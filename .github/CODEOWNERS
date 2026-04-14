@@ -1,0 +1,9 @@
+# Sensitive repository policy and automation paths.
+
+/.github/CODEOWNERS @yazanabuashour
+/.github/ISSUE_TEMPLATE/ @yazanabuashour
+/.github/PULL_REQUEST_TEMPLATE.md @yazanabuashour
+/.github/dependabot.yml @yazanabuashour
+/.github/workflows/ @yazanabuashour
+/SECURITY.md @yazanabuashour
+/docs/maintainers.md @yazanabuashour

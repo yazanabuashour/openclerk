@@ -1,0 +1,63 @@
+name: Pull request
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+
+permissions:
+  contents: read
+
+jobs:
+  policy-checks:
+    name: Policy checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Verify required repository files
+        run: |
+          required_files=(
+            README.md
+            CONTRIBUTING.md
+            SECURITY.md
+            CODE_OF_CONDUCT.md
+            .github/CODEOWNERS
+            .github/PULL_REQUEST_TEMPLATE.md
+            .github/dependabot.yml
+            .github/workflows/pull-request.yml
+            .github/workflows/release.yml
+          )
+
+          for file in "${required_files[@]}"; do
+            test -f "${file}"
+          done
+
+      - name: Reject machine-absolute paths in docs
+        run: |
+          if grep -RInE '/Users/|/home/|[A-Za-z]:\\\\' \
+            README.md \
+            CONTRIBUTING.md \
+            SECURITY.md \
+            CODE_OF_CONDUCT.md \
+            docs \
+            .github/ISSUE_TEMPLATE \
+            .github/PULL_REQUEST_TEMPLATE.md; then
+            echo "Remove machine-absolute filesystem paths from committed docs."
+            exit 1
+          fi
+
+  dependency-review:
+    name: Dependency review
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48
+        with:
+          fail-on-severity: high
