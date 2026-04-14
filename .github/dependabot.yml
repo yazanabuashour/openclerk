@@ -9,3 +9,12 @@ updates:
       - dependencies
     commit-message:
       prefix: chore
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    commit-message:
+      prefix: chore

@@ -3,3 +3,7 @@
 .dolt/
 *.db
 .beads-credential-key
+
+# Go build outputs
+bin/
+.coverprofile

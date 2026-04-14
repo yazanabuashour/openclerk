@@ -51,6 +51,30 @@ jobs:
             exit 1
           fi
 
+  go-checks:
+    name: Go checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: Verify formatting
+        run: |
+          if test -n "$(gofmt -l cmd internal)"; then
+            echo "Run gofmt -w cmd internal before pushing."
+            gofmt -l cmd internal
+            exit 1
+          fi
+
+      - name: Run tests
+        run: go test ./...
+
   dependency-review:
     name: Dependency review
     runs-on: ubuntu-latest
