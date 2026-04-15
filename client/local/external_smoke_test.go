@@ -25,20 +25,20 @@ import (
 	"fmt"
 
 	local "github.com/yazanabuashour/openclerk/client/local"
-	records "github.com/yazanabuashour/openclerk/client/records"
+	openclerk "github.com/yazanabuashour/openclerk/client/openclerk"
 )
 
 func main() {
-	client, runtime, err := local.OpenRecords(local.Config{})
+	client, runtime, err := local.Open(local.Config{})
 	if err != nil {
 		panic(err)
 	}
 	defer runtime.Close()
 
-	create, err := client.CreateDocumentWithResponse(context.Background(), records.CreateDocumentRequest{
-		Path:  "health/glucose.md",
-		Title: "Fasting glucose",
-		Body:  "---\nentity_type: lab_result\nentity_name: Fasting glucose\nentity_id: fasting-glucose\n---\n# Fasting glucose\n\n## Summary\nRoutine health observation.\n\n## Facts\n- value: 92 mg/dL\n- status: normal\n",
+	create, err := client.CreateDocumentWithResponse(context.Background(), openclerk.CreateDocumentRequest{
+		Path:  "notes/ops/agent-knowledge-plane.md",
+		Title: "Agent knowledge plane",
+		Body:  "---\ntype: note\nstatus: active\n---\n# Agent knowledge plane\n\n## Summary\nCanonical agent-facing context.\n\n## Related\nSee [operations](operations.md).\n",
 	})
 	if err != nil {
 		panic(err)
@@ -47,7 +47,47 @@ func main() {
 		panic(string(create.Body))
 	}
 
-	lookup, err := client.RecordsLookupWithResponse(context.Background(), records.RecordsLookupRequest{Text: "glucose"})
+	related, err := client.CreateDocumentWithResponse(context.Background(), openclerk.CreateDocumentRequest{
+		Path:  "notes/ops/operations.md",
+		Title: "Operations",
+		Body:  "---\ntype: runbook\nstatus: draft\n---\n# Operations\n\n## Summary\nOperational notes for the workspace.\n",
+	})
+	if err != nil {
+		panic(err)
+	}
+	if related.JSON201 == nil {
+		panic(string(related.Body))
+	}
+
+	record, err := client.CreateDocumentWithResponse(context.Background(), openclerk.CreateDocumentRequest{
+		Path:  "records/assets/transmission-solenoid.md",
+		Title: "Transmission solenoid",
+		Body:  "---\nentity_type: part\nentity_name: Transmission solenoid\nentity_id: transmission-solenoid\ntype: record\nstatus: active\n---\n# Transmission solenoid\n\n## Summary\nCanonical promoted-domain baseline.\n\n## Facts\n- sku: SOL-1\n- vendor: OpenClerk Motors\n",
+	})
+	if err != nil {
+		panic(err)
+	}
+	if record.JSON201 == nil {
+		panic(string(record.Body))
+	}
+
+	list, err := client.ListDocumentsWithResponse(context.Background(), &openclerk.ListDocumentsParams{PathPrefix: ptr("notes/")})
+	if err != nil {
+		panic(err)
+	}
+	if list.JSON200 == nil || len(list.JSON200.Documents) != 2 {
+		panic(string(list.Body))
+	}
+
+	links, err := client.GetDocumentLinksWithResponse(context.Background(), create.JSON201.DocId)
+	if err != nil {
+		panic(err)
+	}
+	if links.JSON200 == nil || len(links.JSON200.Outgoing) != 1 {
+		panic(string(links.Body))
+	}
+
+	lookup, err := client.RecordsLookupWithResponse(context.Background(), openclerk.RecordsLookupRequest{Text: "solenoid"})
 	if err != nil {
 		panic(err)
 	}
@@ -55,16 +95,18 @@ func main() {
 		panic(string(lookup.Body))
 	}
 
-	entity, err := client.GetRecordEntityWithResponse(context.Background(), lookup.JSON200.Entities[0].EntityId)
+	events, err := client.ListProvenanceEventsWithResponse(context.Background(), &openclerk.ListProvenanceEventsParams{RefKind: ptr("document"), RefId: &create.JSON201.DocId})
 	if err != nil {
 		panic(err)
 	}
-	if entity.JSON200 == nil {
-		panic(string(entity.Body))
+	if events.JSON200 == nil || len(events.JSON200.Events) == 0 {
+		panic(string(events.Body))
 	}
 
-	fmt.Printf("backend=%s dataDir=%s entity=%s facts=%d doc=%s\n", records.CapabilitiesBackendRecords, runtime.Paths().DataDir, entity.JSON200.EntityId, len(entity.JSON200.Facts), create.JSON201.DocId)
+	fmt.Printf("backend=%s dataDir=%s docs=%d links=%d entity=%s events=%d\n", openclerk.CapabilitiesBackendOpenclerk, runtime.Paths().DataDir, len(list.JSON200.Documents), len(links.JSON200.Outgoing), lookup.JSON200.Entities[0].EntityId, len(events.JSON200.Events))
 }
+
+func ptr(value string) *string { return &value }
 `
 	if err := os.WriteFile(filepath.Join(tmpDir, "main.go"), []byte(mainFile), 0o644); err != nil {
 		t.Fatalf("write main.go: %v", err)
@@ -97,7 +139,7 @@ replace github.com/yazanabuashour/openclerk => %s
 	}
 
 	got := strings.TrimSpace(string(output))
-	expectedPrefix := fmt.Sprintf("backend=records dataDir=%s entity=fasting-glucose facts=2 ", filepath.Join(xdgDataHome, "openclerk"))
+	expectedPrefix := fmt.Sprintf("backend=openclerk dataDir=%s docs=2 links=1 entity=transmission-solenoid events=", filepath.Join(xdgDataHome, "openclerk"))
 	if !strings.HasPrefix(got, expectedPrefix) {
 		t.Fatalf("embedded smoke output = %q, want prefix %q", got, expectedPrefix)
 	}
@@ -105,7 +147,7 @@ replace github.com/yazanabuashour/openclerk => %s
 	if _, err := os.Stat(filepath.Join(xdgDataHome, "openclerk", "openclerk.sqlite")); err != nil {
 		t.Fatalf("stat sqlite database: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(xdgDataHome, "openclerk", "vault", "health", "glucose.md")); err != nil {
+	if _, err := os.Stat(filepath.Join(xdgDataHome, "openclerk", "vault", "notes", "ops", "agent-knowledge-plane.md")); err != nil {
 		t.Fatalf("stat canonical vault document: %v", err)
 	}
 }

@@ -18,13 +18,13 @@ import (
 
 func main() {
 	if len(os.Args) < 2 || os.Args[1] != "serve" {
-		fmt.Fprintln(os.Stderr, "usage: openclerkd serve --backend=<fts|hybrid|graph|records> --db <path> --vault-root <path> [--addr 127.0.0.1:8080]")
+		fmt.Fprintln(os.Stderr, "usage: openclerkd serve --backend=<openclerk|fts|hybrid|graph|records> --db <path> --vault-root <path> [--addr 127.0.0.1:8080]")
 		os.Exit(2)
 	}
 
 	command := flag.NewFlagSet("serve", flag.ContinueOnError)
 	command.SetOutput(os.Stderr)
-	backendFlag := command.String("backend", "fts", "backend kind: fts, hybrid, graph, or records")
+	backendFlag := command.String("backend", "openclerk", "backend kind: openclerk, fts, hybrid, graph, or records")
 	dbPath := command.String("db", "", "path to the sqlite database file")
 	vaultRoot := command.String("vault-root", "", "path to the canonical markdown vault root")
 	addr := command.String("addr", "127.0.0.1:8080", "listen address")
@@ -74,7 +74,7 @@ func shutdownSignal() <-chan os.Signal {
 
 func parseBackend(value string) (domain.BackendKind, error) {
 	switch domain.BackendKind(value) {
-	case domain.BackendFTS, domain.BackendHybrid, domain.BackendGraph, domain.BackendRecords:
+	case domain.BackendOpenClerk, domain.BackendFTS, domain.BackendHybrid, domain.BackendGraph, domain.BackendRecords:
 		return domain.BackendKind(value), nil
 	default:
 		return "", fmt.Errorf("unsupported backend %q", value)

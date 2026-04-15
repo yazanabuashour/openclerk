@@ -47,6 +47,11 @@ type Store struct {
 	now               func() time.Time
 }
 
+type storedProjectionState struct {
+	ProjectionVersion string
+	UpdatedAt         time.Time
+}
+
 type section struct {
 	Heading   string
 	Level     int
@@ -102,17 +107,16 @@ func (s *Store) Capabilities(_ context.Context) (domain.Capabilities, error) {
 		Backend:     s.backend,
 		AuthMode:    "none",
 		SearchModes: []string{"lexical"},
+		Extensions:  []string{"provenance"},
 	}
-	if s.backend == domain.BackendHybrid && s.embeddingProvider != "" {
+	if supportsHybridSearch(s.backend) && s.embeddingProvider != "" {
 		capabilities.SearchModes = []string{"lexical", "vector", "hybrid"}
 	}
-	switch s.backend {
-	case domain.BackendGraph:
-		capabilities.Extensions = []string{"graph"}
-	case domain.BackendRecords:
-		capabilities.Extensions = []string{"records"}
-	default:
-		capabilities.Extensions = []string{}
+	if supportsGraph(s.backend) {
+		capabilities.Extensions = append(capabilities.Extensions, "graph")
+	}
+	if supportsRecords(s.backend) {
+		capabilities.Extensions = append(capabilities.Extensions, "records")
 	}
 	return capabilities, nil
 }
@@ -128,10 +132,82 @@ func (s *Store) Search(ctx context.Context, query domain.SearchQuery) (domain.Se
 	if limit < 1 || limit > 100 {
 		return domain.SearchResult{}, domain.ValidationError("limit must be between 1 and 100", map[string]any{"limit": limit})
 	}
-	if s.backend == domain.BackendHybrid && s.embeddingProvider != "" {
-		return s.hybridSearch(ctx, query.Text, limit, decodeCursor(query.Cursor))
+	if (query.MetadataKey == "") != (query.MetadataValue == "") {
+		return domain.SearchResult{}, domain.ValidationError("metadataKey and metadataValue must be provided together", nil)
 	}
-	return s.lexicalSearch(ctx, query.Text, limit, decodeCursor(query.Cursor))
+	if supportsHybridSearch(s.backend) && s.embeddingProvider != "" {
+		return s.hybridSearch(ctx, query, limit, decodeCursor(query.Cursor))
+	}
+	return s.lexicalSearch(ctx, query, limit, decodeCursor(query.Cursor))
+}
+
+func (s *Store) ListDocuments(ctx context.Context, query domain.DocumentListQuery) (domain.DocumentListResult, error) {
+	if (query.MetadataKey == "") != (query.MetadataValue == "") {
+		return domain.DocumentListResult{}, domain.ValidationError("metadataKey and metadataValue must be provided together", nil)
+	}
+	limit := query.Limit
+	if limit == 0 {
+		limit = 20
+	}
+	if limit < 1 || limit > 100 {
+		return domain.DocumentListResult{}, domain.ValidationError("limit must be between 1 and 100", map[string]any{"limit": limit})
+	}
+
+	sqlQuery := `
+SELECT d.doc_id, d.path, d.title, d.metadata_json, d.updated_at
+FROM documents d`
+	args := []any{}
+	clauses := []string{}
+	if prefix := strings.TrimSpace(query.PathPrefix); prefix != "" {
+		clauses = append(clauses, "d.path LIKE ?")
+		args = append(args, prefix+"%")
+	}
+	if query.MetadataKey != "" {
+		sqlQuery += `
+JOIN document_metadata dm ON dm.doc_id = d.doc_id`
+		clauses = append(clauses, "dm.key_name = ? AND dm.value_text = ?")
+		args = append(args, strings.ToLower(strings.TrimSpace(query.MetadataKey)), strings.TrimSpace(query.MetadataValue))
+	}
+	if len(clauses) > 0 {
+		sqlQuery += "\nWHERE " + strings.Join(clauses, " AND ")
+	}
+	sqlQuery += `
+ORDER BY d.path
+LIMIT ? OFFSET ?`
+	args = append(args, limit+1, decodeCursor(query.Cursor))
+
+	rows, err := s.db.QueryContext(ctx, sqlQuery, args...)
+	if err != nil {
+		return domain.DocumentListResult{}, domain.InternalError("query document registry", err)
+	}
+	defer rows.Close()
+
+	documents := make([]domain.DocumentSummary, 0, limit+1)
+	for rows.Next() {
+		var (
+			document     domain.DocumentSummary
+			metadataJSON string
+			updatedAt    string
+		)
+		if err := rows.Scan(&document.DocID, &document.Path, &document.Title, &metadataJSON, &updatedAt); err != nil {
+			return domain.DocumentListResult{}, domain.InternalError("scan document registry row", err)
+		}
+		_ = json.Unmarshal([]byte(metadataJSON), &document.Metadata)
+		document.UpdatedAt = mustParseTime(updatedAt)
+		documents = append(documents, document)
+	}
+	if err := rows.Err(); err != nil {
+		return domain.DocumentListResult{}, domain.InternalError("iterate document registry rows", err)
+	}
+
+	pageInfo := domain.PageInfo{}
+	offset := decodeCursor(query.Cursor)
+	if len(documents) > limit {
+		pageInfo.HasMore = true
+		pageInfo.NextCursor = encodeCursor(offset + limit)
+		documents = documents[:limit]
+	}
+	return domain.DocumentListResult{Documents: documents, PageInfo: pageInfo}, nil
 }
 
 func (s *Store) CreateDocument(ctx context.Context, input domain.CreateDocumentInput) (domain.Document, error) {
@@ -165,12 +241,13 @@ func (s *Store) CreateDocument(ctx context.Context, input domain.CreateDocumentI
 
 func (s *Store) GetDocument(ctx context.Context, docID string) (domain.Document, error) {
 	const query = `
-SELECT doc_id, path, title, body, headings_json, created_at, updated_at
+SELECT doc_id, path, title, body, headings_json, metadata_json, created_at, updated_at
 FROM documents
 WHERE doc_id = ?`
 	var (
 		document     domain.Document
 		headingsJSON string
+		metadataJSON string
 		createdAt    string
 		updatedAt    string
 	)
@@ -180,6 +257,7 @@ WHERE doc_id = ?`
 		&document.Title,
 		&document.Body,
 		&headingsJSON,
+		&metadataJSON,
 		&createdAt,
 		&updatedAt,
 	)
@@ -190,9 +268,39 @@ WHERE doc_id = ?`
 		return domain.Document{}, domain.InternalError("query document", err)
 	}
 	_ = json.Unmarshal([]byte(headingsJSON), &document.Headings)
+	_ = json.Unmarshal([]byte(metadataJSON), &document.Metadata)
 	document.CreatedAt = mustParseTime(createdAt)
 	document.UpdatedAt = mustParseTime(updatedAt)
 	return document, nil
+}
+
+func (s *Store) GetDocumentLinks(ctx context.Context, docID string) (domain.DocumentLinks, error) {
+	if !supportsGraph(s.backend) {
+		return domain.DocumentLinks{}, domain.UnsupportedError("document links", s.backend)
+	}
+	if _, err := s.GetDocument(ctx, docID); err != nil {
+		return domain.DocumentLinks{}, err
+	}
+
+	outgoing, err := s.loadDocumentLinks(ctx, `
+SELECT d.doc_id, d.path, d.title, ge.evidence_doc_id, ge.evidence_chunk_id, ge.evidence_path, ge.evidence_heading, ge.evidence_line_start, ge.evidence_line_end
+FROM graph_edges ge
+JOIN documents d ON d.doc_id = SUBSTR(ge.to_node_id, 5)
+WHERE ge.kind = 'links_to' AND ge.from_node_id = ? AND ge.to_node_id LIKE 'doc:%'
+ORDER BY d.path`, "doc:"+docID)
+	if err != nil {
+		return domain.DocumentLinks{}, err
+	}
+	incoming, err := s.loadDocumentLinks(ctx, `
+SELECT d.doc_id, d.path, d.title, ge.evidence_doc_id, ge.evidence_chunk_id, ge.evidence_path, ge.evidence_heading, ge.evidence_line_start, ge.evidence_line_end
+FROM graph_edges ge
+JOIN documents d ON d.doc_id = SUBSTR(ge.from_node_id, 5)
+WHERE ge.kind = 'links_to' AND ge.to_node_id = ? AND ge.from_node_id LIKE 'doc:%'
+ORDER BY d.path`, "doc:"+docID)
+	if err != nil {
+		return domain.DocumentLinks{}, err
+	}
+	return domain.DocumentLinks{DocID: docID, Outgoing: outgoing, Incoming: incoming}, nil
 }
 
 func (s *Store) AppendDocument(ctx context.Context, docID string, input domain.AppendDocumentInput) (domain.Document, error) {
@@ -260,7 +368,7 @@ WHERE chunk_id = ?`
 }
 
 func (s *Store) GraphNeighborhood(ctx context.Context, input domain.GraphNeighborhoodInput) (domain.GraphNeighborhood, error) {
-	if s.backend != domain.BackendGraph {
+	if !supportsGraph(s.backend) {
 		return domain.GraphNeighborhood{}, domain.UnsupportedError("graph extension", s.backend)
 	}
 	nodeID := strings.TrimSpace(input.NodeID)
@@ -362,7 +470,7 @@ WHERE node_id = ?`, id).Scan(
 }
 
 func (s *Store) RecordsLookup(ctx context.Context, input domain.RecordLookupInput) (domain.RecordLookupResult, error) {
-	if s.backend != domain.BackendRecords {
+	if !supportsRecords(s.backend) {
 		return domain.RecordLookupResult{}, domain.UnsupportedError("records extension", s.backend)
 	}
 	if strings.TrimSpace(input.Text) == "" {
@@ -427,7 +535,7 @@ LIMIT ? OFFSET ?`, condition)
 }
 
 func (s *Store) GetRecordEntity(ctx context.Context, entityID string) (domain.RecordEntity, error) {
-	if s.backend != domain.BackendRecords {
+	if !supportsRecords(s.backend) {
 		return domain.RecordEntity{}, domain.UnsupportedError("records extension", s.backend)
 	}
 	var entity domain.RecordEntity
@@ -513,6 +621,142 @@ ORDER BY source_doc_id, source_chunk_id`, entity.EntityID)
 	return entity, nil
 }
 
+func (s *Store) ListProvenanceEvents(ctx context.Context, query domain.ProvenanceEventQuery) (domain.ProvenanceEventResult, error) {
+	limit := query.Limit
+	if limit == 0 {
+		limit = 20
+	}
+	if limit < 1 || limit > 100 {
+		return domain.ProvenanceEventResult{}, domain.ValidationError("limit must be between 1 and 100", map[string]any{"limit": limit})
+	}
+
+	sqlQuery := `
+SELECT event_id, event_type, ref_kind, ref_id, source_ref, occurred_at, details_json
+FROM provenance_events`
+	args := []any{}
+	clauses := []string{}
+	if refKind := strings.TrimSpace(query.RefKind); refKind != "" {
+		clauses = append(clauses, "ref_kind = ?")
+		args = append(args, refKind)
+	}
+	if refID := strings.TrimSpace(query.RefID); refID != "" {
+		clauses = append(clauses, "ref_id = ?")
+		args = append(args, refID)
+	}
+	if sourceRef := strings.TrimSpace(query.SourceRef); sourceRef != "" {
+		clauses = append(clauses, "source_ref = ?")
+		args = append(args, sourceRef)
+	}
+	if len(clauses) > 0 {
+		sqlQuery += "\nWHERE " + strings.Join(clauses, " AND ")
+	}
+	offset := decodeCursor(query.Cursor)
+	sqlQuery += `
+ORDER BY occurred_at DESC, event_id DESC
+LIMIT ? OFFSET ?`
+	args = append(args, limit+1, offset)
+
+	rows, err := s.db.QueryContext(ctx, sqlQuery, args...)
+	if err != nil {
+		return domain.ProvenanceEventResult{}, domain.InternalError("query provenance events", err)
+	}
+	defer rows.Close()
+
+	events := make([]domain.ProvenanceEvent, 0, limit+1)
+	for rows.Next() {
+		var (
+			event       domain.ProvenanceEvent
+			occurredAt  string
+			detailsJSON string
+		)
+		if err := rows.Scan(&event.EventID, &event.EventType, &event.RefKind, &event.RefID, &event.SourceRef, &occurredAt, &detailsJSON); err != nil {
+			return domain.ProvenanceEventResult{}, domain.InternalError("scan provenance event", err)
+		}
+		_ = json.Unmarshal([]byte(detailsJSON), &event.Details)
+		event.OccurredAt = mustParseTime(occurredAt)
+		events = append(events, event)
+	}
+	if err := rows.Err(); err != nil {
+		return domain.ProvenanceEventResult{}, domain.InternalError("iterate provenance events", err)
+	}
+
+	pageInfo := domain.PageInfo{}
+	if len(events) > limit {
+		pageInfo.HasMore = true
+		pageInfo.NextCursor = encodeCursor(offset + limit)
+		events = events[:limit]
+	}
+	return domain.ProvenanceEventResult{Events: events, PageInfo: pageInfo}, nil
+}
+
+func (s *Store) ListProjectionStates(ctx context.Context, query domain.ProjectionStateQuery) (domain.ProjectionStateResult, error) {
+	limit := query.Limit
+	if limit == 0 {
+		limit = 20
+	}
+	if limit < 1 || limit > 100 {
+		return domain.ProjectionStateResult{}, domain.ValidationError("limit must be between 1 and 100", map[string]any{"limit": limit})
+	}
+
+	sqlQuery := `
+SELECT projection_name, ref_kind, ref_id, source_ref, freshness, projection_version, updated_at, details_json
+FROM projection_states`
+	args := []any{}
+	clauses := []string{}
+	if projection := strings.TrimSpace(query.Projection); projection != "" {
+		clauses = append(clauses, "projection_name = ?")
+		args = append(args, projection)
+	}
+	if refKind := strings.TrimSpace(query.RefKind); refKind != "" {
+		clauses = append(clauses, "ref_kind = ?")
+		args = append(args, refKind)
+	}
+	if refID := strings.TrimSpace(query.RefID); refID != "" {
+		clauses = append(clauses, "ref_id = ?")
+		args = append(args, refID)
+	}
+	if len(clauses) > 0 {
+		sqlQuery += "\nWHERE " + strings.Join(clauses, " AND ")
+	}
+	offset := decodeCursor(query.Cursor)
+	sqlQuery += `
+ORDER BY projection_name, ref_kind, ref_id
+LIMIT ? OFFSET ?`
+	args = append(args, limit+1, offset)
+
+	rows, err := s.db.QueryContext(ctx, sqlQuery, args...)
+	if err != nil {
+		return domain.ProjectionStateResult{}, domain.InternalError("query projection states", err)
+	}
+	defer rows.Close()
+
+	projections := make([]domain.ProjectionState, 0, limit+1)
+	for rows.Next() {
+		var (
+			projection  domain.ProjectionState
+			updatedAt   string
+			detailsJSON string
+		)
+		if err := rows.Scan(&projection.Projection, &projection.RefKind, &projection.RefID, &projection.SourceRef, &projection.Freshness, &projection.ProjectionVersion, &updatedAt, &detailsJSON); err != nil {
+			return domain.ProjectionStateResult{}, domain.InternalError("scan projection state", err)
+		}
+		_ = json.Unmarshal([]byte(detailsJSON), &projection.Details)
+		projection.UpdatedAt = mustParseTime(updatedAt)
+		projections = append(projections, projection)
+	}
+	if err := rows.Err(); err != nil {
+		return domain.ProjectionStateResult{}, domain.InternalError("iterate projection states", err)
+	}
+
+	pageInfo := domain.PageInfo{}
+	if len(projections) > limit {
+		pageInfo.HasMore = true
+		pageInfo.NextCursor = encodeCursor(offset + limit)
+		projections = projections[:limit]
+	}
+	return domain.ProjectionStateResult{Projections: projections, PageInfo: pageInfo}, nil
+}
+
 func (s *Store) initSchema(ctx context.Context) error {
 	statements := []string{
 		`PRAGMA foreign_keys = ON;`,
@@ -522,8 +766,16 @@ func (s *Store) initSchema(ctx context.Context) error {
 			title TEXT NOT NULL,
 			body TEXT NOT NULL,
 			headings_json TEXT NOT NULL,
+			metadata_json TEXT NOT NULL DEFAULT '{}',
 			created_at TEXT NOT NULL,
 			updated_at TEXT NOT NULL
+		);`,
+		`CREATE TABLE IF NOT EXISTS document_metadata (
+			doc_id TEXT NOT NULL,
+			key_name TEXT NOT NULL,
+			value_text TEXT NOT NULL,
+			PRIMARY KEY (doc_id, key_name),
+			FOREIGN KEY (doc_id) REFERENCES documents(doc_id) ON DELETE CASCADE
 		);`,
 		`CREATE TABLE IF NOT EXISTS chunks (
 			chunk_id TEXT PRIMARY KEY,
@@ -607,11 +859,25 @@ func (s *Store) initSchema(ctx context.Context) error {
 			occurred_at TEXT NOT NULL,
 			details_json TEXT NOT NULL
 		);`,
+		`CREATE TABLE IF NOT EXISTS projection_states (
+			projection_name TEXT NOT NULL,
+			ref_kind TEXT NOT NULL,
+			ref_id TEXT NOT NULL,
+			source_ref TEXT NOT NULL,
+			freshness TEXT NOT NULL,
+			projection_version TEXT NOT NULL,
+			updated_at TEXT NOT NULL,
+			details_json TEXT NOT NULL,
+			PRIMARY KEY (projection_name, ref_kind, ref_id)
+		);`,
 	}
 	for _, statement := range statements {
 		if _, err := s.db.ExecContext(ctx, statement); err != nil {
 			return domain.InternalError("initialize sqlite schema", err)
 		}
+	}
+	if err := ensureColumn(ctx, s.db, "documents", "metadata_json", "TEXT NOT NULL DEFAULT '{}'"); err != nil {
+		return err
 	}
 	return nil
 }
@@ -648,6 +914,11 @@ func (s *Store) syncVault(ctx context.Context) error {
 		}
 	}
 	switch s.backend {
+	case domain.BackendOpenClerk:
+		if err := s.rebuildGraph(ctx); err != nil {
+			return err
+		}
+		return s.rebuildRecords(ctx)
 	case domain.BackendGraph:
 		return s.rebuildGraph(ctx)
 	case domain.BackendRecords:
@@ -725,6 +996,7 @@ func (s *Store) syncDocumentFromDisk(ctx context.Context, relPath string, prefer
 	docID := docIDForPath(relPath)
 	now := s.now().UTC()
 	headingsJSON, _ := json.Marshal(headings)
+	metadataJSON, _ := json.Marshal(frontmatter)
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -735,34 +1007,75 @@ func (s *Store) syncDocumentFromDisk(ctx context.Context, relPath string, prefer
 	}()
 
 	createdAt := now.Format(time.RFC3339Nano)
+	updatedAt := now.Format(time.RFC3339Nano)
 	var existingTitle string
+	var existingBody string
+	var existingHeadingsJSON string
+	var existingMetadataJSON string
 	var createdAtExisting string
-	err = tx.QueryRowContext(ctx, `SELECT created_at, title FROM documents WHERE doc_id = ?`, docID).Scan(&createdAtExisting, &existingTitle)
+	var updatedAtExisting string
+	eventType := "document_created"
+	err = tx.QueryRowContext(ctx, `
+SELECT created_at, updated_at, title, body, headings_json, metadata_json
+FROM documents
+WHERE doc_id = ?`, docID).Scan(
+		&createdAtExisting,
+		&updatedAtExisting,
+		&existingTitle,
+		&existingBody,
+		&existingHeadingsJSON,
+		&existingMetadataJSON,
+	)
 	if err == nil {
 		createdAt = createdAtExisting
+		eventType = "document_updated"
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		return domain.InternalError("query existing document timestamp", err)
 	}
 
 	title := resolvedDocumentTitle(relPath, body, headings, frontmatter, preferredTitle, existingTitle)
+	contentChanged := eventType == "document_created" ||
+		existingTitle != title ||
+		existingBody != body ||
+		existingHeadingsJSON != string(headingsJSON) ||
+		existingMetadataJSON != string(metadataJSON)
+	if !contentChanged {
+		updatedAt = updatedAtExisting
+	}
 	if _, err := tx.ExecContext(ctx, `
-INSERT INTO documents (doc_id, path, title, body, headings_json, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?)
+INSERT INTO documents (doc_id, path, title, body, headings_json, metadata_json, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(doc_id) DO UPDATE SET
 	path = excluded.path,
 	title = excluded.title,
 	body = excluded.body,
 	headings_json = excluded.headings_json,
+	metadata_json = excluded.metadata_json,
 	updated_at = excluded.updated_at`,
 		docID,
 		relPath,
 		title,
 		body,
 		string(headingsJSON),
+		string(metadataJSON),
 		createdAt,
-		now.Format(time.RFC3339Nano),
+		updatedAt,
 	); err != nil {
 		return domain.InternalError("upsert document", err)
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM document_metadata WHERE doc_id = ?`, docID); err != nil {
+		return domain.InternalError("delete document metadata", err)
+	}
+	for key, value := range frontmatter {
+		if _, err := tx.ExecContext(ctx, `
+INSERT INTO document_metadata (doc_id, key_name, value_text)
+VALUES (?, ?, ?)`,
+			docID,
+			strings.ToLower(strings.TrimSpace(key)),
+			strings.TrimSpace(value),
+		); err != nil {
+			return domain.InternalError("insert document metadata", err)
+		}
 	}
 
 	if _, err := tx.ExecContext(ctx, `DELETE FROM chunk_fts WHERE doc_id = ?`, docID); err != nil {
@@ -814,24 +1127,81 @@ VALUES (?, ?)`, chunkID, string(vectorJSON)); err != nil {
 		}
 	}
 
-	if _, err := tx.ExecContext(ctx, `
-INSERT INTO provenance_events (event_id, event_type, ref_kind, ref_id, source_ref, occurred_at, details_json)
-VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		hashID("event", relPath, now.Format(time.RFC3339Nano)),
-		"document_synced",
-		"document",
-		docID,
-		"doc:"+docID,
-		now.Format(time.RFC3339Nano),
-		fmt.Sprintf(`{"path":%q}`, relPath),
-	); err != nil {
-		return domain.InternalError("record provenance event", err)
+	if contentChanged {
+		if err := insertProvenanceEvent(ctx, tx, domain.ProvenanceEvent{
+			EventID:    hashID("event", eventType, relPath, now.Format(time.RFC3339Nano)),
+			EventType:  eventType,
+			RefKind:    "document",
+			RefID:      docID,
+			SourceRef:  "doc:" + docID,
+			OccurredAt: now,
+			Details: map[string]string{
+				"path": relPath,
+			},
+		}); err != nil {
+			return domain.InternalError("record provenance event", err)
+		}
+	}
+	if contentChanged && supportsGraph(s.backend) {
+		if err := upsertProjectionState(ctx, tx, domain.ProjectionState{
+			Projection:        "graph",
+			RefKind:           "document",
+			RefID:             docID,
+			SourceRef:         "doc:" + docID,
+			Freshness:         "stale",
+			ProjectionVersion: hashID("graph", docID, "stale", now.Format(time.RFC3339Nano)),
+			UpdatedAt:         now,
+			Details: map[string]string{
+				"path": relPath,
+			},
+		}); err != nil {
+			return domain.InternalError("mark graph projection stale", err)
+		}
+		if err := insertProvenanceEvent(ctx, tx, domain.ProvenanceEvent{
+			EventID:    hashID("event", "projection_invalidated", "graph", docID, now.Format(time.RFC3339Nano)),
+			EventType:  "projection_invalidated",
+			RefKind:    "projection",
+			RefID:      "graph:" + docID,
+			SourceRef:  "doc:" + docID,
+			OccurredAt: now,
+			Details: map[string]string{
+				"projection": "graph",
+				"path":       relPath,
+			},
+		}); err != nil {
+			return domain.InternalError("record graph invalidation event", err)
+		}
+	}
+	if contentChanged && supportsRecords(s.backend) {
+		_, _, projectsRecords := extractRecordProjection(body)
+		_, _, projectedRecords := extractRecordProjection(existingBody)
+		if projectsRecords || projectedRecords {
+			if err := insertProvenanceEvent(ctx, tx, domain.ProvenanceEvent{
+				EventID:    hashID("event", "projection_invalidated", "records", docID, now.Format(time.RFC3339Nano)),
+				EventType:  "projection_invalidated",
+				RefKind:    "projection",
+				RefID:      "records-source:" + docID,
+				SourceRef:  "doc:" + docID,
+				OccurredAt: now,
+				Details: map[string]string{
+					"projection": "records",
+					"path":       relPath,
+				},
+			}); err != nil {
+				return domain.InternalError("record records invalidation event", err)
+			}
+		}
 	}
 
 	if err := tx.Commit(); err != nil {
 		return domain.InternalError("commit document sync", err)
 	}
 	switch s.backend {
+	case domain.BackendOpenClerk:
+		if err := s.rebuildGraph(ctx); err != nil {
+			return err
+		}
+		return s.rebuildRecords(ctx)
 	case domain.BackendGraph:
 		return s.rebuildGraph(ctx)
 	case domain.BackendRecords:
@@ -841,15 +1211,23 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`,
 	}
 }
 
-func (s *Store) lexicalSearch(ctx context.Context, text string, limit int, offset int) (domain.SearchResult, error) {
-	rows, err := s.db.QueryContext(ctx, `
+func (s *Store) lexicalSearch(ctx context.Context, query domain.SearchQuery, limit int, offset int) (domain.SearchResult, error) {
+	baseQuery := `
 SELECT c.chunk_id, c.doc_id, d.title, c.path, c.heading, c.content, c.line_start, c.line_end, bm25(chunk_fts)
 FROM chunk_fts
 JOIN chunks c ON c.chunk_id = chunk_fts.chunk_id
-JOIN documents d ON d.doc_id = c.doc_id
-WHERE chunk_fts MATCH ?
+JOIN documents d ON d.doc_id = c.doc_id`
+	whereClause, args := filteredDocumentClauses(query)
+	sqlQuery := baseQuery + "\nWHERE chunk_fts MATCH ?"
+	args = append([]any{ftsExpression(query.Text)}, args...)
+	if whereClause != "" {
+		sqlQuery += " AND " + whereClause
+	}
+	sqlQuery += `
 ORDER BY bm25(chunk_fts), c.chunk_id
-LIMIT ? OFFSET ?`, ftsExpression(text), limit+1, offset)
+LIMIT ? OFFSET ?`
+	args = append(args, limit+1, offset)
+	rows, err := s.db.QueryContext(ctx, sqlQuery, args...)
 	if err != nil {
 		return domain.SearchResult{}, domain.InternalError("run lexical search", err)
 	}
@@ -869,7 +1247,7 @@ LIMIT ? OFFSET ?`, ftsExpression(text), limit+1, offset)
 			return domain.SearchResult{}, domain.InternalError("scan lexical result", err)
 		}
 		hit.Score = 1 / (1 + math.Abs(bm25Score))
-		hit.Snippet = snippetForSearch(content, text)
+		hit.Snippet = snippetForSearch(content, query.Text)
 		hit.Citations = []domain.Citation{{
 			DocID:     hit.DocID,
 			ChunkID:   hit.ChunkID,
@@ -886,17 +1264,23 @@ LIMIT ? OFFSET ?`, ftsExpression(text), limit+1, offset)
 	return paginateSearchResults(hits, limit, offset), nil
 }
 
-func (s *Store) hybridSearch(ctx context.Context, text string, limit int, offset int) (domain.SearchResult, error) {
-	lexical, err := s.lexicalSearch(ctx, text, max(limit*2, 20), 0)
+func (s *Store) hybridSearch(ctx context.Context, query domain.SearchQuery, limit int, offset int) (domain.SearchResult, error) {
+	lexical, err := s.lexicalSearch(ctx, query, max(limit*2, 20), 0)
 	if err != nil {
 		return domain.SearchResult{}, err
 	}
-	queryVector := embedText(text)
-	rows, err := s.db.QueryContext(ctx, `
+	queryVector := embedText(query.Text)
+	baseQuery := `
 SELECT c.chunk_id, c.doc_id, d.title, c.path, c.heading, c.content, c.line_start, c.line_end, e.vector_json
 FROM chunks c
 JOIN documents d ON d.doc_id = c.doc_id
-JOIN embeddings e ON e.chunk_id = c.chunk_id`)
+JOIN embeddings e ON e.chunk_id = c.chunk_id`
+	whereClause, args := filteredDocumentClauses(query)
+	sqlQuery := baseQuery
+	if whereClause != "" {
+		sqlQuery += "\nWHERE " + whereClause
+	}
+	rows, err := s.db.QueryContext(ctx, sqlQuery, args...)
 	if err != nil {
 		return domain.SearchResult{}, domain.InternalError("query embeddings", err)
 	}
@@ -924,7 +1308,7 @@ JOIN embeddings e ON e.chunk_id = c.chunk_id`)
 			return domain.SearchResult{}, domain.InternalError("decode embedding", err)
 		}
 		hit.Score = cosineSimilarity(queryVector, vector)
-		hit.Snippet = snippetForSearch(content, text)
+		hit.Snippet = snippetForSearch(content, query.Text)
 		hit.Citations = []domain.Citation{{
 			DocID:     hit.DocID,
 			ChunkID:   hit.ChunkID,
@@ -991,6 +1375,10 @@ func (s *Store) rebuildGraph(ctx context.Context) error {
 		return err
 	}
 	documentIndex := documentsByPath(documents)
+	previousStates, err := s.loadProjectionStateSnapshots(ctx, "graph")
+	if err != nil {
+		return err
+	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -1002,13 +1390,21 @@ func (s *Store) rebuildGraph(ctx context.Context) error {
 	for _, stmt := range []string{
 		`DELETE FROM graph_edges;`,
 		`DELETE FROM graph_nodes;`,
+		`DELETE FROM projection_states WHERE projection_name = 'graph';`,
 	} {
 		if _, err := tx.ExecContext(ctx, stmt); err != nil {
 			return domain.InternalError("reset graph projection", err)
 		}
 	}
 
+	now := s.now().UTC()
+	versionInputs := make(map[string][]string, len(documents))
 	for _, doc := range documents {
+		versionInputs[doc.DocID] = append(versionInputs[doc.DocID],
+			"doc:"+doc.DocID,
+			"path:"+doc.Path,
+			"updated:"+doc.UpdatedAt.UTC().Format(time.RFC3339Nano),
+		)
 		nodeID := "doc:" + doc.DocID
 		citation := documentCitation(doc, chunksByDoc[doc.DocID])
 		if err := insertGraphNode(ctx, tx, nodeID, "document", doc.Title, citation); err != nil {
@@ -1056,6 +1452,52 @@ func (s *Store) rebuildGraph(ctx context.Context) error {
 				if err := insertGraphEdge(ctx, tx, hashID("edge", chunkNodeID, targetDoc.DocID, link), chunkNodeID, "doc:"+targetDoc.DocID, "links_to", citation); err != nil {
 					return err
 				}
+				versionInputs[doc.DocID] = append(versionInputs[doc.DocID],
+					fmt.Sprintf("out:%s:%s:%s:%d:%d", targetDoc.DocID, citation.ChunkID, citation.Path, citation.LineStart, citation.LineEnd),
+				)
+				versionInputs[targetDoc.DocID] = append(versionInputs[targetDoc.DocID],
+					fmt.Sprintf("in:%s:%s:%s:%d:%d", doc.DocID, citation.ChunkID, citation.Path, citation.LineStart, citation.LineEnd),
+				)
+			}
+		}
+	}
+	for _, doc := range documents {
+		markers := append([]string(nil), versionInputs[doc.DocID]...)
+		sort.Strings(markers)
+		version := hashID("graph", doc.DocID, strings.Join(markers, "|"))
+		stateUpdatedAt := now
+		if previous, ok := previousStates[doc.DocID]; ok && previous.ProjectionVersion == version {
+			stateUpdatedAt = previous.UpdatedAt
+		}
+		if err := upsertProjectionState(ctx, tx, domain.ProjectionState{
+			Projection:        "graph",
+			RefKind:           "document",
+			RefID:             doc.DocID,
+			SourceRef:         "doc:" + doc.DocID,
+			Freshness:         "fresh",
+			ProjectionVersion: version,
+			UpdatedAt:         stateUpdatedAt,
+			Details: map[string]string{
+				"path": doc.Path,
+			},
+		}); err != nil {
+			return err
+		}
+		if previous, ok := previousStates[doc.DocID]; !ok || previous.ProjectionVersion != version {
+			if err := insertProvenanceEvent(ctx, tx, domain.ProvenanceEvent{
+				EventID:    hashID("event", "projection_refreshed", "graph", doc.DocID, now.Format(time.RFC3339Nano)),
+				EventType:  "projection_refreshed",
+				RefKind:    "projection",
+				RefID:      "graph:" + doc.DocID,
+				SourceRef:  "doc:" + doc.DocID,
+				OccurredAt: now,
+				Details: map[string]string{
+					"projection": "graph",
+					"path":       doc.Path,
+					"version":    version,
+				},
+			}); err != nil {
+				return err
 			}
 		}
 	}
@@ -1074,6 +1516,10 @@ func (s *Store) rebuildRecords(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	previousStates, err := s.loadProjectionStateSnapshots(ctx, "records")
+	if err != nil {
+		return err
+	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -1086,13 +1532,14 @@ func (s *Store) rebuildRecords(ctx context.Context) error {
 		`DELETE FROM record_citations;`,
 		`DELETE FROM record_facts;`,
 		`DELETE FROM record_entities;`,
+		`DELETE FROM projection_states WHERE projection_name = 'records';`,
 	} {
 		if _, err := tx.ExecContext(ctx, stmt); err != nil {
 			return domain.InternalError("reset records projection", err)
 		}
 	}
 
-	now := s.now().UTC().Format(time.RFC3339Nano)
+	now := s.now().UTC()
 	for _, doc := range documents {
 		frontmatter, facts, ok := extractRecordProjection(doc.Body)
 		if !ok {
@@ -1108,6 +1555,13 @@ func (s *Store) rebuildRecords(ctx context.Context) error {
 			entityID = hashID("entity", doc.DocID, name)
 		}
 		summary := firstSummaryParagraph(doc.Body)
+		version := hashID("records", entityID, doc.UpdatedAt.UTC().Format(time.RFC3339Nano))
+		entityUpdatedAt := now
+		entityChanged := true
+		if previous, ok := previousStates[entityID]; ok && previous.ProjectionVersion == version {
+			entityUpdatedAt = previous.UpdatedAt
+			entityChanged = false
+		}
 		if _, err := tx.ExecContext(ctx, `
 INSERT INTO record_entities (entity_id, entity_type, name, summary, source_doc_id, updated_at)
 VALUES (?, ?, ?, ?, ?, ?)`,
@@ -1116,7 +1570,7 @@ VALUES (?, ?, ?, ?, ?, ?)`,
 			name,
 			summary,
 			doc.DocID,
-			now,
+			entityUpdatedAt.UTC().Format(time.RFC3339Nano),
 		); err != nil {
 			return domain.InternalError("insert record entity", err)
 		}
@@ -1151,18 +1605,52 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		); err != nil {
 			return domain.InternalError("insert record citation", err)
 		}
-		if _, err := tx.ExecContext(ctx, `
+		if entityChanged {
+			if _, err := tx.ExecContext(ctx, `
 INSERT INTO provenance_events (event_id, event_type, ref_kind, ref_id, source_ref, occurred_at, details_json)
 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-			hashID("event", "record", entityID, now),
-			"record_extracted_from_doc",
-			"entity",
-			entityID,
-			"doc:"+doc.DocID,
-			now,
-			fmt.Sprintf(`{"entity_type":%q,"entity_name":%q}`, entityType, name),
-		); err != nil {
-			return domain.InternalError("record records provenance event", err)
+				hashID("event", "record", entityID, now.Format(time.RFC3339Nano)),
+				"record_extracted_from_doc",
+				"entity",
+				entityID,
+				"doc:"+doc.DocID,
+				now.Format(time.RFC3339Nano),
+				fmt.Sprintf(`{"entity_type":%q,"entity_name":%q}`, entityType, name),
+			); err != nil {
+				return domain.InternalError("record records provenance event", err)
+			}
+		}
+		if err := upsertProjectionState(ctx, tx, domain.ProjectionState{
+			Projection:        "records",
+			RefKind:           "entity",
+			RefID:             entityID,
+			SourceRef:         "doc:" + doc.DocID,
+			Freshness:         "fresh",
+			ProjectionVersion: version,
+			UpdatedAt:         entityUpdatedAt,
+			Details: map[string]string{
+				"entity_type": entityType,
+				"path":        doc.Path,
+			},
+		}); err != nil {
+			return err
+		}
+		if entityChanged {
+			if err := insertProvenanceEvent(ctx, tx, domain.ProvenanceEvent{
+				EventID:    hashID("event", "projection_refreshed", "records", entityID, now.Format(time.RFC3339Nano)),
+				EventType:  "projection_refreshed",
+				RefKind:    "projection",
+				RefID:      "records:" + entityID,
+				SourceRef:  "doc:" + doc.DocID,
+				OccurredAt: now,
+				Details: map[string]string{
+					"projection":  "records",
+					"entity_type": entityType,
+					"version":     version,
+				},
+			}); err != nil {
+				return err
+			}
 		}
 	}
 	if err := tx.Commit(); err != nil {
@@ -1173,7 +1661,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`,
 
 func (s *Store) loadAllDocuments(ctx context.Context) ([]domain.Document, error) {
 	rows, err := s.db.QueryContext(ctx, `
-SELECT doc_id, path, title, body, headings_json, created_at, updated_at
+SELECT doc_id, path, title, body, headings_json, metadata_json, created_at, updated_at
 FROM documents
 ORDER BY path`)
 	if err != nil {
@@ -1185,13 +1673,15 @@ ORDER BY path`)
 		var (
 			doc          domain.Document
 			headingsJSON string
+			metadataJSON string
 			createdAt    string
 			updatedAt    string
 		)
-		if err := rows.Scan(&doc.DocID, &doc.Path, &doc.Title, &doc.Body, &headingsJSON, &createdAt, &updatedAt); err != nil {
+		if err := rows.Scan(&doc.DocID, &doc.Path, &doc.Title, &doc.Body, &headingsJSON, &metadataJSON, &createdAt, &updatedAt); err != nil {
 			return nil, domain.InternalError("scan document", err)
 		}
 		_ = json.Unmarshal([]byte(headingsJSON), &doc.Headings)
+		_ = json.Unmarshal([]byte(metadataJSON), &doc.Metadata)
 		doc.CreatedAt = mustParseTime(createdAt)
 		doc.UpdatedAt = mustParseTime(updatedAt)
 		docs = append(docs, doc)
@@ -1223,6 +1713,184 @@ ORDER BY doc_id, line_start`)
 		return nil, domain.InternalError("iterate chunks", err)
 	}
 	return result, nil
+}
+
+func (s *Store) loadProjectionStateSnapshots(ctx context.Context, projection string) (map[string]storedProjectionState, error) {
+	rows, err := s.db.QueryContext(ctx, `
+SELECT ref_id, projection_version, updated_at
+FROM projection_states
+WHERE projection_name = ?`, projection)
+	if err != nil {
+		return nil, domain.InternalError("query projection state snapshots", err)
+	}
+	defer rows.Close()
+
+	snapshots := map[string]storedProjectionState{}
+	for rows.Next() {
+		var (
+			refID             string
+			projectionVersion string
+			updatedAt         string
+		)
+		if err := rows.Scan(&refID, &projectionVersion, &updatedAt); err != nil {
+			return nil, domain.InternalError("scan projection state snapshot", err)
+		}
+		snapshots[refID] = storedProjectionState{
+			ProjectionVersion: projectionVersion,
+			UpdatedAt:         mustParseTime(updatedAt),
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, domain.InternalError("iterate projection state snapshots", err)
+	}
+	return snapshots, nil
+}
+
+func (s *Store) loadDocumentLinks(ctx context.Context, query string, nodeID string) ([]domain.DocumentLink, error) {
+	rows, err := s.db.QueryContext(ctx, query, nodeID)
+	if err != nil {
+		return nil, domain.InternalError("query document links", err)
+	}
+	defer rows.Close()
+
+	links := []domain.DocumentLink{}
+	for rows.Next() {
+		var (
+			link       domain.DocumentLink
+			citation   domain.Citation
+			headingRaw sql.NullString
+		)
+		if err := rows.Scan(
+			&link.DocID,
+			&link.Path,
+			&link.Title,
+			&citation.DocID,
+			&citation.ChunkID,
+			&citation.Path,
+			&headingRaw,
+			&citation.LineStart,
+			&citation.LineEnd,
+		); err != nil {
+			return nil, domain.InternalError("scan document link", err)
+		}
+		citation.Heading = headingRaw.String
+		link.Citations = []domain.Citation{citation}
+		links = append(links, link)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, domain.InternalError("iterate document links", err)
+	}
+	return links, nil
+}
+
+func filteredDocumentClauses(query domain.SearchQuery) (string, []any) {
+	clauses := []string{}
+	args := []any{}
+	if prefix := strings.TrimSpace(query.PathPrefix); prefix != "" {
+		clauses = append(clauses, "d.path LIKE ?")
+		args = append(args, prefix+"%")
+	}
+	if query.MetadataKey != "" && query.MetadataValue != "" {
+		clauses = append(clauses, `EXISTS (
+SELECT 1
+FROM document_metadata dm
+WHERE dm.doc_id = d.doc_id AND dm.key_name = ? AND dm.value_text = ?
+)`)
+		args = append(args, strings.ToLower(strings.TrimSpace(query.MetadataKey)), strings.TrimSpace(query.MetadataValue))
+	}
+	return strings.Join(clauses, " AND "), args
+}
+
+func ensureColumn(ctx context.Context, db *sql.DB, table string, column string, definition string) error {
+	rows, err := db.QueryContext(ctx, fmt.Sprintf("PRAGMA table_info(%s)", table))
+	if err != nil {
+		return domain.InternalError("inspect sqlite table", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var (
+			cid        int
+			name       string
+			typ        string
+			notNull    int
+			defaultVal sql.NullString
+			primaryKey int
+		)
+		if err := rows.Scan(&cid, &name, &typ, &notNull, &defaultVal, &primaryKey); err != nil {
+			return domain.InternalError("scan sqlite table info", err)
+		}
+		if name == column {
+			return nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return domain.InternalError("iterate sqlite table info", err)
+	}
+	if _, err := db.ExecContext(ctx, fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", table, column, definition)); err != nil {
+		return domain.InternalError("alter sqlite table", err)
+	}
+	return nil
+}
+
+func supportsHybridSearch(backend domain.BackendKind) bool {
+	return backend == domain.BackendOpenClerk || backend == domain.BackendHybrid
+}
+
+func supportsGraph(backend domain.BackendKind) bool {
+	return backend == domain.BackendOpenClerk || backend == domain.BackendGraph
+}
+
+func supportsRecords(backend domain.BackendKind) bool {
+	return backend == domain.BackendOpenClerk || backend == domain.BackendRecords
+}
+
+func insertProvenanceEvent(ctx context.Context, tx *sql.Tx, event domain.ProvenanceEvent) error {
+	detailsJSON, err := json.Marshal(event.Details)
+	if err != nil {
+		return domain.InternalError("encode provenance event details", err)
+	}
+	if _, err := tx.ExecContext(ctx, `
+INSERT INTO provenance_events (event_id, event_type, ref_kind, ref_id, source_ref, occurred_at, details_json)
+VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		event.EventID,
+		event.EventType,
+		event.RefKind,
+		event.RefID,
+		event.SourceRef,
+		event.OccurredAt.UTC().Format(time.RFC3339Nano),
+		string(detailsJSON),
+	); err != nil {
+		return domain.InternalError("insert provenance event", err)
+	}
+	return nil
+}
+
+func upsertProjectionState(ctx context.Context, tx *sql.Tx, projection domain.ProjectionState) error {
+	detailsJSON, err := json.Marshal(projection.Details)
+	if err != nil {
+		return domain.InternalError("encode projection state details", err)
+	}
+	if _, err := tx.ExecContext(ctx, `
+INSERT INTO projection_states (projection_name, ref_kind, ref_id, source_ref, freshness, projection_version, updated_at, details_json)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(projection_name, ref_kind, ref_id) DO UPDATE SET
+	source_ref = excluded.source_ref,
+	freshness = excluded.freshness,
+	projection_version = excluded.projection_version,
+	updated_at = excluded.updated_at,
+	details_json = excluded.details_json`,
+		projection.Projection,
+		projection.RefKind,
+		projection.RefID,
+		projection.SourceRef,
+		projection.Freshness,
+		projection.ProjectionVersion,
+		projection.UpdatedAt.UTC().Format(time.RFC3339Nano),
+		string(detailsJSON),
+	); err != nil {
+		return domain.InternalError("upsert projection state", err)
+	}
+	return nil
 }
 
 func normalizePath(raw string) (string, error) {

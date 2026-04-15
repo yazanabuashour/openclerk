@@ -12,6 +12,7 @@ import (
 	ftsclient "github.com/yazanabuashour/openclerk/client/fts"
 	graphclient "github.com/yazanabuashour/openclerk/client/graph"
 	hybridclient "github.com/yazanabuashour/openclerk/client/hybrid"
+	openclerkclient "github.com/yazanabuashour/openclerk/client/openclerk"
 	recordsclient "github.com/yazanabuashour/openclerk/client/records"
 	"github.com/yazanabuashour/openclerk/internal/api"
 	"github.com/yazanabuashour/openclerk/internal/app"
@@ -98,6 +99,20 @@ func OpenFTS(cfg Config) (*ftsclient.ClientWithResponses, *Runtime, error) {
 	return client, runtime, nil
 }
 
+// Open creates the primary embedded OpenClerk client without binding a local port.
+func Open(cfg Config) (*openclerkclient.ClientWithResponses, *Runtime, error) {
+	runtime, err := newRuntime(domain.BackendOpenClerk, withDefaultEmbeddingProvider(cfg))
+	if err != nil {
+		return nil, nil, err
+	}
+	client, err := openclerkclient.NewClientWithResponses(inProcessBaseURL, openclerkclient.WithHTTPClient(handlerDoer{handler: runtime.handler}))
+	if err != nil {
+		_ = runtime.Close()
+		return nil, nil, err
+	}
+	return client, runtime, nil
+}
+
 // OpenHybrid creates an embedded hybrid client without binding a local port.
 func OpenHybrid(cfg Config) (*hybridclient.ClientWithResponses, *Runtime, error) {
 	runtime, err := newRuntime(domain.BackendHybrid, cfg)
@@ -160,6 +175,13 @@ func newRuntime(backend domain.BackendKind, cfg Config) (*Runtime, error) {
 		service: service,
 		handler: api.NewHandler(service),
 	}, nil
+}
+
+func withDefaultEmbeddingProvider(cfg Config) Config {
+	if strings.TrimSpace(cfg.EmbeddingProvider) == "" {
+		cfg.EmbeddingProvider = "local"
+	}
+	return cfg
 }
 
 func resolveDataDir(cfg Config) (string, error) {

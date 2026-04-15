@@ -26,12 +26,20 @@ func (s *Service) Search(ctx context.Context, query domain.SearchQuery) (domain.
 	return s.store.Search(ctx, query)
 }
 
+func (s *Service) ListDocuments(ctx context.Context, query domain.DocumentListQuery) (domain.DocumentListResult, error) {
+	return s.store.ListDocuments(ctx, query)
+}
+
 func (s *Service) CreateDocument(ctx context.Context, input domain.CreateDocumentInput) (domain.Document, error) {
 	return s.store.CreateDocument(ctx, input)
 }
 
 func (s *Service) GetDocument(ctx context.Context, docID string) (domain.Document, error) {
 	return s.store.GetDocument(ctx, docID)
+}
+
+func (s *Service) GetDocumentLinks(ctx context.Context, docID string) (domain.DocumentLinks, error) {
+	return s.store.GetDocumentLinks(ctx, docID)
 }
 
 func (s *Service) AppendDocument(ctx context.Context, docID string, input domain.AppendDocumentInput) (domain.Document, error) {
@@ -56,4 +64,12 @@ func (s *Service) RecordsLookup(ctx context.Context, input domain.RecordLookupIn
 
 func (s *Service) GetRecordEntity(ctx context.Context, entityID string) (domain.RecordEntity, error) {
 	return s.store.GetRecordEntity(ctx, entityID)
+}
+
+func (s *Service) ListProvenanceEvents(ctx context.Context, query domain.ProvenanceEventQuery) (domain.ProvenanceEventResult, error) {
+	return s.store.ListProvenanceEvents(ctx, query)
+}
+
+func (s *Service) ListProjectionStates(ctx context.Context, query domain.ProjectionStateQuery) (domain.ProjectionStateResult, error) {
+	return s.store.ListProjectionStates(ctx, query)
 }

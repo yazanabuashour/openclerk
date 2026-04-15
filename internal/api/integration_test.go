@@ -11,6 +11,7 @@ import (
 	ftsclient "github.com/yazanabuashour/openclerk/client/fts"
 	graphclient "github.com/yazanabuashour/openclerk/client/graph"
 	hybridclient "github.com/yazanabuashour/openclerk/client/hybrid"
+	openclerkclient "github.com/yazanabuashour/openclerk/client/openclerk"
 	recordsclient "github.com/yazanabuashour/openclerk/client/records"
 	"github.com/yazanabuashour/openclerk/internal/api"
 	"github.com/yazanabuashour/openclerk/internal/app"
@@ -259,6 +260,85 @@ Canonical part record.
 	}
 }
 
+func TestOpenClerkUnifiedSurface(t *testing.T) {
+	t.Parallel()
+
+	serverURL := newTestServer(t, domain.BackendOpenClerk, "local")
+	client := openclerkclientClient(t, serverURL)
+
+	source := openclerkCreateDocument(t, client, "notes/architecture/knowledge-plane.md", "Knowledge plane", strings.TrimSpace(`
+---
+type: note
+status: active
+---
+# Knowledge plane
+
+## Summary
+Canonical architecture note.
+`))
+	target := openclerkCreateDocument(t, client, "notes/projects/openclerk-roadmap.md", "Roadmap", strings.TrimSpace(`
+---
+type: project
+status: active
+---
+# Roadmap
+
+## Summary
+See the [knowledge plane](../architecture/knowledge-plane.md).
+`))
+	openclerkCreateDocument(t, client, "records/assets/transmission-solenoid.md", "Transmission solenoid", strings.TrimSpace(`
+---
+entity_type: part
+entity_name: Transmission solenoid
+entity_id: transmission-solenoid
+type: record
+status: active
+---
+# Transmission solenoid
+
+## Summary
+Canonical promoted-domain baseline.
+
+## Facts
+- sku: SOL-1
+- vendor: OpenClerk Motors
+`))
+
+	pathPrefix := "notes/"
+	list, err := client.ListDocumentsWithResponse(context.Background(), &openclerkclient.ListDocumentsParams{PathPrefix: &pathPrefix})
+	if err != nil {
+		t.Fatalf("list documents: %v", err)
+	}
+	if list.JSON200 == nil || len(list.JSON200.Documents) != 2 {
+		t.Fatalf("list documents response = %#v", list.JSON200)
+	}
+
+	links, err := client.GetDocumentLinksWithResponse(context.Background(), target.docID)
+	if err != nil {
+		t.Fatalf("document links: %v", err)
+	}
+	if links.JSON200 == nil || len(links.JSON200.Outgoing) != 1 || links.JSON200.Outgoing[0].DocId != source.docID {
+		t.Fatalf("document links response = %#v", links.JSON200)
+	}
+
+	lookup, err := client.RecordsLookupWithResponse(context.Background(), openclerkclient.RecordsLookupRequest{Text: "solenoid"})
+	if err != nil {
+		t.Fatalf("records lookup: %v", err)
+	}
+	if lookup.JSON200 == nil || len(lookup.JSON200.Entities) != 1 {
+		t.Fatalf("records lookup response = %#v", lookup.JSON200)
+	}
+
+	projection := "records"
+	projections, err := client.ListProjectionStatesWithResponse(context.Background(), &openclerkclient.ListProjectionStatesParams{Projection: &projection})
+	if err != nil {
+		t.Fatalf("projection states: %v", err)
+	}
+	if projections.JSON200 == nil || len(projections.JSON200.Projections) == 0 {
+		t.Fatalf("projection states response = %#v", projections.JSON200)
+	}
+}
+
 func newTestServer(t *testing.T, backend domain.BackendKind, provider string) string {
 	t.Helper()
 
@@ -339,6 +419,31 @@ func hybridDriver(provider string) coreDriver {
 			return hybridGetChunk(t, client.(*hybridclient.ClientWithResponses), chunkID)
 		},
 	}
+}
+
+func openclerkclientClient(t *testing.T, serverURL string) *openclerkclient.ClientWithResponses {
+	t.Helper()
+	client, err := openclerkclient.NewClientWithResponses(serverURL)
+	if err != nil {
+		t.Fatalf("new openclerk client: %v", err)
+	}
+	return client
+}
+
+func openclerkCreateDocument(t *testing.T, client *openclerkclient.ClientWithResponses, path, title, body string) documentInfo {
+	t.Helper()
+	response, err := client.CreateDocumentWithResponse(context.Background(), openclerkclient.CreateDocumentRequest{
+		Path:  path,
+		Title: title,
+		Body:  body + "\n",
+	})
+	if err != nil {
+		t.Fatalf("openclerk create document: %v", err)
+	}
+	if response.JSON201 == nil {
+		t.Fatalf("openclerk create document error: %s", string(response.Body))
+	}
+	return documentInfo{docID: response.JSON201.DocId, path: response.JSON201.Path}
 }
 
 func graphDriver() coreDriver {

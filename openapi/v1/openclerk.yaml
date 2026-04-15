@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: OpenClerk Agent Store API
+  title: OpenClerk Agent Knowledge Plane API
   version: 0.1.0
-  description: Contract-first local document store API for agent-facing retrieval and document operations.
+  description: Contract-first local agent-facing knowledge plane for canonical documents, derived graph traversal, promoted domain lookup, and provenance inspection.
 servers:
   - url: http://127.0.0.1:8080
 tags:
@@ -11,6 +11,7 @@ tags:
   - name: search
   - name: graph
   - name: records
+  - name: provenance
 paths:
   /v1/capabilities:
     get:
@@ -47,6 +48,43 @@ paths:
         default:
           $ref: "#/components/responses/ErrorResponse"
   /v1/documents:
+    get:
+      operationId: listDocuments
+      tags: [documents]
+      summary: List canonical documents
+      parameters:
+        - name: pathPrefix
+          in: query
+          schema:
+            type: string
+        - name: metadataKey
+          in: query
+          schema:
+            type: string
+        - name: metadataValue
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Document listing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentListResponse"
+        default:
+          $ref: "#/components/responses/ErrorResponse"
     post:
       operationId: createDocument
       tags: [documents]
@@ -80,6 +118,22 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Document"
+        default:
+          $ref: "#/components/responses/ErrorResponse"
+  /v1/documents/{docId}/links:
+    get:
+      operationId: getDocumentLinks
+      tags: [documents]
+      summary: Get outgoing and incoming derived links for a document
+      parameters:
+        - $ref: "#/components/parameters/DocId"
+      responses:
+        "200":
+          description: Document link neighborhood
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentLinksResponse"
         default:
           $ref: "#/components/responses/ErrorResponse"
   /v1/documents/{docId}:append:
@@ -198,6 +252,82 @@ paths:
                 $ref: "#/components/schemas/RecordEntity"
         default:
           $ref: "#/components/responses/ErrorResponse"
+  /v1/provenance/events:
+    get:
+      operationId: listProvenanceEvents
+      tags: [provenance]
+      summary: List provenance and truth-sync events
+      parameters:
+        - name: refKind
+          in: query
+          schema:
+            type: string
+        - name: refId
+          in: query
+          schema:
+            type: string
+        - name: sourceRef
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Provenance event listing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProvenanceEventsResponse"
+        default:
+          $ref: "#/components/responses/ErrorResponse"
+  /v1/provenance/projections:
+    get:
+      operationId: listProjectionStates
+      tags: [provenance]
+      summary: List current derived projection states
+      parameters:
+        - name: projection
+          in: query
+          schema:
+            type: string
+        - name: refKind
+          in: query
+          schema:
+            type: string
+        - name: refId
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Projection state listing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectionStatesResponse"
+        default:
+          $ref: "#/components/responses/ErrorResponse"
 components:
   parameters:
     DocId:
@@ -237,7 +367,7 @@ components:
       properties:
         backend:
           type: string
-          enum: [fts, hybrid, graph, records]
+          enum: [openclerk, fts, hybrid, graph, records]
         authMode:
           type: string
           enum: [none]
@@ -250,7 +380,7 @@ components:
           type: array
           items:
             type: string
-            enum: [graph, records]
+            enum: [graph, records, provenance]
     Document:
       type: object
       additionalProperties: false
@@ -260,6 +390,7 @@ components:
         - title
         - body
         - headings
+        - metadata
         - createdAt
         - updatedAt
       properties:
@@ -275,12 +406,89 @@ components:
           type: array
           items:
             type: string
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
         createdAt:
           type: string
           format: date-time
         updatedAt:
           type: string
           format: date-time
+    DocumentSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - docId
+        - path
+        - title
+        - metadata
+        - updatedAt
+      properties:
+        docId:
+          type: string
+        path:
+          type: string
+        title:
+          type: string
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+        updatedAt:
+          type: string
+          format: date-time
+    DocumentListResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - documents
+        - pageInfo
+      properties:
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentSummary"
+        pageInfo:
+          $ref: "#/components/schemas/PageInfo"
+    DocumentLink:
+      type: object
+      additionalProperties: false
+      required:
+        - docId
+        - path
+        - title
+        - citations
+      properties:
+        docId:
+          type: string
+        path:
+          type: string
+        title:
+          type: string
+        citations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Citation"
+    DocumentLinksResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - docId
+        - outgoing
+        - incoming
+      properties:
+        docId:
+          type: string
+        outgoing:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentLink"
+        incoming:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentLink"
     Chunk:
       type: object
       additionalProperties: false
@@ -321,6 +529,12 @@ components:
           maximum: 100
           default: 10
         cursor:
+          type: string
+        pathPrefix:
+          type: string
+        metadataKey:
+          type: string
+        metadataValue:
           type: string
     SearchResponse:
       type: object
@@ -577,6 +791,96 @@ components:
         observedAt:
           type: string
           format: date-time
+    ProvenanceEvent:
+      type: object
+      additionalProperties: false
+      required:
+        - eventId
+        - eventType
+        - refKind
+        - refId
+        - sourceRef
+        - occurredAt
+        - details
+      properties:
+        eventId:
+          type: string
+        eventType:
+          type: string
+        refKind:
+          type: string
+          enum: [document, chunk, entity, projection]
+        refId:
+          type: string
+        sourceRef:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
+        details:
+          type: object
+          additionalProperties:
+            type: string
+    ProvenanceEventsResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - events
+        - pageInfo
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProvenanceEvent"
+        pageInfo:
+          $ref: "#/components/schemas/PageInfo"
+    ProjectionState:
+      type: object
+      additionalProperties: false
+      required:
+        - projection
+        - refKind
+        - refId
+        - sourceRef
+        - freshness
+        - projectionVersion
+        - updatedAt
+        - details
+      properties:
+        projection:
+          type: string
+        refKind:
+          type: string
+          enum: [document, chunk, entity, projection]
+        refId:
+          type: string
+        sourceRef:
+          type: string
+        freshness:
+          type: string
+          enum: [fresh, stale]
+        projectionVersion:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+        details:
+          type: object
+          additionalProperties:
+            type: string
+    ProjectionStatesResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - projections
+        - pageInfo
+      properties:
+        projections:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectionState"
+        pageInfo:
+          $ref: "#/components/schemas/PageInfo"
     ErrorEnvelope:
       type: object
       additionalProperties: false

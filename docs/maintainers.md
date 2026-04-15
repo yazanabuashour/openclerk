@@ -2,7 +2,7 @@
 
 This repository uses **Beads** (`bd`) in embedded mode for maintainer task tracking.
 
-The public product surface is the embedded Go module exposed through [`client/local`](../client/local) and the generated backend clients. There is no hosted deployment target, and the default user path does not require a daemon or bound port.
+The public product surface is the embedded Go module exposed through [`client/local`](../client/local) and the generated [`client/openclerk`](../client/openclerk) SDK. The backend-specific generated clients remain in the repo as eval fixtures. There is no hosted deployment target, and the default user path does not require a daemon or bound port.
 
 ## Initial Setup
 

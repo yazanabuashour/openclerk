@@ -33,10 +33,11 @@ func (e CapabilitiesAuthMode) Valid() bool {
 
 // Defines values for CapabilitiesBackend.
 const (
-	CapabilitiesBackendFts     CapabilitiesBackend = "fts"
-	CapabilitiesBackendGraph   CapabilitiesBackend = "graph"
-	CapabilitiesBackendHybrid  CapabilitiesBackend = "hybrid"
-	CapabilitiesBackendRecords CapabilitiesBackend = "records"
+	CapabilitiesBackendFts       CapabilitiesBackend = "fts"
+	CapabilitiesBackendGraph     CapabilitiesBackend = "graph"
+	CapabilitiesBackendHybrid    CapabilitiesBackend = "hybrid"
+	CapabilitiesBackendOpenclerk CapabilitiesBackend = "openclerk"
+	CapabilitiesBackendRecords   CapabilitiesBackend = "records"
 )
 
 // Valid indicates whether the value is a known member of the CapabilitiesBackend enum.
@@ -48,6 +49,8 @@ func (e CapabilitiesBackend) Valid() bool {
 		return true
 	case CapabilitiesBackendHybrid:
 		return true
+	case CapabilitiesBackendOpenclerk:
+		return true
 	case CapabilitiesBackendRecords:
 		return true
 	default:
@@ -57,14 +60,17 @@ func (e CapabilitiesBackend) Valid() bool {
 
 // Defines values for CapabilitiesExtensions.
 const (
-	CapabilitiesExtensionsGraph   CapabilitiesExtensions = "graph"
-	CapabilitiesExtensionsRecords CapabilitiesExtensions = "records"
+	CapabilitiesExtensionsGraph      CapabilitiesExtensions = "graph"
+	CapabilitiesExtensionsProvenance CapabilitiesExtensions = "provenance"
+	CapabilitiesExtensionsRecords    CapabilitiesExtensions = "records"
 )
 
 // Valid indicates whether the value is a known member of the CapabilitiesExtensions enum.
 func (e CapabilitiesExtensions) Valid() bool {
 	switch e {
 	case CapabilitiesExtensionsGraph:
+		return true
+	case CapabilitiesExtensionsProvenance:
 		return true
 	case CapabilitiesExtensionsRecords:
 		return true
@@ -139,6 +145,72 @@ func (e GraphNodeType) Valid() bool {
 	}
 }
 
+// Defines values for ProjectionStateFreshness.
+const (
+	Fresh ProjectionStateFreshness = "fresh"
+	Stale ProjectionStateFreshness = "stale"
+)
+
+// Valid indicates whether the value is a known member of the ProjectionStateFreshness enum.
+func (e ProjectionStateFreshness) Valid() bool {
+	switch e {
+	case Fresh:
+		return true
+	case Stale:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProjectionStateRefKind.
+const (
+	ProjectionStateRefKindChunk      ProjectionStateRefKind = "chunk"
+	ProjectionStateRefKindDocument   ProjectionStateRefKind = "document"
+	ProjectionStateRefKindEntity     ProjectionStateRefKind = "entity"
+	ProjectionStateRefKindProjection ProjectionStateRefKind = "projection"
+)
+
+// Valid indicates whether the value is a known member of the ProjectionStateRefKind enum.
+func (e ProjectionStateRefKind) Valid() bool {
+	switch e {
+	case ProjectionStateRefKindChunk:
+		return true
+	case ProjectionStateRefKindDocument:
+		return true
+	case ProjectionStateRefKindEntity:
+		return true
+	case ProjectionStateRefKindProjection:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProvenanceEventRefKind.
+const (
+	ProvenanceEventRefKindChunk      ProvenanceEventRefKind = "chunk"
+	ProvenanceEventRefKindDocument   ProvenanceEventRefKind = "document"
+	ProvenanceEventRefKindEntity     ProvenanceEventRefKind = "entity"
+	ProvenanceEventRefKindProjection ProvenanceEventRefKind = "projection"
+)
+
+// Valid indicates whether the value is a known member of the ProvenanceEventRefKind enum.
+func (e ProvenanceEventRefKind) Valid() bool {
+	switch e {
+	case ProvenanceEventRefKindChunk:
+		return true
+	case ProvenanceEventRefKindDocument:
+		return true
+	case ProvenanceEventRefKindEntity:
+		return true
+	case ProvenanceEventRefKindProjection:
+		return true
+	default:
+		return false
+	}
+}
+
 // AppendDocumentRequest defines model for AppendDocumentRequest.
 type AppendDocumentRequest struct {
 	Content string `json:"content"`
@@ -194,13 +266,44 @@ type CreateDocumentRequest struct {
 
 // Document defines model for Document.
 type Document struct {
-	Body      string    `json:"body"`
-	CreatedAt time.Time `json:"createdAt"`
-	DocId     string    `json:"docId"`
-	Headings  []string  `json:"headings"`
-	Path      string    `json:"path"`
-	Title     string    `json:"title"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	Body      string            `json:"body"`
+	CreatedAt time.Time         `json:"createdAt"`
+	DocId     string            `json:"docId"`
+	Headings  []string          `json:"headings"`
+	Metadata  map[string]string `json:"metadata"`
+	Path      string            `json:"path"`
+	Title     string            `json:"title"`
+	UpdatedAt time.Time         `json:"updatedAt"`
+}
+
+// DocumentLink defines model for DocumentLink.
+type DocumentLink struct {
+	Citations []Citation `json:"citations"`
+	DocId     string     `json:"docId"`
+	Path      string     `json:"path"`
+	Title     string     `json:"title"`
+}
+
+// DocumentLinksResponse defines model for DocumentLinksResponse.
+type DocumentLinksResponse struct {
+	DocId    string         `json:"docId"`
+	Incoming []DocumentLink `json:"incoming"`
+	Outgoing []DocumentLink `json:"outgoing"`
+}
+
+// DocumentListResponse defines model for DocumentListResponse.
+type DocumentListResponse struct {
+	Documents []DocumentSummary `json:"documents"`
+	PageInfo  PageInfo          `json:"pageInfo"`
+}
+
+// DocumentSummary defines model for DocumentSummary.
+type DocumentSummary struct {
+	DocId     string            `json:"docId"`
+	Metadata  map[string]string `json:"metadata"`
+	Path      string            `json:"path"`
+	Title     string            `json:"title"`
+	UpdatedAt time.Time         `json:"updatedAt"`
 }
 
 // ErrorEnvelope defines model for ErrorEnvelope.
@@ -255,6 +358,50 @@ type PageInfo struct {
 	NextCursor *string `json:"nextCursor,omitempty"`
 }
 
+// ProjectionState defines model for ProjectionState.
+type ProjectionState struct {
+	Details           map[string]string        `json:"details"`
+	Freshness         ProjectionStateFreshness `json:"freshness"`
+	Projection        string                   `json:"projection"`
+	ProjectionVersion string                   `json:"projectionVersion"`
+	RefId             string                   `json:"refId"`
+	RefKind           ProjectionStateRefKind   `json:"refKind"`
+	SourceRef         string                   `json:"sourceRef"`
+	UpdatedAt         time.Time                `json:"updatedAt"`
+}
+
+// ProjectionStateFreshness defines model for ProjectionState.Freshness.
+type ProjectionStateFreshness string
+
+// ProjectionStateRefKind defines model for ProjectionState.RefKind.
+type ProjectionStateRefKind string
+
+// ProjectionStatesResponse defines model for ProjectionStatesResponse.
+type ProjectionStatesResponse struct {
+	PageInfo    PageInfo          `json:"pageInfo"`
+	Projections []ProjectionState `json:"projections"`
+}
+
+// ProvenanceEvent defines model for ProvenanceEvent.
+type ProvenanceEvent struct {
+	Details    map[string]string      `json:"details"`
+	EventId    string                 `json:"eventId"`
+	EventType  string                 `json:"eventType"`
+	OccurredAt time.Time              `json:"occurredAt"`
+	RefId      string                 `json:"refId"`
+	RefKind    ProvenanceEventRefKind `json:"refKind"`
+	SourceRef  string                 `json:"sourceRef"`
+}
+
+// ProvenanceEventRefKind defines model for ProvenanceEvent.RefKind.
+type ProvenanceEventRefKind string
+
+// ProvenanceEventsResponse defines model for ProvenanceEventsResponse.
+type ProvenanceEventsResponse struct {
+	Events   []ProvenanceEvent `json:"events"`
+	PageInfo PageInfo          `json:"pageInfo"`
+}
+
 // RecordEntity defines model for RecordEntity.
 type RecordEntity struct {
 	Citations  []Citation   `json:"citations"`
@@ -306,9 +453,12 @@ type SearchHit struct {
 
 // SearchQuery defines model for SearchQuery.
 type SearchQuery struct {
-	Cursor *string `json:"cursor,omitempty"`
-	Limit  *int    `json:"limit,omitempty"`
-	Text   string  `json:"text"`
+	Cursor        *string `json:"cursor,omitempty"`
+	Limit         *int    `json:"limit,omitempty"`
+	MetadataKey   *string `json:"metadataKey,omitempty"`
+	MetadataValue *string `json:"metadataValue,omitempty"`
+	PathPrefix    *string `json:"pathPrefix,omitempty"`
+	Text          string  `json:"text"`
 }
 
 // SearchResponse defines model for SearchResponse.
@@ -328,6 +478,33 @@ type EntityId = string
 
 // ErrorResponse defines model for ErrorResponse.
 type ErrorResponse = ErrorEnvelope
+
+// ListDocumentsParams defines parameters for ListDocuments.
+type ListDocumentsParams struct {
+	PathPrefix    *string `form:"pathPrefix,omitempty" json:"pathPrefix,omitempty"`
+	MetadataKey   *string `form:"metadataKey,omitempty" json:"metadataKey,omitempty"`
+	MetadataValue *string `form:"metadataValue,omitempty" json:"metadataValue,omitempty"`
+	Limit         *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor        *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// ListProvenanceEventsParams defines parameters for ListProvenanceEvents.
+type ListProvenanceEventsParams struct {
+	RefKind   *string `form:"refKind,omitempty" json:"refKind,omitempty"`
+	RefId     *string `form:"refId,omitempty" json:"refId,omitempty"`
+	SourceRef *string `form:"sourceRef,omitempty" json:"sourceRef,omitempty"`
+	Limit     *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor    *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// ListProjectionStatesParams defines parameters for ListProjectionStates.
+type ListProjectionStatesParams struct {
+	Projection *string `form:"projection,omitempty" json:"projection,omitempty"`
+	RefKind    *string `form:"refKind,omitempty" json:"refKind,omitempty"`
+	RefId      *string `form:"refId,omitempty" json:"refId,omitempty"`
+	Limit      *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor     *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
 
 // CreateDocumentJSONRequestBody defines body for CreateDocument for application/json ContentType.
 type CreateDocumentJSONRequestBody = CreateDocumentRequest
@@ -355,12 +532,18 @@ type ServerInterface interface {
 	// Get an indexed chunk
 	// (GET /v1/chunks/{chunkId})
 	GetChunk(w http.ResponseWriter, r *http.Request, chunkId ChunkId)
+	// List canonical documents
+	// (GET /v1/documents)
+	ListDocuments(w http.ResponseWriter, r *http.Request, params ListDocumentsParams)
 	// Create a canonical markdown document
 	// (POST /v1/documents)
 	CreateDocument(w http.ResponseWriter, r *http.Request)
 	// Get a canonical document
 	// (GET /v1/documents/{docId})
 	GetDocument(w http.ResponseWriter, r *http.Request, docId DocId)
+	// Get outgoing and incoming derived links for a document
+	// (GET /v1/documents/{docId}/links)
+	GetDocumentLinks(w http.ResponseWriter, r *http.Request, docId DocId)
 	// Append markdown content to a canonical document
 	// (POST /v1/documents/{docId}:append)
 	AppendDocument(w http.ResponseWriter, r *http.Request, docId DocId)
@@ -376,6 +559,12 @@ type ServerInterface interface {
 	// Lookup promoted records
 	// (POST /v1/extensions/records/lookup)
 	RecordsLookup(w http.ResponseWriter, r *http.Request)
+	// List provenance and truth-sync events
+	// (GET /v1/provenance/events)
+	ListProvenanceEvents(w http.ResponseWriter, r *http.Request, params ListProvenanceEventsParams)
+	// List current derived projection states
+	// (GET /v1/provenance/projections)
+	ListProjectionStates(w http.ResponseWriter, r *http.Request, params ListProjectionStatesParams)
 	// Search indexed content
 	// (POST /v1/search/query)
 	SearchQuery(w http.ResponseWriter, r *http.Request)
@@ -429,6 +618,65 @@ func (siw *ServerInterfaceWrapper) GetChunk(w http.ResponseWriter, r *http.Reque
 	handler.ServeHTTP(w, r)
 }
 
+// ListDocuments operation middleware
+func (siw *ServerInterfaceWrapper) ListDocuments(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListDocumentsParams
+
+	// ------------- Optional query parameter "pathPrefix" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pathPrefix", r.URL.Query(), &params.PathPrefix, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pathPrefix", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "metadataKey" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "metadataKey", r.URL.Query(), &params.MetadataKey, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "metadataKey", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "metadataValue" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "metadataValue", r.URL.Query(), &params.MetadataValue, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "metadataValue", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDocuments(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateDocument operation middleware
 func (siw *ServerInterfaceWrapper) CreateDocument(w http.ResponseWriter, r *http.Request) {
 
@@ -459,6 +707,31 @@ func (siw *ServerInterfaceWrapper) GetDocument(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetDocument(w, r, docId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetDocumentLinks operation middleware
+func (siw *ServerInterfaceWrapper) GetDocumentLinks(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "docId" -------------
+	var docId DocId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "docId", r.PathValue("docId"), &docId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "docId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDocumentLinks(w, r, docId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -562,6 +835,124 @@ func (siw *ServerInterfaceWrapper) RecordsLookup(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RecordsLookup(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListProvenanceEvents operation middleware
+func (siw *ServerInterfaceWrapper) ListProvenanceEvents(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListProvenanceEventsParams
+
+	// ------------- Optional query parameter "refKind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "refKind", r.URL.Query(), &params.RefKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "refKind", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "refId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "refId", r.URL.Query(), &params.RefId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "refId", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "sourceRef" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sourceRef", r.URL.Query(), &params.SourceRef, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sourceRef", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProvenanceEvents(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListProjectionStates operation middleware
+func (siw *ServerInterfaceWrapper) ListProjectionStates(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListProjectionStatesParams
+
+	// ------------- Optional query parameter "projection" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "projection", r.URL.Query(), &params.Projection, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "projection", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "refKind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "refKind", r.URL.Query(), &params.RefKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "refKind", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "refId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "refId", r.URL.Query(), &params.RefId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "refId", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProjectionStates(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -707,13 +1098,17 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 
 	m.HandleFunc("GET "+options.BaseURL+"/v1/capabilities", wrapper.GetCapabilities)
 	m.HandleFunc("GET "+options.BaseURL+"/v1/chunks/{chunkId}", wrapper.GetChunk)
+	m.HandleFunc("GET "+options.BaseURL+"/v1/documents", wrapper.ListDocuments)
 	m.HandleFunc("POST "+options.BaseURL+"/v1/documents", wrapper.CreateDocument)
 	m.HandleFunc("GET "+options.BaseURL+"/v1/documents/{docId}", wrapper.GetDocument)
+	m.HandleFunc("GET "+options.BaseURL+"/v1/documents/{docId}/links", wrapper.GetDocumentLinks)
 	m.HandleFunc("POST "+options.BaseURL+"/v1/documents/{docId}:append", wrapper.AppendDocument)
 	m.HandleFunc("POST "+options.BaseURL+"/v1/documents/{docId}:replace-section", wrapper.ReplaceDocumentSection)
 	m.HandleFunc("POST "+options.BaseURL+"/v1/extensions/graph/neighborhood", wrapper.GraphNeighborhood)
 	m.HandleFunc("GET "+options.BaseURL+"/v1/extensions/records/entities/{entityId}", wrapper.GetRecordEntity)
 	m.HandleFunc("POST "+options.BaseURL+"/v1/extensions/records/lookup", wrapper.RecordsLookup)
+	m.HandleFunc("GET "+options.BaseURL+"/v1/provenance/events", wrapper.ListProvenanceEvents)
+	m.HandleFunc("GET "+options.BaseURL+"/v1/provenance/projections", wrapper.ListProjectionStates)
 	m.HandleFunc("POST "+options.BaseURL+"/v1/search/query", wrapper.SearchQuery)
 
 	return m
@@ -778,6 +1173,35 @@ func (response GetChunkdefaultJSONResponse) VisitGetChunkResponse(w http.Respons
 	return json.NewEncoder(w).Encode(response.Body)
 }
 
+type ListDocumentsRequestObject struct {
+	Params ListDocumentsParams
+}
+
+type ListDocumentsResponseObject interface {
+	VisitListDocumentsResponse(w http.ResponseWriter) error
+}
+
+type ListDocuments200JSONResponse DocumentListResponse
+
+func (response ListDocuments200JSONResponse) VisitListDocumentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListDocumentsdefaultJSONResponse struct {
+	Body       ErrorEnvelope
+	StatusCode int
+}
+
+func (response ListDocumentsdefaultJSONResponse) VisitListDocumentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+
+	return json.NewEncoder(w).Encode(response.Body)
+}
+
 type CreateDocumentRequestObject struct {
 	Body *CreateDocumentJSONRequestBody
 }
@@ -830,6 +1254,35 @@ type GetDocumentdefaultJSONResponse struct {
 }
 
 func (response GetDocumentdefaultJSONResponse) VisitGetDocumentResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+
+	return json.NewEncoder(w).Encode(response.Body)
+}
+
+type GetDocumentLinksRequestObject struct {
+	DocId DocId `json:"docId"`
+}
+
+type GetDocumentLinksResponseObject interface {
+	VisitGetDocumentLinksResponse(w http.ResponseWriter) error
+}
+
+type GetDocumentLinks200JSONResponse DocumentLinksResponse
+
+func (response GetDocumentLinks200JSONResponse) VisitGetDocumentLinksResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetDocumentLinksdefaultJSONResponse struct {
+	Body       ErrorEnvelope
+	StatusCode int
+}
+
+func (response GetDocumentLinksdefaultJSONResponse) VisitGetDocumentLinksResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(response.StatusCode)
 
@@ -983,6 +1436,64 @@ func (response RecordsLookupdefaultJSONResponse) VisitRecordsLookupResponse(w ht
 	return json.NewEncoder(w).Encode(response.Body)
 }
 
+type ListProvenanceEventsRequestObject struct {
+	Params ListProvenanceEventsParams
+}
+
+type ListProvenanceEventsResponseObject interface {
+	VisitListProvenanceEventsResponse(w http.ResponseWriter) error
+}
+
+type ListProvenanceEvents200JSONResponse ProvenanceEventsResponse
+
+func (response ListProvenanceEvents200JSONResponse) VisitListProvenanceEventsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListProvenanceEventsdefaultJSONResponse struct {
+	Body       ErrorEnvelope
+	StatusCode int
+}
+
+func (response ListProvenanceEventsdefaultJSONResponse) VisitListProvenanceEventsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+
+	return json.NewEncoder(w).Encode(response.Body)
+}
+
+type ListProjectionStatesRequestObject struct {
+	Params ListProjectionStatesParams
+}
+
+type ListProjectionStatesResponseObject interface {
+	VisitListProjectionStatesResponse(w http.ResponseWriter) error
+}
+
+type ListProjectionStates200JSONResponse ProjectionStatesResponse
+
+func (response ListProjectionStates200JSONResponse) VisitListProjectionStatesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListProjectionStatesdefaultJSONResponse struct {
+	Body       ErrorEnvelope
+	StatusCode int
+}
+
+func (response ListProjectionStatesdefaultJSONResponse) VisitListProjectionStatesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+
+	return json.NewEncoder(w).Encode(response.Body)
+}
+
 type SearchQueryRequestObject struct {
 	Body *SearchQueryJSONRequestBody
 }
@@ -1020,12 +1531,18 @@ type StrictServerInterface interface {
 	// Get an indexed chunk
 	// (GET /v1/chunks/{chunkId})
 	GetChunk(ctx context.Context, request GetChunkRequestObject) (GetChunkResponseObject, error)
+	// List canonical documents
+	// (GET /v1/documents)
+	ListDocuments(ctx context.Context, request ListDocumentsRequestObject) (ListDocumentsResponseObject, error)
 	// Create a canonical markdown document
 	// (POST /v1/documents)
 	CreateDocument(ctx context.Context, request CreateDocumentRequestObject) (CreateDocumentResponseObject, error)
 	// Get a canonical document
 	// (GET /v1/documents/{docId})
 	GetDocument(ctx context.Context, request GetDocumentRequestObject) (GetDocumentResponseObject, error)
+	// Get outgoing and incoming derived links for a document
+	// (GET /v1/documents/{docId}/links)
+	GetDocumentLinks(ctx context.Context, request GetDocumentLinksRequestObject) (GetDocumentLinksResponseObject, error)
 	// Append markdown content to a canonical document
 	// (POST /v1/documents/{docId}:append)
 	AppendDocument(ctx context.Context, request AppendDocumentRequestObject) (AppendDocumentResponseObject, error)
@@ -1041,6 +1558,12 @@ type StrictServerInterface interface {
 	// Lookup promoted records
 	// (POST /v1/extensions/records/lookup)
 	RecordsLookup(ctx context.Context, request RecordsLookupRequestObject) (RecordsLookupResponseObject, error)
+	// List provenance and truth-sync events
+	// (GET /v1/provenance/events)
+	ListProvenanceEvents(ctx context.Context, request ListProvenanceEventsRequestObject) (ListProvenanceEventsResponseObject, error)
+	// List current derived projection states
+	// (GET /v1/provenance/projections)
+	ListProjectionStates(ctx context.Context, request ListProjectionStatesRequestObject) (ListProjectionStatesResponseObject, error)
 	// Search indexed content
 	// (POST /v1/search/query)
 	SearchQuery(ctx context.Context, request SearchQueryRequestObject) (SearchQueryResponseObject, error)
@@ -1125,6 +1648,32 @@ func (sh *strictHandler) GetChunk(w http.ResponseWriter, r *http.Request, chunkI
 	}
 }
 
+// ListDocuments operation middleware
+func (sh *strictHandler) ListDocuments(w http.ResponseWriter, r *http.Request, params ListDocumentsParams) {
+	var request ListDocumentsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListDocuments(ctx, request.(ListDocumentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListDocuments")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListDocumentsResponseObject); ok {
+		if err := validResponse.VisitListDocumentsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // CreateDocument operation middleware
 func (sh *strictHandler) CreateDocument(w http.ResponseWriter, r *http.Request) {
 	var request CreateDocumentRequestObject
@@ -1175,6 +1724,32 @@ func (sh *strictHandler) GetDocument(w http.ResponseWriter, r *http.Request, doc
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetDocumentResponseObject); ok {
 		if err := validResponse.VisitGetDocumentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetDocumentLinks operation middleware
+func (sh *strictHandler) GetDocumentLinks(w http.ResponseWriter, r *http.Request, docId DocId) {
+	var request GetDocumentLinksRequestObject
+
+	request.DocId = docId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetDocumentLinks(ctx, request.(GetDocumentLinksRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetDocumentLinks")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetDocumentLinksResponseObject); ok {
+		if err := validResponse.VisitGetDocumentLinksResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -1329,6 +1904,58 @@ func (sh *strictHandler) RecordsLookup(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(RecordsLookupResponseObject); ok {
 		if err := validResponse.VisitRecordsLookupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListProvenanceEvents operation middleware
+func (sh *strictHandler) ListProvenanceEvents(w http.ResponseWriter, r *http.Request, params ListProvenanceEventsParams) {
+	var request ListProvenanceEventsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListProvenanceEvents(ctx, request.(ListProvenanceEventsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListProvenanceEvents")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListProvenanceEventsResponseObject); ok {
+		if err := validResponse.VisitListProvenanceEventsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListProjectionStates operation middleware
+func (sh *strictHandler) ListProjectionStates(w http.ResponseWriter, r *http.Request, params ListProjectionStatesParams) {
+	var request ListProjectionStatesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListProjectionStates(ctx, request.(ListProjectionStatesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListProjectionStates")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListProjectionStatesResponseObject); ok {
+		if err := validResponse.VisitListProjectionStatesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

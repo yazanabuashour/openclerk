@@ -1,32 +1,29 @@
 # openclerk
 
-openclerk is a local-first, agent-facing document store built from one authored OpenAPI contract, four committed generated Go clients, and an embedded SQLite-backed runtime that does not require a daemon or bound port.
+openclerk is a local-first, agent-facing knowledge plane for notes, documents, promoted records, and provenance-backed retrieval.
 
-## Backend variants
+The public surface is one authored OpenAPI contract, one generated Go client, and one embedded SQLite-backed runtime that does not require a daemon or bound port. Canonical docs remain markdown in the vault; graph traversal and promoted-domain lookup stay derived from those canonical sources.
 
-| Backend | Generated package | Architecture |
-| --- | --- | --- |
-| `fts` | [`client/fts`](client/fts) | Canonical documents + deterministic chunks + SQLite FTS5/BM25 |
-| `hybrid` | [`client/hybrid`](client/hybrid) | FTS core plus persisted local embeddings and reciprocal-rank fusion |
-| `graph` | [`client/graph`](client/graph) | FTS core plus evidence-linked graph projections |
-| `records` | [`client/records`](client/records) | FTS core plus promoted entities and provenance-backed record lookup |
+## Public surface
 
-The contract source of truth is [`openapi/v1/openclerk.yaml`](openapi/v1/openclerk.yaml). The generated Go clients are the public SDK surface, and [`client/local`](client/local) opens those clients against an in-process runtime with no host-level HTTP service.
+- [`client/openclerk`](client/openclerk) is the primary generated SDK.
+- [`client/local`](client/local) opens the embedded runtime in process.
+- [`openapi/v1/openclerk.yaml`](openapi/v1/openclerk.yaml) is the contract source of truth.
+
+The legacy `fts`, `hybrid`, `graph`, and `records` packages remain in the repo as implementation-variant fixtures for evals and internal comparison. They are not the preferred product entrypoint.
 
 ## Install the embedded client
 
-Install the embedded runtime package plus the backend package your agent uses:
-
 ```bash
 go get github.com/yazanabuashour/openclerk/client/local@latest
-go get github.com/yazanabuashour/openclerk/client/records@latest
+go get github.com/yazanabuashour/openclerk/client/openclerk@latest
 ```
 
 For reproducible installs, pin the module to a release tag such as `@v0.y.z`.
 
 ## Quick start
 
-This example stores and retrieves a health record through the generated `records` client while running entirely in process:
+The primary usage flow is one embedded client over one agent-facing surface:
 
 ```go
 package main
@@ -37,38 +34,92 @@ import (
 	"log"
 
 	local "github.com/yazanabuashour/openclerk/client/local"
-	records "github.com/yazanabuashour/openclerk/client/records"
+	openclerk "github.com/yazanabuashour/openclerk/client/openclerk"
 )
 
 func main() {
-	client, runtime, err := local.OpenRecords(local.Config{})
+	ctx := context.Background()
+	client, runtime, err := local.Open(local.Config{})
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer runtime.Close()
 
-	create, err := client.CreateDocumentWithResponse(context.Background(), records.CreateDocumentRequest{
-		Path:  "health/labs/glucose.md",
-		Title: "Fasting glucose",
-		Body:  "---\nentity_type: lab_result\nentity_name: Fasting glucose\nentity_id: fasting-glucose\n---\n# Fasting glucose\n\n## Facts\n- value: 92 mg/dL\n- status: normal\n",
+	architecture, err := client.CreateDocumentWithResponse(ctx, openclerk.CreateDocumentRequest{
+		Path:  "notes/architecture/knowledge-plane.md",
+		Title: "Knowledge plane",
+		Body:  "---\ntype: note\nstatus: active\n---\n# Knowledge plane\n\n## Summary\nCanonical architecture note.\n",
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	if create.JSON201 == nil {
-		log.Fatalf("create failed: %s", string(create.Body))
+	if architecture.JSON201 == nil {
+		log.Fatalf("create document failed: %s", string(architecture.Body))
 	}
 
-	entity, err := client.GetRecordEntityWithResponse(context.Background(), "fasting-glucose")
+	roadmap, err := client.CreateDocumentWithResponse(ctx, openclerk.CreateDocumentRequest{
+		Path:  "notes/projects/openclerk-roadmap.md",
+		Title: "Roadmap",
+		Body:  "---\ntype: project\nstatus: active\n---\n# Roadmap\n\n## Summary\nSee the [knowledge plane](../architecture/knowledge-plane.md).\n",
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	if entity.JSON200 == nil {
-		log.Fatalf("get entity failed: %s", string(entity.Body))
+	if roadmap.JSON201 == nil {
+		log.Fatalf("create linked document failed: %s", string(roadmap.Body))
 	}
 
-	fmt.Printf("stored %s in %s\n", entity.JSON200.EntityId, runtime.Paths().DataDir)
+	record, err := client.CreateDocumentWithResponse(ctx, openclerk.CreateDocumentRequest{
+		Path:  "records/assets/transmission-solenoid.md",
+		Title: "Transmission solenoid",
+		Body:  "---\nentity_type: part\nentity_name: Transmission solenoid\nentity_id: transmission-solenoid\ntype: record\nstatus: active\n---\n# Transmission solenoid\n\n## Summary\nCanonical promoted-domain baseline.\n\n## Facts\n- sku: SOL-1\n- vendor: OpenClerk Motors\n",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	if record.JSON201 == nil {
+		log.Fatalf("create record failed: %s", string(record.Body))
+	}
+
+	pathPrefix := "notes/"
+	docs, err := client.ListDocumentsWithResponse(ctx, &openclerk.ListDocumentsParams{PathPrefix: &pathPrefix})
+	if err != nil || docs.JSON200 == nil {
+		log.Fatal("list documents failed")
+	}
+
+	links, err := client.GetDocumentLinksWithResponse(ctx, roadmap.JSON201.DocId)
+	if err != nil || links.JSON200 == nil {
+		log.Fatal("get document links failed")
+	}
+
+	lookup, err := client.RecordsLookupWithResponse(ctx, openclerk.RecordsLookupRequest{Text: "solenoid"})
+	if err != nil || lookup.JSON200 == nil {
+		log.Fatal("records lookup failed")
+	}
+
+	refKind := "document"
+	events, err := client.ListProvenanceEventsWithResponse(ctx, &openclerk.ListProvenanceEventsParams{
+		RefKind: &refKind,
+		RefId:   &roadmap.JSON201.DocId,
+	})
+	if err != nil || events.JSON200 == nil {
+		log.Fatal("list provenance events failed")
+	}
+
+	fmt.Printf("docs=%d links=%d entity=%s events=%d dataDir=%s\n",
+		len(docs.JSON200.Documents),
+		len(links.JSON200.Outgoing),
+		lookup.JSON200.Entities[0].EntityId,
+		len(events.JSON200.Events),
+		runtime.Paths().DataDir,
+	)
 }
+```
+
+Runnable example:
+
+```bash
+OPENCLERK_DATA_DIR="$(mktemp -d)" go run ./examples/openclerk-client
 ```
 
 ## Default storage
@@ -88,39 +139,52 @@ Override any of these locations through [`client/local.Config`](client/local/loc
 
 ## API surface
 
-Stable core methods:
+Core docs and retrieval:
 
 - `GET /v1/capabilities`
 - `POST /v1/search/query`
-- `GET /v1/documents/{docId}`
-- `GET /v1/chunks/{chunkId}`
+- `GET /v1/documents`
 - `POST /v1/documents`
+- `GET /v1/documents/{docId}`
+- `GET /v1/documents/{docId}/links`
 - `POST /v1/documents/{docId}:append`
 - `POST /v1/documents/{docId}:replace-section`
+- `GET /v1/chunks/{chunkId}`
 
-Extension methods:
+Derived capabilities:
 
 - `POST /v1/extensions/graph/neighborhood`
 - `POST /v1/extensions/records/lookup`
 - `GET /v1/extensions/records/entities/{entityId}`
+- `GET /v1/provenance/events`
+- `GET /v1/provenance/projections`
 
 The OpenAPI contract remains the single definition of operations, schemas, and generated request and response types even when the runtime is embedded.
 
-## Example programs
+## Architecture notes
 
-Each example opens the embedded runtime, writes sample content, and reads it back without binding a port. To avoid writing into your default XDG location while exploring, point the examples at a temporary data directory:
+- Canonical docs stay markdown-backed and inspectable.
+- Graph traversal is a derived docs capability, not a second truth system.
+- Promoted records are a selective structured layer for domains that fail as plain docs.
+- Provenance and projection-state APIs make derivation and freshness inspectable.
+- Memory and routing are intentionally out of scope for this rewrite.
 
-```bash
-OPENCLERK_DATA_DIR="$(mktemp -d)" go run ./examples/records-client
-OPENCLERK_DATA_DIR="$(mktemp -d)" go run ./examples/graph-client
-```
+See [`docs/architecture/agent-knowledge-plane.md`](docs/architecture/agent-knowledge-plane.md) for the in-repo design summary and [`docs/evals/baseline-scenarios.md`](docs/evals/baseline-scenarios.md) for the eval task set used to compare implementation variants.
 
-Available examples:
+## Implementation variants
 
+The repo still contains implementation-specific fixtures and examples used for eval work:
+
+- [`client/fts`](client/fts)
+- [`client/hybrid`](client/hybrid)
+- [`client/graph`](client/graph)
+- [`client/records`](client/records)
 - [`examples/fts-client/main.go`](examples/fts-client/main.go)
 - [`examples/hybrid-client/main.go`](examples/hybrid-client/main.go)
 - [`examples/graph-client/main.go`](examples/graph-client/main.go)
 - [`examples/records-client/main.go`](examples/records-client/main.go)
+
+These help benchmark storage and retrieval approaches. They are not the preferred application-facing SDK surface.
 
 ## Verify a release
 
@@ -161,15 +225,17 @@ Run formatting, tests, and lint:
 test -z "$(gofmt -l $(git ls-files '*.go'))"
 go test ./...
 golangci-lint run
+OPENCLERK_DATA_DIR="$(mktemp -d)" go run ./examples/openclerk-client
 ```
 
 ## Repository contents
 
-- [`client/local`](client/local) contains the embedded runtime entrypoint for the generated clients.
-- [`client`](client) contains the committed generated Go clients.
+- [`client/local`](client/local) contains the embedded runtime entrypoint for the public client.
+- [`client/openclerk`](client/openclerk) contains the primary generated Go client.
+- [`client`](client) also contains internal variant clients used for evals.
 - [`openapi/v1/openclerk.yaml`](openapi/v1/openclerk.yaml) contains the contract source of truth.
-- [`internal/infra/sqlite`](internal/infra/sqlite) contains the SQLite-backed implementations and derived projections.
-- [`cmd/openclerkd`](cmd/openclerkd) remains available for internal contract testing and adapter work, but it is not the primary user-facing runtime.
+- [`internal/infra/sqlite`](internal/infra/sqlite) contains the SQLite-backed implementation and derived projections.
+- [`cmd/openclerkd`](cmd/openclerkd) remains available for adapter work and contract testing, but it is not the primary runtime path.
 - [`docs/maintainers.md`](docs/maintainers.md) explains Beads-based maintainer workflow and release administration notes.
 
 ## Contributing

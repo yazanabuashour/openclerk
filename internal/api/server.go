@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/yazanabuashour/openclerk/internal/app"
@@ -33,6 +34,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		resp, err := s.SearchQuery(r.Context(), SearchQueryRequestObject{Body: &body})
 		writeVisitResponse(w, err, func() error { return resp.VisitSearchQueryResponse(w) })
+	case r.Method == http.MethodGet && r.URL.Path == "/v1/documents":
+		params := ListDocumentsParams{
+			PathPrefix:    optionalString(r.URL.Query().Get("pathPrefix")),
+			MetadataKey:   optionalString(r.URL.Query().Get("metadataKey")),
+			MetadataValue: optionalString(r.URL.Query().Get("metadataValue")),
+			Limit:         optionalInt(r.URL.Query().Get("limit")),
+			Cursor:        optionalString(r.URL.Query().Get("cursor")),
+		}
+		resp, err := s.ListDocuments(r.Context(), ListDocumentsRequestObject{Params: params})
+		writeVisitResponse(w, err, func() error { return resp.VisitListDocumentsResponse(w) })
 	case r.Method == http.MethodPost && r.URL.Path == "/v1/documents":
 		var body CreateDocumentRequest
 		if !decodeJSONBody(w, r, &body) {
@@ -40,6 +51,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		resp, err := s.CreateDocument(r.Context(), CreateDocumentRequestObject{Body: &body})
 		writeVisitResponse(w, err, func() error { return resp.VisitCreateDocumentResponse(w) })
+	case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/v1/documents/") && strings.HasSuffix(r.URL.Path, "/links"):
+		docID := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/v1/documents/"), "/links")
+		resp, err := s.GetDocumentLinks(r.Context(), GetDocumentLinksRequestObject{DocId: DocId(docID)})
+		writeVisitResponse(w, err, func() error { return resp.VisitGetDocumentLinksResponse(w) })
 	case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/v1/documents/") && !strings.Contains(r.URL.Path, ":"):
 		docID := strings.TrimPrefix(r.URL.Path, "/v1/documents/")
 		resp, err := s.GetDocument(r.Context(), GetDocumentRequestObject{DocId: DocId(docID)})
@@ -82,6 +97,26 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		entityID := strings.TrimPrefix(r.URL.Path, "/v1/extensions/records/entities/")
 		resp, err := s.GetRecordEntity(r.Context(), GetRecordEntityRequestObject{EntityId: EntityId(entityID)})
 		writeVisitResponse(w, err, func() error { return resp.VisitGetRecordEntityResponse(w) })
+	case r.Method == http.MethodGet && r.URL.Path == "/v1/provenance/events":
+		params := ListProvenanceEventsParams{
+			RefKind:   optionalString(r.URL.Query().Get("refKind")),
+			RefId:     optionalString(r.URL.Query().Get("refId")),
+			SourceRef: optionalString(r.URL.Query().Get("sourceRef")),
+			Limit:     optionalInt(r.URL.Query().Get("limit")),
+			Cursor:    optionalString(r.URL.Query().Get("cursor")),
+		}
+		resp, err := s.ListProvenanceEvents(r.Context(), ListProvenanceEventsRequestObject{Params: params})
+		writeVisitResponse(w, err, func() error { return resp.VisitListProvenanceEventsResponse(w) })
+	case r.Method == http.MethodGet && r.URL.Path == "/v1/provenance/projections":
+		params := ListProjectionStatesParams{
+			Projection: optionalString(r.URL.Query().Get("projection")),
+			RefKind:    optionalString(r.URL.Query().Get("refKind")),
+			RefId:      optionalString(r.URL.Query().Get("refId")),
+			Limit:      optionalInt(r.URL.Query().Get("limit")),
+			Cursor:     optionalString(r.URL.Query().Get("cursor")),
+		}
+		resp, err := s.ListProjectionStates(r.Context(), ListProjectionStatesRequestObject{Params: params})
+		writeVisitResponse(w, err, func() error { return resp.VisitListProjectionStatesResponse(w) })
 	default:
 		writeJSONError(w, http.StatusNotFound, ErrorEnvelope{
 			Code:      "not_found",
@@ -150,14 +185,31 @@ func (s *Server) SearchQuery(ctx context.Context, request SearchQueryRequestObje
 		return SearchQuerydefaultJSONResponse{Body: errorEnvelope(domain.ValidationError("request body is required", nil)), StatusCode: 400}, nil
 	}
 	result, err := s.service.Search(ctx, domain.SearchQuery{
-		Text:   request.Body.Text,
-		Limit:  intValue(request.Body.Limit),
-		Cursor: stringValue(request.Body.Cursor),
+		Text:          request.Body.Text,
+		Limit:         intValue(request.Body.Limit),
+		Cursor:        stringValue(request.Body.Cursor),
+		PathPrefix:    stringValue(request.Body.PathPrefix),
+		MetadataKey:   stringValue(request.Body.MetadataKey),
+		MetadataValue: stringValue(request.Body.MetadataValue),
 	})
 	if err != nil {
 		return SearchQuerydefaultJSONResponse{Body: errorEnvelope(err), StatusCode: statusCode(err)}, nil
 	}
 	return SearchQuery200JSONResponse(toSearchResponse(result)), nil
+}
+
+func (s *Server) ListDocuments(ctx context.Context, request ListDocumentsRequestObject) (ListDocumentsResponseObject, error) {
+	result, err := s.service.ListDocuments(ctx, domain.DocumentListQuery{
+		PathPrefix:    stringValue(request.Params.PathPrefix),
+		MetadataKey:   stringValue(request.Params.MetadataKey),
+		MetadataValue: stringValue(request.Params.MetadataValue),
+		Limit:         intValue(request.Params.Limit),
+		Cursor:        stringValue(request.Params.Cursor),
+	})
+	if err != nil {
+		return ListDocumentsdefaultJSONResponse{Body: errorEnvelope(err), StatusCode: statusCode(err)}, nil
+	}
+	return ListDocuments200JSONResponse(toDocumentListResponse(result)), nil
 }
 
 func (s *Server) CreateDocument(ctx context.Context, request CreateDocumentRequestObject) (CreateDocumentResponseObject, error) {
@@ -181,6 +233,14 @@ func (s *Server) GetDocument(ctx context.Context, request GetDocumentRequestObje
 		return GetDocumentdefaultJSONResponse{Body: errorEnvelope(err), StatusCode: statusCode(err)}, nil
 	}
 	return GetDocument200JSONResponse(toDocument(document)), nil
+}
+
+func (s *Server) GetDocumentLinks(ctx context.Context, request GetDocumentLinksRequestObject) (GetDocumentLinksResponseObject, error) {
+	links, err := s.service.GetDocumentLinks(ctx, string(request.DocId))
+	if err != nil {
+		return GetDocumentLinksdefaultJSONResponse{Body: errorEnvelope(err), StatusCode: statusCode(err)}, nil
+	}
+	return GetDocumentLinks200JSONResponse(toDocumentLinksResponse(links)), nil
 }
 
 func (s *Server) AppendDocument(ctx context.Context, request AppendDocumentRequestObject) (AppendDocumentResponseObject, error) {
@@ -258,6 +318,34 @@ func (s *Server) GetRecordEntity(ctx context.Context, request GetRecordEntityReq
 	return GetRecordEntity200JSONResponse(toRecordEntity(entity)), nil
 }
 
+func (s *Server) ListProvenanceEvents(ctx context.Context, request ListProvenanceEventsRequestObject) (ListProvenanceEventsResponseObject, error) {
+	result, err := s.service.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{
+		RefKind:   stringValue(request.Params.RefKind),
+		RefID:     stringValue(request.Params.RefId),
+		SourceRef: stringValue(request.Params.SourceRef),
+		Limit:     intValue(request.Params.Limit),
+		Cursor:    stringValue(request.Params.Cursor),
+	})
+	if err != nil {
+		return ListProvenanceEventsdefaultJSONResponse{Body: errorEnvelope(err), StatusCode: statusCode(err)}, nil
+	}
+	return ListProvenanceEvents200JSONResponse(toProvenanceEventsResponse(result)), nil
+}
+
+func (s *Server) ListProjectionStates(ctx context.Context, request ListProjectionStatesRequestObject) (ListProjectionStatesResponseObject, error) {
+	result, err := s.service.ListProjectionStates(ctx, domain.ProjectionStateQuery{
+		Projection: stringValue(request.Params.Projection),
+		RefKind:    stringValue(request.Params.RefKind),
+		RefID:      stringValue(request.Params.RefId),
+		Limit:      intValue(request.Params.Limit),
+		Cursor:     stringValue(request.Params.Cursor),
+	})
+	if err != nil {
+		return ListProjectionStatesdefaultJSONResponse{Body: errorEnvelope(err), StatusCode: statusCode(err)}, nil
+	}
+	return ListProjectionStates200JSONResponse(toProjectionStatesResponse(result)), nil
+}
+
 func defaultCapabilitiesResponse(err error) GetCapabilitiesdefaultJSONResponse {
 	return GetCapabilitiesdefaultJSONResponse{Body: errorEnvelope(err), StatusCode: statusCode(err)}
 }
@@ -297,10 +385,50 @@ func toDocument(doc domain.Document) Document {
 		CreatedAt: doc.CreatedAt,
 		DocId:     doc.DocID,
 		Headings:  doc.Headings,
+		Metadata:  doc.Metadata,
 		Path:      doc.Path,
 		Title:     doc.Title,
 		UpdatedAt: doc.UpdatedAt,
 	}
+}
+
+func toDocumentListResponse(result domain.DocumentListResult) DocumentListResponse {
+	documents := make([]DocumentSummary, 0, len(result.Documents))
+	for _, document := range result.Documents {
+		documents = append(documents, DocumentSummary{
+			DocId:     document.DocID,
+			Metadata:  document.Metadata,
+			Path:      document.Path,
+			Title:     document.Title,
+			UpdatedAt: document.UpdatedAt,
+		})
+	}
+	pageInfo := PageInfo{HasMore: result.PageInfo.HasMore}
+	if result.PageInfo.NextCursor != "" {
+		pageInfo.NextCursor = &result.PageInfo.NextCursor
+	}
+	return DocumentListResponse{Documents: documents, PageInfo: pageInfo}
+}
+
+func toDocumentLinksResponse(result domain.DocumentLinks) DocumentLinksResponse {
+	return DocumentLinksResponse{
+		DocId:    result.DocID,
+		Incoming: toDocumentLinks(result.Incoming),
+		Outgoing: toDocumentLinks(result.Outgoing),
+	}
+}
+
+func toDocumentLinks(links []domain.DocumentLink) []DocumentLink {
+	result := make([]DocumentLink, 0, len(links))
+	for _, link := range links {
+		result = append(result, DocumentLink{
+			Citations: toCitations(link.Citations),
+			DocId:     link.DocID,
+			Path:      link.Path,
+			Title:     link.Title,
+		})
+	}
+	return result
 }
 
 func toChunk(chunk domain.Chunk) Chunk {
@@ -414,6 +542,47 @@ func toRecordsLookupResponse(result domain.RecordLookupResult) RecordsLookupResp
 	}
 }
 
+func toProvenanceEventsResponse(result domain.ProvenanceEventResult) ProvenanceEventsResponse {
+	events := make([]ProvenanceEvent, 0, len(result.Events))
+	for _, event := range result.Events {
+		events = append(events, ProvenanceEvent{
+			Details:    event.Details,
+			EventId:    event.EventID,
+			EventType:  event.EventType,
+			OccurredAt: event.OccurredAt,
+			RefId:      event.RefID,
+			RefKind:    ProvenanceEventRefKind(event.RefKind),
+			SourceRef:  event.SourceRef,
+		})
+	}
+	pageInfo := PageInfo{HasMore: result.PageInfo.HasMore}
+	if result.PageInfo.NextCursor != "" {
+		pageInfo.NextCursor = &result.PageInfo.NextCursor
+	}
+	return ProvenanceEventsResponse{Events: events, PageInfo: pageInfo}
+}
+
+func toProjectionStatesResponse(result domain.ProjectionStateResult) ProjectionStatesResponse {
+	projections := make([]ProjectionState, 0, len(result.Projections))
+	for _, projection := range result.Projections {
+		projections = append(projections, ProjectionState{
+			Details:           projection.Details,
+			Freshness:         ProjectionStateFreshness(projection.Freshness),
+			Projection:        projection.Projection,
+			ProjectionVersion: projection.ProjectionVersion,
+			RefId:             projection.RefID,
+			RefKind:           ProjectionStateRefKind(projection.RefKind),
+			SourceRef:         projection.SourceRef,
+			UpdatedAt:         projection.UpdatedAt,
+		})
+	}
+	pageInfo := PageInfo{HasMore: result.PageInfo.HasMore}
+	if result.PageInfo.NextCursor != "" {
+		pageInfo.NextCursor = &result.PageInfo.NextCursor
+	}
+	return ProjectionStatesResponse{PageInfo: pageInfo, Projections: projections}
+}
+
 func toCapabilityModes(values []string) []CapabilitiesSearchModes {
 	result := make([]CapabilitiesSearchModes, 0, len(values))
 	for _, value := range values {
@@ -446,4 +615,22 @@ func intValue(value *int) int {
 		return 0
 	}
 	return *value
+}
+
+func optionalString(value string) *string {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+	return &value
+}
+
+func optionalInt(raw string) *int {
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+	value, err := strconv.Atoi(raw)
+	if err != nil {
+		return nil
+	}
+	return &value
 }

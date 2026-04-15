@@ -1,5 +1,5 @@
 package cli
 
 func Message() string {
-	return "openclerk bootstrap is wired and ready for development"
+	return "openclerk knowledge-plane bootstrap is wired and ready for development"
 }

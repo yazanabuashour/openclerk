@@ -4,7 +4,7 @@ Outside contributors do not need Beads to contribute to this repository.
 
 ## Current project shape
 
-The shipped surface is the embedded Go module exposed through [`client/local`](client/local) plus the generated backend clients in [`client`](client). The repository still contains an HTTP adapter in [`cmd/openclerkd`](cmd/openclerkd), but contributors should treat that as internal compatibility and contract-testing infrastructure rather than the primary product path.
+The shipped surface is the embedded Go module exposed through [`client/local`](client/local) plus the generated public client in [`client/openclerk`](client/openclerk). The repository still contains implementation-variant clients in [`client`](client) and an HTTP adapter in [`cmd/openclerkd`](cmd/openclerkd), but contributors should treat those as eval or compatibility infrastructure rather than the primary product path.
 
 ## Local setup
 
@@ -22,7 +22,7 @@ git diff --exit-code
 test -z "$(gofmt -l $(git ls-files '*.go'))"
 go test ./...
 golangci-lint run
-XDG_DATA_HOME="$(mktemp -d)" go run ./examples/records-client
+OPENCLERK_DATA_DIR="$(mktemp -d)" go run ./examples/openclerk-client
 ```
 
 Outside contributors may use their own local tooling if they can satisfy the repository checks.
@@ -49,6 +49,8 @@ Current pull request checks validate:
 - dependency-review safety
 
 Pull requests that touch the embedded runtime, generated clients, or examples should leave the repository in a public-safe, policy-consistent, and runnable state without requiring a local daemon.
+
+If a change affects the public product story, keep the docs aligned with the single-surface agent knowledge plane framing in [README.md](README.md) and [docs/architecture/agent-knowledge-plane.md](docs/architecture/agent-knowledge-plane.md).
 
 ## Support and compatibility
 

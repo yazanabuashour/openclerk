@@ -12,6 +12,7 @@ import (
 	graphclient "github.com/yazanabuashour/openclerk/client/graph"
 	hybridclient "github.com/yazanabuashour/openclerk/client/hybrid"
 	localclient "github.com/yazanabuashour/openclerk/client/local"
+	openclerkclient "github.com/yazanabuashour/openclerk/client/openclerk"
 	recordsclient "github.com/yazanabuashour/openclerk/client/records"
 )
 
@@ -80,17 +81,373 @@ func TestOpenFTSDefaultStorage(t *testing.T) {
 		t.Fatalf("runtime paths = %+v, want %+v", runtime.Paths(), paths)
 	}
 
-	document := ftsCreateDocument(t, client, "health/default-storage.md", "Default storage", strings.TrimSpace(`
+	document := ftsCreateDocument(t, client, "notes/default-storage.md", "Default storage", strings.TrimSpace(`
 # Default storage
 
 ## Summary
-Health data stored under the XDG data directory.
+Workspace knowledge stored under the XDG data directory.
 `))
 	if _, err := os.Stat(paths.DatabasePath); err != nil {
 		t.Fatalf("stat sqlite database: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(paths.VaultRoot, filepath.FromSlash(document.path))); err != nil {
 		t.Fatalf("stat canonical document: %v", err)
+	}
+}
+
+func TestOpenKnowledgePlaneSurface(t *testing.T) {
+	t.Parallel()
+
+	client, runtime, err := localclient.Open(localclient.Config{DataDir: filepath.Join(t.TempDir(), "data")})
+	if err != nil {
+		t.Fatalf("open knowledge-plane client: %v", err)
+	}
+	t.Cleanup(func() { _ = runtime.Close() })
+
+	capabilities, err := client.GetCapabilitiesWithResponse(context.Background())
+	if err != nil {
+		t.Fatalf("get capabilities: %v", err)
+	}
+	if capabilities.JSON200 == nil {
+		t.Fatalf("capabilities error: %s", string(capabilities.Body))
+	}
+	if capabilities.JSON200.Backend != openclerkclient.CapabilitiesBackendOpenclerk {
+		t.Fatalf("backend = %q", capabilities.JSON200.Backend)
+	}
+	if !slices.Equal(enumStrings(capabilities.JSON200.Extensions), []string{"provenance", "graph", "records"}) {
+		t.Fatalf("extensions = %v", capabilities.JSON200.Extensions)
+	}
+
+	architecture, err := client.CreateDocumentWithResponse(context.Background(), openclerkclient.CreateDocumentRequest{
+		Path:  "notes/architecture/knowledge-plane.md",
+		Title: "Knowledge plane",
+		Body: strings.TrimSpace(`
+---
+type: note
+status: active
+---
+# Knowledge plane
+
+## Summary
+Canonical agent-facing architecture note.
+`) + "\n",
+	})
+	if err != nil {
+		t.Fatalf("create architecture note: %v", err)
+	}
+	if architecture.JSON201 == nil {
+		t.Fatalf("create architecture note response: %s", string(architecture.Body))
+	}
+
+	roadmap, err := client.CreateDocumentWithResponse(context.Background(), openclerkclient.CreateDocumentRequest{
+		Path:  "notes/projects/openclerk-roadmap.md",
+		Title: "Roadmap",
+		Body: strings.TrimSpace(`
+---
+type: project
+status: active
+---
+# Roadmap
+
+## Summary
+See the [knowledge plane](../architecture/knowledge-plane.md) architecture note.
+`) + "\n",
+	})
+	if err != nil {
+		t.Fatalf("create roadmap note: %v", err)
+	}
+	if roadmap.JSON201 == nil {
+		t.Fatalf("create roadmap note response: %s", string(roadmap.Body))
+	}
+
+	record, err := client.CreateDocumentWithResponse(context.Background(), openclerkclient.CreateDocumentRequest{
+		Path:  "records/assets/transmission-solenoid.md",
+		Title: "Transmission solenoid",
+		Body: strings.TrimSpace(`
+---
+entity_type: part
+entity_name: Transmission solenoid
+entity_id: transmission-solenoid
+type: record
+status: active
+---
+# Transmission solenoid
+
+## Summary
+Canonical promoted-domain baseline.
+
+## Facts
+- sku: SOL-1
+- vendor: OpenClerk Motors
+`) + "\n",
+	})
+	if err != nil {
+		t.Fatalf("create record note: %v", err)
+	}
+	if record.JSON201 == nil {
+		t.Fatalf("create record note response: %s", string(record.Body))
+	}
+
+	pathPrefix := "notes/"
+	list, err := client.ListDocumentsWithResponse(context.Background(), &openclerkclient.ListDocumentsParams{PathPrefix: &pathPrefix})
+	if err != nil {
+		t.Fatalf("list documents: %v", err)
+	}
+	if list.JSON200 == nil || len(list.JSON200.Documents) != 2 {
+		t.Fatalf("list documents response = %#v", list.JSON200)
+	}
+
+	searchLimit := 5
+	projectType := "type"
+	projectValue := "project"
+	search, err := client.SearchQueryWithResponse(context.Background(), openclerkclient.SearchQuery{
+		Text:          "roadmap",
+		Limit:         &searchLimit,
+		MetadataKey:   &projectType,
+		MetadataValue: &projectValue,
+	})
+	if err != nil {
+		t.Fatalf("search query: %v", err)
+	}
+	if search.JSON200 == nil || len(search.JSON200.Hits) == 0 || search.JSON200.Hits[0].DocId != roadmap.JSON201.DocId {
+		t.Fatalf("search response = %#v", search.JSON200)
+	}
+
+	links, err := client.GetDocumentLinksWithResponse(context.Background(), roadmap.JSON201.DocId)
+	if err != nil {
+		t.Fatalf("document links: %v", err)
+	}
+	if links.JSON200 == nil || len(links.JSON200.Outgoing) != 1 || links.JSON200.Outgoing[0].DocId != architecture.JSON201.DocId {
+		t.Fatalf("document links response = %#v", links.JSON200)
+	}
+
+	lookup, err := client.RecordsLookupWithResponse(context.Background(), openclerkclient.RecordsLookupRequest{Text: "solenoid"})
+	if err != nil {
+		t.Fatalf("records lookup: %v", err)
+	}
+	if lookup.JSON200 == nil || len(lookup.JSON200.Entities) != 1 || lookup.JSON200.Entities[0].EntityId != "transmission-solenoid" {
+		t.Fatalf("records lookup response = %#v", lookup.JSON200)
+	}
+
+	refKind := "document"
+	events, err := client.ListProvenanceEventsWithResponse(context.Background(), &openclerkclient.ListProvenanceEventsParams{
+		RefKind: &refKind,
+		RefId:   &roadmap.JSON201.DocId,
+	})
+	if err != nil {
+		t.Fatalf("list provenance events: %v", err)
+	}
+	if events.JSON200 == nil || len(events.JSON200.Events) == 0 {
+		t.Fatalf("provenance events response = %#v", events.JSON200)
+	}
+
+	projection := "graph"
+	projections, err := client.ListProjectionStatesWithResponse(context.Background(), &openclerkclient.ListProjectionStatesParams{
+		Projection: &projection,
+		RefId:      &roadmap.JSON201.DocId,
+	})
+	if err != nil {
+		t.Fatalf("list projection states: %v", err)
+	}
+	if projections.JSON200 == nil || len(projections.JSON200.Projections) != 1 || projections.JSON200.Projections[0].Freshness != openclerkclient.Fresh {
+		t.Fatalf("projection states response = %#v", projections.JSON200)
+	}
+}
+
+func TestOpenReopenPreservesDocumentState(t *testing.T) {
+	t.Parallel()
+
+	dataDir := filepath.Join(t.TempDir(), "data")
+	client, runtime, err := localclient.Open(localclient.Config{DataDir: dataDir})
+	if err != nil {
+		t.Fatalf("open knowledge-plane client: %v", err)
+	}
+
+	create, err := client.CreateDocumentWithResponse(context.Background(), openclerkclient.CreateDocumentRequest{
+		Path:  "notes/ops/runbook.md",
+		Title: "Runbook",
+		Body:  "# Runbook\n\n## Summary\nCanonical operating notes.\n",
+	})
+	if err != nil {
+		t.Fatalf("create document: %v", err)
+	}
+	if create.JSON201 == nil {
+		t.Fatalf("create document response: %s", string(create.Body))
+	}
+
+	initialDocument := openclerkGetDocument(t, client, create.JSON201.DocId)
+	initialEvents := openclerkProvenanceEvents(t, client, "document", create.JSON201.DocId)
+	if len(initialEvents) != 1 || initialEvents[0].EventType != "document_created" {
+		t.Fatalf("initial document events = %#v", initialEvents)
+	}
+
+	if err := runtime.Close(); err != nil {
+		t.Fatalf("close first runtime: %v", err)
+	}
+
+	client, runtime, err = localclient.Open(localclient.Config{DataDir: dataDir})
+	if err != nil {
+		t.Fatalf("reopen knowledge-plane client: %v", err)
+	}
+	t.Cleanup(func() { _ = runtime.Close() })
+
+	reopenedDocument := openclerkGetDocument(t, client, create.JSON201.DocId)
+	if !reopenedDocument.UpdatedAt.Equal(initialDocument.UpdatedAt) {
+		t.Fatalf("updatedAt changed across reopen: got %s want %s", reopenedDocument.UpdatedAt, initialDocument.UpdatedAt)
+	}
+
+	reopenedEvents := openclerkProvenanceEvents(t, client, "document", create.JSON201.DocId)
+	if len(reopenedEvents) != 1 || reopenedEvents[0].EventType != "document_created" {
+		t.Fatalf("document events after reopen = %#v", reopenedEvents)
+	}
+}
+
+func TestOpenPlainNotesDoNotInvalidateRecords(t *testing.T) {
+	t.Parallel()
+
+	client, runtime, err := localclient.Open(localclient.Config{DataDir: filepath.Join(t.TempDir(), "data")})
+	if err != nil {
+		t.Fatalf("open knowledge-plane client: %v", err)
+	}
+	t.Cleanup(func() { _ = runtime.Close() })
+
+	create, err := client.CreateDocumentWithResponse(context.Background(), openclerkclient.CreateDocumentRequest{
+		Path:  "notes/team/briefing.md",
+		Title: "Briefing",
+		Body:  "# Briefing\n\n## Summary\nAgent-facing team notes.\n",
+	})
+	if err != nil {
+		t.Fatalf("create note: %v", err)
+	}
+	if create.JSON201 == nil {
+		t.Fatalf("create note response: %s", string(create.Body))
+	}
+
+	recordEvents := openclerkProvenanceEvents(t, client, "projection", "records-source:"+create.JSON201.DocId)
+	if len(recordEvents) != 0 {
+		t.Fatalf("records invalidation events for plain note = %#v", recordEvents)
+	}
+}
+
+func TestOpenGraphRefreshesOnlyAffectedDocuments(t *testing.T) {
+	t.Parallel()
+
+	client, runtime, err := localclient.Open(localclient.Config{DataDir: filepath.Join(t.TempDir(), "data")})
+	if err != nil {
+		t.Fatalf("open knowledge-plane client: %v", err)
+	}
+	t.Cleanup(func() { _ = runtime.Close() })
+
+	unrelated, err := client.CreateDocumentWithResponse(context.Background(), openclerkclient.CreateDocumentRequest{
+		Path:  "notes/archive/unrelated.md",
+		Title: "Unrelated",
+		Body:  "# Unrelated\n\n## Summary\nIndependent workspace context.\n",
+	})
+	if err != nil {
+		t.Fatalf("create unrelated note: %v", err)
+	}
+	if unrelated.JSON201 == nil {
+		t.Fatalf("create unrelated note response: %s", string(unrelated.Body))
+	}
+
+	target, err := client.CreateDocumentWithResponse(context.Background(), openclerkclient.CreateDocumentRequest{
+		Path:  "notes/reference/reference.md",
+		Title: "Reference",
+		Body:  "# Reference\n\n## Summary\nLinked supporting note.\n",
+	})
+	if err != nil {
+		t.Fatalf("create target note: %v", err)
+	}
+	if target.JSON201 == nil {
+		t.Fatalf("create target note response: %s", string(target.Body))
+	}
+
+	source, err := client.CreateDocumentWithResponse(context.Background(), openclerkclient.CreateDocumentRequest{
+		Path:  "notes/reference/source.md",
+		Title: "Source",
+		Body:  "# Source\n\n## Summary\nSee the [reference](reference.md).\n",
+	})
+	if err != nil {
+		t.Fatalf("create source note: %v", err)
+	}
+	if source.JSON201 == nil {
+		t.Fatalf("create source note response: %s", string(source.Body))
+	}
+
+	replace, err := client.ReplaceDocumentSectionWithResponse(context.Background(), source.JSON201.DocId, openclerkclient.ReplaceSectionRequest{
+		Heading: "Summary",
+		Content: "Updated summary without the link.",
+	})
+	if err != nil {
+		t.Fatalf("replace source summary: %v", err)
+	}
+	if replace.JSON200 == nil {
+		t.Fatalf("replace source summary response: %s", string(replace.Body))
+	}
+
+	unrelatedEvents := openclerkProvenanceEvents(t, client, "projection", "graph:"+unrelated.JSON201.DocId)
+	if countEventType(unrelatedEvents, "projection_refreshed") != 1 {
+		t.Fatalf("unrelated graph events = %#v", unrelatedEvents)
+	}
+
+	targetEvents := openclerkProvenanceEvents(t, client, "projection", "graph:"+target.JSON201.DocId)
+	if countEventType(targetEvents, "projection_refreshed") < 2 {
+		t.Fatalf("target graph events = %#v", targetEvents)
+	}
+}
+
+func TestOpenRecordsRefreshOnlyAffectedEntities(t *testing.T) {
+	t.Parallel()
+
+	client, runtime, err := localclient.Open(localclient.Config{DataDir: filepath.Join(t.TempDir(), "data")})
+	if err != nil {
+		t.Fatalf("open knowledge-plane client: %v", err)
+	}
+	t.Cleanup(func() { _ = runtime.Close() })
+
+	unrelated, err := client.CreateDocumentWithResponse(context.Background(), openclerkclient.CreateDocumentRequest{
+		Path:  "records/assets/transmission-solenoid.md",
+		Title: "Transmission solenoid",
+		Body:  "---\nentity_type: part\nentity_name: Transmission solenoid\nentity_id: transmission-solenoid\n---\n# Transmission solenoid\n\n## Facts\n- sku: SOL-1\n",
+	})
+	if err != nil {
+		t.Fatalf("create unrelated record: %v", err)
+	}
+	if unrelated.JSON201 == nil {
+		t.Fatalf("create unrelated record response: %s", string(unrelated.Body))
+	}
+
+	affected, err := client.CreateDocumentWithResponse(context.Background(), openclerkclient.CreateDocumentRequest{
+		Path:  "records/assets/diagnostic-scanner.md",
+		Title: "Diagnostic scanner",
+		Body:  "---\nentity_type: tool\nentity_name: Diagnostic scanner\nentity_id: diagnostic-scanner\n---\n# Diagnostic scanner\n\n## Facts\n- sku: TOOL-1\n",
+	})
+	if err != nil {
+		t.Fatalf("create affected record: %v", err)
+	}
+	if affected.JSON201 == nil {
+		t.Fatalf("create affected record response: %s", string(affected.Body))
+	}
+
+	replace, err := client.ReplaceDocumentSectionWithResponse(context.Background(), affected.JSON201.DocId, openclerkclient.ReplaceSectionRequest{
+		Heading: "Facts",
+		Content: "- sku: TOOL-2",
+	})
+	if err != nil {
+		t.Fatalf("replace affected facts: %v", err)
+	}
+	if replace.JSON200 == nil {
+		t.Fatalf("replace affected facts response: %s", string(replace.Body))
+	}
+
+	unrelatedEvents := openclerkProvenanceEvents(t, client, "projection", "records:transmission-solenoid")
+	if len(unrelatedEvents) != 1 {
+		t.Fatalf("unrelated record events = %#v", unrelatedEvents)
+	}
+
+	affectedEvents := openclerkProvenanceEvents(t, client, "projection", "records:diagnostic-scanner")
+	if len(affectedEvents) < 2 {
+		t.Fatalf("affected record events = %#v", affectedEvents)
 	}
 }
 
@@ -864,6 +1221,43 @@ func recordsGetChunk(t *testing.T, client *recordsclient.ClientWithResponses, ch
 		t.Fatalf("records get chunk error: %s", string(response.Body))
 	}
 	return searchHitInfo{chunkID: response.JSON200.ChunkId, docID: response.JSON200.DocId, path: response.JSON200.Path}
+}
+
+func openclerkGetDocument(t *testing.T, client *openclerkclient.ClientWithResponses, docID string) openclerkclient.Document {
+	t.Helper()
+	response, err := client.GetDocumentWithResponse(context.Background(), docID)
+	if err != nil {
+		t.Fatalf("openclerk get document: %v", err)
+	}
+	if response.JSON200 == nil {
+		t.Fatalf("openclerk get document error: %s", string(response.Body))
+	}
+	return *response.JSON200
+}
+
+func openclerkProvenanceEvents(t *testing.T, client *openclerkclient.ClientWithResponses, refKind string, refID string) []openclerkclient.ProvenanceEvent {
+	t.Helper()
+	response, err := client.ListProvenanceEventsWithResponse(context.Background(), &openclerkclient.ListProvenanceEventsParams{
+		RefKind: &refKind,
+		RefId:   &refID,
+	})
+	if err != nil {
+		t.Fatalf("openclerk list provenance events: %v", err)
+	}
+	if response.JSON200 == nil {
+		t.Fatalf("openclerk list provenance events error: %s", string(response.Body))
+	}
+	return response.JSON200.Events
+}
+
+func countEventType(events []openclerkclient.ProvenanceEvent, eventType string) int {
+	count := 0
+	for _, event := range events {
+		if event.EventType == eventType {
+			count++
+		}
+	}
+	return count
 }
 
 func enumStrings[T ~string](values []T) []string {

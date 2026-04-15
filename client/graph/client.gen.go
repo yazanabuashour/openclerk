@@ -34,10 +34,11 @@ func (e CapabilitiesAuthMode) Valid() bool {
 
 // Defines values for CapabilitiesBackend.
 const (
-	CapabilitiesBackendFts     CapabilitiesBackend = "fts"
-	CapabilitiesBackendGraph   CapabilitiesBackend = "graph"
-	CapabilitiesBackendHybrid  CapabilitiesBackend = "hybrid"
-	CapabilitiesBackendRecords CapabilitiesBackend = "records"
+	CapabilitiesBackendFts       CapabilitiesBackend = "fts"
+	CapabilitiesBackendGraph     CapabilitiesBackend = "graph"
+	CapabilitiesBackendHybrid    CapabilitiesBackend = "hybrid"
+	CapabilitiesBackendOpenclerk CapabilitiesBackend = "openclerk"
+	CapabilitiesBackendRecords   CapabilitiesBackend = "records"
 )
 
 // Valid indicates whether the value is a known member of the CapabilitiesBackend enum.
@@ -49,6 +50,8 @@ func (e CapabilitiesBackend) Valid() bool {
 		return true
 	case CapabilitiesBackendHybrid:
 		return true
+	case CapabilitiesBackendOpenclerk:
+		return true
 	case CapabilitiesBackendRecords:
 		return true
 	default:
@@ -58,14 +61,17 @@ func (e CapabilitiesBackend) Valid() bool {
 
 // Defines values for CapabilitiesExtensions.
 const (
-	CapabilitiesExtensionsGraph   CapabilitiesExtensions = "graph"
-	CapabilitiesExtensionsRecords CapabilitiesExtensions = "records"
+	CapabilitiesExtensionsGraph      CapabilitiesExtensions = "graph"
+	CapabilitiesExtensionsProvenance CapabilitiesExtensions = "provenance"
+	CapabilitiesExtensionsRecords    CapabilitiesExtensions = "records"
 )
 
 // Valid indicates whether the value is a known member of the CapabilitiesExtensions enum.
 func (e CapabilitiesExtensions) Valid() bool {
 	switch e {
 	case CapabilitiesExtensionsGraph:
+		return true
+	case CapabilitiesExtensionsProvenance:
 		return true
 	case CapabilitiesExtensionsRecords:
 		return true
@@ -140,6 +146,72 @@ func (e GraphNodeType) Valid() bool {
 	}
 }
 
+// Defines values for ProjectionStateFreshness.
+const (
+	Fresh ProjectionStateFreshness = "fresh"
+	Stale ProjectionStateFreshness = "stale"
+)
+
+// Valid indicates whether the value is a known member of the ProjectionStateFreshness enum.
+func (e ProjectionStateFreshness) Valid() bool {
+	switch e {
+	case Fresh:
+		return true
+	case Stale:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProjectionStateRefKind.
+const (
+	ProjectionStateRefKindChunk      ProjectionStateRefKind = "chunk"
+	ProjectionStateRefKindDocument   ProjectionStateRefKind = "document"
+	ProjectionStateRefKindEntity     ProjectionStateRefKind = "entity"
+	ProjectionStateRefKindProjection ProjectionStateRefKind = "projection"
+)
+
+// Valid indicates whether the value is a known member of the ProjectionStateRefKind enum.
+func (e ProjectionStateRefKind) Valid() bool {
+	switch e {
+	case ProjectionStateRefKindChunk:
+		return true
+	case ProjectionStateRefKindDocument:
+		return true
+	case ProjectionStateRefKindEntity:
+		return true
+	case ProjectionStateRefKindProjection:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProvenanceEventRefKind.
+const (
+	ProvenanceEventRefKindChunk      ProvenanceEventRefKind = "chunk"
+	ProvenanceEventRefKindDocument   ProvenanceEventRefKind = "document"
+	ProvenanceEventRefKindEntity     ProvenanceEventRefKind = "entity"
+	ProvenanceEventRefKindProjection ProvenanceEventRefKind = "projection"
+)
+
+// Valid indicates whether the value is a known member of the ProvenanceEventRefKind enum.
+func (e ProvenanceEventRefKind) Valid() bool {
+	switch e {
+	case ProvenanceEventRefKindChunk:
+		return true
+	case ProvenanceEventRefKindDocument:
+		return true
+	case ProvenanceEventRefKindEntity:
+		return true
+	case ProvenanceEventRefKindProjection:
+		return true
+	default:
+		return false
+	}
+}
+
 // AppendDocumentRequest defines model for AppendDocumentRequest.
 type AppendDocumentRequest struct {
 	Content string `json:"content"`
@@ -195,13 +267,44 @@ type CreateDocumentRequest struct {
 
 // Document defines model for Document.
 type Document struct {
-	Body      string    `json:"body"`
-	CreatedAt time.Time `json:"createdAt"`
-	DocId     string    `json:"docId"`
-	Headings  []string  `json:"headings"`
-	Path      string    `json:"path"`
-	Title     string    `json:"title"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	Body      string            `json:"body"`
+	CreatedAt time.Time         `json:"createdAt"`
+	DocId     string            `json:"docId"`
+	Headings  []string          `json:"headings"`
+	Metadata  map[string]string `json:"metadata"`
+	Path      string            `json:"path"`
+	Title     string            `json:"title"`
+	UpdatedAt time.Time         `json:"updatedAt"`
+}
+
+// DocumentLink defines model for DocumentLink.
+type DocumentLink struct {
+	Citations []Citation `json:"citations"`
+	DocId     string     `json:"docId"`
+	Path      string     `json:"path"`
+	Title     string     `json:"title"`
+}
+
+// DocumentLinksResponse defines model for DocumentLinksResponse.
+type DocumentLinksResponse struct {
+	DocId    string         `json:"docId"`
+	Incoming []DocumentLink `json:"incoming"`
+	Outgoing []DocumentLink `json:"outgoing"`
+}
+
+// DocumentListResponse defines model for DocumentListResponse.
+type DocumentListResponse struct {
+	Documents []DocumentSummary `json:"documents"`
+	PageInfo  PageInfo          `json:"pageInfo"`
+}
+
+// DocumentSummary defines model for DocumentSummary.
+type DocumentSummary struct {
+	DocId     string            `json:"docId"`
+	Metadata  map[string]string `json:"metadata"`
+	Path      string            `json:"path"`
+	Title     string            `json:"title"`
+	UpdatedAt time.Time         `json:"updatedAt"`
 }
 
 // ErrorEnvelope defines model for ErrorEnvelope.
@@ -256,6 +359,50 @@ type PageInfo struct {
 	NextCursor *string `json:"nextCursor,omitempty"`
 }
 
+// ProjectionState defines model for ProjectionState.
+type ProjectionState struct {
+	Details           map[string]string        `json:"details"`
+	Freshness         ProjectionStateFreshness `json:"freshness"`
+	Projection        string                   `json:"projection"`
+	ProjectionVersion string                   `json:"projectionVersion"`
+	RefId             string                   `json:"refId"`
+	RefKind           ProjectionStateRefKind   `json:"refKind"`
+	SourceRef         string                   `json:"sourceRef"`
+	UpdatedAt         time.Time                `json:"updatedAt"`
+}
+
+// ProjectionStateFreshness defines model for ProjectionState.Freshness.
+type ProjectionStateFreshness string
+
+// ProjectionStateRefKind defines model for ProjectionState.RefKind.
+type ProjectionStateRefKind string
+
+// ProjectionStatesResponse defines model for ProjectionStatesResponse.
+type ProjectionStatesResponse struct {
+	PageInfo    PageInfo          `json:"pageInfo"`
+	Projections []ProjectionState `json:"projections"`
+}
+
+// ProvenanceEvent defines model for ProvenanceEvent.
+type ProvenanceEvent struct {
+	Details    map[string]string      `json:"details"`
+	EventId    string                 `json:"eventId"`
+	EventType  string                 `json:"eventType"`
+	OccurredAt time.Time              `json:"occurredAt"`
+	RefId      string                 `json:"refId"`
+	RefKind    ProvenanceEventRefKind `json:"refKind"`
+	SourceRef  string                 `json:"sourceRef"`
+}
+
+// ProvenanceEventRefKind defines model for ProvenanceEvent.RefKind.
+type ProvenanceEventRefKind string
+
+// ProvenanceEventsResponse defines model for ProvenanceEventsResponse.
+type ProvenanceEventsResponse struct {
+	Events   []ProvenanceEvent `json:"events"`
+	PageInfo PageInfo          `json:"pageInfo"`
+}
+
 // RecordEntity defines model for RecordEntity.
 type RecordEntity struct {
 	Citations  []Citation   `json:"citations"`
@@ -307,9 +454,12 @@ type SearchHit struct {
 
 // SearchQuery defines model for SearchQuery.
 type SearchQuery struct {
-	Cursor *string `json:"cursor,omitempty"`
-	Limit  *int    `json:"limit,omitempty"`
-	Text   string  `json:"text"`
+	Cursor        *string `json:"cursor,omitempty"`
+	Limit         *int    `json:"limit,omitempty"`
+	MetadataKey   *string `json:"metadataKey,omitempty"`
+	MetadataValue *string `json:"metadataValue,omitempty"`
+	PathPrefix    *string `json:"pathPrefix,omitempty"`
+	Text          string  `json:"text"`
 }
 
 // SearchResponse defines model for SearchResponse.
@@ -329,6 +479,33 @@ type EntityId = string
 
 // ErrorResponse defines model for ErrorResponse.
 type ErrorResponse = ErrorEnvelope
+
+// ListDocumentsParams defines parameters for ListDocuments.
+type ListDocumentsParams struct {
+	PathPrefix    *string `form:"pathPrefix,omitempty" json:"pathPrefix,omitempty"`
+	MetadataKey   *string `form:"metadataKey,omitempty" json:"metadataKey,omitempty"`
+	MetadataValue *string `form:"metadataValue,omitempty" json:"metadataValue,omitempty"`
+	Limit         *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor        *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// ListProvenanceEventsParams defines parameters for ListProvenanceEvents.
+type ListProvenanceEventsParams struct {
+	RefKind   *string `form:"refKind,omitempty" json:"refKind,omitempty"`
+	RefId     *string `form:"refId,omitempty" json:"refId,omitempty"`
+	SourceRef *string `form:"sourceRef,omitempty" json:"sourceRef,omitempty"`
+	Limit     *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor    *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// ListProjectionStatesParams defines parameters for ListProjectionStates.
+type ListProjectionStatesParams struct {
+	Projection *string `form:"projection,omitempty" json:"projection,omitempty"`
+	RefKind    *string `form:"refKind,omitempty" json:"refKind,omitempty"`
+	RefId      *string `form:"refId,omitempty" json:"refId,omitempty"`
+	Limit      *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor     *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
 
 // CreateDocumentJSONRequestBody defines body for CreateDocument for application/json ContentType.
 type CreateDocumentJSONRequestBody = CreateDocumentRequest
@@ -424,6 +601,9 @@ type ClientInterface interface {
 	// GetChunk request
 	GetChunk(ctx context.Context, chunkId ChunkId, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListDocuments request
+	ListDocuments(ctx context.Context, params *ListDocumentsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// CreateDocumentWithBody request with any body
 	CreateDocumentWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -431,6 +611,9 @@ type ClientInterface interface {
 
 	// GetDocument request
 	GetDocument(ctx context.Context, docId DocId, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetDocumentLinks request
+	GetDocumentLinks(ctx context.Context, docId DocId, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// AppendDocumentWithBody request with any body
 	AppendDocumentWithBody(ctx context.Context, docId DocId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -446,6 +629,12 @@ type ClientInterface interface {
 	GraphNeighborhoodWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	GraphNeighborhood(ctx context.Context, body GraphNeighborhoodJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListProvenanceEvents request
+	ListProvenanceEvents(ctx context.Context, params *ListProvenanceEventsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListProjectionStates request
+	ListProjectionStates(ctx context.Context, params *ListProjectionStatesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// SearchQueryWithBody request with any body
 	SearchQueryWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -467,6 +656,18 @@ func (c *Client) GetCapabilities(ctx context.Context, reqEditors ...RequestEdito
 
 func (c *Client) GetChunk(ctx context.Context, chunkId ChunkId, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetChunkRequest(c.Server, chunkId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListDocuments(ctx context.Context, params *ListDocumentsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListDocumentsRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -503,6 +704,18 @@ func (c *Client) CreateDocument(ctx context.Context, body CreateDocumentJSONRequ
 
 func (c *Client) GetDocument(ctx context.Context, docId DocId, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetDocumentRequest(c.Server, docId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetDocumentLinks(ctx context.Context, docId DocId, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetDocumentLinksRequest(c.Server, docId)
 	if err != nil {
 		return nil, err
 	}
@@ -575,6 +788,30 @@ func (c *Client) GraphNeighborhoodWithBody(ctx context.Context, contentType stri
 
 func (c *Client) GraphNeighborhood(ctx context.Context, body GraphNeighborhoodJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGraphNeighborhoodRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListProvenanceEvents(ctx context.Context, params *ListProvenanceEventsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListProvenanceEventsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListProjectionStates(ctx context.Context, params *ListProjectionStatesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListProjectionStatesRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -670,6 +907,119 @@ func NewGetChunkRequest(server string, chunkId ChunkId) (*http.Request, error) {
 	return req, nil
 }
 
+// NewListDocumentsRequest generates requests for ListDocuments
+func NewListDocumentsRequest(server string, params *ListDocumentsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/documents")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.PathPrefix != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "pathPrefix", *params.PathPrefix, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.MetadataKey != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "metadataKey", *params.MetadataKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.MetadataValue != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "metadataValue", *params.MetadataValue, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Cursor != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewCreateDocumentRequest calls the generic CreateDocument builder with application/json body
 func NewCreateDocumentRequest(server string, body CreateDocumentJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -727,6 +1077,40 @@ func NewGetDocumentRequest(server string, docId DocId) (*http.Request, error) {
 	}
 
 	operationPath := fmt.Sprintf("/v1/documents/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetDocumentLinksRequest generates requests for GetDocumentLinks
+func NewGetDocumentLinksRequest(server string, docId DocId) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "docId", docId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/documents/%s/links", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -878,6 +1262,232 @@ func NewGraphNeighborhoodRequestWithBody(server string, contentType string, body
 	return req, nil
 }
 
+// NewListProvenanceEventsRequest generates requests for ListProvenanceEvents
+func NewListProvenanceEventsRequest(server string, params *ListProvenanceEventsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/provenance/events")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.RefKind != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "refKind", *params.RefKind, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.RefId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "refId", *params.RefId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.SourceRef != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "sourceRef", *params.SourceRef, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Cursor != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewListProjectionStatesRequest generates requests for ListProjectionStates
+func NewListProjectionStatesRequest(server string, params *ListProjectionStatesParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/provenance/projections")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Projection != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "projection", *params.Projection, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.RefKind != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "refKind", *params.RefKind, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.RefId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "refId", *params.RefId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Cursor != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewSearchQueryRequest calls the generic SearchQuery builder with application/json body
 func NewSearchQueryRequest(server string, body SearchQueryJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -967,6 +1577,9 @@ type ClientWithResponsesInterface interface {
 	// GetChunkWithResponse request
 	GetChunkWithResponse(ctx context.Context, chunkId ChunkId, reqEditors ...RequestEditorFn) (*GetChunkResp, error)
 
+	// ListDocumentsWithResponse request
+	ListDocumentsWithResponse(ctx context.Context, params *ListDocumentsParams, reqEditors ...RequestEditorFn) (*ListDocumentsResp, error)
+
 	// CreateDocumentWithBodyWithResponse request with any body
 	CreateDocumentWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateDocumentResp, error)
 
@@ -974,6 +1587,9 @@ type ClientWithResponsesInterface interface {
 
 	// GetDocumentWithResponse request
 	GetDocumentWithResponse(ctx context.Context, docId DocId, reqEditors ...RequestEditorFn) (*GetDocumentResp, error)
+
+	// GetDocumentLinksWithResponse request
+	GetDocumentLinksWithResponse(ctx context.Context, docId DocId, reqEditors ...RequestEditorFn) (*GetDocumentLinksResp, error)
 
 	// AppendDocumentWithBodyWithResponse request with any body
 	AppendDocumentWithBodyWithResponse(ctx context.Context, docId DocId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AppendDocumentResp, error)
@@ -989,6 +1605,12 @@ type ClientWithResponsesInterface interface {
 	GraphNeighborhoodWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*GraphNeighborhoodResp, error)
 
 	GraphNeighborhoodWithResponse(ctx context.Context, body GraphNeighborhoodJSONRequestBody, reqEditors ...RequestEditorFn) (*GraphNeighborhoodResp, error)
+
+	// ListProvenanceEventsWithResponse request
+	ListProvenanceEventsWithResponse(ctx context.Context, params *ListProvenanceEventsParams, reqEditors ...RequestEditorFn) (*ListProvenanceEventsResp, error)
+
+	// ListProjectionStatesWithResponse request
+	ListProjectionStatesWithResponse(ctx context.Context, params *ListProjectionStatesParams, reqEditors ...RequestEditorFn) (*ListProjectionStatesResp, error)
 
 	// SearchQueryWithBodyWithResponse request with any body
 	SearchQueryWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchQueryResp, error)
@@ -1042,6 +1664,29 @@ func (r GetChunkResp) StatusCode() int {
 	return 0
 }
 
+type ListDocumentsResp struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *DocumentListResponse
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListDocumentsResp) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListDocumentsResp) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type CreateDocumentResp struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -1082,6 +1727,29 @@ func (r GetDocumentResp) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r GetDocumentResp) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetDocumentLinksResp struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *DocumentLinksResponse
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetDocumentLinksResp) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetDocumentLinksResp) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -1157,6 +1825,52 @@ func (r GraphNeighborhoodResp) StatusCode() int {
 	return 0
 }
 
+type ListProvenanceEventsResp struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ProvenanceEventsResponse
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListProvenanceEventsResp) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListProvenanceEventsResp) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListProjectionStatesResp struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ProjectionStatesResponse
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListProjectionStatesResp) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListProjectionStatesResp) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type SearchQueryResp struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -1198,6 +1912,15 @@ func (c *ClientWithResponses) GetChunkWithResponse(ctx context.Context, chunkId 
 	return ParseGetChunkResp(rsp)
 }
 
+// ListDocumentsWithResponse request returning *ListDocumentsResp
+func (c *ClientWithResponses) ListDocumentsWithResponse(ctx context.Context, params *ListDocumentsParams, reqEditors ...RequestEditorFn) (*ListDocumentsResp, error) {
+	rsp, err := c.ListDocuments(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListDocumentsResp(rsp)
+}
+
 // CreateDocumentWithBodyWithResponse request with arbitrary body returning *CreateDocumentResp
 func (c *ClientWithResponses) CreateDocumentWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateDocumentResp, error) {
 	rsp, err := c.CreateDocumentWithBody(ctx, contentType, body, reqEditors...)
@@ -1222,6 +1945,15 @@ func (c *ClientWithResponses) GetDocumentWithResponse(ctx context.Context, docId
 		return nil, err
 	}
 	return ParseGetDocumentResp(rsp)
+}
+
+// GetDocumentLinksWithResponse request returning *GetDocumentLinksResp
+func (c *ClientWithResponses) GetDocumentLinksWithResponse(ctx context.Context, docId DocId, reqEditors ...RequestEditorFn) (*GetDocumentLinksResp, error) {
+	rsp, err := c.GetDocumentLinks(ctx, docId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetDocumentLinksResp(rsp)
 }
 
 // AppendDocumentWithBodyWithResponse request with arbitrary body returning *AppendDocumentResp
@@ -1273,6 +2005,24 @@ func (c *ClientWithResponses) GraphNeighborhoodWithResponse(ctx context.Context,
 		return nil, err
 	}
 	return ParseGraphNeighborhoodResp(rsp)
+}
+
+// ListProvenanceEventsWithResponse request returning *ListProvenanceEventsResp
+func (c *ClientWithResponses) ListProvenanceEventsWithResponse(ctx context.Context, params *ListProvenanceEventsParams, reqEditors ...RequestEditorFn) (*ListProvenanceEventsResp, error) {
+	rsp, err := c.ListProvenanceEvents(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListProvenanceEventsResp(rsp)
+}
+
+// ListProjectionStatesWithResponse request returning *ListProjectionStatesResp
+func (c *ClientWithResponses) ListProjectionStatesWithResponse(ctx context.Context, params *ListProjectionStatesParams, reqEditors ...RequestEditorFn) (*ListProjectionStatesResp, error) {
+	rsp, err := c.ListProjectionStates(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListProjectionStatesResp(rsp)
 }
 
 // SearchQueryWithBodyWithResponse request with arbitrary body returning *SearchQueryResp
@@ -1358,6 +2108,39 @@ func ParseGetChunkResp(rsp *http.Response) (*GetChunkResp, error) {
 	return response, nil
 }
 
+// ParseListDocumentsResp parses an HTTP response from a ListDocumentsWithResponse call
+func ParseListDocumentsResp(rsp *http.Response) (*ListDocumentsResp, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListDocumentsResp{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest DocumentListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseCreateDocumentResp parses an HTTP response from a CreateDocumentWithResponse call
 func ParseCreateDocumentResp(rsp *http.Response) (*CreateDocumentResp, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -1407,6 +2190,39 @@ func ParseGetDocumentResp(rsp *http.Response) (*GetDocumentResp, error) {
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest Document
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetDocumentLinksResp parses an HTTP response from a GetDocumentLinksWithResponse call
+func ParseGetDocumentLinksResp(rsp *http.Response) (*GetDocumentLinksResp, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetDocumentLinksResp{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest DocumentLinksResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -1506,6 +2322,72 @@ func ParseGraphNeighborhoodResp(rsp *http.Response) (*GraphNeighborhoodResp, err
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest GraphNeighborhoodResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListProvenanceEventsResp parses an HTTP response from a ListProvenanceEventsWithResponse call
+func ParseListProvenanceEventsResp(rsp *http.Response) (*ListProvenanceEventsResp, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListProvenanceEventsResp{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ProvenanceEventsResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListProjectionStatesResp parses an HTTP response from a ListProjectionStatesWithResponse call
+func ParseListProjectionStatesResp(rsp *http.Response) (*ListProjectionStatesResp, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListProjectionStatesResp{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ProjectionStatesResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

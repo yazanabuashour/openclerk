@@ -8,10 +8,11 @@ import (
 type BackendKind string
 
 const (
-	BackendFTS     BackendKind = "fts"
-	BackendHybrid  BackendKind = "hybrid"
-	BackendGraph   BackendKind = "graph"
-	BackendRecords BackendKind = "records"
+	BackendOpenClerk BackendKind = "openclerk"
+	BackendFTS       BackendKind = "fts"
+	BackendHybrid    BackendKind = "hybrid"
+	BackendGraph     BackendKind = "graph"
+	BackendRecords   BackendKind = "records"
 )
 
 type Capabilities struct {
@@ -27,7 +28,16 @@ type Document struct {
 	Title     string
 	Body      string
 	Headings  []string
+	Metadata  map[string]string
 	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type DocumentSummary struct {
+	DocID     string
+	Path      string
+	Title     string
+	Metadata  map[string]string
 	UpdatedAt time.Time
 }
 
@@ -56,9 +66,12 @@ type PageInfo struct {
 }
 
 type SearchQuery struct {
-	Text   string
-	Limit  int
-	Cursor string
+	Text          string
+	Limit         int
+	Cursor        string
+	PathPrefix    string
+	MetadataKey   string
+	MetadataValue string
 }
 
 type SearchHit struct {
@@ -74,6 +87,19 @@ type SearchHit struct {
 type SearchResult struct {
 	Hits     []SearchHit
 	PageInfo PageInfo
+}
+
+type DocumentListQuery struct {
+	PathPrefix    string
+	MetadataKey   string
+	MetadataValue string
+	Limit         int
+	Cursor        string
+}
+
+type DocumentListResult struct {
+	Documents []DocumentSummary
+	PageInfo  PageInfo
 }
 
 type CreateDocumentInput struct {
@@ -118,6 +144,19 @@ type GraphNeighborhood struct {
 	Edges []GraphEdge
 }
 
+type DocumentLink struct {
+	DocID     string
+	Path      string
+	Title     string
+	Citations []Citation
+}
+
+type DocumentLinks struct {
+	DocID    string
+	Outgoing []DocumentLink
+	Incoming []DocumentLink
+}
+
 type RecordLookupInput struct {
 	Text       string
 	EntityType string
@@ -146,16 +185,67 @@ type RecordLookupResult struct {
 	PageInfo PageInfo
 }
 
+type ProvenanceEvent struct {
+	EventID    string
+	EventType  string
+	RefKind    string
+	RefID      string
+	SourceRef  string
+	OccurredAt time.Time
+	Details    map[string]string
+}
+
+type ProvenanceEventQuery struct {
+	RefKind   string
+	RefID     string
+	SourceRef string
+	Limit     int
+	Cursor    string
+}
+
+type ProvenanceEventResult struct {
+	Events   []ProvenanceEvent
+	PageInfo PageInfo
+}
+
+type ProjectionState struct {
+	Projection        string
+	RefKind           string
+	RefID             string
+	SourceRef         string
+	Freshness         string
+	ProjectionVersion string
+	UpdatedAt         time.Time
+	Details           map[string]string
+}
+
+type ProjectionStateQuery struct {
+	Projection string
+	RefKind    string
+	RefID      string
+	Limit      int
+	Cursor     string
+}
+
+type ProjectionStateResult struct {
+	Projections []ProjectionState
+	PageInfo    PageInfo
+}
+
 type Store interface {
 	Capabilities(context.Context) (Capabilities, error)
 	Search(context.Context, SearchQuery) (SearchResult, error)
+	ListDocuments(context.Context, DocumentListQuery) (DocumentListResult, error)
 	CreateDocument(context.Context, CreateDocumentInput) (Document, error)
 	GetDocument(context.Context, string) (Document, error)
+	GetDocumentLinks(context.Context, string) (DocumentLinks, error)
 	AppendDocument(context.Context, string, AppendDocumentInput) (Document, error)
 	ReplaceDocumentSection(context.Context, string, ReplaceSectionInput) (Document, error)
 	GetChunk(context.Context, string) (Chunk, error)
 	GraphNeighborhood(context.Context, GraphNeighborhoodInput) (GraphNeighborhood, error)
 	RecordsLookup(context.Context, RecordLookupInput) (RecordLookupResult, error)
 	GetRecordEntity(context.Context, string) (RecordEntity, error)
+	ListProvenanceEvents(context.Context, ProvenanceEventQuery) (ProvenanceEventResult, error)
+	ListProjectionStates(context.Context, ProjectionStateQuery) (ProjectionStateResult, error)
 	Close() error
 }
