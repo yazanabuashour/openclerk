@@ -64,11 +64,20 @@ jobs:
           go-version-file: go.mod
           check-latest: true
 
+      - name: Verify generated clients are up to date
+        run: |
+          go generate ./...
+          if ! git diff --exit-code; then
+            echo "Run go generate ./... and commit the generated output."
+            exit 1
+          fi
+
       - name: Verify formatting
         run: |
-          if test -n "$(gofmt -l cmd internal)"; then
-            echo "Run gofmt -w cmd internal before pushing."
-            gofmt -l cmd internal
+          files="$(git ls-files '*.go')"
+          if test -n "$(gofmt -l ${files})"; then
+            echo "Run gofmt -w on tracked Go files before pushing."
+            gofmt -l ${files}
             exit 1
           fi
 
