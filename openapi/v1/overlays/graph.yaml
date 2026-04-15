@@ -1,0 +1,9 @@
+overlay: 1.0.0
+info:
+  title: Graph overlay
+  version: 0.1.0
+actions:
+  - target: $.paths["/v1/extensions/records/lookup"]
+    remove: true
+  - target: $.paths["/v1/extensions/records/entities/{entityId}"]
+    remove: true

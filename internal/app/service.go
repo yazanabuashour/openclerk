@@ -1,0 +1,59 @@
+package app
+
+import (
+	"context"
+
+	"github.com/yazanabuashour/openclerk/internal/domain"
+)
+
+type Service struct {
+	store domain.Store
+}
+
+func New(store domain.Store) *Service {
+	return &Service{store: store}
+}
+
+func (s *Service) Close() error {
+	return s.store.Close()
+}
+
+func (s *Service) Capabilities(ctx context.Context) (domain.Capabilities, error) {
+	return s.store.Capabilities(ctx)
+}
+
+func (s *Service) Search(ctx context.Context, query domain.SearchQuery) (domain.SearchResult, error) {
+	return s.store.Search(ctx, query)
+}
+
+func (s *Service) CreateDocument(ctx context.Context, input domain.CreateDocumentInput) (domain.Document, error) {
+	return s.store.CreateDocument(ctx, input)
+}
+
+func (s *Service) GetDocument(ctx context.Context, docID string) (domain.Document, error) {
+	return s.store.GetDocument(ctx, docID)
+}
+
+func (s *Service) AppendDocument(ctx context.Context, docID string, input domain.AppendDocumentInput) (domain.Document, error) {
+	return s.store.AppendDocument(ctx, docID, input)
+}
+
+func (s *Service) ReplaceDocumentSection(ctx context.Context, docID string, input domain.ReplaceSectionInput) (domain.Document, error) {
+	return s.store.ReplaceDocumentSection(ctx, docID, input)
+}
+
+func (s *Service) GetChunk(ctx context.Context, chunkID string) (domain.Chunk, error) {
+	return s.store.GetChunk(ctx, chunkID)
+}
+
+func (s *Service) GraphNeighborhood(ctx context.Context, input domain.GraphNeighborhoodInput) (domain.GraphNeighborhood, error) {
+	return s.store.GraphNeighborhood(ctx, input)
+}
+
+func (s *Service) RecordsLookup(ctx context.Context, input domain.RecordLookupInput) (domain.RecordLookupResult, error) {
+	return s.store.RecordsLookup(ctx, input)
+}
+
+func (s *Service) GetRecordEntity(ctx context.Context, entityID string) (domain.RecordEntity, error) {
+	return s.store.GetRecordEntity(ctx, entityID)
+}
