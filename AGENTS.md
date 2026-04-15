@@ -23,27 +23,28 @@ bd close <id>         # Complete work
 
 ## Session Completion
 
-**When ending a work session**, you MUST complete steps 1-4 below, then stop for manual review. The workflow is paused for manual review at step 4 and the work session is NOT complete until steps 5-8 are finished and `git push` succeeds.
+**When ending a work session**, you MUST complete steps 1-5 below, then stop for manual review. The workflow is paused for manual review at step 5 and the work session is NOT complete until steps 6-9 are finished and `git push` succeeds.
 
 **MANDATORY WORKFLOW:**
 
 1. **File issues for remaining work** - Create issues for anything that needs follow-up
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close finished work, update in-progress items
-4. **Manual review** - Stop here by default, report that the workflow is paused for manual review, and wait for explicit instruction to complete the remaining steps
-5. **PUSH TO REMOTE** - This is MANDATORY:
+4. **Commit changes** - Stage the intended files and create a local commit before stopping for manual review; do not push yet
+5. **Manual review** - Stop here by default, report that the workflow is paused for manual review, and wait for explicit instruction to complete the remaining steps
+6. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
    git pull --rebase
    bd dolt push
    git push
    git status  # MUST show "up to date with origin"
    ```
-6. **Clean up** - Clear stashes, prune remote branches
-7. **Verify** - All changes committed AND pushed
-8. **Hand off** - Provide context for next session
+7. **Clean up** - Clear stashes, prune remote branches
+8. **Verify** - All changes committed AND pushed
+9. **Hand off** - Provide context for next session
 
 **CRITICAL RULES:**
-- The workflow pauses for manual review after step 4 and the work session is NOT complete until `git push` succeeds
+- The workflow pauses for manual review after step 5 and the work session is NOT complete until `git push` succeeds
 - Do NOT continue past `Manual review` unless explicitly instructed to complete the remaining workflow steps
 - Once instructed to continue after review, complete the remaining workflow and push; do NOT stop again with local-only changes
 - NEVER say "ready to push when you are" after review approval - YOU must push

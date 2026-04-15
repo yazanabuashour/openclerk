@@ -188,4 +188,4 @@ OPENCLERK_DATA_DIR="$(mktemp -d)" go run ./examples/openclerk-client
 
 Outside contributors can work entirely through GitHub issues and pull requests. Beads is maintainer-only workflow tooling and is not required for community contributions.
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for contribution expectations, [`SECURITY.md`](SECURITY.md) for vulnerability reporting, and [`SKILL.md`](SKILL.md) for the agent-facing usage guide.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for contribution expectations, [`SECURITY.md`](SECURITY.md) for vulnerability reporting, and [`skills/openclerk/SKILL.md`](skills/openclerk/SKILL.md) for the agent-facing usage guide.

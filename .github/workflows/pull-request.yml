@@ -26,7 +26,7 @@ jobs:
             CONTRIBUTING.md
             SECURITY.md
             CODE_OF_CONDUCT.md
-            SKILL.md
+            skills/openclerk/SKILL.md
             .github/CODEOWNERS
             .github/PULL_REQUEST_TEMPLATE.md
             .github/dependabot.yml
@@ -45,13 +45,19 @@ jobs:
             CONTRIBUTING.md \
             SECURITY.md \
             CODE_OF_CONDUCT.md \
-            SKILL.md \
+            skills \
             docs \
             .github/ISSUE_TEMPLATE \
             .github/PULL_REQUEST_TEMPLATE.md; then
             echo "Remove machine-absolute filesystem paths from committed docs."
             exit 1
           fi
+
+      - name: Validate Agent Skills package
+        run: |
+          python3 -m venv "${RUNNER_TEMP}/agentskills"
+          "${RUNNER_TEMP}/agentskills/bin/pip" install skills-ref
+          "${RUNNER_TEMP}/agentskills/bin/agentskills" validate skills/openclerk
 
   go-checks:
     name: Go checks
