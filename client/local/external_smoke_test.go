@@ -121,7 +121,7 @@ replace github.com/yazanabuashour/openclerk => %s
 		t.Fatalf("write go.mod: %v", err)
 	}
 
-	install := exec.Command("go", "get", "github.com/yazanabuashour/openclerk/client/local@v0.0.0")
+	install := exec.Command("go", "get", "github.com/yazanabuashour/openclerk/client/local@v0.1.0")
 	install.Dir = tmpDir
 	install.Env = os.Environ()
 	installOutput, err := install.CombinedOutput()

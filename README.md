@@ -6,24 +6,23 @@ The public surface is one authored OpenAPI contract, one generated Go client, an
 
 ## Public surface
 
-- [`client/openclerk`](client/openclerk) is the primary generated SDK.
 - [`client/local`](client/local) opens the embedded runtime in process.
+- [`client/openclerk`](client/openclerk) provides the generated request and response types from the same module.
 - [`openapi/v1/openclerk.yaml`](openapi/v1/openclerk.yaml) is the contract source of truth.
 
 The legacy `fts`, `hybrid`, `graph`, and `records` packages remain in the repo as implementation-variant fixtures for evals and internal comparison. They are not the preferred product entrypoint.
 
-## Install the embedded client
+## Install in your Go project
 
 ```bash
-go get github.com/yazanabuashour/openclerk/client/local@latest
-go get github.com/yazanabuashour/openclerk/client/openclerk@latest
+go get github.com/yazanabuashour/openclerk/client/local@v0.1.0
 ```
 
-For reproducible installs, pin the module to a release tag such as `@v0.y.z`.
+Import `client/local` to open the embedded runtime and `client/openclerk` from the same module for generated request and response types. Do not document or require a second `go get` for `client/openclerk`.
 
 ## Quick start
 
-The primary usage flow is one embedded client over one agent-facing surface:
+The normal user path is one embedded runtime opened directly inside the caller's process:
 
 ```go
 package main
@@ -38,83 +37,29 @@ import (
 )
 
 func main() {
-	ctx := context.Background()
 	client, runtime, err := local.Open(local.Config{})
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer runtime.Close()
 
-	architecture, err := client.CreateDocumentWithResponse(ctx, openclerk.CreateDocumentRequest{
-		Path:  "notes/architecture/knowledge-plane.md",
-		Title: "Knowledge plane",
-		Body:  "---\ntype: note\nstatus: active\n---\n# Knowledge plane\n\n## Summary\nCanonical architecture note.\n",
+	create, err := client.CreateDocumentWithResponse(context.Background(), openclerk.CreateDocumentRequest{
+		Path:  "notes/hello.md",
+		Title: "Hello",
+		Body:  "---\ntype: note\nstatus: active\n---\n# Hello\n\n## Summary\nEmbedded OpenClerk runtime.\n",
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	if architecture.JSON201 == nil {
-		log.Fatalf("create document failed: %s", string(architecture.Body))
+	if create.JSON201 == nil {
+		log.Fatalf("create document failed: %s", string(create.Body))
 	}
 
-	roadmap, err := client.CreateDocumentWithResponse(ctx, openclerk.CreateDocumentRequest{
-		Path:  "notes/projects/openclerk-roadmap.md",
-		Title: "Roadmap",
-		Body:  "---\ntype: project\nstatus: active\n---\n# Roadmap\n\n## Summary\nSee the [knowledge plane](../architecture/knowledge-plane.md).\n",
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	if roadmap.JSON201 == nil {
-		log.Fatalf("create linked document failed: %s", string(roadmap.Body))
-	}
-
-	record, err := client.CreateDocumentWithResponse(ctx, openclerk.CreateDocumentRequest{
-		Path:  "records/assets/transmission-solenoid.md",
-		Title: "Transmission solenoid",
-		Body:  "---\nentity_type: part\nentity_name: Transmission solenoid\nentity_id: transmission-solenoid\ntype: record\nstatus: active\n---\n# Transmission solenoid\n\n## Summary\nCanonical promoted-domain baseline.\n\n## Facts\n- sku: SOL-1\n- vendor: OpenClerk Motors\n",
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	if record.JSON201 == nil {
-		log.Fatalf("create record failed: %s", string(record.Body))
-	}
-
-	pathPrefix := "notes/"
-	docs, err := client.ListDocumentsWithResponse(ctx, &openclerk.ListDocumentsParams{PathPrefix: &pathPrefix})
-	if err != nil || docs.JSON200 == nil {
-		log.Fatal("list documents failed")
-	}
-
-	links, err := client.GetDocumentLinksWithResponse(ctx, roadmap.JSON201.DocId)
-	if err != nil || links.JSON200 == nil {
-		log.Fatal("get document links failed")
-	}
-
-	lookup, err := client.RecordsLookupWithResponse(ctx, openclerk.RecordsLookupRequest{Text: "solenoid"})
-	if err != nil || lookup.JSON200 == nil {
-		log.Fatal("records lookup failed")
-	}
-
-	refKind := "document"
-	events, err := client.ListProvenanceEventsWithResponse(ctx, &openclerk.ListProvenanceEventsParams{
-		RefKind: &refKind,
-		RefId:   &roadmap.JSON201.DocId,
-	})
-	if err != nil || events.JSON200 == nil {
-		log.Fatal("list provenance events failed")
-	}
-
-	fmt.Printf("docs=%d links=%d entity=%s events=%d dataDir=%s\n",
-		len(docs.JSON200.Documents),
-		len(links.JSON200.Outgoing),
-		lookup.JSON200.Entities[0].EntityId,
-		len(events.JSON200.Events),
-		runtime.Paths().DataDir,
-	)
+	fmt.Printf("doc=%s dataDir=%s\n", create.JSON201.DocId, runtime.Paths().DataDir)
 }
 ```
+
+`cmd/openclerkd serve` remains available for intentional HTTP debugging and compatibility work. When you start that adapter manually, create a remote client explicitly with `openclerk.NewClientWithResponses(baseURL)`.
 
 Runnable example:
 
@@ -193,9 +138,10 @@ Tagged releases publish:
 - a source archive
 - a SHA-256 checksum file
 - a CycloneDX SBOM
-- Sigstore-backed provenance and SBOM attestation bundles
+- a Sigstore-backed provenance bundle
+- a Sigstore-backed SBOM bundle
 
-To verify a tagged release:
+The source-only asset contract is the same for `v0.1.0` and later tags. To verify a tagged release:
 
 ```bash
 shasum -a 256 -c openclerk-v0.y.z.tar.gz.sha256

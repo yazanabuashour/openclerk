@@ -6,6 +6,18 @@ Outside contributors do not need Beads to contribute to this repository.
 
 The shipped surface is the embedded Go module exposed through [`client/local`](client/local) plus the generated public client in [`client/openclerk`](client/openclerk). The repository still contains implementation-variant clients in [`client`](client) and an HTTP adapter in [`cmd/openclerkd`](cmd/openclerkd), but contributors should treat those as eval or compatibility infrastructure rather than the primary product path.
 
+## Public install contract
+
+The canonical tagged install command is:
+
+```bash
+go get github.com/yazanabuashour/openclerk/client/local@v0.1.0
+```
+
+Import [`client/openclerk`](client/openclerk) from the same module for generated request and response types. Do not document a second install command for that package.
+
+[`cmd/openclerkd`](cmd/openclerkd) remains available for intentional HTTP debugging and compatibility work, not as the primary user path.
+
 ## Local setup
 
 Maintainers prefer:

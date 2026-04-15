@@ -4,6 +4,14 @@ This repository uses **Beads** (`bd`) in embedded mode for maintainer task track
 
 The public product surface is the embedded Go module exposed through [`client/local`](../client/local) and the generated [`client/openclerk`](../client/openclerk) SDK. The backend-specific generated clients remain in the repo as eval fixtures. There is no hosted deployment target, and the default user path does not require a daemon or bound port.
 
+The canonical tagged install command for consumers is:
+
+```bash
+go get github.com/yazanabuashour/openclerk/client/local@v0.1.0
+```
+
+Consumers import [`client/openclerk`](../client/openclerk) from the same module for generated request and response types. [`cmd/openclerkd`](../cmd/openclerkd) remains an intentional HTTP debug and compatibility surface, not the primary runtime path.
+
 ## Initial Setup
 
 Preferred tool install:
@@ -64,7 +72,7 @@ Current readiness assumptions:
 
 - `main` is the protected default branch.
 - Pull requests run only untrusted-safe validation with read-only token scope.
-- GitHub Releases are created from version tags in the `v0.y.z` form.
+- GitHub Releases are created from version tags in the `v0.y.z` form, starting with `v0.1.0`.
 - The `release` environment is protected before enabling public tagged releases.
 - `v*` tags are protected so only maintainers or trusted automation can create them.
 - Security reports are expected through GitHub private vulnerability reporting.
@@ -84,7 +92,7 @@ When changing GitHub settings, keep the repo aligned with:
 
 ## Release workflow
 
-Before cutting a public tag:
+Before cutting the first public tag (`v0.1.0`) or any later public tag:
 
 ```bash
 gh workflow run release.yml -f ref=main
@@ -100,6 +108,8 @@ Tagged releases are the first distributable artifact. A `v0.y.z` tag triggers:
 - GitHub Release publication with the generated assets
 
 The release bundle logic lives in [`scripts/build-release-bundle.sh`](../scripts/build-release-bundle.sh).
+
+Do not add downloadable binaries or package-manager artifacts in this pass. The public release contract remains source-only.
 
 ## Runtime storage defaults
 
