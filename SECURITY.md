@@ -2,7 +2,12 @@
 
 ## Supported versions
 
-This project is pre-`1.0` and does not yet ship a runnable application or package. Until `0.1.0`, the only supported code line is the current default branch and the most recent `0.y.z` tag, if one exists.
+This project ships an embedded Go module and generated clients for local document storage. There is no hosted service and no long-running daemon in the supported user path.
+
+Until `1.0.0`, the supported code lines are:
+
+- the current default branch
+- the most recent `v0.y.z` tag
 
 Older pre-`1.0` tags are not guaranteed to receive fixes or backports.
 
@@ -45,8 +50,12 @@ Maintainers will triage reports using practical impact on repository users and m
 - Public release notes should avoid exploit-enabling detail until a fix or mitigation is available.
 - If the repository later adopts GitHub Security Advisories, maintainers should publish advisories for material fixes.
 
+## Release integrity
+
+Tagged releases publish a source archive, checksum, SBOM, and attestation bundles. Users should verify both the checksum and the GitHub artifact attestation for the released source archive before treating a tag as trusted.
+
 ## Emergency releases and hotfixes
 
 If a vulnerability affects the latest supported code line, maintainers may cut an out-of-band patch tag and GitHub Release outside the normal release cadence.
 
-Because the repository does not yet ship build artifacts or packages, emergency fixes currently mean source changes and release notes only.
+For this repository, emergency fixes currently mean a source change plus refreshed release integrity assets for the affected tag.

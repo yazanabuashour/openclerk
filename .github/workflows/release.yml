@@ -4,24 +4,90 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref to package in a release dry run
+        required: false
+        default: main
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
+  artifact-metadata: write
 
 jobs:
   publish-release:
     name: Publish GitHub Release
     runs-on: ubuntu-latest
+    environment: release
     steps:
-      - name: Create GitHub Release from tag
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: Resolve release metadata
+        id: meta
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_REF: ${{ inputs.ref }}
+          GITHUB_REF_NAME_VALUE: ${{ github.ref_name }}
+        run: |
+          if [ "${EVENT_NAME}" = "push" ]; then
+            version="${GITHUB_REF_NAME_VALUE}"
+            publish=true
+          else
+            version="dry-run-$(printf '%s' "${INPUT_REF:-main}" | sed 's#^refs/heads/##; s#^refs/tags/##; s#[^A-Za-z0-9._-]#-#g')"
+            publish=false
+          fi
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "publish=${publish}" >> "${GITHUB_OUTPUT}"
+
+      - name: Run release validation
+        run: go test ./...
+
+      - name: Build source bundle, checksums, and SBOM
+        run: bash ./scripts/build-release-bundle.sh "${{ steps.meta.outputs.version }}" dist
+
+      - name: Attest source provenance
+        id: provenance
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26
+        with:
+          subject-path: dist/openclerk-${{ steps.meta.outputs.version }}.tar.gz
+
+      - name: Attest source SBOM
+        id: sbom
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26
+        with:
+          subject-path: dist/openclerk-${{ steps.meta.outputs.version }}.tar.gz
+          sbom-path: dist/openclerk-${{ steps.meta.outputs.version }}.sbom.json
+
+      - name: Stage attestation bundles
+        run: |
+          cp "${{ steps.provenance.outputs.bundle-path }}" "dist/openclerk-${{ steps.meta.outputs.version }}.provenance.bundle.json"
+          cp "${{ steps.sbom.outputs.bundle-path }}" "dist/openclerk-${{ steps.meta.outputs.version }}.sbom.bundle.json"
+          ls -l dist
+
+      - name: Create or update GitHub Release
+        if: steps.meta.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
-            echo "Release already exists for ${GITHUB_REF_NAME}"
+            gh release upload "${GITHUB_REF_NAME}" dist/* --clobber
             exit 0
           fi
 
           gh release create "${GITHUB_REF_NAME}" \
             --verify-tag \
-            --generate-notes
+            --generate-notes \
+            dist/*

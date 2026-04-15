@@ -1,6 +1,6 @@
 # openclerk
 
-openclerk is a local-first, agent-facing document store with one authored OpenAPI contract and four committed generated Go clients over SQLite-backed backend variants.
+openclerk is a local-first, agent-facing document store built from one authored OpenAPI contract, four committed generated Go clients, and an embedded SQLite-backed runtime that does not require a daemon or bound port.
 
 ## Backend variants
 
@@ -11,7 +11,80 @@ openclerk is a local-first, agent-facing document store with one authored OpenAP
 | `graph` | [`client/graph`](client/graph) | FTS core plus evidence-linked graph projections |
 | `records` | [`client/records`](client/records) | FTS core plus promoted entities and provenance-backed record lookup |
 
-The contract source of truth is [`openapi/v1/openclerk.yaml`](openapi/v1/openclerk.yaml). Generated Go client code is committed and is the public SDK surface for this repository.
+The contract source of truth is [`openapi/v1/openclerk.yaml`](openapi/v1/openclerk.yaml). The generated Go clients are the public SDK surface, and [`client/local`](client/local) opens those clients against an in-process runtime with no host-level HTTP service.
+
+## Install the embedded client
+
+Install the embedded runtime package plus the backend package your agent uses:
+
+```bash
+go get github.com/yazanabuashour/openclerk/client/local@latest
+go get github.com/yazanabuashour/openclerk/client/records@latest
+```
+
+For reproducible installs, pin the module to a release tag such as `@v0.y.z`.
+
+## Quick start
+
+This example stores and retrieves a health record through the generated `records` client while running entirely in process:
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	local "github.com/yazanabuashour/openclerk/client/local"
+	records "github.com/yazanabuashour/openclerk/client/records"
+)
+
+func main() {
+	client, runtime, err := local.OpenRecords(local.Config{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer runtime.Close()
+
+	create, err := client.CreateDocumentWithResponse(context.Background(), records.CreateDocumentRequest{
+		Path:  "health/labs/glucose.md",
+		Title: "Fasting glucose",
+		Body:  "---\nentity_type: lab_result\nentity_name: Fasting glucose\nentity_id: fasting-glucose\n---\n# Fasting glucose\n\n## Facts\n- value: 92 mg/dL\n- status: normal\n",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	if create.JSON201 == nil {
+		log.Fatalf("create failed: %s", string(create.Body))
+	}
+
+	entity, err := client.GetRecordEntityWithResponse(context.Background(), "fasting-glucose")
+	if err != nil {
+		log.Fatal(err)
+	}
+	if entity.JSON200 == nil {
+		log.Fatalf("get entity failed: %s", string(entity.Body))
+	}
+
+	fmt.Printf("stored %s in %s\n", entity.JSON200.EntityId, runtime.Paths().DataDir)
+}
+```
+
+## Default storage
+
+By default, the embedded runtime stores data under:
+
+```text
+${XDG_DATA_HOME:-~/.local/share}/openclerk
+```
+
+That directory contains:
+
+- `openclerk.sqlite` for the SQLite database
+- `vault/` for canonical markdown documents
+
+Override any of these locations through [`client/local.Config`](client/local/local.go).
 
 ## API surface
 
@@ -31,63 +104,41 @@ Extension methods:
 - `POST /v1/extensions/records/lookup`
 - `GET /v1/extensions/records/entities/{entityId}`
 
-v1 is local-first and intentionally simple:
-
-- Auth mode is `none`.
-- There is no users table.
-- SQLite is the only persisted database.
-- Canonical markdown documents are stored under the configured vault root and indexes are derived from them.
-
-## Quick start
-
-Start the daemon against a local SQLite file and vault root:
-
-```bash
-go run ./cmd/openclerkd serve \
-  --backend=fts \
-  --db ./var/openclerk.sqlite \
-  --vault-root ./vault \
-  --addr 127.0.0.1:8080
-```
-
-To enable hybrid vector scoring without an external vector database, start the hybrid backend with the local embedding provider:
-
-```bash
-go run ./cmd/openclerkd serve \
-  --backend=hybrid \
-  --embedding-provider local \
-  --db ./var/openclerk.sqlite \
-  --vault-root ./vault \
-  --addr 127.0.0.1:8080
-```
-
-## Install generated clients
-
-Install the package that matches the backend you want to benchmark or ship:
-
-```bash
-go get github.com/yazanabuashour/openclerk/client/fts@v0.x.y-alpha.n
-go get github.com/yazanabuashour/openclerk/client/hybrid@v0.x.y-alpha.n
-go get github.com/yazanabuashour/openclerk/client/graph@v0.x.y-alpha.n
-go get github.com/yazanabuashour/openclerk/client/records@v0.x.y-alpha.n
-```
-
-Each package exposes the generated typed client directly via `NewClientWithResponses`.
+The OpenAPI contract remains the single definition of operations, schemas, and generated request and response types even when the runtime is embedded.
 
 ## Example programs
 
-These examples are runnable against an empty local daemon. Each one creates sample content through the generated client before reading it back.
+Each example opens the embedded runtime, writes sample content, and reads it back without binding a port. To avoid writing into your default XDG location while exploring, point the examples at a temporary data directory:
+
+```bash
+OPENCLERK_DATA_DIR="$(mktemp -d)" go run ./examples/records-client
+OPENCLERK_DATA_DIR="$(mktemp -d)" go run ./examples/graph-client
+```
+
+Available examples:
 
 - [`examples/fts-client/main.go`](examples/fts-client/main.go)
 - [`examples/hybrid-client/main.go`](examples/hybrid-client/main.go)
 - [`examples/graph-client/main.go`](examples/graph-client/main.go)
 - [`examples/records-client/main.go`](examples/records-client/main.go)
 
-Run one with:
+## Verify a release
+
+Tagged releases publish:
+
+- a source archive
+- a SHA-256 checksum file
+- a CycloneDX SBOM
+- Sigstore-backed provenance and SBOM attestation bundles
+
+To verify a tagged release:
 
 ```bash
-OPENCLERK_SERVER=http://127.0.0.1:8080 go run ./examples/fts-client
+shasum -a 256 -c openclerk-v0.y.z.tar.gz.sha256
+gh attestation verify openclerk-v0.y.z.tar.gz --repo yazanabuashour/openclerk
 ```
+
+The release assets and attestation bundles are generated by [`.github/workflows/release.yml`](.github/workflows/release.yml).
 
 ## Local development
 
@@ -104,26 +155,25 @@ go generate ./...
 git diff --exit-code
 ```
 
-Run formatting and tests:
+Run formatting, tests, and lint:
 
 ```bash
-gofmt -w $(git ls-files '*.go')
+test -z "$(gofmt -l $(git ls-files '*.go'))"
 go test ./...
 golangci-lint run
 ```
 
 ## Repository contents
 
-- [`cmd/openclerkd`](cmd/openclerkd) contains the HTTP daemon entrypoint.
-- [`cmd/openclerk`](cmd/openclerk) contains the bootstrap CLI entrypoint.
-- [`internal/app`](internal/app) contains application services and use cases.
-- [`internal/domain`](internal/domain) defines the strict domain contracts and shared types.
+- [`client/local`](client/local) contains the embedded runtime entrypoint for the generated clients.
+- [`client`](client) contains the committed generated Go clients.
+- [`openapi/v1/openclerk.yaml`](openapi/v1/openclerk.yaml) contains the contract source of truth.
 - [`internal/infra/sqlite`](internal/infra/sqlite) contains the SQLite-backed implementations and derived projections.
-- [`client`](client) contains committed generated Go clients.
-- [`docs/maintainers.md`](docs/maintainers.md) explains Beads-based maintainer workflow and repo administration notes.
+- [`cmd/openclerkd`](cmd/openclerkd) remains available for internal contract testing and adapter work, but it is not the primary user-facing runtime.
+- [`docs/maintainers.md`](docs/maintainers.md) explains Beads-based maintainer workflow and release administration notes.
 
 ## Contributing
 
 Outside contributors can work entirely through GitHub issues and pull requests. Beads is maintainer-only workflow tooling and is not required for community contributions.
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for contribution expectations, [`SECURITY.md`](SECURITY.md) for vulnerability reporting, and [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) for community standards.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for contribution expectations, [`SECURITY.md`](SECURITY.md) for vulnerability reporting, and [`SKILL.md`](SKILL.md) for the agent-facing usage guide.

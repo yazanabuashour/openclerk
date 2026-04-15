@@ -22,13 +22,16 @@ func main() {
 		os.Exit(2)
 	}
 
-	command := flag.NewFlagSet("serve", flag.ExitOnError)
+	command := flag.NewFlagSet("serve", flag.ContinueOnError)
+	command.SetOutput(os.Stderr)
 	backendFlag := command.String("backend", "fts", "backend kind: fts, hybrid, graph, or records")
 	dbPath := command.String("db", "", "path to the sqlite database file")
 	vaultRoot := command.String("vault-root", "", "path to the canonical markdown vault root")
 	addr := command.String("addr", "127.0.0.1:8080", "listen address")
 	embeddingProvider := command.String("embedding-provider", "", "embedding provider name; use 'local' to enable local hashed embeddings")
-	command.Parse(os.Args[2:])
+	if err := command.Parse(os.Args[2:]); err != nil {
+		os.Exit(2)
+	}
 
 	backend, err := parseBackend(*backendFlag)
 	if err != nil {

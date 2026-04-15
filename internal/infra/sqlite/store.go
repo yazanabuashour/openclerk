@@ -694,7 +694,9 @@ func (s *Store) pruneMissingDocuments(ctx context.Context, livePaths []string) e
 	if err != nil {
 		return domain.InternalError("begin prune missing documents", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback()
+	}()
 
 	for _, docID := range staleDocIDs {
 		if _, err := tx.ExecContext(ctx, `DELETE FROM chunk_fts WHERE doc_id = ?`, docID); err != nil {
@@ -728,7 +730,9 @@ func (s *Store) syncDocumentFromDisk(ctx context.Context, relPath string, prefer
 	if err != nil {
 		return domain.InternalError("begin transaction", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback()
+	}()
 
 	createdAt := now.Format(time.RFC3339Nano)
 	var existingTitle string
@@ -992,7 +996,9 @@ func (s *Store) rebuildGraph(ctx context.Context) error {
 	if err != nil {
 		return domain.InternalError("begin graph rebuild", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback()
+	}()
 	for _, stmt := range []string{
 		`DELETE FROM graph_edges;`,
 		`DELETE FROM graph_nodes;`,
@@ -1073,7 +1079,9 @@ func (s *Store) rebuildRecords(ctx context.Context) error {
 	if err != nil {
 		return domain.InternalError("begin records rebuild", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback()
+	}()
 	for _, stmt := range []string{
 		`DELETE FROM record_citations;`,
 		`DELETE FROM record_facts;`,

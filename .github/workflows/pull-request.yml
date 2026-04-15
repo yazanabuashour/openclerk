@@ -26,6 +26,7 @@ jobs:
             CONTRIBUTING.md
             SECURITY.md
             CODE_OF_CONDUCT.md
+            SKILL.md
             .github/CODEOWNERS
             .github/PULL_REQUEST_TEMPLATE.md
             .github/dependabot.yml
@@ -44,6 +45,7 @@ jobs:
             CONTRIBUTING.md \
             SECURITY.md \
             CODE_OF_CONDUCT.md \
+            SKILL.md \
             docs \
             .github/ISSUE_TEMPLATE \
             .github/PULL_REQUEST_TEMPLATE.md; then
@@ -74,15 +76,21 @@ jobs:
 
       - name: Verify formatting
         run: |
-          files="$(git ls-files '*.go')"
-          if test -n "$(gofmt -l ${files})"; then
+          if test -n "$(gofmt -l $(git ls-files '*.go'))"; then
             echo "Run gofmt -w on tracked Go files before pushing."
-            gofmt -l ${files}
+            gofmt -l $(git ls-files '*.go')
             exit 1
           fi
 
       - name: Run tests
         run: go test ./...
+
+      - name: Run golangci-lint
+        run: |
+          export GOBIN="${RUNNER_TEMP}/bin"
+          mkdir -p "${GOBIN}"
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
+          "${GOBIN}/golangci-lint" run
 
   dependency-review:
     name: Dependency review

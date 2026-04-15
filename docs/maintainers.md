@@ -2,7 +2,7 @@
 
 This repository uses **Beads** (`bd`) in embedded mode for maintainer task tracking.
 
-This repository is public, but it is still only a scaffold. There is no deploy pipeline, package publication target, or runnable application yet. Keep maintainer docs honest about that status.
+The public product surface is the embedded Go module exposed through [`client/local`](../client/local) and the generated backend clients. There is no hosted deployment target, and the default user path does not require a daemon or bound port.
 
 ## Initial Setup
 
@@ -54,7 +54,7 @@ bd dolt pull
 ## Public repo expectations
 
 - Outside contributors must be able to contribute without Beads.
-- Policy and workflow files are part of the public contract and should stay reviewable in Git alone.
+- Policy, release, and skill files are part of the public contract and should stay reviewable in Git alone.
 - Do not document machine-absolute filesystem paths in committed docs.
 - Do not assume private infrastructure, deploy secrets, or internal services exist unless they have been added explicitly.
 
@@ -65,6 +65,8 @@ Current readiness assumptions:
 - `main` is the protected default branch.
 - Pull requests run only untrusted-safe validation with read-only token scope.
 - GitHub Releases are created from version tags in the `v0.y.z` form.
+- The `release` environment is protected before enabling public tagged releases.
+- `v*` tags are protected so only maintainers or trusted automation can create them.
 - Security reports are expected through GitHub private vulnerability reporting.
 
 Current review enforcement nuance:
@@ -75,11 +77,36 @@ Current review enforcement nuance:
 
 When changing GitHub settings, keep the repo aligned with:
 
-- [SECURITY.md](../SECURITY.md) for disclosure handling and patch timing.
+- [SECURITY.md](../SECURITY.md) for disclosure handling and release integrity expectations.
 - [.github/CODEOWNERS](../.github/CODEOWNERS) for sensitive file ownership.
 - [.github/workflows/pull-request.yml](../.github/workflows/pull-request.yml) for fork-safe checks.
-- [.github/workflows/release.yml](../.github/workflows/release.yml) for release-note generation.
+- [.github/workflows/release.yml](../.github/workflows/release.yml) for source bundle, checksum, SBOM, and attestation publication.
 
-## Release notes
+## Release workflow
 
-The current release contract is GitHub Releases only. Tag a version like `v0.1.0`, push the tag, and let the release workflow generate notes from the tag. Do not attach build artifacts, checksums, provenance, or SBOMs until the project actually ships distributable outputs and the stronger release process is implemented.
+Before cutting a public tag:
+
+```bash
+gh workflow run release.yml -f ref=main
+```
+
+Tagged releases are the first distributable artifact. A `v0.y.z` tag triggers:
+
+- source archive generation
+- SHA-256 checksum generation
+- CycloneDX SBOM generation
+- Sigstore-backed provenance attestation
+- Sigstore-backed SBOM attestation
+- GitHub Release publication with the generated assets
+
+The release bundle logic lives in [`scripts/build-release-bundle.sh`](../scripts/build-release-bundle.sh).
+
+## Runtime storage defaults
+
+The embedded runtime defaults to:
+
+```text
+${XDG_DATA_HOME:-~/.local/share}/openclerk
+```
+
+That location contains `openclerk.sqlite` plus the `vault/` tree used for canonical markdown documents.

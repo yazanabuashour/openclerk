@@ -7,26 +7,31 @@ import (
 	"os"
 	"time"
 
+	local "github.com/yazanabuashour/openclerk/client/local"
 	records "github.com/yazanabuashour/openclerk/client/records"
 )
 
 func main() {
 	ctx := context.Background()
-	client, err := records.NewClientWithResponses(serverURL())
+	client, runtime, err := local.OpenRecords(config())
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer runtime.Close()
 
-	path := fmt.Sprintf("examples/records-%d.md", time.Now().UnixNano())
+	runID := fmt.Sprintf("%d", time.Now().UnixNano())
+	path := fmt.Sprintf("examples/records-%s.md", runID)
+	title := fmt.Sprintf("Transmission solenoid %s", runID)
+	entityID := fmt.Sprintf("transmission-solenoid-%s", runID)
 	create, err := client.CreateDocumentWithResponse(ctx, records.CreateDocumentRequest{
 		Path:  path,
-		Title: "Transmission solenoid",
-		Body: `---
+		Title: title,
+		Body: fmt.Sprintf(`---
 entity_type: part
-entity_name: Transmission solenoid
-entity_id: transmission-solenoid
+entity_name: %s
+entity_id: %s
 ---
-# Transmission solenoid
+# %s
 
 ## Summary
 Canonical part record.
@@ -34,7 +39,7 @@ Canonical part record.
 ## Facts
 - sku: SOL-1
 - vendor: OpenClerk Motors
-`,
+`, title, entityID, title),
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -43,7 +48,7 @@ Canonical part record.
 		log.Fatalf("create document failed: %s", string(create.Body))
 	}
 
-	lookup, err := client.RecordsLookupWithResponse(ctx, records.RecordsLookupRequest{Text: "solenoid"})
+	lookup, err := client.RecordsLookupWithResponse(ctx, records.RecordsLookupRequest{Text: runID})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -62,12 +67,12 @@ Canonical part record.
 		log.Fatalf("get record entity failed: %s", string(entity.Body))
 	}
 
-	fmt.Printf("backend=%s entity=%s facts=%d sourceDoc=%s\n", records.CapabilitiesBackendRecords, entity.JSON200.EntityId, len(entity.JSON200.Facts), create.JSON201.DocId)
+	fmt.Printf("backend=%s dataDir=%s entity=%s facts=%d sourceDoc=%s\n", records.CapabilitiesBackendRecords, runtime.Paths().DataDir, entity.JSON200.EntityId, len(entity.JSON200.Facts), create.JSON201.DocId)
 }
 
-func serverURL() string {
-	if value := os.Getenv("OPENCLERK_SERVER"); value != "" {
-		return value
+func config() local.Config {
+	if value := os.Getenv("OPENCLERK_DATA_DIR"); value != "" {
+		return local.Config{DataDir: value}
 	}
-	return "http://127.0.0.1:8080"
+	return local.Config{}
 }

@@ -8,14 +8,16 @@ import (
 	"time"
 
 	graph "github.com/yazanabuashour/openclerk/client/graph"
+	local "github.com/yazanabuashour/openclerk/client/local"
 )
 
 func main() {
 	ctx := context.Background()
-	client, err := graph.NewClientWithResponses(serverURL())
+	client, runtime, err := local.OpenGraph(config())
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer runtime.Close()
 
 	prefix := fmt.Sprintf("examples/graph-%d", time.Now().UnixNano())
 	targetPath := prefix + "/reference.md"
@@ -65,12 +67,12 @@ See the [reference](reference.md) for details.
 		log.Fatalf("graph neighborhood failed: %s", string(neighborhood.Body))
 	}
 
-	fmt.Printf("backend=%s nodes=%d edges=%d source=%s target=%s\n", graph.CapabilitiesBackendGraph, len(neighborhood.JSON200.Nodes), len(neighborhood.JSON200.Edges), source.JSON201.DocId, target.JSON201.DocId)
+	fmt.Printf("backend=%s dataDir=%s nodes=%d edges=%d source=%s target=%s\n", graph.CapabilitiesBackendGraph, runtime.Paths().DataDir, len(neighborhood.JSON200.Nodes), len(neighborhood.JSON200.Edges), source.JSON201.DocId, target.JSON201.DocId)
 }
 
-func serverURL() string {
-	if value := os.Getenv("OPENCLERK_SERVER"); value != "" {
-		return value
+func config() local.Config {
+	if value := os.Getenv("OPENCLERK_DATA_DIR"); value != "" {
+		return local.Config{DataDir: value}
 	}
-	return "http://127.0.0.1:8080"
+	return local.Config{}
 }

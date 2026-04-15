@@ -9,14 +9,18 @@ import (
 	"time"
 
 	hybrid "github.com/yazanabuashour/openclerk/client/hybrid"
+	local "github.com/yazanabuashour/openclerk/client/local"
 )
 
 func main() {
 	ctx := context.Background()
-	client, err := hybrid.NewClientWithResponses(serverURL())
+	cfg := config()
+	cfg.EmbeddingProvider = "local"
+	client, runtime, err := local.OpenHybrid(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer runtime.Close()
 
 	path := fmt.Sprintf("examples/hybrid-%d.md", time.Now().UnixNano())
 	create, err := client.CreateDocumentWithResponse(ctx, hybrid.CreateDocumentRequest{
@@ -66,12 +70,12 @@ Magnetic valve actuator for drivetrain control.
 		modes = append(modes, string(mode))
 	}
 
-	fmt.Printf("backend=%s modes=%s topChunk=%s\n", hybrid.CapabilitiesBackendHybrid, strings.Join(modes, ","), search.JSON200.Hits[0].ChunkId)
+	fmt.Printf("backend=%s dataDir=%s modes=%s topChunk=%s\n", hybrid.CapabilitiesBackendHybrid, runtime.Paths().DataDir, strings.Join(modes, ","), search.JSON200.Hits[0].ChunkId)
 }
 
-func serverURL() string {
-	if value := os.Getenv("OPENCLERK_SERVER"); value != "" {
-		return value
+func config() local.Config {
+	if value := os.Getenv("OPENCLERK_DATA_DIR"); value != "" {
+		return local.Config{DataDir: value}
 	}
-	return "http://127.0.0.1:8080"
+	return local.Config{}
 }

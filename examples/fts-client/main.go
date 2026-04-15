@@ -8,14 +8,16 @@ import (
 	"time"
 
 	fts "github.com/yazanabuashour/openclerk/client/fts"
+	local "github.com/yazanabuashour/openclerk/client/local"
 )
 
 func main() {
 	ctx := context.Background()
-	client, err := fts.NewClientWithResponses(serverURL())
+	client, runtime, err := local.OpenFTS(config())
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer runtime.Close()
 
 	path := fmt.Sprintf("examples/fts-%d.md", time.Now().UnixNano())
 	create, err := client.CreateDocumentWithResponse(ctx, fts.CreateDocumentRequest{
@@ -52,12 +54,12 @@ Transmission solenoid exact-match note.
 		log.Fatal("search returned no hits")
 	}
 
-	fmt.Printf("backend=%s doc=%s chunk=%s title=%q\n", fts.CapabilitiesBackendFts, create.JSON201.DocId, search.JSON200.Hits[0].ChunkId, search.JSON200.Hits[0].Title)
+	fmt.Printf("backend=%s dataDir=%s doc=%s chunk=%s title=%q\n", fts.CapabilitiesBackendFts, runtime.Paths().DataDir, create.JSON201.DocId, search.JSON200.Hits[0].ChunkId, search.JSON200.Hits[0].Title)
 }
 
-func serverURL() string {
-	if value := os.Getenv("OPENCLERK_SERVER"); value != "" {
-		return value
+func config() local.Config {
+	if value := os.Getenv("OPENCLERK_DATA_DIR"); value != "" {
+		return local.Config{DataDir: value}
 	}
-	return "http://127.0.0.1:8080"
+	return local.Config{}
 }
