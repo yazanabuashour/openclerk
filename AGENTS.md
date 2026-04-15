@@ -30,7 +30,7 @@ bd close <id>         # Complete work
 1. **File issues for remaining work** - Create issues for anything that needs follow-up
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close finished work, update in-progress items
-4. **Commit changes** - Stage the intended files and create a local commit before stopping for manual review; do not push yet
+4. **Commit changes** - Stage all files and create a local commit before stopping for manual review; do not push yet
 5. **Manual review** - Stop here by default, report that the workflow is paused for manual review, and wait for explicit instruction to complete the remaining steps
 6. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
