@@ -41,6 +41,27 @@ Unless the caller overrides paths in [`../../client/local/local.go`](../../clien
 
 Use explicit `DataDir` overrides in tests and demos to avoid polluting the default XDG location.
 
+## Common queries
+
+Use `local.ResolvePaths(local.Config{})` when the user asks where local OpenClerk data lives. It reports the effective `DataDir`, `DatabasePath`, and `VaultRoot` without opening the runtime.
+
+Use `local.Open(local.Config{})` for live local state, then call the generated client methods:
+
+- To list canonical documents, call `ListDocumentsWithResponse(ctx, &openclerk.ListDocumentsParams{...})`. Filter with `PathPrefix`, `MetadataKey`, and `MetadataValue` when the user asks for a specific notebook, folder, type, status, or other metadata value.
+- To answer “what do I know about X?”, call `SearchQueryWithResponse(ctx, openclerk.SearchQuery{Text: query, Limit: &limit})`. Add `PathPrefix` or metadata filters when the user narrows the question.
+- To inspect promoted records for a domain entity, call `RecordsLookupWithResponse(ctx, openclerk.RecordsLookupRequest{Text: query, Limit: &limit})`.
+- To inspect what links to or from a document, call `GetDocumentLinksWithResponse(ctx, docID)`.
+- To inspect source and derivation state, call `ListProvenanceEventsWithResponse(ctx, &openclerk.ListProvenanceEventsParams{...})` and `ListProjectionStatesWithResponse(ctx, &openclerk.ListProjectionStatesParams{...})`.
+
+For quick local inspection without rewriting client boilerplate, run [`../../examples/openclerk-query`](../../examples/openclerk-query):
+
+```bash
+go run ./examples/openclerk-query
+go run ./examples/openclerk-query -- -q "architecture" -limit 10
+go run ./examples/openclerk-query -- -path-prefix notes/ -metadata-key status -metadata-value active
+go run ./examples/openclerk-query -- -doc-id <doc-id> -provenance
+```
+
 ## Practical defaults
 
 - Use tagged installs such as `v0.1.0` and later for reproducible setups.
