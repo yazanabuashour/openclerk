@@ -16,8 +16,8 @@ The product model is:
 
 The public SDK surface is:
 
-- [`client/openclerk`](../../client/openclerk)
-- [`client/local`](../../client/local)
+- [`client/local`](../../client/local), including the code-first embedded facade
+- [`client/openclerk`](../../client/openclerk), for generated OpenAPI fallback work
 - [`openapi/v1/openclerk.yaml`](../../openapi/v1/openclerk.yaml)
 
 The public API is organized by capability, not implementation variant:

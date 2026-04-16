@@ -2,6 +2,9 @@
 
 These scenarios define the initial eval task set used to compare the internal `fts`, `hybrid`, `graph`, `records`, and unified `openclerk` implementations.
 
+Production agent eval guidance for the code-first SDK surface lives in
+[`agent-production.md`](agent-production.md).
+
 ## Source-grounded retrieval
 
 - Create canonical notes with stable headings and exact terms.

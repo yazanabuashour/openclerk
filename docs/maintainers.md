@@ -2,15 +2,15 @@
 
 This repository uses **Beads** (`bd`) in embedded mode for maintainer task tracking.
 
-The public product surface is the embedded Go module exposed through [`client/local`](../client/local) and the generated [`client/openclerk`](../client/openclerk) SDK. The backend-specific generated clients remain in the repo as eval fixtures. There is no hosted deployment target, and the default user path does not require a daemon or bound port.
+The public product surface is the embedded Go module exposed through the code-first [`client/local`](../client/local) SDK facade. The generated [`client/openclerk`](../client/openclerk) package remains available for raw OpenAPI fallback work, and the backend-specific generated clients remain in the repo as eval fixtures. There is no hosted deployment target, and the default user path does not require a daemon or bound port.
 
-The canonical tagged install command for consumers is:
+Until the first release tag is published, the install command for consumers is:
 
 ```bash
-go get github.com/yazanabuashour/openclerk/client/local@v0.1.0
+go get github.com/yazanabuashour/openclerk/client/local@main
 ```
 
-Consumers import [`client/openclerk`](../client/openclerk) from the same module for generated request and response types. [`cmd/openclerkd`](../cmd/openclerkd) remains an intentional HTTP debug and compatibility surface, not the primary runtime path.
+Consumers should start with `local.OpenClient(local.Config{})`. They can import [`client/openclerk`](../client/openclerk) from the same module only when generated request and response types are needed. [`cmd/openclerkd`](../cmd/openclerkd) remains an intentional HTTP debug and compatibility surface, not the primary runtime path.
 
 ## Initial Setup
 

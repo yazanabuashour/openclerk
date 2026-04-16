@@ -2,12 +2,12 @@
 
 openclerk is a local-first, agent-facing knowledge plane for notes, documents, promoted records, and provenance-backed retrieval.
 
-The public surface is one authored OpenAPI contract, one generated Go client, and one embedded SQLite-backed runtime that does not require a daemon or bound port. Canonical docs remain markdown in the vault; graph traversal and promoted-domain lookup stay derived from those canonical sources.
+The public surface is one authored OpenAPI contract, one code-first local SDK, one generated Go client for fallback contract work, and one embedded SQLite-backed runtime that does not require a daemon or bound port. Canonical docs remain markdown in the vault; graph traversal and promoted-domain lookup stay derived from those canonical sources.
 
 ## Public surface
 
-- [`client/local`](client/local) opens the embedded runtime in process.
-- [`client/openclerk`](client/openclerk) provides the generated request and response types from the same module.
+- [`client/local`](client/local) opens the embedded runtime in process and provides the preferred code-first SDK facade.
+- [`client/openclerk`](client/openclerk) provides generated request and response types from the same module for raw OpenAPI fallback work.
 - [`openapi/v1/openclerk.yaml`](openapi/v1/openclerk.yaml) is the contract source of truth.
 
 The legacy `fts`, `hybrid`, `graph`, and `records` packages remain in the repo as implementation-variant fixtures for evals and internal comparison. They are not the preferred product entrypoint.
@@ -15,10 +15,10 @@ The legacy `fts`, `hybrid`, `graph`, and `records` packages remain in the repo a
 ## Install in your Go project
 
 ```bash
-go get github.com/yazanabuashour/openclerk/client/local@v0.1.0
+go get github.com/yazanabuashour/openclerk/client/local@main
 ```
 
-Import `client/local` to open the embedded runtime and `client/openclerk` from the same module for generated request and response types. Do not document or require a second `go get` for `client/openclerk`.
+Import `client/local` to open the embedded runtime and use routine OpenClerk workflows without generated response wrappers. Do not document or require a second `go get` for `client/openclerk`; it is part of the same module when raw OpenAPI types are needed.
 
 ## Quick start
 
@@ -33,17 +33,16 @@ import (
 	"log"
 
 	local "github.com/yazanabuashour/openclerk/client/local"
-	openclerk "github.com/yazanabuashour/openclerk/client/openclerk"
 )
 
 func main() {
-	client, runtime, err := local.Open(local.Config{})
+	client, err := local.OpenClient(local.Config{})
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer runtime.Close()
+	defer client.Close()
 
-	create, err := client.CreateDocumentWithResponse(context.Background(), openclerk.CreateDocumentRequest{
+	document, err := client.CreateDocument(context.Background(), local.DocumentInput{
 		Path:  "notes/hello.md",
 		Title: "Hello",
 		Body:  "---\ntype: note\nstatus: active\n---\n# Hello\n\n## Summary\nEmbedded OpenClerk runtime.\n",
@@ -51,15 +50,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if create.JSON201 == nil {
-		log.Fatalf("create document failed: %s", string(create.Body))
-	}
 
-	fmt.Printf("doc=%s dataDir=%s\n", create.JSON201.DocId, runtime.Paths().DataDir)
+	fmt.Printf("doc=%s dataDir=%s\n", document.DocID, client.Paths().DataDir)
 }
 ```
 
-`cmd/openclerkd serve` remains available for intentional HTTP debugging and compatibility work. When you start that adapter manually, create a remote client explicitly with `openclerk.NewClientWithResponses(baseURL)`.
+`local.OpenClient(...)` opens SQLite locally, syncs the vault, and calls the in-process service directly. `local.Open(...)`, `Client.Generated()`, and `cmd/openclerkd serve` remain available for intentional HTTP debugging, compatibility work, or raw OpenAPI response handling.
 
 Runnable example:
 
@@ -106,6 +102,31 @@ Derived capabilities:
 
 The OpenAPI contract remains the single definition of operations, schemas, and generated request and response types even when the runtime is embedded.
 
+## Code-first local SDK
+
+Prefer `local.OpenClient(...)` for normal agent and application workflows:
+
+```go
+client, err := local.OpenClient(local.Config{})
+if err != nil {
+	log.Fatal(err)
+}
+defer client.Close()
+
+results, err := client.Search(context.Background(), local.SearchOptions{
+	Text:  "architecture",
+	Limit: 10,
+})
+if err != nil {
+	log.Fatal(err)
+}
+for _, hit := range results.Hits {
+	fmt.Printf("%s %s\n", hit.DocID, hit.Snippet)
+}
+```
+
+The facade covers document create/list/get, search, append, replace-section, links, graph neighborhood, records lookup, record entity reads, provenance events, and projection states. Use generated methods only for endpoints or raw response details not yet covered by the facade.
+
 ## Architecture notes
 
 - Canonical docs stay markdown-backed and inspectable.
@@ -114,7 +135,7 @@ The OpenAPI contract remains the single definition of operations, schemas, and g
 - Provenance and projection-state APIs make derivation and freshness inspectable.
 - Memory and routing are intentionally out of scope for this rewrite.
 
-See [`docs/architecture/agent-knowledge-plane.md`](docs/architecture/agent-knowledge-plane.md) for the in-repo design summary and [`docs/evals/baseline-scenarios.md`](docs/evals/baseline-scenarios.md) for the eval task set used to compare implementation variants.
+See [`docs/architecture/agent-knowledge-plane.md`](docs/architecture/agent-knowledge-plane.md) for the in-repo design summary, [`docs/evals/baseline-scenarios.md`](docs/evals/baseline-scenarios.md) for the eval task set used to compare implementation variants, and [`docs/evals/agent-production.md`](docs/evals/agent-production.md) for production agent workflow eval guidance.
 
 ## Implementation variants
 
@@ -176,8 +197,8 @@ OPENCLERK_DATA_DIR="$(mktemp -d)" go run ./examples/openclerk-client
 
 ## Repository contents
 
-- [`client/local`](client/local) contains the embedded runtime entrypoint for the public client.
-- [`client/openclerk`](client/openclerk) contains the primary generated Go client.
+- [`client/local`](client/local) contains the embedded runtime entrypoint and code-first SDK facade.
+- [`client/openclerk`](client/openclerk) contains the generated Go client for raw OpenAPI fallback work.
 - [`client`](client) also contains internal variant clients used for evals.
 - [`openapi/v1/openclerk.yaml`](openapi/v1/openclerk.yaml) contains the contract source of truth.
 - [`internal/infra/sqlite`](internal/infra/sqlite) contains the SQLite-backed implementation and derived projections.

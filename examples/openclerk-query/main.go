@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	local "github.com/yazanabuashour/openclerk/client/local"
-	openclerk "github.com/yazanabuashour/openclerk/client/openclerk"
 )
 
 type options struct {
@@ -52,11 +51,11 @@ func run(ctx context.Context, args []string, out io.Writer) error {
 	fmt.Fprintf(out, "db=%s\n", paths.DatabasePath)
 	fmt.Fprintf(out, "vault=%s\n", paths.VaultRoot)
 
-	client, runtime, err := local.Open(cfg)
+	client, err := local.OpenClient(cfg)
 	if err != nil {
 		return err
 	}
-	defer runtime.Close()
+	defer client.Close()
 
 	if opts.docID != "" {
 		if err := printLinks(ctx, out, client, opts.docID); err != nil {
@@ -115,27 +114,19 @@ func parseOptions(args []string) (options, error) {
 	return opts, nil
 }
 
-func printDocuments(ctx context.Context, out io.Writer, client *openclerk.ClientWithResponses, opts options) error {
-	params := openclerk.ListDocumentsParams{Limit: &opts.limit}
-	if opts.pathPrefix != "" {
-		params.PathPrefix = &opts.pathPrefix
-	}
-	if opts.metadataKey != "" {
-		params.MetadataKey = &opts.metadataKey
-	}
-	if opts.metadataValue != "" {
-		params.MetadataValue = &opts.metadataValue
-	}
-	response, err := client.ListDocumentsWithResponse(ctx, &params)
+func printDocuments(ctx context.Context, out io.Writer, client *local.Client, opts options) error {
+	response, err := client.ListDocuments(ctx, local.DocumentListOptions{
+		PathPrefix:    opts.pathPrefix,
+		MetadataKey:   opts.metadataKey,
+		MetadataValue: opts.metadataValue,
+		Limit:         opts.limit,
+	})
 	if err != nil {
 		return err
 	}
-	if response.JSON200 == nil {
-		return fmt.Errorf("list documents failed: %s", string(response.Body))
-	}
-	fmt.Fprintf(out, "documents=%d hasMore=%t\n", len(response.JSON200.Documents), response.JSON200.PageInfo.HasMore)
-	for _, document := range response.JSON200.Documents {
-		fmt.Fprintf(out, "doc %s path=%s title=%q updated=%s", document.DocId, document.Path, document.Title, document.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"))
+	fmt.Fprintf(out, "documents=%d hasMore=%t\n", len(response.Documents), response.PageInfo.HasMore)
+	for _, document := range response.Documents {
+		fmt.Fprintf(out, "doc %s path=%s title=%q updated=%s", document.DocID, document.Path, document.Title, document.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"))
 		if len(document.Metadata) > 0 {
 			fmt.Fprintf(out, " metadata=%s", formatMap(document.Metadata))
 		}
@@ -144,102 +135,82 @@ func printDocuments(ctx context.Context, out io.Writer, client *openclerk.Client
 	return nil
 }
 
-func printSearch(ctx context.Context, out io.Writer, client *openclerk.ClientWithResponses, opts options) error {
-	query := openclerk.SearchQuery{Text: opts.query, Limit: &opts.limit}
-	if opts.pathPrefix != "" {
-		query.PathPrefix = &opts.pathPrefix
-	}
-	if opts.metadataKey != "" {
-		query.MetadataKey = &opts.metadataKey
-	}
-	if opts.metadataValue != "" {
-		query.MetadataValue = &opts.metadataValue
-	}
-	response, err := client.SearchQueryWithResponse(ctx, query)
+func printSearch(ctx context.Context, out io.Writer, client *local.Client, opts options) error {
+	response, err := client.Search(ctx, local.SearchOptions{
+		Text:          opts.query,
+		PathPrefix:    opts.pathPrefix,
+		MetadataKey:   opts.metadataKey,
+		MetadataValue: opts.metadataValue,
+		Limit:         opts.limit,
+	})
 	if err != nil {
 		return err
 	}
-	if response.JSON200 == nil {
-		return fmt.Errorf("search failed: %s", string(response.Body))
-	}
-	fmt.Fprintf(out, "searchHits=%d hasMore=%t\n", len(response.JSON200.Hits), response.JSON200.PageInfo.HasMore)
-	for _, hit := range response.JSON200.Hits {
+	fmt.Fprintf(out, "searchHits=%d hasMore=%t\n", len(response.Hits), response.PageInfo.HasMore)
+	for _, hit := range response.Hits {
 		path := firstCitationPath(hit.Citations)
-		fmt.Fprintf(out, "hit rank=%d score=%.3f doc=%s chunk=%s path=%s title=%q snippet=%q\n", hit.Rank, hit.Score, hit.DocId, hit.ChunkId, path, hit.Title, compact(hit.Snippet))
+		fmt.Fprintf(out, "hit rank=%d score=%.3f doc=%s chunk=%s path=%s title=%q snippet=%q\n", hit.Rank, hit.Score, hit.DocID, hit.ChunkID, path, hit.Title, compact(hit.Snippet))
 	}
 	return nil
 }
 
-func printRecords(ctx context.Context, out io.Writer, client *openclerk.ClientWithResponses, text string, limit int) error {
-	response, err := client.RecordsLookupWithResponse(ctx, openclerk.RecordsLookupRequest{Text: text, Limit: &limit})
+func printRecords(ctx context.Context, out io.Writer, client *local.Client, text string, limit int) error {
+	response, err := client.LookupRecords(ctx, local.RecordLookupOptions{Text: text, Limit: limit})
 	if err != nil {
 		return err
 	}
-	if response.JSON200 == nil {
-		return fmt.Errorf("records lookup failed: %s", string(response.Body))
-	}
-	fmt.Fprintf(out, "records=%d hasMore=%t\n", len(response.JSON200.Entities), response.JSON200.PageInfo.HasMore)
-	for _, entity := range response.JSON200.Entities {
-		fmt.Fprintf(out, "record %s type=%s name=%q facts=%d summary=%q\n", entity.EntityId, entity.EntityType, entity.Name, len(entity.Facts), compact(entity.Summary))
+	fmt.Fprintf(out, "records=%d hasMore=%t\n", len(response.Entities), response.PageInfo.HasMore)
+	for _, entity := range response.Entities {
+		fmt.Fprintf(out, "record %s type=%s name=%q facts=%d summary=%q\n", entity.EntityID, entity.EntityType, entity.Name, len(entity.Facts), compact(entity.Summary))
 	}
 	return nil
 }
 
-func printLinks(ctx context.Context, out io.Writer, client *openclerk.ClientWithResponses, docID string) error {
-	response, err := client.GetDocumentLinksWithResponse(ctx, docID)
+func printLinks(ctx context.Context, out io.Writer, client *local.Client, docID string) error {
+	response, err := client.GetDocumentLinks(ctx, docID)
 	if err != nil {
 		return err
 	}
-	if response.JSON200 == nil {
-		return fmt.Errorf("links failed: %s", string(response.Body))
+	fmt.Fprintf(out, "links doc=%s outgoing=%d incoming=%d\n", response.DocID, len(response.Outgoing), len(response.Incoming))
+	for _, link := range response.Outgoing {
+		fmt.Fprintf(out, "outgoing %s path=%s title=%q citations=%d\n", link.DocID, link.Path, link.Title, len(link.Citations))
 	}
-	fmt.Fprintf(out, "links doc=%s outgoing=%d incoming=%d\n", response.JSON200.DocId, len(response.JSON200.Outgoing), len(response.JSON200.Incoming))
-	for _, link := range response.JSON200.Outgoing {
-		fmt.Fprintf(out, "outgoing %s path=%s title=%q citations=%d\n", link.DocId, link.Path, link.Title, len(link.Citations))
-	}
-	for _, link := range response.JSON200.Incoming {
-		fmt.Fprintf(out, "incoming %s path=%s title=%q citations=%d\n", link.DocId, link.Path, link.Title, len(link.Citations))
+	for _, link := range response.Incoming {
+		fmt.Fprintf(out, "incoming %s path=%s title=%q citations=%d\n", link.DocID, link.Path, link.Title, len(link.Citations))
 	}
 	return nil
 }
 
-func printProvenance(ctx context.Context, out io.Writer, client *openclerk.ClientWithResponses, docID string, limit int) error {
-	refKind := "document"
-	events, err := client.ListProvenanceEventsWithResponse(ctx, &openclerk.ListProvenanceEventsParams{
-		RefKind: &refKind,
-		RefId:   &docID,
-		Limit:   &limit,
+func printProvenance(ctx context.Context, out io.Writer, client *local.Client, docID string, limit int) error {
+	events, err := client.ListProvenanceEvents(ctx, local.ProvenanceEventOptions{
+		RefKind: "document",
+		RefID:   docID,
+		Limit:   limit,
 	})
 	if err != nil {
 		return err
 	}
-	if events.JSON200 == nil {
-		return fmt.Errorf("provenance failed: %s", string(events.Body))
-	}
-	fmt.Fprintf(out, "provenanceEvents=%d hasMore=%t\n", len(events.JSON200.Events), events.JSON200.PageInfo.HasMore)
-	for _, event := range events.JSON200.Events {
-		fmt.Fprintf(out, "event %s type=%s source=%s occurred=%s details=%s\n", event.EventId, event.EventType, event.SourceRef, event.OccurredAt.Format("2006-01-02T15:04:05Z07:00"), formatMap(event.Details))
+	fmt.Fprintf(out, "provenanceEvents=%d hasMore=%t\n", len(events.Events), events.PageInfo.HasMore)
+	for _, event := range events.Events {
+		fmt.Fprintf(out, "event %s type=%s source=%s occurred=%s details=%s\n", event.EventID, event.EventType, event.SourceRef, event.OccurredAt.Format("2006-01-02T15:04:05Z07:00"), formatMap(event.Details))
 	}
 
-	projections, err := client.ListProjectionStatesWithResponse(ctx, &openclerk.ListProjectionStatesParams{
-		RefKind: &refKind,
-		RefId:   &docID,
-		Limit:   &limit,
+	projections, err := client.ListProjectionStates(ctx, local.ProjectionStateOptions{
+		RefKind: "document",
+		RefID:   docID,
+		Limit:   limit,
 	})
 	if err != nil {
 		return err
 	}
-	if projections.JSON200 == nil {
-		return fmt.Errorf("projections failed: %s", string(projections.Body))
-	}
-	fmt.Fprintf(out, "projections=%d hasMore=%t\n", len(projections.JSON200.Projections), projections.JSON200.PageInfo.HasMore)
-	for _, projection := range projections.JSON200.Projections {
+	fmt.Fprintf(out, "projections=%d hasMore=%t\n", len(projections.Projections), projections.PageInfo.HasMore)
+	for _, projection := range projections.Projections {
 		fmt.Fprintf(out, "projection %s freshness=%s source=%s updated=%s details=%s\n", projection.Projection, projection.Freshness, projection.SourceRef, projection.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"), formatMap(projection.Details))
 	}
 	return nil
 }
 
-func firstCitationPath(citations []openclerk.Citation) string {
+func firstCitationPath(citations []local.Citation) string {
 	if len(citations) == 0 {
 		return ""
 	}
