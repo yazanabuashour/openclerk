@@ -1,61 +1,36 @@
-# OpenClerk Reference
+# Source-Linked Synthesis Workflow
 
-The production agent path is the ergonomic local SDK facade in
-`github.com/yazanabuashour/openclerk/client/local`.
+Use source-linked synthesis when the user wants durable knowledge that should
+compound beyond the current chat. Compose the workflow from the document and
+retrieval runner tasks.
 
-## Agent Quick Start
+## Routine Flow
 
-- Use `local.OpenClient(local.Config{})` for live local data. It opens the
-  default SQLite database and vault, syncs canonical Markdown, and calls the
-  in-process service directly.
-- Use `local.ResolvePaths(local.Config{})` only when you need to report or verify
-  the default `DataDir`, `DatabasePath`, and `VaultRoot`.
-- Use explicit `local.Config{DataDir: "..."}`, `local.Config{DatabasePath: "..."}`,
-  or `local.Config{VaultRoot: "..."}` for tests, fixtures, and throwaway
-  examples.
-- Use generated OpenAPI methods only for endpoints not covered by the SDK facade
-  or when the user explicitly needs raw API-contract behavior.
+1. Search first with `cmd/openclerk-agentops retrieval`.
+2. If a relevant synthesis page exists, update it with `append_document` or
+   `replace_section`.
+3. If no suitable page exists, create one with `create_document`.
+4. Preserve source-sensitive claims with citation paths, source refs, or
+   provenance references in the Markdown body/frontmatter.
+5. Inspect provenance events and projection states when the user asks where
+   knowledge came from or whether a synthesis page is stale.
 
-## Install In A Go Workspace
+Synthesis pages are durable knowledge artifacts, but they do not outrank the
+canonical source docs or promoted records they cite. Treat promoted records as
+selective structured domains, not the default wiki mechanism.
+
+## Example Synthesis Create
 
 ```bash
-go get github.com/yazanabuashour/openclerk/client/local@main
+printf '%s\n' '{
+  "action": "create_document",
+  "document": {
+    "path": "notes/synthesis/openclerk-knowledge-plane.md",
+    "title": "OpenClerk knowledge plane synthesis",
+    "body": "---\ntype: synthesis\nstatus: active\nfreshness: fresh\nsource_refs:\n  - notes/architecture/knowledge-plane.md\n---\n# OpenClerk knowledge plane synthesis\n\n## Summary\nSource-linked synthesis of the current architecture.\n\n## Sources\n- notes/architecture/knowledge-plane.md\n"
+  }
+}' | go run ./cmd/openclerk-agentops document
 ```
 
-## Minimal Flow
-
-```go
-client, err := local.OpenClient(local.Config{})
-if err != nil {
-	return err
-}
-defer client.Close()
-
-document, err := client.CreateDocument(ctx, local.DocumentInput{
-	Path:  "notes/architecture/knowledge-plane.md",
-	Title: "Knowledge plane",
-	Body:  "---\ntype: note\nstatus: active\n---\n# Knowledge plane\n\n## Summary\nCanonical architecture note.\n",
-})
-if err != nil {
-	return err
-}
-
-results, err := client.Search(ctx, local.SearchOptions{
-	Text:  "architecture",
-	Limit: 10,
-})
-if err != nil {
-	return err
-}
-
-events, err := client.ListProvenanceEvents(ctx, local.ProvenanceEventOptions{
-	RefKind: "document",
-	RefID:   document.DocID,
-	Limit:   10,
-})
-if err != nil {
-	return err
-}
-_ = results
-_ = events
-```
+File an answer back into OpenClerk only when it is reusable beyond the current
+chat and can point back to source evidence.

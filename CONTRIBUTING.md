@@ -4,7 +4,7 @@ Outside contributors do not need Beads to contribute to this repository.
 
 ## Current project shape
 
-The shipped surface is the embedded Go module exposed through [`client/local`](client/local) plus the generated public client in [`client/openclerk`](client/openclerk). The repository still contains implementation-variant clients in [`client`](client) and an HTTP adapter in [`cmd/openclerkd`](cmd/openclerkd), but contributors should treat those as eval or compatibility infrastructure rather than the primary product path.
+The shipped agent surface is [`cmd/openclerk-agentops`](cmd/openclerk-agentops) backed by [`agentops`](agentops). The developer SDK is [`client/local`](client/local), and the generated public client in [`client/openclerk`](client/openclerk) remains available for raw OpenAPI fallback work. Backend-specific public clients are not part of the product surface.
 
 ## Public install contract
 

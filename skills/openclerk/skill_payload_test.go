@@ -44,7 +44,7 @@ func TestSkillMarkdownLinksReferenceInstalledFiles(t *testing.T) {
 	}
 }
 
-func TestSkillUsesCodeFirstFacadeForRoutineWork(t *testing.T) {
+func TestSkillUsesAgentOpsRunnerForRoutineWork(t *testing.T) {
 	t.Parallel()
 
 	content, err := os.ReadFile("SKILL.md")
@@ -52,11 +52,22 @@ func TestSkillUsesCodeFirstFacadeForRoutineWork(t *testing.T) {
 		t.Fatalf("read skill: %v", err)
 	}
 	text := string(content)
-	if !strings.Contains(text, "local.OpenClient") {
-		t.Fatal("SKILL.md must point routine work at local.OpenClient")
+	if !strings.Contains(text, "cmd/openclerk-agentops") {
+		t.Fatal("SKILL.md must point routine work at cmd/openclerk-agentops")
 	}
-	if strings.Contains(text, "WithResponse") {
-		t.Fatal("SKILL.md should not steer routine tasks to generated WithResponse methods")
+	for _, stale := range []string{
+		"local.OpenClient",
+		"WithResponse",
+		"client/fts",
+		"client/hybrid",
+		"client/graph",
+		"client/records",
+		"temporary Go module",
+		"mktemp",
+	} {
+		if strings.Contains(text, stale) {
+			t.Fatalf("SKILL.md contains stale routine guidance %q", stale)
+		}
 	}
 }
 

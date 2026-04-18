@@ -47,15 +47,23 @@ func run(ctx context.Context, args []string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(out, "dataDir=%s\n", paths.DataDir)
-	fmt.Fprintf(out, "db=%s\n", paths.DatabasePath)
-	fmt.Fprintf(out, "vault=%s\n", paths.VaultRoot)
+	if _, err := fmt.Fprintf(out, "dataDir=%s\n", paths.DataDir); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(out, "db=%s\n", paths.DatabasePath); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(out, "vault=%s\n", paths.VaultRoot); err != nil {
+		return err
+	}
 
 	client, err := local.OpenClient(cfg)
 	if err != nil {
 		return err
 	}
-	defer client.Close()
+	defer func() {
+		_ = client.Close()
+	}()
 
 	if opts.docID != "" {
 		if err := printLinks(ctx, out, client, opts.docID); err != nil {
@@ -124,13 +132,21 @@ func printDocuments(ctx context.Context, out io.Writer, client *local.Client, op
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(out, "documents=%d hasMore=%t\n", len(response.Documents), response.PageInfo.HasMore)
+	if _, err := fmt.Fprintf(out, "documents=%d hasMore=%t\n", len(response.Documents), response.PageInfo.HasMore); err != nil {
+		return err
+	}
 	for _, document := range response.Documents {
-		fmt.Fprintf(out, "doc %s path=%s title=%q updated=%s", document.DocID, document.Path, document.Title, document.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"))
-		if len(document.Metadata) > 0 {
-			fmt.Fprintf(out, " metadata=%s", formatMap(document.Metadata))
+		if _, err := fmt.Fprintf(out, "doc %s path=%s title=%q updated=%s", document.DocID, document.Path, document.Title, document.UpdatedAt.Format("2006-01-02T15:04:05Z07:00")); err != nil {
+			return err
 		}
-		fmt.Fprintln(out)
+		if len(document.Metadata) > 0 {
+			if _, err := fmt.Fprintf(out, " metadata=%s", formatMap(document.Metadata)); err != nil {
+				return err
+			}
+		}
+		if _, err := fmt.Fprintln(out); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -146,10 +162,14 @@ func printSearch(ctx context.Context, out io.Writer, client *local.Client, opts 
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(out, "searchHits=%d hasMore=%t\n", len(response.Hits), response.PageInfo.HasMore)
+	if _, err := fmt.Fprintf(out, "searchHits=%d hasMore=%t\n", len(response.Hits), response.PageInfo.HasMore); err != nil {
+		return err
+	}
 	for _, hit := range response.Hits {
 		path := firstCitationPath(hit.Citations)
-		fmt.Fprintf(out, "hit rank=%d score=%.3f doc=%s chunk=%s path=%s title=%q snippet=%q\n", hit.Rank, hit.Score, hit.DocID, hit.ChunkID, path, hit.Title, compact(hit.Snippet))
+		if _, err := fmt.Fprintf(out, "hit rank=%d score=%.3f doc=%s chunk=%s path=%s title=%q snippet=%q\n", hit.Rank, hit.Score, hit.DocID, hit.ChunkID, path, hit.Title, compact(hit.Snippet)); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -159,9 +179,13 @@ func printRecords(ctx context.Context, out io.Writer, client *local.Client, text
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(out, "records=%d hasMore=%t\n", len(response.Entities), response.PageInfo.HasMore)
+	if _, err := fmt.Fprintf(out, "records=%d hasMore=%t\n", len(response.Entities), response.PageInfo.HasMore); err != nil {
+		return err
+	}
 	for _, entity := range response.Entities {
-		fmt.Fprintf(out, "record %s type=%s name=%q facts=%d summary=%q\n", entity.EntityID, entity.EntityType, entity.Name, len(entity.Facts), compact(entity.Summary))
+		if _, err := fmt.Fprintf(out, "record %s type=%s name=%q facts=%d summary=%q\n", entity.EntityID, entity.EntityType, entity.Name, len(entity.Facts), compact(entity.Summary)); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -171,12 +195,18 @@ func printLinks(ctx context.Context, out io.Writer, client *local.Client, docID 
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(out, "links doc=%s outgoing=%d incoming=%d\n", response.DocID, len(response.Outgoing), len(response.Incoming))
+	if _, err := fmt.Fprintf(out, "links doc=%s outgoing=%d incoming=%d\n", response.DocID, len(response.Outgoing), len(response.Incoming)); err != nil {
+		return err
+	}
 	for _, link := range response.Outgoing {
-		fmt.Fprintf(out, "outgoing %s path=%s title=%q citations=%d\n", link.DocID, link.Path, link.Title, len(link.Citations))
+		if _, err := fmt.Fprintf(out, "outgoing %s path=%s title=%q citations=%d\n", link.DocID, link.Path, link.Title, len(link.Citations)); err != nil {
+			return err
+		}
 	}
 	for _, link := range response.Incoming {
-		fmt.Fprintf(out, "incoming %s path=%s title=%q citations=%d\n", link.DocID, link.Path, link.Title, len(link.Citations))
+		if _, err := fmt.Fprintf(out, "incoming %s path=%s title=%q citations=%d\n", link.DocID, link.Path, link.Title, len(link.Citations)); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -190,9 +220,13 @@ func printProvenance(ctx context.Context, out io.Writer, client *local.Client, d
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(out, "provenanceEvents=%d hasMore=%t\n", len(events.Events), events.PageInfo.HasMore)
+	if _, err := fmt.Fprintf(out, "provenanceEvents=%d hasMore=%t\n", len(events.Events), events.PageInfo.HasMore); err != nil {
+		return err
+	}
 	for _, event := range events.Events {
-		fmt.Fprintf(out, "event %s type=%s source=%s occurred=%s details=%s\n", event.EventID, event.EventType, event.SourceRef, event.OccurredAt.Format("2006-01-02T15:04:05Z07:00"), formatMap(event.Details))
+		if _, err := fmt.Fprintf(out, "event %s type=%s source=%s occurred=%s details=%s\n", event.EventID, event.EventType, event.SourceRef, event.OccurredAt.Format("2006-01-02T15:04:05Z07:00"), formatMap(event.Details)); err != nil {
+			return err
+		}
 	}
 
 	projections, err := client.ListProjectionStates(ctx, local.ProjectionStateOptions{
@@ -203,9 +237,13 @@ func printProvenance(ctx context.Context, out io.Writer, client *local.Client, d
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(out, "projections=%d hasMore=%t\n", len(projections.Projections), projections.PageInfo.HasMore)
+	if _, err := fmt.Fprintf(out, "projections=%d hasMore=%t\n", len(projections.Projections), projections.PageInfo.HasMore); err != nil {
+		return err
+	}
 	for _, projection := range projections.Projections {
-		fmt.Fprintf(out, "projection %s freshness=%s source=%s updated=%s details=%s\n", projection.Projection, projection.Freshness, projection.SourceRef, projection.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"), formatMap(projection.Details))
+		if _, err := fmt.Fprintf(out, "projection %s freshness=%s source=%s updated=%s details=%s\n", projection.Projection, projection.Freshness, projection.SourceRef, projection.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"), formatMap(projection.Details)); err != nil {
+			return err
+		}
 	}
 	return nil
 }

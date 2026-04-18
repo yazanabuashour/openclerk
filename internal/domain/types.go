@@ -9,10 +9,6 @@ type BackendKind string
 
 const (
 	BackendOpenClerk BackendKind = "openclerk"
-	BackendFTS       BackendKind = "fts"
-	BackendHybrid    BackendKind = "hybrid"
-	BackendGraph     BackendKind = "graph"
-	BackendRecords   BackendKind = "records"
 )
 
 type Capabilities struct {

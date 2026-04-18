@@ -1,0 +1,219 @@
+package agentops
+
+import "github.com/yazanabuashour/openclerk/client/local"
+
+func toPaths(paths local.Paths) Paths {
+	return Paths{
+		DataDir:      paths.DataDir,
+		DatabasePath: paths.DatabasePath,
+		VaultRoot:    paths.VaultRoot,
+	}
+}
+
+func toDocument(document local.Document) Document {
+	return Document{
+		DocID:     document.DocID,
+		Path:      document.Path,
+		Title:     document.Title,
+		Body:      document.Body,
+		Headings:  append([]string(nil), document.Headings...),
+		Metadata:  cloneStringMap(document.Metadata),
+		CreatedAt: document.CreatedAt,
+		UpdatedAt: document.UpdatedAt,
+	}
+}
+
+func toDocumentSummaries(documents []local.DocumentSummary) []DocumentSummary {
+	result := make([]DocumentSummary, 0, len(documents))
+	for _, document := range documents {
+		result = append(result, DocumentSummary{
+			DocID:     document.DocID,
+			Path:      document.Path,
+			Title:     document.Title,
+			Metadata:  cloneStringMap(document.Metadata),
+			UpdatedAt: document.UpdatedAt,
+		})
+	}
+	return result
+}
+
+func toPageInfo(pageInfo local.PageInfo) PageInfo {
+	return PageInfo{
+		NextCursor: pageInfo.NextCursor,
+		HasMore:    pageInfo.HasMore,
+	}
+}
+
+func toSearchResult(result local.SearchResult) SearchResult {
+	hits := make([]SearchHit, 0, len(result.Hits))
+	for _, hit := range result.Hits {
+		hits = append(hits, SearchHit{
+			Rank:      hit.Rank,
+			Score:     hit.Score,
+			DocID:     hit.DocID,
+			ChunkID:   hit.ChunkID,
+			Title:     hit.Title,
+			Snippet:   hit.Snippet,
+			Citations: toCitations(hit.Citations),
+		})
+	}
+	return SearchResult{
+		Hits:     hits,
+		PageInfo: toPageInfo(result.PageInfo),
+	}
+}
+
+func toCitations(citations []local.Citation) []Citation {
+	result := make([]Citation, 0, len(citations))
+	for _, citation := range citations {
+		result = append(result, Citation{
+			DocID:     citation.DocID,
+			ChunkID:   citation.ChunkID,
+			Path:      citation.Path,
+			Heading:   citation.Heading,
+			LineStart: citation.LineStart,
+			LineEnd:   citation.LineEnd,
+		})
+	}
+	return result
+}
+
+func toDocumentLinksResult(links local.DocumentLinks) DocumentLinks {
+	return DocumentLinks{
+		DocID:    links.DocID,
+		Outgoing: toDocumentLinks(links.Outgoing),
+		Incoming: toDocumentLinks(links.Incoming),
+	}
+}
+
+func toDocumentLinks(links []local.DocumentLink) []DocumentLink {
+	result := make([]DocumentLink, 0, len(links))
+	for _, link := range links {
+		result = append(result, DocumentLink{
+			DocID:     link.DocID,
+			Path:      link.Path,
+			Title:     link.Title,
+			Citations: toCitations(link.Citations),
+		})
+	}
+	return result
+}
+
+func toGraphNeighborhood(neighborhood local.GraphNeighborhood) GraphNeighborhood {
+	nodes := make([]GraphNode, 0, len(neighborhood.Nodes))
+	for _, node := range neighborhood.Nodes {
+		nodes = append(nodes, GraphNode{
+			NodeID:    node.NodeID,
+			Type:      node.Type,
+			Label:     node.Label,
+			Citations: toCitations(node.Citations),
+		})
+	}
+	edges := make([]GraphEdge, 0, len(neighborhood.Edges))
+	for _, edge := range neighborhood.Edges {
+		edges = append(edges, GraphEdge{
+			EdgeID:     edge.EdgeID,
+			FromNodeID: edge.FromNodeID,
+			ToNodeID:   edge.ToNodeID,
+			Kind:       edge.Kind,
+			Citations:  toCitations(edge.Citations),
+		})
+	}
+	return GraphNeighborhood{
+		Nodes: nodes,
+		Edges: edges,
+	}
+}
+
+func toRecordLookupResult(result local.RecordLookupResult) RecordLookupResult {
+	return RecordLookupResult{
+		Entities: toRecordEntities(result.Entities),
+		PageInfo: toPageInfo(result.PageInfo),
+	}
+}
+
+func toRecordEntities(entities []local.RecordEntity) []RecordEntity {
+	result := make([]RecordEntity, 0, len(entities))
+	for _, entity := range entities {
+		result = append(result, toRecordEntity(entity))
+	}
+	return result
+}
+
+func toRecordEntity(entity local.RecordEntity) RecordEntity {
+	facts := make([]RecordFact, 0, len(entity.Facts))
+	for _, fact := range entity.Facts {
+		facts = append(facts, RecordFact{
+			Key:        fact.Key,
+			Value:      fact.Value,
+			ObservedAt: fact.ObservedAt,
+		})
+	}
+	return RecordEntity{
+		EntityID:   entity.EntityID,
+		EntityType: entity.EntityType,
+		Name:       entity.Name,
+		Summary:    entity.Summary,
+		Facts:      facts,
+		Citations:  toCitations(entity.Citations),
+		UpdatedAt:  entity.UpdatedAt,
+	}
+}
+
+func toProvenanceEventList(list local.ProvenanceEventList) ProvenanceEventList {
+	return ProvenanceEventList{
+		Events:   toProvenanceEvents(list.Events),
+		PageInfo: toPageInfo(list.PageInfo),
+	}
+}
+
+func toProvenanceEvents(events []local.ProvenanceEvent) []ProvenanceEvent {
+	result := make([]ProvenanceEvent, 0, len(events))
+	for _, event := range events {
+		result = append(result, ProvenanceEvent{
+			EventID:    event.EventID,
+			EventType:  event.EventType,
+			RefKind:    event.RefKind,
+			RefID:      event.RefID,
+			SourceRef:  event.SourceRef,
+			OccurredAt: event.OccurredAt,
+			Details:    cloneStringMap(event.Details),
+		})
+	}
+	return result
+}
+
+func toProjectionStateList(list local.ProjectionStateList) ProjectionStateList {
+	return ProjectionStateList{
+		Projections: toProjectionStates(list.Projections),
+		PageInfo:    toPageInfo(list.PageInfo),
+	}
+}
+
+func toProjectionStates(projections []local.ProjectionState) []ProjectionState {
+	result := make([]ProjectionState, 0, len(projections))
+	for _, projection := range projections {
+		result = append(result, ProjectionState{
+			Projection:        projection.Projection,
+			RefKind:           projection.RefKind,
+			RefID:             projection.RefID,
+			SourceRef:         projection.SourceRef,
+			Freshness:         projection.Freshness,
+			ProjectionVersion: projection.ProjectionVersion,
+			UpdatedAt:         projection.UpdatedAt,
+			Details:           cloneStringMap(projection.Details),
+		})
+	}
+	return result
+}
+
+func cloneStringMap(values map[string]string) map[string]string {
+	if len(values) == 0 {
+		return nil
+	}
+	cloned := make(map[string]string, len(values))
+	for key, value := range values {
+		cloned[key] = value
+	}
+	return cloned
+}

@@ -16,8 +16,10 @@ func TestCreateDocumentRejectsDuplicatePath(t *testing.T) {
 
 	vaultRoot := t.TempDir()
 	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
-	store := openTestStore(t, domain.BackendFTS, dbPath, vaultRoot)
-	defer store.Close()
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
 
 	first, err := store.CreateDocument(context.Background(), domain.CreateDocumentInput{
 		Path:  "docs/widget.md",
@@ -60,7 +62,7 @@ func TestSyncVaultPrunesDeletedDocuments(t *testing.T) {
 		t.Fatalf("write vault doc: %v", err)
 	}
 
-	store := openTestStore(t, domain.BackendFTS, dbPath, vaultRoot)
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
 	search, err := store.Search(context.Background(), domain.SearchQuery{Text: "alpha", Limit: 10})
 	if err != nil {
 		t.Fatalf("search before delete: %v", err)
@@ -76,8 +78,10 @@ func TestSyncVaultPrunesDeletedDocuments(t *testing.T) {
 		t.Fatalf("remove vault doc: %v", err)
 	}
 
-	reopened := openTestStore(t, domain.BackendFTS, dbPath, vaultRoot)
-	defer reopened.Close()
+	reopened := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = reopened.Close()
+	}()
 
 	search, err = reopened.Search(context.Background(), domain.SearchQuery{Text: "alpha", Limit: 10})
 	if err != nil {
@@ -99,7 +103,7 @@ func TestCreateDocumentPreservesRequestedTitleAcrossRestart(t *testing.T) {
 
 	vaultRoot := t.TempDir()
 	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
-	store := openTestStore(t, domain.BackendFTS, dbPath, vaultRoot)
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
 
 	document, err := store.CreateDocument(context.Background(), domain.CreateDocumentInput{
 		Path:  "docs/widget.md",
@@ -116,8 +120,10 @@ func TestCreateDocumentPreservesRequestedTitleAcrossRestart(t *testing.T) {
 		t.Fatalf("close initial store: %v", err)
 	}
 
-	reopened := openTestStore(t, domain.BackendFTS, dbPath, vaultRoot)
-	defer reopened.Close()
+	reopened := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = reopened.Close()
+	}()
 
 	got, err := reopened.GetDocument(context.Background(), document.DocID)
 	if err != nil {
@@ -133,8 +139,10 @@ func TestGraphNeighborhoodIncludesOutgoingLinksForChunk(t *testing.T) {
 
 	vaultRoot := t.TempDir()
 	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
-	store := openTestStore(t, domain.BackendGraph, dbPath, vaultRoot)
-	defer store.Close()
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
 
 	target, err := store.CreateDocument(context.Background(), domain.CreateDocumentInput{
 		Path:  "docs/reference.md",

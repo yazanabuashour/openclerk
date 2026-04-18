@@ -1,18 +1,20 @@
 # openclerk
 
-openclerk is a local-first, agent-facing knowledge plane for notes, documents, promoted records, and provenance-backed retrieval.
+openclerk is a local-first, agent-facing knowledge plane for notes, documents, promoted records, source-linked synthesis, and provenance-backed retrieval.
 
-The public surface is one authored OpenAPI contract, one code-first local SDK, one generated Go client for fallback contract work, and one embedded SQLite-backed runtime that does not require a daemon or bound port. Canonical docs remain markdown in the vault; graph traversal and promoted-domain lookup stay derived from those canonical sources.
+The production agent surface is the `cmd/openclerk-agentops` JSON runner backed by the `agentops` package. The developer surface is one code-first local SDK, one generated Go client for fallback contract work, one authored OpenAPI contract, and one embedded SQLite-backed runtime that does not require a daemon or bound port. Canonical docs remain markdown in the vault; graph traversal and promoted-domain lookup stay derived from those canonical sources.
 
 OpenClerk is also infrastructure for persistent agent-maintained knowledge. It is meant to help useful synthesis compound over time as cited, inspectable markdown rather than being rediscovered from scratch on every query or lost in chat history.
 
 ## Public surface
 
+- [`agentops`](agentops) exposes task-shaped document and retrieval facades for coding agents.
+- [`cmd/openclerk-agentops`](cmd/openclerk-agentops) is the machine-facing JSON runner agents should use for routine local knowledge tasks.
 - [`client/local`](client/local) opens the embedded runtime in process and provides the preferred code-first SDK facade.
 - [`client/openclerk`](client/openclerk) provides generated request and response types from the same module for raw OpenAPI fallback work.
 - [`openapi/v1/openclerk.yaml`](openapi/v1/openclerk.yaml) is the contract source of truth.
 
-The legacy `fts`, `hybrid`, `graph`, and `records` packages remain in the repo as implementation-variant fixtures for evals and internal comparison. They are not the preferred product entrypoint.
+Backend-specific public clients have been removed. Graph, records, and provenance are OpenClerk capabilities, not separate public backends.
 
 ## Install in your Go project
 
@@ -21,6 +23,13 @@ go get github.com/yazanabuashour/openclerk/client/local@main
 ```
 
 Import `client/local` to open the embedded runtime and use routine OpenClerk workflows without generated response wrappers. Do not document or require a second `go get` for `client/openclerk`; it is part of the same module when raw OpenAPI types are needed.
+
+For agent workflows inside this repository, use the JSON runner:
+
+```bash
+printf '%s\n' '{"action":"search","search":{"text":"architecture","limit":10}}' |
+  go run ./cmd/openclerk-agentops retrieval
+```
 
 ## Quick start
 
@@ -78,7 +87,7 @@ That directory contains:
 - `openclerk.sqlite` for the SQLite database
 - `vault/` for canonical markdown documents
 
-Override any of these locations through [`client/local.Config`](client/local/local.go).
+Override any of these locations through [`client/local.Config`](client/local/local.go), `OPENCLERK_DATA_DIR`, `OPENCLERK_DATABASE_PATH`, or `OPENCLERK_VAULT_ROOT`. Explicit config fields and runner flags take precedence over environment variables.
 
 ## API surface
 
@@ -106,7 +115,7 @@ The OpenAPI contract remains the single definition of operations, schemas, and g
 
 ## Code-first local SDK
 
-Prefer `local.OpenClient(...)` for normal agent and application workflows:
+Prefer `local.OpenClient(...)` for Go application and developer workflows:
 
 ```go
 client, err := local.OpenClient(local.Config{})
@@ -138,7 +147,7 @@ The facade covers document create/list/get, search, append, replace-section, lin
 - Provenance and projection-state APIs make derivation and freshness inspectable.
 - Memory and routing are intentionally out of scope for this rewrite.
 
-See [`docs/architecture/agent-knowledge-plane.md`](docs/architecture/agent-knowledge-plane.md) for the in-repo design summary, [`docs/evals/baseline-scenarios.md`](docs/evals/baseline-scenarios.md) for the eval task set used to compare implementation variants, and [`docs/evals/agent-production.md`](docs/evals/agent-production.md) for production agent workflow eval guidance.
+See [`docs/architecture/agent-knowledge-plane.md`](docs/architecture/agent-knowledge-plane.md) for the in-repo design summary, [`docs/evals/baseline-scenarios.md`](docs/evals/baseline-scenarios.md) for the eval task set, and [`docs/evals/agent-production.md`](docs/evals/agent-production.md) for production agent workflow eval guidance.
 
 ### LLM-maintained synthesis
 
@@ -146,20 +155,16 @@ Karpathy's LLM Wiki pattern is related to the OpenClerk vision: both reject pure
 
 OpenClerk should support that workflow through its existing docs, search, graph, records, and provenance surface before adding new public APIs. The OpenClerk version keeps raw sources and accepted canonical notes inspectable, treats synthesis as source-linked markdown, and uses provenance/freshness state so agent-authored synthesis does not become an opaque second truth system.
 
-## Implementation variants
+## AgentOps Runner
 
-The repo still contains implementation-specific fixtures and examples used for eval work:
+Agents should use `cmd/openclerk-agentops` for routine document and retrieval tasks instead of creating temporary Go programs or inspecting generated clients.
 
-- [`client/fts`](client/fts)
-- [`client/hybrid`](client/hybrid)
-- [`client/graph`](client/graph)
-- [`client/records`](client/records)
-- [`examples/fts-client/main.go`](examples/fts-client/main.go)
-- [`examples/hybrid-client/main.go`](examples/hybrid-client/main.go)
-- [`examples/graph-client/main.go`](examples/graph-client/main.go)
-- [`examples/records-client/main.go`](examples/records-client/main.go)
+```bash
+printf '%s\n' '{"action":"list_documents","list":{"path_prefix":"notes/","limit":20}}' |
+  go run ./cmd/openclerk-agentops document
+```
 
-These help benchmark storage and retrieval approaches. They are not the preferred application-facing SDK surface.
+Validation rejections are JSON results with `rejected: true`. Runtime failures exit non-zero and write errors to stderr.
 
 ## Verify a release
 
@@ -208,9 +213,10 @@ OPENCLERK_DATA_DIR="$(mktemp -d)" go run ./examples/openclerk-client
 
 - [`client/local`](client/local) contains the embedded runtime entrypoint and code-first SDK facade.
 - [`client/openclerk`](client/openclerk) contains the generated Go client for raw OpenAPI fallback work.
-- [`client`](client) also contains internal variant clients used for evals.
+- [`agentops`](agentops) contains the task-shaped agent facade used by the JSON runner.
 - [`openapi/v1/openclerk.yaml`](openapi/v1/openclerk.yaml) contains the contract source of truth.
 - [`internal/infra/sqlite`](internal/infra/sqlite) contains the SQLite-backed implementation and derived projections.
+- [`cmd/openclerk-agentops`](cmd/openclerk-agentops) contains the machine-facing AgentOps JSON runner.
 - [`cmd/openclerkd`](cmd/openclerkd) remains available for adapter work and contract testing, but it is not the primary runtime path.
 - [`docs/maintainers.md`](docs/maintainers.md) explains Beads-based maintainer workflow and release administration notes.
 

@@ -9,11 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	ftsclient "github.com/yazanabuashour/openclerk/client/fts"
-	graphclient "github.com/yazanabuashour/openclerk/client/graph"
-	hybridclient "github.com/yazanabuashour/openclerk/client/hybrid"
 	openclerkclient "github.com/yazanabuashour/openclerk/client/openclerk"
-	recordsclient "github.com/yazanabuashour/openclerk/client/records"
 	"github.com/yazanabuashour/openclerk/internal/api"
 	"github.com/yazanabuashour/openclerk/internal/app"
 	"github.com/yazanabuashour/openclerk/internal/domain"
@@ -71,32 +67,23 @@ func ResolvePaths(cfg Config) (Paths, error) {
 	if err != nil {
 		return Paths{}, err
 	}
+	explicitDataDir := strings.TrimSpace(cfg.DataDir) != ""
 	paths := Paths{DataDir: filepath.Clean(dataDir)}
 	if strings.TrimSpace(cfg.DatabasePath) != "" {
 		paths.DatabasePath = filepath.Clean(cfg.DatabasePath)
+	} else if envDatabasePath := strings.TrimSpace(os.Getenv("OPENCLERK_DATABASE_PATH")); !explicitDataDir && envDatabasePath != "" {
+		paths.DatabasePath = filepath.Clean(envDatabasePath)
 	} else {
 		paths.DatabasePath = filepath.Join(paths.DataDir, defaultDBFile)
 	}
 	if strings.TrimSpace(cfg.VaultRoot) != "" {
 		paths.VaultRoot = filepath.Clean(cfg.VaultRoot)
+	} else if envVaultRoot := strings.TrimSpace(os.Getenv("OPENCLERK_VAULT_ROOT")); !explicitDataDir && envVaultRoot != "" {
+		paths.VaultRoot = filepath.Clean(envVaultRoot)
 	} else {
 		paths.VaultRoot = filepath.Join(paths.DataDir, defaultVaultDir)
 	}
 	return paths, nil
-}
-
-// OpenFTS creates an embedded FTS client without binding a local port.
-func OpenFTS(cfg Config) (*ftsclient.ClientWithResponses, *Runtime, error) {
-	runtime, err := newRuntime(domain.BackendFTS, cfg)
-	if err != nil {
-		return nil, nil, err
-	}
-	client, err := ftsclient.NewClientWithResponses(inProcessBaseURL, ftsclient.WithHTTPClient(handlerDoer{handler: runtime.handler}))
-	if err != nil {
-		_ = runtime.Close()
-		return nil, nil, err
-	}
-	return client, runtime, nil
 }
 
 // Open creates the primary embedded OpenClerk client without binding a local port.
@@ -106,48 +93,6 @@ func Open(cfg Config) (*openclerkclient.ClientWithResponses, *Runtime, error) {
 		return nil, nil, err
 	}
 	client, err := openclerkclient.NewClientWithResponses(inProcessBaseURL, openclerkclient.WithHTTPClient(handlerDoer{handler: runtime.handler}))
-	if err != nil {
-		_ = runtime.Close()
-		return nil, nil, err
-	}
-	return client, runtime, nil
-}
-
-// OpenHybrid creates an embedded hybrid client without binding a local port.
-func OpenHybrid(cfg Config) (*hybridclient.ClientWithResponses, *Runtime, error) {
-	runtime, err := newRuntime(domain.BackendHybrid, cfg)
-	if err != nil {
-		return nil, nil, err
-	}
-	client, err := hybridclient.NewClientWithResponses(inProcessBaseURL, hybridclient.WithHTTPClient(handlerDoer{handler: runtime.handler}))
-	if err != nil {
-		_ = runtime.Close()
-		return nil, nil, err
-	}
-	return client, runtime, nil
-}
-
-// OpenGraph creates an embedded graph client without binding a local port.
-func OpenGraph(cfg Config) (*graphclient.ClientWithResponses, *Runtime, error) {
-	runtime, err := newRuntime(domain.BackendGraph, cfg)
-	if err != nil {
-		return nil, nil, err
-	}
-	client, err := graphclient.NewClientWithResponses(inProcessBaseURL, graphclient.WithHTTPClient(handlerDoer{handler: runtime.handler}))
-	if err != nil {
-		_ = runtime.Close()
-		return nil, nil, err
-	}
-	return client, runtime, nil
-}
-
-// OpenRecords creates an embedded records client without binding a local port.
-func OpenRecords(cfg Config) (*recordsclient.ClientWithResponses, *Runtime, error) {
-	runtime, err := newRuntime(domain.BackendRecords, cfg)
-	if err != nil {
-		return nil, nil, err
-	}
-	client, err := recordsclient.NewClientWithResponses(inProcessBaseURL, recordsclient.WithHTTPClient(handlerDoer{handler: runtime.handler}))
 	if err != nil {
 		_ = runtime.Close()
 		return nil, nil, err
@@ -192,6 +137,12 @@ func resolveDataDir(cfg Config) (string, error) {
 		return filepath.Dir(cfg.DatabasePath), nil
 	case strings.TrimSpace(cfg.VaultRoot) != "":
 		return filepath.Dir(cfg.VaultRoot), nil
+	case strings.TrimSpace(os.Getenv("OPENCLERK_DATA_DIR")) != "":
+		return os.Getenv("OPENCLERK_DATA_DIR"), nil
+	case strings.TrimSpace(os.Getenv("OPENCLERK_DATABASE_PATH")) != "":
+		return filepath.Dir(os.Getenv("OPENCLERK_DATABASE_PATH")), nil
+	case strings.TrimSpace(os.Getenv("OPENCLERK_VAULT_ROOT")) != "":
+		return filepath.Dir(os.Getenv("OPENCLERK_VAULT_ROOT")), nil
 	default:
 		return defaultDataDir()
 	}

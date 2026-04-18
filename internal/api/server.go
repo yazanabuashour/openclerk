@@ -128,7 +128,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func decodeJSONBody(w http.ResponseWriter, r *http.Request, target any) bool {
-	defer r.Body.Close()
+	defer func() {
+		_ = r.Body.Close()
+	}()
 	if err := json.NewDecoder(r.Body).Decode(target); err != nil {
 		writeJSONError(w, http.StatusBadRequest, ErrorEnvelope{
 			Code:      "bad_request",

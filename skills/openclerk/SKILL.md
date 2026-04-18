@@ -1,75 +1,55 @@
 ---
 name: openclerk
-description: Use OpenClerk when an agent needs a local-first knowledge plane for canonical notes, documents, promoted records, and provenance-backed retrieval in a Go workspace through the code-first local SDK.
+description: Use OpenClerk when an agent needs a local-first knowledge plane for canonical notes, source-linked synthesis, promoted records, and provenance-backed retrieval through the AgentOps JSON runner.
 license: MIT
+compatibility: Requires a Go-capable environment with local filesystem access and the openclerk repository checkout.
 ---
 
-# OpenClerk Agent SDK
+# OpenClerk AgentOps
 
-Use OpenClerk when the task needs local notes, documents, promoted records, or provenance-backed retrieval without running a daemon or depending on an external service.
+Use this skill for routine local OpenClerk knowledge-plane tasks. The production
+agent interface is the JSON runner in `cmd/openclerk-agentops`, backed by the
+`agentops` package. Supported routine tasks are:
 
-## Default Path
+- document tasks: validate, create, list, get, append, replace-section, and resolve paths; see [references/documents.md](references/documents.md)
+- retrieval tasks: search, document links, graph neighborhoods, records lookup/entity reads, provenance events, and projection states; see [references/search.md](references/search.md) and [references/records-provenance.md](references/records-provenance.md)
+- source-linked synthesis workflows composed from document and retrieval tasks; see [references/openclerk.md](references/openclerk.md)
 
-- Install the current development line with `go get github.com/yazanabuashour/openclerk/client/local@main` until the first release tag is published.
-- Import `github.com/yazanabuashour/openclerk/client/local`.
-- Open live local state with `local.OpenClient(local.Config{})`.
-- Use the code-first methods on `*local.Client` for routine work: `CreateDocument`, `ListDocuments`, `Search`, `AppendDocument`, `ReplaceSection`, `GetDocumentLinks`, `GraphNeighborhood`, `LookupRecords`, `GetRecordEntity`, `ListProvenanceEvents`, and `ListProjectionStates`.
-- Use `local.Config{DataDir: "..."}`, `local.Config{DatabasePath: "..."}`, or `local.Config{VaultRoot: "..."}` only when the user names a specific dataset or you are using an isolated test database.
+For supported tasks, run `go run ./cmd/openclerk-agentops document` or
+`go run ./cmd/openclerk-agentops retrieval`, pass exactly one JSON request on
+stdin, read the JSON result from stdout, and answer only from that JSON. Use
+`local.Config{}` defaults unless the user names a specific dataset. The runner
+honors `OPENCLERK_DATA_DIR`, `OPENCLERK_DATABASE_PATH`, and
+`OPENCLERK_VAULT_ROOT`; optional `--data-dir`, `--db`, `--vault-root`, and
+`--embedding-provider` flags are for tests or explicit user-directed datasets.
 
-Do not inspect generated clients, generated server code, large dependency directories, or the Go module cache for routine document/search/records/provenance tasks. Use targeted repo searches only when the local SDK facade does not cover the user's ask.
+Do not inspect generated clients, backend-variant packages, generated server
+code, the Go module cache, or SQLite directly for routine OpenClerk tasks. Do
+not run broad repo searches, `bd prime`, or maintainer setup before acting on a
+direct user request to read or write local OpenClerk knowledge. Search the repo
+only if the AgentOps runner fails in a way that requires debugging the checkout.
 
-## Source-Linked Synthesis Workflow
+## Runner Pattern
 
-OpenClerk can support LLM Wiki-style maintenance when the user wants durable knowledge that compounds over time.
+Document task example:
 
-- Search existing notes and synthesis before creating a new document.
-- Use `CreateDocument` for new canonical source notes or new synthesis pages.
-- Use `AppendDocument` or `ReplaceSection` to update existing synthesis instead of duplicating nearby pages.
-- Preserve source-sensitive claims with citations, source refs, or provenance references in the document body/frontmatter.
-- Use `ListProvenanceEvents` and `ListProjectionStates` when the user asks where knowledge came from, whether derived views are fresh, or whether a synthesis page is stale.
-- Treat promoted records as selective structured domains. Do not use records lookup as the default wiki mechanism.
-- File a useful answer back into OpenClerk only when it is reusable beyond the current chat and can point back to source evidence.
-
-## Quick Start
-
-```go
-package main
-
-import (
-	"context"
-	"log"
-
-	"github.com/yazanabuashour/openclerk/client/local"
-)
-
-func main() {
-	client, err := local.OpenClient(local.Config{})
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer client.Close()
-
-	results, err := client.Search(context.Background(), local.SearchOptions{
-		Text:  "architecture",
-		Limit: 10,
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	for _, hit := range results.Hits {
-		log.Printf("%s %s", hit.DocID, hit.Snippet)
-	}
-}
+```bash
+printf '%s\n' '{"action":"list_documents","list":{"path_prefix":"notes/","limit":20}}' |
+  go run ./cmd/openclerk-agentops document
 ```
 
-## Common Tasks
+Retrieval task example:
 
-- Create, list, read, append, and replace canonical Markdown documents with the snippets in [references/documents.md](references/documents.md).
-- Search what OpenClerk knows with path and metadata filters using [references/search.md](references/search.md).
-- Inspect derived graph links, promoted records, provenance events, and projection freshness with [references/records-provenance.md](references/records-provenance.md).
-- Maintain source-linked synthesis by searching first, updating existing pages when possible, and preserving citations/provenance for source-sensitive claims.
-- Use `local.ResolvePaths(local.Config{})` when the user asks where OpenClerk data lives. It reports `DataDir`, `DatabasePath`, and `VaultRoot` without opening the runtime.
+```bash
+printf '%s\n' '{"action":"search","search":{"text":"architecture","limit":10}}' |
+  go run ./cmd/openclerk-agentops retrieval
+```
 
-## Generated Client Fallback
+Validation rejections are normal JSON results with `rejected: true` and
+`rejection_reason`. Runtime failures exit non-zero and write the error to
+stderr.
 
-The generated OpenAPI client remains available through `client.Generated()` and the legacy `local.Open(...)` return value for raw API-contract work, HTTP debugging, or endpoints not yet covered by the local SDK facade. Do not start there for routine local agent tasks.
+When reporting results, answer from JSON fields such as `document`,
+`documents`, `search`, `links`, `graph`, `records`, `entity`, `provenance`,
+`projections`, `paths`, or `rejection_reason`. Preserve citation paths, source
+refs, and provenance details for source-sensitive claims.

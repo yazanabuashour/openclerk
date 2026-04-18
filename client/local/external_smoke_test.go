@@ -103,7 +103,7 @@ func main() {
 		panic(string(events.Body))
 	}
 
-	fmt.Printf("backend=%s dataDir=%s docs=%d links=%d entity=%s events=%d\n", openclerk.CapabilitiesBackendOpenclerk, runtime.Paths().DataDir, len(list.JSON200.Documents), len(links.JSON200.Outgoing), lookup.JSON200.Entities[0].EntityId, len(events.JSON200.Events))
+	fmt.Printf("backend=%s dataDir=%s docs=%d links=%d entity=%s events=%d\n", openclerk.Openclerk, runtime.Paths().DataDir, len(list.JSON200.Documents), len(links.JSON200.Outgoing), lookup.JSON200.Entities[0].EntityId, len(events.JSON200.Events))
 }
 
 func ptr(value string) *string { return &value }

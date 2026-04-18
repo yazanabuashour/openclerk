@@ -18,13 +18,12 @@ import (
 
 func main() {
 	if len(os.Args) < 2 || os.Args[1] != "serve" {
-		fmt.Fprintln(os.Stderr, "usage: openclerkd serve --backend=<openclerk|fts|hybrid|graph|records> --db <path> --vault-root <path> [--addr 127.0.0.1:8080]")
+		fmt.Fprintln(os.Stderr, "usage: openclerkd serve --db <path> --vault-root <path> [--addr 127.0.0.1:8080]")
 		os.Exit(2)
 	}
 
 	command := flag.NewFlagSet("serve", flag.ContinueOnError)
 	command.SetOutput(os.Stderr)
-	backendFlag := command.String("backend", "openclerk", "backend kind: openclerk, fts, hybrid, graph, or records")
 	dbPath := command.String("db", "", "path to the sqlite database file")
 	vaultRoot := command.String("vault-root", "", "path to the canonical markdown vault root")
 	addr := command.String("addr", "127.0.0.1:8080", "listen address")
@@ -33,14 +32,9 @@ func main() {
 		os.Exit(2)
 	}
 
-	backend, err := parseBackend(*backendFlag)
-	if err != nil {
-		log.Fatalf("invalid backend: %v", err)
-	}
-
 	ctx := context.Background()
 	store, err := sqlite.New(ctx, sqlite.Config{
-		Backend:           backend,
+		Backend:           domain.BackendOpenClerk,
 		DatabasePath:      *dbPath,
 		VaultRoot:         *vaultRoot,
 		EmbeddingProvider: *embeddingProvider,
@@ -48,7 +42,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer store.Close()
+	defer func() {
+		_ = store.Close()
+	}()
 
 	service := app.New(store)
 	server := &http.Server{
@@ -70,13 +66,4 @@ func shutdownSignal() <-chan os.Signal {
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	return ch
-}
-
-func parseBackend(value string) (domain.BackendKind, error) {
-	switch domain.BackendKind(value) {
-	case domain.BackendOpenClerk, domain.BackendFTS, domain.BackendHybrid, domain.BackendGraph, domain.BackendRecords:
-		return domain.BackendKind(value), nil
-	default:
-		return "", fmt.Errorf("unsupported backend %q", value)
-	}
 }

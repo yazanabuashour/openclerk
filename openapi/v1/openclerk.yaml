@@ -367,7 +367,7 @@ components:
       properties:
         backend:
           type: string
-          enum: [openclerk, fts, hybrid, graph, records]
+          enum: [openclerk]
         authMode:
           type: string
           enum: [none]

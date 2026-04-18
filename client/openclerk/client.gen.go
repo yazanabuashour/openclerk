@@ -34,25 +34,13 @@ func (e CapabilitiesAuthMode) Valid() bool {
 
 // Defines values for CapabilitiesBackend.
 const (
-	CapabilitiesBackendFts       CapabilitiesBackend = "fts"
-	CapabilitiesBackendGraph     CapabilitiesBackend = "graph"
-	CapabilitiesBackendHybrid    CapabilitiesBackend = "hybrid"
-	CapabilitiesBackendOpenclerk CapabilitiesBackend = "openclerk"
-	CapabilitiesBackendRecords   CapabilitiesBackend = "records"
+	Openclerk CapabilitiesBackend = "openclerk"
 )
 
 // Valid indicates whether the value is a known member of the CapabilitiesBackend enum.
 func (e CapabilitiesBackend) Valid() bool {
 	switch e {
-	case CapabilitiesBackendFts:
-		return true
-	case CapabilitiesBackendGraph:
-		return true
-	case CapabilitiesBackendHybrid:
-		return true
-	case CapabilitiesBackendOpenclerk:
-		return true
-	case CapabilitiesBackendRecords:
+	case Openclerk:
 		return true
 	default:
 		return false
@@ -61,19 +49,19 @@ func (e CapabilitiesBackend) Valid() bool {
 
 // Defines values for CapabilitiesExtensions.
 const (
-	CapabilitiesExtensionsGraph      CapabilitiesExtensions = "graph"
-	CapabilitiesExtensionsProvenance CapabilitiesExtensions = "provenance"
-	CapabilitiesExtensionsRecords    CapabilitiesExtensions = "records"
+	Graph      CapabilitiesExtensions = "graph"
+	Provenance CapabilitiesExtensions = "provenance"
+	Records    CapabilitiesExtensions = "records"
 )
 
 // Valid indicates whether the value is a known member of the CapabilitiesExtensions enum.
 func (e CapabilitiesExtensions) Valid() bool {
 	switch e {
-	case CapabilitiesExtensionsGraph:
+	case Graph:
 		return true
-	case CapabilitiesExtensionsProvenance:
+	case Provenance:
 		return true
-	case CapabilitiesExtensionsRecords:
+	case Records:
 		return true
 	default:
 		return false

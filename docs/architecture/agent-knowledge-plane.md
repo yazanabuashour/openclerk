@@ -4,6 +4,11 @@
 
 OpenClerk is positioned as a single-surface agent-facing knowledge plane, not a domain-specific health application and not a menu of user-facing backend variants.
 
+The production agent surface is the `cmd/openclerk-agentops` JSON runner backed
+by the `agentops` package. Agents use task-shaped JSON for routine document and
+retrieval work; they do not need to inspect generated clients, backend variants,
+or SQLite to operate the knowledge plane.
+
 It is also positioned as infrastructure for persistent agent-maintained knowledge: useful synthesis should become cited, inspectable markdown instead of being rediscovered from scratch on every query.
 
 The product model is:
@@ -19,6 +24,7 @@ The product model is:
 
 The public SDK surface is:
 
+- [`agentops`](../../agentops), plus [`cmd/openclerk-agentops`](../../cmd/openclerk-agentops), for production agent workflows
 - [`client/local`](../../client/local), including the code-first embedded facade
 - [`client/openclerk`](../../client/openclerk), for generated OpenAPI fallback work
 - [`openapi/v1/openclerk.yaml`](../../openapi/v1/openclerk.yaml)
@@ -91,11 +97,13 @@ Current event and projection semantics are intentionally minimal:
 - record extraction events
 - fresh/stale projection state for current derived outputs
 
-## Implementation variants
+## Agent evals
 
-The repo still keeps `fts`, `hybrid`, `graph`, and `records` clients and examples for eval-driven implementation comparison.
-
-Those variants are implementation fixtures, not the preferred application-facing SDK.
+Production evals compare the runner-first `skills/openclerk` surface against an
+archived SDK-oriented baseline. Reports track correctness, tool calls, assistant
+calls, wall time, token use, generated-file inspection, module-cache inspection,
+broad repo search, direct SQLite access, and raw log references using
+`<run-root>` placeholders.
 
 ## Out of scope for this rewrite
 

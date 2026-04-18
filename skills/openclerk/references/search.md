@@ -1,52 +1,32 @@
 # Search Task Recipes
 
-Use `Search` for questions like "what do I know about X?" Results include
-citations that point back to canonical Markdown documents and chunks.
+Use `go run ./cmd/openclerk-agentops retrieval` for source-grounded search. It
+returns `search.hits` with `doc_id`, `chunk_id`, snippets, and citations that
+point back to canonical Markdown paths and line ranges.
 
-For source-linked synthesis work, search first. Prefer updating an existing
-topic/entity/comparison page when results show one already exists, and use the
-returned citations as the evidence trail for any source-sensitive answer.
+## Search
 
-```go
-client, err := local.OpenClient(local.Config{})
-if err != nil {
-	return err
-}
-defer client.Close()
-
-results, err := client.Search(ctx, local.SearchOptions{
-	Text:  "architecture",
-	Limit: 10,
-})
-if err != nil {
-	return err
-}
-for _, hit := range results.Hits {
-	log.Printf("%s %s", hit.DocID, hit.Snippet)
-	for _, citation := range hit.Citations {
-		log.Printf("source %s lines %d-%d", citation.Path, citation.LineStart, citation.LineEnd)
-	}
-}
+```bash
+printf '%s\n' '{"action":"search","search":{"text":"architecture","limit":10}}' |
+  go run ./cmd/openclerk-agentops retrieval
 ```
 
-## Scoped Search
+For scoped questions, add path or metadata filters:
 
-Use path and metadata filters when the user narrows the request to a folder,
-notebook, type, status, or other frontmatter value.
-
-```go
-results, err := client.Search(ctx, local.SearchOptions{
-	Text:          "roadmap",
-	PathPrefix:    "notes/projects/",
-	MetadataKey:   "status",
-	MetadataValue: "active",
-	Limit:         10,
-})
-if err != nil {
-	return err
-}
+```bash
+printf '%s\n' '{
+  "action": "search",
+  "search": {
+    "text": "roadmap",
+    "path_prefix": "notes/projects/",
+    "metadata_key": "status",
+    "metadata_value": "active",
+    "limit": 10
+  }
+}' | go run ./cmd/openclerk-agentops retrieval
 ```
 
-If the user asks where the data came from, report citation paths and line ranges
-from the returned hits. If results are empty, report the resolved `VaultRoot` so
-the user can tell which local dataset was checked.
+Search before creating source-linked synthesis. If a relevant topic, entity,
+comparison, or overview page already exists, update it with a document task
+instead of creating a duplicate. When answering source-sensitive questions,
+report from the returned citations rather than unsupported memory.

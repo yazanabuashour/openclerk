@@ -2,7 +2,7 @@
 
 This repository uses **Beads** (`bd`) in embedded mode for maintainer task tracking.
 
-The public product surface is the embedded Go module exposed through the code-first [`client/local`](../client/local) SDK facade. The generated [`client/openclerk`](../client/openclerk) package remains available for raw OpenAPI fallback work, and the backend-specific generated clients remain in the repo as eval fixtures. There is no hosted deployment target, and the default user path does not require a daemon or bound port.
+The production agent surface is the [`cmd/openclerk-agentops`](../cmd/openclerk-agentops) JSON runner backed by [`agentops`](../agentops). The developer product surface is the embedded Go module exposed through the code-first [`client/local`](../client/local) SDK facade. The generated [`client/openclerk`](../client/openclerk) package remains available for raw OpenAPI fallback work. Backend-specific generated clients are not part of the public surface. There is no hosted deployment target, and the default user path does not require a daemon or bound port.
 
 Until the first release tag is published, the install command for consumers is:
 
@@ -10,7 +10,7 @@ Until the first release tag is published, the install command for consumers is:
 go get github.com/yazanabuashour/openclerk/client/local@main
 ```
 
-Consumers should start with `local.OpenClient(local.Config{})`. They can import [`client/openclerk`](../client/openclerk) from the same module only when generated request and response types are needed. [`cmd/openclerkd`](../cmd/openclerkd) remains an intentional HTTP debug and compatibility surface, not the primary runtime path.
+Agents should start with `go run ./cmd/openclerk-agentops document` or `go run ./cmd/openclerk-agentops retrieval`. Go consumers should start with `local.OpenClient(local.Config{})`. They can import [`client/openclerk`](../client/openclerk) from the same module only when generated request and response types are needed. [`cmd/openclerkd`](../cmd/openclerkd) remains an intentional HTTP debug and compatibility surface, not the primary runtime path.
 
 ## Initial Setup
 

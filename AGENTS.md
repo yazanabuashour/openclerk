@@ -1,6 +1,29 @@
 - For all committed docs, reports, and artifact references, use repo-relative paths or neutral repo-relative placeholders. Never use machine-absolute filesystem paths.
 - Do work on the current branch. Do not create or switch to another branch unless explicitly instructed.
 
+## OpenClerk Knowledge Requests
+
+When the prompt is a direct user request to create, list, update, search, or
+inspect local OpenClerk knowledge, treat it as a product data task rather than a
+repository maintenance task. Do not run `bd prime`, inspect generated files,
+inspect backend-variant packages, inspect the Go module cache, query SQLite
+directly, or run repo-wide searches before acting.
+
+Use the AgentOps JSON runner:
+
+```bash
+go run ./cmd/openclerk-agentops document
+go run ./cmd/openclerk-agentops retrieval
+```
+
+Pass one JSON request on stdin and answer only from the JSON result. The runner
+uses `local.Config{}` by default and honors `OPENCLERK_DATA_DIR`,
+`OPENCLERK_DATABASE_PATH`, and `OPENCLERK_VAULT_ROOT`. Optional `--data-dir`,
+`--db`, `--vault-root`, and `--embedding-provider` flags are for explicit
+datasets, tests, or manual debugging. For unsupported workflows, say the
+production AgentOps runner does not support that workflow yet unless the user
+explicitly asks for lower-level SDK or HTTP work.
+
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker
 

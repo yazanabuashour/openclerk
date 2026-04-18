@@ -15,7 +15,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer client.Close()
+	defer func() {
+		_ = client.Close()
+	}()
 
 	architecture, err := client.CreateDocument(ctx, local.DocumentInput{
 		Path:  "notes/architecture/knowledge-plane.md",

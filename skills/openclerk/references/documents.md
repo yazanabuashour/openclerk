@@ -1,89 +1,52 @@
 # Document Task Recipes
 
-Use these snippets after opening the local runtime:
-
-```go
-client, err := local.OpenClient(local.Config{})
-if err != nil {
-	return err
-}
-defer client.Close()
-ctx := context.Background()
-```
+Use `go run ./cmd/openclerk-agentops document` for routine document work. It
+reads an `agentops.DocumentTaskRequest` as JSON and returns a
+`DocumentTaskResult` with `rejected`, `rejection_reason`, `document`,
+`documents`, `paths`, `page_info`, and `summary`.
 
 ## Create A Canonical Document
 
-```go
-document, err := client.CreateDocument(ctx, local.DocumentInput{
-	Path:  "notes/projects/openclerk-roadmap.md",
-	Title: "Roadmap",
-	Body:  "---\ntype: project\nstatus: active\n---\n# Roadmap\n\n## Summary\nCanonical project note.\n",
-})
-if err != nil {
-	return err
-}
-log.Printf("created %s at %s", document.DocID, document.Path)
+```bash
+printf '%s\n' '{
+  "action": "create_document",
+  "document": {
+    "path": "notes/projects/openclerk-roadmap.md",
+    "title": "Roadmap",
+    "body": "---\ntype: project\nstatus: active\n---\n# Roadmap\n\n## Summary\nCanonical project note.\n"
+  }
+}' | go run ./cmd/openclerk-agentops document
 ```
 
-`CreateDocument` fails with a conflict when the path already exists. For
-incremental updates, use `AppendDocument` or `ReplaceSection`; do not overwrite
-the whole Markdown body unless the user explicitly asks for that behavior.
+`create_document` rejects missing `path`, `title`, or `body` before opening the
+runtime. Duplicate paths fail as runtime errors; do not overwrite a whole
+document unless the user explicitly asks.
 
-## Create Source-Linked Synthesis
+## List, Read, Append, And Replace
 
-Search before creating synthesis. If a relevant topic, entity, comparison, or
-overview page already exists, update it with `AppendDocument` or
-`ReplaceSection` instead of creating a duplicate.
+```bash
+printf '%s\n' '{"action":"list_documents","list":{"path_prefix":"notes/","metadata_key":"status","metadata_value":"active","limit":20}}' |
+  go run ./cmd/openclerk-agentops document
 
-Use synthesis pages for durable compiled knowledge that should survive beyond
-the current chat. Include source refs or citations in the body/frontmatter for
-claims that depend on source evidence.
+printf '%s\n' '{"action":"get_document","doc_id":"doc_id_from_json"}' |
+  go run ./cmd/openclerk-agentops document
 
-```go
-document, err := client.CreateDocument(ctx, local.DocumentInput{
-	Path:  "notes/synthesis/openclerk-knowledge-plane.md",
-	Title: "OpenClerk knowledge plane synthesis",
-	Body:  "---\ntype: synthesis\nstatus: active\nfreshness: fresh\nsource_refs:\n  - notes/architecture/knowledge-plane.md\n---\n# OpenClerk knowledge plane synthesis\n\n## Summary\nSource-linked synthesis of the current architecture.\n\n## Sources\n- notes/architecture/knowledge-plane.md\n",
-})
-if err != nil {
-	return err
-}
+printf '%s\n' '{"action":"append_document","doc_id":"doc_id_from_json","content":"## Decisions\nUse the AgentOps runner."}' |
+  go run ./cmd/openclerk-agentops document
+
+printf '%s\n' '{"action":"replace_section","doc_id":"doc_id_from_json","heading":"Decisions","content":"Use `cmd/openclerk-agentops` for routine agent workflows."}' |
+  go run ./cmd/openclerk-agentops document
 ```
 
-## List And Read Documents
+Use `append_document` or `replace_section` for incremental updates. Preserve
+unrelated content and existing source refs.
 
-```go
-docs, err := client.ListDocuments(ctx, local.DocumentListOptions{
-	PathPrefix:    "notes/",
-	MetadataKey:   "status",
-	MetadataValue: "active",
-	Limit:         20,
-})
-if err != nil {
-	return err
-}
-for _, doc := range docs.Documents {
-	log.Printf("%s %s", doc.DocID, doc.Path)
-}
+## Resolve Paths
 
-document, err := client.GetDocument(ctx, docs.Documents[0].DocID)
-if err != nil {
-	return err
-}
-log.Printf("%s headings=%v", document.Title, document.Headings)
+```bash
+printf '%s\n' '{"action":"resolve_paths"}' |
+  go run ./cmd/openclerk-agentops document
 ```
 
-## Append Or Replace A Section
-
-```go
-updated, err := client.AppendDocument(ctx, document.DocID, "## Decisions\nUse the code-first local SDK.")
-if err != nil {
-	return err
-}
-
-updated, err = client.ReplaceSection(ctx, updated.DocID, "Decisions", "Use `local.OpenClient` for routine agent workflows.")
-if err != nil {
-	return err
-}
-log.Printf("updated %s", updated.Path)
-```
+Use this when the user asks which local OpenClerk dataset was checked. Report
+the returned `data_dir`, `database_path`, and `vault_root` only when useful.

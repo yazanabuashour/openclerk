@@ -237,14 +237,6 @@ func TestOpenClientErrors(t *testing.T) {
 	})
 	assertLocalError(t, err, "already_exists", 409)
 
-	ftsRuntime, err := newRuntime(domain.BackendFTS, Config{DataDir: filepath.Join(t.TempDir(), "fts")})
-	if err != nil {
-		t.Fatalf("open fts runtime: %v", err)
-	}
-	t.Cleanup(func() { _ = ftsRuntime.Close() })
-	ftsClient := &Client{runtime: ftsRuntime}
-	_, err = ftsClient.GraphNeighborhood(ctx, GraphNeighborhoodOptions{DocID: "doc"})
-	assertLocalError(t, err, "unsupported", 404)
 }
 
 func assertLocalError(t *testing.T, err error, code string, status int) {

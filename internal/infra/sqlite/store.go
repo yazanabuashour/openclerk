@@ -180,7 +180,9 @@ LIMIT ? OFFSET ?`
 	if err != nil {
 		return domain.DocumentListResult{}, domain.InternalError("query document registry", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	documents := make([]domain.DocumentSummary, 0, limit+1)
 	for rows.Next() {
@@ -395,7 +397,9 @@ LIMIT ?`, nodeID, nodeID, limit)
 	if err != nil {
 		return domain.GraphNeighborhood{}, domain.InternalError("query graph edges", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	edges := make([]domain.GraphEdge, 0, limit)
 	nodeSet := map[string]struct{}{nodeID: {}}
@@ -569,7 +573,9 @@ ORDER BY key_name`, entity.EntityID)
 	if err != nil {
 		return domain.RecordEntity{}, domain.InternalError("query record facts", err)
 	}
-	defer factRows.Close()
+	defer func() {
+		_ = factRows.Close()
+	}()
 	for factRows.Next() {
 		var (
 			fact        domain.RecordFact
@@ -596,7 +602,9 @@ ORDER BY source_doc_id, source_chunk_id`, entity.EntityID)
 	if err != nil {
 		return domain.RecordEntity{}, domain.InternalError("query record citations", err)
 	}
-	defer citationRows.Close()
+	defer func() {
+		_ = citationRows.Close()
+	}()
 	for citationRows.Next() {
 		var (
 			citation   domain.Citation
@@ -660,7 +668,9 @@ LIMIT ? OFFSET ?`
 	if err != nil {
 		return domain.ProvenanceEventResult{}, domain.InternalError("query provenance events", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	events := make([]domain.ProvenanceEvent, 0, limit+1)
 	for rows.Next() {
@@ -728,7 +738,9 @@ LIMIT ? OFFSET ?`
 	if err != nil {
 		return domain.ProjectionStateResult{}, domain.InternalError("query projection states", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	projections := make([]domain.ProjectionState, 0, limit+1)
 	for rows.Next() {
@@ -913,19 +925,10 @@ func (s *Store) syncVault(ctx context.Context) error {
 			return err
 		}
 	}
-	switch s.backend {
-	case domain.BackendOpenClerk:
-		if err := s.rebuildGraph(ctx); err != nil {
-			return err
-		}
-		return s.rebuildRecords(ctx)
-	case domain.BackendGraph:
-		return s.rebuildGraph(ctx)
-	case domain.BackendRecords:
-		return s.rebuildRecords(ctx)
-	default:
-		return nil
+	if err := s.rebuildGraph(ctx); err != nil {
+		return err
 	}
+	return s.rebuildRecords(ctx)
 }
 
 func (s *Store) pruneMissingDocuments(ctx context.Context, livePaths []string) error {
@@ -938,7 +941,9 @@ func (s *Store) pruneMissingDocuments(ctx context.Context, livePaths []string) e
 	if err != nil {
 		return domain.InternalError("query existing documents for pruning", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	staleDocIDs := make([]string, 0, 8)
 	for rows.Next() {
@@ -1196,19 +1201,10 @@ VALUES (?, ?)`, chunkID, string(vectorJSON)); err != nil {
 	if err := tx.Commit(); err != nil {
 		return domain.InternalError("commit document sync", err)
 	}
-	switch s.backend {
-	case domain.BackendOpenClerk:
-		if err := s.rebuildGraph(ctx); err != nil {
-			return err
-		}
-		return s.rebuildRecords(ctx)
-	case domain.BackendGraph:
-		return s.rebuildGraph(ctx)
-	case domain.BackendRecords:
-		return s.rebuildRecords(ctx)
-	default:
-		return nil
+	if err := s.rebuildGraph(ctx); err != nil {
+		return err
 	}
+	return s.rebuildRecords(ctx)
 }
 
 func (s *Store) lexicalSearch(ctx context.Context, query domain.SearchQuery, limit int, offset int) (domain.SearchResult, error) {
@@ -1231,7 +1227,9 @@ LIMIT ? OFFSET ?`
 	if err != nil {
 		return domain.SearchResult{}, domain.InternalError("run lexical search", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 	hits := make([]domain.SearchHit, 0, limit+1)
 	for rows.Next() {
 		var (
@@ -1284,7 +1282,9 @@ JOIN embeddings e ON e.chunk_id = c.chunk_id`
 	if err != nil {
 		return domain.SearchResult{}, domain.InternalError("query embeddings", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	type candidate struct {
 		hit domain.SearchHit
@@ -1667,7 +1667,9 @@ ORDER BY path`)
 	if err != nil {
 		return nil, domain.InternalError("query documents", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 	docs := []domain.Document{}
 	for rows.Next() {
 		var (
@@ -1700,7 +1702,9 @@ ORDER BY doc_id, line_start`)
 	if err != nil {
 		return nil, domain.InternalError("query chunks", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 	result := map[string][]domain.Chunk{}
 	for rows.Next() {
 		var chunk domain.Chunk
@@ -1723,7 +1727,9 @@ WHERE projection_name = ?`, projection)
 	if err != nil {
 		return nil, domain.InternalError("query projection state snapshots", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	snapshots := map[string]storedProjectionState{}
 	for rows.Next() {
@@ -1751,7 +1757,9 @@ func (s *Store) loadDocumentLinks(ctx context.Context, query string, nodeID stri
 	if err != nil {
 		return nil, domain.InternalError("query document links", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	links := []domain.DocumentLink{}
 	for rows.Next() {
@@ -1806,7 +1814,9 @@ func ensureColumn(ctx context.Context, db *sql.DB, table string, column string, 
 	if err != nil {
 		return domain.InternalError("inspect sqlite table", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 	for rows.Next() {
 		var (
 			cid        int
@@ -1833,15 +1843,15 @@ func ensureColumn(ctx context.Context, db *sql.DB, table string, column string, 
 }
 
 func supportsHybridSearch(backend domain.BackendKind) bool {
-	return backend == domain.BackendOpenClerk || backend == domain.BackendHybrid
+	return backend == domain.BackendOpenClerk
 }
 
 func supportsGraph(backend domain.BackendKind) bool {
-	return backend == domain.BackendOpenClerk || backend == domain.BackendGraph
+	return backend == domain.BackendOpenClerk
 }
 
 func supportsRecords(backend domain.BackendKind) bool {
-	return backend == domain.BackendOpenClerk || backend == domain.BackendRecords
+	return backend == domain.BackendOpenClerk
 }
 
 func insertProvenanceEvent(ctx context.Context, tx *sql.Tx, event domain.ProvenanceEvent) error {
