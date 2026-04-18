@@ -12,6 +12,9 @@ also present in the production skill.
 - Provide natural user prompts such as "create a project note for OpenClerk",
   "what do I know about the roadmap?", "append a decision", or "show provenance
   for this document".
+- Include compounding-knowledge prompts such as "ingest this source into the
+  OpenClerk synthesis", "update the existing synthesis with this new evidence",
+  "file this answer for reuse", and "lint the synthesis for stale claims".
 - Use the normal local Go/tool environment and default OpenClerk data path unless
   the scenario explicitly provides a temporary data directory.
 - Judge success by final vault/database state, citation quality, duplicate-path
@@ -41,10 +44,18 @@ same production skill.
 
 - Create canonical notes with stable paths, frontmatter, headings, and body
   content, then verify they exist in the vault and document registry.
+- Search before creating a synthesis page, then create or update source-linked
+  synthesis with citations/source refs to canonical evidence.
+- Add a newer source that contradicts or supersedes an older synthesis claim and
+  verify the agent surfaces the conflict instead of blindly trusting the older
+  synthesis.
 - Repeat the same create request and assert duplicate paths fail clearly instead
   of silently overwriting canonical Markdown.
 - Search for a user concept and verify citation paths and line ranges point back
   to the correct Markdown source.
+- Ask a source-grounded question, file the reusable answer back into a synthesis
+  page, and verify a later query uses the filed synthesis plus citations rather
+  than rediscovering the answer from scratch.
 - Append a new section and replace an existing section without losing unrelated
   document content.
 - Inspect document links and graph neighborhood output for linked notes.
@@ -52,3 +63,5 @@ same production skill.
   expected entity, facts, and citations.
 - Inspect provenance events and projection states after document create/update
   workflows.
+- Run a wiki-health pass that looks for stale synthesis, missing source refs,
+  orphan pages, and missing cross-links.

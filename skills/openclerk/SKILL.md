@@ -18,6 +18,18 @@ Use OpenClerk when the task needs local notes, documents, promoted records, or p
 
 Do not inspect generated clients, generated server code, large dependency directories, or the Go module cache for routine document/search/records/provenance tasks. Use targeted repo searches only when the local SDK facade does not cover the user's ask.
 
+## Source-Linked Synthesis Workflow
+
+OpenClerk can support LLM Wiki-style maintenance when the user wants durable knowledge that compounds over time.
+
+- Search existing notes and synthesis before creating a new document.
+- Use `CreateDocument` for new canonical source notes or new synthesis pages.
+- Use `AppendDocument` or `ReplaceSection` to update existing synthesis instead of duplicating nearby pages.
+- Preserve source-sensitive claims with citations, source refs, or provenance references in the document body/frontmatter.
+- Use `ListProvenanceEvents` and `ListProjectionStates` when the user asks where knowledge came from, whether derived views are fresh, or whether a synthesis page is stale.
+- Treat promoted records as selective structured domains. Do not use records lookup as the default wiki mechanism.
+- File a useful answer back into OpenClerk only when it is reusable beyond the current chat and can point back to source evidence.
+
 ## Quick Start
 
 ```go
@@ -55,6 +67,7 @@ func main() {
 - Create, list, read, append, and replace canonical Markdown documents with the snippets in [references/documents.md](references/documents.md).
 - Search what OpenClerk knows with path and metadata filters using [references/search.md](references/search.md).
 - Inspect derived graph links, promoted records, provenance events, and projection freshness with [references/records-provenance.md](references/records-provenance.md).
+- Maintain source-linked synthesis by searching first, updating existing pages when possible, and preserving citations/provenance for source-sensitive claims.
 - Use `local.ResolvePaths(local.Config{})` when the user asks where OpenClerk data lives. It reports `DataDir`, `DatabasePath`, and `VaultRoot` without opening the runtime.
 
 ## Generated Client Fallback

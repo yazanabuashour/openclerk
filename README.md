@@ -4,6 +4,8 @@ openclerk is a local-first, agent-facing knowledge plane for notes, documents, p
 
 The public surface is one authored OpenAPI contract, one code-first local SDK, one generated Go client for fallback contract work, and one embedded SQLite-backed runtime that does not require a daemon or bound port. Canonical docs remain markdown in the vault; graph traversal and promoted-domain lookup stay derived from those canonical sources.
 
+OpenClerk is also infrastructure for persistent agent-maintained knowledge. It is meant to help useful synthesis compound over time as cited, inspectable markdown rather than being rediscovered from scratch on every query or lost in chat history.
+
 ## Public surface
 
 - [`client/local`](client/local) opens the embedded runtime in process and provides the preferred code-first SDK facade.
@@ -130,12 +132,19 @@ The facade covers document create/list/get, search, append, replace-section, lin
 ## Architecture notes
 
 - Canonical docs stay markdown-backed and inspectable.
+- Source-linked synthesis can live in markdown when it carries citations and provenance back to canonical sources.
 - Graph traversal is a derived docs capability, not a second truth system.
 - Promoted records are a selective structured layer for domains that fail as plain docs.
 - Provenance and projection-state APIs make derivation and freshness inspectable.
 - Memory and routing are intentionally out of scope for this rewrite.
 
 See [`docs/architecture/agent-knowledge-plane.md`](docs/architecture/agent-knowledge-plane.md) for the in-repo design summary, [`docs/evals/baseline-scenarios.md`](docs/evals/baseline-scenarios.md) for the eval task set used to compare implementation variants, and [`docs/evals/agent-production.md`](docs/evals/agent-production.md) for production agent workflow eval guidance.
+
+### LLM-maintained synthesis
+
+Karpathy's LLM Wiki pattern is related to the OpenClerk vision: both reject pure query-time RAG as the whole answer and favor durable markdown knowledge that compounds through summaries, links, contradiction checks, and filed answers.
+
+OpenClerk should support that workflow through its existing docs, search, graph, records, and provenance surface before adding new public APIs. The OpenClerk version keeps raw sources and accepted canonical notes inspectable, treats synthesis as source-linked markdown, and uses provenance/freshness state so agent-authored synthesis does not become an opaque second truth system.
 
 ## Implementation variants
 

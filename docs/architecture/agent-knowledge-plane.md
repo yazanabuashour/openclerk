@@ -4,9 +4,12 @@
 
 OpenClerk is positioned as a single-surface agent-facing knowledge plane, not a domain-specific health application and not a menu of user-facing backend variants.
 
+It is also positioned as infrastructure for persistent agent-maintained knowledge: useful synthesis should become cited, inspectable markdown instead of being rediscovered from scratch on every query.
+
 The product model is:
 
 - canonical docs remain markdown in the vault
+- source-linked synthesis can live in markdown when it preserves source refs and freshness
 - graph traversal is a derived docs capability
 - promoted records are selective structured domains, not the default storage shape
 - provenance and projection-state APIs make derivation and freshness inspectable
@@ -33,6 +36,8 @@ The public API is organized by capability, not implementation variant:
 
 Canonical docs are markdown files under the vault with stable `doc_id`, `chunk_id`, vault-relative `path`, headings, and parsed frontmatter metadata.
 
+The docs layer also supports source-linked synthesis: topic pages, entity pages, comparisons, overview notes, and filed answers that compile existing evidence into reusable markdown. These pages are durable knowledge artifacts, but they do not outrank the canonical source docs or promoted records they cite.
+
 The docs layer now exposes:
 
 - document registry listing over stable ids and paths
@@ -40,6 +45,20 @@ The docs layer now exposes:
 - safe write operations for canonical docs
 - docs-centric link expansion
 - citation-bearing retrieval results
+
+### LLM Wiki alignment
+
+Karpathy's LLM Wiki pattern maps cleanly onto OpenClerk, but OpenClerk should implement it as a provenance-backed docs workflow rather than a literal clone.
+
+| LLM Wiki concept | OpenClerk mapping |
+| --- | --- |
+| Raw sources | canonical source docs and assets |
+| Wiki | source-linked synthesis and accepted canonical notes |
+| Schema | repo docs plus `skills/openclerk` guidance |
+| `index.md` | search, metadata filters, graph neighborhoods, and optional generated index notes |
+| `log.md` | provenance events, projection states, and optional human-readable activity notes |
+
+The shared idea is that agents should maintain summaries, links, contradiction notes, and filed answers so knowledge compounds over time. The OpenClerk-specific constraint is that synthesis must stay inspectable through stable ids, citations, provenance events, and projection freshness. It should not become an opaque second truth system.
 
 ### Graph
 

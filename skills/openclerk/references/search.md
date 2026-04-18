@@ -3,6 +3,10 @@
 Use `Search` for questions like "what do I know about X?" Results include
 citations that point back to canonical Markdown documents and chunks.
 
+For source-linked synthesis work, search first. Prefer updating an existing
+topic/entity/comparison page when results show one already exists, and use the
+returned citations as the evidence trail for any source-sensitive answer.
+
 ```go
 client, err := local.OpenClient(local.Config{})
 if err != nil {

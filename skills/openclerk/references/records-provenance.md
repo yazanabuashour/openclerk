@@ -51,6 +51,10 @@ if err != nil {
 
 ## Provenance And Freshness
 
+Use provenance and projection freshness when maintaining source-linked
+synthesis. A synthesis page should not hide whether it came from canonical docs,
+promoted records, or a derived projection that may need refresh.
+
 ```go
 events, err := client.ListProvenanceEvents(ctx, local.ProvenanceEventOptions{
 	RefKind: "document",

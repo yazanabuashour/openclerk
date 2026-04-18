@@ -29,6 +29,27 @@ log.Printf("created %s at %s", document.DocID, document.Path)
 incremental updates, use `AppendDocument` or `ReplaceSection`; do not overwrite
 the whole Markdown body unless the user explicitly asks for that behavior.
 
+## Create Source-Linked Synthesis
+
+Search before creating synthesis. If a relevant topic, entity, comparison, or
+overview page already exists, update it with `AppendDocument` or
+`ReplaceSection` instead of creating a duplicate.
+
+Use synthesis pages for durable compiled knowledge that should survive beyond
+the current chat. Include source refs or citations in the body/frontmatter for
+claims that depend on source evidence.
+
+```go
+document, err := client.CreateDocument(ctx, local.DocumentInput{
+	Path:  "notes/synthesis/openclerk-knowledge-plane.md",
+	Title: "OpenClerk knowledge plane synthesis",
+	Body:  "---\ntype: synthesis\nstatus: active\nfreshness: fresh\nsource_refs:\n  - notes/architecture/knowledge-plane.md\n---\n# OpenClerk knowledge plane synthesis\n\n## Summary\nSource-linked synthesis of the current architecture.\n\n## Sources\n- notes/architecture/knowledge-plane.md\n",
+})
+if err != nil {
+	return err
+}
+```
+
 ## List And Read Documents
 
 ```go
