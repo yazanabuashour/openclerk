@@ -21,7 +21,17 @@ stdin, read the JSON result from stdout, and answer only from that JSON. Use
 `local.Config{}` defaults unless the user names a specific dataset. The runner
 honors `OPENCLERK_DATA_DIR`, `OPENCLERK_DATABASE_PATH`, and
 `OPENCLERK_VAULT_ROOT`; optional `--data-dir`, `--db`, `--vault-root`, and
-`--embedding-provider` flags are for tests or explicit user-directed datasets.
+`--embedding-provider` flags are for tests or explicit user-directed datasets
+only. For routine requests, do not pass those flags; rely on the configured
+environment so data, database, and vault paths stay together. Do not inspect the
+repo to rediscover runner schemas; use the documented request shapes directly.
+
+Before using any runner, reject final-answer-only, with exactly one assistant
+answer and no tools, when the request is missing required document or retrieval
+fields, asks for an obviously invalid limit such as a negative number, or asks
+to bypass AgentOps for routine lower-level SDK, HTTP, SQLite, or
+generated-client work. Do not first announce skill use or process for those
+direct rejections.
 
 Do not inspect generated clients, backend-variant packages, generated server
 code, the Go module cache, or SQLite directly for routine OpenClerk tasks. Do
@@ -38,11 +48,31 @@ printf '%s\n' '{"action":"list_documents","list":{"path_prefix":"notes/","limit"
   go run ./cmd/openclerk-agentops document
 ```
 
+Common one-line document shapes:
+
+```bash
+{"action":"create_document","document":{"path":"notes/projects/example.md","title":"Example","body":"# Example\n\n## Summary\nReusable knowledge.\n"}}
+{"action":"list_documents","list":{"path_prefix":"notes/","limit":20}}
+{"action":"get_document","doc_id":"doc_id_from_json"}
+{"action":"append_document","doc_id":"doc_id_from_json","content":"## Decisions\nUse the AgentOps runner."}
+{"action":"replace_section","doc_id":"doc_id_from_json","heading":"Decisions","content":"Use the AgentOps runner."}
+```
+
 Retrieval task example:
 
 ```bash
 printf '%s\n' '{"action":"search","search":{"text":"architecture","limit":10}}' |
   go run ./cmd/openclerk-agentops retrieval
+```
+
+Common one-line retrieval shapes:
+
+```bash
+{"action":"search","search":{"text":"architecture","limit":10}}
+{"action":"document_links","doc_id":"doc_id_from_json"}
+{"action":"records_lookup","records":{"text":"OpenClerk AgentOps","limit":10}}
+{"action":"provenance_events","provenance":{"ref_kind":"document","ref_id":"doc_id_from_json","limit":20}}
+{"action":"projection_states","projection":{"ref_kind":"document","ref_id":"doc_id_from_json","limit":20}}
 ```
 
 Validation rejections are normal JSON results with `rejected: true` and
