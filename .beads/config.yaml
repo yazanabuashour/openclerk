@@ -52,3 +52,8 @@
 # - linear.api-key
 # - github.org
 # - github.repo
+
+# Embedded Dolt is the source of truth; do not auto-export or git-add JSONL snapshots.
+export.auto: false
+
+export.git-add: false

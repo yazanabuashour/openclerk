@@ -13,6 +13,7 @@ daemon.*
 
 # Interactions log (runtime, not versioned)
 interactions.jsonl
+issues.jsonl
 
 # Push state (runtime, per-machine)
 push-state.json
