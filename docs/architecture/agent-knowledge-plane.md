@@ -105,6 +105,9 @@ calls, wall time, token use, generated-file inspection, module-cache inspection,
 broad repo search, direct SQLite access, and raw log references using
 `<run-root>` placeholders.
 
+The provisional architecture decision and adoption gates are recorded in
+[`eval-backed-knowledge-plane-adr.md`](eval-backed-knowledge-plane-adr.md).
+
 ## Out of scope for this rewrite
 
 - Mem0 or other long-term memory integration

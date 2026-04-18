@@ -302,6 +302,11 @@ func TestVerifyFinalAnswerOnlyRequiresRejectionAndNoTools(t *testing.T) {
 	if result := verifyFinalAnswerOnly(sc, "The limit is invalid because it cannot be negative.", noTools); !result.Passed {
 		t.Fatalf("valid direct rejection failed: %+v", result)
 	}
+
+	unsupported := scenario{ID: "unsupported-lower-level-reject"}
+	if result := verifyFinalAnswerOnly(unsupported, "I can\u2019t bypass AgentOps or query SQLite directly for this task.", noTools); !result.Passed {
+		t.Fatalf("curly apostrophe rejection failed: %+v", result)
+	}
 }
 
 func TestDuplicatePathRejectRequiresAnswerFailure(t *testing.T) {

@@ -11,8 +11,30 @@ instruction is needed, put it in `skills/openclerk` first.
 - `sdk-baseline`: an archived SDK-oriented skill retained only as a comparison
   surface.
 
-Generated clients, HTTP server calls, and backend-specific variants are not
-active production agent surfaces.
+AgentOps is the production semantic contract for routine agent work. The
+machine-facing runner is the supported transport for that contract today.
+
+Generated clients, HTTP server calls, direct SQLite access, ad hoc SDK programs,
+repo-wide spelunking, module-cache inspection, and backend-specific variants are
+not active production agent surfaces.
+
+## Adapter Eligibility
+
+CLI and MCP surfaces may be evaluated only as adapters over AgentOps-equivalent
+task shapes. An adapter must preserve the same document and retrieval semantics,
+validation behavior, provenance access, and final-answer-only rejection rules as
+the runner-backed production skill.
+
+An adapter is eligible for adoption only if it:
+
+- passes the same correctness checks as production AgentOps
+- avoids generated-client inspection, direct SQLite, backend variants, broad
+  repo search, module-cache inspection, and routine lower-level SDK work
+- ties or improves AgentOps tool count
+- improves at least one measured agent-behavior metric such as latency,
+  non-cached input tokens, clarity of failure handling, or multi-turn continuity
+- does not require new public API surface unless the eval shows the current
+  AgentOps surface is insufficient
 
 ## Harness
 
@@ -88,6 +110,11 @@ The `ockp` harness covers routine local knowledge-plane workflows:
   limits, and unsupported lower-level routine workflows
 - true multi-turn workflows that require resumed context across ordered turns
 
+The current reduced harness does not yet include separate scenarios for durable
+answer filing, contradiction or stale-synthesis handling, or promoted-record
+comparison against plain docs retrieval. Those remain ADR proof obligations in
+[`baseline-scenarios.md`](baseline-scenarios.md).
+
 ## Comparison Policy
 
 Production AgentOps beats `sdk-baseline` only when:
@@ -105,5 +132,15 @@ Production AgentOps beats `sdk-baseline` only when:
 - production total non-cached input tokens are less than or equal to baseline
   total non-cached input tokens; missing usage on either side fails token
   comparison
+
+CLI or MCP adapters beat production AgentOps only when:
+
+- the adapter wraps AgentOps-equivalent task semantics
+- the adapter passes every selected scenario
+- the adapter has no forbidden access patterns
+- the adapter ties or beats production total tools
+- the adapter improves at least one explicit measured agent-behavior metric
+- the adapter preserves provenance, projection freshness, and validation
+  rejection behavior
 
 Current reduced eval reports are written under `docs/evals/results/`.

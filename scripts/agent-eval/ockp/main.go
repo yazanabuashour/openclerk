@@ -789,7 +789,7 @@ func verifyFinalAnswerOnly(sc scenario, finalMessage string, turnMetrics metrics
 }
 
 func isValidationRejection(scenarioID string, message string) bool {
-	lower := strings.ToLower(strings.TrimSpace(message))
+	lower := normalizeValidationMessage(message)
 	if lower == "" {
 		return false
 	}
@@ -803,6 +803,15 @@ func isValidationRejection(scenarioID string, message string) bool {
 	default:
 		return false
 	}
+}
+
+func normalizeValidationMessage(message string) string {
+	normalized := strings.NewReplacer(
+		"\u2018", "'",
+		"\u2019", "'",
+		"\u02bc", "'",
+	).Replace(message)
+	return strings.ToLower(strings.TrimSpace(normalized))
 }
 
 func verifyNoDocument(ctx context.Context, paths evalPaths, docPath string, detail string) verificationResult {
