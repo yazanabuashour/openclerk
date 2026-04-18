@@ -8,6 +8,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/yazanabuashour/openclerk/agentops"
+	"github.com/yazanabuashour/openclerk/client/local"
 )
 
 func TestParseRunConfigDefaultsParallelAndSharedCache(t *testing.T) {
@@ -307,6 +310,118 @@ func TestVerifyFinalAnswerOnlyRequiresRejectionAndNoTools(t *testing.T) {
 	if result := verifyFinalAnswerOnly(unsupported, "I can\u2019t bypass AgentOps or query SQLite directly for this task.", noTools); !result.Passed {
 		t.Fatalf("curly apostrophe rejection failed: %+v", result)
 	}
+
+	cliMCP := scenario{ID: "unsupported-cli-mcp-reject"}
+	if result := verifyFinalAnswerOnly(cliMCP, "I can't bypass AgentOps through the CLI or MCP for this routine task.", noTools); !result.Passed {
+		t.Fatalf("CLI/MCP bypass rejection failed: %+v", result)
+	}
+}
+
+func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
+	ids := map[string]bool{}
+	for _, id := range scenarioIDs() {
+		ids[id] = true
+	}
+	for _, want := range []string{"answer-filing", "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-cli-mcp-reject"} {
+		if !ids[want] {
+			t.Fatalf("scenarioIDs missing %q in %v", want, scenarioIDs())
+		}
+	}
+}
+
+func TestVerifyAnswerFilingRequiresFiledSourceLinkedDocument(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: "answer-filing"}); err != nil {
+		t.Fatalf("seed scenario: %v", err)
+	}
+	noTools := metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}}
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: "answer-filing"}, 1, "notes/synthesis/filed-agentops-answer.md", noTools)
+	if err != nil {
+		t.Fatalf("verify missing answer filing: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("missing filed document passed: %+v", result)
+	}
+	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	body := "# Filed AgentOps Answer\n\n## Summary\nSource: notes/sources/answer-filing-agentops.md\n\nDurable AgentOps answers should be filed as source-linked markdown.\n"
+	if err := createSeedDocument(ctx, cfg, "notes/synthesis/filed-agentops-answer.md", "Filed AgentOps Answer", body); err != nil {
+		t.Fatalf("create filed answer: %v", err)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: "answer-filing"}, 1, "Created notes/synthesis/filed-agentops-answer.md.", noTools)
+	if err != nil {
+		t.Fatalf("verify answer filing: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("answer filing failed: %+v", result)
+	}
+}
+
+func TestVerifyStaleSynthesisUpdateRequiresCurrentSourceAndNoDuplicate(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: "stale-synthesis-update"}); err != nil {
+		t.Fatalf("seed scenario: %v", err)
+	}
+	noTools := metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}}
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: "stale-synthesis-update"}, 1, "Updated notes/synthesis/agentops-routing.md.", noTools)
+	if err != nil {
+		t.Fatalf("verify stale before update: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("stale synthesis passed before update: %+v", result)
+	}
+	replacement := "Current guidance: routine agents must use cmd/openclerk-agentops JSON runner.\n\nCurrent source: notes/sources/agentops-current-runner.md\n\nSupersedes: notes/sources/agentops-old-cli.md\n\nThis stale claim is superseded by current guidance."
+	replaceSeedSection(t, ctx, paths, "notes/synthesis/agentops-routing.md", "Summary", replacement)
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: "stale-synthesis-update"}, 1, "Updated notes/synthesis/agentops-routing.md with current guidance.", noTools)
+	if err != nil {
+		t.Fatalf("verify stale after update: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("updated stale synthesis failed: %+v", result)
+	}
+	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	if err := createSeedDocument(ctx, cfg, "notes/synthesis/agentops-routing-current.md", "AgentOps Routing Current", "# Duplicate\n"); err != nil {
+		t.Fatalf("create duplicate synthesis: %v", err)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: "stale-synthesis-update"}, 1, "Updated notes/synthesis/agentops-routing.md with current guidance.", noTools)
+	if err != nil {
+		t.Fatalf("verify stale duplicate: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("duplicate synthesis passed: %+v", result)
+	}
+}
+
+func TestVerifyPromotedRecordVsDocsRequiresComparisonAnswer(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: "promoted-record-vs-docs"}); err != nil {
+		t.Fatalf("seed scenario: %v", err)
+	}
+	noTools := metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}}
+	withRetrievalWork := metrics{AssistantCalls: 1, ToolCalls: 2, CommandExecutions: 2, EventTypeCounts: map[string]int{}}
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: "promoted-record-vs-docs"}, 1, "Records lookup says JSON runner; plain docs search agrees.", noTools)
+	if err != nil {
+		t.Fatalf("verify records vs docs no tools: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("no-tool records vs docs passed: %+v", result)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: "promoted-record-vs-docs"}, 1, "Records lookup says JSON runner; plain docs search agrees.", withRetrievalWork)
+	if err != nil {
+		t.Fatalf("verify records vs docs: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("records vs docs failed: %+v", result)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: "promoted-record-vs-docs"}, 1, "JSON runner.", withRetrievalWork)
+	if err != nil {
+		t.Fatalf("verify incomplete records vs docs answer: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("incomplete comparison passed: %+v", result)
+	}
 }
 
 func TestDuplicatePathRejectRequiresAnswerFailure(t *testing.T) {
@@ -346,6 +461,30 @@ func TestProductionOnlySummaryDoesNotBeatMissingBaseline(t *testing.T) {
 	}
 	if summary.Recommendation != "baseline_not_run_production_only_report" {
 		t.Fatalf("recommendation = %q", summary.Recommendation)
+	}
+}
+
+func replaceSeedSection(t *testing.T, ctx context.Context, paths evalPaths, docPath string, heading string, content string) {
+	t.Helper()
+	docID, found, err := documentIDByPath(ctx, paths, docPath)
+	if err != nil {
+		t.Fatalf("find %s: %v", docPath, err)
+	}
+	if !found {
+		t.Fatalf("missing %s", docPath)
+	}
+	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	result, err := agentops.RunDocumentTask(ctx, cfg, agentops.DocumentTaskRequest{
+		Action:  agentops.DocumentTaskActionReplaceSection,
+		DocID:   docID,
+		Heading: heading,
+		Content: content,
+	})
+	if err != nil {
+		t.Fatalf("replace %s section %s: %v", docPath, heading, err)
+	}
+	if result.Rejected {
+		t.Fatalf("replace %s rejected: %s", docPath, result.RejectionReason)
 	}
 }
 

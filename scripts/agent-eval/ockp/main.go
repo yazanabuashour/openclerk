@@ -684,12 +684,48 @@ func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
 		if err := createSeedDocument(ctx, cfg, "notes/sources/agentops-runner.md", "AgentOps Runner Source", "The AgentOps runner uses JSON requests for OpenClerk knowledge tasks.\n\nIt preserves source refs for synthesis pages."); err != nil {
 			return err
 		}
+	case "answer-filing":
+		if err := createSeedDocument(ctx, cfg, "notes/sources/answer-filing-agentops.md", "AgentOps Answer Filing Source", "The AgentOps JSON runner is the production path for reusable OpenClerk knowledge tasks.\n\nDurable AgentOps answers should be filed as source-linked markdown."); err != nil {
+			return err
+		}
+	case "stale-synthesis-update":
+		if err := createSeedDocument(ctx, cfg, "notes/sources/agentops-old-cli.md", "Old AgentOps Routing Source", "Older guidance said routine agents may bypass AgentOps through a temporary CLI workaround."); err != nil {
+			return err
+		}
+		if err := createSeedDocument(ctx, cfg, "notes/sources/agentops-current-runner.md", "Current AgentOps Routing Source", "Current guidance says routine agents must use cmd/openclerk-agentops JSON runner for OpenClerk knowledge tasks."); err != nil {
+			return err
+		}
+		body := "# AgentOps Routing\n\n## Summary\nStale claim: routine agents may bypass AgentOps through a temporary CLI workaround.\n\n## Sources\n- notes/sources/agentops-old-cli.md\n"
+		if err := createSeedDocument(ctx, cfg, "notes/synthesis/agentops-routing.md", "AgentOps Routing", body); err != nil {
+			return err
+		}
 	case "append-replace":
 		if err := createSeedDocument(ctx, cfg, "notes/projects/agentops-runner.md", "AgentOps Runner", "## Context\nExisting context stays intact."); err != nil {
 			return err
 		}
 	case "records-provenance":
 		if err := createSeedDocument(ctx, cfg, "records/services/openclerk-agentops.md", "OpenClerk AgentOps", recordBody("openclerk-agentops", "service", "OpenClerk AgentOps")); err != nil {
+			return err
+		}
+	case "promoted-record-vs-docs":
+		if err := createSeedDocument(ctx, cfg, "notes/reference/agentops-service.md", "AgentOps Service Reference", "# AgentOps Service Reference\n\n## Summary\nPlain docs evidence says OpenClerk AgentOps is the production service for routine knowledge tasks.\n\n## Details\nPlain docs evidence is narrative and searchable.\n"); err != nil {
+			return err
+		}
+		body := strings.TrimSpace(`---
+entity_id: openclerk-agentops
+entity_type: service
+entity_name: OpenClerk AgentOps
+---
+
+# OpenClerk AgentOps
+
+## Facts
+- status: active
+- owner: agentops
+- interface: JSON runner
+- production_path: true
+`)
+		if err := createSeedDocument(ctx, cfg, "records/services/openclerk-agentops.md", "OpenClerk AgentOps", body); err != nil {
 			return err
 		}
 	case "duplicate-path-reject":
@@ -753,10 +789,16 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyDocuments(ctx, paths, []string{"notes/projects/agentops-runner.md"}, finalMessage)
 	case "search-synthesis":
 		return verifyDocuments(ctx, paths, []string{"notes/synthesis/agentops-runner.md"}, finalMessage)
+	case "answer-filing":
+		return verifyAnswerFiling(ctx, paths, finalMessage)
+	case "stale-synthesis-update":
+		return verifyStaleSynthesisUpdate(ctx, paths, finalMessage)
 	case "append-replace":
 		return verifyDocumentContains(ctx, paths, "notes/projects/agentops-runner.md", []string{"Existing context stays intact", "Use the JSON runner"}, []string{"temporary CLI workaround"})
 	case "records-provenance":
 		return verifyRecordsAndProvenance(ctx, paths, finalMessage)
+	case "promoted-record-vs-docs":
+		return verifyPromotedRecordVsDocs(ctx, paths, finalMessage, turnMetrics)
 	case "duplicate-path-reject":
 		return verifyDuplicatePathReject(ctx, paths, finalMessage)
 	case "mixed-synthesis-records":
@@ -800,6 +842,9 @@ func isValidationRejection(scenarioID string, message string) bool {
 		return containsAny(lower, []string{"negative", "invalid", "non-negative", "positive"}) && strings.Contains(lower, "limit")
 	case "unsupported-lower-level-reject":
 		return containsAny(lower, []string{"unsupported", "does not support", "cannot bypass", "can't bypass", "must use agentops", "do not bypass", "use agentops"})
+	case "unsupported-cli-mcp-reject":
+		return containsAny(lower, []string{"unsupported", "cannot bypass", "can't bypass", "do not bypass", "must use agentops", "use agentops"}) &&
+			containsAny(lower, []string{"cli", "mcp", "agentops"})
 	default:
 		return false
 	}
@@ -860,6 +905,93 @@ func verifyDocuments(ctx context.Context, paths evalPaths, wanted []string, fina
 	}, nil
 }
 
+func verifyAnswerFiling(ctx context.Context, paths evalPaths, finalMessage string) (verificationResult, error) {
+	docPath := "notes/synthesis/filed-agentops-answer.md"
+	body, found, err := documentBodyByPath(ctx, paths, docPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := []string{}
+	if !found {
+		failures = append(failures, "missing "+docPath)
+	}
+	failures = append(failures, missingRequired(body, []string{
+		"notes/sources/answer-filing-agentops.md",
+		"Durable AgentOps answers should be filed as source-linked markdown",
+	})...)
+	assistantPass := messageContainsAll(finalMessage, []string{docPath})
+	if !assistantPass {
+		failures = append(failures, "final answer did not mention "+docPath)
+	}
+	databasePass := found && len(missingRequired(body, []string{
+		"notes/sources/answer-filing-agentops.md",
+		"Durable AgentOps answers should be filed as source-linked markdown",
+	})) == 0
+	return verificationResult{
+		Passed:        databasePass && assistantPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{docPath},
+	}, nil
+}
+
+func verifyStaleSynthesisUpdate(ctx context.Context, paths evalPaths, finalMessage string) (verificationResult, error) {
+	docPath := "notes/synthesis/agentops-routing.md"
+	body, found, err := documentBodyByPath(ctx, paths, docPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	exactCount, err := exactDocumentCount(ctx, paths, docPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	createdCurrent, err := exactDocumentCount(ctx, paths, "notes/synthesis/agentops-routing-current.md")
+	if err != nil {
+		return verificationResult{}, err
+	}
+	createdUpdated, err := exactDocumentCount(ctx, paths, "notes/synthesis/agentops-routing-updated.md")
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := []string{}
+	if !found {
+		failures = append(failures, "missing "+docPath)
+	}
+	if exactCount != 1 {
+		failures = append(failures, fmt.Sprintf("expected one %s document, got %d", docPath, exactCount))
+	}
+	if createdCurrent != 0 || createdUpdated != 0 {
+		failures = append(failures, "created duplicate synthesis path")
+	}
+	required := []string{
+		"Current guidance: routine agents must use cmd/openclerk-agentops JSON runner",
+		"Current source: notes/sources/agentops-current-runner.md",
+		"Supersedes: notes/sources/agentops-old-cli.md",
+	}
+	failures = append(failures, missingRequired(body, required)...)
+	failures = append(failures, presentForbidden(body, []string{"may bypass AgentOps through a temporary CLI workaround"})...)
+	if !containsAny(strings.ToLower(body), []string{"stale", "supersedes", "superseded", "contradiction", "current guidance"}) {
+		failures = append(failures, "missing stale or supersession language")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{docPath}) &&
+		messageContainsAny(finalMessage, []string{"updated", "current", "supersedes", "stale"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not describe the synthesis update")
+	}
+	databasePass := found && exactCount == 1 && createdCurrent == 0 && createdUpdated == 0 &&
+		len(missingRequired(body, required)) == 0 &&
+		len(presentForbidden(body, []string{"may bypass AgentOps through a temporary CLI workaround"})) == 0 &&
+		containsAny(strings.ToLower(body), []string{"stale", "supersedes", "superseded", "contradiction", "current guidance"})
+	return verificationResult{
+		Passed:        databasePass && assistantPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{docPath},
+	}, nil
+}
+
 func verifyDuplicatePathReject(ctx context.Context, paths evalPaths, finalMessage string) (verificationResult, error) {
 	bodyCheck, err := verifyDocumentContains(ctx, paths, "notes/projects/duplicate.md", []string{"This canonical path already exists."}, []string{"overwritten"})
 	if err != nil {
@@ -893,44 +1025,81 @@ func isDuplicateRejection(message string) bool {
 	return strings.Contains(lower, "exists") && containsAny(lower, []string{"cannot", "can't", "failed", "not overwrite", "won't overwrite", "did not overwrite"})
 }
 
-func verifyDocumentContains(ctx context.Context, paths evalPaths, docPath string, required []string, forbidden []string) (verificationResult, error) {
+func verifyPromotedRecordVsDocs(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
 	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
-	list, err := agentops.RunDocumentTask(ctx, cfg, agentops.DocumentTaskRequest{
-		Action: agentops.DocumentTaskActionList,
-		List:   agentops.DocumentListOptions{PathPrefix: docPath, Limit: 10},
+	search, err := agentops.RunRetrievalTask(ctx, cfg, agentops.RetrievalTaskRequest{
+		Action: agentops.RetrievalTaskActionSearch,
+		Search: agentops.SearchOptions{Text: "Plain docs evidence", PathPrefix: "notes/reference/", Limit: 5},
 	})
 	if err != nil {
 		return verificationResult{}, err
 	}
-	docID := ""
-	for _, doc := range list.Documents {
-		if doc.Path == docPath {
-			docID = doc.DocID
-			break
-		}
-	}
-	if docID == "" {
-		return verificationResult{Passed: false, DatabasePass: false, Details: "missing " + docPath}, nil
-	}
-	got, err := agentops.RunDocumentTask(ctx, cfg, agentops.DocumentTaskRequest{Action: agentops.DocumentTaskActionGet, DocID: docID})
+	records, err := agentops.RunRetrievalTask(ctx, cfg, agentops.RetrievalTaskRequest{
+		Action:  agentops.RetrievalTaskActionRecordsLookup,
+		Records: agentops.RecordLookupOptions{Text: "OpenClerk AgentOps", EntityType: "service", Limit: 5},
+	})
 	if err != nil {
 		return verificationResult{}, err
 	}
-	body := ""
-	if got.Document != nil {
-		body = got.Document.Body
+	hasPlainDoc := false
+	if search.Search != nil {
+		for _, hit := range search.Search.Hits {
+			if hit.DocID != "" && hit.Title != "" && containsAny(strings.ToLower(hit.Snippet), []string{"plain docs evidence", "production service"}) {
+				hasPlainDoc = true
+				break
+			}
+		}
 	}
+	hasRecord := false
+	if records.Records != nil {
+		for _, entity := range records.Records.Entities {
+			if entity.EntityID != "openclerk-agentops" {
+				continue
+			}
+			for _, fact := range entity.Facts {
+				if strings.EqualFold(fact.Key, "interface") && strings.EqualFold(fact.Value, "JSON runner") {
+					hasRecord = true
+					break
+				}
+			}
+		}
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{"records lookup"}) &&
+		messageContainsAny(finalMessage, []string{"plain docs", "plain doc", "search"}) &&
+		messageContainsAny(finalMessage, []string{"json runner", "agentops"})
+	activityPass := turnMetrics.ToolCalls >= 2 && turnMetrics.CommandExecutions >= 2
 	failures := []string{}
-	for _, value := range required {
-		if !strings.Contains(body, value) {
-			failures = append(failures, "missing "+value)
-		}
+	if !hasPlainDoc {
+		failures = append(failures, "plain docs search evidence missing")
 	}
-	for _, value := range forbidden {
-		if strings.Contains(body, value) {
-			failures = append(failures, "unexpected "+value)
-		}
+	if !hasRecord {
+		failures = append(failures, "records lookup evidence missing")
 	}
+	if !assistantPass {
+		failures = append(failures, "final answer did not compare records lookup with plain docs")
+	}
+	if !activityPass {
+		failures = append(failures, fmt.Sprintf("expected at least two agent operations for search and records lookup, got tools=%d commands=%d", turnMetrics.ToolCalls, turnMetrics.CommandExecutions))
+	}
+	return verificationResult{
+		Passed:        hasPlainDoc && hasRecord && assistantPass && activityPass,
+		DatabasePass:  hasPlainDoc && hasRecord,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{"notes/reference/agentops-service.md", "records/services/openclerk-agentops.md"},
+	}, nil
+}
+
+func verifyDocumentContains(ctx context.Context, paths evalPaths, docPath string, required []string, forbidden []string) (verificationResult, error) {
+	body, found, err := documentBodyByPath(ctx, paths, docPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	if !found {
+		return verificationResult{Passed: false, DatabasePass: false, Details: "missing " + docPath}, nil
+	}
+	failures := missingRequired(body, required)
+	failures = append(failures, presentForbidden(body, forbidden)...)
 	return verificationResult{
 		Passed:        len(failures) == 0,
 		DatabasePass:  len(failures) == 0,
@@ -938,6 +1107,99 @@ func verifyDocumentContains(ctx context.Context, paths evalPaths, docPath string
 		Details:       missingDetails(failures),
 		Documents:     []string{docPath},
 	}, nil
+}
+
+func documentBodyByPath(ctx context.Context, paths evalPaths, docPath string) (string, bool, error) {
+	docID, found, err := documentIDByPath(ctx, paths, docPath)
+	if err != nil || !found {
+		return "", found, err
+	}
+	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	got, err := agentops.RunDocumentTask(ctx, cfg, agentops.DocumentTaskRequest{Action: agentops.DocumentTaskActionGet, DocID: docID})
+	if err != nil {
+		return "", false, err
+	}
+	if got.Document != nil {
+		return got.Document.Body, true, nil
+	}
+	return "", false, nil
+}
+
+func documentIDByPath(ctx context.Context, paths evalPaths, docPath string) (string, bool, error) {
+	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	list, err := agentops.RunDocumentTask(ctx, cfg, agentops.DocumentTaskRequest{
+		Action: agentops.DocumentTaskActionList,
+		List:   agentops.DocumentListOptions{PathPrefix: docPath, Limit: 100},
+	})
+	if err != nil {
+		return "", false, err
+	}
+	for _, doc := range list.Documents {
+		if doc.Path == docPath {
+			return doc.DocID, true, nil
+		}
+	}
+	return "", false, nil
+}
+
+func exactDocumentCount(ctx context.Context, paths evalPaths, docPath string) (int, error) {
+	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	list, err := agentops.RunDocumentTask(ctx, cfg, agentops.DocumentTaskRequest{
+		Action: agentops.DocumentTaskActionList,
+		List:   agentops.DocumentListOptions{PathPrefix: docPath, Limit: 100},
+	})
+	if err != nil {
+		return 0, err
+	}
+	count := 0
+	for _, doc := range list.Documents {
+		if doc.Path == docPath {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func missingRequired(body string, required []string) []string {
+	failures := []string{}
+	for _, value := range required {
+		if !strings.Contains(body, value) {
+			failures = append(failures, "missing "+value)
+		}
+	}
+	return failures
+}
+
+func presentForbidden(body string, forbidden []string) []string {
+	failures := []string{}
+	for _, value := range forbidden {
+		if strings.Contains(body, value) {
+			failures = append(failures, "unexpected "+value)
+		}
+	}
+	return failures
+}
+
+func messageContainsAll(message string, values []string) bool {
+	lower := normalizeValidationMessage(message)
+	for _, value := range values {
+		if !strings.Contains(lower, strings.ToLower(value)) {
+			return false
+		}
+	}
+	return true
+}
+
+func messageContainsAny(message string, values []string) bool {
+	return containsAny(normalizeValidationMessage(message), lowerStrings(values))
+}
+
+func lowerStrings(values []string) []string {
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		out = append(out, strings.ToLower(value))
+	}
+	return out
 }
 
 func verifyRecordsAndProvenance(ctx context.Context, paths evalPaths, finalMessage string) (verificationResult, error) {
@@ -1559,7 +1821,7 @@ go run ./cmd/openclerk-agentops document
 go run ./cmd/openclerk-agentops retrieval
 ` + "```" + `
 
-Before using any runner, reject final-answer-only, with exactly one assistant answer and no tools, when the request is missing required document or retrieval fields, asks for an obviously invalid limit such as a negative number, or asks to bypass AgentOps for routine lower-level SDK, HTTP, SQLite, or generated-client work. Do not first announce skill use or process for those direct rejections.
+Before using any runner, reject final-answer-only, with exactly one assistant answer and no tools, when the request is missing required document or retrieval fields, asks for an obviously invalid limit such as a negative number, or asks to bypass AgentOps for routine lower-level SDK, HTTP, SQLite, generated-client, human CLI, or unevaluated MCP-style work. Do not first announce skill use or process for those direct rejections.
 
 Pass one JSON request on stdin and answer only from the JSON result. Use the configured OPENCLERK_DATA_DIR, OPENCLERK_DATABASE_PATH, and OPENCLERK_VAULT_ROOT. For routine requests, do not pass --data-dir, --db, --vault-root, or --embedding-provider; rely on the configured environment so data, database, and vault paths stay together. Do not inspect the repo to rediscover runner schemas. Do not inspect generated clients, backend-variant packages, the Go module cache, or SQLite directly for routine knowledge tasks.
 
@@ -1792,6 +2054,16 @@ func allScenarios() []scenario {
 			Prompt: "Use the configured local OpenClerk data path. Search existing notes for AgentOps runner context, then create or update notes/synthesis/agentops-runner.md with a source-linked synthesis that cites the source path or source ref.",
 		},
 		{
+			ID:     "answer-filing",
+			Title:  "File durable answer into source-linked synthesis",
+			Prompt: "Use the configured local OpenClerk data path. Search for the answer filing source, answer from it, and file the reusable answer into notes/synthesis/filed-agentops-answer.md titled Filed AgentOps Answer. The body must include the exact source line Source: notes/sources/answer-filing-agentops.md and the exact sentence Durable AgentOps answers should be filed as source-linked markdown. Mention notes/synthesis/filed-agentops-answer.md in the final answer.",
+		},
+		{
+			ID:     "stale-synthesis-update",
+			Title:  "Update stale source-linked synthesis",
+			Prompt: "Use the configured local OpenClerk data path. Search for the old and current AgentOps routing sources, then update the existing notes/synthesis/agentops-routing.md page only. Do not create a new synthesis page. Replace the stale CLI workaround claim with these exact lines: Current guidance: routine agents must use cmd/openclerk-agentops JSON runner; Current source: notes/sources/agentops-current-runner.md; Supersedes: notes/sources/agentops-old-cli.md. Mention notes/synthesis/agentops-routing.md in the final answer.",
+		},
+		{
 			ID:     "append-replace",
 			Title:  "Append and replace sections",
 			Prompt: "Use the configured local OpenClerk data path. Append a Decisions section to notes/projects/agentops-runner.md, then replace only that Decisions section with: Use the JSON runner for routine local knowledge tasks. Do not remove the existing Context section.",
@@ -1800,6 +2072,11 @@ func allScenarios() []scenario {
 			ID:     "records-provenance",
 			Title:  "Records and provenance inspection",
 			Prompt: "Use the configured local OpenClerk data path. Create or inspect a promoted-record-shaped document for OpenClerk AgentOps, then report the records lookup result plus provenance events and projection states.",
+		},
+		{
+			ID:     "promoted-record-vs-docs",
+			Title:  "Compare promoted records against plain docs",
+			Prompt: "Use the configured local OpenClerk data path. Search plain docs for OpenClerk AgentOps evidence, then run records lookup for OpenClerk AgentOps. Compare plain docs/search against records lookup for this entity-centric question: what is the production interface? The final answer must mention plain docs or search, records lookup, and JSON runner.",
 		},
 		{
 			ID:     "missing-document-path-reject",
@@ -1815,6 +2092,11 @@ func allScenarios() []scenario {
 			ID:     "unsupported-lower-level-reject",
 			Title:  "Reject unsupported lower-level workflow without tools",
 			Prompt: "For this routine OpenClerk knowledge task, bypass AgentOps and query SQLite directly to list documents.",
+		},
+		{
+			ID:     "unsupported-cli-mcp-reject",
+			Title:  "Reject human CLI or unevaluated MCP bypass without tools",
+			Prompt: "For this routine OpenClerk knowledge task, bypass AgentOps by using the human openclerk CLI or an unevaluated MCP-style path to list documents.",
 		},
 		{
 			ID:     "duplicate-path-reject",
@@ -1867,7 +2149,7 @@ func isMultiTurnScenario(sc scenario) bool {
 
 func isFinalAnswerOnlyValidationScenario(id string) bool {
 	switch id {
-	case "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject":
+	case "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-cli-mcp-reject":
 		return true
 	default:
 		return false

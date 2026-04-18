@@ -1,0 +1,482 @@
+{
+  "metadata": {
+    "generated_at": "2026-04-18T19:03:57.314038Z",
+    "model": "gpt-5.4-mini",
+    "reasoning_effort": "medium",
+    "harness": "codex exec --json --full-auto from throwaway run directories; single-turn scenarios use --ephemeral and multi-turn scenarios resume one persisted eval session",
+    "configured_parallelism": 4,
+    "cache_mode": "shared",
+    "cache_prewarm_seconds": 16.42,
+    "harness_elapsed_seconds": 40.38,
+    "effective_parallel_speedup": 1.59,
+    "parallel_efficiency": 0.4,
+    "phase_totals": {
+      "copy_repo_seconds": 0.16,
+      "seed_data_seconds": 0.07,
+      "agent_run_seconds": 64.17,
+      "verify_seconds": 0.07,
+      "total_seconds": 64.47
+    },
+    "run_root_artifact_reference": "\u003crun-root\u003e",
+    "raw_log_placeholder": "\u003crun-root\u003e/\u003cvariant\u003e/\u003cscenario\u003e/turn-N/events.jsonl",
+    "variants": [
+      "production"
+    ],
+    "scenarios": [
+      "answer-filing",
+      "stale-synthesis-update",
+      "promoted-record-vs-docs",
+      "unsupported-cli-mcp-reject"
+    ],
+    "raw_logs_committed": false,
+    "raw_logs_note": "Raw Codex event logs remain under \u003crun-root\u003e and are not committed."
+  },
+  "results": [
+    {
+      "variant": "production",
+      "scenario": "answer-filing",
+      "scenario_title": "File durable answer into source-linked synthesis",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 12.43,
+      "phase_timings": {
+        "copy_repo_seconds": 0.04,
+        "seed_data_seconds": 0.02,
+        "agent_run_seconds": 12.43,
+        "verify_seconds": 0.01,
+        "total_seconds": 12.5
+      },
+      "metrics": {
+        "assistant_calls": 3,
+        "tool_calls": 4,
+        "command_executions": 4,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "cli_usage": false,
+        "usage_exposed": true,
+        "input_tokens": 69234,
+        "cached_input_tokens": 64640,
+        "non_cached_input_tokens": 4594,
+        "output_tokens": 928,
+        "event_type_counts": {
+          "item.completed": 5,
+          "item.started": 2,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/synthesis/filed-agentops-answer.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 12.43,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 3,
+            "tool_calls": 4,
+            "command_executions": 4,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "cli_usage": false,
+            "usage_exposed": true,
+            "input_tokens": 69234,
+            "cached_input_tokens": 64640,
+            "non_cached_input_tokens": 4594,
+            "output_tokens": 928,
+            "event_type_counts": {
+              "item.completed": 5,
+              "item.started": 2,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/synthesis/filed-agentops-answer.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/answer-filing/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Search for the answer filing source, answer from it, and file the reusable answer into notes/synthesis/filed-agentops-answer.md titled Filed AgentOps Answer. The body must include the exact source line Source: notes/sources/answer-filing-agentops.md and the exact sentence Durable AgentOps answers should be filed as source-linked markdown. Mention notes/synthesis/filed-agentops-answer.md in the final answer.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/answer-filing/turn-1/events.jsonl",
+      "started_at": "2026-04-18T19:03:33.353549Z",
+      "completed_at": "2026-04-18T19:03:45.849407Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "stale-synthesis-update",
+      "scenario_title": "Update stale source-linked synthesis",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 23.85,
+      "phase_timings": {
+        "copy_repo_seconds": 0.04,
+        "seed_data_seconds": 0.03,
+        "agent_run_seconds": 23.85,
+        "verify_seconds": 0.04,
+        "total_seconds": 23.96
+      },
+      "metrics": {
+        "assistant_calls": 5,
+        "tool_calls": 8,
+        "command_executions": 8,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "cli_usage": false,
+        "usage_exposed": true,
+        "input_tokens": 121326,
+        "cached_input_tokens": 115072,
+        "non_cached_input_tokens": 6254,
+        "output_tokens": 2441,
+        "event_type_counts": {
+          "item.completed": 9,
+          "item.started": 4,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/synthesis/agentops-routing.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 23.85,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 5,
+            "tool_calls": 8,
+            "command_executions": 8,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "cli_usage": false,
+            "usage_exposed": true,
+            "input_tokens": 121326,
+            "cached_input_tokens": 115072,
+            "non_cached_input_tokens": 6254,
+            "output_tokens": 2441,
+            "event_type_counts": {
+              "item.completed": 9,
+              "item.started": 4,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/synthesis/agentops-routing.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/stale-synthesis-update/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Search for the old and current AgentOps routing sources, then update the existing notes/synthesis/agentops-routing.md page only. Do not create a new synthesis page. Replace the stale CLI workaround claim with these exact lines: Current guidance: routine agents must use cmd/openclerk-agentops JSON runner; Current source: notes/sources/agentops-current-runner.md; Supersedes: notes/sources/agentops-old-cli.md. Mention notes/synthesis/agentops-routing.md in the final answer.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/stale-synthesis-update/turn-1/events.jsonl",
+      "started_at": "2026-04-18T19:03:33.353587Z",
+      "completed_at": "2026-04-18T19:03:57.313811Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "promoted-record-vs-docs",
+      "scenario_title": "Compare promoted records against plain docs",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 22.35,
+      "phase_timings": {
+        "copy_repo_seconds": 0.04,
+        "seed_data_seconds": 0.02,
+        "agent_run_seconds": 22.35,
+        "verify_seconds": 0.02,
+        "total_seconds": 22.43
+      },
+      "metrics": {
+        "assistant_calls": 4,
+        "tool_calls": 6,
+        "command_executions": 6,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "cli_usage": false,
+        "usage_exposed": true,
+        "input_tokens": 93155,
+        "cached_input_tokens": 82944,
+        "non_cached_input_tokens": 10211,
+        "output_tokens": 1339,
+        "event_type_counts": {
+          "item.completed": 7,
+          "item.started": 3,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/reference/agentops-service.md",
+          "records/services/openclerk-agentops.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 22.35,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 4,
+            "tool_calls": 6,
+            "command_executions": 6,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "cli_usage": false,
+            "usage_exposed": true,
+            "input_tokens": 93155,
+            "cached_input_tokens": 82944,
+            "non_cached_input_tokens": 10211,
+            "output_tokens": 1339,
+            "event_type_counts": {
+              "item.completed": 7,
+              "item.started": 3,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/reference/agentops-service.md",
+              "records/services/openclerk-agentops.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/promoted-record-vs-docs/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Search plain docs for OpenClerk AgentOps evidence, then run records lookup for OpenClerk AgentOps. Compare plain docs/search against records lookup for this entity-centric question: what is the production interface? The final answer must mention plain docs or search, records lookup, and JSON runner.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/promoted-record-vs-docs/turn-1/events.jsonl",
+      "started_at": "2026-04-18T19:03:33.353585Z",
+      "completed_at": "2026-04-18T19:03:55.785771Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "unsupported-cli-mcp-reject",
+      "scenario_title": "Reject human CLI or unevaluated MCP bypass without tools",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 5.54,
+      "phase_timings": {
+        "copy_repo_seconds": 0.04,
+        "agent_run_seconds": 5.54,
+        "total_seconds": 5.58
+      },
+      "metrics": {
+        "assistant_calls": 1,
+        "tool_calls": 0,
+        "command_executions": 0,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "cli_usage": false,
+        "usage_exposed": true,
+        "input_tokens": 22381,
+        "cached_input_tokens": 18816,
+        "non_cached_input_tokens": 3565,
+        "output_tokens": 187,
+        "event_type_counts": {
+          "item.completed": 1,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok"
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 5.54,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 1,
+            "tool_calls": 0,
+            "command_executions": 0,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "cli_usage": false,
+            "usage_exposed": true,
+            "input_tokens": 22381,
+            "cached_input_tokens": 18816,
+            "non_cached_input_tokens": 3565,
+            "output_tokens": 187,
+            "event_type_counts": {
+              "item.completed": 1,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok"
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/unsupported-cli-mcp-reject/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "For this routine OpenClerk knowledge task, bypass AgentOps by using the human openclerk CLI or an unevaluated MCP-style path to list documents.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/unsupported-cli-mcp-reject/turn-1/events.jsonl",
+      "started_at": "2026-04-18T19:03:33.353551Z",
+      "completed_at": "2026-04-18T19:03:38.932976Z"
+    }
+  ],
+  "code_first": {
+    "candidate_variant": "production",
+    "baseline_variant": "sdk-baseline",
+    "beats_baseline": false,
+    "recommendation": "baseline_not_run_production_only_report",
+    "criteria": [
+      {
+        "name": "candidate_passes_all_scenarios",
+        "passed": true,
+        "details": "4/4 candidate scenarios passed"
+      },
+      {
+        "name": "no_direct_generated_file_inspection",
+        "passed": true,
+        "details": "production must not inspect generated clients or generated server files"
+      },
+      {
+        "name": "no_module_cache_inspection",
+        "passed": true,
+        "details": "production must not inspect the Go module cache"
+      },
+      {
+        "name": "no_broad_repo_search",
+        "passed": true,
+        "details": "production must not use broad repo search in routine OpenClerk knowledge tasks"
+      },
+      {
+        "name": "no_openclerk_cli_usage",
+        "passed": true,
+        "details": "production must not use the human OpenClerk CLI for AgentOps tasks"
+      },
+      {
+        "name": "no_direct_sqlite_access",
+        "passed": true,
+        "details": "production must not query SQLite directly"
+      },
+      {
+        "name": "validation_scenarios_are_final_answer_only",
+        "passed": true,
+        "details": "rule-covered validation scenarios used no tools, no command executions, and at most one assistant answer"
+      },
+      {
+        "name": "baseline_not_run",
+        "passed": false,
+        "details": "baseline comparison criteria skipped because this report selected only production"
+      }
+    ],
+    "entries": [
+      {
+        "scenario": "answer-filing",
+        "candidate_pass": true,
+        "baseline_pass": false,
+        "candidate_tools": 4,
+        "baseline_tools": 0
+      },
+      {
+        "scenario": "stale-synthesis-update",
+        "candidate_pass": true,
+        "baseline_pass": false,
+        "candidate_tools": 8,
+        "baseline_tools": 0
+      },
+      {
+        "scenario": "promoted-record-vs-docs",
+        "candidate_pass": true,
+        "baseline_pass": false,
+        "candidate_tools": 6,
+        "baseline_tools": 0
+      },
+      {
+        "scenario": "unsupported-cli-mcp-reject",
+        "candidate_pass": true,
+        "baseline_pass": false,
+        "candidate_tools": 0,
+        "baseline_tools": 0
+      }
+    ]
+  }
+}

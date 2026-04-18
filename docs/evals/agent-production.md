@@ -101,19 +101,19 @@ The `ockp` harness covers routine local knowledge-plane workflows:
 - canonical note creation with stable paths, frontmatter, headings, body content,
   and vault/document-registry verification
 - source-grounded search followed by source-linked synthesis creation or update
+- durable answer filing into source-linked markdown
+- contradiction or stale synthesis repair against newer canonical sources
 - append and replace-section workflows that preserve unrelated document content
 - promoted-record-shaped document creation, records lookup, provenance events,
   and projection states
+- promoted-record comparison against plain docs retrieval for entity-centric
+  tasks
 - duplicate canonical path rejection without overwrite
 - mixed document/retrieval workflows that require both runner domains
 - final-answer-only direct rejections for missing required fields, invalid
-  limits, and unsupported lower-level routine workflows
+  limits, unsupported lower-level routine workflows, and human CLI or
+  unevaluated MCP bypass attempts
 - true multi-turn workflows that require resumed context across ordered turns
-
-The current reduced harness does not yet include separate scenarios for durable
-answer filing, contradiction or stale-synthesis handling, or promoted-record
-comparison against plain docs retrieval. Those remain ADR proof obligations in
-[`baseline-scenarios.md`](baseline-scenarios.md).
 
 ## Comparison Policy
 

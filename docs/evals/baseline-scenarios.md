@@ -62,6 +62,8 @@ proof obligations for the eval-backed knowledge-plane ADR in
 
 - Verify production tasks use `cmd/openclerk-agentops` rather than generated
   clients, direct SQLite, backend variants, or ad hoc SDK programs.
+- Verify routine attempts to bypass AgentOps through the human CLI or an
+  unevaluated MCP-style path are rejected final-answer-only without tools.
 - Compare AgentOps against SDK-oriented, CLI-style, or MCP-style alternatives
   only when the alternative exposes equivalent task-shaped document and
   retrieval semantics.

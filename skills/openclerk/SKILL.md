@@ -30,8 +30,8 @@ Before using any runner, reject final-answer-only, with exactly one assistant
 answer and no tools, when the request is missing required document or retrieval
 fields, asks for an obviously invalid limit such as a negative number, or asks
 to bypass AgentOps for routine lower-level SDK, HTTP, SQLite, or
-generated-client work. Do not first announce skill use or process for those
-direct rejections.
+generated-client work, human CLI work, or unevaluated MCP-style work. Do not
+first announce skill use or process for those direct rejections.
 
 Do not inspect generated clients, backend-variant packages, generated server
 code, the Go module cache, or SQLite directly for routine OpenClerk tasks. Do
