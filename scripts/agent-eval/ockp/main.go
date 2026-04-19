@@ -12,12 +12,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/yazanabuashour/openclerk/client/local"
+	"github.com/yazanabuashour/openclerk/internal/runclient"
 	"github.com/yazanabuashour/openclerk/internal/runner"
 )
 
@@ -26,7 +25,6 @@ const (
 	modelName         = "gpt-5.4-mini"
 	reasoningEffort   = "medium"
 	productionVariant = "production"
-	baselineVariant   = "sdk-baseline"
 	cacheModeShared   = "shared"
 	cacheModeIsolated = "isolated"
 )
@@ -68,9 +66,9 @@ type scenarioTurn struct {
 }
 
 type report struct {
-	Metadata  reportMetadata    `json:"metadata"`
-	Results   []jobResult       `json:"results"`
-	CodeFirst *codeFirstSummary `json:"code_first,omitempty"`
+	Metadata       reportMetadata         `json:"metadata"`
+	Results        []jobResult            `json:"results"`
+	ProductionGate *productionGateSummary `json:"production_gate,omitempty"`
 }
 
 type reportMetadata struct {
@@ -165,28 +163,17 @@ type verificationResult struct {
 	Documents     []string `json:"documents,omitempty"`
 }
 
-type codeFirstSummary struct {
-	CandidateVariant string                   `json:"candidate_variant"`
-	BaselineVariant  string                   `json:"baseline_variant"`
-	BeatsBaseline    bool                     `json:"beats_baseline"`
-	Recommendation   string                   `json:"recommendation"`
-	Criteria         []codeFirstCriterion     `json:"criteria"`
-	Entries          []codeFirstComparisonRow `json:"entries"`
+type productionGateSummary struct {
+	Variant        string                    `json:"variant"`
+	PassesGate     bool                      `json:"passes_gate"`
+	Recommendation string                    `json:"recommendation"`
+	Criteria       []productionGateCriterion `json:"criteria"`
 }
 
-type codeFirstCriterion struct {
+type productionGateCriterion struct {
 	Name    string `json:"name"`
 	Passed  bool   `json:"passed"`
 	Details string `json:"details"`
-}
-
-type codeFirstComparisonRow struct {
-	Scenario       string `json:"scenario"`
-	CandidatePass  bool   `json:"candidate_pass"`
-	BaselinePass   bool   `json:"baseline_pass"`
-	CandidateTools int    `json:"candidate_tools"`
-	BaselineTools  int    `json:"baseline_tools"`
-	ToolDelta      *int   `json:"tool_delta,omitempty"`
 }
 
 type jobRunner func(context.Context, runConfig, evalJob, cacheConfig) jobResult
@@ -322,8 +309,8 @@ func executeRun(ctx context.Context, config runConfig, stdout io.Writer, runner 
 			RawLogsCommitted:         false,
 			RawLogsNote:              "Raw Codex event logs remain under <run-root> and are not committed.",
 		},
-		Results:   results,
-		CodeFirst: buildCodeFirstSummary(results),
+		Results:        results,
+		ProductionGate: buildProductionGateSummary(results),
 	}
 	if err := os.MkdirAll(config.ReportDir, 0o755); err != nil {
 		return fmt.Errorf("create report dir: %w", err)
@@ -699,7 +686,7 @@ func buildOpenClerkRunner(repoDir string, runDir string, paths evalPaths, cache 
 }
 
 func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
-	cfg := local.Config{
+	cfg := runclient.Config{
 		DataDir:      paths.DataDir,
 		DatabasePath: paths.DatabasePath,
 		VaultRoot:    paths.VaultRoot,
@@ -760,7 +747,7 @@ service_interface: JSON runner
 	return nil
 }
 
-func createSeedDocument(ctx context.Context, cfg local.Config, path, title, body string) error {
+func createSeedDocument(ctx context.Context, cfg runclient.Config, path, title, body string) error {
 	result, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionCreate,
 		Document: runner.DocumentInput{
@@ -884,7 +871,7 @@ func normalizeValidationMessage(message string) string {
 }
 
 func verifyNoDocument(ctx context.Context, paths evalPaths, docPath string, detail string) verificationResult {
-	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
 	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionList,
 		List:   runner.DocumentListOptions{PathPrefix: docPath, Limit: 5},
@@ -901,7 +888,7 @@ func verifyNoDocument(ctx context.Context, paths evalPaths, docPath string, deta
 }
 
 func verifyDocuments(ctx context.Context, paths evalPaths, wanted []string, finalMessage string) (verificationResult, error) {
-	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
 	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionList,
 		List:   runner.DocumentListOptions{Limit: 100},
@@ -1050,7 +1037,7 @@ func isDuplicateRejection(message string) bool {
 }
 
 func verifyPromotedRecordVsDocs(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
-	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
 	search, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
 		Action: runner.RetrievalTaskActionSearch,
 		Search: runner.SearchOptions{Text: "Plain docs evidence", PathPrefix: "notes/reference/", Limit: 5},
@@ -1173,7 +1160,7 @@ func documentBodyByPath(ctx context.Context, paths evalPaths, docPath string) (s
 	if err != nil || !found {
 		return "", found, err
 	}
-	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
 	got, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{Action: runner.DocumentTaskActionGet, DocID: docID})
 	if err != nil {
 		return "", false, err
@@ -1185,7 +1172,7 @@ func documentBodyByPath(ctx context.Context, paths evalPaths, docPath string) (s
 }
 
 func documentIDByPath(ctx context.Context, paths evalPaths, docPath string) (string, bool, error) {
-	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
 	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionList,
 		List:   runner.DocumentListOptions{PathPrefix: docPath, Limit: 100},
@@ -1202,7 +1189,7 @@ func documentIDByPath(ctx context.Context, paths evalPaths, docPath string) (str
 }
 
 func exactDocumentCount(ctx context.Context, paths evalPaths, docPath string) (int, error) {
-	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
 	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionList,
 		List:   runner.DocumentListOptions{PathPrefix: docPath, Limit: 100},
@@ -1262,7 +1249,7 @@ func lowerStrings(values []string) []string {
 }
 
 func verifyRecordsAndProvenance(ctx context.Context, paths evalPaths, finalMessage string) (verificationResult, error) {
-	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
 	records, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
 		Action:  runner.RetrievalTaskActionRecordsLookup,
 		Records: runner.RecordLookupOptions{Text: "OpenClerk runner", Limit: 5},
@@ -1633,23 +1620,17 @@ func aggregateExitCode(turns []turnResult) int {
 	return 0
 }
 
-func buildCodeFirstSummary(results []jobResult) *codeFirstSummary {
-	candidateByScenario := map[string]jobResult{}
-	baselineByScenario := map[string]jobResult{}
+func buildProductionGateSummary(results []jobResult) *productionGateSummary {
+	productionByScenario := map[string]jobResult{}
 	for _, result := range results {
-		switch result.Variant {
-		case productionVariant:
-			candidateByScenario[result.Scenario] = result
-		case baselineVariant:
-			baselineByScenario[result.Scenario] = result
+		if result.Variant == productionVariant {
+			productionByScenario[result.Scenario] = result
 		}
 	}
-	if len(candidateByScenario) == 0 {
+	if len(productionByScenario) == 0 {
 		return nil
 	}
-	baselineAvailable := len(baselineByScenario) > 0
-	entries := []codeFirstComparisonRow{}
-	candidatePassedAll := true
+	productionPassedAll := true
 	noGenerated := true
 	noModuleCache := true
 	noBroadSearch := true
@@ -1657,80 +1638,39 @@ func buildCodeFirstSummary(results []jobResult) *codeFirstSummary {
 	noDirectSQLite := true
 	validationFinalAnswerOnly := true
 	validationFailures := []string{}
-	totalCandidateTools := 0
-	totalBaselineTools := 0
-	scenariosAtOrBelowBaseline := 0
-	totalCandidateNonCached := 0
-	totalBaselineNonCached := 0
-	tokenMajorityWins := 0
-	tokenMajorityScenarios := 0
-	tokenTotalComparable := true
-	tokenMissing := []string{}
-	missingBaseline := []string{}
-	candidateScenarioIDs := []string{}
+	productionScenarioIDs := []string{}
 	for _, scenarioID := range scenarioIDs() {
-		candidate, ok := candidateByScenario[scenarioID]
+		production, ok := productionByScenario[scenarioID]
 		if !ok {
 			continue
 		}
-		candidateScenarioIDs = append(candidateScenarioIDs, scenarioID)
-		if !candidate.Passed {
-			candidatePassedAll = false
+		productionScenarioIDs = append(productionScenarioIDs, scenarioID)
+		if !production.Passed {
+			productionPassedAll = false
 		}
-		if candidate.Metrics.GeneratedFileInspection {
+		if production.Metrics.GeneratedFileInspection {
 			noGenerated = false
 		}
-		if candidate.Metrics.ModuleCacheInspection {
+		if production.Metrics.ModuleCacheInspection {
 			noModuleCache = false
 		}
-		if candidate.Metrics.BroadRepoSearch {
+		if production.Metrics.BroadRepoSearch {
 			noBroadSearch = false
 		}
-		if candidate.Metrics.LegacyRunnerUsage {
+		if production.Metrics.LegacyRunnerUsage {
 			noLegacyRunnerUsage = false
 		}
-		if candidate.Metrics.DirectSQLiteAccess {
+		if production.Metrics.DirectSQLiteAccess {
 			noDirectSQLite = false
 		}
-		if isFinalAnswerOnlyValidationScenario(candidate.Scenario) &&
-			(candidate.Metrics.ToolCalls != 0 || candidate.Metrics.CommandExecutions != 0 || candidate.Metrics.AssistantCalls > 1) {
+		if isFinalAnswerOnlyValidationScenario(production.Scenario) &&
+			(production.Metrics.ToolCalls != 0 || production.Metrics.CommandExecutions != 0 || production.Metrics.AssistantCalls > 1) {
 			validationFinalAnswerOnly = false
-			validationFailures = append(validationFailures, candidate.Scenario)
+			validationFailures = append(validationFailures, production.Scenario)
 		}
-		totalCandidateTools += candidate.Metrics.ToolCalls
-		row := codeFirstComparisonRow{Scenario: scenarioID, CandidatePass: candidate.Passed, CandidateTools: candidate.Metrics.ToolCalls}
-		baseline, hasBaseline := baselineByScenario[scenarioID]
-		if !hasBaseline {
-			missingBaseline = append(missingBaseline, scenarioID)
-		} else {
-			row.BaselinePass = baseline.Passed
-			row.BaselineTools = baseline.Metrics.ToolCalls
-			totalBaselineTools += baseline.Metrics.ToolCalls
-			delta := candidate.Metrics.ToolCalls - baseline.Metrics.ToolCalls
-			row.ToolDelta = &delta
-			if candidate.Metrics.ToolCalls <= baseline.Metrics.ToolCalls {
-				scenariosAtOrBelowBaseline++
-			}
-			tokenMajorityScenarios++
-			candidateTokens, candidateHasTokens := nonCachedTokens(candidate)
-			baselineTokens, baselineHasTokens := nonCachedTokens(baseline)
-			if !candidateHasTokens || !baselineHasTokens {
-				tokenTotalComparable = false
-				tokenMissing = append(tokenMissing, scenarioID)
-			} else {
-				totalCandidateNonCached += candidateTokens
-				totalBaselineNonCached += baselineTokens
-				if candidateTokens < baselineTokens {
-					tokenMajorityWins++
-				}
-			}
-		}
-		entries = append(entries, row)
 	}
-	requiredAtOrBelow := requiredAtOrBelow(len(candidateScenarioIDs))
-	requiredTokenWins := strictMajority(tokenMajorityScenarios)
-	criteria := []codeFirstCriterion{
-		{Name: "candidate_passes_all_scenarios", Passed: candidatePassedAll, Details: fmt.Sprintf("%d/%d candidate scenarios passed", countPassed(candidateByScenario), len(candidateScenarioIDs))},
+	criteria := []productionGateCriterion{
+		{Name: "production_passes_all_scenarios", Passed: productionPassedAll, Details: fmt.Sprintf("%d/%d production scenarios passed", countPassed(productionByScenario), len(productionScenarioIDs))},
 		{Name: "no_direct_generated_file_inspection", Passed: noGenerated, Details: "production must not inspect retired API files or generated server files"},
 		{Name: "no_module_cache_inspection", Passed: noModuleCache, Details: "production must not inspect the Go module cache"},
 		{Name: "no_broad_repo_search", Passed: noBroadSearch, Details: "production must not use broad repo search in routine OpenClerk knowledge tasks"},
@@ -1738,37 +1678,22 @@ func buildCodeFirstSummary(results []jobResult) *codeFirstSummary {
 		{Name: "no_direct_sqlite_access", Passed: noDirectSQLite, Details: "production must not query SQLite directly"},
 		{Name: "validation_scenarios_are_final_answer_only", Passed: validationFinalAnswerOnly, Details: validationFinalAnswerDetails(validationFailures)},
 	}
-	if baselineAvailable {
-		criteria = append(criteria,
-			codeFirstCriterion{Name: "total_tools_less_than_or_equal_baseline", Passed: len(missingBaseline) == 0 && totalCandidateTools <= totalBaselineTools, Details: fmt.Sprintf("production tools %d vs baseline tools %d; missing baseline: %s", totalCandidateTools, totalBaselineTools, missingDetails(missingBaseline))},
-			codeFirstCriterion{Name: "minimum_scenarios_at_or_below_baseline", Passed: scenariosAtOrBelowBaseline >= requiredAtOrBelow, Details: fmt.Sprintf("%d scenarios at or below baseline tools; required %d of %d", scenariosAtOrBelowBaseline, requiredAtOrBelow, len(candidateScenarioIDs))},
-			codeFirstCriterion{Name: "non_cached_token_majority", Passed: len(missingBaseline) == 0 && tokenMajorityWins >= requiredTokenWins, Details: fmt.Sprintf("%d scenarios with lower non-cached input tokens; required %d of %d; missing usage: %s", tokenMajorityWins, requiredTokenWins, tokenMajorityScenarios, missingDetails(tokenMissing))},
-			codeFirstCriterion{Name: "non_cached_token_total_less_than_or_equal_baseline", Passed: len(missingBaseline) == 0 && tokenTotalComparable && totalCandidateNonCached <= totalBaselineNonCached, Details: fmt.Sprintf("production non-cached input tokens %d vs baseline %d; missing usage: %s", totalCandidateNonCached, totalBaselineNonCached, missingDetails(tokenMissing))},
-		)
-	} else {
-		criteria = append(criteria, codeFirstCriterion{Name: "baseline_not_run", Passed: false, Details: "baseline comparison criteria skipped because this report selected only production"})
-	}
-	beats := true
+	passes := true
 	for _, criterion := range criteria {
 		if !criterion.Passed {
-			beats = false
+			passes = false
 			break
 		}
 	}
-	recommendation := "baseline_not_run_production_only_report"
-	if baselineAvailable && !beats {
-		recommendation = "continue_baseline_for_routine_openclerk_operations"
+	recommendation := "fix_production_agentops_before_release"
+	if passes {
+		recommendation = "use_agentops_runner_for_routine_openclerk_operations"
 	}
-	if baselineAvailable && beats {
-		recommendation = "use_production_runner_for_routine_openclerk_operations"
-	}
-	return &codeFirstSummary{
-		CandidateVariant: productionVariant,
-		BaselineVariant:  baselineVariant,
-		BeatsBaseline:    beats,
-		Recommendation:   recommendation,
-		Criteria:         criteria,
-		Entries:          entries,
+	return &productionGateSummary{
+		Variant:        productionVariant,
+		PassesGate:     passes,
+		Recommendation: recommendation,
+		Criteria:       criteria,
 	}
 }
 
@@ -1777,24 +1702,6 @@ func validationFinalAnswerDetails(failures []string) string {
 		return "rule-covered validation scenarios used no tools, no command executions, and at most one assistant answer"
 	}
 	return "not final-answer-only: " + strings.Join(failures, ", ")
-}
-
-func nonCachedTokens(result jobResult) (int, bool) {
-	if !result.Metrics.UsageExposed || result.Metrics.NonCachedInputTokens == nil {
-		return 0, false
-	}
-	return *result.Metrics.NonCachedInputTokens, true
-}
-
-func requiredAtOrBelow(total int) int {
-	if total == 0 {
-		return 0
-	}
-	return int(float64(total)*0.8 + 0.999999)
-}
-
-func strictMajority(total int) int {
-	return total/2 + 1
 }
 
 func countPassed(results map[string]jobResult) int {
@@ -1884,9 +1791,10 @@ func writeVariantInstructions(repoDir string, variant string) error {
 }
 
 func variantInstructions(variant string) (string, error) {
-	switch variant {
-	case productionVariant:
-		return `# OpenClerk Agent Eval Variant: production
+	if variant != productionVariant {
+		return "", fmt.Errorf("unsupported variant %q", variant)
+	}
+	return `# OpenClerk Agent Eval Variant: production
 
 For direct user requests to create, list, update, search, or inspect local OpenClerk knowledge, use the production OpenClerk JSON runner:
 
@@ -1895,7 +1803,7 @@ openclerk document
 openclerk retrieval
 ` + "```" + `
 
-Before using any runner, reject final-answer-only, with exactly one assistant answer and no tools, when the request is missing required document or retrieval fields, asks for an obviously invalid limit such as a negative number, or asks to bypass the OpenClerk runner for routine lower-level SDK, HTTP, SQLite, legacy source-built command paths, or unevaluated MCP-style work. For bypass requests, explicitly say the workflow is unsupported and must use the OpenClerk runner. Do not first announce skill use or process for those direct rejections.
+Before using any runner, reject final-answer-only, with exactly one assistant answer and no tools, when the request is missing required document or retrieval fields, asks for an obviously invalid limit such as a negative number, or asks to bypass the OpenClerk runner for routine lower-level runtime, HTTP, SQLite, legacy source-built command paths, or unevaluated MCP-style work. For bypass requests, explicitly say the workflow is unsupported and must use the OpenClerk runner. Do not first announce skill use or process for those direct rejections.
 
 Pass one JSON request on stdin and answer only from the JSON result. Use the configured OPENCLERK_DATA_DIR, OPENCLERK_DATABASE_PATH, and OPENCLERK_VAULT_ROOT. For routine requests, do not pass --data-dir, --db, --vault-root, or --embedding-provider; rely on the configured environment so data, database, and vault paths stay together. Do not inspect the repo to rediscover runner schemas. Do not inspect retired API files, backend-variant packages, the Go module cache, or SQLite directly for routine knowledge tasks. Do not use broad file enumeration such as rg --files, find, ls, or direct .openclerk-eval/vault inspection to find or verify routine runner work; use runner JSON results, list_documents, search, or get_document instead.
 
@@ -1913,16 +1821,6 @@ Use these JSON shapes directly:
 {"action":"provenance_events","provenance":{"ref_kind":"document","ref_id":"doc_id_from_json","limit":20}}
 {"action":"projection_states","projection":{"ref_kind":"document","ref_id":"doc_id_from_json","limit":20}}
 `, nil
-	case baselineVariant:
-		return `# OpenClerk Agent Eval Variant: sdk-baseline
-
-For direct user requests to create, list, update, search, or inspect local OpenClerk knowledge, use the code-first local SDK at ` + "`client/local`" + ` with ` + "`local.OpenClient(local.Config{})`" + `.
-
-Do not use ` + "`openclerk`" + ` for this baseline variant. Use lower-level SDK work only when the facade does not cover the requested workflow.
-`, nil
-	default:
-		return "", fmt.Errorf("unsupported variant %q", variant)
-	}
 }
 
 func copyRepo(srcRoot string, dstRoot string) error {
@@ -2015,10 +1913,10 @@ func writeMarkdownReport(path string, rep report) error {
 	fmt.Fprintf(&b, "- Effective parallel speedup: `%.2fx`\n", rep.Metadata.EffectiveParallelSpeedup)
 	fmt.Fprintf(&b, "- Parallel efficiency: `%.2f`\n", rep.Metadata.ParallelEfficiency)
 	b.WriteString("- Raw logs: `<run-root>/<variant>/<scenario>/turn-N/events.jsonl`\n\n")
-	if rep.CodeFirst != nil {
-		fmt.Fprintf(&b, "## Production Comparison\n\nCandidate: `%s`\n\nBaseline: `%s`\n\nBeats baseline: `%t`\n\nRecommendation: `%s`\n\n", rep.CodeFirst.CandidateVariant, rep.CodeFirst.BaselineVariant, rep.CodeFirst.BeatsBaseline, rep.CodeFirst.Recommendation)
+	if rep.ProductionGate != nil {
+		fmt.Fprintf(&b, "## Production Gate\n\nVariant: `%s`\n\nPasses gate: `%t`\n\nRecommendation: `%s`\n\n", rep.ProductionGate.Variant, rep.ProductionGate.PassesGate, rep.ProductionGate.Recommendation)
 		b.WriteString("| Criterion | Status | Details |\n| --- | --- | --- |\n")
-		for _, criterion := range rep.CodeFirst.Criteria {
+		for _, criterion := range rep.ProductionGate.Criteria {
 			status := "fail"
 			if criterion.Passed {
 				status = "pass"
@@ -2087,7 +1985,7 @@ func selectedVariants(config runConfig) []string {
 	if strings.TrimSpace(config.Variant) != "" {
 		return splitCSV(config.Variant)
 	}
-	return []string{productionVariant, baselineVariant}
+	return []string{productionVariant}
 }
 
 func selectedScenarios(config runConfig) []scenario {
@@ -2142,7 +2040,7 @@ func allScenarios() []scenario {
 		{
 			ID:     "append-replace",
 			Title:  "Append and replace sections",
-			Prompt: "Use the configured local OpenClerk data path. Append a Decisions section to notes/projects/openclerk-runner.md, then replace only that Decisions section with: Use the JSON runner for routine local knowledge tasks. Do not remove the existing Context section.",
+			Prompt: "Use the configured local OpenClerk data path. Append a Decisions section to notes/projects/openclerk-runner.md, then replace only that Decisions section with: Use the JSON runner for routine AgentOps knowledge tasks. Do not remove the existing Context section.",
 		},
 		{
 			ID:     "records-provenance",
@@ -2262,15 +2160,6 @@ func containsArgPair(args []string, key string, value string) bool {
 		}
 	}
 	return false
-}
-
-func sortedKeys(values map[string]int) []string {
-	keys := make([]string, 0, len(values))
-	for key := range values {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	return keys
 }
 
 func min(left, right int) int {

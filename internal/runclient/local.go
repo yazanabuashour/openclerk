@@ -1,4 +1,4 @@
-package local
+package runclient
 
 import (
 	"context"
@@ -18,7 +18,7 @@ const (
 	defaultVaultDir = "vault"
 )
 
-// Config controls where the embedded runtime stores SQLite and canonical markdown data.
+// Config controls where the internal runtime stores SQLite and canonical markdown data.
 type Config struct {
 	DataDir           string
 	DatabasePath      string
@@ -33,7 +33,7 @@ type Paths struct {
 	VaultRoot    string
 }
 
-// Runtime owns the in-process store used by an embedded client.
+// Runtime owns the in-process store used by the runner runtime.
 type Runtime struct {
 	paths   Paths
 	service *app.Service
@@ -55,7 +55,7 @@ func (r *Runtime) Paths() Paths {
 	return r.paths
 }
 
-// ResolvePaths returns the effective storage layout for an embedded runtime.
+// ResolvePaths returns the effective storage layout for an internal runtime.
 func ResolvePaths(cfg Config) (Paths, error) {
 	dataDir, err := resolveDataDir(cfg)
 	if err != nil {

@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/yazanabuashour/openclerk/client/local"
+	"github.com/yazanabuashour/openclerk/internal/runclient"
 	"github.com/yazanabuashour/openclerk/internal/runner"
 )
 
@@ -39,7 +40,7 @@ func TestRunJobsPreservesDeterministicOrder(t *testing.T) {
 	jobs := []evalJob{
 		{Index: 0, Variant: "production", Scenario: scenario{ID: "first", Title: "First"}},
 		{Index: 1, Variant: "production", Scenario: scenario{ID: "second", Title: "Second"}},
-		{Index: 2, Variant: "sdk-baseline", Scenario: scenario{ID: "third", Title: "Third"}},
+		{Index: 2, Variant: "adapter-smoke", Scenario: scenario{ID: "third", Title: "Third"}},
 	}
 	results := runJobs(context.Background(), runConfig{Parallel: 3}, jobs, cacheConfig{Mode: cacheModeIsolated}, func(_ context.Context, _ runConfig, job evalJob, _ cacheConfig) jobResult {
 		if job.Index == 0 {
@@ -61,7 +62,7 @@ func TestRunJobsPreservesDeterministicOrder(t *testing.T) {
 func TestRunJobsPreservesErrorIdentity(t *testing.T) {
 	jobs := []evalJob{
 		{Index: 0, Variant: "production", Scenario: scenario{ID: "ok", Title: "OK"}},
-		{Index: 1, Variant: "sdk-baseline", Scenario: scenario{ID: "bad", Title: "Bad"}},
+		{Index: 1, Variant: "adapter-smoke", Scenario: scenario{ID: "bad", Title: "Bad"}},
 	}
 	results := runJobs(context.Background(), runConfig{Parallel: 2}, jobs, cacheConfig{Mode: cacheModeIsolated}, func(_ context.Context, _ runConfig, job evalJob, _ cacheConfig) jobResult {
 		result := jobResult{Variant: job.Variant, Scenario: job.Scenario.ID}
@@ -73,7 +74,7 @@ func TestRunJobsPreservesErrorIdentity(t *testing.T) {
 		result.Status = "completed"
 		return result
 	})
-	if results[1].Variant != "sdk-baseline" || results[1].Scenario != "bad" || results[1].Error != "boom" {
+	if results[1].Variant != "adapter-smoke" || results[1].Scenario != "bad" || results[1].Error != "boom" {
 		t.Fatalf("error result = %+v", results[1])
 	}
 }
@@ -198,28 +199,86 @@ func TestEvalEnvSharedAndIsolatedCache(t *testing.T) {
 	}
 }
 
-func TestVariantInstructionsDistinguishProductionAndSDKBaseline(t *testing.T) {
+func TestVariantInstructionsUseProductionRunnerOnly(t *testing.T) {
 	production, err := variantInstructions("production")
 	if err != nil {
 		t.Fatalf("production instructions: %v", err)
 	}
-	if !strings.Contains(production, "openclerk") || strings.Contains(production, "local.OpenClient") {
+	if !strings.Contains(production, "openclerk") || strings.Contains(production, "runclient.Open") {
 		t.Fatalf("production instructions = %s", production)
 	}
 	if !strings.Contains(production, "reject final-answer-only") {
 		t.Fatalf("production instructions missing direct rejection guidance = %s", production)
 	}
 
-	baseline, err := variantInstructions("sdk-baseline")
-	if err != nil {
-		t.Fatalf("baseline instructions: %v", err)
-	}
-	if !strings.Contains(baseline, "local.OpenClient") || !strings.Contains(baseline, "Do not use `openclerk`") {
-		t.Fatalf("baseline instructions = %s", baseline)
-	}
-
 	if _, err := variantInstructions("unknown"); err == nil {
 		t.Fatal("expected unknown variant error")
+	}
+}
+
+func TestGoListDoesNotExposePublicLocalClientPackage(t *testing.T) {
+	t.Parallel()
+
+	repoRoot := filepath.Join("..", "..", "..")
+	cmd := exec.Command("go", "list", "./...")
+	cmd.Dir = repoRoot
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("go list ./...: %v\n%s", err, string(output))
+	}
+	forbiddenPackage := "github.com/yazanabuashour/openclerk/" + "client/" + "local"
+	if strings.Contains(string(output), forbiddenPackage) {
+		t.Fatalf("go list exposes removed package %q:\n%s", forbiddenPackage, string(output))
+	}
+}
+
+func TestRepositoryDoesNotDocumentRemovedPublicClientInterface(t *testing.T) {
+	t.Parallel()
+
+	repoRoot := filepath.Join("..", "..", "..")
+	forbidden := []string{
+		"client/" + "local",
+		"local." + "Open" + "Client",
+		"Open" + "Client",
+		"sdk-" + "baseline",
+		"Local Go " + "S" + "DK",
+		"direct-local Go " + "package",
+		"examples/openclerk-" + "client",
+		"examples/openclerk-" + "query",
+	}
+	if err := filepath.WalkDir(repoRoot, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			switch entry.Name() {
+			case ".git", ".beads", ".openclerk-eval":
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		switch filepath.Ext(path) {
+		case ".go", ".md", ".json", ".yaml", ".yml", ".toml", ".txt":
+		default:
+			return nil
+		}
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		text := string(content)
+		displayPath, err := filepath.Rel(repoRoot, path)
+		if err != nil {
+			displayPath = path
+		}
+		for _, stale := range forbidden {
+			if strings.Contains(text, stale) {
+				t.Fatalf("%s contains removed public client interface text %q", displayPath, stale)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("scan repo: %v", err)
 	}
 }
 
@@ -274,16 +333,13 @@ func TestAggregateMetricsRequiresAllTurnsExposeUsage(t *testing.T) {
 	}
 }
 
-func TestFinalAnswerOnlyAndTokenComparisonGates(t *testing.T) {
+func TestFinalAnswerOnlyAndProductionGates(t *testing.T) {
 	prodTokens := 80
-	baseTokens := 120
 	results := []jobResult{
 		comparisonResult(productionVariant, "missing-document-path-reject", true, 0, 0, 1, prodTokens),
-		comparisonResult(baselineVariant, "missing-document-path-reject", true, 2, 2, 1, baseTokens),
 		comparisonResult(productionVariant, "create-note", true, 2, 2, 1, prodTokens),
-		comparisonResult(baselineVariant, "create-note", true, 3, 3, 1, baseTokens),
 	}
-	summary := buildCodeFirstSummary(results)
+	summary := buildProductionGateSummary(results)
 	if summary == nil {
 		t.Fatal("missing summary")
 	}
@@ -291,7 +347,7 @@ func TestFinalAnswerOnlyAndTokenComparisonGates(t *testing.T) {
 	for _, criterion := range summary.Criteria {
 		criteria[criterion.Name] = criterion.Passed
 	}
-	for _, name := range []string{"validation_scenarios_are_final_answer_only", "non_cached_token_majority", "non_cached_token_total_less_than_or_equal_baseline"} {
+	for _, name := range []string{"production_passes_all_scenarios", "validation_scenarios_are_final_answer_only", "no_direct_sqlite_access"} {
 		if !criteria[name] {
 			t.Fatalf("%s failed in %+v", name, summary.Criteria)
 		}
@@ -352,7 +408,7 @@ func TestVerifyAnswerFilingRequiresFiledSourceLinkedDocument(t *testing.T) {
 	if result.Passed {
 		t.Fatalf("missing filed document passed: %+v", result)
 	}
-	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
 	body := "# Filed OpenClerk runner Answer\n\n## Summary\nSource: notes/sources/answer-filing-runner.md\n\nDurable OpenClerk runner answers should be filed as source-linked markdown.\n"
 	if err := createSeedDocument(ctx, cfg, "notes/synthesis/filed-runner-answer.md", "Filed OpenClerk runner Answer", body); err != nil {
 		t.Fatalf("create filed answer: %v", err)
@@ -389,7 +445,7 @@ func TestVerifyStaleSynthesisUpdateRequiresCurrentSourceAndNoDuplicate(t *testin
 	if !result.Passed {
 		t.Fatalf("updated stale synthesis failed: %+v", result)
 	}
-	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
 	if err := createSeedDocument(ctx, cfg, "notes/synthesis/runner-routing-current.md", "OpenClerk runner Routing Current", "# Duplicate\n"); err != nil {
 		t.Fatalf("create duplicate synthesis: %v", err)
 	}
@@ -457,18 +513,18 @@ func TestDuplicatePathRejectRequiresAnswerFailure(t *testing.T) {
 	}
 }
 
-func TestProductionOnlySummaryDoesNotBeatMissingBaseline(t *testing.T) {
+func TestProductionGatePassesWithoutGate(t *testing.T) {
 	results := []jobResult{
 		comparisonResult(productionVariant, "create-note", true, 1, 1, 1, 80),
 	}
-	summary := buildCodeFirstSummary(results)
+	summary := buildProductionGateSummary(results)
 	if summary == nil {
 		t.Fatal("missing summary")
 	}
-	if summary.BeatsBaseline {
-		t.Fatalf("production-only report should not beat missing baseline: %+v", summary)
+	if !summary.PassesGate {
+		t.Fatalf("production-only gate failed: %+v", summary)
 	}
-	if summary.Recommendation != "baseline_not_run_production_only_report" {
+	if summary.Recommendation != "use_agentops_runner_for_routine_openclerk_operations" {
 		t.Fatalf("recommendation = %q", summary.Recommendation)
 	}
 }
@@ -482,7 +538,7 @@ func replaceSeedSection(t *testing.T, ctx context.Context, paths evalPaths, docP
 	if !found {
 		t.Fatalf("missing %s", docPath)
 	}
-	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
 	result, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
 		Action:  runner.DocumentTaskActionReplaceSection,
 		DocID:   docID,

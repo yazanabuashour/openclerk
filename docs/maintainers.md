@@ -4,12 +4,12 @@ This repository uses **Beads** (`bd`) in embedded mode for maintainer task
 tracking.
 
 This repository is public and includes a production `openclerk` runner binary,
-an Agent Skills-compatible OpenClerk skill, a direct-local Go SDK, and a local
-SQLite runtime. Keep maintainer docs honest about the actual supported surface.
+an Agent Skills-compatible OpenClerk skill, and a local SQLite runtime. Keep
+maintainer docs honest about the actual supported surface.
 
-Agents should start with `openclerk document` or `openclerk retrieval`. Go
-consumers should start with `local.OpenClient(local.Config{})`. There is no
-supported remote HTTP API or daemon path for `0.1.0`.
+Agents should start with `openclerk document` or `openclerk retrieval`. There
+is no supported public importable Go API, remote HTTP API, or daemon path for
+`0.1.0`.
 
 ## Initial Setup
 
@@ -108,9 +108,9 @@ The release installer installs the `openclerk` binary only. It prints the skill
 source URL and instructs users to install `skills/openclerk` with their agent's
 native skill installer or skill directory.
 
-## Runtime Storage Defaults
+## Runner Storage Defaults
 
-The embedded runtime defaults to:
+The installed runner defaults to:
 
 ```text
 ${XDG_DATA_HOME:-~/.local/share}/openclerk

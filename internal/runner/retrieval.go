@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/yazanabuashour/openclerk/client/local"
+	"github.com/yazanabuashour/openclerk/internal/runclient"
 )
 
-func RunRetrievalTask(ctx context.Context, config local.Config, request RetrievalTaskRequest) (RetrievalTaskResult, error) {
+func RunRetrievalTask(ctx context.Context, config runclient.Config, request RetrievalTaskRequest) (RetrievalTaskResult, error) {
 	normalized, rejection := normalizeRetrievalTaskRequest(request)
 	if rejection != "" {
 		return RetrievalTaskResult{
@@ -22,7 +22,7 @@ func RunRetrievalTask(ctx context.Context, config local.Config, request Retrieva
 		return RetrievalTaskResult{Summary: "valid"}, nil
 	}
 
-	client, err := local.OpenClient(config)
+	client, err := runclient.Open(config)
 	if err != nil {
 		return RetrievalTaskResult{}, err
 	}
@@ -32,7 +32,7 @@ func RunRetrievalTask(ctx context.Context, config local.Config, request Retrieva
 
 	switch normalized.Action {
 	case RetrievalTaskActionSearch:
-		search, err := client.Search(ctx, local.SearchOptions(normalized.Search))
+		search, err := client.Search(ctx, runclient.SearchOptions(normalized.Search))
 		if err != nil {
 			return RetrievalTaskResult{}, err
 		}
@@ -52,7 +52,7 @@ func RunRetrievalTask(ctx context.Context, config local.Config, request Retrieva
 			Summary: fmt.Sprintf("returned links for document %s", normalized.DocID),
 		}, nil
 	case RetrievalTaskActionGraph:
-		graph, err := client.GraphNeighborhood(ctx, local.GraphNeighborhoodOptions{
+		graph, err := client.GraphNeighborhood(ctx, runclient.GraphNeighborhoodOptions{
 			DocID:   normalized.DocID,
 			ChunkID: normalized.ChunkID,
 			NodeID:  normalized.NodeID,
@@ -67,7 +67,7 @@ func RunRetrievalTask(ctx context.Context, config local.Config, request Retrieva
 			Summary: fmt.Sprintf("returned %d graph nodes and %d edges", len(converted.Nodes), len(converted.Edges)),
 		}, nil
 	case RetrievalTaskActionRecordsLookup:
-		records, err := client.LookupRecords(ctx, local.RecordLookupOptions(normalized.Records))
+		records, err := client.LookupRecords(ctx, runclient.RecordLookupOptions(normalized.Records))
 		if err != nil {
 			return RetrievalTaskResult{}, err
 		}
@@ -87,7 +87,7 @@ func RunRetrievalTask(ctx context.Context, config local.Config, request Retrieva
 			Summary: fmt.Sprintf("returned record entity %s", converted.EntityID),
 		}, nil
 	case RetrievalTaskActionServicesLookup:
-		services, err := client.LookupServices(ctx, local.ServiceLookupOptions(normalized.Services))
+		services, err := client.LookupServices(ctx, runclient.ServiceLookupOptions(normalized.Services))
 		if err != nil {
 			return RetrievalTaskResult{}, err
 		}
@@ -107,7 +107,7 @@ func RunRetrievalTask(ctx context.Context, config local.Config, request Retrieva
 			Summary: fmt.Sprintf("returned service %s", converted.ServiceID),
 		}, nil
 	case RetrievalTaskActionProvenanceEvents:
-		events, err := client.ListProvenanceEvents(ctx, local.ProvenanceEventOptions(normalized.Provenance))
+		events, err := client.ListProvenanceEvents(ctx, runclient.ProvenanceEventOptions(normalized.Provenance))
 		if err != nil {
 			return RetrievalTaskResult{}, err
 		}
@@ -117,7 +117,7 @@ func RunRetrievalTask(ctx context.Context, config local.Config, request Retrieva
 			Summary:    fmt.Sprintf("returned %d provenance events", len(converted.Events)),
 		}, nil
 	case RetrievalTaskActionProjectionStates:
-		projections, err := client.ListProjectionStates(ctx, local.ProjectionStateOptions(normalized.Projection))
+		projections, err := client.ListProjectionStates(ctx, runclient.ProjectionStateOptions(normalized.Projection))
 		if err != nil {
 			return RetrievalTaskResult{}, err
 		}

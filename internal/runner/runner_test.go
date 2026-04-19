@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yazanabuashour/openclerk/client/local"
+	"github.com/yazanabuashour/openclerk/internal/runclient"
 	"github.com/yazanabuashour/openclerk/internal/runner"
 )
 
@@ -16,7 +16,7 @@ func TestDocumentTaskCreateListGetAndUpdate(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	config := local.Config{DataDir: filepath.Join(t.TempDir(), "data")}
+	config := runclient.Config{DataDir: filepath.Join(t.TempDir(), "data")}
 	create, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionCreate,
 		Document: runner.DocumentInput{
@@ -105,7 +105,7 @@ func TestRetrievalTaskSearchLinksRecordsAndProvenance(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	config := local.Config{DataDir: filepath.Join(t.TempDir(), "data")}
+	config := runclient.Config{DataDir: filepath.Join(t.TempDir(), "data")}
 	architecture := createDocument(t, ctx, config, "notes/architecture/knowledge-plane.md", "Knowledge plane", "# Knowledge plane\n\n## Summary\nCanonical architecture note.\n")
 	roadmap := createDocument(t, ctx, config, "notes/projects/roadmap.md", "Roadmap", "# Roadmap\n\n## Summary\nSee the [knowledge plane](../architecture/knowledge-plane.md).\n")
 	createDocument(t, ctx, config, "records/assets/transmission-solenoid.md", "Transmission solenoid", "---\nentity_type: part\nentity_name: Transmission solenoid\nentity_id: transmission-solenoid\n---\n# Transmission solenoid\n\n## Facts\n- sku: SOL-1\n")
@@ -253,7 +253,7 @@ func TestRetrievalTaskSearchLinksRecordsAndProvenance(t *testing.T) {
 func TestRetrievalTaskServiceValidation(t *testing.T) {
 	t.Parallel()
 
-	missing, err := runner.RunRetrievalTask(context.Background(), local.Config{}, runner.RetrievalTaskRequest{
+	missing, err := runner.RunRetrievalTask(context.Background(), runclient.Config{}, runner.RetrievalTaskRequest{
 		Action: runner.RetrievalTaskActionServiceRecord,
 	})
 	if err != nil {
@@ -263,7 +263,7 @@ func TestRetrievalTaskServiceValidation(t *testing.T) {
 		t.Fatalf("missing result = %+v", missing)
 	}
 
-	negative, err := runner.RunRetrievalTask(context.Background(), local.Config{}, runner.RetrievalTaskRequest{
+	negative, err := runner.RunRetrievalTask(context.Background(), runclient.Config{}, runner.RetrievalTaskRequest{
 		Action:   runner.RetrievalTaskActionServicesLookup,
 		Services: runner.ServiceLookupOptions{Limit: -1},
 	})
@@ -279,7 +279,7 @@ func TestValidationRejectionDoesNotCreateRuntimeFiles(t *testing.T) {
 	t.Parallel()
 
 	dataDir := filepath.Join(t.TempDir(), "data")
-	result, err := runner.RunDocumentTask(context.Background(), local.Config{DataDir: dataDir}, runner.DocumentTaskRequest{
+	result, err := runner.RunDocumentTask(context.Background(), runclient.Config{DataDir: dataDir}, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionCreate,
 		Document: runner.DocumentInput{
 			Title: "Missing path",
@@ -302,7 +302,7 @@ func TestResolvePathsHonorsOpenClerkEnvOverrides(t *testing.T) {
 	t.Setenv("OPENCLERK_DATABASE_PATH", filepath.Join(t.TempDir(), "env-db", "openclerk.sqlite"))
 	t.Setenv("OPENCLERK_VAULT_ROOT", filepath.Join(t.TempDir(), "env-vault"))
 
-	result, err := runner.RunDocumentTask(context.Background(), local.Config{}, runner.DocumentTaskRequest{
+	result, err := runner.RunDocumentTask(context.Background(), runclient.Config{}, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionResolvePaths,
 	})
 	if err != nil {
@@ -315,7 +315,7 @@ func TestResolvePathsHonorsOpenClerkEnvOverrides(t *testing.T) {
 		t.Fatalf("paths = %+v", result.Paths)
 	}
 
-	explicit, err := runner.RunDocumentTask(context.Background(), local.Config{
+	explicit, err := runner.RunDocumentTask(context.Background(), runclient.Config{
 		DataDir:      filepath.Join(t.TempDir(), "explicit-data"),
 		DatabasePath: filepath.Join(t.TempDir(), "explicit-db", "openclerk.sqlite"),
 		VaultRoot:    filepath.Join(t.TempDir(), "explicit-vault"),
@@ -330,7 +330,7 @@ func TestResolvePathsHonorsOpenClerkEnvOverrides(t *testing.T) {
 	}
 }
 
-func createDocument(t *testing.T, ctx context.Context, config local.Config, path string, title string, body string) runner.Document {
+func createDocument(t *testing.T, ctx context.Context, config runclient.Config, path string, title string, body string) runner.Document {
 	t.Helper()
 	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionCreate,

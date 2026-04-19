@@ -4,9 +4,10 @@ Outside contributors do not need Beads to contribute to this repository.
 
 ## Current Project Shape
 
-The shipped agent surface is the installed `openclerk` JSON runner. The
-developer SDK is `client/local`. There is no hosted service, remote HTTP API,
-or daemon in the supported product path.
+The shipped product surface is the installed `openclerk` JSON runner plus the
+single-file skill at `skills/openclerk/SKILL.md`. There is no public importable
+Go API, hosted service, remote HTTP API, or daemon in the supported product
+path.
 
 ## Public Install Contract
 
@@ -20,12 +21,6 @@ The repository publishes an Agent Skills-compatible skill at `skills/openclerk`
 and an `openclerk` runner binary. Agents should use their native skill installer
 or skill directory; docs should not assume a specific agent vendor or fixed
 skill path.
-
-The canonical tagged Go install command is:
-
-```bash
-go get github.com/yazanabuashour/openclerk/client/local@v0.1.0
-```
 
 ## Local Setup
 
@@ -41,7 +36,6 @@ The current local validation commands are:
 test -z "$(gofmt -l $(git ls-files '*.go'))"
 go test ./...
 golangci-lint run
-OPENCLERK_DATA_DIR="$(mktemp -d)" go run ./examples/openclerk-client
 ```
 
 Outside contributors may use their own local tooling if they can satisfy the
@@ -69,7 +63,7 @@ Current pull request checks validate:
 - `golangci-lint`
 - dependency-review safety
 
-Pull requests that touch the embedded runtime, runner, skill, or examples should
+Pull requests that touch the internal runtime, runner, or skill should
 leave the repository in a public-safe, policy-consistent, and runnable state
 without requiring a local daemon.
 
@@ -81,6 +75,6 @@ single-surface agent knowledge plane framing in `README.md` and
 
 Before `1.0.0`, compatibility is best effort and may change between releases.
 The current support target is Go `1.26.x` on current Linux and macOS
-environments using the embedded local runtime.
+environments using the installed local runner.
 
 Maintainer workflow notes live in `docs/maintainers.md`.

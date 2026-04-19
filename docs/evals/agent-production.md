@@ -1,6 +1,7 @@
 # Production Agent Evaluation Protocol
 
-OpenClerk agent evals measure the same production skill a real agent receives.
+OpenClerk agent evals measure the same AgentOps surface a real agent receives:
+the production skill plus the installed `openclerk` runner.
 Do not add hidden evaluator-only instructions to improve a result; if an
 instruction is needed, put it in `skills/openclerk` first.
 
@@ -8,13 +9,11 @@ instruction is needed, put it in `skills/openclerk` first.
 
 - `production`: the installed runner-first `skills/openclerk` skill using the
   `openclerk` binary.
-- `sdk-baseline`: an archived SDK-oriented skill retained only as a comparison
-  surface.
 
 OpenClerk runner is the production semantic contract for routine agent work. The
 machine-facing runner is the supported transport for that contract today.
 
-HTTP server calls, direct SQLite access, ad hoc SDK programs, repo-wide
+HTTP server calls, direct SQLite access, ad hoc runtime programs, repo-wide
 spelunking, module-cache inspection, stale API paths, and
 backend-specific variants are not active production agent surfaces.
 
@@ -29,7 +28,7 @@ An adapter is eligible for adoption only if it:
 
 - passes the same correctness checks as production OpenClerk runner
 - avoids stale surface inspection, direct SQLite, backend variants, broad
-  repo search, module-cache inspection, and routine lower-level SDK work
+  repo search, module-cache inspection, and routine lower-level runtime work
 - ties or improves OpenClerk runner tool count
 - improves at least one measured agent-behavior metric such as latency,
   non-cached input tokens, clarity of failure handling, or multi-turn continuity
@@ -114,23 +113,17 @@ The `ockp` harness covers routine local knowledge-plane workflows:
   unevaluated MCP bypass attempts
 - true multi-turn workflows that require resumed context across ordered turns
 
-## Comparison Policy
+## Production Gate
 
-Production OpenClerk runner beats `sdk-baseline` only when:
+Production OpenClerk AgentOps is release-ready only when:
 
 - production passes every selected scenario
 - production has no stale surface inspection, module-cache inspection,
   broad repo search, direct SQLite access, or legacy source-built runner usage
 - rule-covered validation scenarios are final-answer-only: no tools, no command
   executions, and at most one assistant answer
-- production total tools are less than or equal to baseline total tools
-- production ties or beats baseline tools in at least 80% of comparable
-  scenarios
-- production has lower non-cached input tokens than baseline in a strict
-  majority of comparable scenarios with exposed usage
-- production total non-cached input tokens are less than or equal to baseline
-  total non-cached input tokens; missing usage on either side fails token
-  comparison
+- the eval context preflight confirms the model-visible agent context is the
+  shipped skill and runner, not hidden evaluator-only instructions
 
 CLI or MCP adapters beat production OpenClerk runner only when:
 

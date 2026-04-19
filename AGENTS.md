@@ -12,8 +12,8 @@ SQLite directly, or run repo-wide searches before acting.
 Before using any runner, reject final-answer-only, with exactly one assistant
 answer and no tools, when the request is missing required document or retrieval
 fields, asks for an obviously invalid limit such as a negative number, or asks
-to bypass the OpenClerk runner for routine lower-level SDK, HTTP, SQLite, or
-retired API work. Do not first announce skill use or process for those
+to bypass the OpenClerk runner for routine lower-level runtime, HTTP, SQLite,
+MCP, or retired API work. Do not first announce skill use or process for those
 direct rejections.
 
 Use the installed OpenClerk JSON runner:
@@ -24,7 +24,7 @@ openclerk retrieval
 ```
 
 Pass one JSON request on stdin and answer only from the JSON result. The runner
-uses `local.Config{}` by default and honors `OPENCLERK_DATA_DIR`,
+honors `OPENCLERK_DATA_DIR`,
 `OPENCLERK_DATABASE_PATH`, and `OPENCLERK_VAULT_ROOT`. Optional `--data-dir`,
 `--db`, `--vault-root`, and `--embedding-provider` flags are for explicit
 datasets, tests, or manual debugging only. For routine requests, do not pass
@@ -32,8 +32,7 @@ those flags; rely on the configured environment so data, database, and vault
 paths stay together. Do not inspect the repo to rediscover runner schemas; use
 the documented request shapes directly. For unsupported workflows not covered
 by the direct rejection rule above, say the production OpenClerk runner does not
-support that workflow yet unless the user explicitly asks for lower-level SDK
-debugging work.
+support that workflow yet.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker

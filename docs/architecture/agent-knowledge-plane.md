@@ -4,10 +4,10 @@
 
 OpenClerk is positioned as a single-surface agent-facing knowledge plane, not a domain-specific health application and not a menu of user-facing backend variants.
 
-The production agent surface is the installed `openclerk` JSON runner. Agents
-use task-shaped JSON for routine document and retrieval work; they do not need
-to inspect implementation files, backend variants, or SQLite to operate the
-knowledge plane.
+The production agent surface is AgentOps: the installed `openclerk` JSON runner
+plus `skills/openclerk/SKILL.md`. Agents use task-shaped JSON for routine
+document and retrieval work; they do not need to inspect implementation files,
+backend variants, or SQLite to operate the knowledge plane.
 
 It is also positioned as infrastructure for persistent agent-maintained knowledge: useful synthesis should become cited, inspectable markdown instead of being rediscovered from scratch on every query.
 
@@ -22,10 +22,10 @@ The product model is:
 
 ## Public contract
 
-The public surface is:
+The public product surface is:
 
 - the installed `openclerk` runner for production agent workflows
-- [`client/local`](../../client/local), including the code-first embedded facade
+- the Agent Skills-compatible `skills/openclerk/SKILL.md` guidance
 
 The public API is organized by capability, not implementation variant:
 
@@ -106,11 +106,10 @@ Current event and projection semantics are intentionally minimal:
 
 ## Agent evals
 
-Production evals compare the runner-first `skills/openclerk` surface against an
-archived SDK-oriented baseline. Reports track correctness, tool calls, assistant
-calls, wall time, token use, stale surface inspection, module-cache inspection,
-broad repo search, direct SQLite access, and raw log references using
-`<run-root>` placeholders.
+Production evals gate the runner-first `skills/openclerk` surface directly.
+Reports track correctness, tool calls, assistant calls, wall time, token use,
+stale surface inspection, module-cache inspection, broad repo search, direct
+SQLite access, and raw log references using `<run-root>` placeholders.
 
 The provisional architecture decision and adoption gates are recorded in
 [`eval-backed-knowledge-plane-adr.md`](eval-backed-knowledge-plane-adr.md).

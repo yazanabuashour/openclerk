@@ -2,9 +2,9 @@
 
 ## Supported versions
 
-This project ships an installed local runner, an Agent Skills-compatible skill,
-and an embedded Go module for local document storage. There is no hosted service
-or long-running daemon in the supported user path.
+This project ships an installed local runner and an Agent Skills-compatible
+skill for local document storage. There is no public importable Go API, hosted
+service, or long-running daemon in the supported user path.
 
 Until `1.0.0`, the supported code lines are:
 

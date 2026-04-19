@@ -7,9 +7,9 @@ compatibility: Requires local filesystem access and an installed openclerk binar
 
 # OpenClerk
 
-Use this skill for routine local OpenClerk knowledge-plane tasks. The production
-interface is the installed JSON runner. This skill directory is Agent
-Skills-compatible and uses `SKILL.md` as its entrypoint.
+Use this skill for routine local OpenClerk knowledge-plane tasks. The
+production interface is AgentOps: this Agent Skills-compatible `SKILL.md` plus
+the installed JSON runner.
 
 ```bash
 openclerk document
@@ -33,15 +33,14 @@ answer and no tools, when the request:
 
 - is missing required document or retrieval fields
 - asks for an obviously invalid limit, such as a negative number
-- asks to bypass the runner for routine lower-level SDK, HTTP, SQLite,
+- asks to bypass the runner for routine lower-level runtime, HTTP, SQLite,
   legacy source-built command paths, or unevaluated MCP-style work
 
 For bypass requests, explicitly say the workflow is unsupported and must use
 the OpenClerk runner.
 
 For unsupported workflows not covered by the rejection rules, say the
-production OpenClerk runner does not support that workflow yet unless the user
-explicitly asks for lower-level SDK work.
+production OpenClerk runner does not support that workflow yet.
 
 Do not inspect source files, generated artifacts, backend variants, module-cache
 docs, SQLite, or `.openclerk-eval/vault` directly for routine OpenClerk tasks.

@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/yazanabuashour/openclerk/client/local"
+	"github.com/yazanabuashour/openclerk/internal/runclient"
 )
 
-func RunDocumentTask(ctx context.Context, config local.Config, request DocumentTaskRequest) (DocumentTaskResult, error) {
+func RunDocumentTask(ctx context.Context, config runclient.Config, request DocumentTaskRequest) (DocumentTaskResult, error) {
 	normalized, rejection := normalizeDocumentTaskRequest(request)
 	if rejection != "" {
 		return DocumentTaskResult{
@@ -23,7 +23,7 @@ func RunDocumentTask(ctx context.Context, config local.Config, request DocumentT
 	}
 
 	if normalized.Action == DocumentTaskActionResolvePaths {
-		paths, err := local.ResolvePaths(config)
+		paths, err := runclient.ResolvePaths(config)
 		if err != nil {
 			return DocumentTaskResult{}, err
 		}
@@ -34,7 +34,7 @@ func RunDocumentTask(ctx context.Context, config local.Config, request DocumentT
 		}, nil
 	}
 
-	client, err := local.OpenClient(config)
+	client, err := runclient.Open(config)
 	if err != nil {
 		return DocumentTaskResult{}, err
 	}
@@ -44,7 +44,7 @@ func RunDocumentTask(ctx context.Context, config local.Config, request DocumentT
 
 	switch normalized.Action {
 	case DocumentTaskActionCreate:
-		document, err := client.CreateDocument(ctx, local.DocumentInput(normalized.Document))
+		document, err := client.CreateDocument(ctx, runclient.DocumentInput(normalized.Document))
 		if err != nil {
 			return DocumentTaskResult{}, err
 		}
@@ -54,7 +54,7 @@ func RunDocumentTask(ctx context.Context, config local.Config, request DocumentT
 			Summary:  fmt.Sprintf("created document %s", converted.DocID),
 		}, nil
 	case DocumentTaskActionList:
-		documents, err := client.ListDocuments(ctx, local.DocumentListOptions(normalized.List))
+		documents, err := client.ListDocuments(ctx, runclient.DocumentListOptions(normalized.List))
 		if err != nil {
 			return DocumentTaskResult{}, err
 		}

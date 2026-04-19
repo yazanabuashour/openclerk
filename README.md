@@ -3,12 +3,13 @@
 OpenClerk is a local-first, agent-facing knowledge plane for notes, documents,
 promoted records, source-linked synthesis, and provenance-backed retrieval.
 
-The production agent surface is the installed `openclerk` JSON runner. The Go
-developer surface is the direct local SDK in `client/local`. There is no hosted
-service, remote HTTP API, or daemon in the `0.1.0` path.
+The supported product interface is the AgentOps pattern: a shipped `openclerk`
+runner plus the single-file skill at `skills/openclerk/SKILL.md`. There is no
+public importable Go API, hosted service, remote HTTP API, or daemon in the
+supported product path.
 
-OpenClerk is also infrastructure for persistent agent-maintained knowledge:
-useful synthesis should become cited, inspectable markdown rather than being
+OpenClerk is infrastructure for persistent agent-maintained knowledge: useful
+synthesis should become cited, inspectable markdown rather than being
 rediscovered from scratch on every query or lost in chat history.
 
 ## Quickstart
@@ -21,10 +22,10 @@ Tell your agent:
 Install https://github.com/yazanabuashour/openclerk
 ```
 
-The repository publishes an Agent Skills-compatible skill at
-`skills/openclerk` and an `openclerk` runner binary. Agents should use their
-native skill installer or skill directory to install the skill; this repository
-does not assume a specific agent vendor or skill path.
+The repository publishes an Agent Skills-compatible skill at `skills/openclerk`
+and an `openclerk` runner binary. Agents should use their native skill
+installer or skill directory; this repository does not assume a specific agent
+vendor or skill path.
 
 ### Manual Install, Latest Release
 
@@ -44,18 +45,28 @@ curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/v0.1.0/
 
 Use this for reproducible setup.
 
+## AgentOps Architecture
+
+OpenClerk's agent-facing path is AgentOps: the skill gives the agent task
+policy, and the local runner performs stateful knowledge-plane operations
+through structured JSON. This keeps product rules close to the agent, avoids
+broad repo search and ad hoc lower-level workflows, and leaves storage local
+without requiring a hosted service.
+
+The runner/skill pair is the competitive interface for agents. MCP or other
+adapters may be evaluated later only if they wrap equivalent runner semantics
+and improve measured agent behavior without weakening validation, provenance,
+or source-authority guarantees.
+
 ## Runner Interface
 
-The skill calls these runner domains:
+The skill sends structured JSON on stdin and reads structured JSON from stdout
+for these runner domains:
 
 ```bash
 openclerk document
 openclerk retrieval
 ```
-
-The runner reads structured JSON from stdin, validates and normalizes the
-request, performs the local knowledge-plane operation, and writes structured
-JSON to stdout.
 
 Example:
 
@@ -74,53 +85,9 @@ printf '%s\n' '{"action":"services_lookup","services":{"text":"OpenClerk runner"
 Validation rejections are JSON results with `rejected: true`. Runtime failures
 exit non-zero and write errors to stderr.
 
-## Local Go SDK
-
-Go developers can embed the same local runtime directly:
-
-```bash
-go get github.com/yazanabuashour/openclerk/client/local@v0.1.0
-```
-
-Minimal usage from Go:
-
-```go
-package main
-
-import (
-	"context"
-	"fmt"
-	"log"
-
-	local "github.com/yazanabuashour/openclerk/client/local"
-)
-
-func main() {
-	client, err := local.OpenClient(local.Config{})
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer client.Close()
-
-	document, err := client.CreateDocument(context.Background(), local.DocumentInput{
-		Path:  "notes/hello.md",
-		Title: "Hello",
-		Body:  "# Hello\n\n## Summary\nEmbedded OpenClerk runtime.\n",
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Printf("doc=%s dataDir=%s\n", document.DocID, client.Paths().DataDir)
-}
-```
-
-`local.OpenClient(...)` opens SQLite locally, syncs the vault, and calls the
-same local service used by the runner.
-
 ## Local Storage
 
-By default, the local runtime stores data under:
+By default, the runner stores data under:
 
 ```text
 ${XDG_DATA_HOME:-~/.local/share}/openclerk
@@ -131,9 +98,9 @@ That directory contains:
 - `openclerk.sqlite` for the SQLite database
 - `vault/` for canonical markdown documents
 
-Override storage with `client/local.Config`, `OPENCLERK_DATA_DIR`,
-`OPENCLERK_DATABASE_PATH`, or `OPENCLERK_VAULT_ROOT`. Explicit config fields and
-runner flags take precedence over environment variables.
+Override storage with `OPENCLERK_DATA_DIR`, `OPENCLERK_DATABASE_PATH`, or
+`OPENCLERK_VAULT_ROOT`. Runner flags `--data-dir`, `--db`, `--vault-root`, and
+`--embedding-provider` are for explicit datasets, tests, or manual debugging.
 
 ## Architecture Notes
 
@@ -146,7 +113,7 @@ runner flags take precedence over environment variables.
   docs.
 - Provenance and projection-state reads make derivation and freshness
   inspectable.
-- Memory and routing are intentionally out of scope for this release.
+- Memory and autonomous routing are intentionally out of scope for this release.
 
 See `docs/architecture/agent-knowledge-plane.md` for the in-repo design
 summary, `docs/evals/baseline-scenarios.md` for the eval task set, and
@@ -154,9 +121,10 @@ summary, `docs/evals/baseline-scenarios.md` for the eval task set, and
 
 ## Eval Evidence
 
-The runner-backed production skill beat the SDK-oriented baseline in the latest
-full proof-obligation eval report:
-`docs/evals/results/ockp-adr-proof-obligations.md`.
+Production evals gate the shipped AgentOps surface against correctness and
+hygiene requirements: no direct SQLite access, no broad repo search, no module
+cache inspection, no source-built runner bypass, and final-answer-only rejection
+for rule-covered invalid requests.
 
 ## Contributing and Maintainer Setup
 
@@ -164,7 +132,6 @@ Repository development uses the full local toolchain:
 
 ```bash
 mise install
-OPENCLERK_DATA_DIR="$(mktemp -d)" go run ./examples/openclerk-client
 test -z "$(gofmt -l $(git ls-files '*.go'))"
 go test ./...
 golangci-lint run
@@ -178,7 +145,6 @@ The `0.1.0` release deliverables are:
 - the Agent Skills-compatible `openclerk` skill archive
 - the release installer script
 - the Go module import path rooted at `github.com/yazanabuashour/openclerk`
-- the direct-local Go package at `github.com/yazanabuashour/openclerk/client/local`
 
 The release workflow is built around semantic version tags in the `v0.y.z`
 range. Each tagged GitHub Release publishes binary archives, the skill archive,

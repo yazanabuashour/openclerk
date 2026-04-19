@@ -5,15 +5,15 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/yazanabuashour/openclerk/client/local"
+	"github.com/yazanabuashour/openclerk/internal/runclient"
 	"github.com/yazanabuashour/openclerk/internal/runner"
 )
 
-func TestUnifiedOpenClerkRunnerBaseline(t *testing.T) {
+func TestUnifiedOpenClerkRunnerGate(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	config := local.Config{DataDir: filepath.Join(t.TempDir(), "data")}
+	config := runclient.Config{DataDir: filepath.Join(t.TempDir(), "data")}
 	source := createDocument(t, ctx, config, "notes/architecture/knowledge-plane.md", "Knowledge plane", "---\ntype: note\nstatus: active\n---\n# Knowledge plane\n\n## Summary\nCanonical architecture note.\n")
 	target := createDocument(t, ctx, config, "notes/projects/openclerk-roadmap.md", "Roadmap", "---\ntype: project\nstatus: active\n---\n# Roadmap\n\n## Summary\nSee the [knowledge plane](../architecture/knowledge-plane.md).\n")
 	createDocument(t, ctx, config, "records/assets/transmission-solenoid.md", "Transmission solenoid", "---\nentity_type: part\nentity_name: Transmission solenoid\nentity_id: transmission-solenoid\ntype: record\nstatus: active\n---\n# Transmission solenoid\n\n## Facts\n- sku: SOL-1\n")
@@ -83,7 +83,7 @@ func TestUnifiedOpenClerkRunnerBaseline(t *testing.T) {
 	}
 }
 
-func createDocument(t *testing.T, ctx context.Context, config local.Config, path string, title string, body string) runner.Document {
+func createDocument(t *testing.T, ctx context.Context, config runclient.Config, path string, title string, body string) runner.Document {
 	t.Helper()
 	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionCreate,

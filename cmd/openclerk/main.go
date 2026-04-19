@@ -9,7 +9,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/yazanabuashour/openclerk/client/local"
+	"github.com/yazanabuashour/openclerk/internal/runclient"
 	"github.com/yazanabuashour/openclerk/internal/runner"
 )
 
@@ -82,7 +82,7 @@ func runRetrieval(args []string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 	return 0
 }
 
-func parseConfig(name string, args []string, stderr io.Writer) (local.Config, bool) {
+func parseConfig(name string, args []string, stderr io.Writer) (runclient.Config, bool) {
 	fs := flag.NewFlagSet("openclerk "+name, flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	dataDir := fs.String("data-dir", "", "OpenClerk data directory")
@@ -90,13 +90,13 @@ func parseConfig(name string, args []string, stderr io.Writer) (local.Config, bo
 	vaultRoot := fs.String("vault-root", "", "OpenClerk vault root")
 	embeddingProvider := fs.String("embedding-provider", "", "embedding provider name")
 	if err := fs.Parse(args); err != nil {
-		return local.Config{}, false
+		return runclient.Config{}, false
 	}
 	if fs.NArg() != 0 {
 		_, _ = fmt.Fprintf(stderr, "unexpected positional arguments: %v\n", fs.Args())
-		return local.Config{}, false
+		return runclient.Config{}, false
 	}
-	return local.Config{
+	return runclient.Config{
 		DataDir:           *dataDir,
 		DatabasePath:      *databasePath,
 		VaultRoot:         *vaultRoot,

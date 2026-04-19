@@ -1,4 +1,4 @@
-package local
+package runclient
 
 import (
 	"context"
@@ -9,12 +9,12 @@ import (
 	"github.com/yazanabuashour/openclerk/internal/domain"
 )
 
-// Client is the preferred code-first facade for the embedded OpenClerk runtime.
+// Client is the preferred internal runner client for the embedded OpenClerk runtime.
 type Client struct {
 	runtime *Runtime
 }
 
-// Error is the public error shape returned by the local SDK facade.
+// Error is the internal error shape returned by the internal runner client.
 type Error struct {
 	Code      string
 	Message   string
@@ -260,8 +260,8 @@ type ProjectionStateList struct {
 	PageInfo    PageInfo
 }
 
-// OpenClient creates the primary embedded OpenClerk facade without binding a local port.
-func OpenClient(cfg Config) (*Client, error) {
+// Open creates the primary embedded OpenClerk client without binding a local port.
+func Open(cfg Config) (*Client, error) {
 	runtime, err := newRuntime(domain.BackendOpenClerk, withDefaultEmbeddingProvider(cfg))
 	if err != nil {
 		return nil, wrapError(err)
@@ -269,7 +269,7 @@ func OpenClient(cfg Config) (*Client, error) {
 	return &Client{runtime: runtime}, nil
 }
 
-// Close releases the embedded runtime.
+// Close releases the internal runtime.
 func (c *Client) Close() error {
 	if c == nil || c.runtime == nil {
 		return nil

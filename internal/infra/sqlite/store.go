@@ -2663,11 +2663,7 @@ func extractServiceProjection(body string) (serviceProjection, bool) {
 	recordFacts := extractRecordFacts(lines, contentStart)
 	facts := make([]domain.ServiceFact, 0, len(recordFacts))
 	for _, fact := range recordFacts {
-		facts = append(facts, domain.ServiceFact{
-			Key:        fact.Key,
-			Value:      fact.Value,
-			ObservedAt: fact.ObservedAt,
-		})
+		facts = append(facts, domain.ServiceFact(fact))
 	}
 
 	projected := serviceProjection{

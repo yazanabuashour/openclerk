@@ -1,8 +1,8 @@
 package runner
 
-import "github.com/yazanabuashour/openclerk/client/local"
+import "github.com/yazanabuashour/openclerk/internal/runclient"
 
-func toPaths(paths local.Paths) Paths {
+func toPaths(paths runclient.Paths) Paths {
 	return Paths{
 		DataDir:      paths.DataDir,
 		DatabasePath: paths.DatabasePath,
@@ -10,7 +10,7 @@ func toPaths(paths local.Paths) Paths {
 	}
 }
 
-func toDocument(document local.Document) Document {
+func toDocument(document runclient.Document) Document {
 	return Document{
 		DocID:     document.DocID,
 		Path:      document.Path,
@@ -23,7 +23,7 @@ func toDocument(document local.Document) Document {
 	}
 }
 
-func toDocumentSummaries(documents []local.DocumentSummary) []DocumentSummary {
+func toDocumentSummaries(documents []runclient.DocumentSummary) []DocumentSummary {
 	result := make([]DocumentSummary, 0, len(documents))
 	for _, document := range documents {
 		result = append(result, DocumentSummary{
@@ -37,14 +37,14 @@ func toDocumentSummaries(documents []local.DocumentSummary) []DocumentSummary {
 	return result
 }
 
-func toPageInfo(pageInfo local.PageInfo) PageInfo {
+func toPageInfo(pageInfo runclient.PageInfo) PageInfo {
 	return PageInfo{
 		NextCursor: pageInfo.NextCursor,
 		HasMore:    pageInfo.HasMore,
 	}
 }
 
-func toSearchResult(result local.SearchResult) SearchResult {
+func toSearchResult(result runclient.SearchResult) SearchResult {
 	hits := make([]SearchHit, 0, len(result.Hits))
 	for _, hit := range result.Hits {
 		hits = append(hits, SearchHit{
@@ -63,7 +63,7 @@ func toSearchResult(result local.SearchResult) SearchResult {
 	}
 }
 
-func toCitations(citations []local.Citation) []Citation {
+func toCitations(citations []runclient.Citation) []Citation {
 	result := make([]Citation, 0, len(citations))
 	for _, citation := range citations {
 		result = append(result, Citation{
@@ -78,7 +78,7 @@ func toCitations(citations []local.Citation) []Citation {
 	return result
 }
 
-func toDocumentLinksResult(links local.DocumentLinks) DocumentLinks {
+func toDocumentLinksResult(links runclient.DocumentLinks) DocumentLinks {
 	return DocumentLinks{
 		DocID:    links.DocID,
 		Outgoing: toDocumentLinks(links.Outgoing),
@@ -86,7 +86,7 @@ func toDocumentLinksResult(links local.DocumentLinks) DocumentLinks {
 	}
 }
 
-func toDocumentLinks(links []local.DocumentLink) []DocumentLink {
+func toDocumentLinks(links []runclient.DocumentLink) []DocumentLink {
 	result := make([]DocumentLink, 0, len(links))
 	for _, link := range links {
 		result = append(result, DocumentLink{
@@ -99,7 +99,7 @@ func toDocumentLinks(links []local.DocumentLink) []DocumentLink {
 	return result
 }
 
-func toGraphNeighborhood(neighborhood local.GraphNeighborhood) GraphNeighborhood {
+func toGraphNeighborhood(neighborhood runclient.GraphNeighborhood) GraphNeighborhood {
 	nodes := make([]GraphNode, 0, len(neighborhood.Nodes))
 	for _, node := range neighborhood.Nodes {
 		nodes = append(nodes, GraphNode{
@@ -125,14 +125,14 @@ func toGraphNeighborhood(neighborhood local.GraphNeighborhood) GraphNeighborhood
 	}
 }
 
-func toRecordLookupResult(result local.RecordLookupResult) RecordLookupResult {
+func toRecordLookupResult(result runclient.RecordLookupResult) RecordLookupResult {
 	return RecordLookupResult{
 		Entities: toRecordEntities(result.Entities),
 		PageInfo: toPageInfo(result.PageInfo),
 	}
 }
 
-func toRecordEntities(entities []local.RecordEntity) []RecordEntity {
+func toRecordEntities(entities []runclient.RecordEntity) []RecordEntity {
 	result := make([]RecordEntity, 0, len(entities))
 	for _, entity := range entities {
 		result = append(result, toRecordEntity(entity))
@@ -140,7 +140,7 @@ func toRecordEntities(entities []local.RecordEntity) []RecordEntity {
 	return result
 }
 
-func toRecordEntity(entity local.RecordEntity) RecordEntity {
+func toRecordEntity(entity runclient.RecordEntity) RecordEntity {
 	facts := make([]RecordFact, 0, len(entity.Facts))
 	for _, fact := range entity.Facts {
 		facts = append(facts, RecordFact{
@@ -160,14 +160,14 @@ func toRecordEntity(entity local.RecordEntity) RecordEntity {
 	}
 }
 
-func toServiceLookupResult(result local.ServiceLookupResult) ServiceLookupResult {
+func toServiceLookupResult(result runclient.ServiceLookupResult) ServiceLookupResult {
 	return ServiceLookupResult{
 		Services: toServiceRecords(result.Services),
 		PageInfo: toPageInfo(result.PageInfo),
 	}
 }
 
-func toServiceRecords(services []local.ServiceRecord) []ServiceRecord {
+func toServiceRecords(services []runclient.ServiceRecord) []ServiceRecord {
 	result := make([]ServiceRecord, 0, len(services))
 	for _, service := range services {
 		result = append(result, toServiceRecord(service))
@@ -175,7 +175,7 @@ func toServiceRecords(services []local.ServiceRecord) []ServiceRecord {
 	return result
 }
 
-func toServiceRecord(service local.ServiceRecord) ServiceRecord {
+func toServiceRecord(service runclient.ServiceRecord) ServiceRecord {
 	facts := make([]ServiceFact, 0, len(service.Facts))
 	for _, fact := range service.Facts {
 		facts = append(facts, ServiceFact{
@@ -197,14 +197,14 @@ func toServiceRecord(service local.ServiceRecord) ServiceRecord {
 	}
 }
 
-func toProvenanceEventList(list local.ProvenanceEventList) ProvenanceEventList {
+func toProvenanceEventList(list runclient.ProvenanceEventList) ProvenanceEventList {
 	return ProvenanceEventList{
 		Events:   toProvenanceEvents(list.Events),
 		PageInfo: toPageInfo(list.PageInfo),
 	}
 }
 
-func toProvenanceEvents(events []local.ProvenanceEvent) []ProvenanceEvent {
+func toProvenanceEvents(events []runclient.ProvenanceEvent) []ProvenanceEvent {
 	result := make([]ProvenanceEvent, 0, len(events))
 	for _, event := range events {
 		result = append(result, ProvenanceEvent{
@@ -220,14 +220,14 @@ func toProvenanceEvents(events []local.ProvenanceEvent) []ProvenanceEvent {
 	return result
 }
 
-func toProjectionStateList(list local.ProjectionStateList) ProjectionStateList {
+func toProjectionStateList(list runclient.ProjectionStateList) ProjectionStateList {
 	return ProjectionStateList{
 		Projections: toProjectionStates(list.Projections),
 		PageInfo:    toPageInfo(list.PageInfo),
 	}
 }
 
-func toProjectionStates(projections []local.ProjectionState) []ProjectionState {
+func toProjectionStates(projections []runclient.ProjectionState) []ProjectionState {
 	result := make([]ProjectionState, 0, len(projections))
 	for _, projection := range projections {
 		result = append(result, ProjectionState{
