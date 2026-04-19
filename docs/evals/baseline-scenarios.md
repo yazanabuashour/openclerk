@@ -1,8 +1,8 @@
 # Baseline Scenarios
 
-These scenarios define the initial eval task set for the unified OpenClerk
-AgentOps runner and the archived SDK-oriented baseline. They also define the
-proof obligations for the eval-backed knowledge-plane ADR in
+These scenarios define the initial eval task set for the installed OpenClerk
+runner and the archived SDK-oriented baseline. They also define the proof
+obligations for the eval-backed knowledge-plane ADR in
 `docs/architecture/eval-backed-knowledge-plane-adr.md`.
 
 ## Source-Grounded Retrieval
@@ -60,13 +60,12 @@ proof obligations for the eval-backed knowledge-plane ADR in
 
 ## Agent Surface Comparison
 
-- Verify production tasks use `cmd/openclerk-agentops` rather than generated
-  clients, direct SQLite, backend variants, or ad hoc SDK programs.
-- Verify routine attempts to bypass AgentOps through the human CLI or an
-  unevaluated MCP-style path are rejected final-answer-only without tools.
-- Compare AgentOps against SDK-oriented, CLI-style, or MCP-style alternatives
-  only when the alternative exposes equivalent task-shaped document and
-  retrieval semantics.
-- Accept a CLI or MCP adapter only if it matches AgentOps correctness and
-  improves a measured agent-behavior metric without increasing forbidden access
-  patterns.
+- Verify production tasks use `openclerk` rather than direct SQLite, backend
+  variants, stale API paths, or ad hoc SDK programs.
+- Verify routine attempts to bypass the OpenClerk runner through legacy
+  source-built command paths or an unevaluated MCP-style path are rejected
+  final-answer-only without tools.
+- Compare the runner against SDK-oriented, CLI-style, or MCP-style alternatives
+  only when the alternative exposes equivalent task-shaped document and retrieval semantics.
+- Accept a CLI or MCP adapter only if it matches runner correctness and improves
+  a measured agent-behavior metric without increasing forbidden access patterns.

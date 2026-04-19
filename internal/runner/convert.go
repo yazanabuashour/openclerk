@@ -1,4 +1,4 @@
-package agentops
+package runner
 
 import "github.com/yazanabuashour/openclerk/client/local"
 

@@ -2,13 +2,9 @@ module github.com/yazanabuashour/openclerk
 
 go 1.26.0
 
-require (
-	github.com/oapi-codegen/runtime v1.4.0
-	modernc.org/sqlite v1.37.1
-)
+require modernc.org/sqlite v1.37.1
 
 require (
-	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect

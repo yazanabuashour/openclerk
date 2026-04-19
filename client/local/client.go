@@ -5,15 +5,13 @@ import (
 	"errors"
 	"time"
 
-	openclerkclient "github.com/yazanabuashour/openclerk/client/openclerk"
 	"github.com/yazanabuashour/openclerk/internal/app"
 	"github.com/yazanabuashour/openclerk/internal/domain"
 )
 
 // Client is the preferred code-first facade for the embedded OpenClerk runtime.
 type Client struct {
-	runtime   *Runtime
-	generated *openclerkclient.ClientWithResponses
+	runtime *Runtime
 }
 
 // Error is the public error shape returned by the local SDK facade.
@@ -236,15 +234,7 @@ func OpenClient(cfg Config) (*Client, error) {
 	if err != nil {
 		return nil, wrapError(err)
 	}
-	generated, err := openclerkclient.NewClientWithResponses(inProcessBaseURL, openclerkclient.WithHTTPClient(handlerDoer{handler: runtime.handler}))
-	if err != nil {
-		_ = runtime.Close()
-		return nil, wrapError(err)
-	}
-	return &Client{
-		runtime:   runtime,
-		generated: generated,
-	}, nil
+	return &Client{runtime: runtime}, nil
 }
 
 // Close releases the embedded runtime.
@@ -261,14 +251,6 @@ func (c *Client) Paths() Paths {
 		return Paths{}
 	}
 	return c.runtime.Paths()
-}
-
-// Generated returns the generated OpenAPI client for raw contract fallback work.
-func (c *Client) Generated() *openclerkclient.ClientWithResponses {
-	if c == nil {
-		return nil
-	}
-	return c.generated
 }
 
 func (c *Client) Capabilities(ctx context.Context) (Capabilities, error) {

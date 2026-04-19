@@ -2,7 +2,9 @@
 
 ## Supported versions
 
-This project ships an embedded Go module and generated clients for local document storage. There is no hosted service and no long-running daemon in the supported user path.
+This project ships an installed local runner, an Agent Skills-compatible skill,
+and an embedded Go module for local document storage. There is no hosted service
+or long-running daemon in the supported user path.
 
 Until `1.0.0`, the supported code lines are:
 
@@ -52,7 +54,9 @@ Maintainers will triage reports using practical impact on repository users and m
 
 ## Release integrity
 
-Tagged releases publish a source archive, checksum, SBOM, and attestation bundles. Users should verify both the checksum and the GitHub artifact attestation for the released source archive before treating a tag as trusted.
+Tagged releases publish runner archives, a skill archive, a source archive,
+checksums, an SBOM, and GitHub attestations. Users should verify checksums and
+artifact attestations before treating a tag as trusted.
 
 ## Emergency releases and hotfixes
 

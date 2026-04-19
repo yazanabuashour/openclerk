@@ -20,9 +20,6 @@ func TestOpenClientKnowledgePlaneFacade(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = client.Close() })
 
-	if client.Generated() == nil {
-		t.Fatal("generated fallback client is nil")
-	}
 	if client.Paths().DataDir == "" || client.Paths().DatabasePath == "" || client.Paths().VaultRoot == "" {
 		t.Fatalf("resolved paths incomplete: %+v", client.Paths())
 	}

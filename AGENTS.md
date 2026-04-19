@@ -5,22 +5,22 @@
 
 When the prompt is a direct user request to create, list, update, search, or
 inspect local OpenClerk knowledge, treat it as a product data task rather than a
-repository maintenance task. Do not run `bd prime`, inspect generated files,
-inspect backend-variant packages, inspect the Go module cache, query SQLite
-directly, or run repo-wide searches before acting.
+repository maintenance task. Do not run `bd prime`, inspect implementation
+files, inspect backend-variant packages, inspect the Go module cache, query
+SQLite directly, or run repo-wide searches before acting.
 
 Before using any runner, reject final-answer-only, with exactly one assistant
 answer and no tools, when the request is missing required document or retrieval
 fields, asks for an obviously invalid limit such as a negative number, or asks
-to bypass AgentOps for routine lower-level SDK, HTTP, SQLite, or
-generated-client work. Do not first announce skill use or process for those
+to bypass the OpenClerk runner for routine lower-level SDK, HTTP, SQLite, or
+retired API work. Do not first announce skill use or process for those
 direct rejections.
 
-Use the AgentOps JSON runner:
+Use the installed OpenClerk JSON runner:
 
 ```bash
-go run ./cmd/openclerk-agentops document
-go run ./cmd/openclerk-agentops retrieval
+openclerk document
+openclerk retrieval
 ```
 
 Pass one JSON request on stdin and answer only from the JSON result. The runner
@@ -31,9 +31,9 @@ datasets, tests, or manual debugging only. For routine requests, do not pass
 those flags; rely on the configured environment so data, database, and vault
 paths stay together. Do not inspect the repo to rediscover runner schemas; use
 the documented request shapes directly. For unsupported workflows not covered
-by the direct rejection rule above, say the production AgentOps runner does not
-support that workflow yet unless the user explicitly asks for lower-level SDK or
-HTTP work.
+by the direct rejection rule above, say the production OpenClerk runner does not
+support that workflow yet unless the user explicitly asks for lower-level SDK
+debugging work.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker

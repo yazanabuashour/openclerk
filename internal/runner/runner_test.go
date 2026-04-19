@@ -1,4 +1,4 @@
-package agentops_test
+package runner_test
 
 import (
 	"context"
@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yazanabuashour/openclerk/agentops"
 	"github.com/yazanabuashour/openclerk/client/local"
+	"github.com/yazanabuashour/openclerk/internal/runner"
 )
 
 func TestDocumentTaskCreateListGetAndUpdate(t *testing.T) {
@@ -17,9 +17,9 @@ func TestDocumentTaskCreateListGetAndUpdate(t *testing.T) {
 
 	ctx := context.Background()
 	config := local.Config{DataDir: filepath.Join(t.TempDir(), "data")}
-	create, err := agentops.RunDocumentTask(ctx, config, agentops.DocumentTaskRequest{
-		Action: agentops.DocumentTaskActionCreate,
-		Document: agentops.DocumentInput{
+	create, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionCreate,
+		Document: runner.DocumentInput{
 			Path:  "notes/projects/roadmap.md",
 			Title: "Roadmap",
 			Body:  "# Roadmap\n\n## Summary\nCanonical project note.\n",
@@ -32,9 +32,9 @@ func TestDocumentTaskCreateListGetAndUpdate(t *testing.T) {
 		t.Fatalf("create result = %+v", create)
 	}
 
-	list, err := agentops.RunDocumentTask(ctx, config, agentops.DocumentTaskRequest{
-		Action: agentops.DocumentTaskActionList,
-		List:   agentops.DocumentListOptions{PathPrefix: "notes/", Limit: 10},
+	list, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{PathPrefix: "notes/", Limit: 10},
 	})
 	if err != nil {
 		t.Fatalf("list document task: %v", err)
@@ -43,35 +43,35 @@ func TestDocumentTaskCreateListGetAndUpdate(t *testing.T) {
 		t.Fatalf("list result = %+v", list)
 	}
 
-	appendResult, err := agentops.RunDocumentTask(ctx, config, agentops.DocumentTaskRequest{
-		Action:  agentops.DocumentTaskActionAppend,
+	appendResult, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action:  runner.DocumentTaskActionAppend,
 		DocID:   create.Document.DocID,
-		Content: "## Decisions\nUse the AgentOps runner.\n",
+		Content: "## Decisions\nUse the OpenClerk runner.\n",
 	})
 	if err != nil {
 		t.Fatalf("append document task: %v", err)
 	}
-	if appendResult.Document == nil || !strings.Contains(appendResult.Document.Body, "AgentOps runner") {
+	if appendResult.Document == nil || !strings.Contains(appendResult.Document.Body, "OpenClerk runner") {
 		t.Fatalf("append result = %+v", appendResult)
 	}
 
-	replace, err := agentops.RunDocumentTask(ctx, config, agentops.DocumentTaskRequest{
-		Action:  agentops.DocumentTaskActionReplaceSection,
+	replace, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action:  runner.DocumentTaskActionReplaceSection,
 		DocID:   create.Document.DocID,
 		Heading: "Decisions",
-		Content: "Use `cmd/openclerk-agentops` for routine agent work.",
+		Content: "Use `openclerk` for routine agent work.",
 	})
 	if err != nil {
 		t.Fatalf("replace document task: %v", err)
 	}
 	if replace.Document == nil ||
-		!strings.Contains(replace.Document.Body, "cmd/openclerk-agentops") ||
-		strings.Contains(replace.Document.Body, "AgentOps runner") {
+		!strings.Contains(replace.Document.Body, "openclerk") ||
+		strings.Contains(replace.Document.Body, "OpenClerk runner") {
 		t.Fatalf("replace result body = %q", replace.Document.Body)
 	}
 
-	cleared, err := agentops.RunDocumentTask(ctx, config, agentops.DocumentTaskRequest{
-		Action:  agentops.DocumentTaskActionReplaceSection,
+	cleared, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action:  runner.DocumentTaskActionReplaceSection,
 		DocID:   create.Document.DocID,
 		Heading: "Decisions",
 		Content: "",
@@ -81,12 +81,12 @@ func TestDocumentTaskCreateListGetAndUpdate(t *testing.T) {
 	}
 	if cleared.Document == nil ||
 		!strings.Contains(cleared.Document.Body, "## Decisions") ||
-		strings.Contains(cleared.Document.Body, "cmd/openclerk-agentops") {
+		strings.Contains(cleared.Document.Body, "openclerk") {
 		t.Fatalf("cleared section body = %q", cleared.Document.Body)
 	}
 
-	get, err := agentops.RunDocumentTask(ctx, config, agentops.DocumentTaskRequest{
-		Action: agentops.DocumentTaskActionGet,
+	get, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGet,
 		DocID:  create.Document.DocID,
 	})
 	if err != nil {
@@ -110,9 +110,9 @@ func TestRetrievalTaskSearchLinksRecordsAndProvenance(t *testing.T) {
 	roadmap := createDocument(t, ctx, config, "notes/projects/roadmap.md", "Roadmap", "# Roadmap\n\n## Summary\nSee the [knowledge plane](../architecture/knowledge-plane.md).\n")
 	createDocument(t, ctx, config, "records/assets/transmission-solenoid.md", "Transmission solenoid", "---\nentity_type: part\nentity_name: Transmission solenoid\nentity_id: transmission-solenoid\n---\n# Transmission solenoid\n\n## Facts\n- sku: SOL-1\n")
 
-	search, err := agentops.RunRetrievalTask(ctx, config, agentops.RetrievalTaskRequest{
-		Action: agentops.RetrievalTaskActionSearch,
-		Search: agentops.SearchOptions{
+	search, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
 			Text:  "roadmap",
 			Limit: 10,
 		},
@@ -124,8 +124,8 @@ func TestRetrievalTaskSearchLinksRecordsAndProvenance(t *testing.T) {
 		t.Fatalf("search result = %+v", search)
 	}
 
-	links, err := agentops.RunRetrievalTask(ctx, config, agentops.RetrievalTaskRequest{
-		Action: agentops.RetrievalTaskActionDocumentLinks,
+	links, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionDocumentLinks,
 		DocID:  roadmap.DocID,
 	})
 	if err != nil {
@@ -135,8 +135,8 @@ func TestRetrievalTaskSearchLinksRecordsAndProvenance(t *testing.T) {
 		t.Fatalf("links result = %+v", links)
 	}
 
-	graph, err := agentops.RunRetrievalTask(ctx, config, agentops.RetrievalTaskRequest{
-		Action: agentops.RetrievalTaskActionGraph,
+	graph, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionGraph,
 		DocID:  roadmap.DocID,
 		Limit:  10,
 	})
@@ -147,9 +147,9 @@ func TestRetrievalTaskSearchLinksRecordsAndProvenance(t *testing.T) {
 		t.Fatalf("graph result = %+v", graph)
 	}
 
-	records, err := agentops.RunRetrievalTask(ctx, config, agentops.RetrievalTaskRequest{
-		Action:  agentops.RetrievalTaskActionRecordsLookup,
-		Records: agentops.RecordLookupOptions{Text: "solenoid", Limit: 10},
+	records, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action:  runner.RetrievalTaskActionRecordsLookup,
+		Records: runner.RecordLookupOptions{Text: "solenoid", Limit: 10},
 	})
 	if err != nil {
 		t.Fatalf("records task: %v", err)
@@ -158,8 +158,8 @@ func TestRetrievalTaskSearchLinksRecordsAndProvenance(t *testing.T) {
 		t.Fatalf("records result = %+v", records)
 	}
 
-	entity, err := agentops.RunRetrievalTask(ctx, config, agentops.RetrievalTaskRequest{
-		Action:   agentops.RetrievalTaskActionRecordEntity,
+	entity, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action:   runner.RetrievalTaskActionRecordEntity,
 		EntityID: records.Records.Entities[0].EntityID,
 	})
 	if err != nil {
@@ -169,9 +169,9 @@ func TestRetrievalTaskSearchLinksRecordsAndProvenance(t *testing.T) {
 		t.Fatalf("entity result = %+v", entity)
 	}
 
-	provenance, err := agentops.RunRetrievalTask(ctx, config, agentops.RetrievalTaskRequest{
-		Action: agentops.RetrievalTaskActionProvenanceEvents,
-		Provenance: agentops.ProvenanceEventOptions{
+	provenance, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{
 			RefKind: "document",
 			RefID:   roadmap.DocID,
 			Limit:   10,
@@ -184,9 +184,9 @@ func TestRetrievalTaskSearchLinksRecordsAndProvenance(t *testing.T) {
 		t.Fatalf("provenance result = %+v", provenance)
 	}
 
-	projections, err := agentops.RunRetrievalTask(ctx, config, agentops.RetrievalTaskRequest{
-		Action: agentops.RetrievalTaskActionProjectionStates,
-		Projection: agentops.ProjectionStateOptions{
+	projections, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProjectionStates,
+		Projection: runner.ProjectionStateOptions{
 			Projection: "graph",
 			RefKind:    "document",
 			RefID:      roadmap.DocID,
@@ -205,9 +205,9 @@ func TestValidationRejectionDoesNotCreateRuntimeFiles(t *testing.T) {
 	t.Parallel()
 
 	dataDir := filepath.Join(t.TempDir(), "data")
-	result, err := agentops.RunDocumentTask(context.Background(), local.Config{DataDir: dataDir}, agentops.DocumentTaskRequest{
-		Action: agentops.DocumentTaskActionCreate,
-		Document: agentops.DocumentInput{
+	result, err := runner.RunDocumentTask(context.Background(), local.Config{DataDir: dataDir}, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionCreate,
+		Document: runner.DocumentInput{
 			Title: "Missing path",
 			Body:  "# Missing path\n",
 		},
@@ -228,8 +228,8 @@ func TestResolvePathsHonorsOpenClerkEnvOverrides(t *testing.T) {
 	t.Setenv("OPENCLERK_DATABASE_PATH", filepath.Join(t.TempDir(), "env-db", "openclerk.sqlite"))
 	t.Setenv("OPENCLERK_VAULT_ROOT", filepath.Join(t.TempDir(), "env-vault"))
 
-	result, err := agentops.RunDocumentTask(context.Background(), local.Config{}, agentops.DocumentTaskRequest{
-		Action: agentops.DocumentTaskActionResolvePaths,
+	result, err := runner.RunDocumentTask(context.Background(), local.Config{}, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionResolvePaths,
 	})
 	if err != nil {
 		t.Fatalf("resolve paths: %v", err)
@@ -241,11 +241,11 @@ func TestResolvePathsHonorsOpenClerkEnvOverrides(t *testing.T) {
 		t.Fatalf("paths = %+v", result.Paths)
 	}
 
-	explicit, err := agentops.RunDocumentTask(context.Background(), local.Config{
+	explicit, err := runner.RunDocumentTask(context.Background(), local.Config{
 		DataDir:      filepath.Join(t.TempDir(), "explicit-data"),
 		DatabasePath: filepath.Join(t.TempDir(), "explicit-db", "openclerk.sqlite"),
 		VaultRoot:    filepath.Join(t.TempDir(), "explicit-vault"),
-	}, agentops.DocumentTaskRequest{Action: agentops.DocumentTaskActionResolvePaths})
+	}, runner.DocumentTaskRequest{Action: runner.DocumentTaskActionResolvePaths})
 	if err != nil {
 		t.Fatalf("resolve explicit paths: %v", err)
 	}
@@ -256,11 +256,11 @@ func TestResolvePathsHonorsOpenClerkEnvOverrides(t *testing.T) {
 	}
 }
 
-func createDocument(t *testing.T, ctx context.Context, config local.Config, path string, title string, body string) agentops.Document {
+func createDocument(t *testing.T, ctx context.Context, config local.Config, path string, title string, body string) runner.Document {
 	t.Helper()
-	result, err := agentops.RunDocumentTask(ctx, config, agentops.DocumentTaskRequest{
-		Action: agentops.DocumentTaskActionCreate,
-		Document: agentops.DocumentInput{
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionCreate,
+		Document: runner.DocumentInput{
 			Path:  path,
 			Title: title,
 			Body:  body,

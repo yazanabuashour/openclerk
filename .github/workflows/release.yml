@@ -50,32 +50,25 @@ jobs:
             publish=false
           fi
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "asset_version=${version#v}" >> "${GITHUB_OUTPUT}"
           echo "publish=${publish}" >> "${GITHUB_OUTPUT}"
 
       - name: Run release validation
         run: go test ./...
 
-      - name: Build source bundle, checksums, and SBOM
+      - name: Build release assets
         run: bash ./scripts/build-release-bundle.sh "${{ steps.meta.outputs.version }}" dist
 
-      - name: Attest source provenance
-        id: provenance
-        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661
         with:
-          subject-path: dist/openclerk-${{ steps.meta.outputs.version }}.tar.gz
+          subject-path: dist/*
 
-      - name: Attest source SBOM
-        id: sbom
-        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26
+      - name: Attest SBOM
+        uses: actions/attest-sbom@51e74621a501c89df81fc1391c5a8f4cfc9fab2f
         with:
-          subject-path: dist/openclerk-${{ steps.meta.outputs.version }}.tar.gz
-          sbom-path: dist/openclerk-${{ steps.meta.outputs.version }}.sbom.json
-
-      - name: Stage attestation bundles
-        run: |
-          cp "${{ steps.provenance.outputs.bundle-path }}" "dist/openclerk-${{ steps.meta.outputs.version }}.provenance.bundle.json"
-          cp "${{ steps.sbom.outputs.bundle-path }}" "dist/openclerk-${{ steps.meta.outputs.version }}.sbom.bundle.json"
-          ls -l dist
+          subject-path: dist/openclerk_${{ steps.meta.outputs.asset_version }}_source.tar.gz
+          sbom-path: dist/openclerk_${{ steps.meta.outputs.asset_version }}_sbom.json
 
       - name: Create or update GitHub Release
         if: steps.meta.outputs.publish == 'true'

@@ -1,85 +1,119 @@
 ---
 name: openclerk
-description: Use OpenClerk when an agent needs a local-first knowledge plane for canonical notes, source-linked synthesis, promoted records, and provenance-backed retrieval through the AgentOps JSON runner.
+description: Use OpenClerk for local-first knowledge-plane tasks over canonical notes, source-linked synthesis, promoted records, provenance-backed retrieval, and projection freshness through the installed openclerk JSON runner.
 license: MIT
-compatibility: Requires a Go-capable environment with local filesystem access and the openclerk repository checkout.
+compatibility: Requires local filesystem access and an installed openclerk binary on PATH.
 ---
 
-# OpenClerk AgentOps
+# OpenClerk
 
 Use this skill for routine local OpenClerk knowledge-plane tasks. The production
-agent interface is the JSON runner in `cmd/openclerk-agentops`, backed by the
-`agentops` package. Supported routine tasks are:
-
-- document tasks: validate, create, list, get, append, replace-section, and resolve paths; see [references/documents.md](references/documents.md)
-- retrieval tasks: search, document links, graph neighborhoods, records lookup/entity reads, provenance events, and projection states; see [references/search.md](references/search.md) and [references/records-provenance.md](references/records-provenance.md)
-- source-linked synthesis workflows composed from document and retrieval tasks; see [references/openclerk.md](references/openclerk.md)
-
-For supported tasks, run `go run ./cmd/openclerk-agentops document` or
-`go run ./cmd/openclerk-agentops retrieval`, pass exactly one JSON request on
-stdin, read the JSON result from stdout, and answer only from that JSON. Use
-`local.Config{}` defaults unless the user names a specific dataset. The runner
-honors `OPENCLERK_DATA_DIR`, `OPENCLERK_DATABASE_PATH`, and
-`OPENCLERK_VAULT_ROOT`; optional `--data-dir`, `--db`, `--vault-root`, and
-`--embedding-provider` flags are for tests or explicit user-directed datasets
-only. For routine requests, do not pass those flags; rely on the configured
-environment so data, database, and vault paths stay together. Do not inspect the
-repo to rediscover runner schemas; use the documented request shapes directly.
-
-Before using any runner, reject final-answer-only, with exactly one assistant
-answer and no tools, when the request is missing required document or retrieval
-fields, asks for an obviously invalid limit such as a negative number, or asks
-to bypass AgentOps for routine lower-level SDK, HTTP, SQLite, or
-generated-client work, human CLI work, or unevaluated MCP-style work. Do not
-first announce skill use or process for those direct rejections.
-
-Do not inspect generated clients, backend-variant packages, generated server
-code, the Go module cache, or SQLite directly for routine OpenClerk tasks. Do
-not run broad repo searches, `bd prime`, or maintainer setup before acting on a
-direct user request to read or write local OpenClerk knowledge. Search the repo
-only if the AgentOps runner fails in a way that requires debugging the checkout.
-
-## Runner Pattern
-
-Document task example:
+interface is the installed JSON runner. This skill directory is Agent
+Skills-compatible and uses `SKILL.md` as its entrypoint.
 
 ```bash
-printf '%s\n' '{"action":"list_documents","list":{"path_prefix":"notes/","limit":20}}' |
-  go run ./cmd/openclerk-agentops document
+openclerk document
+openclerk retrieval
 ```
 
-Common one-line document shapes:
+Pipe exactly one JSON request to one runner command, then answer only from the
+JSON result. The configured local data path is already available through the
+environment. For routine requests, do not pass `--data-dir`, `--db`,
+`--vault-root`, or `--embedding-provider` unless the user explicitly names a
+specific dataset.
+
+The runner honors `OPENCLERK_DATA_DIR`, `OPENCLERK_DATABASE_PATH`, and
+`OPENCLERK_VAULT_ROOT`. Keep those paths together by relying on the configured
+environment.
+
+## Reject Before Tools
+
+Before using any runner, reject final-answer-only, with exactly one assistant
+answer and no tools, when the request:
+
+- is missing required document or retrieval fields
+- asks for an obviously invalid limit, such as a negative number
+- asks to bypass the runner for routine lower-level SDK, HTTP, SQLite,
+  legacy source-built command paths, or unevaluated MCP-style work
+
+For unsupported workflows not covered by the rejection rules, say the
+production OpenClerk runner does not support that workflow yet unless the user
+explicitly asks for lower-level SDK work.
+
+Do not inspect source files, generated artifacts, backend variants, module-cache
+docs, or SQLite directly for routine OpenClerk tasks. Do not use broad file
+enumeration such as `rg --files` or `find` to verify routine runner work; use
+runner JSON results, `list_documents`, or `get_document` instead. Search the
+repository only if the runner fails in a way that requires debugging the
+checkout.
+
+## Document Tasks
+
+Run document tasks with:
 
 ```bash
+openclerk document
+```
+
+Common request shapes:
+
+```json
+{"action":"validate","document":{"path":"notes/projects/example.md","title":"Example","body":"# Example\n\n## Summary\nReusable knowledge.\n"}}
 {"action":"create_document","document":{"path":"notes/projects/example.md","title":"Example","body":"# Example\n\n## Summary\nReusable knowledge.\n"}}
 {"action":"list_documents","list":{"path_prefix":"notes/","limit":20}}
 {"action":"get_document","doc_id":"doc_id_from_json"}
-{"action":"append_document","doc_id":"doc_id_from_json","content":"## Decisions\nUse the AgentOps runner."}
-{"action":"replace_section","doc_id":"doc_id_from_json","heading":"Decisions","content":"Use the AgentOps runner."}
+{"action":"append_document","doc_id":"doc_id_from_json","content":"## Decisions\nUse the OpenClerk runner."}
+{"action":"replace_section","doc_id":"doc_id_from_json","heading":"Decisions","content":"Use the OpenClerk runner for routine local knowledge tasks."}
+{"action":"resolve_paths"}
 ```
 
-Retrieval task example:
+Request fields are `action`, `document`, `doc_id`, `content`, `heading`, and
+`list`. A `document` has `path`, `title`, and `body`. A `list` may include
+`path_prefix`, `metadata_key`, `metadata_value`, `limit`, and `cursor`.
+
+Validation rejections are normal JSON results with `rejected: true` and
+`rejection_reason`. Runtime failures exit non-zero and write errors to stderr.
+
+When writing source-linked synthesis, search first, update an existing synthesis
+page when possible, and preserve source paths, source refs, citations, or stable
+identifiers. Synthesis is durable compiled knowledge, not a higher authority
+than the canonical sources it cites.
+
+## Retrieval Tasks
+
+Run retrieval tasks with:
 
 ```bash
-printf '%s\n' '{"action":"search","search":{"text":"architecture","limit":10}}' |
-  go run ./cmd/openclerk-agentops retrieval
+openclerk retrieval
 ```
 
-Common one-line retrieval shapes:
+Common request shapes:
 
-```bash
+```json
 {"action":"search","search":{"text":"architecture","limit":10}}
+{"action":"search","search":{"text":"architecture","path_prefix":"notes/","metadata_key":"status","metadata_value":"active","limit":10}}
 {"action":"document_links","doc_id":"doc_id_from_json"}
-{"action":"records_lookup","records":{"text":"OpenClerk AgentOps","limit":10}}
+{"action":"graph_neighborhood","doc_id":"doc_id_from_json","limit":10}
+{"action":"records_lookup","records":{"text":"OpenClerk runner","limit":10}}
+{"action":"record_entity","entity_id":"entity_id_from_json"}
 {"action":"provenance_events","provenance":{"ref_kind":"document","ref_id":"doc_id_from_json","limit":20}}
 {"action":"projection_states","projection":{"ref_kind":"document","ref_id":"doc_id_from_json","limit":20}}
 ```
 
-Validation rejections are normal JSON results with `rejected: true` and
-`rejection_reason`. Runtime failures exit non-zero and write the error to
-stderr.
+Request fields are `action`, `search`, `doc_id`, `chunk_id`, `node_id`,
+`entity_id`, `records`, `provenance`, `projection`, and `limit`.
 
-When reporting results, answer from JSON fields such as `document`,
-`documents`, `search`, `links`, `graph`, `records`, `entity`, `provenance`,
-`projections`, `paths`, or `rejection_reason`. Preserve citation paths, source
-refs, and provenance details for source-sensitive claims.
+Use search for source-grounded answers, document links for explicit markdown
+relationships, graph neighborhoods for nearby derived context, records lookup
+for promoted record-shaped documents, provenance events for derivation history,
+and projection states for freshness.
+
+## Answering From Results
+
+Answer from JSON fields such as `document`, `documents`, `search`, `links`,
+`graph`, `records`, `entity`, `provenance`, `projections`, `paths`, or
+`rejection_reason`.
+
+Preserve citation paths, source refs, chunk ids, and provenance details for
+source-sensitive claims. For filtered list answers, mention only returned rows
+unless the user explicitly asks about omitted data.

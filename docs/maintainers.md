@@ -1,16 +1,15 @@
 # Maintainer Notes
 
-This repository uses **Beads** (`bd`) in embedded mode for maintainer task tracking.
+This repository uses **Beads** (`bd`) in embedded mode for maintainer task
+tracking.
 
-The production agent surface is the [`cmd/openclerk-agentops`](../cmd/openclerk-agentops) JSON runner backed by [`agentops`](../agentops). The developer product surface is the embedded Go module exposed through the code-first [`client/local`](../client/local) SDK facade. The generated [`client/openclerk`](../client/openclerk) package remains available for raw OpenAPI fallback work. Backend-specific generated clients are not part of the public surface. There is no hosted deployment target, and the default user path does not require a daemon or bound port.
+This repository is public and includes a production `openclerk` runner binary,
+an Agent Skills-compatible OpenClerk skill, a direct-local Go SDK, and a local
+SQLite runtime. Keep maintainer docs honest about the actual supported surface.
 
-Until the first release tag is published, the install command for consumers is:
-
-```bash
-go get github.com/yazanabuashour/openclerk/client/local@main
-```
-
-Agents should start with `go run ./cmd/openclerk-agentops document` or `go run ./cmd/openclerk-agentops retrieval`. Go consumers should start with `local.OpenClient(local.Config{})`. They can import [`client/openclerk`](../client/openclerk) from the same module only when generated request and response types are needed. [`cmd/openclerkd`](../cmd/openclerkd) remains an intentional HTTP debug and compatibility surface, not the primary runtime path.
+Agents should start with `openclerk document` or `openclerk retrieval`. Go
+consumers should start with `local.OpenClient(local.Config{})`. There is no
+supported remote HTTP API or daemon path for `0.1.0`.
 
 ## Initial Setup
 
@@ -45,7 +44,8 @@ git config beads.role maintainer
 
 ## Sync Between Machines
 
-Push local Beads state before switching machines, then pull on the other machine:
+Push local Beads state before switching machines, then pull on the other
+machine:
 
 ```bash
 bd dolt push
@@ -59,14 +59,15 @@ bd dolt commit
 bd dolt pull
 ```
 
-## Public repo expectations
+## Public Repo Expectations
 
 - Outside contributors must be able to contribute without Beads.
 - Policy, release, and skill files are part of the public contract and should stay reviewable in Git alone.
 - Do not document machine-absolute filesystem paths in committed docs.
 - Do not assume private infrastructure, deploy secrets, or internal services exist unless they have been added explicitly.
+- Do not document a generic skill install location. Agent-specific paths may appear only as clearly labeled examples.
 
-## Repository administration
+## Repository Administration
 
 Current readiness assumptions:
 
@@ -85,33 +86,29 @@ Current review enforcement nuance:
 
 When changing GitHub settings, keep the repo aligned with:
 
-- [SECURITY.md](../SECURITY.md) for disclosure handling and release integrity expectations.
-- [.github/CODEOWNERS](../.github/CODEOWNERS) for sensitive file ownership.
-- [.github/workflows/pull-request.yml](../.github/workflows/pull-request.yml) for fork-safe checks.
-- [.github/workflows/release.yml](../.github/workflows/release.yml) for source bundle, checksum, SBOM, and attestation publication.
+- `SECURITY.md` for disclosure handling and release integrity expectations.
+- `.github/CODEOWNERS` for sensitive file ownership.
+- `.github/workflows/pull-request.yml` for fork-safe checks.
+- `.github/workflows/release.yml` for runner, skill, source, checksum, SBOM, and attestation publication.
 
-## Release workflow
+## Release Publication
 
-Before cutting the first public tag (`v0.1.0`) or any later public tag:
+The first public release tag should be `v0.1.0`. Tag a version like `v0.1.0`,
+push the tag, and let the release workflow:
 
-```bash
-gh workflow run release.yml -f ref=main
-```
+- validate tests before publish
+- create or reuse the GitHub Release
+- attach platform binary archives, the skill archive, the canonical source archive, release installer, SHA256 checksums, and SBOM
+- generate GitHub attestations for the published assets
 
-Tagged releases are the first distributable artifact. A `v0.y.z` tag triggers:
+The release bundle logic lives in `scripts/build-release-bundle.sh`. The
+installer logic lives in `scripts/install.sh`.
 
-- source archive generation
-- SHA-256 checksum generation
-- CycloneDX SBOM generation
-- Sigstore-backed provenance attestation
-- Sigstore-backed SBOM attestation
-- GitHub Release publication with the generated assets
+The release installer installs the `openclerk` binary only. It prints the skill
+source URL and instructs users to install `skills/openclerk` with their agent's
+native skill installer or skill directory.
 
-The release bundle logic lives in [`scripts/build-release-bundle.sh`](../scripts/build-release-bundle.sh).
-
-Do not add downloadable binaries or package-manager artifacts in this pass. The public release contract remains source-only.
-
-## Runtime storage defaults
+## Runtime Storage Defaults
 
 The embedded runtime defaults to:
 
@@ -119,4 +116,5 @@ The embedded runtime defaults to:
 ${XDG_DATA_HOME:-~/.local/share}/openclerk
 ```
 
-That location contains `openclerk.sqlite` plus the `vault/` tree used for canonical markdown documents.
+That location contains `openclerk.sqlite` plus the `vault/` tree used for
+canonical markdown documents.

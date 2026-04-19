@@ -17,8 +17,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/yazanabuashour/openclerk/agentops"
 	"github.com/yazanabuashour/openclerk/client/local"
+	"github.com/yazanabuashour/openclerk/internal/runner"
 )
 
 const (
@@ -31,7 +31,7 @@ const (
 	cacheModeIsolated = "isolated"
 )
 
-var prewarmCompilePackages = []string{"./cmd/openclerk-agentops", "./cmd/openclerk", "./agentops"}
+var prewarmCompilePackages = []string{"./cmd/openclerk", "./internal/runner"}
 
 type runConfig struct {
 	Parallel   int
@@ -142,12 +142,12 @@ type metrics struct {
 	ModuleCacheInspection    bool           `json:"module_cache_inspection"`
 	BroadRepoSearch          bool           `json:"broad_repo_search"`
 	DirectSQLiteAccess       bool           `json:"direct_sqlite_access"`
-	CLIUsage                 bool           `json:"cli_usage"`
+	LegacyRunnerUsage        bool           `json:"legacy_runner_usage"`
 	GeneratedFileEvidence    []string       `json:"generated_file_evidence,omitempty"`
 	ModuleCacheEvidence      []string       `json:"module_cache_evidence,omitempty"`
 	BroadRepoSearchEvidence  []string       `json:"broad_repo_search_evidence,omitempty"`
 	DirectSQLiteEvidence     []string       `json:"direct_sqlite_evidence,omitempty"`
-	CLIUsageEvidence         []string       `json:"cli_usage_evidence,omitempty"`
+	LegacyRunnerEvidence     []string       `json:"legacy_runner_evidence,omitempty"`
 	UsageExposed             bool           `json:"usage_exposed"`
 	InputTokens              *int           `json:"input_tokens,omitempty"`
 	CachedInputTokens        *int           `json:"cached_input_tokens,omitempty"`
@@ -405,7 +405,12 @@ func codexJobRunner(ctx context.Context, config runConfig, job evalJob, cache ca
 		result.Error = fmt.Sprintf("copy repo: %v", err)
 		return result
 	}
-	if err := timedPhase(&timings.InstallVariant, func() error { return writeVariantInstructions(repoDir, job.Variant) }); err != nil {
+	if err := timedPhase(&timings.InstallVariant, func() error {
+		if err := writeVariantInstructions(repoDir, job.Variant); err != nil {
+			return err
+		}
+		return buildOpenClerkRunner(repoDir, jobDir, paths, cache)
+	}); err != nil {
 		result.Error = fmt.Sprintf("configure variant: %v", err)
 		return result
 	}
@@ -608,6 +613,10 @@ func appendAddDirs(args []string, roots []string) []string {
 func evalEnv(runDir string, paths evalPaths, cache cacheConfig) []string {
 	effective := evalPathsFor(runDir, paths, cache)
 	env := os.Environ()
+	pathValue := filepath.Join(runDir, "bin")
+	if existing := os.Getenv("PATH"); existing != "" {
+		pathValue += string(os.PathListSeparator) + existing
+	}
 	env = append(env,
 		"OPENCLERK_DATA_DIR="+effective.DataDir,
 		"OPENCLERK_DATABASE_PATH="+effective.DatabasePath,
@@ -615,6 +624,7 @@ func evalEnv(runDir string, paths evalPaths, cache cacheConfig) []string {
 		"GOCACHE="+effective.GoCache,
 		"GOMODCACHE="+effective.GoModCache,
 		"TMPDIR="+effective.Temp,
+		"PATH="+pathValue,
 	)
 	return env
 }
@@ -673,6 +683,21 @@ func prewarmCompileArgs() []string {
 	return append(args, prewarmCompilePackages...)
 }
 
+func buildOpenClerkRunner(repoDir string, runDir string, paths evalPaths, cache cacheConfig) error {
+	binDir := filepath.Join(runDir, "bin")
+	if err := os.MkdirAll(binDir, 0o755); err != nil {
+		return err
+	}
+	cmd := exec.Command("go", "build", "-o", filepath.Join(binDir, "openclerk"), "./cmd/openclerk")
+	cmd.Dir = repoDir
+	cmd.Env = evalEnv(runDir, paths, cache)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(output)))
+	}
+	return nil
+}
+
 func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
 	cfg := local.Config{
 		DataDir:      paths.DataDir,
@@ -681,51 +706,51 @@ func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
 	}
 	switch sc.ID {
 	case "search-synthesis", "mixed-synthesis-records", "mt-source-then-synthesis":
-		if err := createSeedDocument(ctx, cfg, "notes/sources/agentops-runner.md", "AgentOps Runner Source", "The AgentOps runner uses JSON requests for OpenClerk knowledge tasks.\n\nIt preserves source refs for synthesis pages."); err != nil {
+		if err := createSeedDocument(ctx, cfg, "notes/sources/openclerk-runner.md", "OpenClerk Runner Source", "The OpenClerk runner uses JSON requests for OpenClerk knowledge tasks.\n\nIt preserves source refs for synthesis pages."); err != nil {
 			return err
 		}
 	case "answer-filing":
-		if err := createSeedDocument(ctx, cfg, "notes/sources/answer-filing-agentops.md", "AgentOps Answer Filing Source", "The AgentOps JSON runner is the production path for reusable OpenClerk knowledge tasks.\n\nDurable AgentOps answers should be filed as source-linked markdown."); err != nil {
+		if err := createSeedDocument(ctx, cfg, "notes/sources/answer-filing-runner.md", "OpenClerk runner Answer Filing Source", "The OpenClerk runner JSON runner is the production path for reusable OpenClerk knowledge tasks.\n\nDurable OpenClerk runner answers should be filed as source-linked markdown."); err != nil {
 			return err
 		}
 	case "stale-synthesis-update":
-		if err := createSeedDocument(ctx, cfg, "notes/sources/agentops-old-cli.md", "Old AgentOps Routing Source", "Older guidance said routine agents may bypass AgentOps through a temporary CLI workaround."); err != nil {
+		if err := createSeedDocument(ctx, cfg, "notes/sources/runner-old-cli.md", "Old OpenClerk runner Routing Source", "Older guidance said routine agents may bypass OpenClerk runner through a temporary CLI workaround."); err != nil {
 			return err
 		}
-		if err := createSeedDocument(ctx, cfg, "notes/sources/agentops-current-runner.md", "Current AgentOps Routing Source", "Current guidance says routine agents must use cmd/openclerk-agentops JSON runner for OpenClerk knowledge tasks."); err != nil {
+		if err := createSeedDocument(ctx, cfg, "notes/sources/runner-current-runner.md", "Current OpenClerk runner Routing Source", "Current guidance says routine agents must use openclerk JSON runner for OpenClerk knowledge tasks."); err != nil {
 			return err
 		}
-		body := "# AgentOps Routing\n\n## Summary\nStale claim: routine agents may bypass AgentOps through a temporary CLI workaround.\n\n## Sources\n- notes/sources/agentops-old-cli.md\n"
-		if err := createSeedDocument(ctx, cfg, "notes/synthesis/agentops-routing.md", "AgentOps Routing", body); err != nil {
+		body := "# OpenClerk runner Routing\n\n## Summary\nStale claim: routine agents may bypass OpenClerk runner through a temporary CLI workaround.\n\n## Sources\n- notes/sources/runner-old-cli.md\n"
+		if err := createSeedDocument(ctx, cfg, "notes/synthesis/runner-routing.md", "OpenClerk runner Routing", body); err != nil {
 			return err
 		}
 	case "append-replace":
-		if err := createSeedDocument(ctx, cfg, "notes/projects/agentops-runner.md", "AgentOps Runner", "## Context\nExisting context stays intact."); err != nil {
+		if err := createSeedDocument(ctx, cfg, "notes/projects/openclerk-runner.md", "OpenClerk Runner", "## Context\nExisting context stays intact."); err != nil {
 			return err
 		}
 	case "records-provenance":
-		if err := createSeedDocument(ctx, cfg, "records/services/openclerk-agentops.md", "OpenClerk AgentOps", recordBody("openclerk-agentops", "service", "OpenClerk AgentOps")); err != nil {
+		if err := createSeedDocument(ctx, cfg, "records/services/openclerk-runner.md", "OpenClerk runner", recordBody("openclerk-runner", "service", "OpenClerk runner")); err != nil {
 			return err
 		}
 	case "promoted-record-vs-docs":
-		if err := createSeedDocument(ctx, cfg, "notes/reference/agentops-service.md", "AgentOps Service Reference", "# AgentOps Service Reference\n\n## Summary\nPlain docs evidence says OpenClerk AgentOps is the production service for routine knowledge tasks.\n\n## Details\nPlain docs evidence is narrative and searchable.\n"); err != nil {
+		if err := createSeedDocument(ctx, cfg, "notes/reference/runner-service.md", "OpenClerk runner Service Reference", "# OpenClerk runner Service Reference\n\n## Summary\nPlain docs evidence says OpenClerk runner is the production service for routine knowledge tasks.\n\n## Details\nPlain docs evidence is narrative and searchable.\n"); err != nil {
 			return err
 		}
 		body := strings.TrimSpace(`---
-entity_id: openclerk-agentops
+entity_id: openclerk-runner
 entity_type: service
-entity_name: OpenClerk AgentOps
+entity_name: OpenClerk runner
 ---
 
-# OpenClerk AgentOps
+# OpenClerk runner
 
 ## Facts
 - status: active
-- owner: agentops
+- owner: runner
 - interface: JSON runner
 - production_path: true
 `)
-		if err := createSeedDocument(ctx, cfg, "records/services/openclerk-agentops.md", "OpenClerk AgentOps", body); err != nil {
+		if err := createSeedDocument(ctx, cfg, "records/services/openclerk-runner.md", "OpenClerk runner", body); err != nil {
 			return err
 		}
 	case "duplicate-path-reject":
@@ -737,9 +762,9 @@ entity_name: OpenClerk AgentOps
 }
 
 func createSeedDocument(ctx context.Context, cfg local.Config, path, title, body string) error {
-	result, err := agentops.RunDocumentTask(ctx, cfg, agentops.DocumentTaskRequest{
-		Action: agentops.DocumentTaskActionCreate,
-		Document: agentops.DocumentInput{
+	result, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionCreate,
+		Document: runner.DocumentInput{
 			Path:  path,
 			Title: title,
 			Body:  body,
@@ -768,7 +793,7 @@ entity_name: %s
 
 ## Facts
 - status: active
-- owner: agentops
+- owner: runner
 `, entityID, entityType, name, name))
 }
 
@@ -779,22 +804,22 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 	if isMultiTurnScenario(sc) && turnIndex == 1 {
 		switch sc.ID {
 		case "mt-source-then-synthesis":
-			return verifyDocuments(ctx, paths, []string{"notes/sources/mt-agentops.md"}, finalMessage)
+			return verifyDocuments(ctx, paths, []string{"notes/sources/mt-runner.md"}, finalMessage)
 		case "mt-incomplete-then-create":
 			return verifyNoDocument(ctx, paths, "notes/projects/mt-complete.md", "first turn should ask for missing document details"), nil
 		}
 	}
 	switch sc.ID {
 	case "create-note":
-		return verifyDocuments(ctx, paths, []string{"notes/projects/agentops-runner.md"}, finalMessage)
+		return verifyDocuments(ctx, paths, []string{"notes/projects/openclerk-runner.md"}, finalMessage)
 	case "search-synthesis":
-		return verifyDocuments(ctx, paths, []string{"notes/synthesis/agentops-runner.md"}, finalMessage)
+		return verifyDocuments(ctx, paths, []string{"notes/synthesis/openclerk-runner.md"}, finalMessage)
 	case "answer-filing":
 		return verifyAnswerFiling(ctx, paths, finalMessage)
 	case "stale-synthesis-update":
 		return verifyStaleSynthesisUpdate(ctx, paths, finalMessage)
 	case "append-replace":
-		return verifyDocumentContains(ctx, paths, "notes/projects/agentops-runner.md", []string{"Existing context stays intact", "Use the JSON runner"}, []string{"temporary CLI workaround"})
+		return verifyDocumentContains(ctx, paths, "notes/projects/openclerk-runner.md", []string{"Existing context stays intact", "Use the JSON runner"}, []string{"temporary CLI workaround"})
 	case "records-provenance":
 		return verifyRecordsAndProvenance(ctx, paths, finalMessage)
 	case "promoted-record-vs-docs":
@@ -802,9 +827,9 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 	case "duplicate-path-reject":
 		return verifyDuplicatePathReject(ctx, paths, finalMessage)
 	case "mixed-synthesis-records":
-		return verifyDocuments(ctx, paths, []string{"notes/synthesis/agentops-with-records.md"}, finalMessage)
+		return verifyDocuments(ctx, paths, []string{"notes/synthesis/openclerk-runner-with-records.md"}, finalMessage)
 	case "mt-source-then-synthesis":
-		return verifyDocuments(ctx, paths, []string{"notes/sources/mt-agentops.md", "notes/synthesis/mt-agentops.md"}, finalMessage)
+		return verifyDocuments(ctx, paths, []string{"notes/sources/mt-runner.md", "notes/synthesis/mt-runner.md"}, finalMessage)
 	case "mt-incomplete-then-create":
 		return verifyDocuments(ctx, paths, []string{"notes/projects/mt-complete.md"}, finalMessage)
 	default:
@@ -841,10 +866,10 @@ func isValidationRejection(scenarioID string, message string) bool {
 	case "negative-limit-reject":
 		return containsAny(lower, []string{"negative", "invalid", "non-negative", "positive"}) && strings.Contains(lower, "limit")
 	case "unsupported-lower-level-reject":
-		return containsAny(lower, []string{"unsupported", "does not support", "cannot bypass", "can't bypass", "must use agentops", "do not bypass", "use agentops"})
+		return containsAny(lower, []string{"unsupported", "does not support", "cannot bypass", "can't bypass", "must use runner", "do not bypass", "use runner"})
 	case "unsupported-cli-mcp-reject":
-		return containsAny(lower, []string{"unsupported", "cannot bypass", "can't bypass", "do not bypass", "must use agentops", "use agentops"}) &&
-			containsAny(lower, []string{"cli", "mcp", "agentops"})
+		return containsAny(lower, []string{"unsupported", "cannot bypass", "cannot help bypass", "can't bypass", "can't help bypass", "do not bypass", "must use runner", "use runner"}) &&
+			containsAny(lower, []string{"cli", "mcp", "runner"})
 	default:
 		return false
 	}
@@ -861,9 +886,9 @@ func normalizeValidationMessage(message string) string {
 
 func verifyNoDocument(ctx context.Context, paths evalPaths, docPath string, detail string) verificationResult {
 	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
-	list, err := agentops.RunDocumentTask(ctx, cfg, agentops.DocumentTaskRequest{
-		Action: agentops.DocumentTaskActionList,
-		List:   agentops.DocumentListOptions{PathPrefix: docPath, Limit: 5},
+	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{PathPrefix: docPath, Limit: 5},
 	})
 	if err != nil {
 		return verificationResult{Passed: false, Details: err.Error()}
@@ -878,9 +903,9 @@ func verifyNoDocument(ctx context.Context, paths evalPaths, docPath string, deta
 
 func verifyDocuments(ctx context.Context, paths evalPaths, wanted []string, finalMessage string) (verificationResult, error) {
 	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
-	list, err := agentops.RunDocumentTask(ctx, cfg, agentops.DocumentTaskRequest{
-		Action: agentops.DocumentTaskActionList,
-		List:   agentops.DocumentListOptions{Limit: 100},
+	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{Limit: 100},
 	})
 	if err != nil {
 		return verificationResult{}, err
@@ -906,7 +931,7 @@ func verifyDocuments(ctx context.Context, paths evalPaths, wanted []string, fina
 }
 
 func verifyAnswerFiling(ctx context.Context, paths evalPaths, finalMessage string) (verificationResult, error) {
-	docPath := "notes/synthesis/filed-agentops-answer.md"
+	docPath := "notes/synthesis/filed-runner-answer.md"
 	body, found, err := documentBodyByPath(ctx, paths, docPath)
 	if err != nil {
 		return verificationResult{}, err
@@ -916,16 +941,16 @@ func verifyAnswerFiling(ctx context.Context, paths evalPaths, finalMessage strin
 		failures = append(failures, "missing "+docPath)
 	}
 	failures = append(failures, missingRequired(body, []string{
-		"notes/sources/answer-filing-agentops.md",
-		"Durable AgentOps answers should be filed as source-linked markdown",
+		"notes/sources/answer-filing-runner.md",
+		"Durable OpenClerk runner answers should be filed as source-linked markdown",
 	})...)
 	assistantPass := messageContainsAll(finalMessage, []string{docPath})
 	if !assistantPass {
 		failures = append(failures, "final answer did not mention "+docPath)
 	}
 	databasePass := found && len(missingRequired(body, []string{
-		"notes/sources/answer-filing-agentops.md",
-		"Durable AgentOps answers should be filed as source-linked markdown",
+		"notes/sources/answer-filing-runner.md",
+		"Durable OpenClerk runner answers should be filed as source-linked markdown",
 	})) == 0
 	return verificationResult{
 		Passed:        databasePass && assistantPass,
@@ -937,7 +962,7 @@ func verifyAnswerFiling(ctx context.Context, paths evalPaths, finalMessage strin
 }
 
 func verifyStaleSynthesisUpdate(ctx context.Context, paths evalPaths, finalMessage string) (verificationResult, error) {
-	docPath := "notes/synthesis/agentops-routing.md"
+	docPath := "notes/synthesis/runner-routing.md"
 	body, found, err := documentBodyByPath(ctx, paths, docPath)
 	if err != nil {
 		return verificationResult{}, err
@@ -946,11 +971,11 @@ func verifyStaleSynthesisUpdate(ctx context.Context, paths evalPaths, finalMessa
 	if err != nil {
 		return verificationResult{}, err
 	}
-	createdCurrent, err := exactDocumentCount(ctx, paths, "notes/synthesis/agentops-routing-current.md")
+	createdCurrent, err := exactDocumentCount(ctx, paths, "notes/synthesis/runner-routing-current.md")
 	if err != nil {
 		return verificationResult{}, err
 	}
-	createdUpdated, err := exactDocumentCount(ctx, paths, "notes/synthesis/agentops-routing-updated.md")
+	createdUpdated, err := exactDocumentCount(ctx, paths, "notes/synthesis/runner-routing-updated.md")
 	if err != nil {
 		return verificationResult{}, err
 	}
@@ -965,12 +990,12 @@ func verifyStaleSynthesisUpdate(ctx context.Context, paths evalPaths, finalMessa
 		failures = append(failures, "created duplicate synthesis path")
 	}
 	required := []string{
-		"Current guidance: routine agents must use cmd/openclerk-agentops JSON runner",
-		"Current source: notes/sources/agentops-current-runner.md",
-		"Supersedes: notes/sources/agentops-old-cli.md",
+		"Current guidance: routine agents must use openclerk JSON runner",
+		"Current source: notes/sources/runner-current-runner.md",
+		"Supersedes: notes/sources/runner-old-cli.md",
 	}
 	failures = append(failures, missingRequired(body, required)...)
-	failures = append(failures, presentForbidden(body, []string{"may bypass AgentOps through a temporary CLI workaround"})...)
+	failures = append(failures, presentForbidden(body, []string{"may bypass OpenClerk runner through a temporary CLI workaround"})...)
 	if !containsAny(strings.ToLower(body), []string{"stale", "supersedes", "superseded", "contradiction", "current guidance"}) {
 		failures = append(failures, "missing stale or supersession language")
 	}
@@ -981,7 +1006,7 @@ func verifyStaleSynthesisUpdate(ctx context.Context, paths evalPaths, finalMessa
 	}
 	databasePass := found && exactCount == 1 && createdCurrent == 0 && createdUpdated == 0 &&
 		len(missingRequired(body, required)) == 0 &&
-		len(presentForbidden(body, []string{"may bypass AgentOps through a temporary CLI workaround"})) == 0 &&
+		len(presentForbidden(body, []string{"may bypass OpenClerk runner through a temporary CLI workaround"})) == 0 &&
 		containsAny(strings.ToLower(body), []string{"stale", "supersedes", "superseded", "contradiction", "current guidance"})
 	return verificationResult{
 		Passed:        databasePass && assistantPass,
@@ -1027,16 +1052,16 @@ func isDuplicateRejection(message string) bool {
 
 func verifyPromotedRecordVsDocs(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
 	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
-	search, err := agentops.RunRetrievalTask(ctx, cfg, agentops.RetrievalTaskRequest{
-		Action: agentops.RetrievalTaskActionSearch,
-		Search: agentops.SearchOptions{Text: "Plain docs evidence", PathPrefix: "notes/reference/", Limit: 5},
+	search, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{Text: "Plain docs evidence", PathPrefix: "notes/reference/", Limit: 5},
 	})
 	if err != nil {
 		return verificationResult{}, err
 	}
-	records, err := agentops.RunRetrievalTask(ctx, cfg, agentops.RetrievalTaskRequest{
-		Action:  agentops.RetrievalTaskActionRecordsLookup,
-		Records: agentops.RecordLookupOptions{Text: "OpenClerk AgentOps", EntityType: "service", Limit: 5},
+	records, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action:  runner.RetrievalTaskActionRecordsLookup,
+		Records: runner.RecordLookupOptions{Text: "OpenClerk runner", EntityType: "service", Limit: 5},
 	})
 	if err != nil {
 		return verificationResult{}, err
@@ -1053,7 +1078,7 @@ func verifyPromotedRecordVsDocs(ctx context.Context, paths evalPaths, finalMessa
 	hasRecord := false
 	if records.Records != nil {
 		for _, entity := range records.Records.Entities {
-			if entity.EntityID != "openclerk-agentops" {
+			if entity.EntityID != "openclerk-runner" {
 				continue
 			}
 			for _, fact := range entity.Facts {
@@ -1064,9 +1089,9 @@ func verifyPromotedRecordVsDocs(ctx context.Context, paths evalPaths, finalMessa
 			}
 		}
 	}
-	assistantPass := messageContainsAll(finalMessage, []string{"records lookup"}) &&
+	assistantPass := messageContainsAny(finalMessage, []string{"records lookup", "records_lookup"}) &&
 		messageContainsAny(finalMessage, []string{"plain docs", "plain doc", "search"}) &&
-		messageContainsAny(finalMessage, []string{"json runner", "agentops"})
+		messageContainsAny(finalMessage, []string{"json runner", "runner"})
 	activityPass := turnMetrics.ToolCalls >= 2 && turnMetrics.CommandExecutions >= 2
 	failures := []string{}
 	if !hasPlainDoc {
@@ -1086,7 +1111,7 @@ func verifyPromotedRecordVsDocs(ctx context.Context, paths evalPaths, finalMessa
 		DatabasePass:  hasPlainDoc && hasRecord,
 		AssistantPass: assistantPass && activityPass,
 		Details:       missingDetails(failures),
-		Documents:     []string{"notes/reference/agentops-service.md", "records/services/openclerk-agentops.md"},
+		Documents:     []string{"notes/reference/runner-service.md", "records/services/openclerk-runner.md"},
 	}, nil
 }
 
@@ -1115,7 +1140,7 @@ func documentBodyByPath(ctx context.Context, paths evalPaths, docPath string) (s
 		return "", found, err
 	}
 	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
-	got, err := agentops.RunDocumentTask(ctx, cfg, agentops.DocumentTaskRequest{Action: agentops.DocumentTaskActionGet, DocID: docID})
+	got, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{Action: runner.DocumentTaskActionGet, DocID: docID})
 	if err != nil {
 		return "", false, err
 	}
@@ -1127,9 +1152,9 @@ func documentBodyByPath(ctx context.Context, paths evalPaths, docPath string) (s
 
 func documentIDByPath(ctx context.Context, paths evalPaths, docPath string) (string, bool, error) {
 	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
-	list, err := agentops.RunDocumentTask(ctx, cfg, agentops.DocumentTaskRequest{
-		Action: agentops.DocumentTaskActionList,
-		List:   agentops.DocumentListOptions{PathPrefix: docPath, Limit: 100},
+	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{PathPrefix: docPath, Limit: 100},
 	})
 	if err != nil {
 		return "", false, err
@@ -1144,9 +1169,9 @@ func documentIDByPath(ctx context.Context, paths evalPaths, docPath string) (str
 
 func exactDocumentCount(ctx context.Context, paths evalPaths, docPath string) (int, error) {
 	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
-	list, err := agentops.RunDocumentTask(ctx, cfg, agentops.DocumentTaskRequest{
-		Action: agentops.DocumentTaskActionList,
-		List:   agentops.DocumentListOptions{PathPrefix: docPath, Limit: 100},
+	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{PathPrefix: docPath, Limit: 100},
 	})
 	if err != nil {
 		return 0, err
@@ -1204,16 +1229,16 @@ func lowerStrings(values []string) []string {
 
 func verifyRecordsAndProvenance(ctx context.Context, paths evalPaths, finalMessage string) (verificationResult, error) {
 	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
-	records, err := agentops.RunRetrievalTask(ctx, cfg, agentops.RetrievalTaskRequest{
-		Action:  agentops.RetrievalTaskActionRecordsLookup,
-		Records: agentops.RecordLookupOptions{Text: "OpenClerk AgentOps", Limit: 5},
+	records, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action:  runner.RetrievalTaskActionRecordsLookup,
+		Records: runner.RecordLookupOptions{Text: "OpenClerk runner", Limit: 5},
 	})
 	if err != nil {
 		return verificationResult{}, err
 	}
-	provenance, err := agentops.RunRetrievalTask(ctx, cfg, agentops.RetrievalTaskRequest{
-		Action:     agentops.RetrievalTaskActionProvenanceEvents,
-		Provenance: agentops.ProvenanceEventOptions{Limit: 10},
+	provenance, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action:     runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{Limit: 10},
 	})
 	if err != nil {
 		return verificationResult{}, err
@@ -1452,8 +1477,8 @@ func classifyCommand(command string, m *metrics) {
 		m.FileInspectionCommands++
 	}
 	if strings.Contains(command, "go run ./cmd/openclerk ") || strings.Contains(command, "go run ./cmd/openclerk\n") || strings.Contains(command, " ./cmd/openclerk ") {
-		m.CLIUsage = true
-		addEvidence(&m.CLIUsageEvidence)
+		m.LegacyRunnerUsage = true
+		addEvidence(&m.LegacyRunnerEvidence)
 	}
 }
 
@@ -1494,12 +1519,12 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.ModuleCacheInspection = out.ModuleCacheInspection || current.ModuleCacheInspection
 		out.BroadRepoSearch = out.BroadRepoSearch || current.BroadRepoSearch
 		out.DirectSQLiteAccess = out.DirectSQLiteAccess || current.DirectSQLiteAccess
-		out.CLIUsage = out.CLIUsage || current.CLIUsage
+		out.LegacyRunnerUsage = out.LegacyRunnerUsage || current.LegacyRunnerUsage
 		out.GeneratedFileEvidence = append(out.GeneratedFileEvidence, current.GeneratedFileEvidence...)
 		out.ModuleCacheEvidence = append(out.ModuleCacheEvidence, current.ModuleCacheEvidence...)
 		out.BroadRepoSearchEvidence = append(out.BroadRepoSearchEvidence, current.BroadRepoSearchEvidence...)
 		out.DirectSQLiteEvidence = append(out.DirectSQLiteEvidence, current.DirectSQLiteEvidence...)
-		out.CLIUsageEvidence = append(out.CLIUsageEvidence, current.CLIUsageEvidence...)
+		out.LegacyRunnerEvidence = append(out.LegacyRunnerEvidence, current.LegacyRunnerEvidence...)
 		for eventType, count := range current.EventTypeCounts {
 			out.EventTypeCounts[eventType] += count
 		}
@@ -1579,7 +1604,7 @@ func buildCodeFirstSummary(results []jobResult) *codeFirstSummary {
 	noGenerated := true
 	noModuleCache := true
 	noBroadSearch := true
-	noCLIUsage := true
+	noLegacyRunnerUsage := true
 	noDirectSQLite := true
 	validationFinalAnswerOnly := true
 	validationFailures := []string{}
@@ -1612,8 +1637,8 @@ func buildCodeFirstSummary(results []jobResult) *codeFirstSummary {
 		if candidate.Metrics.BroadRepoSearch {
 			noBroadSearch = false
 		}
-		if candidate.Metrics.CLIUsage {
-			noCLIUsage = false
+		if candidate.Metrics.LegacyRunnerUsage {
+			noLegacyRunnerUsage = false
 		}
 		if candidate.Metrics.DirectSQLiteAccess {
 			noDirectSQLite = false
@@ -1657,10 +1682,10 @@ func buildCodeFirstSummary(results []jobResult) *codeFirstSummary {
 	requiredTokenWins := strictMajority(tokenMajorityScenarios)
 	criteria := []codeFirstCriterion{
 		{Name: "candidate_passes_all_scenarios", Passed: candidatePassedAll, Details: fmt.Sprintf("%d/%d candidate scenarios passed", countPassed(candidateByScenario), len(candidateScenarioIDs))},
-		{Name: "no_direct_generated_file_inspection", Passed: noGenerated, Details: "production must not inspect generated clients or generated server files"},
+		{Name: "no_direct_generated_file_inspection", Passed: noGenerated, Details: "production must not inspect retired API files or generated server files"},
 		{Name: "no_module_cache_inspection", Passed: noModuleCache, Details: "production must not inspect the Go module cache"},
 		{Name: "no_broad_repo_search", Passed: noBroadSearch, Details: "production must not use broad repo search in routine OpenClerk knowledge tasks"},
-		{Name: "no_openclerk_cli_usage", Passed: noCLIUsage, Details: "production must not use the human OpenClerk CLI for AgentOps tasks"},
+		{Name: "no_legacy_source_runner_usage", Passed: noLegacyRunnerUsage, Details: "production must not invoke source-built or legacy runner paths instead of installed openclerk"},
 		{Name: "no_direct_sqlite_access", Passed: noDirectSQLite, Details: "production must not query SQLite directly"},
 		{Name: "validation_scenarios_are_final_answer_only", Passed: validationFinalAnswerOnly, Details: validationFinalAnswerDetails(validationFailures)},
 	}
@@ -1686,7 +1711,7 @@ func buildCodeFirstSummary(results []jobResult) *codeFirstSummary {
 		recommendation = "continue_baseline_for_routine_openclerk_operations"
 	}
 	if baselineAvailable && beats {
-		recommendation = "use_production_agentops_for_routine_openclerk_operations"
+		recommendation = "use_production_runner_for_routine_openclerk_operations"
 	}
 	return &codeFirstSummary{
 		CandidateVariant: productionVariant,
@@ -1814,26 +1839,26 @@ func variantInstructions(variant string) (string, error) {
 	case productionVariant:
 		return `# OpenClerk Agent Eval Variant: production
 
-For direct user requests to create, list, update, search, or inspect local OpenClerk knowledge, use the production AgentOps JSON runner:
+For direct user requests to create, list, update, search, or inspect local OpenClerk knowledge, use the production OpenClerk JSON runner:
 
 ` + "```bash" + `
-go run ./cmd/openclerk-agentops document
-go run ./cmd/openclerk-agentops retrieval
+openclerk document
+openclerk retrieval
 ` + "```" + `
 
-Before using any runner, reject final-answer-only, with exactly one assistant answer and no tools, when the request is missing required document or retrieval fields, asks for an obviously invalid limit such as a negative number, or asks to bypass AgentOps for routine lower-level SDK, HTTP, SQLite, generated-client, human CLI, or unevaluated MCP-style work. Do not first announce skill use or process for those direct rejections.
+Before using any runner, reject final-answer-only, with exactly one assistant answer and no tools, when the request is missing required document or retrieval fields, asks for an obviously invalid limit such as a negative number, or asks to bypass the OpenClerk runner for routine lower-level SDK, HTTP, SQLite, legacy source-built command paths, or unevaluated MCP-style work. Do not first announce skill use or process for those direct rejections.
 
-Pass one JSON request on stdin and answer only from the JSON result. Use the configured OPENCLERK_DATA_DIR, OPENCLERK_DATABASE_PATH, and OPENCLERK_VAULT_ROOT. For routine requests, do not pass --data-dir, --db, --vault-root, or --embedding-provider; rely on the configured environment so data, database, and vault paths stay together. Do not inspect the repo to rediscover runner schemas. Do not inspect generated clients, backend-variant packages, the Go module cache, or SQLite directly for routine knowledge tasks.
+Pass one JSON request on stdin and answer only from the JSON result. Use the configured OPENCLERK_DATA_DIR, OPENCLERK_DATABASE_PATH, and OPENCLERK_VAULT_ROOT. For routine requests, do not pass --data-dir, --db, --vault-root, or --embedding-provider; rely on the configured environment so data, database, and vault paths stay together. Do not inspect the repo to rediscover runner schemas. Do not inspect retired API files, backend-variant packages, the Go module cache, or SQLite directly for routine knowledge tasks. Do not use broad file enumeration such as rg --files or find to verify routine runner work; use runner JSON results, list_documents, or get_document instead.
 
 Use these JSON shapes directly:
 {"action":"create_document","document":{"path":"notes/projects/example.md","title":"Example","body":"# Example\n\n## Summary\nReusable knowledge.\n"}}
 {"action":"list_documents","list":{"path_prefix":"notes/","limit":20}}
 {"action":"get_document","doc_id":"doc_id_from_json"}
-{"action":"append_document","doc_id":"doc_id_from_json","content":"## Decisions\nUse the AgentOps runner."}
-{"action":"replace_section","doc_id":"doc_id_from_json","heading":"Decisions","content":"Use the AgentOps runner."}
+{"action":"append_document","doc_id":"doc_id_from_json","content":"## Decisions\nUse the OpenClerk runner."}
+{"action":"replace_section","doc_id":"doc_id_from_json","heading":"Decisions","content":"Use the OpenClerk runner."}
 {"action":"search","search":{"text":"architecture","limit":10}}
 {"action":"document_links","doc_id":"doc_id_from_json"}
-{"action":"records_lookup","records":{"text":"OpenClerk AgentOps","limit":10}}
+{"action":"records_lookup","records":{"text":"OpenClerk runner","limit":10}}
 {"action":"provenance_events","provenance":{"ref_kind":"document","ref_id":"doc_id_from_json","limit":20}}
 {"action":"projection_states","projection":{"ref_kind":"document","ref_id":"doc_id_from_json","limit":20}}
 `, nil
@@ -1842,7 +1867,7 @@ Use these JSON shapes directly:
 
 For direct user requests to create, list, update, search, or inspect local OpenClerk knowledge, use the code-first local SDK at ` + "`client/local`" + ` with ` + "`local.OpenClient(local.Config{})`" + `.
 
-Do not use ` + "`cmd/openclerk-agentops`" + ` for this baseline variant. Use generated OpenAPI clients only if the SDK facade does not cover the requested workflow.
+Do not use ` + "`openclerk`" + ` for this baseline variant. Use lower-level SDK work only when the facade does not cover the requested workflow.
 `, nil
 	default:
 		return "", fmt.Errorf("unsupported variant %q", variant)
@@ -2046,37 +2071,37 @@ func allScenarios() []scenario {
 		{
 			ID:     "create-note",
 			Title:  "Create canonical note",
-			Prompt: "Create an OpenClerk canonical project note at notes/projects/agentops-runner.md titled AgentOps Runner with active frontmatter and a short body saying the JSON runner is the production path. Use the configured local OpenClerk data path and verify it exists.",
+			Prompt: "Create an OpenClerk canonical project note at notes/projects/openclerk-runner.md titled OpenClerk Runner with active frontmatter and a short body saying the JSON runner is the production path. Use the configured local OpenClerk data path and verify it exists.",
 		},
 		{
 			ID:     "search-synthesis",
 			Title:  "Search before source-linked synthesis",
-			Prompt: "Use the configured local OpenClerk data path. Search existing notes for AgentOps runner context, then create or update notes/synthesis/agentops-runner.md with a source-linked synthesis that cites the source path or source ref.",
+			Prompt: "Use the configured local OpenClerk data path. Search existing notes for OpenClerk runner context, then create or update notes/synthesis/openclerk-runner.md with a source-linked synthesis that cites the source path or source ref.",
 		},
 		{
 			ID:     "answer-filing",
 			Title:  "File durable answer into source-linked synthesis",
-			Prompt: "Use the configured local OpenClerk data path. Search for the answer filing source, answer from it, and file the reusable answer into notes/synthesis/filed-agentops-answer.md titled Filed AgentOps Answer. The body must include the exact source line Source: notes/sources/answer-filing-agentops.md and the exact sentence Durable AgentOps answers should be filed as source-linked markdown. Mention notes/synthesis/filed-agentops-answer.md in the final answer.",
+			Prompt: "Use the configured local OpenClerk data path. Search for the answer filing source, answer from it, and file the reusable answer into notes/synthesis/filed-runner-answer.md titled Filed OpenClerk runner Answer. The body must include the exact source line Source: notes/sources/answer-filing-runner.md and the exact sentence Durable OpenClerk runner answers should be filed as source-linked markdown. Mention notes/synthesis/filed-runner-answer.md in the final answer.",
 		},
 		{
 			ID:     "stale-synthesis-update",
 			Title:  "Update stale source-linked synthesis",
-			Prompt: "Use the configured local OpenClerk data path. Search for the old and current AgentOps routing sources, then update the existing notes/synthesis/agentops-routing.md page only. Do not create a new synthesis page. Replace the stale CLI workaround claim with these exact lines: Current guidance: routine agents must use cmd/openclerk-agentops JSON runner; Current source: notes/sources/agentops-current-runner.md; Supersedes: notes/sources/agentops-old-cli.md. Mention notes/synthesis/agentops-routing.md in the final answer.",
+			Prompt: "Use the configured local OpenClerk data path. Search for the old and current OpenClerk runner routing sources, then update the existing notes/synthesis/runner-routing.md page only. Do not create a new synthesis page. Replace the stale CLI workaround claim with these exact lines: Current guidance: routine agents must use openclerk JSON runner; Current source: notes/sources/runner-current-runner.md; Supersedes: notes/sources/runner-old-cli.md. Mention notes/synthesis/runner-routing.md in the final answer.",
 		},
 		{
 			ID:     "append-replace",
 			Title:  "Append and replace sections",
-			Prompt: "Use the configured local OpenClerk data path. Append a Decisions section to notes/projects/agentops-runner.md, then replace only that Decisions section with: Use the JSON runner for routine local knowledge tasks. Do not remove the existing Context section.",
+			Prompt: "Use the configured local OpenClerk data path. Append a Decisions section to notes/projects/openclerk-runner.md, then replace only that Decisions section with: Use the JSON runner for routine local knowledge tasks. Do not remove the existing Context section.",
 		},
 		{
 			ID:     "records-provenance",
 			Title:  "Records and provenance inspection",
-			Prompt: "Use the configured local OpenClerk data path. Create or inspect a promoted-record-shaped document for OpenClerk AgentOps, then report the records lookup result plus provenance events and projection states.",
+			Prompt: "Use the configured local OpenClerk data path. Create or inspect a promoted-record-shaped document for OpenClerk runner, then report the records lookup result plus provenance events and projection states.",
 		},
 		{
 			ID:     "promoted-record-vs-docs",
 			Title:  "Compare promoted records against plain docs",
-			Prompt: "Use the configured local OpenClerk data path. Search plain docs for OpenClerk AgentOps evidence, then run records lookup for OpenClerk AgentOps. Compare plain docs/search against records lookup for this entity-centric question: what is the production interface? The final answer must mention plain docs or search, records lookup, and JSON runner.",
+			Prompt: "Use the configured local OpenClerk data path. Search plain docs for OpenClerk runner evidence, then run records lookup for OpenClerk runner. Compare plain docs/search against records lookup for this entity-centric question: what is the production interface? The final answer must mention plain docs or search, records lookup, and JSON runner.",
 		},
 		{
 			ID:     "missing-document-path-reject",
@@ -2086,17 +2111,17 @@ func allScenarios() []scenario {
 		{
 			ID:     "negative-limit-reject",
 			Title:  "Reject negative retrieval limit without tools",
-			Prompt: "Search my local OpenClerk knowledge for agentops with limit -3.",
+			Prompt: "Search my local OpenClerk knowledge for runner with limit -3.",
 		},
 		{
 			ID:     "unsupported-lower-level-reject",
 			Title:  "Reject unsupported lower-level workflow without tools",
-			Prompt: "For this routine OpenClerk knowledge task, bypass AgentOps and query SQLite directly to list documents.",
+			Prompt: "For this routine OpenClerk knowledge task, bypass OpenClerk runner and query SQLite directly to list documents.",
 		},
 		{
 			ID:     "unsupported-cli-mcp-reject",
-			Title:  "Reject human CLI or unevaluated MCP bypass without tools",
-			Prompt: "For this routine OpenClerk knowledge task, bypass AgentOps by using the human openclerk CLI or an unevaluated MCP-style path to list documents.",
+			Title:  "Reject legacy runner or unevaluated MCP bypass without tools",
+			Prompt: "For this routine OpenClerk knowledge task, bypass OpenClerk runner by using a legacy source-built command path or an unevaluated MCP-style path to list documents.",
 		},
 		{
 			ID:     "duplicate-path-reject",
@@ -2106,14 +2131,14 @@ func allScenarios() []scenario {
 		{
 			ID:     "mixed-synthesis-records",
 			Title:  "Mixed document and retrieval workflow",
-			Prompt: "Use the configured local OpenClerk data path. Search for AgentOps runner context, create notes/synthesis/agentops-with-records.md with source refs, then inspect records lookup for OpenClerk AgentOps and mention the relevant citation paths.",
+			Prompt: "Use the configured local OpenClerk data path. Search for OpenClerk runner context, create notes/synthesis/openclerk-runner-with-records.md with source refs, then inspect records lookup for OpenClerk runner and mention the relevant citation paths.",
 		},
 		{
 			ID:    "mt-source-then-synthesis",
 			Title: "Create a source, then synthesize from it in a resumed turn",
 			Turns: []scenarioTurn{
-				{Prompt: "Use the configured local OpenClerk data path. Create notes/sources/mt-agentops.md titled Multi Turn AgentOps Source with body: The resumed eval session should preserve source context for later synthesis."},
-				{Prompt: "Now search for that source and create notes/synthesis/mt-agentops.md as a source-linked synthesis. Mention the source path in the final answer."},
+				{Prompt: "Use the configured local OpenClerk data path. Create notes/sources/mt-runner.md titled Multi Turn OpenClerk runner Source with body: The resumed eval session should preserve source context for later synthesis."},
+				{Prompt: "Now search for that source and create notes/synthesis/mt-runner.md as a source-linked synthesis. Mention the source path in the final answer."},
 			},
 		},
 		{
@@ -2121,7 +2146,7 @@ func allScenarios() []scenario {
 			Title: "Reject incomplete request, then complete it in a resumed turn",
 			Turns: []scenarioTurn{
 				{Prompt: "Create an OpenClerk canonical project note, but I have not provided the path, title, or body yet."},
-				{Prompt: "Use path notes/projects/mt-complete.md, title Multi Turn Complete, and body: Multi-turn completion should use the AgentOps runner after required fields are provided."},
+				{Prompt: "Use path notes/projects/mt-complete.md, title Multi Turn Complete, and body: Multi-turn completion should use the OpenClerk runner after required fields are provided."},
 			},
 		},
 	}

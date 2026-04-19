@@ -3,24 +3,19 @@ package local
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 
-	openclerkclient "github.com/yazanabuashour/openclerk/client/openclerk"
-	"github.com/yazanabuashour/openclerk/internal/api"
 	"github.com/yazanabuashour/openclerk/internal/app"
 	"github.com/yazanabuashour/openclerk/internal/domain"
 	"github.com/yazanabuashour/openclerk/internal/infra/sqlite"
 )
 
 const (
-	defaultAppDir    = "openclerk"
-	defaultDBFile    = "openclerk.sqlite"
-	defaultVaultDir  = "vault"
-	inProcessBaseURL = "http://openclerk.local"
+	defaultAppDir   = "openclerk"
+	defaultDBFile   = "openclerk.sqlite"
+	defaultVaultDir = "vault"
 )
 
 // Config controls where the embedded runtime stores SQLite and canonical markdown data.
@@ -42,7 +37,6 @@ type Paths struct {
 type Runtime struct {
 	paths   Paths
 	service *app.Service
-	handler http.Handler
 }
 
 // Close releases the underlying SQLite-backed runtime.
@@ -86,20 +80,6 @@ func ResolvePaths(cfg Config) (Paths, error) {
 	return paths, nil
 }
 
-// Open creates the primary embedded OpenClerk client without binding a local port.
-func Open(cfg Config) (*openclerkclient.ClientWithResponses, *Runtime, error) {
-	runtime, err := newRuntime(domain.BackendOpenClerk, withDefaultEmbeddingProvider(cfg))
-	if err != nil {
-		return nil, nil, err
-	}
-	client, err := openclerkclient.NewClientWithResponses(inProcessBaseURL, openclerkclient.WithHTTPClient(handlerDoer{handler: runtime.handler}))
-	if err != nil {
-		_ = runtime.Close()
-		return nil, nil, err
-	}
-	return client, runtime, nil
-}
-
 func newRuntime(backend domain.BackendKind, cfg Config) (*Runtime, error) {
 	paths, err := ResolvePaths(cfg)
 	if err != nil {
@@ -118,7 +98,6 @@ func newRuntime(backend domain.BackendKind, cfg Config) (*Runtime, error) {
 	return &Runtime{
 		paths:   paths,
 		service: service,
-		handler: api.NewHandler(service),
 	}, nil
 }
 
@@ -158,14 +137,4 @@ func defaultDataDir() (string, error) {
 		return "", fmt.Errorf("resolve user home: %w", err)
 	}
 	return filepath.Join(homeDir, ".local", "share", defaultAppDir), nil
-}
-
-type handlerDoer struct {
-	handler http.Handler
-}
-
-func (d handlerDoer) Do(req *http.Request) (*http.Response, error) {
-	recorder := httptest.NewRecorder()
-	d.handler.ServeHTTP(recorder, req)
-	return recorder.Result(), nil
 }

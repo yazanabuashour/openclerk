@@ -6,35 +6,35 @@ instruction is needed, put it in `skills/openclerk` first.
 
 ## Active Surfaces
 
-- `production`: the installed runner-first `skills/openclerk` skill using
-  `cmd/openclerk-agentops`.
+- `production`: the installed runner-first `skills/openclerk` skill using the
+  `openclerk` binary.
 - `sdk-baseline`: an archived SDK-oriented skill retained only as a comparison
   surface.
 
-AgentOps is the production semantic contract for routine agent work. The
+OpenClerk runner is the production semantic contract for routine agent work. The
 machine-facing runner is the supported transport for that contract today.
 
-Generated clients, HTTP server calls, direct SQLite access, ad hoc SDK programs,
-repo-wide spelunking, module-cache inspection, and backend-specific variants are
-not active production agent surfaces.
+HTTP server calls, direct SQLite access, ad hoc SDK programs, repo-wide
+spelunking, module-cache inspection, stale API paths, and
+backend-specific variants are not active production agent surfaces.
 
 ## Adapter Eligibility
 
-CLI and MCP surfaces may be evaluated only as adapters over AgentOps-equivalent
+CLI and MCP surfaces may be evaluated only as adapters over OpenClerk runner-equivalent
 task shapes. An adapter must preserve the same document and retrieval semantics,
 validation behavior, provenance access, and final-answer-only rejection rules as
 the runner-backed production skill.
 
 An adapter is eligible for adoption only if it:
 
-- passes the same correctness checks as production AgentOps
-- avoids generated-client inspection, direct SQLite, backend variants, broad
+- passes the same correctness checks as production OpenClerk runner
+- avoids stale surface inspection, direct SQLite, backend variants, broad
   repo search, module-cache inspection, and routine lower-level SDK work
-- ties or improves AgentOps tool count
+- ties or improves OpenClerk runner tool count
 - improves at least one measured agent-behavior metric such as latency,
   non-cached input tokens, clarity of failure handling, or multi-turn continuity
 - does not require new public API surface unless the eval shows the current
-  AgentOps surface is insufficient
+  OpenClerk runner surface is insufficient
 
 ## Harness
 
@@ -88,11 +88,10 @@ Reports include:
 - per-turn metrics and raw log references for multi-turn scenarios
 - tool calls, command executions, assistant calls, wall time, non-cached input
   tokens, cached input tokens, input tokens, and output tokens
-- direct generated-file inspection, module-cache inspection, broad repo search,
-  direct SQLite access, and human OpenClerk CLI usage
+- stale surface inspection, module-cache inspection, broad repo search,
+  direct SQLite access, and legacy source-built runner usage
 
-CLI usage is counted only for executed human CLI invocations, not AgentOps
-runner calls or documentation text containing command strings.
+Legacy source-built runner usage is counted only for executed source-tree command paths, not installed OpenClerk runner calls or documentation text containing command strings.
 
 ## Scenario Coverage
 
@@ -111,17 +110,17 @@ The `ockp` harness covers routine local knowledge-plane workflows:
 - duplicate canonical path rejection without overwrite
 - mixed document/retrieval workflows that require both runner domains
 - final-answer-only direct rejections for missing required fields, invalid
-  limits, unsupported lower-level routine workflows, and human CLI or
+  limits, unsupported lower-level routine workflows, and legacy source-built command paths or
   unevaluated MCP bypass attempts
 - true multi-turn workflows that require resumed context across ordered turns
 
 ## Comparison Policy
 
-Production AgentOps beats `sdk-baseline` only when:
+Production OpenClerk runner beats `sdk-baseline` only when:
 
 - production passes every selected scenario
-- production has no direct generated-file inspection, module-cache inspection,
-  broad repo search, direct SQLite access, or human OpenClerk CLI usage
+- production has no stale surface inspection, module-cache inspection,
+  broad repo search, direct SQLite access, or legacy source-built runner usage
 - rule-covered validation scenarios are final-answer-only: no tools, no command
   executions, and at most one assistant answer
 - production total tools are less than or equal to baseline total tools
@@ -133,9 +132,9 @@ Production AgentOps beats `sdk-baseline` only when:
   total non-cached input tokens; missing usage on either side fails token
   comparison
 
-CLI or MCP adapters beat production AgentOps only when:
+CLI or MCP adapters beat production OpenClerk runner only when:
 
-- the adapter wraps AgentOps-equivalent task semantics
+- the adapter wraps OpenClerk runner-equivalent task semantics
 - the adapter passes every selected scenario
 - the adapter has no forbidden access patterns
 - the adapter ties or beats production total tools

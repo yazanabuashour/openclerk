@@ -8,15 +8,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yazanabuashour/openclerk/agentops"
+	"github.com/yazanabuashour/openclerk/internal/runner"
 )
 
 func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 	t.Parallel()
 
 	dataDir := filepath.Join(t.TempDir(), "data")
-	createRequest := `{"action":"create_document","document":{"path":"notes/runner.md","title":"Runner","body":"# Runner\n\n## Summary\nAgentOps runner note.\n"}}`
-	var createResult agentops.DocumentTaskResult
+	createRequest := `{"action":"create_document","document":{"path":"notes/runner.md","title":"Runner","body":"# Runner\n\n## Summary\nOpenClerk runner note.\n"}}`
+	var createResult runner.DocumentTaskResult
 	code, stderr := runJSON(t, []string{"document", "--data-dir", dataDir}, createRequest, &createResult)
 	if code != 0 {
 		t.Fatalf("create exit = %d stderr=%s", code, stderr)
@@ -26,7 +26,7 @@ func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 	}
 
 	searchRequest := `{"action":"search","search":{"text":"runner","limit":10}}`
-	var searchResult agentops.RetrievalTaskResult
+	var searchResult runner.RetrievalTaskResult
 	code, stderr = runJSON(t, []string{"retrieval", "--data-dir", dataDir}, searchRequest, &searchResult)
 	if code != 0 {
 		t.Fatalf("search exit = %d stderr=%s", code, stderr)
@@ -41,7 +41,7 @@ func TestRunnerValidationRejectionDoesNotCreateDatabase(t *testing.T) {
 
 	dataDir := filepath.Join(t.TempDir(), "data")
 	request := `{"action":"create_document","document":{"title":"Missing path","body":"# Missing path\n"}}`
-	var result agentops.DocumentTaskResult
+	var result runner.DocumentTaskResult
 	code, stderr := runJSON(t, []string{"document", "--data-dir", dataDir}, request, &result)
 	if code != 0 {
 		t.Fatalf("exit = %d stderr=%s", code, stderr)
@@ -64,8 +64,10 @@ func TestRunnerErrors(t *testing.T) {
 		want   int
 		stderr string
 	}{
-		{name: "unknown command", args: []string{"unknown"}, input: `{}`, want: 2, stderr: "unknown openclerk-agentops command"},
+		{name: "unknown command", args: []string{"unknown"}, input: `{}`, want: 2, stderr: "unknown openclerk command"},
 		{name: "bad json", args: []string{"document"}, input: `{`, want: 1, stderr: "decode document request"},
+		{name: "multiple json", args: []string{"document"}, input: `{} {}`, want: 1, stderr: "multiple JSON values"},
+		{name: "unknown json field", args: []string{"document"}, input: `{"action":"validate","extra":true}`, want: 1, stderr: "unknown field"},
 		{name: "unexpected arg", args: []string{"retrieval", "extra"}, input: `{}`, want: 2, stderr: "unexpected positional arguments"},
 	}
 
@@ -91,7 +93,7 @@ func TestRunnerRuntimeErrorExitsNonZero(t *testing.T) {
 
 	dataDir := filepath.Join(t.TempDir(), "data")
 	request := `{"action":"get_document","doc_id":"missing"}`
-	var result agentops.DocumentTaskResult
+	var result runner.DocumentTaskResult
 	code, stderr := runJSON(t, []string{"document", "--data-dir", dataDir}, request, &result)
 	if code == 0 {
 		t.Fatalf("exit = 0, want non-zero")
@@ -106,7 +108,7 @@ func TestRunnerDBFlag(t *testing.T) {
 
 	dbPath := filepath.Join(t.TempDir(), "custom", "openclerk.sqlite")
 	request := `{"action":"resolve_paths"}`
-	var result agentops.DocumentTaskResult
+	var result runner.DocumentTaskResult
 	code, stderr := runJSON(t, []string{"document", "--db", dbPath}, request, &result)
 	if code != 0 {
 		t.Fatalf("exit = %d stderr=%s", code, stderr)

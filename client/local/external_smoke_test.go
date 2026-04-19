@@ -25,17 +25,16 @@ import (
 	"fmt"
 
 	local "github.com/yazanabuashour/openclerk/client/local"
-	openclerk "github.com/yazanabuashour/openclerk/client/openclerk"
 )
 
 func main() {
-	client, runtime, err := local.Open(local.Config{})
+	client, err := local.OpenClient(local.Config{})
 	if err != nil {
 		panic(err)
 	}
-	defer runtime.Close()
+	defer client.Close()
 
-	create, err := client.CreateDocumentWithResponse(context.Background(), openclerk.CreateDocumentRequest{
+	create, err := client.CreateDocument(context.Background(), local.DocumentInput{
 		Path:  "notes/ops/agent-knowledge-plane.md",
 		Title: "Agent knowledge plane",
 		Body:  "---\ntype: note\nstatus: active\n---\n# Agent knowledge plane\n\n## Summary\nCanonical agent-facing context.\n\n## Related\nSee [operations](operations.md).\n",
@@ -43,11 +42,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	if create.JSON201 == nil {
-		panic(string(create.Body))
-	}
 
-	related, err := client.CreateDocumentWithResponse(context.Background(), openclerk.CreateDocumentRequest{
+	related, err := client.CreateDocument(context.Background(), local.DocumentInput{
 		Path:  "notes/ops/operations.md",
 		Title: "Operations",
 		Body:  "---\ntype: runbook\nstatus: draft\n---\n# Operations\n\n## Summary\nOperational notes for the workspace.\n",
@@ -55,11 +51,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	if related.JSON201 == nil {
-		panic(string(related.Body))
-	}
+	_ = related
 
-	record, err := client.CreateDocumentWithResponse(context.Background(), openclerk.CreateDocumentRequest{
+	record, err := client.CreateDocument(context.Background(), local.DocumentInput{
 		Path:  "records/assets/transmission-solenoid.md",
 		Title: "Transmission solenoid",
 		Body:  "---\nentity_type: part\nentity_name: Transmission solenoid\nentity_id: transmission-solenoid\ntype: record\nstatus: active\n---\n# Transmission solenoid\n\n## Summary\nCanonical promoted-domain baseline.\n\n## Facts\n- sku: SOL-1\n- vendor: OpenClerk Motors\n",
@@ -67,46 +61,42 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	if record.JSON201 == nil {
-		panic(string(record.Body))
-	}
+	_ = record
 
-	list, err := client.ListDocumentsWithResponse(context.Background(), &openclerk.ListDocumentsParams{PathPrefix: ptr("notes/")})
+	list, err := client.ListDocuments(context.Background(), local.DocumentListOptions{PathPrefix: "notes/"})
 	if err != nil {
 		panic(err)
 	}
-	if list.JSON200 == nil || len(list.JSON200.Documents) != 2 {
-		panic(string(list.Body))
+	if len(list.Documents) != 2 {
+		panic(fmt.Sprintf("docs=%d", len(list.Documents)))
 	}
 
-	links, err := client.GetDocumentLinksWithResponse(context.Background(), create.JSON201.DocId)
+	links, err := client.GetDocumentLinks(context.Background(), create.DocID)
 	if err != nil {
 		panic(err)
 	}
-	if links.JSON200 == nil || len(links.JSON200.Outgoing) != 1 {
-		panic(string(links.Body))
+	if len(links.Outgoing) != 1 {
+		panic(fmt.Sprintf("links=%d", len(links.Outgoing)))
 	}
 
-	lookup, err := client.RecordsLookupWithResponse(context.Background(), openclerk.RecordsLookupRequest{Text: "solenoid"})
+	lookup, err := client.LookupRecords(context.Background(), local.RecordLookupOptions{Text: "solenoid"})
 	if err != nil {
 		panic(err)
 	}
-	if lookup.JSON200 == nil || len(lookup.JSON200.Entities) != 1 {
-		panic(string(lookup.Body))
+	if len(lookup.Entities) != 1 {
+		panic(fmt.Sprintf("entities=%d", len(lookup.Entities)))
 	}
 
-	events, err := client.ListProvenanceEventsWithResponse(context.Background(), &openclerk.ListProvenanceEventsParams{RefKind: ptr("document"), RefId: &create.JSON201.DocId})
+	events, err := client.ListProvenanceEvents(context.Background(), local.ProvenanceEventOptions{RefKind: "document", RefID: create.DocID})
 	if err != nil {
 		panic(err)
 	}
-	if events.JSON200 == nil || len(events.JSON200.Events) == 0 {
-		panic(string(events.Body))
+	if len(events.Events) == 0 {
+		panic("missing events")
 	}
 
-	fmt.Printf("backend=%s dataDir=%s docs=%d links=%d entity=%s events=%d\n", openclerk.Openclerk, runtime.Paths().DataDir, len(list.JSON200.Documents), len(links.JSON200.Outgoing), lookup.JSON200.Entities[0].EntityId, len(events.JSON200.Events))
+	fmt.Printf("backend=%s dataDir=%s docs=%d links=%d entity=%s events=%d\n", "openclerk", client.Paths().DataDir, len(list.Documents), len(links.Outgoing), lookup.Entities[0].EntityID, len(events.Events))
 }
-
-func ptr(value string) *string { return &value }
 `
 	if err := os.WriteFile(filepath.Join(tmpDir, "main.go"), []byte(mainFile), 0o644); err != nil {
 		t.Fatalf("write main.go: %v", err)

@@ -19,11 +19,10 @@ query. OpenClerk should not clone that pattern literally. It should implement
 the useful part as source-linked synthesis inside a provenance-backed docs
 layer.
 
-The second design question is the agent-facing interface. OpenClerk already has
-a task-shaped production surface: the `agentops` package and the
-`cmd/openclerk-agentops` JSON runner. That surface is easier to evaluate and
-constrain than ad hoc SDK programs, generated-client inspection, direct SQLite
-access, or backend-specific workflows.
+The second design question is the agent-facing interface. OpenClerk now has one
+task-shaped production surface: the installed `openclerk` JSON runner. That
+surface is easier to evaluate and constrain than ad hoc SDK programs, direct
+SQLite access, or backend-specific workflows.
 
 ## Options Considered
 
@@ -37,14 +36,13 @@ access, or backend-specific workflows.
   graph navigation. This is the first architecture slice to prove.
 - **Full docs, records, memory, and router:** the target shape for selected
   future domains, but too much to adopt before docs/provenance eval evidence.
-- **AgentOps runner:** task-shaped document and retrieval operations through
-  `cmd/openclerk-agentops`, backed by `agentops`. This is the production agent
-  contract.
+- **OpenClerk runner:** task-shaped document and retrieval operations through
+  the installed `openclerk` binary. This is the production agent contract.
 - **Human CLI:** useful for humans and debugging, but not the routine agent
   contract.
-- **MCP:** a possible adapter if it wraps the same AgentOps semantics and beats
+- **MCP:** a possible adapter if it wraps the same OpenClerk runner semantics and beats
   the runner on measured agent behavior.
-- **SDK/generated-client workflows:** valid for developer and contract work, but
+- **SDK workflows:** valid for developer work through `client/local`, but
   disallowed for routine production-agent knowledge tasks.
 
 ## Decision
@@ -61,13 +59,12 @@ proof slice:
 - memory and autonomous routing remain deferred until the docs and truth-sync
   layers are benchmarked
 
-OpenClerk will keep AgentOps as the primary production agent interface:
+OpenClerk will keep the installed runner as the primary production agent interface:
 
-- routine agents use `cmd/openclerk-agentops` and task-shaped JSON
-- `agentops` defines the semantic contract for document and retrieval workflows
+- routine agents use `openclerk` and task-shaped JSON
 - CLI and MCP may be evaluated only as adapters over equivalent task shapes
-- generated clients, direct SQLite, backend variants, module-cache spelunking,
-  and ad hoc SDK programs are not routine production-agent paths
+- direct SQLite, backend variants, module-cache spelunking, and ad hoc SDK
+  programs are not routine production-agent paths
 
 ## Invariants
 
@@ -79,7 +76,7 @@ OpenClerk will keep AgentOps as the primary production agent interface:
 - Derived graph, records, search indexes, and future memory entries must expose
   freshness or provenance sufficient to explain their relationship to canonical
   docs or records.
-- Routine agent tasks must use the AgentOps surface unless an evaluated adapter
+- Routine agent tasks must use the OpenClerk runner surface unless an evaluated adapter
   proves it can preserve the same contract with better measured behavior.
 - New public API surface is added only after evals show the current surface is
   insufficient.
@@ -89,17 +86,17 @@ OpenClerk will keep AgentOps as the primary production agent interface:
 A layer or adapter can become permanent only when it satisfies all applicable
 gates:
 
-- production AgentOps passes the selected knowledge-plane scenarios
+- production OpenClerk runner passes the selected knowledge-plane scenarios
 - source-linked synthesis is updated rather than duplicated
 - source-sensitive answers preserve citations, chunk ids, paths, or explicit
   source refs
 - provenance and projection-state reads can explain freshness
 - promoted records improve precision or update safety over plain docs for the
   target domain
-- candidate CLI or MCP adapters match AgentOps correctness and improve at least
+- candidate CLI or MCP adapters match OpenClerk runner correctness and improve at least
   one measured agent-behavior metric without increasing forbidden access
-- no production scenario requires generated-client inspection, direct SQLite,
-  backend variants, module-cache inspection, broad repo search, or routine
+- no production scenario requires direct SQLite, backend variants, module-cache
+  inspection, broad repo search, stale surface inspection, or routine
   lower-level SDK work
 
 ## Kill Criteria
@@ -110,7 +107,7 @@ Keep a layer optional or remove it if it:
 - obscures canonical source authority
 - increases duplicate or conflicting truths
 - cannot explain provenance or freshness
-- encourages routine agents to bypass AgentOps for lower-level APIs
+- encourages routine agents to bypass OpenClerk runner for lower-level APIs
 - improves one benchmark class while regressing core source-grounded retrieval
   or citation correctness
 

@@ -1,5 +1,5 @@
-// Package agentops exposes task-shaped OpenClerk helpers for coding agents.
-package agentops
+// Package runner executes task-shaped OpenClerk JSON requests.
+package runner
 
 import "time"
 

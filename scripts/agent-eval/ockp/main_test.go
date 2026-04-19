@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yazanabuashour/openclerk/agentops"
 	"github.com/yazanabuashour/openclerk/client/local"
+	"github.com/yazanabuashour/openclerk/internal/runner"
 )
 
 func TestParseRunConfigDefaultsParallelAndSharedCache(t *testing.T) {
@@ -203,7 +203,7 @@ func TestVariantInstructionsDistinguishProductionAndSDKBaseline(t *testing.T) {
 	if err != nil {
 		t.Fatalf("production instructions: %v", err)
 	}
-	if !strings.Contains(production, "cmd/openclerk-agentops") || strings.Contains(production, "local.OpenClient") {
+	if !strings.Contains(production, "openclerk") || strings.Contains(production, "local.OpenClient") {
 		t.Fatalf("production instructions = %s", production)
 	}
 	if !strings.Contains(production, "reject final-answer-only") {
@@ -214,7 +214,7 @@ func TestVariantInstructionsDistinguishProductionAndSDKBaseline(t *testing.T) {
 	if err != nil {
 		t.Fatalf("baseline instructions: %v", err)
 	}
-	if !strings.Contains(baseline, "local.OpenClient") || !strings.Contains(baseline, "Do not use `cmd/openclerk-agentops`") {
+	if !strings.Contains(baseline, "local.OpenClient") || !strings.Contains(baseline, "Do not use `openclerk`") {
 		t.Fatalf("baseline instructions = %s", baseline)
 	}
 
@@ -229,7 +229,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	log := strings.Join([]string{
 		`{"type":"thread.started","thread_id":"session-123"}`,
 		`{"type":"item.completed","item":{"type":"agent_message","text":"done"},"usage":{"input_tokens":100,"cached_input_tokens":30,"output_tokens":12}}`,
-		`{"type":"tool_call","item":{"type":"tool_call","command":"go run ./cmd/openclerk-agentops document"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"rg --files"}}`,
 		`not json`,
 	}, "\n")
@@ -307,12 +307,12 @@ func TestVerifyFinalAnswerOnlyRequiresRejectionAndNoTools(t *testing.T) {
 	}
 
 	unsupported := scenario{ID: "unsupported-lower-level-reject"}
-	if result := verifyFinalAnswerOnly(unsupported, "I can\u2019t bypass AgentOps or query SQLite directly for this task.", noTools); !result.Passed {
+	if result := verifyFinalAnswerOnly(unsupported, "I can\u2019t bypass OpenClerk runner or query SQLite directly for this task.", noTools); !result.Passed {
 		t.Fatalf("curly apostrophe rejection failed: %+v", result)
 	}
 
 	cliMCP := scenario{ID: "unsupported-cli-mcp-reject"}
-	if result := verifyFinalAnswerOnly(cliMCP, "I can't bypass AgentOps through the CLI or MCP for this routine task.", noTools); !result.Passed {
+	if result := verifyFinalAnswerOnly(cliMCP, "I can't bypass OpenClerk runner through the CLI or MCP for this routine task.", noTools); !result.Passed {
 		t.Fatalf("CLI/MCP bypass rejection failed: %+v", result)
 	}
 }
@@ -336,7 +336,7 @@ func TestVerifyAnswerFilingRequiresFiledSourceLinkedDocument(t *testing.T) {
 		t.Fatalf("seed scenario: %v", err)
 	}
 	noTools := metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}}
-	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: "answer-filing"}, 1, "notes/synthesis/filed-agentops-answer.md", noTools)
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: "answer-filing"}, 1, "notes/synthesis/filed-runner-answer.md", noTools)
 	if err != nil {
 		t.Fatalf("verify missing answer filing: %v", err)
 	}
@@ -344,11 +344,11 @@ func TestVerifyAnswerFilingRequiresFiledSourceLinkedDocument(t *testing.T) {
 		t.Fatalf("missing filed document passed: %+v", result)
 	}
 	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
-	body := "# Filed AgentOps Answer\n\n## Summary\nSource: notes/sources/answer-filing-agentops.md\n\nDurable AgentOps answers should be filed as source-linked markdown.\n"
-	if err := createSeedDocument(ctx, cfg, "notes/synthesis/filed-agentops-answer.md", "Filed AgentOps Answer", body); err != nil {
+	body := "# Filed OpenClerk runner Answer\n\n## Summary\nSource: notes/sources/answer-filing-runner.md\n\nDurable OpenClerk runner answers should be filed as source-linked markdown.\n"
+	if err := createSeedDocument(ctx, cfg, "notes/synthesis/filed-runner-answer.md", "Filed OpenClerk runner Answer", body); err != nil {
 		t.Fatalf("create filed answer: %v", err)
 	}
-	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: "answer-filing"}, 1, "Created notes/synthesis/filed-agentops-answer.md.", noTools)
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: "answer-filing"}, 1, "Created notes/synthesis/filed-runner-answer.md.", noTools)
 	if err != nil {
 		t.Fatalf("verify answer filing: %v", err)
 	}
@@ -364,16 +364,16 @@ func TestVerifyStaleSynthesisUpdateRequiresCurrentSourceAndNoDuplicate(t *testin
 		t.Fatalf("seed scenario: %v", err)
 	}
 	noTools := metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}}
-	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: "stale-synthesis-update"}, 1, "Updated notes/synthesis/agentops-routing.md.", noTools)
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: "stale-synthesis-update"}, 1, "Updated notes/synthesis/runner-routing.md.", noTools)
 	if err != nil {
 		t.Fatalf("verify stale before update: %v", err)
 	}
 	if result.Passed {
 		t.Fatalf("stale synthesis passed before update: %+v", result)
 	}
-	replacement := "Current guidance: routine agents must use cmd/openclerk-agentops JSON runner.\n\nCurrent source: notes/sources/agentops-current-runner.md\n\nSupersedes: notes/sources/agentops-old-cli.md\n\nThis stale claim is superseded by current guidance."
-	replaceSeedSection(t, ctx, paths, "notes/synthesis/agentops-routing.md", "Summary", replacement)
-	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: "stale-synthesis-update"}, 1, "Updated notes/synthesis/agentops-routing.md with current guidance.", noTools)
+	replacement := "Current guidance: routine agents must use openclerk JSON runner.\n\nCurrent source: notes/sources/runner-current-runner.md\n\nSupersedes: notes/sources/runner-old-cli.md\n\nThis stale claim is superseded by current guidance."
+	replaceSeedSection(t, ctx, paths, "notes/synthesis/runner-routing.md", "Summary", replacement)
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: "stale-synthesis-update"}, 1, "Updated notes/synthesis/runner-routing.md with current guidance.", noTools)
 	if err != nil {
 		t.Fatalf("verify stale after update: %v", err)
 	}
@@ -381,10 +381,10 @@ func TestVerifyStaleSynthesisUpdateRequiresCurrentSourceAndNoDuplicate(t *testin
 		t.Fatalf("updated stale synthesis failed: %+v", result)
 	}
 	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
-	if err := createSeedDocument(ctx, cfg, "notes/synthesis/agentops-routing-current.md", "AgentOps Routing Current", "# Duplicate\n"); err != nil {
+	if err := createSeedDocument(ctx, cfg, "notes/synthesis/runner-routing-current.md", "OpenClerk runner Routing Current", "# Duplicate\n"); err != nil {
 		t.Fatalf("create duplicate synthesis: %v", err)
 	}
-	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: "stale-synthesis-update"}, 1, "Updated notes/synthesis/agentops-routing.md with current guidance.", noTools)
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: "stale-synthesis-update"}, 1, "Updated notes/synthesis/runner-routing.md with current guidance.", noTools)
 	if err != nil {
 		t.Fatalf("verify stale duplicate: %v", err)
 	}
@@ -474,8 +474,8 @@ func replaceSeedSection(t *testing.T, ctx context.Context, paths evalPaths, docP
 		t.Fatalf("missing %s", docPath)
 	}
 	cfg := local.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
-	result, err := agentops.RunDocumentTask(ctx, cfg, agentops.DocumentTaskRequest{
-		Action:  agentops.DocumentTaskActionReplaceSection,
+	result, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action:  runner.DocumentTaskActionReplaceSection,
 		DocID:   docID,
 		Heading: heading,
 		Content: content,

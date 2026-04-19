@@ -8,6 +8,29 @@ import (
 	"testing"
 )
 
+func TestSkillPayloadContainsOnlySkillMarkdown(t *testing.T) {
+	t.Parallel()
+
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatalf("read skill dir: %v", err)
+	}
+	payloadEntries := []string{}
+	for _, entry := range entries {
+		if strings.HasSuffix(entry.Name(), "_test.go") {
+			continue
+		}
+		payloadEntries = append(payloadEntries, entry.Name())
+	}
+	if len(payloadEntries) != 1 || payloadEntries[0] != "SKILL.md" {
+		names := make([]string, 0, len(entries))
+		for _, entry := range entries {
+			names = append(names, entry.Name())
+		}
+		t.Fatalf("skill payload files = %v, want exactly SKILL.md", names)
+	}
+}
+
 func TestSkillMarkdownLinksReferenceInstalledFiles(t *testing.T) {
 	t.Parallel()
 
@@ -44,7 +67,7 @@ func TestSkillMarkdownLinksReferenceInstalledFiles(t *testing.T) {
 	}
 }
 
-func TestSkillUsesAgentOpsRunnerForRoutineWork(t *testing.T) {
+func TestSkillUsesInstalledRunnerForRoutineWork(t *testing.T) {
 	t.Parallel()
 
 	content, err := os.ReadFile("SKILL.md")
@@ -52,16 +75,42 @@ func TestSkillUsesAgentOpsRunnerForRoutineWork(t *testing.T) {
 		t.Fatalf("read skill: %v", err)
 	}
 	text := string(content)
-	if !strings.Contains(text, "cmd/openclerk-agentops") {
-		t.Fatal("SKILL.md must point routine work at cmd/openclerk-agentops")
+	for _, want := range []string{
+		"name: openclerk",
+		"openclerk document",
+		"openclerk retrieval",
+		"Agent",
+		"Skills-compatible",
+		"Do not inspect source files",
+		"reject final-answer-only",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("SKILL.md missing %q", want)
+		}
 	}
 	for _, stale := range []string{
+		"AgentOps",
+		"agentops",
+		"cmd/openclerk-agentops",
+		"go run",
 		"local.OpenClient",
 		"WithResponse",
+		"generated-client",
+		"client/openclerk",
+		"openapi",
+		"cmd/openclerkd",
 		"client/fts",
 		"client/hybrid",
 		"client/graph",
 		"client/records",
+		".agents/skills",
+		".claude/skills",
+		".openclaw/skills",
+		"~/.codex",
+		"Codex",
+		"Claude",
+		"OpenClaw",
+		"Hermes",
 		"temporary Go module",
 		"mktemp",
 	} {

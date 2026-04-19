@@ -5,11 +5,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/yazanabuashour/openclerk/agentops"
 	"github.com/yazanabuashour/openclerk/client/local"
+	"github.com/yazanabuashour/openclerk/internal/runner"
 )
 
-func TestUnifiedOpenClerkAgentOpsBaseline(t *testing.T) {
+func TestUnifiedOpenClerkRunnerBaseline(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -18,9 +18,9 @@ func TestUnifiedOpenClerkAgentOpsBaseline(t *testing.T) {
 	target := createDocument(t, ctx, config, "notes/projects/openclerk-roadmap.md", "Roadmap", "---\ntype: project\nstatus: active\n---\n# Roadmap\n\n## Summary\nSee the [knowledge plane](../architecture/knowledge-plane.md).\n")
 	createDocument(t, ctx, config, "records/assets/transmission-solenoid.md", "Transmission solenoid", "---\nentity_type: part\nentity_name: Transmission solenoid\nentity_id: transmission-solenoid\ntype: record\nstatus: active\n---\n# Transmission solenoid\n\n## Facts\n- sku: SOL-1\n")
 
-	search, err := agentops.RunRetrievalTask(ctx, config, agentops.RetrievalTaskRequest{
-		Action: agentops.RetrievalTaskActionSearch,
-		Search: agentops.SearchOptions{Text: "roadmap", Limit: 10},
+	search, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{Text: "roadmap", Limit: 10},
 	})
 	if err != nil {
 		t.Fatalf("search task: %v", err)
@@ -29,8 +29,8 @@ func TestUnifiedOpenClerkAgentOpsBaseline(t *testing.T) {
 		t.Fatalf("search result = %+v", search.Search)
 	}
 
-	links, err := agentops.RunRetrievalTask(ctx, config, agentops.RetrievalTaskRequest{
-		Action: agentops.RetrievalTaskActionDocumentLinks,
+	links, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionDocumentLinks,
 		DocID:  target.DocID,
 	})
 	if err != nil {
@@ -40,9 +40,9 @@ func TestUnifiedOpenClerkAgentOpsBaseline(t *testing.T) {
 		t.Fatalf("links result = %+v", links.Links)
 	}
 
-	records, err := agentops.RunRetrievalTask(ctx, config, agentops.RetrievalTaskRequest{
-		Action:  agentops.RetrievalTaskActionRecordsLookup,
-		Records: agentops.RecordLookupOptions{Text: "solenoid", Limit: 10},
+	records, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action:  runner.RetrievalTaskActionRecordsLookup,
+		Records: runner.RecordLookupOptions{Text: "solenoid", Limit: 10},
 	})
 	if err != nil {
 		t.Fatalf("records task: %v", err)
@@ -51,9 +51,9 @@ func TestUnifiedOpenClerkAgentOpsBaseline(t *testing.T) {
 		t.Fatalf("records result = %+v", records.Records)
 	}
 
-	events, err := agentops.RunRetrievalTask(ctx, config, agentops.RetrievalTaskRequest{
-		Action: agentops.RetrievalTaskActionProvenanceEvents,
-		Provenance: agentops.ProvenanceEventOptions{
+	events, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{
 			RefKind: "document",
 			RefID:   target.DocID,
 			Limit:   10,
@@ -67,11 +67,11 @@ func TestUnifiedOpenClerkAgentOpsBaseline(t *testing.T) {
 	}
 }
 
-func createDocument(t *testing.T, ctx context.Context, config local.Config, path string, title string, body string) agentops.Document {
+func createDocument(t *testing.T, ctx context.Context, config local.Config, path string, title string, body string) runner.Document {
 	t.Helper()
-	result, err := agentops.RunDocumentTask(ctx, config, agentops.DocumentTaskRequest{
-		Action: agentops.DocumentTaskActionCreate,
-		Document: agentops.DocumentInput{
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionCreate,
+		Document: runner.DocumentInput{
 			Path:  path,
 			Title: title,
 			Body:  body,

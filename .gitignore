@@ -7,3 +7,6 @@
 # Go build outputs
 bin/
 .coverprofile
+
+# macOS metadata
+.DS_Store

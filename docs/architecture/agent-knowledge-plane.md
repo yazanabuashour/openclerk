@@ -4,10 +4,10 @@
 
 OpenClerk is positioned as a single-surface agent-facing knowledge plane, not a domain-specific health application and not a menu of user-facing backend variants.
 
-The production agent surface is the `cmd/openclerk-agentops` JSON runner backed
-by the `agentops` package. Agents use task-shaped JSON for routine document and
-retrieval work; they do not need to inspect generated clients, backend variants,
-or SQLite to operate the knowledge plane.
+The production agent surface is the installed `openclerk` JSON runner. Agents
+use task-shaped JSON for routine document and retrieval work; they do not need
+to inspect implementation files, backend variants, or SQLite to operate the
+knowledge plane.
 
 It is also positioned as infrastructure for persistent agent-maintained knowledge: useful synthesis should become cited, inspectable markdown instead of being rediscovered from scratch on every query.
 
@@ -22,12 +22,10 @@ The product model is:
 
 ## Public contract
 
-The public SDK surface is:
+The public surface is:
 
-- [`agentops`](../../agentops), plus [`cmd/openclerk-agentops`](../../cmd/openclerk-agentops), for production agent workflows
+- the installed `openclerk` runner for production agent workflows
 - [`client/local`](../../client/local), including the code-first embedded facade
-- [`client/openclerk`](../../client/openclerk), for generated OpenAPI fallback work
-- [`openapi/v1/openclerk.yaml`](../../openapi/v1/openclerk.yaml)
 
 The public API is organized by capability, not implementation variant:
 
@@ -61,7 +59,7 @@ Karpathy's LLM Wiki pattern maps cleanly onto OpenClerk, but OpenClerk should im
 | Raw sources | canonical source docs and assets |
 | Wiki | source-linked synthesis and accepted canonical notes |
 | Schema | repo docs plus `skills/openclerk` guidance |
-| `index.md` | search, metadata filters, graph neighborhoods, and optional generated index notes |
+| `index.md` | search, metadata filters, graph neighborhoods, and optional index notes |
 | `log.md` | provenance events, projection states, and optional human-readable activity notes |
 
 The shared idea is that agents should maintain summaries, links, contradiction notes, and filed answers so knowledge compounds over time. The OpenClerk-specific constraint is that synthesis must stay inspectable through stable ids, citations, provenance events, and projection freshness. It should not become an opaque second truth system.
@@ -86,8 +84,8 @@ It should eventually be replaced or extended with explicit domain models where s
 
 The provenance layer now exposes:
 
-- append-only event inspection through `GET /v1/provenance/events`
-- current projection-state inspection through `GET /v1/provenance/projections`
+- append-only event inspection through retrieval runner tasks
+- current projection-state inspection through retrieval runner tasks
 
 Current event and projection semantics are intentionally minimal:
 
@@ -101,7 +99,7 @@ Current event and projection semantics are intentionally minimal:
 
 Production evals compare the runner-first `skills/openclerk` surface against an
 archived SDK-oriented baseline. Reports track correctness, tool calls, assistant
-calls, wall time, token use, generated-file inspection, module-cache inspection,
+calls, wall time, token use, stale surface inspection, module-cache inspection,
 broad repo search, direct SQLite access, and raw log references using
 `<run-root>` placeholders.
 

@@ -72,14 +72,6 @@ jobs:
           go-version-file: go.mod
           check-latest: true
 
-      - name: Verify generated clients are up to date
-        run: |
-          go generate ./...
-          if ! git diff --exit-code; then
-            echo "Run go generate ./... and commit the generated output."
-            exit 1
-          fi
-
       - name: Verify formatting
         run: |
           if test -n "$(gofmt -l $(git ls-files '*.go'))"; then
