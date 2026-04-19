@@ -181,6 +181,38 @@ type RecordLookupResult struct {
 	PageInfo PageInfo
 }
 
+type ServiceLookupInput struct {
+	Text      string
+	Status    string
+	Owner     string
+	Interface string
+	Limit     int
+	Cursor    string
+}
+
+type ServiceFact struct {
+	Key        string
+	Value      string
+	ObservedAt *time.Time
+}
+
+type ServiceRecord struct {
+	ServiceID string
+	Name      string
+	Status    string
+	Owner     string
+	Interface string
+	Summary   string
+	Facts     []ServiceFact
+	Citations []Citation
+	UpdatedAt time.Time
+}
+
+type ServiceLookupResult struct {
+	Services []ServiceRecord
+	PageInfo PageInfo
+}
+
 type ProvenanceEvent struct {
 	EventID    string
 	EventType  string
@@ -241,6 +273,8 @@ type Store interface {
 	GraphNeighborhood(context.Context, GraphNeighborhoodInput) (GraphNeighborhood, error)
 	RecordsLookup(context.Context, RecordLookupInput) (RecordLookupResult, error)
 	GetRecordEntity(context.Context, string) (RecordEntity, error)
+	ServicesLookup(context.Context, ServiceLookupInput) (ServiceLookupResult, error)
+	GetServiceRecord(context.Context, string) (ServiceRecord, error)
 	ListProvenanceEvents(context.Context, ProvenanceEventQuery) (ProvenanceEventResult, error)
 	ListProjectionStates(context.Context, ProjectionStateQuery) (ProjectionStateResult, error)
 	Close() error

@@ -36,16 +36,19 @@ answer and no tools, when the request:
 - asks to bypass the runner for routine lower-level SDK, HTTP, SQLite,
   legacy source-built command paths, or unevaluated MCP-style work
 
+For bypass requests, explicitly say the workflow is unsupported and must use
+the OpenClerk runner.
+
 For unsupported workflows not covered by the rejection rules, say the
 production OpenClerk runner does not support that workflow yet unless the user
 explicitly asks for lower-level SDK work.
 
 Do not inspect source files, generated artifacts, backend variants, module-cache
-docs, or SQLite directly for routine OpenClerk tasks. Do not use broad file
-enumeration such as `rg --files` or `find` to verify routine runner work; use
-runner JSON results, `list_documents`, or `get_document` instead. Search the
-repository only if the runner fails in a way that requires debugging the
-checkout.
+docs, SQLite, or `.openclerk-eval/vault` directly for routine OpenClerk tasks.
+Do not use broad file enumeration such as `rg --files`, `find`, or `ls` to find
+or verify routine runner work; use runner JSON results, `list_documents`,
+`search`, or `get_document` instead. Search the repository only if the runner
+fails in a way that requires debugging the checkout.
 
 ## Document Tasks
 
@@ -96,17 +99,23 @@ Common request shapes:
 {"action":"graph_neighborhood","doc_id":"doc_id_from_json","limit":10}
 {"action":"records_lookup","records":{"text":"OpenClerk runner","limit":10}}
 {"action":"record_entity","entity_id":"entity_id_from_json"}
+{"action":"services_lookup","services":{"text":"OpenClerk runner","interface":"JSON runner","limit":10}}
+{"action":"service_record","service_id":"service_id_from_json"}
 {"action":"provenance_events","provenance":{"ref_kind":"document","ref_id":"doc_id_from_json","limit":20}}
 {"action":"projection_states","projection":{"ref_kind":"document","ref_id":"doc_id_from_json","limit":20}}
 ```
 
 Request fields are `action`, `search`, `doc_id`, `chunk_id`, `node_id`,
-`entity_id`, `records`, `provenance`, `projection`, and `limit`.
+`entity_id`, `service_id`, `records`, `services`, `provenance`, `projection`,
+and `limit`.
 
 Use search for source-grounded answers, document links for explicit markdown
 relationships, graph neighborhoods for nearby derived context, records lookup
 for promoted record-shaped documents, provenance events for derivation history,
-and projection states for freshness.
+and projection states for freshness. Use services lookup for service-centric
+questions before falling back to plain docs search; canonical markdown remains
+the source of truth and service records are a derived promoted-domain
+projection.
 
 ## Answering From Results
 

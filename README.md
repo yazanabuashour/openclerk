@@ -64,6 +64,13 @@ printf '%s\n' '{"action":"search","search":{"text":"architecture","limit":10}}' 
   openclerk retrieval
 ```
 
+Service-centric retrieval can use the first typed promoted-domain projection:
+
+```bash
+printf '%s\n' '{"action":"services_lookup","services":{"text":"OpenClerk runner","interface":"JSON runner","limit":10}}' |
+  openclerk retrieval
+```
+
 Validation rejections are JSON results with `rejected: true`. Runtime failures
 exit non-zero and write errors to stderr.
 
@@ -134,8 +141,9 @@ runner flags take precedence over environment variables.
 - Source-linked synthesis can live in markdown when it carries citations and
   provenance back to canonical sources.
 - Graph traversal is a derived docs capability, not a second truth system.
-- Promoted records are a selective structured layer for domains that fail as
-  plain docs.
+- The service registry is the first typed promoted-domain prototype; promoted
+  records remain selective structured layers for domains that fail as plain
+  docs.
 - Provenance and projection-state reads make derivation and freshness
   inspectable.
 - Memory and routing are intentionally out of scope for this release.

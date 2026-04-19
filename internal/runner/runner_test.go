@@ -109,6 +109,7 @@ func TestRetrievalTaskSearchLinksRecordsAndProvenance(t *testing.T) {
 	architecture := createDocument(t, ctx, config, "notes/architecture/knowledge-plane.md", "Knowledge plane", "# Knowledge plane\n\n## Summary\nCanonical architecture note.\n")
 	roadmap := createDocument(t, ctx, config, "notes/projects/roadmap.md", "Roadmap", "# Roadmap\n\n## Summary\nSee the [knowledge plane](../architecture/knowledge-plane.md).\n")
 	createDocument(t, ctx, config, "records/assets/transmission-solenoid.md", "Transmission solenoid", "---\nentity_type: part\nentity_name: Transmission solenoid\nentity_id: transmission-solenoid\n---\n# Transmission solenoid\n\n## Facts\n- sku: SOL-1\n")
+	createDocument(t, ctx, config, "records/services/openclerk-runner.md", "OpenClerk runner", "---\nservice_id: openclerk-runner\nservice_name: OpenClerk runner\nservice_status: active\nservice_owner: runner\nservice_interface: JSON runner\n---\n# OpenClerk runner\n\n## Summary\nProduction service for routine knowledge tasks.\n\n## Facts\n- tier: production\n")
 
 	search, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
 		Action: runner.RetrievalTaskActionSearch,
@@ -169,6 +170,36 @@ func TestRetrievalTaskSearchLinksRecordsAndProvenance(t *testing.T) {
 		t.Fatalf("entity result = %+v", entity)
 	}
 
+	services, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionServicesLookup,
+		Services: runner.ServiceLookupOptions{
+			Text:      "OpenClerk runner",
+			Interface: "JSON runner",
+			Limit:     10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("services task: %v", err)
+	}
+	if services.Services == nil || len(services.Services.Services) != 1 || services.Services.Services[0].ServiceID != "openclerk-runner" {
+		t.Fatalf("services result = %+v", services)
+	}
+
+	service, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action:    runner.RetrievalTaskActionServiceRecord,
+		ServiceID: "openclerk-runner",
+	})
+	if err != nil {
+		t.Fatalf("service record task: %v", err)
+	}
+	if service.Service == nil ||
+		service.Service.Status != "active" ||
+		service.Service.Owner != "runner" ||
+		service.Service.Interface != "JSON runner" ||
+		len(service.Service.Citations) == 0 {
+		t.Fatalf("service result = %+v", service)
+	}
+
 	provenance, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
 		Action: runner.RetrievalTaskActionProvenanceEvents,
 		Provenance: runner.ProvenanceEventOptions{
@@ -198,6 +229,49 @@ func TestRetrievalTaskSearchLinksRecordsAndProvenance(t *testing.T) {
 	}
 	if projections.Projections == nil || len(projections.Projections.Projections) != 1 {
 		t.Fatalf("projection result = %+v", projections)
+	}
+
+	serviceProjections, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProjectionStates,
+		Projection: runner.ProjectionStateOptions{
+			Projection: "services",
+			RefKind:    "service",
+			RefID:      "openclerk-runner",
+			Limit:      10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("service projection task: %v", err)
+	}
+	if serviceProjections.Projections == nil ||
+		len(serviceProjections.Projections.Projections) != 1 ||
+		serviceProjections.Projections.Projections[0].Freshness != "fresh" {
+		t.Fatalf("service projections result = %+v", serviceProjections)
+	}
+}
+
+func TestRetrievalTaskServiceValidation(t *testing.T) {
+	t.Parallel()
+
+	missing, err := runner.RunRetrievalTask(context.Background(), local.Config{}, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionServiceRecord,
+	})
+	if err != nil {
+		t.Fatalf("missing service id validation: %v", err)
+	}
+	if !missing.Rejected || missing.RejectionReason != "service_id is required" {
+		t.Fatalf("missing result = %+v", missing)
+	}
+
+	negative, err := runner.RunRetrievalTask(context.Background(), local.Config{}, runner.RetrievalTaskRequest{
+		Action:   runner.RetrievalTaskActionServicesLookup,
+		Services: runner.ServiceLookupOptions{Limit: -1},
+	})
+	if err != nil {
+		t.Fatalf("negative service limit validation: %v", err)
+	}
+	if !negative.Rejected || negative.RejectionReason != "limit must be greater than or equal to 0" {
+		t.Fatalf("negative result = %+v", negative)
 	}
 }
 

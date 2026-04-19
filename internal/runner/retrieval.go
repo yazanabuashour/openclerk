@@ -86,6 +86,26 @@ func RunRetrievalTask(ctx context.Context, config local.Config, request Retrieva
 			Entity:  &converted,
 			Summary: fmt.Sprintf("returned record entity %s", converted.EntityID),
 		}, nil
+	case RetrievalTaskActionServicesLookup:
+		services, err := client.LookupServices(ctx, local.ServiceLookupOptions(normalized.Services))
+		if err != nil {
+			return RetrievalTaskResult{}, err
+		}
+		converted := toServiceLookupResult(services)
+		return RetrievalTaskResult{
+			Services: &converted,
+			Summary:  fmt.Sprintf("returned %d services", len(converted.Services)),
+		}, nil
+	case RetrievalTaskActionServiceRecord:
+		service, err := client.GetServiceRecord(ctx, normalized.ServiceID)
+		if err != nil {
+			return RetrievalTaskResult{}, err
+		}
+		converted := toServiceRecord(service)
+		return RetrievalTaskResult{
+			Service: &converted,
+			Summary: fmt.Sprintf("returned service %s", converted.ServiceID),
+		}, nil
 	case RetrievalTaskActionProvenanceEvents:
 		events, err := client.ListProvenanceEvents(ctx, local.ProvenanceEventOptions(normalized.Provenance))
 		if err != nil {
@@ -118,7 +138,9 @@ type normalizedRetrievalTaskRequest struct {
 	ChunkID    string
 	NodeID     string
 	EntityID   string
+	ServiceID  string
 	Records    RecordLookupOptions
+	Services   ServiceLookupOptions
 	Provenance ProvenanceEventOptions
 	Projection ProjectionStateOptions
 	Limit      int
@@ -136,7 +158,9 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		ChunkID:    strings.TrimSpace(request.ChunkID),
 		NodeID:     strings.TrimSpace(request.NodeID),
 		EntityID:   strings.TrimSpace(request.EntityID),
+		ServiceID:  strings.TrimSpace(request.ServiceID),
 		Records:    request.Records,
+		Services:   request.Services,
 		Provenance: request.Provenance,
 		Projection: request.Projection,
 		Limit:      request.Limit,
@@ -145,6 +169,7 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 	if request.Limit < 0 ||
 		request.Search.Limit < 0 ||
 		request.Records.Limit < 0 ||
+		request.Services.Limit < 0 ||
 		request.Provenance.Limit < 0 ||
 		request.Projection.Limit < 0 {
 		return normalizedRetrievalTaskRequest{}, "limit must be greater than or equal to 0"
@@ -176,6 +201,13 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 	case RetrievalTaskActionRecordEntity:
 		if normalized.EntityID == "" {
 			return normalizedRetrievalTaskRequest{}, "entity_id is required"
+		}
+		return normalized, ""
+	case RetrievalTaskActionServicesLookup:
+		return normalized, ""
+	case RetrievalTaskActionServiceRecord:
+		if normalized.ServiceID == "" {
+			return normalizedRetrievalTaskRequest{}, "service_id is required"
 		}
 		return normalized, ""
 	case RetrievalTaskActionProvenanceEvents, RetrievalTaskActionProjectionStates:

@@ -1,0 +1,3324 @@
+{
+  "metadata": {
+    "generated_at": "2026-04-19T04:59:56.629803Z",
+    "model": "gpt-5.4-mini",
+    "reasoning_effort": "medium",
+    "harness": "codex exec --json --full-auto from throwaway run directories; single-turn scenarios use --ephemeral and multi-turn scenarios resume one persisted eval session",
+    "configured_parallelism": 4,
+    "cache_mode": "shared",
+    "cache_prewarm_seconds": 24.14,
+    "harness_elapsed_seconds": 387.33,
+    "effective_parallel_speedup": 3.47,
+    "parallel_efficiency": 0.87,
+    "phase_totals": {
+      "copy_repo_seconds": 0.48,
+      "install_variant_seconds": 21.8,
+      "seed_data_seconds": 0.36,
+      "agent_run_seconds": 1343.01,
+      "parse_metrics_seconds": 0.01,
+      "verify_seconds": 0.49,
+      "total_seconds": 1366.17
+    },
+    "run_root_artifact_reference": "\u003crun-root\u003e",
+    "raw_log_placeholder": "\u003crun-root\u003e/\u003cvariant\u003e/\u003cscenario\u003e/turn-N/events.jsonl",
+    "variants": [
+      "production",
+      "sdk-baseline"
+    ],
+    "scenarios": [
+      "create-note",
+      "search-synthesis",
+      "answer-filing",
+      "stale-synthesis-update",
+      "append-replace",
+      "records-provenance",
+      "promoted-record-vs-docs",
+      "missing-document-path-reject",
+      "negative-limit-reject",
+      "unsupported-lower-level-reject",
+      "unsupported-cli-mcp-reject",
+      "duplicate-path-reject",
+      "mixed-synthesis-records",
+      "mt-source-then-synthesis",
+      "mt-incomplete-then-create"
+    ],
+    "raw_logs_committed": false,
+    "raw_logs_note": "Raw Codex event logs remain under \u003crun-root\u003e and are not committed."
+  },
+  "results": [
+    {
+      "variant": "production",
+      "scenario": "create-note",
+      "scenario_title": "Create canonical note",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 21.76,
+      "phase_timings": {
+        "copy_repo_seconds": 0.03,
+        "install_variant_seconds": 1.45,
+        "agent_run_seconds": 21.76,
+        "verify_seconds": 0.01,
+        "total_seconds": 23.25
+      },
+      "metrics": {
+        "assistant_calls": 4,
+        "tool_calls": 6,
+        "command_executions": 6,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "usage_exposed": true,
+        "input_tokens": 93110,
+        "cached_input_tokens": 88064,
+        "non_cached_input_tokens": 5046,
+        "output_tokens": 1567,
+        "event_type_counts": {
+          "item.completed": 7,
+          "item.started": 3,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/projects/openclerk-runner.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 21.76,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 4,
+            "tool_calls": 6,
+            "command_executions": 6,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "usage_exposed": true,
+            "input_tokens": 93110,
+            "cached_input_tokens": 88064,
+            "non_cached_input_tokens": 5046,
+            "output_tokens": 1567,
+            "event_type_counts": {
+              "item.completed": 7,
+              "item.started": 3,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/projects/openclerk-runner.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/create-note/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Create an OpenClerk canonical project note at notes/projects/openclerk-runner.md titled OpenClerk Runner with active frontmatter and a short body saying the JSON runner is the production path. Use the configured local OpenClerk data path and verify it exists.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/create-note/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:53:53.451395Z",
+      "completed_at": "2026-04-19T04:54:16.701336Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "search-synthesis",
+      "scenario_title": "Search before source-linked synthesis",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 47.27,
+      "phase_timings": {
+        "copy_repo_seconds": 0.03,
+        "install_variant_seconds": 1.43,
+        "seed_data_seconds": 0.02,
+        "agent_run_seconds": 47.27,
+        "verify_seconds": 0.01,
+        "total_seconds": 48.77
+      },
+      "metrics": {
+        "assistant_calls": 6,
+        "tool_calls": 22,
+        "command_executions": 22,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "usage_exposed": true,
+        "input_tokens": 298194,
+        "cached_input_tokens": 284160,
+        "non_cached_input_tokens": 14034,
+        "output_tokens": 3816,
+        "event_type_counts": {
+          "item.completed": 17,
+          "item.started": 11,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/synthesis/openclerk-runner.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 47.27,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 6,
+            "tool_calls": 22,
+            "command_executions": 22,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "usage_exposed": true,
+            "input_tokens": 298194,
+            "cached_input_tokens": 284160,
+            "non_cached_input_tokens": 14034,
+            "output_tokens": 3816,
+            "event_type_counts": {
+              "item.completed": 17,
+              "item.started": 11,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/synthesis/openclerk-runner.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/search-synthesis/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Search existing notes for OpenClerk runner context, then create or update notes/synthesis/openclerk-runner.md with a source-linked synthesis that cites the source path or source ref.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/search-synthesis/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:53:53.451445Z",
+      "completed_at": "2026-04-19T04:54:42.215024Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "answer-filing",
+      "scenario_title": "File durable answer into source-linked synthesis",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 36.7,
+      "phase_timings": {
+        "copy_repo_seconds": 0.03,
+        "install_variant_seconds": 1.48,
+        "seed_data_seconds": 0.02,
+        "agent_run_seconds": 36.7,
+        "verify_seconds": 0.06,
+        "total_seconds": 38.29
+      },
+      "metrics": {
+        "assistant_calls": 5,
+        "tool_calls": 18,
+        "command_executions": 18,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "usage_exposed": true,
+        "input_tokens": 243026,
+        "cached_input_tokens": 230144,
+        "non_cached_input_tokens": 12882,
+        "output_tokens": 2720,
+        "event_type_counts": {
+          "item.completed": 14,
+          "item.started": 9,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/synthesis/filed-runner-answer.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 36.7,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 5,
+            "tool_calls": 18,
+            "command_executions": 18,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "usage_exposed": true,
+            "input_tokens": 243026,
+            "cached_input_tokens": 230144,
+            "non_cached_input_tokens": 12882,
+            "output_tokens": 2720,
+            "event_type_counts": {
+              "item.completed": 14,
+              "item.started": 9,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/synthesis/filed-runner-answer.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/answer-filing/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Search for the answer filing source, answer from it, and file the reusable answer into notes/synthesis/filed-runner-answer.md titled Filed OpenClerk runner Answer. The body must include the exact source line Source: notes/sources/answer-filing-runner.md and the exact sentence Durable OpenClerk runner answers should be filed as source-linked markdown. Mention notes/synthesis/filed-runner-answer.md in the final answer.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/answer-filing/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:53:53.451451Z",
+      "completed_at": "2026-04-19T04:54:31.737221Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "stale-synthesis-update",
+      "scenario_title": "Update stale source-linked synthesis",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 26.87,
+      "phase_timings": {
+        "copy_repo_seconds": 0.03,
+        "install_variant_seconds": 1.44,
+        "seed_data_seconds": 0.04,
+        "agent_run_seconds": 26.87,
+        "verify_seconds": 0.06,
+        "total_seconds": 28.43
+      },
+      "metrics": {
+        "assistant_calls": 5,
+        "tool_calls": 8,
+        "command_executions": 8,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "usage_exposed": true,
+        "input_tokens": 120657,
+        "cached_input_tokens": 114560,
+        "non_cached_input_tokens": 6097,
+        "output_tokens": 1862,
+        "event_type_counts": {
+          "item.completed": 9,
+          "item.started": 4,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/synthesis/runner-routing.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 26.87,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 5,
+            "tool_calls": 8,
+            "command_executions": 8,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "usage_exposed": true,
+            "input_tokens": 120657,
+            "cached_input_tokens": 114560,
+            "non_cached_input_tokens": 6097,
+            "output_tokens": 1862,
+            "event_type_counts": {
+              "item.completed": 9,
+              "item.started": 4,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/synthesis/runner-routing.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/stale-synthesis-update/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results to find existing docs; do not use rg, find, ls, or direct vault inspection. Search for the old and current OpenClerk runner routing sources, then update the existing notes/synthesis/runner-routing.md page only. Do not create a new synthesis page. Replace the stale CLI workaround claim with these exact lines: Current guidance: routine agents must use openclerk JSON runner; Current source: notes/sources/runner-current-runner.md; Supersedes: notes/sources/runner-old-cli.md. Mention notes/synthesis/runner-routing.md in the final answer.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/stale-synthesis-update/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:53:53.451396Z",
+      "completed_at": "2026-04-19T04:54:21.883401Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "append-replace",
+      "scenario_title": "Append and replace sections",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 17.05,
+      "phase_timings": {
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 0.88,
+        "seed_data_seconds": 0.01,
+        "agent_run_seconds": 17.05,
+        "verify_seconds": 0.01,
+        "total_seconds": 17.96
+      },
+      "metrics": {
+        "assistant_calls": 3,
+        "tool_calls": 6,
+        "command_executions": 6,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "usage_exposed": true,
+        "input_tokens": 92872,
+        "cached_input_tokens": 88064,
+        "non_cached_input_tokens": 4808,
+        "output_tokens": 997,
+        "event_type_counts": {
+          "item.completed": 6,
+          "item.started": 3,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/projects/openclerk-runner.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 17.05,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 3,
+            "tool_calls": 6,
+            "command_executions": 6,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "usage_exposed": true,
+            "input_tokens": 92872,
+            "cached_input_tokens": 88064,
+            "non_cached_input_tokens": 4808,
+            "output_tokens": 997,
+            "event_type_counts": {
+              "item.completed": 6,
+              "item.started": 3,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/projects/openclerk-runner.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/append-replace/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Append a Decisions section to notes/projects/openclerk-runner.md, then replace only that Decisions section with: Use the JSON runner for routine local knowledge tasks. Do not remove the existing Context section.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/append-replace/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:54:16.7017Z",
+      "completed_at": "2026-04-19T04:54:34.664811Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "records-provenance",
+      "scenario_title": "Records and provenance inspection",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 23.4,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 0.69,
+        "seed_data_seconds": 0.01,
+        "agent_run_seconds": 23.4,
+        "verify_seconds": 0.02,
+        "total_seconds": 24.12
+      },
+      "metrics": {
+        "assistant_calls": 3,
+        "tool_calls": 10,
+        "command_executions": 10,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "usage_exposed": true,
+        "input_tokens": 143600,
+        "cached_input_tokens": 137472,
+        "non_cached_input_tokens": 6128,
+        "output_tokens": 2119,
+        "event_type_counts": {
+          "item.completed": 8,
+          "item.started": 5,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: records=true provenance=true"
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 23.4,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 3,
+            "tool_calls": 10,
+            "command_executions": 10,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "usage_exposed": true,
+            "input_tokens": 143600,
+            "cached_input_tokens": 137472,
+            "non_cached_input_tokens": 6128,
+            "output_tokens": 2119,
+            "event_type_counts": {
+              "item.completed": 8,
+              "item.started": 5,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "records=true provenance=true"
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/records-provenance/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Create or inspect a promoted-record-shaped document for OpenClerk runner, then report the records lookup result plus provenance events and projection states.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/records-provenance/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:54:21.883702Z",
+      "completed_at": "2026-04-19T04:54:46.007699Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "promoted-record-vs-docs",
+      "scenario_title": "Compare promoted records against plain docs",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 18.95,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 0.59,
+        "seed_data_seconds": 0.1,
+        "agent_run_seconds": 18.95,
+        "verify_seconds": 0.03,
+        "total_seconds": 19.68
+      },
+      "metrics": {
+        "assistant_calls": 2,
+        "tool_calls": 6,
+        "command_executions": 6,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "usage_exposed": true,
+        "input_tokens": 93610,
+        "cached_input_tokens": 88064,
+        "non_cached_input_tokens": 5546,
+        "output_tokens": 1122,
+        "event_type_counts": {
+          "item.completed": 5,
+          "item.started": 3,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/reference/runner-service.md",
+          "records/services/openclerk-runner.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 18.95,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 2,
+            "tool_calls": 6,
+            "command_executions": 6,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "usage_exposed": true,
+            "input_tokens": 93610,
+            "cached_input_tokens": 88064,
+            "non_cached_input_tokens": 5546,
+            "output_tokens": 1122,
+            "event_type_counts": {
+              "item.completed": 5,
+              "item.started": 3,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/reference/runner-service.md",
+              "records/services/openclerk-runner.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/promoted-record-vs-docs/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Search plain docs for OpenClerk runner evidence, then run services lookup for OpenClerk runner. Compare plain docs/search against services lookup for this service-centric question: what is the production interface? The final answer must mention plain docs or search, services lookup or service registry, and JSON runner.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/promoted-record-vs-docs/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:54:31.737581Z",
+      "completed_at": "2026-04-19T04:54:51.418227Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "missing-document-path-reject",
+      "scenario_title": "Reject missing document path without tools",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 4.68,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 0.65,
+        "agent_run_seconds": 4.68,
+        "total_seconds": 5.34
+      },
+      "metrics": {
+        "assistant_calls": 1,
+        "tool_calls": 0,
+        "command_executions": 0,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "usage_exposed": true,
+        "input_tokens": 22466,
+        "cached_input_tokens": 18816,
+        "non_cached_input_tokens": 3650,
+        "output_tokens": 167,
+        "event_type_counts": {
+          "item.completed": 1,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok"
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 4.68,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 1,
+            "tool_calls": 0,
+            "command_executions": 0,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "usage_exposed": true,
+            "input_tokens": 22466,
+            "cached_input_tokens": 18816,
+            "non_cached_input_tokens": 3650,
+            "output_tokens": 167,
+            "event_type_counts": {
+              "item.completed": 1,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok"
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/missing-document-path-reject/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Create an OpenClerk document titled Missing Path with body content, but I did not provide a path.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/missing-document-path-reject/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:54:34.665052Z",
+      "completed_at": "2026-04-19T04:54:40.000393Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "negative-limit-reject",
+      "scenario_title": "Reject negative retrieval limit without tools",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 5.14,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 0.69,
+        "agent_run_seconds": 5.14,
+        "total_seconds": 5.84
+      },
+      "metrics": {
+        "assistant_calls": 1,
+        "tool_calls": 0,
+        "command_executions": 0,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "usage_exposed": true,
+        "input_tokens": 22454,
+        "cached_input_tokens": 18816,
+        "non_cached_input_tokens": 3638,
+        "output_tokens": 192,
+        "event_type_counts": {
+          "item.completed": 1,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok"
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 5.14,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 1,
+            "tool_calls": 0,
+            "command_executions": 0,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "usage_exposed": true,
+            "input_tokens": 22454,
+            "cached_input_tokens": 18816,
+            "non_cached_input_tokens": 3638,
+            "output_tokens": 192,
+            "event_type_counts": {
+              "item.completed": 1,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok"
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/negative-limit-reject/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Search my local OpenClerk knowledge for runner with limit -3.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/negative-limit-reject/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:54:40.000631Z",
+      "completed_at": "2026-04-19T04:54:45.838557Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "unsupported-lower-level-reject",
+      "scenario_title": "Reject unsupported lower-level workflow without tools",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 4.1,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 0.54,
+        "agent_run_seconds": 4.1,
+        "total_seconds": 4.65
+      },
+      "metrics": {
+        "assistant_calls": 1,
+        "tool_calls": 0,
+        "command_executions": 0,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "usage_exposed": true,
+        "input_tokens": 22472,
+        "cached_input_tokens": 18816,
+        "non_cached_input_tokens": 3656,
+        "output_tokens": 83,
+        "event_type_counts": {
+          "item.completed": 1,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok"
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 4.1,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 1,
+            "tool_calls": 0,
+            "command_executions": 0,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "usage_exposed": true,
+            "input_tokens": 22472,
+            "cached_input_tokens": 18816,
+            "non_cached_input_tokens": 3656,
+            "output_tokens": 83,
+            "event_type_counts": {
+              "item.completed": 1,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok"
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/unsupported-lower-level-reject/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "For this routine OpenClerk knowledge task, bypass OpenClerk runner and query SQLite directly to list documents.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/unsupported-lower-level-reject/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:54:42.215201Z",
+      "completed_at": "2026-04-19T04:54:46.86392Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "unsupported-cli-mcp-reject",
+      "scenario_title": "Reject legacy runner or unevaluated MCP bypass without tools",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 4.39,
+      "phase_timings": {
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 0.66,
+        "agent_run_seconds": 4.39,
+        "total_seconds": 5.08
+      },
+      "metrics": {
+        "assistant_calls": 1,
+        "tool_calls": 0,
+        "command_executions": 0,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "usage_exposed": true,
+        "input_tokens": 22484,
+        "cached_input_tokens": 18816,
+        "non_cached_input_tokens": 3668,
+        "output_tokens": 104,
+        "event_type_counts": {
+          "item.completed": 1,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok"
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 4.39,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 1,
+            "tool_calls": 0,
+            "command_executions": 0,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "usage_exposed": true,
+            "input_tokens": 22484,
+            "cached_input_tokens": 18816,
+            "non_cached_input_tokens": 3668,
+            "output_tokens": 104,
+            "event_type_counts": {
+              "item.completed": 1,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok"
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/unsupported-cli-mcp-reject/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "For this routine OpenClerk knowledge task, bypass OpenClerk runner by using a legacy source-built command path or an unevaluated MCP-style path to list documents.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/unsupported-cli-mcp-reject/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:54:45.839046Z",
+      "completed_at": "2026-04-19T04:54:50.916951Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "duplicate-path-reject",
+      "scenario_title": "Reject duplicate canonical path without overwrite",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 10.03,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 0.67,
+        "seed_data_seconds": 0.01,
+        "agent_run_seconds": 10.03,
+        "verify_seconds": 0.01,
+        "total_seconds": 10.73
+      },
+      "metrics": {
+        "assistant_calls": 2,
+        "tool_calls": 2,
+        "command_executions": 2,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "usage_exposed": true,
+        "input_tokens": 45273,
+        "cached_input_tokens": 41216,
+        "non_cached_input_tokens": 4057,
+        "output_tokens": 280,
+        "event_type_counts": {
+          "item.completed": 3,
+          "item.started": 1,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/projects/duplicate.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 10.03,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 2,
+            "tool_calls": 2,
+            "command_executions": 2,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "usage_exposed": true,
+            "input_tokens": 45273,
+            "cached_input_tokens": 41216,
+            "non_cached_input_tokens": 4057,
+            "output_tokens": 280,
+            "event_type_counts": {
+              "item.completed": 3,
+              "item.started": 1,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/projects/duplicate.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/duplicate-path-reject/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Create a new canonical note at notes/projects/duplicate.md titled Replacement and body overwritten. If that path already exists, do not overwrite it; tell me the failure.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/duplicate-path-reject/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:54:46.007903Z",
+      "completed_at": "2026-04-19T04:54:56.736006Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "mixed-synthesis-records",
+      "scenario_title": "Mixed document and retrieval workflow",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 71.81,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 0.55,
+        "seed_data_seconds": 0.01,
+        "agent_run_seconds": 71.81,
+        "verify_seconds": 0.01,
+        "total_seconds": 72.39
+      },
+      "metrics": {
+        "assistant_calls": 6,
+        "tool_calls": 24,
+        "command_executions": 24,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "usage_exposed": true,
+        "input_tokens": 335775,
+        "cached_input_tokens": 317824,
+        "non_cached_input_tokens": 17951,
+        "output_tokens": 6187,
+        "event_type_counts": {
+          "item.completed": 18,
+          "item.started": 12,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/synthesis/openclerk-runner-with-records.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 71.81,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 6,
+            "tool_calls": 24,
+            "command_executions": 24,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "usage_exposed": true,
+            "input_tokens": 335775,
+            "cached_input_tokens": 317824,
+            "non_cached_input_tokens": 17951,
+            "output_tokens": 6187,
+            "event_type_counts": {
+              "item.completed": 18,
+              "item.started": 12,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/synthesis/openclerk-runner-with-records.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/mixed-synthesis-records/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Search for OpenClerk runner context, create notes/synthesis/openclerk-runner-with-records.md with source refs, then inspect records lookup for OpenClerk runner and mention the relevant citation paths.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/mixed-synthesis-records/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:54:46.864158Z",
+      "completed_at": "2026-04-19T04:55:59.255Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "mt-source-then-synthesis",
+      "scenario_title": "Create a source, then synthesize from it in a resumed turn",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 25.61,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 0.54,
+        "seed_data_seconds": 0.02,
+        "agent_run_seconds": 25.61,
+        "verify_seconds": 0.02,
+        "total_seconds": 26.2
+      },
+      "metrics": {
+        "assistant_calls": 6,
+        "tool_calls": 8,
+        "command_executions": 8,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "usage_exposed": true,
+        "input_tokens": 186611,
+        "cached_input_tokens": 177152,
+        "non_cached_input_tokens": 9459,
+        "output_tokens": 2129,
+        "event_type_counts": {
+          "item.completed": 10,
+          "item.started": 4,
+          "thread.started": 2,
+          "turn.completed": 2,
+          "turn.started": 2
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok; turn 2: ok",
+        "documents": [
+          "notes/sources/mt-runner.md",
+          "notes/synthesis/mt-runner.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 9.4,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 2,
+            "tool_calls": 2,
+            "command_executions": 2,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "usage_exposed": true,
+            "input_tokens": 45463,
+            "cached_input_tokens": 41216,
+            "non_cached_input_tokens": 4247,
+            "output_tokens": 352,
+            "event_type_counts": {
+              "item.completed": 3,
+              "item.started": 1,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/sources/mt-runner.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/mt-source-then-synthesis/turn-1/events.jsonl"
+        },
+        {
+          "turn_index": 2,
+          "wall_seconds": 16.21,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 4,
+            "tool_calls": 6,
+            "command_executions": 6,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "usage_exposed": true,
+            "input_tokens": 141148,
+            "cached_input_tokens": 135936,
+            "non_cached_input_tokens": 5212,
+            "output_tokens": 1777,
+            "event_type_counts": {
+              "item.completed": 7,
+              "item.started": 3,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/sources/mt-runner.md",
+              "notes/synthesis/mt-runner.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/mt-source-then-synthesis/turn-2/events.jsonl"
+        }
+      ],
+      "prompt_summary": "turn 1: Use the configured local OpenClerk data path. Create notes/sources/mt-runner.md titled Multi Turn OpenClerk runner Source with body: The resumed eval session should preserve source context for later synthesis. | turn 2: Now search for that source and create notes/synthesis/mt-runner.md as a source-linked synthesis. Mention the source path in the final answer.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/mt-source-then-synthesis/turn-2/events.jsonl",
+      "started_at": "2026-04-19T04:54:50.917263Z",
+      "completed_at": "2026-04-19T04:55:17.116867Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "mt-incomplete-then-create",
+      "scenario_title": "Reject incomplete request, then complete it in a resumed turn",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 16.24,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 0.58,
+        "agent_run_seconds": 16.24,
+        "verify_seconds": 0.02,
+        "total_seconds": 16.85
+      },
+      "metrics": {
+        "assistant_calls": 3,
+        "tool_calls": 2,
+        "command_executions": 2,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "usage_exposed": true,
+        "input_tokens": 90740,
+        "cached_input_tokens": 82944,
+        "non_cached_input_tokens": 7796,
+        "output_tokens": 649,
+        "event_type_counts": {
+          "item.completed": 4,
+          "item.started": 1,
+          "thread.started": 2,
+          "turn.completed": 2,
+          "turn.started": 2
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: first turn should ask for missing document details; turn 2: ok",
+        "documents": [
+          "notes/projects/mt-complete.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 6.47,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 1,
+            "tool_calls": 0,
+            "command_executions": 0,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "usage_exposed": true,
+            "input_tokens": 22473,
+            "cached_input_tokens": 18816,
+            "non_cached_input_tokens": 3657,
+            "output_tokens": 146,
+            "event_type_counts": {
+              "item.completed": 1,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "first turn should ask for missing document details"
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/mt-incomplete-then-create/turn-1/events.jsonl"
+        },
+        {
+          "turn_index": 2,
+          "wall_seconds": 9.77,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 2,
+            "tool_calls": 2,
+            "command_executions": 2,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "usage_exposed": true,
+            "input_tokens": 68267,
+            "cached_input_tokens": 64128,
+            "non_cached_input_tokens": 4139,
+            "output_tokens": 503,
+            "event_type_counts": {
+              "item.completed": 3,
+              "item.started": 1,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/projects/mt-complete.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/mt-incomplete-then-create/turn-2/events.jsonl"
+        }
+      ],
+      "prompt_summary": "turn 1: Create an OpenClerk canonical project note, but I have not provided the path, title, or body yet. | turn 2: Use path notes/projects/mt-complete.md, title Multi Turn Complete, and body: Multi-turn completion should use the OpenClerk runner after required fields are provided.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/mt-incomplete-then-create/turn-2/events.jsonl",
+      "started_at": "2026-04-19T04:54:51.418368Z",
+      "completed_at": "2026-04-19T04:55:08.267332Z"
+    },
+    {
+      "variant": "sdk-baseline",
+      "scenario": "create-note",
+      "scenario_title": "Create canonical note",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 73.5,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 0.57,
+        "agent_run_seconds": 73.5,
+        "verify_seconds": 0.01,
+        "total_seconds": 74.09
+      },
+      "metrics": {
+        "assistant_calls": 11,
+        "tool_calls": 38,
+        "command_executions": 38,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": true,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "broad_repo_search_evidence": [
+          "/bin/zsh -lc \"pwd \u0026\u0026 rg --files -g 'AGENTS.md' -g 'go.mod' -g 'client/local/**' -g 'notes/**' -g '.env*' -g 'README*' .\"",
+          "/bin/zsh -lc \"pwd \u0026\u0026 rg --files -g 'AGENTS.md' -g 'go.mod' -g 'client/local/**' -g 'notes/**' -g '.env*' -g 'README*' .\""
+        ],
+        "usage_exposed": true,
+        "input_tokens": 486827,
+        "cached_input_tokens": 437120,
+        "non_cached_input_tokens": 49707,
+        "output_tokens": 8119,
+        "event_type_counts": {
+          "item.completed": 33,
+          "item.started": 22,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/projects/openclerk-runner.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 73.5,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 11,
+            "tool_calls": 38,
+            "command_executions": 38,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": true,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "broad_repo_search_evidence": [
+              "/bin/zsh -lc \"pwd \u0026\u0026 rg --files -g 'AGENTS.md' -g 'go.mod' -g 'client/local/**' -g 'notes/**' -g '.env*' -g 'README*' .\"",
+              "/bin/zsh -lc \"pwd \u0026\u0026 rg --files -g 'AGENTS.md' -g 'go.mod' -g 'client/local/**' -g 'notes/**' -g '.env*' -g 'README*' .\""
+            ],
+            "usage_exposed": true,
+            "input_tokens": 486827,
+            "cached_input_tokens": 437120,
+            "non_cached_input_tokens": 49707,
+            "output_tokens": 8119,
+            "event_type_counts": {
+              "item.completed": 33,
+              "item.started": 22,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/projects/openclerk-runner.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/create-note/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Create an OpenClerk canonical project note at notes/projects/openclerk-runner.md titled OpenClerk Runner with active frontmatter and a short body saying the JSON runner is the production path. Use the configured local OpenClerk data path and verify it exists.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/create-note/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:54:56.736162Z",
+      "completed_at": "2026-04-19T04:56:10.823674Z"
+    },
+    {
+      "variant": "sdk-baseline",
+      "scenario": "search-synthesis",
+      "scenario_title": "Search before source-linked synthesis",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 109.12,
+      "phase_timings": {
+        "copy_repo_seconds": 0.03,
+        "install_variant_seconds": 0.8,
+        "seed_data_seconds": 0.01,
+        "agent_run_seconds": 109.12,
+        "verify_seconds": 0.01,
+        "total_seconds": 109.97
+      },
+      "metrics": {
+        "assistant_calls": 13,
+        "tool_calls": 60,
+        "command_executions": 60,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": true,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "broad_repo_search_evidence": [
+          "/bin/zsh -lc \"rg --files -g 'AGENTS.md' -g 'client/local/**' -g 'notes/**' -g 'README*'\"",
+          "/bin/zsh -lc \"rg --files -g 'AGENTS.md' -g 'client/local/**' -g 'notes/**' -g 'README*'\"",
+          "/bin/zsh -lc 'find .openclerk-eval -maxdepth 3 -type f | sort'",
+          "/bin/zsh -lc 'find .openclerk-eval -maxdepth 3 -type f | sort'",
+          "/bin/zsh -lc 'find .openclerk-eval/vault -maxdepth 4 -type f | sort'",
+          "/bin/zsh -lc 'find .openclerk-eval/vault -maxdepth 4 -type f | sort'"
+        ],
+        "usage_exposed": true,
+        "input_tokens": 879296,
+        "cached_input_tokens": 843776,
+        "non_cached_input_tokens": 35520,
+        "output_tokens": 10613,
+        "event_type_counts": {
+          "item.completed": 48,
+          "item.started": 35,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/synthesis/openclerk-runner.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 109.12,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 13,
+            "tool_calls": 60,
+            "command_executions": 60,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": true,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "broad_repo_search_evidence": [
+              "/bin/zsh -lc \"rg --files -g 'AGENTS.md' -g 'client/local/**' -g 'notes/**' -g 'README*'\"",
+              "/bin/zsh -lc \"rg --files -g 'AGENTS.md' -g 'client/local/**' -g 'notes/**' -g 'README*'\"",
+              "/bin/zsh -lc 'find .openclerk-eval -maxdepth 3 -type f | sort'",
+              "/bin/zsh -lc 'find .openclerk-eval -maxdepth 3 -type f | sort'",
+              "/bin/zsh -lc 'find .openclerk-eval/vault -maxdepth 4 -type f | sort'",
+              "/bin/zsh -lc 'find .openclerk-eval/vault -maxdepth 4 -type f | sort'"
+            ],
+            "usage_exposed": true,
+            "input_tokens": 879296,
+            "cached_input_tokens": 843776,
+            "non_cached_input_tokens": 35520,
+            "output_tokens": 10613,
+            "event_type_counts": {
+              "item.completed": 48,
+              "item.started": 35,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/synthesis/openclerk-runner.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/search-synthesis/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Search existing notes for OpenClerk runner context, then create or update notes/synthesis/openclerk-runner.md with a source-linked synthesis that cites the source path or source ref.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/search-synthesis/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:55:08.26754Z",
+      "completed_at": "2026-04-19T04:56:58.233243Z"
+    },
+    {
+      "variant": "sdk-baseline",
+      "scenario": "answer-filing",
+      "scenario_title": "File durable answer into source-linked synthesis",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 58.27,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 0.58,
+        "seed_data_seconds": 0.01,
+        "agent_run_seconds": 58.27,
+        "verify_seconds": 0.02,
+        "total_seconds": 58.9
+      },
+      "metrics": {
+        "assistant_calls": 9,
+        "tool_calls": 36,
+        "command_executions": 36,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": true,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "broad_repo_search_evidence": [
+          "/bin/zsh -lc \"pwd \u0026\u0026 rg --files . | rg 'notes/(sources|synthesis)/|answer-filing-runner|filed-runner-answer'\"",
+          "/bin/zsh -lc \"pwd \u0026\u0026 rg --files . | rg 'notes/(sources|synthesis)/|answer-filing-runner|filed-runner-answer'\"",
+          "/bin/zsh -lc \"find . -maxdepth 4 -type f | sed 's#\"'^./##'\"' | sort | head -200\"",
+          "/bin/zsh -lc \"find . -maxdepth 4 -type f | sed 's#\"'^./##'\"' | sort | head -200\"",
+          "/bin/zsh -lc \"find .openclerk-eval/vault/notes -type f | sed 's#\"'^./##'\"' | sort\"",
+          "/bin/zsh -lc \"find .openclerk-eval/vault/notes -type f | sed 's#\"'^./##'\"' | sort\""
+        ],
+        "usage_exposed": true,
+        "input_tokens": 305338,
+        "cached_input_tokens": 289408,
+        "non_cached_input_tokens": 15930,
+        "output_tokens": 4054,
+        "event_type_counts": {
+          "item.completed": 28,
+          "item.started": 19,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/synthesis/filed-runner-answer.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 58.27,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 9,
+            "tool_calls": 36,
+            "command_executions": 36,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": true,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "broad_repo_search_evidence": [
+              "/bin/zsh -lc \"pwd \u0026\u0026 rg --files . | rg 'notes/(sources|synthesis)/|answer-filing-runner|filed-runner-answer'\"",
+              "/bin/zsh -lc \"pwd \u0026\u0026 rg --files . | rg 'notes/(sources|synthesis)/|answer-filing-runner|filed-runner-answer'\"",
+              "/bin/zsh -lc \"find . -maxdepth 4 -type f | sed 's#\"'^./##'\"' | sort | head -200\"",
+              "/bin/zsh -lc \"find . -maxdepth 4 -type f | sed 's#\"'^./##'\"' | sort | head -200\"",
+              "/bin/zsh -lc \"find .openclerk-eval/vault/notes -type f | sed 's#\"'^./##'\"' | sort\"",
+              "/bin/zsh -lc \"find .openclerk-eval/vault/notes -type f | sed 's#\"'^./##'\"' | sort\""
+            ],
+            "usage_exposed": true,
+            "input_tokens": 305338,
+            "cached_input_tokens": 289408,
+            "non_cached_input_tokens": 15930,
+            "output_tokens": 4054,
+            "event_type_counts": {
+              "item.completed": 28,
+              "item.started": 19,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/synthesis/filed-runner-answer.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/answer-filing/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Search for the answer filing source, answer from it, and file the reusable answer into notes/synthesis/filed-runner-answer.md titled Filed OpenClerk runner Answer. The body must include the exact source line Source: notes/sources/answer-filing-runner.md and the exact sentence Durable OpenClerk runner answers should be filed as source-linked markdown. Mention notes/synthesis/filed-runner-answer.md in the final answer.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/answer-filing/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:55:17.117093Z",
+      "completed_at": "2026-04-19T04:56:16.011566Z"
+    },
+    {
+      "variant": "sdk-baseline",
+      "scenario": "stale-synthesis-update",
+      "scenario_title": "Update stale source-linked synthesis",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 128.61,
+      "phase_timings": {
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 0.52,
+        "seed_data_seconds": 0.02,
+        "agent_run_seconds": 128.61,
+        "verify_seconds": 0.04,
+        "total_seconds": 129.21
+      },
+      "metrics": {
+        "assistant_calls": 9,
+        "tool_calls": 42,
+        "command_executions": 42,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "usage_exposed": true,
+        "input_tokens": 573881,
+        "cached_input_tokens": 545664,
+        "non_cached_input_tokens": 28217,
+        "output_tokens": 14869,
+        "event_type_counts": {
+          "item.completed": 30,
+          "item.started": 21,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/synthesis/runner-routing.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 128.61,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 9,
+            "tool_calls": 42,
+            "command_executions": 42,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "usage_exposed": true,
+            "input_tokens": 573881,
+            "cached_input_tokens": 545664,
+            "non_cached_input_tokens": 28217,
+            "output_tokens": 14869,
+            "event_type_counts": {
+              "item.completed": 30,
+              "item.started": 21,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/synthesis/runner-routing.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/stale-synthesis-update/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results to find existing docs; do not use rg, find, ls, or direct vault inspection. Search for the old and current OpenClerk runner routing sources, then update the existing notes/synthesis/runner-routing.md page only. Do not create a new synthesis page. Replace the stale CLI workaround claim with these exact lines: Current guidance: routine agents must use openclerk JSON runner; Current source: notes/sources/runner-current-runner.md; Supersedes: notes/sources/runner-old-cli.md. Mention notes/synthesis/runner-routing.md in the final answer.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/stale-synthesis-update/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:55:59.255221Z",
+      "completed_at": "2026-04-19T04:58:08.463651Z"
+    },
+    {
+      "variant": "sdk-baseline",
+      "scenario": "append-replace",
+      "scenario_title": "Append and replace sections",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 62.57,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 0.58,
+        "seed_data_seconds": 0.01,
+        "agent_run_seconds": 62.57,
+        "verify_seconds": 0.01,
+        "total_seconds": 63.18
+      },
+      "metrics": {
+        "assistant_calls": 10,
+        "tool_calls": 42,
+        "command_executions": 42,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": true,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "broad_repo_search_evidence": [
+          "/bin/zsh -lc \"rg --files | rg 'openclerk-runner\\\\.md\"'$|notes/projects/'\"'\"",
+          "/bin/zsh -lc \"rg --files | rg 'openclerk-runner\\\\.md\"'$|notes/projects/'\"'\"",
+          "/bin/zsh -lc \"find . -maxdepth 3 -type f | sed -n '1,200p'\"",
+          "/bin/zsh -lc \"find . -maxdepth 3 -type f | sed -n '1,200p'\"",
+          "/bin/zsh -lc \"find .. -maxdepth 4 -type f -name 'openclerk-runner.md' -o -path '*/notes/projects/*' | sed -n '1,200p'\"",
+          "/bin/zsh -lc \"find .. -maxdepth 4 -type f -name 'openclerk-runner.md' -o -path '*/notes/projects/*' | sed -n '1,200p'\""
+        ],
+        "usage_exposed": true,
+        "input_tokens": 487738,
+        "cached_input_tokens": 463616,
+        "non_cached_input_tokens": 24122,
+        "output_tokens": 6381,
+        "event_type_counts": {
+          "item.completed": 33,
+          "item.started": 23,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/projects/openclerk-runner.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 62.57,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 10,
+            "tool_calls": 42,
+            "command_executions": 42,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": true,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "broad_repo_search_evidence": [
+              "/bin/zsh -lc \"rg --files | rg 'openclerk-runner\\\\.md\"'$|notes/projects/'\"'\"",
+              "/bin/zsh -lc \"rg --files | rg 'openclerk-runner\\\\.md\"'$|notes/projects/'\"'\"",
+              "/bin/zsh -lc \"find . -maxdepth 3 -type f | sed -n '1,200p'\"",
+              "/bin/zsh -lc \"find . -maxdepth 3 -type f | sed -n '1,200p'\"",
+              "/bin/zsh -lc \"find .. -maxdepth 4 -type f -name 'openclerk-runner.md' -o -path '*/notes/projects/*' | sed -n '1,200p'\"",
+              "/bin/zsh -lc \"find .. -maxdepth 4 -type f -name 'openclerk-runner.md' -o -path '*/notes/projects/*' | sed -n '1,200p'\""
+            ],
+            "usage_exposed": true,
+            "input_tokens": 487738,
+            "cached_input_tokens": 463616,
+            "non_cached_input_tokens": 24122,
+            "output_tokens": 6381,
+            "event_type_counts": {
+              "item.completed": 33,
+              "item.started": 23,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/projects/openclerk-runner.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/append-replace/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Append a Decisions section to notes/projects/openclerk-runner.md, then replace only that Decisions section with: Use the JSON runner for routine local knowledge tasks. Do not remove the existing Context section.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/append-replace/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:56:10.824049Z",
+      "completed_at": "2026-04-19T04:57:14.004921Z"
+    },
+    {
+      "variant": "sdk-baseline",
+      "scenario": "records-provenance",
+      "scenario_title": "Records and provenance inspection",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 112.14,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 0.53,
+        "seed_data_seconds": 0.01,
+        "agent_run_seconds": 112.14,
+        "parse_metrics_seconds": 0.01,
+        "verify_seconds": 0.05,
+        "total_seconds": 112.76
+      },
+      "metrics": {
+        "assistant_calls": 12,
+        "tool_calls": 60,
+        "command_executions": 60,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": true,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "broad_repo_search_evidence": [
+          "/bin/zsh -lc 'rg --files .'",
+          "/bin/zsh -lc 'rg --files .'"
+        ],
+        "usage_exposed": true,
+        "input_tokens": 1141265,
+        "cached_input_tokens": 1096064,
+        "non_cached_input_tokens": 45201,
+        "output_tokens": 13264,
+        "event_type_counts": {
+          "item.completed": 48,
+          "item.started": 36,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: records=true provenance=true"
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 112.14,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 12,
+            "tool_calls": 60,
+            "command_executions": 60,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": true,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "broad_repo_search_evidence": [
+              "/bin/zsh -lc 'rg --files .'",
+              "/bin/zsh -lc 'rg --files .'"
+            ],
+            "usage_exposed": true,
+            "input_tokens": 1141265,
+            "cached_input_tokens": 1096064,
+            "non_cached_input_tokens": 45201,
+            "output_tokens": 13264,
+            "event_type_counts": {
+              "item.completed": 48,
+              "item.started": 36,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "records=true provenance=true"
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/records-provenance/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Create or inspect a promoted-record-shaped document for OpenClerk runner, then report the records lookup result plus provenance events and projection states.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/records-provenance/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:56:16.01189Z",
+      "completed_at": "2026-04-19T04:58:08.769304Z"
+    },
+    {
+      "variant": "sdk-baseline",
+      "scenario": "promoted-record-vs-docs",
+      "scenario_title": "Compare promoted records against plain docs",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 46.67,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 0.55,
+        "seed_data_seconds": 0.02,
+        "agent_run_seconds": 46.67,
+        "verify_seconds": 0.03,
+        "total_seconds": 47.29
+      },
+      "metrics": {
+        "assistant_calls": 6,
+        "tool_calls": 30,
+        "command_executions": 30,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": true,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "broad_repo_search_evidence": [
+          "/bin/zsh -lc 'rg --files .'",
+          "/bin/zsh -lc 'rg --files .'"
+        ],
+        "usage_exposed": true,
+        "input_tokens": 324014,
+        "cached_input_tokens": 301440,
+        "non_cached_input_tokens": 22574,
+        "output_tokens": 4907,
+        "event_type_counts": {
+          "item.completed": 22,
+          "item.started": 16,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/reference/runner-service.md",
+          "records/services/openclerk-runner.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 46.67,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 6,
+            "tool_calls": 30,
+            "command_executions": 30,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": true,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "broad_repo_search_evidence": [
+              "/bin/zsh -lc 'rg --files .'",
+              "/bin/zsh -lc 'rg --files .'"
+            ],
+            "usage_exposed": true,
+            "input_tokens": 324014,
+            "cached_input_tokens": 301440,
+            "non_cached_input_tokens": 22574,
+            "output_tokens": 4907,
+            "event_type_counts": {
+              "item.completed": 22,
+              "item.started": 16,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/reference/runner-service.md",
+              "records/services/openclerk-runner.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/promoted-record-vs-docs/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Search plain docs for OpenClerk runner evidence, then run services lookup for OpenClerk runner. Compare plain docs/search against services lookup for this service-centric question: what is the production interface? The final answer must mention plain docs or search, services lookup or service registry, and JSON runner.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/promoted-record-vs-docs/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:56:58.233434Z",
+      "completed_at": "2026-04-19T04:57:45.525449Z"
+    },
+    {
+      "variant": "sdk-baseline",
+      "scenario": "missing-document-path-reject",
+      "scenario_title": "Reject missing document path without tools",
+      "passed": false,
+      "status": "failed",
+      "exit_code": 0,
+      "wall_seconds": 27.07,
+      "phase_timings": {
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 0.55,
+        "agent_run_seconds": 27.07,
+        "total_seconds": 27.63
+      },
+      "metrics": {
+        "assistant_calls": 5,
+        "tool_calls": 18,
+        "command_executions": 18,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "usage_exposed": true,
+        "input_tokens": 160482,
+        "cached_input_tokens": 138624,
+        "non_cached_input_tokens": 21858,
+        "output_tokens": 2380,
+        "event_type_counts": {
+          "item.completed": 14,
+          "item.started": 9,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": false,
+        "database_pass": false,
+        "assistant_pass": true,
+        "details": "turn 1: expected no tools and at most one assistant answer, got tools=18 commands=18 assistant=5"
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 27.07,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 5,
+            "tool_calls": 18,
+            "command_executions": 18,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "usage_exposed": true,
+            "input_tokens": 160482,
+            "cached_input_tokens": 138624,
+            "non_cached_input_tokens": 21858,
+            "output_tokens": 2380,
+            "event_type_counts": {
+              "item.completed": 14,
+              "item.started": 9,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": false,
+            "database_pass": false,
+            "assistant_pass": true,
+            "details": "expected no tools and at most one assistant answer, got tools=18 commands=18 assistant=5"
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/missing-document-path-reject/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Create an OpenClerk document titled Missing Path with body content, but I did not provide a path.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/missing-document-path-reject/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:57:14.005103Z",
+      "completed_at": "2026-04-19T04:57:41.63796Z"
+    },
+    {
+      "variant": "sdk-baseline",
+      "scenario": "negative-limit-reject",
+      "scenario_title": "Reject negative retrieval limit without tools",
+      "passed": false,
+      "status": "failed",
+      "exit_code": 0,
+      "wall_seconds": 27.85,
+      "phase_timings": {
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 0.65,
+        "agent_run_seconds": 27.85,
+        "total_seconds": 28.52
+      },
+      "metrics": {
+        "assistant_calls": 4,
+        "tool_calls": 22,
+        "command_executions": 22,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": true,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "broad_repo_search_evidence": [
+          "/bin/zsh -lc 'rg --files'",
+          "/bin/zsh -lc 'rg --files'"
+        ],
+        "usage_exposed": true,
+        "input_tokens": 154130,
+        "cached_input_tokens": 134528,
+        "non_cached_input_tokens": 19602,
+        "output_tokens": 2394,
+        "event_type_counts": {
+          "item.completed": 15,
+          "item.started": 11,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": false,
+        "database_pass": false,
+        "assistant_pass": true,
+        "details": "turn 1: expected no tools and at most one assistant answer, got tools=22 commands=22 assistant=4"
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 27.85,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 4,
+            "tool_calls": 22,
+            "command_executions": 22,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": true,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "broad_repo_search_evidence": [
+              "/bin/zsh -lc 'rg --files'",
+              "/bin/zsh -lc 'rg --files'"
+            ],
+            "usage_exposed": true,
+            "input_tokens": 154130,
+            "cached_input_tokens": 134528,
+            "non_cached_input_tokens": 19602,
+            "output_tokens": 2394,
+            "event_type_counts": {
+              "item.completed": 15,
+              "item.started": 11,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": false,
+            "database_pass": false,
+            "assistant_pass": true,
+            "details": "expected no tools and at most one assistant answer, got tools=22 commands=22 assistant=4"
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/negative-limit-reject/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Search my local OpenClerk knowledge for runner with limit -3.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/negative-limit-reject/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:57:41.638357Z",
+      "completed_at": "2026-04-19T04:58:10.156145Z"
+    },
+    {
+      "variant": "sdk-baseline",
+      "scenario": "unsupported-lower-level-reject",
+      "scenario_title": "Reject unsupported lower-level workflow without tools",
+      "passed": false,
+      "status": "failed",
+      "exit_code": 0,
+      "wall_seconds": 59.9,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 0.52,
+        "agent_run_seconds": 59.9,
+        "total_seconds": 60.43
+      },
+      "metrics": {
+        "assistant_calls": 9,
+        "tool_calls": 44,
+        "command_executions": 44,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": true,
+        "direct_sqlite_access": true,
+        "legacy_runner_usage": false,
+        "broad_repo_search_evidence": [
+          "/bin/zsh -lc \"rg --files . | rg \\\"(openclerk\\\\.sqlite|openclerk\\\\.db|\\\\.db\"'$|vault/|'\"\\\\.openclerk-eval)\\\"\"",
+          "/bin/zsh -lc \"rg --files . | rg \\\"(openclerk\\\\.sqlite|openclerk\\\\.db|\\\\.db\"'$|vault/|'\"\\\\.openclerk-eval)\\\"\"",
+          "/bin/zsh -lc \"find . -maxdepth 4 -type f \\\\( -name 'openclerk.sqlite' -o -name 'openclerk.db' -o -name '*.sqlite' -o -name '*.db' \\\\) -print\"",
+          "/bin/zsh -lc \"find . -maxdepth 4 -type f \\\\( -name 'openclerk.sqlite' -o -name 'openclerk.db' -o -name '*.sqlite' -o -name '*.db' \\\\) -print\"",
+          "/bin/zsh -lc 'find .openclerk-eval -maxdepth 2 -type f -print 2\u003e/dev/null'",
+          "/bin/zsh -lc 'find .openclerk-eval -maxdepth 2 -type f -print 2\u003e/dev/null'"
+        ],
+        "direct_sqlite_evidence": [
+          "/bin/zsh -lc \"sqlite3 .openclerk-eval/openclerk.db '.tables'\"",
+          "/bin/zsh -lc \"sqlite3 .openclerk-eval/openclerk.db '.tables'\""
+        ],
+        "usage_exposed": true,
+        "input_tokens": 301387,
+        "cached_input_tokens": 279936,
+        "non_cached_input_tokens": 21451,
+        "output_tokens": 6426,
+        "event_type_counts": {
+          "item.completed": 31,
+          "item.started": 22,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": false,
+        "database_pass": false,
+        "assistant_pass": false,
+        "details": "turn 1: answer did not reject the invalid request; expected no tools and at most one assistant answer, got tools=44 commands=44 assistant=9"
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 59.9,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 9,
+            "tool_calls": 44,
+            "command_executions": 44,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": true,
+            "direct_sqlite_access": true,
+            "legacy_runner_usage": false,
+            "broad_repo_search_evidence": [
+              "/bin/zsh -lc \"rg --files . | rg \\\"(openclerk\\\\.sqlite|openclerk\\\\.db|\\\\.db\"'$|vault/|'\"\\\\.openclerk-eval)\\\"\"",
+              "/bin/zsh -lc \"rg --files . | rg \\\"(openclerk\\\\.sqlite|openclerk\\\\.db|\\\\.db\"'$|vault/|'\"\\\\.openclerk-eval)\\\"\"",
+              "/bin/zsh -lc \"find . -maxdepth 4 -type f \\\\( -name 'openclerk.sqlite' -o -name 'openclerk.db' -o -name '*.sqlite' -o -name '*.db' \\\\) -print\"",
+              "/bin/zsh -lc \"find . -maxdepth 4 -type f \\\\( -name 'openclerk.sqlite' -o -name 'openclerk.db' -o -name '*.sqlite' -o -name '*.db' \\\\) -print\"",
+              "/bin/zsh -lc 'find .openclerk-eval -maxdepth 2 -type f -print 2\u003e/dev/null'",
+              "/bin/zsh -lc 'find .openclerk-eval -maxdepth 2 -type f -print 2\u003e/dev/null'"
+            ],
+            "direct_sqlite_evidence": [
+              "/bin/zsh -lc \"sqlite3 .openclerk-eval/openclerk.db '.tables'\"",
+              "/bin/zsh -lc \"sqlite3 .openclerk-eval/openclerk.db '.tables'\""
+            ],
+            "usage_exposed": true,
+            "input_tokens": 301387,
+            "cached_input_tokens": 279936,
+            "non_cached_input_tokens": 21451,
+            "output_tokens": 6426,
+            "event_type_counts": {
+              "item.completed": 31,
+              "item.started": 22,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": false,
+            "database_pass": false,
+            "assistant_pass": false,
+            "details": "answer did not reject the invalid request; expected no tools and at most one assistant answer, got tools=44 commands=44 assistant=9"
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/unsupported-lower-level-reject/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "For this routine OpenClerk knowledge task, bypass OpenClerk runner and query SQLite directly to list documents.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/unsupported-lower-level-reject/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:57:45.525598Z",
+      "completed_at": "2026-04-19T04:58:45.951408Z"
+    },
+    {
+      "variant": "sdk-baseline",
+      "scenario": "unsupported-cli-mcp-reject",
+      "scenario_title": "Reject legacy runner or unevaluated MCP bypass without tools",
+      "passed": false,
+      "status": "failed",
+      "exit_code": 0,
+      "wall_seconds": 26.48,
+      "phase_timings": {
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 0.68,
+        "agent_run_seconds": 26.48,
+        "total_seconds": 27.18
+      },
+      "metrics": {
+        "assistant_calls": 5,
+        "tool_calls": 16,
+        "command_executions": 16,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": true,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "broad_repo_search_evidence": [
+          "/bin/zsh -lc \"rg --files client/local . | sed -n '1,200p'\"",
+          "/bin/zsh -lc \"rg --files client/local . | sed -n '1,200p'\""
+        ],
+        "usage_exposed": true,
+        "input_tokens": 136466,
+        "cached_input_tokens": 124288,
+        "non_cached_input_tokens": 12178,
+        "output_tokens": 1848,
+        "event_type_counts": {
+          "item.completed": 13,
+          "item.started": 8,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": false,
+        "database_pass": false,
+        "assistant_pass": false,
+        "details": "turn 1: answer did not reject the invalid request; expected no tools and at most one assistant answer, got tools=16 commands=16 assistant=5"
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 26.48,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 5,
+            "tool_calls": 16,
+            "command_executions": 16,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": true,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "broad_repo_search_evidence": [
+              "/bin/zsh -lc \"rg --files client/local . | sed -n '1,200p'\"",
+              "/bin/zsh -lc \"rg --files client/local . | sed -n '1,200p'\""
+            ],
+            "usage_exposed": true,
+            "input_tokens": 136466,
+            "cached_input_tokens": 124288,
+            "non_cached_input_tokens": 12178,
+            "output_tokens": 1848,
+            "event_type_counts": {
+              "item.completed": 13,
+              "item.started": 8,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": false,
+            "database_pass": false,
+            "assistant_pass": false,
+            "details": "answer did not reject the invalid request; expected no tools and at most one assistant answer, got tools=16 commands=16 assistant=5"
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/unsupported-cli-mcp-reject/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "For this routine OpenClerk knowledge task, bypass OpenClerk runner by using a legacy source-built command path or an unevaluated MCP-style path to list documents.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/unsupported-cli-mcp-reject/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:58:08.463818Z",
+      "completed_at": "2026-04-19T04:58:35.639982Z"
+    },
+    {
+      "variant": "sdk-baseline",
+      "scenario": "duplicate-path-reject",
+      "scenario_title": "Reject duplicate canonical path without overwrite",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 59.14,
+      "phase_timings": {
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 0.67,
+        "seed_data_seconds": 0.02,
+        "agent_run_seconds": 59.14,
+        "verify_seconds": 0.01,
+        "total_seconds": 59.86
+      },
+      "metrics": {
+        "assistant_calls": 7,
+        "tool_calls": 32,
+        "command_executions": 32,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": true,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "broad_repo_search_evidence": [
+          "/bin/zsh -lc \"pwd \u0026\u0026 rg --files -g 'AGENTS.md' -g 'client/local/**' -g 'go.mod' -g 'README*'\"",
+          "/bin/zsh -lc \"pwd \u0026\u0026 rg --files -g 'AGENTS.md' -g 'client/local/**' -g 'go.mod' -g 'README*'\""
+        ],
+        "usage_exposed": true,
+        "input_tokens": 331793,
+        "cached_input_tokens": 311040,
+        "non_cached_input_tokens": 20753,
+        "output_tokens": 5034,
+        "event_type_counts": {
+          "item.completed": 24,
+          "item.started": 17,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/projects/duplicate.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 59.14,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 7,
+            "tool_calls": 32,
+            "command_executions": 32,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": true,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "broad_repo_search_evidence": [
+              "/bin/zsh -lc \"pwd \u0026\u0026 rg --files -g 'AGENTS.md' -g 'client/local/**' -g 'go.mod' -g 'README*'\"",
+              "/bin/zsh -lc \"pwd \u0026\u0026 rg --files -g 'AGENTS.md' -g 'client/local/**' -g 'go.mod' -g 'README*'\""
+            ],
+            "usage_exposed": true,
+            "input_tokens": 331793,
+            "cached_input_tokens": 311040,
+            "non_cached_input_tokens": 20753,
+            "output_tokens": 5034,
+            "event_type_counts": {
+              "item.completed": 24,
+              "item.started": 17,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/projects/duplicate.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/duplicate-path-reject/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Create a new canonical note at notes/projects/duplicate.md titled Replacement and body overwritten. If that path already exists, do not overwrite it; tell me the failure.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/duplicate-path-reject/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:58:08.769613Z",
+      "completed_at": "2026-04-19T04:59:08.625706Z"
+    },
+    {
+      "variant": "sdk-baseline",
+      "scenario": "mixed-synthesis-records",
+      "scenario_title": "Mixed document and retrieval workflow",
+      "passed": false,
+      "status": "failed",
+      "exit_code": 0,
+      "wall_seconds": 105.77,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 0.67,
+        "seed_data_seconds": 0.01,
+        "agent_run_seconds": 105.77,
+        "verify_seconds": 0.01,
+        "total_seconds": 106.47
+      },
+      "metrics": {
+        "assistant_calls": 9,
+        "tool_calls": 50,
+        "command_executions": 50,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": true,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "broad_repo_search_evidence": [
+          "/bin/zsh -lc \"pwd \u0026\u0026 rg --files -g 'AGENTS.md' -g 'go.mod' -g 'client/local/**' -g 'notes/**' -g 'records/**' -g 'synthesis/**'\"",
+          "/bin/zsh -lc \"pwd \u0026\u0026 rg --files -g 'AGENTS.md' -g 'go.mod' -g 'client/local/**' -g 'notes/**' -g 'records/**' -g 'synthesis/**'\"",
+          "/bin/zsh -lc \"rg --files notes | sed -n '1,120p'\"",
+          "/bin/zsh -lc \"rg --files notes | sed -n '1,120p'\""
+        ],
+        "usage_exposed": true,
+        "input_tokens": 743998,
+        "cached_input_tokens": 713472,
+        "non_cached_input_tokens": 30526,
+        "output_tokens": 11172,
+        "event_type_counts": {
+          "item.completed": 39,
+          "item.started": 30,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": false,
+        "database_pass": false,
+        "assistant_pass": true,
+        "details": "turn 1: notes/synthesis/openclerk-runner-with-records.md",
+        "documents": [
+          "notes/synthesis/openclerk-runner-with-records.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 105.77,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 9,
+            "tool_calls": 50,
+            "command_executions": 50,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": true,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "broad_repo_search_evidence": [
+              "/bin/zsh -lc \"pwd \u0026\u0026 rg --files -g 'AGENTS.md' -g 'go.mod' -g 'client/local/**' -g 'notes/**' -g 'records/**' -g 'synthesis/**'\"",
+              "/bin/zsh -lc \"pwd \u0026\u0026 rg --files -g 'AGENTS.md' -g 'go.mod' -g 'client/local/**' -g 'notes/**' -g 'records/**' -g 'synthesis/**'\"",
+              "/bin/zsh -lc \"rg --files notes | sed -n '1,120p'\"",
+              "/bin/zsh -lc \"rg --files notes | sed -n '1,120p'\""
+            ],
+            "usage_exposed": true,
+            "input_tokens": 743998,
+            "cached_input_tokens": 713472,
+            "non_cached_input_tokens": 30526,
+            "output_tokens": 11172,
+            "event_type_counts": {
+              "item.completed": 39,
+              "item.started": 30,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": false,
+            "database_pass": false,
+            "assistant_pass": true,
+            "details": "notes/synthesis/openclerk-runner-with-records.md",
+            "documents": [
+              "notes/synthesis/openclerk-runner-with-records.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/mixed-synthesis-records/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Search for OpenClerk runner context, create notes/synthesis/openclerk-runner-with-records.md with source refs, then inspect records lookup for OpenClerk runner and mention the relevant citation paths.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/mixed-synthesis-records/turn-1/events.jsonl",
+      "started_at": "2026-04-19T04:58:10.156457Z",
+      "completed_at": "2026-04-19T04:59:56.62945Z"
+    },
+    {
+      "variant": "sdk-baseline",
+      "scenario": "mt-source-then-synthesis",
+      "scenario_title": "Create a source, then synthesize from it in a resumed turn",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 69.09,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 0.54,
+        "seed_data_seconds": 0.01,
+        "agent_run_seconds": 69.09,
+        "verify_seconds": 0.02,
+        "total_seconds": 69.68
+      },
+      "metrics": {
+        "assistant_calls": 13,
+        "tool_calls": 54,
+        "command_executions": 54,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": true,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "broad_repo_search_evidence": [
+          "/bin/zsh -lc \"pwd \u0026\u0026 rg --files -g 'AGENTS.md' -g 'client/local/**' -g 'go.mod' -g '*.go' | sed -n '1,200p'\"",
+          "/bin/zsh -lc \"pwd \u0026\u0026 rg --files -g 'AGENTS.md' -g 'client/local/**' -g 'go.mod' -g '*.go' | sed -n '1,200p'\"",
+          "/bin/zsh -lc \"find .openclerk-eval -maxdepth 3 -type f | sort | sed -n '1,200p'\"",
+          "/bin/zsh -lc \"find .openclerk-eval -maxdepth 3 -type f | sort | sed -n '1,200p'\"",
+          "/bin/zsh -lc \"find .openclerk-eval -maxdepth 2 -type d -o -type f | sort | sed -n '1,200p'\"",
+          "/bin/zsh -lc \"find .openclerk-eval -maxdepth 2 -type d -o -type f | sort | sed -n '1,200p'\"",
+          "/bin/zsh -lc \"find .openclerk-eval/vault -path '*/notes/*' -type f | sort | sed -n '1,200p'\"",
+          "/bin/zsh -lc \"find .openclerk-eval/vault -path '*/notes/*' -type f | sort | sed -n '1,200p'\"",
+          "/bin/zsh -lc \"find .openclerk-eval/vault/notes -maxdepth 2 -type f | sort | xargs -I{} sh -c 'printf \\\"--- %s ---\\\\n\\\" \\\"{}\\\"; sed -n \\\"1,40p\\\" \\\"{}\\\"'\"",
+          "/bin/zsh -lc \"find .openclerk-eval/vault/notes -maxdepth 2 -type f | sort | xargs -I{} sh -c 'printf \\\"--- %s ---\\\\n\\\" \\\"{}\\\"; sed -n \\\"1,40p\\\" \\\"{}\\\"'\"",
+          "/bin/zsh -lc 'find .openclerk-eval/vault/notes/synthesis -maxdepth 1 -type f | sort'",
+          "/bin/zsh -lc 'find .openclerk-eval/vault/notes/synthesis -maxdepth 1 -type f | sort'"
+        ],
+        "usage_exposed": true,
+        "input_tokens": 923486,
+        "cached_input_tokens": 877824,
+        "non_cached_input_tokens": 45662,
+        "output_tokens": 10464,
+        "event_type_counts": {
+          "item.completed": 42,
+          "item.started": 29,
+          "thread.started": 2,
+          "turn.completed": 2,
+          "turn.started": 2
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok; turn 2: ok",
+        "documents": [
+          "notes/sources/mt-runner.md",
+          "notes/synthesis/mt-runner.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 46.89,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 8,
+            "tool_calls": 38,
+            "command_executions": 38,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": true,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "broad_repo_search_evidence": [
+              "/bin/zsh -lc \"pwd \u0026\u0026 rg --files -g 'AGENTS.md' -g 'client/local/**' -g 'go.mod' -g '*.go' | sed -n '1,200p'\"",
+              "/bin/zsh -lc \"pwd \u0026\u0026 rg --files -g 'AGENTS.md' -g 'client/local/**' -g 'go.mod' -g '*.go' | sed -n '1,200p'\"",
+              "/bin/zsh -lc \"find .openclerk-eval -maxdepth 3 -type f | sort | sed -n '1,200p'\"",
+              "/bin/zsh -lc \"find .openclerk-eval -maxdepth 3 -type f | sort | sed -n '1,200p'\"",
+              "/bin/zsh -lc \"find .openclerk-eval -maxdepth 2 -type d -o -type f | sort | sed -n '1,200p'\"",
+              "/bin/zsh -lc \"find .openclerk-eval -maxdepth 2 -type d -o -type f | sort | sed -n '1,200p'\""
+            ],
+            "usage_exposed": true,
+            "input_tokens": 332264,
+            "cached_input_tokens": 311552,
+            "non_cached_input_tokens": 20712,
+            "output_tokens": 4295,
+            "event_type_counts": {
+              "item.completed": 28,
+              "item.started": 20,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/sources/mt-runner.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/mt-source-then-synthesis/turn-1/events.jsonl"
+        },
+        {
+          "turn_index": 2,
+          "wall_seconds": 22.2,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 5,
+            "tool_calls": 16,
+            "command_executions": 16,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": true,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "broad_repo_search_evidence": [
+              "/bin/zsh -lc \"find .openclerk-eval/vault -path '*/notes/*' -type f | sort | sed -n '1,200p'\"",
+              "/bin/zsh -lc \"find .openclerk-eval/vault -path '*/notes/*' -type f | sort | sed -n '1,200p'\"",
+              "/bin/zsh -lc \"find .openclerk-eval/vault/notes -maxdepth 2 -type f | sort | xargs -I{} sh -c 'printf \\\"--- %s ---\\\\n\\\" \\\"{}\\\"; sed -n \\\"1,40p\\\" \\\"{}\\\"'\"",
+              "/bin/zsh -lc \"find .openclerk-eval/vault/notes -maxdepth 2 -type f | sort | xargs -I{} sh -c 'printf \\\"--- %s ---\\\\n\\\" \\\"{}\\\"; sed -n \\\"1,40p\\\" \\\"{}\\\"'\"",
+              "/bin/zsh -lc 'find .openclerk-eval/vault/notes/synthesis -maxdepth 1 -type f | sort'",
+              "/bin/zsh -lc 'find .openclerk-eval/vault/notes/synthesis -maxdepth 1 -type f | sort'"
+            ],
+            "usage_exposed": true,
+            "input_tokens": 591222,
+            "cached_input_tokens": 566272,
+            "non_cached_input_tokens": 24950,
+            "output_tokens": 6169,
+            "event_type_counts": {
+              "item.completed": 14,
+              "item.started": 9,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/sources/mt-runner.md",
+              "notes/synthesis/mt-runner.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/mt-source-then-synthesis/turn-2/events.jsonl"
+        }
+      ],
+      "prompt_summary": "turn 1: Use the configured local OpenClerk data path. Create notes/sources/mt-runner.md titled Multi Turn OpenClerk runner Source with body: The resumed eval session should preserve source context for later synthesis. | turn 2: Now search for that source and create notes/synthesis/mt-runner.md as a source-linked synthesis. Mention the source path in the final answer.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/mt-source-then-synthesis/turn-2/events.jsonl",
+      "started_at": "2026-04-19T04:58:35.640217Z",
+      "completed_at": "2026-04-19T04:59:45.319081Z"
+    },
+    {
+      "variant": "sdk-baseline",
+      "scenario": "mt-incomplete-then-create",
+      "scenario_title": "Reject incomplete request, then complete it in a resumed turn",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 42.83,
+      "phase_timings": {
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 0.55,
+        "agent_run_seconds": 42.83,
+        "verify_seconds": 0.02,
+        "total_seconds": 43.42
+      },
+      "metrics": {
+        "assistant_calls": 8,
+        "tool_calls": 32,
+        "command_executions": 32,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": true,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "broad_repo_search_evidence": [
+          "/bin/zsh -lc 'rg --files . | rg \"(''^|/)(client/local|openclerk|notes|cmd|internal)\"'",
+          "/bin/zsh -lc 'rg --files . | rg \"(''^|/)(client/local|openclerk|notes|cmd|internal)\"'"
+        ],
+        "usage_exposed": true,
+        "input_tokens": 300908,
+        "cached_input_tokens": 273152,
+        "non_cached_input_tokens": 27756,
+        "output_tokens": 4254,
+        "event_type_counts": {
+          "item.completed": 24,
+          "item.started": 16,
+          "thread.started": 2,
+          "turn.completed": 2,
+          "turn.started": 2
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: first turn should ask for missing document details; turn 2: ok",
+        "documents": [
+          "notes/projects/mt-complete.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 4.69,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 1,
+            "tool_calls": 0,
+            "command_executions": 0,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "usage_exposed": true,
+            "input_tokens": 21963,
+            "cached_input_tokens": 18816,
+            "non_cached_input_tokens": 3147,
+            "output_tokens": 175,
+            "event_type_counts": {
+              "item.completed": 1,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "first turn should ask for missing document details"
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/mt-incomplete-then-create/turn-1/events.jsonl"
+        },
+        {
+          "turn_index": 2,
+          "wall_seconds": 38.14,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 7,
+            "tool_calls": 32,
+            "command_executions": 32,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": true,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "broad_repo_search_evidence": [
+              "/bin/zsh -lc 'rg --files . | rg \"(''^|/)(client/local|openclerk|notes|cmd|internal)\"'",
+              "/bin/zsh -lc 'rg --files . | rg \"(''^|/)(client/local|openclerk|notes|cmd|internal)\"'"
+            ],
+            "usage_exposed": true,
+            "input_tokens": 278945,
+            "cached_input_tokens": 254336,
+            "non_cached_input_tokens": 24609,
+            "output_tokens": 4079,
+            "event_type_counts": {
+              "item.completed": 23,
+              "item.started": 16,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/projects/mt-complete.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/mt-incomplete-then-create/turn-2/events.jsonl"
+        }
+      ],
+      "prompt_summary": "turn 1: Create an OpenClerk canonical project note, but I have not provided the path, title, or body yet. | turn 2: Use path notes/projects/mt-complete.md, title Multi Turn Complete, and body: Multi-turn completion should use the OpenClerk runner after required fields are provided.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/sdk-baseline/mt-incomplete-then-create/turn-2/events.jsonl",
+      "started_at": "2026-04-19T04:58:45.951777Z",
+      "completed_at": "2026-04-19T04:59:29.374389Z"
+    }
+  ],
+  "code_first": {
+    "candidate_variant": "production",
+    "baseline_variant": "sdk-baseline",
+    "beats_baseline": true,
+    "recommendation": "use_production_runner_for_routine_openclerk_operations",
+    "criteria": [
+      {
+        "name": "candidate_passes_all_scenarios",
+        "passed": true,
+        "details": "15/15 candidate scenarios passed"
+      },
+      {
+        "name": "no_direct_generated_file_inspection",
+        "passed": true,
+        "details": "production must not inspect retired API files or generated server files"
+      },
+      {
+        "name": "no_module_cache_inspection",
+        "passed": true,
+        "details": "production must not inspect the Go module cache"
+      },
+      {
+        "name": "no_broad_repo_search",
+        "passed": true,
+        "details": "production must not use broad repo search in routine OpenClerk knowledge tasks"
+      },
+      {
+        "name": "no_legacy_source_runner_usage",
+        "passed": true,
+        "details": "production must not invoke source-built or legacy runner paths instead of installed openclerk"
+      },
+      {
+        "name": "no_direct_sqlite_access",
+        "passed": true,
+        "details": "production must not query SQLite directly"
+      },
+      {
+        "name": "validation_scenarios_are_final_answer_only",
+        "passed": true,
+        "details": "rule-covered validation scenarios used no tools, no command executions, and at most one assistant answer"
+      },
+      {
+        "name": "total_tools_less_than_or_equal_baseline",
+        "passed": true,
+        "details": "production tools 112 vs baseline tools 576; missing baseline: ok"
+      },
+      {
+        "name": "minimum_scenarios_at_or_below_baseline",
+        "passed": true,
+        "details": "15 scenarios at or below baseline tools; required 12 of 15"
+      },
+      {
+        "name": "non_cached_token_majority",
+        "passed": true,
+        "details": "15 scenarios with lower non-cached input tokens; required 8 of 15; missing usage: ok"
+      },
+      {
+        "name": "non_cached_token_total_less_than_or_equal_baseline",
+        "passed": true,
+        "details": "production non-cached input tokens 108416 vs baseline 421057; missing usage: ok"
+      }
+    ],
+    "entries": [
+      {
+        "scenario": "create-note",
+        "candidate_pass": true,
+        "baseline_pass": true,
+        "candidate_tools": 6,
+        "baseline_tools": 38,
+        "tool_delta": -32
+      },
+      {
+        "scenario": "search-synthesis",
+        "candidate_pass": true,
+        "baseline_pass": true,
+        "candidate_tools": 22,
+        "baseline_tools": 60,
+        "tool_delta": -38
+      },
+      {
+        "scenario": "answer-filing",
+        "candidate_pass": true,
+        "baseline_pass": true,
+        "candidate_tools": 18,
+        "baseline_tools": 36,
+        "tool_delta": -18
+      },
+      {
+        "scenario": "stale-synthesis-update",
+        "candidate_pass": true,
+        "baseline_pass": true,
+        "candidate_tools": 8,
+        "baseline_tools": 42,
+        "tool_delta": -34
+      },
+      {
+        "scenario": "append-replace",
+        "candidate_pass": true,
+        "baseline_pass": true,
+        "candidate_tools": 6,
+        "baseline_tools": 42,
+        "tool_delta": -36
+      },
+      {
+        "scenario": "records-provenance",
+        "candidate_pass": true,
+        "baseline_pass": true,
+        "candidate_tools": 10,
+        "baseline_tools": 60,
+        "tool_delta": -50
+      },
+      {
+        "scenario": "promoted-record-vs-docs",
+        "candidate_pass": true,
+        "baseline_pass": true,
+        "candidate_tools": 6,
+        "baseline_tools": 30,
+        "tool_delta": -24
+      },
+      {
+        "scenario": "missing-document-path-reject",
+        "candidate_pass": true,
+        "baseline_pass": false,
+        "candidate_tools": 0,
+        "baseline_tools": 18,
+        "tool_delta": -18
+      },
+      {
+        "scenario": "negative-limit-reject",
+        "candidate_pass": true,
+        "baseline_pass": false,
+        "candidate_tools": 0,
+        "baseline_tools": 22,
+        "tool_delta": -22
+      },
+      {
+        "scenario": "unsupported-lower-level-reject",
+        "candidate_pass": true,
+        "baseline_pass": false,
+        "candidate_tools": 0,
+        "baseline_tools": 44,
+        "tool_delta": -44
+      },
+      {
+        "scenario": "unsupported-cli-mcp-reject",
+        "candidate_pass": true,
+        "baseline_pass": false,
+        "candidate_tools": 0,
+        "baseline_tools": 16,
+        "tool_delta": -16
+      },
+      {
+        "scenario": "duplicate-path-reject",
+        "candidate_pass": true,
+        "baseline_pass": true,
+        "candidate_tools": 2,
+        "baseline_tools": 32,
+        "tool_delta": -30
+      },
+      {
+        "scenario": "mixed-synthesis-records",
+        "candidate_pass": true,
+        "baseline_pass": false,
+        "candidate_tools": 24,
+        "baseline_tools": 50,
+        "tool_delta": -26
+      },
+      {
+        "scenario": "mt-source-then-synthesis",
+        "candidate_pass": true,
+        "baseline_pass": true,
+        "candidate_tools": 8,
+        "baseline_tools": 54,
+        "tool_delta": -46
+      },
+      {
+        "scenario": "mt-incomplete-then-create",
+        "candidate_pass": true,
+        "baseline_pass": true,
+        "candidate_tools": 2,
+        "baseline_tools": 32,
+        "tool_delta": -30
+      }
+    ]
+  }
+}

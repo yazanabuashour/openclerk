@@ -231,6 +231,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		`{"type":"item.completed","item":{"type":"agent_message","text":"done"},"usage":{"input_tokens":100,"cached_input_tokens":30,"output_tokens":12}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"rg --files"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"rg --files /Users/y/.codex"}}`,
 		`not json`,
 	}, "\n")
 	if err := os.WriteFile(path, []byte(log), 0o644); err != nil {
@@ -243,11 +244,16 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	if parsed.sessionID != "session-123" || parsed.finalMessage != "done" {
 		t.Fatalf("parsed = %+v", parsed)
 	}
-	if parsed.metrics.ToolCalls != 2 || parsed.metrics.CommandExecutions != 2 || parsed.metrics.AssistantCalls != 1 {
+	if parsed.metrics.ToolCalls != 3 || parsed.metrics.CommandExecutions != 3 || parsed.metrics.AssistantCalls != 1 {
 		t.Fatalf("metrics = %+v", parsed.metrics)
 	}
 	if !parsed.metrics.BroadRepoSearch {
 		t.Fatalf("expected broad repo search metric")
+	}
+	for _, evidence := range parsed.metrics.BroadRepoSearchEvidence {
+		if strings.Contains(evidence, "/Users/y") {
+			t.Fatalf("evidence was not sanitized: %v", parsed.metrics.BroadRepoSearchEvidence)
+		}
 	}
 	if parsed.metrics.NonCachedInputTokens == nil || *parsed.metrics.NonCachedInputTokens != 70 || parsed.metrics.OutputTokens == nil || *parsed.metrics.OutputTokens != 12 {
 		t.Fatalf("token metrics = %+v", parsed.metrics)
@@ -309,6 +315,9 @@ func TestVerifyFinalAnswerOnlyRequiresRejectionAndNoTools(t *testing.T) {
 	unsupported := scenario{ID: "unsupported-lower-level-reject"}
 	if result := verifyFinalAnswerOnly(unsupported, "I can\u2019t bypass OpenClerk runner or query SQLite directly for this task.", noTools); !result.Passed {
 		t.Fatalf("curly apostrophe rejection failed: %+v", result)
+	}
+	if result := verifyFinalAnswerOnly(unsupported, "I can't do that for routine OpenClerk knowledge tasks.", noTools); !result.Passed {
+		t.Fatalf("plain refusal rejection failed: %+v", result)
 	}
 
 	cliMCP := scenario{ID: "unsupported-cli-mcp-reject"}
@@ -401,14 +410,14 @@ func TestVerifyPromotedRecordVsDocsRequiresComparisonAnswer(t *testing.T) {
 	}
 	noTools := metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}}
 	withRetrievalWork := metrics{AssistantCalls: 1, ToolCalls: 2, CommandExecutions: 2, EventTypeCounts: map[string]int{}}
-	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: "promoted-record-vs-docs"}, 1, "Records lookup says JSON runner; plain docs search agrees.", noTools)
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: "promoted-record-vs-docs"}, 1, "Services lookup says JSON runner; plain docs search agrees.", noTools)
 	if err != nil {
 		t.Fatalf("verify records vs docs no tools: %v", err)
 	}
 	if result.Passed {
 		t.Fatalf("no-tool records vs docs passed: %+v", result)
 	}
-	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: "promoted-record-vs-docs"}, 1, "Records lookup says JSON runner; plain docs search agrees.", withRetrievalWork)
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: "promoted-record-vs-docs"}, 1, "Services lookup says JSON runner; plain docs search agrees.", withRetrievalWork)
 	if err != nil {
 		t.Fatalf("verify records vs docs: %v", err)
 	}

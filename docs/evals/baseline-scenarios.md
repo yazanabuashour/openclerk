@@ -44,9 +44,11 @@ obligations for the eval-backed knowledge-plane ADR in
 
 - Create a canonical record-shaped doc with `entity_*` frontmatter and `Facts`.
 - Verify promoted lookup returns the expected entity and citations.
+- Create a canonical service-shaped doc and verify typed `services_lookup`
+  returns service id, owner, status, interface, facts, and citations.
 - Update the canonical source and verify the derived projection refreshes.
-- Compare the promoted-record path against plain docs retrieval for the same
-  entity-centric task.
+- Compare the service registry path against plain docs retrieval for the same
+  service-centric task.
 - Accept the promoted-domain path only when it improves precision, update
   safety, or structured lookup behavior without weakening citation correctness.
 

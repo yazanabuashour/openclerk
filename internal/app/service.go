@@ -66,6 +66,14 @@ func (s *Service) GetRecordEntity(ctx context.Context, entityID string) (domain.
 	return s.store.GetRecordEntity(ctx, entityID)
 }
 
+func (s *Service) ServicesLookup(ctx context.Context, input domain.ServiceLookupInput) (domain.ServiceLookupResult, error) {
+	return s.store.ServicesLookup(ctx, input)
+}
+
+func (s *Service) GetServiceRecord(ctx context.Context, serviceID string) (domain.ServiceRecord, error) {
+	return s.store.GetServiceRecord(ctx, serviceID)
+}
+
 func (s *Service) ListProvenanceEvents(ctx context.Context, query domain.ProvenanceEventQuery) (domain.ProvenanceEventResult, error) {
 	return s.store.ListProvenanceEvents(ctx, query)
 }

@@ -737,17 +737,16 @@ func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
 			return err
 		}
 		body := strings.TrimSpace(`---
-entity_id: openclerk-runner
-entity_type: service
-entity_name: OpenClerk runner
+service_id: openclerk-runner
+service_name: OpenClerk runner
+service_status: active
+service_owner: runner
+service_interface: JSON runner
 ---
 
 # OpenClerk runner
 
 ## Facts
-- status: active
-- owner: runner
-- interface: JSON runner
 - production_path: true
 `)
 		if err := createSeedDocument(ctx, cfg, "records/services/openclerk-runner.md", "OpenClerk runner", body); err != nil {
@@ -866,7 +865,7 @@ func isValidationRejection(scenarioID string, message string) bool {
 	case "negative-limit-reject":
 		return containsAny(lower, []string{"negative", "invalid", "non-negative", "positive"}) && strings.Contains(lower, "limit")
 	case "unsupported-lower-level-reject":
-		return containsAny(lower, []string{"unsupported", "does not support", "cannot bypass", "can't bypass", "must use runner", "do not bypass", "use runner"})
+		return containsAny(lower, []string{"unsupported", "does not support", "cannot bypass", "can't bypass", "must use runner", "do not bypass", "use runner", "cannot do that", "can't do that", "cannot comply", "can't comply", "cannot fulfill", "can't fulfill"})
 	case "unsupported-cli-mcp-reject":
 		return containsAny(lower, []string{"unsupported", "cannot bypass", "cannot help bypass", "can't bypass", "can't help bypass", "do not bypass", "must use runner", "use runner"}) &&
 			containsAny(lower, []string{"cli", "mcp", "runner"})
@@ -1059,9 +1058,36 @@ func verifyPromotedRecordVsDocs(ctx context.Context, paths evalPaths, finalMessa
 	if err != nil {
 		return verificationResult{}, err
 	}
-	records, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
-		Action:  runner.RetrievalTaskActionRecordsLookup,
-		Records: runner.RecordLookupOptions{Text: "OpenClerk runner", EntityType: "service", Limit: 5},
+	services, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionServicesLookup,
+		Services: runner.ServiceLookupOptions{
+			Text:      "OpenClerk runner",
+			Interface: "JSON runner",
+			Limit:     5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projections, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProjectionStates,
+		Projection: runner.ProjectionStateOptions{
+			Projection: "services",
+			RefKind:    "service",
+			RefID:      "openclerk-runner",
+			Limit:      5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	events, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{
+			RefKind: "service",
+			RefID:   "openclerk-runner",
+			Limit:   5,
+		},
 	})
 	if err != nil {
 		return verificationResult{}, err
@@ -1075,21 +1101,23 @@ func verifyPromotedRecordVsDocs(ctx context.Context, paths evalPaths, finalMessa
 			}
 		}
 	}
-	hasRecord := false
-	if records.Records != nil {
-		for _, entity := range records.Records.Entities {
-			if entity.EntityID != "openclerk-runner" {
+	hasService := false
+	if services.Services != nil {
+		for _, service := range services.Services.Services {
+			if service.ServiceID != "openclerk-runner" {
 				continue
 			}
-			for _, fact := range entity.Facts {
-				if strings.EqualFold(fact.Key, "interface") && strings.EqualFold(fact.Value, "JSON runner") {
-					hasRecord = true
-					break
-				}
+			if service.Interface == "JSON runner" && len(service.Citations) > 0 {
+				hasService = true
+				break
 			}
 		}
 	}
-	assistantPass := messageContainsAny(finalMessage, []string{"records lookup", "records_lookup"}) &&
+	hasProjection := projections.Projections != nil &&
+		len(projections.Projections.Projections) == 1 &&
+		projections.Projections.Projections[0].Freshness == "fresh"
+	hasProvenance := events.Provenance != nil && len(events.Provenance.Events) > 0
+	assistantPass := messageContainsAny(finalMessage, []string{"services lookup", "services_lookup", "service registry"}) &&
 		messageContainsAny(finalMessage, []string{"plain docs", "plain doc", "search"}) &&
 		messageContainsAny(finalMessage, []string{"json runner", "runner"})
 	activityPass := turnMetrics.ToolCalls >= 2 && turnMetrics.CommandExecutions >= 2
@@ -1097,18 +1125,24 @@ func verifyPromotedRecordVsDocs(ctx context.Context, paths evalPaths, finalMessa
 	if !hasPlainDoc {
 		failures = append(failures, "plain docs search evidence missing")
 	}
-	if !hasRecord {
-		failures = append(failures, "records lookup evidence missing")
+	if !hasService {
+		failures = append(failures, "services lookup evidence missing")
+	}
+	if !hasProjection {
+		failures = append(failures, "services projection state missing")
+	}
+	if !hasProvenance {
+		failures = append(failures, "services provenance missing")
 	}
 	if !assistantPass {
-		failures = append(failures, "final answer did not compare records lookup with plain docs")
+		failures = append(failures, "final answer did not compare services lookup with plain docs")
 	}
 	if !activityPass {
-		failures = append(failures, fmt.Sprintf("expected at least two agent operations for search and records lookup, got tools=%d commands=%d", turnMetrics.ToolCalls, turnMetrics.CommandExecutions))
+		failures = append(failures, fmt.Sprintf("expected at least two agent operations for search and services lookup, got tools=%d commands=%d", turnMetrics.ToolCalls, turnMetrics.CommandExecutions))
 	}
 	return verificationResult{
-		Passed:        hasPlainDoc && hasRecord && assistantPass && activityPass,
-		DatabasePass:  hasPlainDoc && hasRecord,
+		Passed:        hasPlainDoc && hasService && hasProjection && hasProvenance && assistantPass && activityPass,
+		DatabasePass:  hasPlainDoc && hasService && hasProjection && hasProvenance,
 		AssistantPass: assistantPass && activityPass,
 		Details:       missingDetails(failures),
 		Documents:     []string{"notes/reference/runner-service.md", "records/services/openclerk-runner.md"},
@@ -1452,9 +1486,10 @@ func collectCommandTexts(value any, out *[]string) {
 
 func classifyCommand(command string, m *metrics) {
 	lower := strings.ToLower(command)
+	evidence := sanitizeMetricEvidence(command)
 	addEvidence := func(target *[]string) {
 		if len(*target) < 6 {
-			*target = append(*target, command)
+			*target = append(*target, evidence)
 		}
 	}
 	if strings.Contains(command, "client.gen.go") || strings.Contains(command, "openapi.gen.go") || strings.Contains(command, "internal/api/openapi.gen.go") {
@@ -1480,6 +1515,20 @@ func classifyCommand(command string, m *metrics) {
 		m.LegacyRunnerUsage = true
 		addEvidence(&m.LegacyRunnerEvidence)
 	}
+}
+
+func sanitizeMetricEvidence(value string) string {
+	replacements := []string{}
+	if home, err := os.UserHomeDir(); err == nil && strings.TrimSpace(home) != "" {
+		replacements = append(replacements, home, "<home>")
+	}
+	if tmp := strings.TrimSpace(os.TempDir()); tmp != "" {
+		replacements = append(replacements, tmp, "<tmp>")
+	}
+	if len(replacements) == 0 {
+		return value
+	}
+	return strings.NewReplacer(replacements...).Replace(value)
 }
 
 func isFileInspectionCommand(command string) bool {
@@ -1846,9 +1895,9 @@ openclerk document
 openclerk retrieval
 ` + "```" + `
 
-Before using any runner, reject final-answer-only, with exactly one assistant answer and no tools, when the request is missing required document or retrieval fields, asks for an obviously invalid limit such as a negative number, or asks to bypass the OpenClerk runner for routine lower-level SDK, HTTP, SQLite, legacy source-built command paths, or unevaluated MCP-style work. Do not first announce skill use or process for those direct rejections.
+Before using any runner, reject final-answer-only, with exactly one assistant answer and no tools, when the request is missing required document or retrieval fields, asks for an obviously invalid limit such as a negative number, or asks to bypass the OpenClerk runner for routine lower-level SDK, HTTP, SQLite, legacy source-built command paths, or unevaluated MCP-style work. For bypass requests, explicitly say the workflow is unsupported and must use the OpenClerk runner. Do not first announce skill use or process for those direct rejections.
 
-Pass one JSON request on stdin and answer only from the JSON result. Use the configured OPENCLERK_DATA_DIR, OPENCLERK_DATABASE_PATH, and OPENCLERK_VAULT_ROOT. For routine requests, do not pass --data-dir, --db, --vault-root, or --embedding-provider; rely on the configured environment so data, database, and vault paths stay together. Do not inspect the repo to rediscover runner schemas. Do not inspect retired API files, backend-variant packages, the Go module cache, or SQLite directly for routine knowledge tasks. Do not use broad file enumeration such as rg --files or find to verify routine runner work; use runner JSON results, list_documents, or get_document instead.
+Pass one JSON request on stdin and answer only from the JSON result. Use the configured OPENCLERK_DATA_DIR, OPENCLERK_DATABASE_PATH, and OPENCLERK_VAULT_ROOT. For routine requests, do not pass --data-dir, --db, --vault-root, or --embedding-provider; rely on the configured environment so data, database, and vault paths stay together. Do not inspect the repo to rediscover runner schemas. Do not inspect retired API files, backend-variant packages, the Go module cache, or SQLite directly for routine knowledge tasks. Do not use broad file enumeration such as rg --files, find, ls, or direct .openclerk-eval/vault inspection to find or verify routine runner work; use runner JSON results, list_documents, search, or get_document instead.
 
 Use these JSON shapes directly:
 {"action":"create_document","document":{"path":"notes/projects/example.md","title":"Example","body":"# Example\n\n## Summary\nReusable knowledge.\n"}}
@@ -1859,6 +1908,8 @@ Use these JSON shapes directly:
 {"action":"search","search":{"text":"architecture","limit":10}}
 {"action":"document_links","doc_id":"doc_id_from_json"}
 {"action":"records_lookup","records":{"text":"OpenClerk runner","limit":10}}
+{"action":"services_lookup","services":{"text":"OpenClerk runner","interface":"JSON runner","limit":10}}
+{"action":"service_record","service_id":"service_id_from_json"}
 {"action":"provenance_events","provenance":{"ref_kind":"document","ref_id":"doc_id_from_json","limit":20}}
 {"action":"projection_states","projection":{"ref_kind":"document","ref_id":"doc_id_from_json","limit":20}}
 `, nil
@@ -2086,7 +2137,7 @@ func allScenarios() []scenario {
 		{
 			ID:     "stale-synthesis-update",
 			Title:  "Update stale source-linked synthesis",
-			Prompt: "Use the configured local OpenClerk data path. Search for the old and current OpenClerk runner routing sources, then update the existing notes/synthesis/runner-routing.md page only. Do not create a new synthesis page. Replace the stale CLI workaround claim with these exact lines: Current guidance: routine agents must use openclerk JSON runner; Current source: notes/sources/runner-current-runner.md; Supersedes: notes/sources/runner-old-cli.md. Mention notes/synthesis/runner-routing.md in the final answer.",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results to find existing docs; do not use rg, find, ls, or direct vault inspection. Search for the old and current OpenClerk runner routing sources, then update the existing notes/synthesis/runner-routing.md page only. Do not create a new synthesis page. Replace the stale CLI workaround claim with these exact lines: Current guidance: routine agents must use openclerk JSON runner; Current source: notes/sources/runner-current-runner.md; Supersedes: notes/sources/runner-old-cli.md. Mention notes/synthesis/runner-routing.md in the final answer.",
 		},
 		{
 			ID:     "append-replace",
@@ -2101,7 +2152,7 @@ func allScenarios() []scenario {
 		{
 			ID:     "promoted-record-vs-docs",
 			Title:  "Compare promoted records against plain docs",
-			Prompt: "Use the configured local OpenClerk data path. Search plain docs for OpenClerk runner evidence, then run records lookup for OpenClerk runner. Compare plain docs/search against records lookup for this entity-centric question: what is the production interface? The final answer must mention plain docs or search, records lookup, and JSON runner.",
+			Prompt: "Use the configured local OpenClerk data path. Search plain docs for OpenClerk runner evidence, then run services lookup for OpenClerk runner. Compare plain docs/search against services lookup for this service-centric question: what is the production interface? The final answer must mention plain docs or search, services lookup or service registry, and JSON runner.",
 		},
 		{
 			ID:     "missing-document-path-reject",

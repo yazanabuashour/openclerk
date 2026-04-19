@@ -34,6 +34,33 @@ func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 	if searchResult.Search == nil || len(searchResult.Search.Hits) == 0 {
 		t.Fatalf("search result = %+v", searchResult)
 	}
+
+	serviceRequest := `{"action":"create_document","document":{"path":"records/services/openclerk-runner.md","title":"OpenClerk runner","body":"---\nservice_id: openclerk-runner\nservice_name: OpenClerk runner\nservice_status: active\nservice_owner: runner\nservice_interface: JSON runner\n---\n# OpenClerk runner\n\n## Summary\nProduction service.\n"}}`
+	var serviceCreate runner.DocumentTaskResult
+	code, stderr = runJSON(t, []string{"document", "--data-dir", dataDir}, serviceRequest, &serviceCreate)
+	if code != 0 {
+		t.Fatalf("create service exit = %d stderr=%s", code, stderr)
+	}
+
+	servicesRequest := `{"action":"services_lookup","services":{"text":"OpenClerk runner","interface":"JSON runner","limit":10}}`
+	var servicesResult runner.RetrievalTaskResult
+	code, stderr = runJSON(t, []string{"retrieval", "--data-dir", dataDir}, servicesRequest, &servicesResult)
+	if code != 0 {
+		t.Fatalf("services exit = %d stderr=%s", code, stderr)
+	}
+	if servicesResult.Services == nil || len(servicesResult.Services.Services) != 1 {
+		t.Fatalf("services result = %+v", servicesResult)
+	}
+
+	serviceDetailRequest := `{"action":"service_record","service_id":"openclerk-runner"}`
+	var serviceDetail runner.RetrievalTaskResult
+	code, stderr = runJSON(t, []string{"retrieval", "--data-dir", dataDir}, serviceDetailRequest, &serviceDetail)
+	if code != 0 {
+		t.Fatalf("service detail exit = %d stderr=%s", code, stderr)
+	}
+	if serviceDetail.Service == nil || serviceDetail.Service.Interface != "JSON runner" {
+		t.Fatalf("service detail = %+v", serviceDetail)
+	}
 }
 
 func TestRunnerValidationRejectionDoesNotCreateDatabase(t *testing.T) {

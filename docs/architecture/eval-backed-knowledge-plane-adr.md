@@ -55,7 +55,8 @@ proof slice:
 - synthesis must preserve source refs, citations, or equivalent stable evidence
 - provenance and projection freshness are required before broad memory adoption
 - graph/search are derived docs capabilities, not independent truth systems
-- records are promoted only for domains that beat plain docs on evals
+- service registry is the first typed promoted-domain prototype, and additional
+  records are promoted only for domains that beat plain docs on evals
 - memory and autonomous routing remain deferred until the docs and truth-sync
   layers are benchmarked
 
@@ -91,8 +92,8 @@ gates:
 - source-sensitive answers preserve citations, chunk ids, paths, or explicit
   source refs
 - provenance and projection-state reads can explain freshness
-- promoted records improve precision or update safety over plain docs for the
-  target domain
+- promoted records, including the service registry, improve precision or update
+  safety over plain docs for the target domain
 - candidate CLI or MCP adapters match OpenClerk runner correctness and improve at least
   one measured agent-behavior metric without increasing forbidden access
 - no production scenario requires direct SQLite, backend variants, module-cache

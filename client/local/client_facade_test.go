@@ -31,8 +31,11 @@ func TestOpenClientKnowledgePlaneFacade(t *testing.T) {
 	if capabilities.Backend != string(domain.BackendOpenClerk) {
 		t.Fatalf("backend = %q, want %q", capabilities.Backend, domain.BackendOpenClerk)
 	}
-	if !contains(capabilities.Extensions, "graph") || !contains(capabilities.Extensions, "records") || !contains(capabilities.Extensions, "provenance") {
-		t.Fatalf("extensions = %v, want graph, records, provenance", capabilities.Extensions)
+	if !contains(capabilities.Extensions, "graph") ||
+		!contains(capabilities.Extensions, "records") ||
+		!contains(capabilities.Extensions, "services") ||
+		!contains(capabilities.Extensions, "provenance") {
+		t.Fatalf("extensions = %v, want graph, records, services, provenance", capabilities.Extensions)
 	}
 
 	architecture, err := client.CreateDocument(ctx, DocumentInput{
@@ -94,6 +97,54 @@ Canonical promoted-domain baseline.
 	})
 	if err != nil {
 		t.Fatalf("create record note: %v", err)
+	}
+
+	serviceRecord, err := client.CreateDocument(ctx, DocumentInput{
+		Path:  "records/services/openclerk-runner.md",
+		Title: "OpenClerk runner",
+		Body: strings.TrimSpace(`
+---
+service_id: openclerk-runner
+service_name: OpenClerk runner
+service_status: active
+service_owner: runner
+service_interface: JSON runner
+---
+# OpenClerk runner
+
+## Summary
+Production service for routine local knowledge tasks.
+
+## Facts
+- tier: production
+`) + "\n",
+	})
+	if err != nil {
+		t.Fatalf("create service note: %v", err)
+	}
+
+	compatibleService, err := client.CreateDocument(ctx, DocumentInput{
+		Path:  "records/services/compat-runner.md",
+		Title: "Compatibility runner",
+		Body: strings.TrimSpace(`
+---
+entity_type: service
+entity_id: compat-runner
+entity_name: Compatibility runner
+---
+# Compatibility runner
+
+## Summary
+Compatibility service record.
+
+## Facts
+- status: trial
+- owner: compatibility
+- interface: HTTP
+`) + "\n",
+	})
+	if err != nil {
+		t.Fatalf("create compatible service note: %v", err)
 	}
 
 	gotRoadmap, err := client.GetDocument(ctx, roadmap.DocID)
@@ -173,6 +224,53 @@ Canonical promoted-domain baseline.
 		t.Fatalf("record entity = %+v", entity)
 	}
 
+	serviceLookup, err := client.LookupServices(ctx, ServiceLookupOptions{Text: "OpenClerk runner", Interface: "JSON runner", Limit: 10})
+	if err != nil {
+		t.Fatalf("services lookup: %v", err)
+	}
+	if len(serviceLookup.Services) != 1 ||
+		serviceLookup.Services[0].ServiceID != "openclerk-runner" ||
+		serviceLookup.Services[0].Status != "active" ||
+		serviceLookup.Services[0].Owner != "runner" ||
+		serviceLookup.Services[0].Interface != "JSON runner" ||
+		len(serviceLookup.Services[0].Citations) == 0 {
+		t.Fatalf("services lookup = %+v", serviceLookup)
+	}
+
+	serviceDetail, err := client.GetServiceRecord(ctx, "openclerk-runner")
+	if err != nil {
+		t.Fatalf("get service record: %v", err)
+	}
+	if serviceDetail.ServiceID != "openclerk-runner" || len(serviceDetail.Facts) != 1 {
+		t.Fatalf("service detail = %+v", serviceDetail)
+	}
+
+	compatLookup, err := client.LookupServices(ctx, ServiceLookupOptions{Owner: "compatibility", Limit: 10})
+	if err != nil {
+		t.Fatalf("compatible services lookup: %v", err)
+	}
+	if len(compatLookup.Services) != 1 ||
+		compatLookup.Services[0].ServiceID != "compat-runner" ||
+		compatLookup.Services[0].Status != "trial" ||
+		compatLookup.Services[0].Interface != "HTTP" {
+		t.Fatalf("compatible services lookup = %+v", compatLookup)
+	}
+
+	updatedCompat, err := client.ReplaceSection(ctx, compatibleService.DocID, "Facts", "- status: active\n- owner: compatibility\n- interface: JSON runner")
+	if err != nil {
+		t.Fatalf("update compatible service facts: %v", err)
+	}
+	if !strings.Contains(updatedCompat.Body, "JSON runner") {
+		t.Fatalf("updated compatible service body = %q", updatedCompat.Body)
+	}
+	updatedService, err := client.GetServiceRecord(ctx, "compat-runner")
+	if err != nil {
+		t.Fatalf("get updated compatible service: %v", err)
+	}
+	if updatedService.Status != "active" || updatedService.Interface != "JSON runner" {
+		t.Fatalf("updated compatible service = %+v", updatedService)
+	}
+
 	events, err := client.ListProvenanceEvents(ctx, ProvenanceEventOptions{
 		RefKind: "document",
 		RefID:   roadmap.DocID,
@@ -198,8 +296,24 @@ Canonical promoted-domain baseline.
 		t.Fatalf("graph projections = %+v, want one fresh projection", projections)
 	}
 
+	serviceProjections, err := client.ListProjectionStates(ctx, ProjectionStateOptions{
+		Projection: "services",
+		RefKind:    "service",
+		RefID:      "openclerk-runner",
+		Limit:      10,
+	})
+	if err != nil {
+		t.Fatalf("list service projection states: %v", err)
+	}
+	if len(serviceProjections.Projections) != 1 || serviceProjections.Projections[0].Freshness != "fresh" {
+		t.Fatalf("service projections = %+v, want one fresh projection", serviceProjections)
+	}
+
 	if record.DocID == "" {
 		t.Fatal("record document id is empty")
+	}
+	if serviceRecord.DocID == "" {
+		t.Fatal("service document id is empty")
 	}
 }
 

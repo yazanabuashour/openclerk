@@ -160,6 +160,43 @@ func toRecordEntity(entity local.RecordEntity) RecordEntity {
 	}
 }
 
+func toServiceLookupResult(result local.ServiceLookupResult) ServiceLookupResult {
+	return ServiceLookupResult{
+		Services: toServiceRecords(result.Services),
+		PageInfo: toPageInfo(result.PageInfo),
+	}
+}
+
+func toServiceRecords(services []local.ServiceRecord) []ServiceRecord {
+	result := make([]ServiceRecord, 0, len(services))
+	for _, service := range services {
+		result = append(result, toServiceRecord(service))
+	}
+	return result
+}
+
+func toServiceRecord(service local.ServiceRecord) ServiceRecord {
+	facts := make([]ServiceFact, 0, len(service.Facts))
+	for _, fact := range service.Facts {
+		facts = append(facts, ServiceFact{
+			Key:        fact.Key,
+			Value:      fact.Value,
+			ObservedAt: fact.ObservedAt,
+		})
+	}
+	return ServiceRecord{
+		ServiceID: service.ServiceID,
+		Name:      service.Name,
+		Status:    service.Status,
+		Owner:     service.Owner,
+		Interface: service.Interface,
+		Summary:   service.Summary,
+		Facts:     facts,
+		Citations: toCitations(service.Citations),
+		UpdatedAt: service.UpdatedAt,
+	}
+}
+
 func toProvenanceEventList(list local.ProvenanceEventList) ProvenanceEventList {
 	return ProvenanceEventList{
 		Events:   toProvenanceEvents(list.Events),

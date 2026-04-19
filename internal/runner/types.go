@@ -18,6 +18,8 @@ const (
 	RetrievalTaskActionGraph            = "graph_neighborhood"
 	RetrievalTaskActionRecordsLookup    = "records_lookup"
 	RetrievalTaskActionRecordEntity     = "record_entity"
+	RetrievalTaskActionServicesLookup   = "services_lookup"
+	RetrievalTaskActionServiceRecord    = "service_record"
 	RetrievalTaskActionProvenanceEvents = "provenance_events"
 	RetrievalTaskActionProjectionStates = "projection_states"
 )
@@ -62,7 +64,9 @@ type RetrievalTaskRequest struct {
 	ChunkID    string                 `json:"chunk_id,omitempty"`
 	NodeID     string                 `json:"node_id,omitempty"`
 	EntityID   string                 `json:"entity_id,omitempty"`
+	ServiceID  string                 `json:"service_id,omitempty"`
 	Records    RecordLookupOptions    `json:"records,omitempty"`
+	Services   ServiceLookupOptions   `json:"services,omitempty"`
 	Provenance ProvenanceEventOptions `json:"provenance,omitempty"`
 	Projection ProjectionStateOptions `json:"projection,omitempty"`
 	Limit      int                    `json:"limit,omitempty"`
@@ -82,6 +86,15 @@ type RecordLookupOptions struct {
 	EntityType string `json:"entity_type,omitempty"`
 	Limit      int    `json:"limit,omitempty"`
 	Cursor     string `json:"cursor,omitempty"`
+}
+
+type ServiceLookupOptions struct {
+	Text      string `json:"text,omitempty"`
+	Status    string `json:"status,omitempty"`
+	Owner     string `json:"owner,omitempty"`
+	Interface string `json:"interface,omitempty"`
+	Limit     int    `json:"limit,omitempty"`
+	Cursor    string `json:"cursor,omitempty"`
 }
 
 type ProvenanceEventOptions struct {
@@ -108,6 +121,8 @@ type RetrievalTaskResult struct {
 	Graph           *GraphNeighborhood   `json:"graph,omitempty"`
 	Records         *RecordLookupResult  `json:"records,omitempty"`
 	Entity          *RecordEntity        `json:"entity,omitempty"`
+	Services        *ServiceLookupResult `json:"services,omitempty"`
+	Service         *ServiceRecord       `json:"service,omitempty"`
 	Provenance      *ProvenanceEventList `json:"provenance,omitempty"`
 	Projections     *ProjectionStateList `json:"projections,omitempty"`
 	Summary         string               `json:"summary"`
@@ -219,6 +234,29 @@ type RecordEntity struct {
 type RecordLookupResult struct {
 	Entities []RecordEntity `json:"entities,omitempty"`
 	PageInfo PageInfo       `json:"page_info,omitempty"`
+}
+
+type ServiceFact struct {
+	Key        string     `json:"key"`
+	Value      string     `json:"value"`
+	ObservedAt *time.Time `json:"observed_at,omitempty"`
+}
+
+type ServiceRecord struct {
+	ServiceID string        `json:"service_id"`
+	Name      string        `json:"name"`
+	Status    string        `json:"status,omitempty"`
+	Owner     string        `json:"owner,omitempty"`
+	Interface string        `json:"interface,omitempty"`
+	Summary   string        `json:"summary"`
+	Facts     []ServiceFact `json:"facts,omitempty"`
+	Citations []Citation    `json:"citations,omitempty"`
+	UpdatedAt time.Time     `json:"updated_at"`
+}
+
+type ServiceLookupResult struct {
+	Services []ServiceRecord `json:"services,omitempty"`
+	PageInfo PageInfo        `json:"page_info,omitempty"`
 }
 
 type ProvenanceEvent struct {

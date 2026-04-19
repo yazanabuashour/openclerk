@@ -105,8 +105,8 @@ The `ockp` harness covers routine local knowledge-plane workflows:
 - append and replace-section workflows that preserve unrelated document content
 - promoted-record-shaped document creation, records lookup, provenance events,
   and projection states
-- promoted-record comparison against plain docs retrieval for entity-centric
-  tasks
+- service registry lookup comparison against plain docs retrieval for
+  service-centric tasks
 - duplicate canonical path rejection without overwrite
 - mixed document/retrieval workflows that require both runner domains
 - final-answer-only direct rejections for missing required fields, invalid

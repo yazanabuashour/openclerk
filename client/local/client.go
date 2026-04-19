@@ -67,6 +67,15 @@ type RecordLookupOptions struct {
 	Cursor     string
 }
 
+type ServiceLookupOptions struct {
+	Text      string
+	Status    string
+	Owner     string
+	Interface string
+	Limit     int
+	Cursor    string
+}
+
 type GraphNeighborhoodOptions struct {
 	DocID   string
 	ChunkID string
@@ -187,6 +196,24 @@ type RecordEntity struct {
 	UpdatedAt  time.Time
 }
 
+type ServiceFact struct {
+	Key        string
+	Value      string
+	ObservedAt *time.Time
+}
+
+type ServiceRecord struct {
+	ServiceID string
+	Name      string
+	Status    string
+	Owner     string
+	Interface string
+	Summary   string
+	Facts     []ServiceFact
+	Citations []Citation
+	UpdatedAt time.Time
+}
+
 type ProvenanceEvent struct {
 	EventID    string
 	EventType  string
@@ -215,6 +242,11 @@ type DocumentList struct {
 
 type RecordLookupResult struct {
 	Entities []RecordEntity
+	PageInfo PageInfo
+}
+
+type ServiceLookupResult struct {
+	Services []ServiceRecord
 	PageInfo PageInfo
 }
 
@@ -406,6 +438,33 @@ func (c *Client) GetRecordEntity(ctx context.Context, entityID string) (RecordEn
 	return toRecordEntity(entity), nil
 }
 
+func (c *Client) LookupServices(ctx context.Context, options ServiceLookupOptions) (ServiceLookupResult, error) {
+	service, err := c.service()
+	if err != nil {
+		return ServiceLookupResult{}, err
+	}
+	result, err := service.ServicesLookup(ctx, domain.ServiceLookupInput(options))
+	if err != nil {
+		return ServiceLookupResult{}, wrapError(err)
+	}
+	return ServiceLookupResult{
+		Services: toServiceRecords(result.Services),
+		PageInfo: toPageInfo(result.PageInfo),
+	}, nil
+}
+
+func (c *Client) GetServiceRecord(ctx context.Context, serviceID string) (ServiceRecord, error) {
+	service, err := c.service()
+	if err != nil {
+		return ServiceRecord{}, err
+	}
+	serviceRecord, err := service.GetServiceRecord(ctx, serviceID)
+	if err != nil {
+		return ServiceRecord{}, wrapError(err)
+	}
+	return toServiceRecord(serviceRecord), nil
+}
+
 func (c *Client) ListProvenanceEvents(ctx context.Context, options ProvenanceEventOptions) (ProvenanceEventList, error) {
 	service, err := c.service()
 	if err != nil {
@@ -587,6 +646,36 @@ func toRecordEntity(entity domain.RecordEntity) RecordEntity {
 		Facts:      facts,
 		Citations:  toCitations(entity.Citations),
 		UpdatedAt:  entity.UpdatedAt,
+	}
+}
+
+func toServiceRecords(services []domain.ServiceRecord) []ServiceRecord {
+	result := make([]ServiceRecord, 0, len(services))
+	for _, service := range services {
+		result = append(result, toServiceRecord(service))
+	}
+	return result
+}
+
+func toServiceRecord(service domain.ServiceRecord) ServiceRecord {
+	facts := make([]ServiceFact, 0, len(service.Facts))
+	for _, fact := range service.Facts {
+		facts = append(facts, ServiceFact{
+			Key:        fact.Key,
+			Value:      fact.Value,
+			ObservedAt: fact.ObservedAt,
+		})
+	}
+	return ServiceRecord{
+		ServiceID: service.ServiceID,
+		Name:      service.Name,
+		Status:    service.Status,
+		Owner:     service.Owner,
+		Interface: service.Interface,
+		Summary:   service.Summary,
+		Facts:     facts,
+		Citations: toCitations(service.Citations),
+		UpdatedAt: service.UpdatedAt,
 	}
 }
 

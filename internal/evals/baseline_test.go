@@ -17,6 +17,7 @@ func TestUnifiedOpenClerkRunnerBaseline(t *testing.T) {
 	source := createDocument(t, ctx, config, "notes/architecture/knowledge-plane.md", "Knowledge plane", "---\ntype: note\nstatus: active\n---\n# Knowledge plane\n\n## Summary\nCanonical architecture note.\n")
 	target := createDocument(t, ctx, config, "notes/projects/openclerk-roadmap.md", "Roadmap", "---\ntype: project\nstatus: active\n---\n# Roadmap\n\n## Summary\nSee the [knowledge plane](../architecture/knowledge-plane.md).\n")
 	createDocument(t, ctx, config, "records/assets/transmission-solenoid.md", "Transmission solenoid", "---\nentity_type: part\nentity_name: Transmission solenoid\nentity_id: transmission-solenoid\ntype: record\nstatus: active\n---\n# Transmission solenoid\n\n## Facts\n- sku: SOL-1\n")
+	createDocument(t, ctx, config, "records/services/openclerk-runner.md", "OpenClerk runner", "---\nservice_id: openclerk-runner\nservice_name: OpenClerk runner\nservice_status: active\nservice_owner: runner\nservice_interface: JSON runner\n---\n# OpenClerk runner\n\n## Summary\nProduction service.\n")
 
 	search, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
 		Action: runner.RetrievalTaskActionSearch,
@@ -49,6 +50,21 @@ func TestUnifiedOpenClerkRunnerBaseline(t *testing.T) {
 	}
 	if records.Records == nil || len(records.Records.Entities) != 1 {
 		t.Fatalf("records result = %+v", records.Records)
+	}
+
+	services, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionServicesLookup,
+		Services: runner.ServiceLookupOptions{
+			Text:      "OpenClerk runner",
+			Interface: "JSON runner",
+			Limit:     10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("services task: %v", err)
+	}
+	if services.Services == nil || len(services.Services.Services) != 1 {
+		t.Fatalf("services result = %+v", services.Services)
 	}
 
 	events, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{

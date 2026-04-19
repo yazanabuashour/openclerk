@@ -78,7 +78,16 @@ The current records projection is still a baseline prototype:
 - it rebuilds on canonical updates
 - it is suitable for evals and promoted-domain experiments
 
-It should eventually be replaced or extended with explicit domain models where structured state clearly outperforms plain docs.
+The first explicit promoted-domain prototype is the service registry:
+
+- it uses dedicated service projection tables rather than generic entity rows
+- canonical markdown service docs remain the source of truth
+- `services_lookup` and `service_record` expose typed runner retrieval behavior
+- service provenance and projection states make derivation and freshness
+  inspectable
+
+The generic records projection remains backward compatible and should be
+extended only where structured state clearly outperforms plain docs.
 
 ### Provenance and truth sync
 

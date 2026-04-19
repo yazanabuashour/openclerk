@@ -98,6 +98,96 @@ func TestSyncVaultPrunesDeletedDocuments(t *testing.T) {
 	}
 }
 
+func TestSyncVaultPrunesDeletedServiceProjection(t *testing.T) {
+	t.Parallel()
+
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	if _, err := store.CreateDocument(context.Background(), domain.CreateDocumentInput{
+		Path:  "records/services/openclerk-runner.md",
+		Title: "OpenClerk runner",
+		Body: strings.TrimSpace(`---
+service_id: openclerk-runner
+service_name: OpenClerk runner
+service_status: active
+service_owner: runner
+service_interface: JSON runner
+---
+# OpenClerk runner
+
+## Summary
+Production service.
+`) + "\n",
+	}); err != nil {
+		t.Fatalf("create service document: %v", err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatalf("close initial store: %v", err)
+	}
+
+	if err := os.Remove(filepath.Join(vaultRoot, "records", "services", "openclerk-runner.md")); err != nil {
+		t.Fatalf("remove service doc: %v", err)
+	}
+
+	reopened := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = reopened.Close()
+	}()
+
+	services, err := reopened.ServicesLookup(context.Background(), domain.ServiceLookupInput{Text: "OpenClerk runner", Limit: 10})
+	if err != nil {
+		t.Fatalf("services lookup after delete: %v", err)
+	}
+	if len(services.Services) != 0 {
+		t.Fatalf("services after delete = %+v, want none", services.Services)
+	}
+}
+
+func TestServicesLookupSearchesSummarySection(t *testing.T) {
+	t.Parallel()
+
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+
+	if _, err := store.CreateDocument(context.Background(), domain.CreateDocumentInput{
+		Path:  "records/services/openclerk-runner.md",
+		Title: "OpenClerk runner",
+		Body: strings.TrimSpace(`---
+service_id: openclerk-runner
+service_name: OpenClerk runner
+service_status: active
+service_owner: runner
+service_interface: JSON runner
+---
+# OpenClerk runner
+
+## Summary
+Production service for routine local knowledge tasks.
+
+## Facts
+- tier: production
+`) + "\n",
+	}); err != nil {
+		t.Fatalf("create service document: %v", err)
+	}
+
+	services, err := store.ServicesLookup(context.Background(), domain.ServiceLookupInput{Text: "routine local knowledge", Limit: 10})
+	if err != nil {
+		t.Fatalf("services lookup: %v", err)
+	}
+	if len(services.Services) != 1 || services.Services[0].ServiceID != "openclerk-runner" {
+		t.Fatalf("services lookup = %+v, want openclerk-runner", services)
+	}
+	if services.Services[0].Summary != "Production service for routine local knowledge tasks." {
+		t.Fatalf("service summary = %q", services.Services[0].Summary)
+	}
+}
+
 func TestCreateDocumentPreservesRequestedTitleAcrossRestart(t *testing.T) {
 	t.Parallel()
 
