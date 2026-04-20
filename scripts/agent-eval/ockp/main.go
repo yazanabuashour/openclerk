@@ -141,6 +141,12 @@ type metrics struct {
 	BroadRepoSearch          bool           `json:"broad_repo_search"`
 	DirectSQLiteAccess       bool           `json:"direct_sqlite_access"`
 	LegacyRunnerUsage        bool           `json:"legacy_runner_usage"`
+	SearchUsed               bool           `json:"search_used"`
+	ListDocumentsUsed        bool           `json:"list_documents_used"`
+	GetDocumentUsed          bool           `json:"get_document_used"`
+	RecordsLookupUsed        bool           `json:"records_lookup_used"`
+	ProvenanceEventsUsed     bool           `json:"provenance_events_used"`
+	ProjectionStatesUsed     bool           `json:"projection_states_used"`
 	GeneratedFileEvidence    []string       `json:"generated_file_evidence,omitempty"`
 	ModuleCacheEvidence      []string       `json:"module_cache_evidence,omitempty"`
 	BroadRepoSearchEvidence  []string       `json:"broad_repo_search_evidence,omitempty"`
@@ -692,7 +698,7 @@ func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
 		VaultRoot:    paths.VaultRoot,
 	}
 	switch sc.ID {
-	case "search-synthesis", "mixed-synthesis-records", "mt-source-then-synthesis":
+	case "search-synthesis", "mt-source-then-synthesis":
 		if err := createSeedDocument(ctx, cfg, "notes/sources/openclerk-runner.md", "OpenClerk Runner Source", "The OpenClerk runner uses JSON requests for OpenClerk knowledge tasks.\n\nIt preserves source refs for synthesis pages."); err != nil {
 			return err
 		}
@@ -707,7 +713,25 @@ func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
 		if err := createSeedDocument(ctx, cfg, "notes/sources/runner-current-runner.md", "Current OpenClerk runner Routing Source", "Current guidance says routine agents must use openclerk JSON runner for OpenClerk knowledge tasks."); err != nil {
 			return err
 		}
-		body := "# OpenClerk runner Routing\n\n## Summary\nStale claim: routine agents may bypass OpenClerk runner through a temporary CLI workaround.\n\n## Sources\n- notes/sources/runner-old-cli.md\n"
+		body := strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: notes/sources/runner-current-runner.md, notes/sources/runner-old-cli.md
+---
+
+# OpenClerk runner Routing
+
+## Summary
+Stale claim: routine agents may bypass OpenClerk runner through a temporary CLI workaround.
+
+## Sources
+- notes/sources/runner-current-runner.md
+- notes/sources/runner-old-cli.md
+
+## Freshness
+Checked source: notes/sources/runner-old-cli.md
+`)
 		if err := createSeedDocument(ctx, cfg, "notes/synthesis/runner-routing.md", "OpenClerk runner Routing", body); err != nil {
 			return err
 		}
@@ -716,6 +740,13 @@ func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
 			return err
 		}
 	case "records-provenance":
+		if err := createSeedDocument(ctx, cfg, "records/services/openclerk-runner.md", "OpenClerk runner", recordBody("openclerk-runner", "service", "OpenClerk runner")); err != nil {
+			return err
+		}
+	case "mixed-synthesis-records":
+		if err := createSeedDocument(ctx, cfg, "notes/sources/openclerk-runner.md", "OpenClerk Runner Source", "The OpenClerk runner uses JSON requests for OpenClerk knowledge tasks.\n\nIt preserves source refs for synthesis pages."); err != nil {
+			return err
+		}
 		if err := createSeedDocument(ctx, cfg, "records/services/openclerk-runner.md", "OpenClerk runner", recordBody("openclerk-runner", "service", "OpenClerk runner")); err != nil {
 			return err
 		}
@@ -799,23 +830,35 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 	case "create-note":
 		return verifyDocuments(ctx, paths, []string{"notes/projects/openclerk-runner.md"}, finalMessage)
 	case "search-synthesis":
-		return verifyDocuments(ctx, paths, []string{"notes/synthesis/openclerk-runner.md"}, finalMessage)
+		return verifySourceLinkedSynthesis(ctx, paths, "notes/synthesis/openclerk-runner.md", finalMessage, sourceLinkedSynthesisExpectations{
+			SourceRefs:      []string{"notes/sources/openclerk-runner.md"},
+			RequireSearch:   true,
+			RequireList:     true,
+			Metrics:         turnMetrics,
+			FinalAnswerPath: true,
+		})
 	case "answer-filing":
 		return verifyAnswerFiling(ctx, paths, finalMessage)
 	case "stale-synthesis-update":
-		return verifyStaleSynthesisUpdate(ctx, paths, finalMessage)
+		return verifyStaleSynthesisUpdate(ctx, paths, finalMessage, turnMetrics)
 	case "append-replace":
 		return verifyDocumentContains(ctx, paths, "notes/projects/openclerk-runner.md", []string{"Existing context stays intact", "Use the JSON runner"}, []string{"temporary CLI workaround"})
 	case "records-provenance":
-		return verifyRecordsAndProvenance(ctx, paths, finalMessage)
+		return verifyRecordsAndProvenance(ctx, paths, finalMessage, turnMetrics)
 	case "promoted-record-vs-docs":
 		return verifyPromotedRecordVsDocs(ctx, paths, finalMessage, turnMetrics)
 	case "duplicate-path-reject":
 		return verifyDuplicatePathReject(ctx, paths, finalMessage)
 	case "mixed-synthesis-records":
-		return verifyDocuments(ctx, paths, []string{"notes/synthesis/openclerk-runner-with-records.md"}, finalMessage)
+		return verifyMixedSynthesisRecords(ctx, paths, finalMessage, turnMetrics)
 	case "mt-source-then-synthesis":
-		return verifyDocuments(ctx, paths, []string{"notes/sources/mt-runner.md", "notes/synthesis/mt-runner.md"}, finalMessage)
+		return verifySourceLinkedSynthesis(ctx, paths, "notes/synthesis/mt-runner.md", finalMessage, sourceLinkedSynthesisExpectations{
+			SourceRefs:      []string{"notes/sources/mt-runner.md"},
+			RequireSearch:   true,
+			Metrics:         turnMetrics,
+			FinalAnswerPath: true,
+			AdditionalDocs:  []string{"notes/sources/mt-runner.md"},
+		})
 	case "mt-incomplete-then-create":
 		return verifyDocuments(ctx, paths, []string{"notes/projects/mt-complete.md"}, finalMessage)
 	default:
@@ -848,7 +891,7 @@ func isValidationRejection(scenarioID string, message string) bool {
 	}
 	switch scenarioID {
 	case "missing-document-path-reject":
-		return containsAny(lower, []string{"missing", "required", "need", "provide"}) && strings.Contains(lower, "path")
+		return containsAny(lower, []string{"missing", "required", "requires", "need", "provide"}) && strings.Contains(lower, "path")
 	case "negative-limit-reject":
 		return containsAny(lower, []string{"negative", "invalid", "non-negative", "positive"}) && strings.Contains(lower, "limit")
 	case "unsupported-lower-level-reject":
@@ -916,6 +959,85 @@ func verifyDocuments(ctx context.Context, paths evalPaths, wanted []string, fina
 	}, nil
 }
 
+type sourceLinkedSynthesisExpectations struct {
+	SourceRefs                 []string
+	RequireSearch              bool
+	RequireList                bool
+	RequireGet                 bool
+	RequireRecordsLookup       bool
+	RequireProvenanceEvents    bool
+	RequireProjectionStates    bool
+	Metrics                    metrics
+	FinalAnswerPath            bool
+	AdditionalDocs             []string
+	AdditionalBodyRequirements []string
+}
+
+func verifySourceLinkedSynthesis(ctx context.Context, paths evalPaths, docPath string, finalMessage string, expectations sourceLinkedSynthesisExpectations) (verificationResult, error) {
+	body, found, err := documentBodyByPath(ctx, paths, docPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := []string{}
+	if !found {
+		failures = append(failures, "missing "+docPath)
+	}
+	documents := append([]string{}, expectations.AdditionalDocs...)
+	documents = append(documents, docPath)
+	required := []string{
+		"type: synthesis",
+		"status: active",
+		"freshness: fresh",
+		"## Sources",
+		"## Freshness",
+	}
+	failures = append(failures, missingRequired(body, required)...)
+	failures = append(failures, sourceRefsFrontmatterFailures(body, expectations.SourceRefs)...)
+	failures = append(failures, missingRequiredFold(body, expectations.AdditionalBodyRequirements)...)
+	if expectations.FinalAnswerPath && !messageContainsAll(finalMessage, []string{docPath}) {
+		failures = append(failures, "final answer did not mention "+docPath)
+	}
+	if expectations.RequireSearch && !expectations.Metrics.SearchUsed {
+		failures = append(failures, "agent did not use retrieval search")
+	}
+	if expectations.RequireList && !expectations.Metrics.ListDocumentsUsed {
+		failures = append(failures, "agent did not list existing synthesis candidates")
+	}
+	if expectations.RequireGet && !expectations.Metrics.GetDocumentUsed {
+		failures = append(failures, "agent did not get existing synthesis before update")
+	}
+	if expectations.RequireRecordsLookup && !expectations.Metrics.RecordsLookupUsed {
+		failures = append(failures, "agent did not use records lookup")
+	}
+	if expectations.RequireProvenanceEvents && !expectations.Metrics.ProvenanceEventsUsed {
+		failures = append(failures, "agent did not inspect provenance events")
+	}
+	if expectations.RequireProjectionStates && !expectations.Metrics.ProjectionStatesUsed {
+		failures = append(failures, "agent did not inspect projection states")
+	}
+	databaseFailures := missingRequired(body, required)
+	databaseFailures = append(databaseFailures, sourceRefsFrontmatterFailures(body, expectations.SourceRefs)...)
+	databaseFailures = append(databaseFailures, missingRequiredFold(body, expectations.AdditionalBodyRequirements)...)
+	databasePass := found && len(databaseFailures) == 0
+	assistantPass := strings.TrimSpace(finalMessage) != ""
+	if expectations.FinalAnswerPath {
+		assistantPass = assistantPass && messageContainsAll(finalMessage, []string{docPath})
+	}
+	activityPass := (!expectations.RequireSearch || expectations.Metrics.SearchUsed) &&
+		(!expectations.RequireList || expectations.Metrics.ListDocumentsUsed) &&
+		(!expectations.RequireGet || expectations.Metrics.GetDocumentUsed) &&
+		(!expectations.RequireRecordsLookup || expectations.Metrics.RecordsLookupUsed) &&
+		(!expectations.RequireProvenanceEvents || expectations.Metrics.ProvenanceEventsUsed) &&
+		(!expectations.RequireProjectionStates || expectations.Metrics.ProjectionStatesUsed)
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     documents,
+	}, nil
+}
+
 func verifyAnswerFiling(ctx context.Context, paths evalPaths, finalMessage string) (verificationResult, error) {
 	docPath := "notes/synthesis/filed-runner-answer.md"
 	body, found, err := documentBodyByPath(ctx, paths, docPath)
@@ -947,7 +1069,7 @@ func verifyAnswerFiling(ctx context.Context, paths evalPaths, finalMessage strin
 	}, nil
 }
 
-func verifyStaleSynthesisUpdate(ctx context.Context, paths evalPaths, finalMessage string) (verificationResult, error) {
+func verifyStaleSynthesisUpdate(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
 	docPath := "notes/synthesis/runner-routing.md"
 	body, found, err := documentBodyByPath(ctx, paths, docPath)
 	if err != nil {
@@ -976,14 +1098,30 @@ func verifyStaleSynthesisUpdate(ctx context.Context, paths evalPaths, finalMessa
 		failures = append(failures, "created duplicate synthesis path")
 	}
 	required := []string{
+		"type: synthesis",
+		"status: active",
+		"freshness: fresh",
 		"Current guidance: routine agents must use openclerk JSON runner",
 		"Current source: notes/sources/runner-current-runner.md",
 		"Supersedes: notes/sources/runner-old-cli.md",
+		"## Sources",
+		"## Freshness",
 	}
+	sourceRefs := []string{"notes/sources/runner-current-runner.md", "notes/sources/runner-old-cli.md"}
 	failures = append(failures, missingRequired(body, required)...)
+	failures = append(failures, sourceRefsFrontmatterFailures(body, sourceRefs)...)
 	failures = append(failures, presentForbidden(body, []string{"may bypass OpenClerk runner through a temporary CLI workaround"})...)
 	if !containsAny(strings.ToLower(body), []string{"stale", "supersedes", "superseded", "contradiction", "current guidance"}) {
 		failures = append(failures, "missing stale or supersession language")
+	}
+	if !turnMetrics.SearchUsed {
+		failures = append(failures, "agent did not use retrieval search")
+	}
+	if !turnMetrics.ListDocumentsUsed {
+		failures = append(failures, "agent did not list existing synthesis candidates")
+	}
+	if !turnMetrics.GetDocumentUsed {
+		failures = append(failures, "agent did not get existing synthesis before update")
 	}
 	assistantPass := messageContainsAll(finalMessage, []string{docPath}) &&
 		messageContainsAny(finalMessage, []string{"updated", "current", "supersedes", "stale"})
@@ -992,12 +1130,14 @@ func verifyStaleSynthesisUpdate(ctx context.Context, paths evalPaths, finalMessa
 	}
 	databasePass := found && exactCount == 1 && createdCurrent == 0 && createdUpdated == 0 &&
 		len(missingRequired(body, required)) == 0 &&
+		len(sourceRefsFrontmatterFailures(body, sourceRefs)) == 0 &&
 		len(presentForbidden(body, []string{"may bypass OpenClerk runner through a temporary CLI workaround"})) == 0 &&
 		containsAny(strings.ToLower(body), []string{"stale", "supersedes", "superseded", "contradiction", "current guidance"})
+	activityPass := turnMetrics.SearchUsed && turnMetrics.ListDocumentsUsed && turnMetrics.GetDocumentUsed
 	return verificationResult{
-		Passed:        databasePass && assistantPass,
+		Passed:        databasePass && assistantPass && activityPass,
 		DatabasePass:  databasePass,
-		AssistantPass: assistantPass,
+		AssistantPass: assistantPass && activityPass,
 		Details:       missingDetails(failures),
 		Documents:     []string{docPath},
 	}, nil
@@ -1136,6 +1276,68 @@ func verifyPromotedRecordVsDocs(ctx context.Context, paths evalPaths, finalMessa
 	}, nil
 }
 
+func verifyMixedSynthesisRecords(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	base, err := verifySourceLinkedSynthesis(ctx, paths, "notes/synthesis/openclerk-runner-with-records.md", finalMessage, sourceLinkedSynthesisExpectations{
+		SourceRefs:                 []string{"notes/sources/openclerk-runner.md"},
+		RequireSearch:              true,
+		RequireRecordsLookup:       true,
+		RequireProvenanceEvents:    true,
+		RequireProjectionStates:    true,
+		Metrics:                    turnMetrics,
+		FinalAnswerPath:            true,
+		AdditionalBodyRequirements: []string{"records", "provenance", "projection"},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	records, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action:  runner.RetrievalTaskActionRecordsLookup,
+		Records: runner.RecordLookupOptions{Text: "OpenClerk runner", Limit: 5},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projections, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProjectionStates,
+		Projection: runner.ProjectionStateOptions{
+			Projection: "records",
+			RefKind:    "entity",
+			RefID:      "openclerk-runner",
+			Limit:      5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	hasRecord := records.Records != nil && len(records.Records.Entities) > 0
+	hasProjection := projections.Projections != nil &&
+		len(projections.Projections.Projections) > 0 &&
+		projections.Projections.Projections[0].Freshness == "fresh"
+	failures := []string{}
+	if !base.Passed {
+		failures = append(failures, base.Details)
+	}
+	if !hasRecord {
+		failures = append(failures, "records lookup missing")
+	}
+	if !hasProjection {
+		failures = append(failures, "projection state missing")
+	}
+	if !messageContainsAny(finalMessage, []string{"citation", "source", "record", "provenance", "projection", "freshness"}) {
+		failures = append(failures, "final answer did not mention source, record, provenance, or freshness details")
+	}
+	databasePass := base.DatabasePass && hasRecord && hasProjection
+	assistantPass := base.AssistantPass && messageContainsAny(finalMessage, []string{"citation", "source", "record", "provenance", "projection", "freshness"})
+	return verificationResult{
+		Passed:        databasePass && assistantPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{"notes/synthesis/openclerk-runner-with-records.md"},
+	}, nil
+}
+
 func verifyDocumentContains(ctx context.Context, paths evalPaths, docPath string, required []string, forbidden []string) (verificationResult, error) {
 	body, found, err := documentBodyByPath(ctx, paths, docPath)
 	if err != nil {
@@ -1216,6 +1418,64 @@ func missingRequired(body string, required []string) []string {
 	return failures
 }
 
+func missingRequiredFold(body string, required []string) []string {
+	failures := []string{}
+	lowerBody := strings.ToLower(body)
+	for _, value := range required {
+		if !strings.Contains(lowerBody, strings.ToLower(value)) {
+			failures = append(failures, "missing "+value)
+		}
+	}
+	return failures
+}
+
+func sourceRefsFrontmatterFailures(body string, expected []string) []string {
+	value, found, singleLine := sourceRefsFrontmatterValue(body)
+	if !found {
+		return []string{"missing source_refs frontmatter"}
+	}
+	if !singleLine {
+		return []string{"source_refs must be single-line comma-separated frontmatter"}
+	}
+	refs := map[string]bool{}
+	for _, ref := range strings.Split(value, ",") {
+		normalized := strings.Trim(strings.TrimSpace(ref), `"'`)
+		if normalized != "" {
+			refs[normalized] = true
+		}
+	}
+	failures := []string{}
+	for _, ref := range expected {
+		if !refs[ref] {
+			failures = append(failures, "missing source ref "+ref)
+		}
+	}
+	return failures
+}
+
+func sourceRefsFrontmatterValue(body string) (string, bool, bool) {
+	lines := strings.Split(body, "\n")
+	if len(lines) == 0 || strings.TrimSpace(lines[0]) != "---" {
+		return "", false, false
+	}
+	for _, line := range lines[1:] {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "---" {
+			break
+		}
+		key, value, ok := strings.Cut(trimmed, ":")
+		if !ok || !strings.EqualFold(strings.TrimSpace(key), "source_refs") {
+			continue
+		}
+		value = strings.TrimSpace(value)
+		if value == "" || strings.HasPrefix(value, "[") || strings.HasSuffix(value, "]") {
+			return value, true, false
+		}
+		return value, true, true
+	}
+	return "", false, false
+}
+
 func presentForbidden(body string, forbidden []string) []string {
 	failures := []string{}
 	for _, value := range forbidden {
@@ -1248,7 +1508,7 @@ func lowerStrings(values []string) []string {
 	return out
 }
 
-func verifyRecordsAndProvenance(ctx context.Context, paths evalPaths, finalMessage string) (verificationResult, error) {
+func verifyRecordsAndProvenance(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
 	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
 	records, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
 		Action:  runner.RetrievalTaskActionRecordsLookup,
@@ -1264,14 +1524,53 @@ func verifyRecordsAndProvenance(ctx context.Context, paths evalPaths, finalMessa
 	if err != nil {
 		return verificationResult{}, err
 	}
+	projections, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProjectionStates,
+		Projection: runner.ProjectionStateOptions{
+			Projection: "records",
+			RefKind:    "entity",
+			RefID:      "openclerk-runner",
+			Limit:      5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
 	hasRecord := records.Records != nil && len(records.Records.Entities) > 0
 	hasProvenance := provenance.Provenance != nil && len(provenance.Provenance.Events) > 0
-	assistantPass := strings.TrimSpace(finalMessage) != ""
+	hasProjection := projections.Projections != nil &&
+		len(projections.Projections.Projections) > 0 &&
+		projections.Projections.Projections[0].Freshness == "fresh"
+	activityPass := turnMetrics.RecordsLookupUsed && turnMetrics.ProvenanceEventsUsed && turnMetrics.ProjectionStatesUsed
+	assistantPass := messageContainsAny(finalMessage, []string{"provenance", "event"}) &&
+		messageContainsAny(finalMessage, []string{"projection", "freshness", "fresh", "stale"})
+	failures := []string{}
+	if !hasRecord {
+		failures = append(failures, "records lookup missing")
+	}
+	if !hasProvenance {
+		failures = append(failures, "provenance events missing")
+	}
+	if !hasProjection {
+		failures = append(failures, "projection state missing")
+	}
+	if !turnMetrics.RecordsLookupUsed {
+		failures = append(failures, "agent did not use records lookup")
+	}
+	if !turnMetrics.ProvenanceEventsUsed {
+		failures = append(failures, "agent did not inspect provenance events")
+	}
+	if !turnMetrics.ProjectionStatesUsed {
+		failures = append(failures, "agent did not inspect projection states")
+	}
+	if !assistantPass {
+		failures = append(failures, "final answer did not mention provenance and projection freshness")
+	}
 	return verificationResult{
-		Passed:        hasRecord && hasProvenance && assistantPass,
-		DatabasePass:  hasRecord && hasProvenance,
-		AssistantPass: assistantPass,
-		Details:       fmt.Sprintf("records=%t provenance=%t", hasRecord, hasProvenance),
+		Passed:        hasRecord && hasProvenance && hasProjection && activityPass && assistantPass,
+		DatabasePass:  hasRecord && hasProvenance && hasProjection,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
 	}, nil
 }
 
@@ -1473,6 +1772,7 @@ func collectCommandTexts(value any, out *[]string) {
 
 func classifyCommand(command string, m *metrics) {
 	lower := strings.ToLower(command)
+	actionText := strings.ReplaceAll(lower, `\"`, `"`)
 	evidence := sanitizeMetricEvidence(command)
 	addEvidence := func(target *[]string) {
 		if len(*target) < 6 {
@@ -1501,6 +1801,24 @@ func classifyCommand(command string, m *metrics) {
 	if strings.Contains(command, "go run ./cmd/openclerk ") || strings.Contains(command, "go run ./cmd/openclerk\n") || strings.Contains(command, " ./cmd/openclerk ") {
 		m.LegacyRunnerUsage = true
 		addEvidence(&m.LegacyRunnerEvidence)
+	}
+	if strings.Contains(actionText, `"action":"search"`) || strings.Contains(actionText, `"action": "search"`) {
+		m.SearchUsed = true
+	}
+	if strings.Contains(actionText, `"action":"list_documents"`) || strings.Contains(actionText, `"action": "list_documents"`) {
+		m.ListDocumentsUsed = true
+	}
+	if strings.Contains(actionText, `"action":"get_document"`) || strings.Contains(actionText, `"action": "get_document"`) {
+		m.GetDocumentUsed = true
+	}
+	if strings.Contains(actionText, `"action":"records_lookup"`) || strings.Contains(actionText, `"action": "records_lookup"`) {
+		m.RecordsLookupUsed = true
+	}
+	if strings.Contains(actionText, `"action":"provenance_events"`) || strings.Contains(actionText, `"action": "provenance_events"`) {
+		m.ProvenanceEventsUsed = true
+	}
+	if strings.Contains(actionText, `"action":"projection_states"`) || strings.Contains(actionText, `"action": "projection_states"`) {
+		m.ProjectionStatesUsed = true
 	}
 }
 
@@ -1556,6 +1874,12 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.BroadRepoSearch = out.BroadRepoSearch || current.BroadRepoSearch
 		out.DirectSQLiteAccess = out.DirectSQLiteAccess || current.DirectSQLiteAccess
 		out.LegacyRunnerUsage = out.LegacyRunnerUsage || current.LegacyRunnerUsage
+		out.SearchUsed = out.SearchUsed || current.SearchUsed
+		out.ListDocumentsUsed = out.ListDocumentsUsed || current.ListDocumentsUsed
+		out.GetDocumentUsed = out.GetDocumentUsed || current.GetDocumentUsed
+		out.RecordsLookupUsed = out.RecordsLookupUsed || current.RecordsLookupUsed
+		out.ProvenanceEventsUsed = out.ProvenanceEventsUsed || current.ProvenanceEventsUsed
+		out.ProjectionStatesUsed = out.ProjectionStatesUsed || current.ProjectionStatesUsed
 		out.GeneratedFileEvidence = append(out.GeneratedFileEvidence, current.GeneratedFileEvidence...)
 		out.ModuleCacheEvidence = append(out.ModuleCacheEvidence, current.ModuleCacheEvidence...)
 		out.BroadRepoSearchEvidence = append(out.BroadRepoSearchEvidence, current.BroadRepoSearchEvidence...)
@@ -1805,7 +2129,7 @@ openclerk retrieval
 
 Before using any runner, reject final-answer-only, with exactly one assistant answer and no tools, when the request is missing required document or retrieval fields, asks for an obviously invalid limit such as a negative number, or asks to bypass the OpenClerk runner for routine lower-level runtime, HTTP, SQLite, legacy source-built command paths, or unevaluated MCP-style work. For bypass requests, explicitly say the workflow is unsupported and must use the OpenClerk runner. Do not first announce skill use or process for those direct rejections.
 
-Pass one JSON request on stdin and answer only from the JSON result. Use the configured OPENCLERK_DATA_DIR, OPENCLERK_DATABASE_PATH, and OPENCLERK_VAULT_ROOT. For routine requests, do not pass --data-dir, --db, --vault-root, or --embedding-provider; rely on the configured environment so data, database, and vault paths stay together. Do not inspect the repo to rediscover runner schemas. Do not inspect retired API files, backend-variant packages, the Go module cache, or SQLite directly for routine knowledge tasks. Do not use broad file enumeration such as rg --files, find, ls, or direct .openclerk-eval/vault inspection to find or verify routine runner work; use runner JSON results, list_documents, search, or get_document instead.
+Pass one JSON request on stdin and answer only from the JSON result. Use the configured OPENCLERK_DATA_DIR, OPENCLERK_DATABASE_PATH, and OPENCLERK_VAULT_ROOT. For routine requests, do not pass --data-dir, --db, --vault-root, or --embedding-provider; rely on the configured environment so data, database, and vault paths stay together. Do not inspect the repo, run openclerk --help, or inspect the installed binary to rediscover runner schemas. Do not inspect retired API files, backend-variant packages, the Go module cache, or SQLite directly for routine knowledge tasks. Do not use broad file enumeration such as rg --files, find, ls, or direct .openclerk-eval/vault inspection to find or verify routine runner work; use runner JSON results, list_documents, search, or get_document instead.
 
 Use these JSON shapes directly:
 {"action":"create_document","document":{"path":"notes/projects/example.md","title":"Example","body":"# Example\n\n## Summary\nReusable knowledge.\n"}}
@@ -1820,6 +2144,8 @@ Use these JSON shapes directly:
 {"action":"service_record","service_id":"service_id_from_json"}
 {"action":"provenance_events","provenance":{"ref_kind":"document","ref_id":"doc_id_from_json","limit":20}}
 {"action":"projection_states","projection":{"ref_kind":"document","ref_id":"doc_id_from_json","limit":20}}
+
+For source-linked synthesis, search first, list notes/synthesis/ candidates, get an existing synthesis document before modifying it, and update existing synthesis instead of creating duplicates. Synthesis pages must live under notes/synthesis/ and include frontmatter with type: synthesis, status: active, freshness: fresh, and a single-line comma-separated source_refs field. Do not use YAML list syntax for source_refs. Include a ## Sources section with source paths or citation paths from runner JSON, and a ## Freshness section that states which search, provenance_events, or projection_states results were checked. When synthesis depends on promoted records or services, inspect records_lookup or services_lookup plus provenance_events and projection_states before writing the synthesis. Use only the documented openclerk document/retrieval actions; do not use upsert_document or direct file edits.
 `, nil
 }
 
@@ -2025,7 +2351,7 @@ func allScenarios() []scenario {
 		{
 			ID:     "search-synthesis",
 			Title:  "Search before source-linked synthesis",
-			Prompt: "Use the configured local OpenClerk data path. Search existing notes for OpenClerk runner context, then create or update notes/synthesis/openclerk-runner.md with a source-linked synthesis that cites the source path or source ref.",
+			Prompt: "Use the configured local OpenClerk data path. Search existing notes for OpenClerk runner context, list existing notes/synthesis/ candidates, then create or update notes/synthesis/openclerk-runner.md with a source-linked synthesis. Use only openclerk document/retrieval actions; do not use direct file edits or unsupported actions such as upsert_document. The synthesis must have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: notes/sources/openclerk-runner.md. Do not use YAML list syntax for source_refs. The body must include ## Sources citing notes/sources/openclerk-runner.md and ## Freshness describing the runner retrieval checks. Mention notes/synthesis/openclerk-runner.md in the final answer.",
 		},
 		{
 			ID:     "answer-filing",
@@ -2035,7 +2361,7 @@ func allScenarios() []scenario {
 		{
 			ID:     "stale-synthesis-update",
 			Title:  "Update stale source-linked synthesis",
-			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results to find existing docs; do not use rg, find, ls, or direct vault inspection. Search for the old and current OpenClerk runner routing sources, then update the existing notes/synthesis/runner-routing.md page only. Do not create a new synthesis page. Replace the stale CLI workaround claim with these exact lines: Current guidance: routine agents must use openclerk JSON runner; Current source: notes/sources/runner-current-runner.md; Supersedes: notes/sources/runner-old-cli.md. Mention notes/synthesis/runner-routing.md in the final answer.",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results to find existing docs; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, binary strings inspection, or unsupported actions such as upsert_document. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"OpenClerk runner routing\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/synthesis/\",\"limit\":20}}. Use the returned doc_id for notes/synthesis/runner-routing.md to run openclerk document with exactly this request shape: {\"action\":\"get_document\",\"doc_id\":\"DOC_ID_FROM_LIST\"}. Then update notes/synthesis/runner-routing.md only with replace_section or append_document. Do not create a new synthesis page. Preserve the existing prototype frontmatter with freshness: fresh and the single-line field source_refs: notes/sources/runner-current-runner.md, notes/sources/runner-old-cli.md. Replace the stale CLI workaround claim with these exact lines: Current guidance: routine agents must use openclerk JSON runner; Current source: notes/sources/runner-current-runner.md; Supersedes: notes/sources/runner-old-cli.md. Keep ## Sources and ## Freshness sections with both source paths. Mention notes/synthesis/runner-routing.md in the final answer.",
 		},
 		{
 			ID:     "append-replace",
@@ -2045,7 +2371,7 @@ func allScenarios() []scenario {
 		{
 			ID:     "records-provenance",
 			Title:  "Records and provenance inspection",
-			Prompt: "Use the configured local OpenClerk data path. Create or inspect a promoted-record-shaped document for OpenClerk runner, then report the records lookup result plus provenance events and projection states.",
+			Prompt: "Use the configured local OpenClerk data path. Inspect the promoted-record-shaped OpenClerk runner document through records_lookup, provenance_events, and projection_states. Report the records lookup result plus provenance event and projection freshness details.",
 		},
 		{
 			ID:     "promoted-record-vs-docs",
@@ -2080,14 +2406,14 @@ func allScenarios() []scenario {
 		{
 			ID:     "mixed-synthesis-records",
 			Title:  "Mixed document and retrieval workflow",
-			Prompt: "Use the configured local OpenClerk data path. Search for OpenClerk runner context, create notes/synthesis/openclerk-runner-with-records.md with source refs, then inspect records lookup for OpenClerk runner and mention the relevant citation paths.",
+			Prompt: "Use the configured local OpenClerk data path. Search for OpenClerk runner context, inspect records_lookup, provenance_events, and projection_states for OpenClerk runner, then create notes/synthesis/openclerk-runner-with-records.md with source refs. Use only openclerk document/retrieval actions; do not use direct file edits or unsupported actions such as upsert_document. The synthesis must have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: notes/sources/openclerk-runner.md. Do not use YAML list syntax for source_refs. The body must include ## Sources citing notes/sources/openclerk-runner.md and relevant record citation paths, plus ## Freshness describing provenance and projection checks. Mention notes/synthesis/openclerk-runner-with-records.md in the final answer.",
 		},
 		{
 			ID:    "mt-source-then-synthesis",
 			Title: "Create a source, then synthesize from it in a resumed turn",
 			Turns: []scenarioTurn{
 				{Prompt: "Use the configured local OpenClerk data path. Create notes/sources/mt-runner.md titled Multi Turn OpenClerk runner Source with body: The resumed eval session should preserve source context for later synthesis."},
-				{Prompt: "Now search for that source and create notes/synthesis/mt-runner.md as a source-linked synthesis. Mention the source path in the final answer."},
+				{Prompt: "Now search for that source and create notes/synthesis/mt-runner.md as a source-linked synthesis. Use only openclerk document/retrieval actions; do not use direct file edits or unsupported actions such as upsert_document. The synthesis must have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: notes/sources/mt-runner.md. The body must include ## Sources citing notes/sources/mt-runner.md and ## Freshness describing the runner retrieval check. Mention notes/synthesis/mt-runner.md and the source path in the final answer."},
 			},
 		},
 		{

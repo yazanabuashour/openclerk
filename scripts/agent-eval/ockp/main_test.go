@@ -291,6 +291,13 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		`{"type":"tool_call","item":{"type":"tool_call","command":"openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"rg --files"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"rg --files /Users/y/.codex"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"search\",\"search\":{\"text\":\"runner\"}}' | openclerk retrieval"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/synthesis/\"}}' | openclerk document"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"get_document\",\"doc_id\":\"doc_1\"}' | openclerk document"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"records_lookup\",\"records\":{\"text\":\"runner\"}}' | openclerk retrieval"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"provenance_events\",\"provenance\":{\"limit\":10}}' | openclerk retrieval"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"projection_states\",\"projection\":{\"limit\":10}}' | openclerk retrieval"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"/bin/zsh -lc \"printf '%s' '{\\\"action\\\":\\\"search\\\",\\\"search\\\":{\\\"text\\\":\\\"runner\\\"}}' | openclerk retrieval\""}}`,
 		`not json`,
 	}, "\n")
 	if err := os.WriteFile(path, []byte(log), 0o644); err != nil {
@@ -303,7 +310,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	if parsed.sessionID != "session-123" || parsed.finalMessage != "done" {
 		t.Fatalf("parsed = %+v", parsed)
 	}
-	if parsed.metrics.ToolCalls != 3 || parsed.metrics.CommandExecutions != 3 || parsed.metrics.AssistantCalls != 1 {
+	if parsed.metrics.ToolCalls != 10 || parsed.metrics.CommandExecutions != 10 || parsed.metrics.AssistantCalls != 1 {
 		t.Fatalf("metrics = %+v", parsed.metrics)
 	}
 	if !parsed.metrics.BroadRepoSearch {
@@ -316,6 +323,18 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	}
 	if parsed.metrics.NonCachedInputTokens == nil || *parsed.metrics.NonCachedInputTokens != 70 || parsed.metrics.OutputTokens == nil || *parsed.metrics.OutputTokens != 12 {
 		t.Fatalf("token metrics = %+v", parsed.metrics)
+	}
+	for name, used := range map[string]bool{
+		"search":            parsed.metrics.SearchUsed,
+		"list_documents":    parsed.metrics.ListDocumentsUsed,
+		"get_document":      parsed.metrics.GetDocumentUsed,
+		"records_lookup":    parsed.metrics.RecordsLookupUsed,
+		"provenance_events": parsed.metrics.ProvenanceEventsUsed,
+		"projection_states": parsed.metrics.ProjectionStatesUsed,
+	} {
+		if !used {
+			t.Fatalf("expected %s action metric in %+v", name, parsed.metrics)
+		}
 	}
 }
 
@@ -380,6 +399,12 @@ func TestVerifyFinalAnswerOnlyRequiresRejectionAndNoTools(t *testing.T) {
 	if result := verifyFinalAnswerOnly(cliMCP, "I can't bypass OpenClerk runner through the CLI or MCP for this routine task.", noTools); !result.Passed {
 		t.Fatalf("CLI/MCP bypass rejection failed: %+v", result)
 	}
+
+	missingPath := scenario{ID: "missing-document-path-reject"}
+	message := "Unsupported: creating an OpenClerk document requires a `path`. Use the OpenClerk JSON runner with a create_document request that includes document.path."
+	if result := verifyFinalAnswerOnly(missingPath, message, noTools); !result.Passed {
+		t.Fatalf("requires path rejection failed: %+v", result)
+	}
 }
 
 func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
@@ -422,6 +447,163 @@ func TestVerifyAnswerFilingRequiresFiledSourceLinkedDocument(t *testing.T) {
 	}
 }
 
+func TestVerifySourceLinkedSynthesisRequiresSourcesFreshnessAndWorkflow(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: "search-synthesis"}); err != nil {
+		t.Fatalf("seed scenario: %v", err)
+	}
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	incomplete := `---
+type: synthesis
+status: active
+freshness: fresh
+---
+
+# OpenClerk runner
+
+## Sources
+
+## Freshness
+Checked search results.
+`
+	if err := createSeedDocument(ctx, cfg, "notes/synthesis/openclerk-runner.md", "OpenClerk runner", incomplete); err != nil {
+		t.Fatalf("create incomplete synthesis: %v", err)
+	}
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: "search-synthesis"}, 1, "Created notes/synthesis/openclerk-runner.md.", metrics{
+		AssistantCalls:    1,
+		SearchUsed:        true,
+		ListDocumentsUsed: true,
+		EventTypeCounts:   map[string]int{},
+	})
+	if err != nil {
+		t.Fatalf("verify incomplete synthesis: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("synthesis without source_refs passed: %+v", result)
+	}
+	yamlListPaths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, yamlListPaths, scenario{ID: "search-synthesis"}); err != nil {
+		t.Fatalf("seed YAML-list source_refs scenario: %v", err)
+	}
+	yamlListCfg := runclient.Config{DataDir: yamlListPaths.DataDir, DatabasePath: yamlListPaths.DatabasePath, VaultRoot: yamlListPaths.VaultRoot}
+	yamlListSourceRefs := `---
+type: synthesis
+status: active
+freshness: fresh
+source_refs:
+  - notes/sources/openclerk-runner.md
+---
+
+# OpenClerk runner
+
+## Summary
+The runner preserves source refs.
+
+## Sources
+- notes/sources/openclerk-runner.md
+
+## Freshness
+Checked runner search results for notes/sources/openclerk-runner.md.
+`
+	if err := createSeedDocument(ctx, yamlListCfg, "notes/synthesis/openclerk-runner.md", "OpenClerk runner", yamlListSourceRefs); err != nil {
+		t.Fatalf("create YAML-list source_refs synthesis: %v", err)
+	}
+	result, err = verifyScenarioTurn(ctx, yamlListPaths, scenario{ID: "search-synthesis"}, 1, "Created notes/synthesis/openclerk-runner.md.", metrics{
+		AssistantCalls:    1,
+		SearchUsed:        true,
+		ListDocumentsUsed: true,
+		EventTypeCounts:   map[string]int{},
+	})
+	if err != nil {
+		t.Fatalf("verify YAML-list source_refs synthesis: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("synthesis with YAML-list source_refs passed: %+v", result)
+	}
+	missingFreshnessPaths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, missingFreshnessPaths, scenario{ID: "search-synthesis"}); err != nil {
+		t.Fatalf("seed missing freshness scenario: %v", err)
+	}
+	missingFreshnessCfg := runclient.Config{DataDir: missingFreshnessPaths.DataDir, DatabasePath: missingFreshnessPaths.DatabasePath, VaultRoot: missingFreshnessPaths.VaultRoot}
+	missingFreshness := `---
+type: synthesis
+status: active
+source_refs: notes/sources/openclerk-runner.md
+---
+
+# OpenClerk runner
+
+## Sources
+- notes/sources/openclerk-runner.md
+`
+	if err := createSeedDocument(ctx, missingFreshnessCfg, "notes/synthesis/openclerk-runner.md", "OpenClerk runner", missingFreshness); err != nil {
+		t.Fatalf("create missing freshness synthesis: %v", err)
+	}
+	result, err = verifyScenarioTurn(ctx, missingFreshnessPaths, scenario{ID: "search-synthesis"}, 1, "Created notes/synthesis/openclerk-runner.md.", metrics{
+		AssistantCalls:    1,
+		SearchUsed:        true,
+		ListDocumentsUsed: true,
+		EventTypeCounts:   map[string]int{},
+	})
+	if err != nil {
+		t.Fatalf("verify missing freshness synthesis: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("synthesis without freshness metadata passed: %+v", result)
+	}
+	completePaths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, completePaths, scenario{ID: "search-synthesis"}); err != nil {
+		t.Fatalf("seed complete scenario: %v", err)
+	}
+	completeCfg := runclient.Config{DataDir: completePaths.DataDir, DatabasePath: completePaths.DatabasePath, VaultRoot: completePaths.VaultRoot}
+	complete := `---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: notes/sources/openclerk-runner.md
+---
+
+# OpenClerk runner
+
+## Summary
+The runner preserves source refs.
+
+## Sources
+- notes/sources/openclerk-runner.md
+
+## Freshness
+Checked runner search results for notes/sources/openclerk-runner.md.
+`
+	if err := createSeedDocument(ctx, completeCfg, "notes/synthesis/openclerk-runner.md", "OpenClerk runner", complete); err != nil {
+		t.Fatalf("create complete synthesis: %v", err)
+	}
+	result, err = verifyScenarioTurn(ctx, completePaths, scenario{ID: "search-synthesis"}, 1, "Created notes/synthesis/openclerk-runner.md.", metrics{
+		AssistantCalls:    1,
+		SearchUsed:        true,
+		ListDocumentsUsed: true,
+		EventTypeCounts:   map[string]int{},
+	})
+	if err != nil {
+		t.Fatalf("verify complete synthesis: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("complete synthesis failed: %+v", result)
+	}
+	result, err = verifyScenarioTurn(ctx, completePaths, scenario{ID: "search-synthesis"}, 1, "Created synthesis.", metrics{
+		AssistantCalls:    1,
+		SearchUsed:        true,
+		ListDocumentsUsed: true,
+		EventTypeCounts:   map[string]int{},
+	})
+	if err != nil {
+		t.Fatalf("verify final answer path: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("synthesis final answer without path passed: %+v", result)
+	}
+}
+
 func TestVerifyStaleSynthesisUpdateRequiresCurrentSourceAndNoDuplicate(t *testing.T) {
 	ctx := context.Background()
 	paths := scenarioPaths(t.TempDir())
@@ -438,7 +620,15 @@ func TestVerifyStaleSynthesisUpdateRequiresCurrentSourceAndNoDuplicate(t *testin
 	}
 	replacement := "Current guidance: routine agents must use openclerk JSON runner.\n\nCurrent source: notes/sources/runner-current-runner.md\n\nSupersedes: notes/sources/runner-old-cli.md\n\nThis stale claim is superseded by current guidance."
 	replaceSeedSection(t, ctx, paths, "notes/synthesis/runner-routing.md", "Summary", replacement)
-	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: "stale-synthesis-update"}, 1, "Updated notes/synthesis/runner-routing.md with current guidance.", noTools)
+	replaceSeedSection(t, ctx, paths, "notes/synthesis/runner-routing.md", "Freshness", "Checked current source: notes/sources/runner-current-runner.md\n\nChecked previous source: notes/sources/runner-old-cli.md")
+	workflowMetrics := metrics{
+		AssistantCalls:    1,
+		SearchUsed:        true,
+		ListDocumentsUsed: true,
+		GetDocumentUsed:   true,
+		EventTypeCounts:   map[string]int{},
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: "stale-synthesis-update"}, 1, "Updated notes/synthesis/runner-routing.md with current guidance.", workflowMetrics)
 	if err != nil {
 		t.Fatalf("verify stale after update: %v", err)
 	}
@@ -449,7 +639,7 @@ func TestVerifyStaleSynthesisUpdateRequiresCurrentSourceAndNoDuplicate(t *testin
 	if err := createSeedDocument(ctx, cfg, "notes/synthesis/runner-routing-current.md", "OpenClerk runner Routing Current", "# Duplicate\n"); err != nil {
 		t.Fatalf("create duplicate synthesis: %v", err)
 	}
-	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: "stale-synthesis-update"}, 1, "Updated notes/synthesis/runner-routing.md with current guidance.", noTools)
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: "stale-synthesis-update"}, 1, "Updated notes/synthesis/runner-routing.md with current guidance.", workflowMetrics)
 	if err != nil {
 		t.Fatalf("verify stale duplicate: %v", err)
 	}

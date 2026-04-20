@@ -56,6 +56,8 @@ proof slice:
 - canonical docs remain markdown-backed and inspectable
 - source-linked synthesis lives inside the docs layer
 - synthesis must preserve source refs, citations, or equivalent stable evidence
+  in `notes/synthesis/` markdown with `type: synthesis`, `status: active`,
+  `freshness: fresh`, `source_refs`, `## Sources`, and `## Freshness`
 - provenance and projection freshness are required before broad memory adoption
 - graph/search are derived docs capabilities, not independent truth systems
 - service registry is the first typed promoted-domain prototype, and additional
@@ -84,6 +86,9 @@ OpenClerk will keep AgentOps as the production agent interface:
   adapter proves it can preserve the same contract with better measured behavior.
 - New public API surface is added only after evals show the current surface is
   insufficient.
+- `oc-0em` proved the current AgentOps document/retrieval runner actions are
+  sufficient for the source-linked synthesis prototype; no dedicated synthesis
+  action or new public API is part of this slice.
 
 ## Eval Gates
 

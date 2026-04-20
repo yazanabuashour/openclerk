@@ -44,6 +44,8 @@ production OpenClerk runner does not support that workflow yet.
 
 Do not inspect source files, generated artifacts, backend variants, module-cache
 docs, SQLite, or `.openclerk-eval/vault` directly for routine OpenClerk tasks.
+Do not run `openclerk --help` or inspect the installed binary to rediscover
+schemas; use the request shapes below.
 Do not use broad file enumeration such as `rg --files`, `find`, or `ls` to find
 or verify routine runner work; use runner JSON results, `list_documents`,
 `search`, or `get_document` instead. Search the repository only if the runner
@@ -76,10 +78,24 @@ Request fields are `action`, `document`, `doc_id`, `content`, `heading`, and
 Validation rejections are normal JSON results with `rejected: true` and
 `rejection_reason`. Runtime failures exit non-zero and write errors to stderr.
 
-When writing source-linked synthesis, search first, update an existing synthesis
-page when possible, and preserve source paths, source refs, citations, or stable
-identifiers. Synthesis is durable compiled knowledge, not a higher authority
-than the canonical sources it cites.
+When writing source-linked synthesis, use this exact AgentOps workflow:
+
+1. Run retrieval `search` for source evidence.
+2. Run document `list_documents` with `path_prefix: "notes/synthesis/"` to
+   find existing synthesis candidates.
+3. Run `get_document` before modifying an existing synthesis page.
+4. Prefer `replace_section` or `append_document` over creating duplicates.
+5. Inspect `provenance_events` and `projection_states` when the synthesis
+   depends on promoted records, services, derivation history, or freshness.
+
+Prototype synthesis pages live under `notes/synthesis/`. Include frontmatter
+with `type: synthesis`, `status: active`, `freshness: fresh`, and `source_refs`
+set to a single-line comma-separated source path list. Do not use YAML list
+syntax for `source_refs`. Include a `## Sources` section with source paths or
+citation paths from runner JSON, and a `## Freshness` section that states which
+runner retrieval results were checked. Use only documented runner actions, not
+`upsert_document` or direct file edits. Synthesis is durable compiled knowledge,
+not a higher authority than the canonical sources it cites.
 
 ## Retrieval Tasks
 

@@ -17,6 +17,9 @@ eval-backed knowledge-plane ADR in
   cites it.
 - Add a second source that updates or challenges the synthesis.
 - Verify the synthesis is updated rather than duplicated.
+- Verify synthesis pages live under `notes/synthesis/`, include `type:
+  synthesis`, `status: active`, `freshness: fresh`, `source_refs`, a
+  `Sources` section, and a `Freshness` section.
 - Verify source-sensitive claims preserve citation paths, chunk ids, or explicit
   source refs.
 - Verify useful answer material can be filed back into durable markdown instead
@@ -31,6 +34,8 @@ eval-backed knowledge-plane ADR in
 - Verify the agent finds the existing synthesis page before writing a new one.
 - Verify the synthesis is updated with the newer evidence, contradiction note,
   or explicit stale-state language.
+- Verify the agent retrieves the existing synthesis document before replacing
+  or appending sections.
 - Verify the final answer identifies which source is current when the prompt is
   source-sensitive.
 
@@ -59,6 +64,9 @@ eval-backed knowledge-plane ADR in
 - Verify projection-state reads expose current freshness and version markers.
 - Verify synthesis pages can be traced back to the canonical docs or records
   they summarize.
+- Verify promoted-record synthesis inspects `records_lookup`,
+  `provenance_events`, and `projection_states` before writing durable
+  synthesis.
 
 ## Agent Surface Comparison
 

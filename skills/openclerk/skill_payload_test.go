@@ -84,6 +84,12 @@ func TestSkillUsesInstalledRunnerForRoutineWork(t *testing.T) {
 		"Skills-compatible",
 		"Do not inspect source files",
 		"reject final-answer-only",
+		"notes/synthesis/",
+		"source_refs",
+		"## Sources",
+		"## Freshness",
+		"provenance_events",
+		"projection_states",
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("SKILL.md missing %q", want)

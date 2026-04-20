@@ -99,11 +99,13 @@ The `ockp` harness covers routine local knowledge-plane workflows:
 - canonical note creation with stable paths, frontmatter, headings, body content,
   and vault/document-registry verification
 - source-grounded search followed by source-linked synthesis creation or update
+  under `notes/synthesis/` with `type: synthesis`, `status: active`,
+  `freshness: fresh`, `source_refs`, `## Sources`, and `## Freshness`
 - durable answer filing into source-linked markdown
 - contradiction or stale synthesis repair against newer canonical sources
 - append and replace-section workflows that preserve unrelated document content
 - promoted-record-shaped document creation, records lookup, provenance events,
-  and projection states
+  projection states, and freshness-aware synthesis when records are summarized
 - service registry lookup comparison against plain docs retrieval for
   service-centric tasks
 - duplicate canonical path rejection without overwrite
