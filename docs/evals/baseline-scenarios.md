@@ -45,6 +45,19 @@ define proof obligations for the AgentOps-only knowledge-plane direction in
 - Verify document link expansion returns outgoing and incoming relationships.
 - Verify graph neighborhood expansion stays source-linked to canonical docs.
 
+## Graph/Memory Reference Archetype
+
+These are future benchmark categories inspired by graph/vector memory systems
+such as Cognee. They should remain reference comparisons unless the current
+AgentOps eval harness supports them cleanly.
+
+- Compare derived graph navigation against docs search and link expansion.
+- Verify graph answers preserve source citations and projection freshness.
+- Verify temporal retrieval distinguishes current, observed, effective, and
+  superseded facts.
+- Verify session-derived or feedback-weighted recall can explain source refs
+  and freshness before being trusted.
+
 ## Promoted-Domain Lookup
 
 - Create a canonical record-shaped doc with `entity_*` frontmatter and `Facts`.

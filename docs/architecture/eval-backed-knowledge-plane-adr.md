@@ -35,6 +35,11 @@ agent-first vault:
 - **Docs/provenance synthesis:** canonical markdown docs plus source-linked
   synthesis, citations, provenance events, projection freshness, search, and
   graph navigation.
+- **Cognee-style graph/vector memory engine:** graph and vector retrieval,
+  ontology grounding, temporal search, session memory, feedback weighting, and
+  memory-style agent integrations. This is useful as a reference architecture
+  and benchmark input, but too memory-first and multi-surface to become
+  OpenClerk's product contract.
 - **Full docs, records, memory, and router:** the long-term shape for selected
   future domains, after the docs/provenance path is solid.
 
@@ -67,6 +72,12 @@ knowledge-model build slice behind AgentOps:
 - memory and autonomous routing remain deferred until the docs, synthesis, and
   truth-sync layers are reliable through AgentOps
 
+Cognee reinforces the need to evaluate graph/vector memory capabilities later,
+especially ontology/entity grounding, temporal retrieval, feedback-weighted
+ranking, and session-to-durable promotion. It does not change the accepted
+AgentOps-only interface or make memory-first `remember`/`recall` semantics the
+OpenClerk product surface.
+
 ## Invariants
 
 - Canonical docs and promoted records outrank synthesis and memory.
@@ -77,6 +88,11 @@ knowledge-model build slice behind AgentOps:
 - Derived graph, records, search indexes, and future memory entries must expose
   freshness or provenance sufficient to explain their relationship to canonical
   docs or records.
+- Graph/vector memory outputs must not outrank canonical docs or promoted
+  records.
+- Session-derived memory cannot become durable truth without canonicalization
+  and provenance.
+- Feedback weighting cannot hide stale or weakly sourced evidence.
 - Routine agent tasks must use the OpenClerk AgentOps surface.
 - New public runner actions are added only when repeated AgentOps workflows show
   that existing document and retrieval actions force brittle behavior.
@@ -111,6 +127,9 @@ Keep a layer optional or remove it if it:
 - encourages routine agents to bypass OpenClerk runner for lower-level APIs
 - improves one workflow class while regressing core source-grounded retrieval,
   citation correctness, or synthesis lifecycle reliability
+- creates opaque graph truth, bypasses runner tasks, weakens citation
+  correctness, or increases stale-memory and conflicting-truth failures when
+  borrowing Cognee-inspired behavior
 
 ## Beads Ownership
 

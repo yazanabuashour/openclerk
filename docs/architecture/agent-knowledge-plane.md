@@ -89,6 +89,21 @@ Karpathy's LLM Wiki pattern maps cleanly onto OpenClerk, but OpenClerk should im
 
 The shared idea is that agents should maintain summaries, links, contradiction notes, and filed answers so knowledge compounds over time. The OpenClerk-specific constraint is that synthesis must stay inspectable through stable ids, citations, provenance events, and projection freshness. It should not become an opaque second truth system.
 
+### Cognee alignment
+
+Cognee is a useful external reference for graph/vector AI memory engines, but
+it is not a markdown-canonical knowledge plane in the OpenClerk sense. Its
+valuable lessons are retriever taxonomy, ontology grounding, temporal
+retrieval, session memory, feedback weighting, and the operational cost of
+coordinating graph, vector, relational, and cache stores.
+
+OpenClerk should not adopt Cognee's `remember`/`recall` product surface,
+memory-first canonical truth model, routine HTTP/MCP/Python bypasses, or graph
+as an independent authority layer. Cognee-inspired ideas should enter
+OpenClerk only as benchmark categories or internal implementation options that
+preserve AgentOps, citations, provenance, freshness, and canonical
+markdown/record authority.
+
 ### Graph
 
 Graph state is derived from markdown links and chunk/document relationships. It remains source-linked and refreshable from canonical docs.
