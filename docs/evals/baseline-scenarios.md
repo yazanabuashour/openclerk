@@ -5,6 +5,9 @@ runner/skill surface and the knowledge-model behavior behind it. They also
 define proof obligations for the AgentOps-only knowledge-plane direction in
 `docs/architecture/eval-backed-knowledge-plane-adr.md`.
 
+The benchmark archetypes and comparison axes behind these scenarios are defined
+in `docs/evals/knowledge-plane-archetype-matrix.md`.
+
 ## Source-Grounded Retrieval
 
 - Create canonical notes with stable headings and exact terms.
