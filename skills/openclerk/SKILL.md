@@ -34,7 +34,7 @@ answer and no tools, when the request:
 - is missing required document or retrieval fields
 - asks for an obviously invalid limit, such as a negative number
 - asks to bypass the runner for routine lower-level runtime, HTTP, SQLite,
-  legacy source-built command paths, or unevaluated MCP-style work
+  legacy source-built command paths, or unsupported transport work
 
 For bypass requests, explicitly say the workflow is unsupported and must use
 the OpenClerk runner.
@@ -96,6 +96,11 @@ citation paths from runner JSON, and a `## Freshness` section that states which
 runner retrieval results were checked. Use only documented runner actions, not
 `upsert_document` or direct file edits. Synthesis is durable compiled knowledge,
 not a higher authority than the canonical sources it cites.
+
+If a synthesis maintenance task feels too repetitive for the documented
+document and retrieval actions, still complete it through AgentOps. Do not
+switch to another routine agent interface. A future improvement should be a
+small runner action that preserves the same JSON contract.
 
 ## Retrieval Tasks
 

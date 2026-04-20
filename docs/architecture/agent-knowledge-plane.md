@@ -4,21 +4,26 @@
 
 OpenClerk is positioned as a single-surface agent-facing knowledge plane, not a domain-specific health application and not a menu of user-facing backend variants.
 
-The production agent surface is AgentOps: the installed `openclerk` JSON runner
-plus `skills/openclerk/SKILL.md`. Agents use task-shaped JSON for routine
-document and retrieval work; they do not need to inspect implementation files,
-backend variants, or SQLite to operate the knowledge plane.
+The first principle is AgentOps: the installed `openclerk` JSON runner plus
+`skills/openclerk/SKILL.md`. Agents use task-shaped JSON for routine document
+and retrieval work. They do not inspect implementation files, backend variants,
+HTTP server internals, source-built command paths, module caches, or SQLite to
+operate the knowledge plane.
 
 It is also positioned as infrastructure for persistent agent-maintained knowledge: useful synthesis should become cited, inspectable markdown instead of being rediscovered from scratch on every query.
 
 The product model is:
 
 - canonical docs remain markdown in the vault
-- source-linked synthesis can live in markdown when it preserves source refs and freshness
-- graph traversal is a derived docs capability
-- promoted records are selective structured domains, not the default storage shape
-- provenance and projection-state APIs make derivation and freshness inspectable
-- memory and routing are intentionally deferred until the docs and truth-sync layers are benchmarked
+- source-linked synthesis is the active next build slice for durable
+  agent-maintained wiki pages
+- graph traversal is a derived docs capability behind AgentOps
+- promoted records are selective structured domains behind AgentOps, not the
+  default storage shape
+- provenance and projection-state runner actions make derivation and freshness
+  inspectable
+- memory and routing remain deferred until the docs, synthesis, and truth-sync
+  layers are reliable through AgentOps
 
 ## Public contract
 
@@ -27,7 +32,8 @@ The public product surface is:
 - the installed `openclerk` runner for production agent workflows
 - the Agent Skills-compatible `skills/openclerk/SKILL.md` guidance
 
-The public API is organized by capability, not implementation variant:
+The public runner contract is organized by capability, not implementation
+variant:
 
 - docs and search are core
 - graph is an optional derived-docs capability
@@ -48,6 +54,18 @@ fresh`, and single-line comma-separated `source_refs` frontmatter, and include
 `## Sources` plus `## Freshness` sections. These pages are durable knowledge
 artifacts, but they do not outrank the canonical source docs or promoted
 records they cite.
+
+The active synthesis lifecycle workflow is:
+
+- search canonical sources before writing synthesis
+- list `notes/synthesis/` candidates before creating a new synthesis page
+- retrieve an existing synthesis document before updating it
+- prefer section replacement or append over duplicate creation
+- preserve source refs, citations, `## Sources`, and `## Freshness`
+- repair stale or contradictory claims by naming current sources and superseded
+  sources
+- inspect provenance and projection freshness when synthesis depends on
+  promoted records or services
 
 The docs layer now exposes:
 
@@ -113,12 +131,13 @@ Current event and projection semantics are intentionally minimal:
 
 ## Agent evals
 
-Production evals gate the runner-first `skills/openclerk` surface directly.
-Reports track correctness, tool calls, assistant calls, wall time, token use,
-stale surface inspection, module-cache inspection, broad repo search, direct
-SQLite access, and raw log references using `<run-root>` placeholders.
+Production evals are regression gates for the AgentOps contract and
+knowledge-model behavior. Reports track correctness, tool calls, assistant
+calls, wall time, token use, stale surface inspection, module-cache inspection,
+broad repo search, direct SQLite access, source-built runner usage, and raw log
+references using `<run-root>` placeholders.
 
-The provisional architecture decision and adoption gates are recorded in
+The current architecture direction is recorded in
 [`eval-backed-knowledge-plane-adr.md`](eval-backed-knowledge-plane-adr.md).
 
 ## Out of scope for this rewrite

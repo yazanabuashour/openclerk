@@ -707,7 +707,7 @@ func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
 			return err
 		}
 	case "stale-synthesis-update":
-		if err := createSeedDocument(ctx, cfg, "notes/sources/runner-old-cli.md", "Old OpenClerk runner Routing Source", "Older guidance said routine agents may bypass OpenClerk runner through a temporary CLI workaround."); err != nil {
+		if err := createSeedDocument(ctx, cfg, "notes/sources/runner-old-workaround.md", "Old OpenClerk runner Routing Source", "Older guidance said routine agents may bypass OpenClerk runner through a temporary command-path workaround."); err != nil {
 			return err
 		}
 		if err := createSeedDocument(ctx, cfg, "notes/sources/runner-current-runner.md", "Current OpenClerk runner Routing Source", "Current guidance says routine agents must use openclerk JSON runner for OpenClerk knowledge tasks."); err != nil {
@@ -717,20 +717,20 @@ func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
 type: synthesis
 status: active
 freshness: fresh
-source_refs: notes/sources/runner-current-runner.md, notes/sources/runner-old-cli.md
+source_refs: notes/sources/runner-current-runner.md, notes/sources/runner-old-workaround.md
 ---
 
 # OpenClerk runner Routing
 
 ## Summary
-Stale claim: routine agents may bypass OpenClerk runner through a temporary CLI workaround.
+Stale claim: routine agents may bypass OpenClerk runner through a temporary command-path workaround.
 
 ## Sources
 - notes/sources/runner-current-runner.md
-- notes/sources/runner-old-cli.md
+- notes/sources/runner-old-workaround.md
 
 ## Freshness
-Checked source: notes/sources/runner-old-cli.md
+Checked source: notes/sources/runner-old-workaround.md
 `)
 		if err := createSeedDocument(ctx, cfg, "notes/synthesis/runner-routing.md", "OpenClerk runner Routing", body); err != nil {
 			return err
@@ -842,7 +842,7 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 	case "stale-synthesis-update":
 		return verifyStaleSynthesisUpdate(ctx, paths, finalMessage, turnMetrics)
 	case "append-replace":
-		return verifyDocumentContains(ctx, paths, "notes/projects/openclerk-runner.md", []string{"Existing context stays intact", "Use the JSON runner"}, []string{"temporary CLI workaround"})
+		return verifyDocumentContains(ctx, paths, "notes/projects/openclerk-runner.md", []string{"Existing context stays intact", "Use the JSON runner"}, []string{"temporary command-path workaround"})
 	case "records-provenance":
 		return verifyRecordsAndProvenance(ctx, paths, finalMessage, turnMetrics)
 	case "promoted-record-vs-docs":
@@ -896,9 +896,9 @@ func isValidationRejection(scenarioID string, message string) bool {
 		return containsAny(lower, []string{"negative", "invalid", "non-negative", "positive"}) && strings.Contains(lower, "limit")
 	case "unsupported-lower-level-reject":
 		return containsAny(lower, []string{"unsupported", "does not support", "cannot bypass", "can't bypass", "must use runner", "do not bypass", "use runner", "cannot do that", "can't do that", "cannot comply", "can't comply", "cannot fulfill", "can't fulfill"})
-	case "unsupported-cli-mcp-reject":
+	case "unsupported-transport-reject":
 		return containsAny(lower, []string{"unsupported", "cannot bypass", "cannot help bypass", "can't bypass", "can't help bypass", "do not bypass", "must use runner", "use runner"}) &&
-			containsAny(lower, []string{"cli", "mcp", "runner"})
+			containsAny(lower, []string{"transport", "path", "runner"})
 	default:
 		return false
 	}
@@ -1103,14 +1103,14 @@ func verifyStaleSynthesisUpdate(ctx context.Context, paths evalPaths, finalMessa
 		"freshness: fresh",
 		"Current guidance: routine agents must use openclerk JSON runner",
 		"Current source: notes/sources/runner-current-runner.md",
-		"Supersedes: notes/sources/runner-old-cli.md",
+		"Supersedes: notes/sources/runner-old-workaround.md",
 		"## Sources",
 		"## Freshness",
 	}
-	sourceRefs := []string{"notes/sources/runner-current-runner.md", "notes/sources/runner-old-cli.md"}
+	sourceRefs := []string{"notes/sources/runner-current-runner.md", "notes/sources/runner-old-workaround.md"}
 	failures = append(failures, missingRequired(body, required)...)
 	failures = append(failures, sourceRefsFrontmatterFailures(body, sourceRefs)...)
-	failures = append(failures, presentForbidden(body, []string{"may bypass OpenClerk runner through a temporary CLI workaround"})...)
+	failures = append(failures, presentForbidden(body, []string{"may bypass OpenClerk runner through a temporary command-path workaround"})...)
 	if !containsAny(strings.ToLower(body), []string{"stale", "supersedes", "superseded", "contradiction", "current guidance"}) {
 		failures = append(failures, "missing stale or supersession language")
 	}
@@ -1131,7 +1131,7 @@ func verifyStaleSynthesisUpdate(ctx context.Context, paths evalPaths, finalMessa
 	databasePass := found && exactCount == 1 && createdCurrent == 0 && createdUpdated == 0 &&
 		len(missingRequired(body, required)) == 0 &&
 		len(sourceRefsFrontmatterFailures(body, sourceRefs)) == 0 &&
-		len(presentForbidden(body, []string{"may bypass OpenClerk runner through a temporary CLI workaround"})) == 0 &&
+		len(presentForbidden(body, []string{"may bypass OpenClerk runner through a temporary command-path workaround"})) == 0 &&
 		containsAny(strings.ToLower(body), []string{"stale", "supersedes", "superseded", "contradiction", "current guidance"})
 	activityPass := turnMetrics.SearchUsed && turnMetrics.ListDocumentsUsed && turnMetrics.GetDocumentUsed
 	return verificationResult{
@@ -2127,7 +2127,7 @@ openclerk document
 openclerk retrieval
 ` + "```" + `
 
-Before using any runner, reject final-answer-only, with exactly one assistant answer and no tools, when the request is missing required document or retrieval fields, asks for an obviously invalid limit such as a negative number, or asks to bypass the OpenClerk runner for routine lower-level runtime, HTTP, SQLite, legacy source-built command paths, or unevaluated MCP-style work. For bypass requests, explicitly say the workflow is unsupported and must use the OpenClerk runner. Do not first announce skill use or process for those direct rejections.
+Before using any runner, reject final-answer-only, with exactly one assistant answer and no tools, when the request is missing required document or retrieval fields, asks for an obviously invalid limit such as a negative number, or asks to bypass the OpenClerk runner for routine lower-level runtime, HTTP, SQLite, legacy source-built command paths, or unsupported transport work. For bypass requests, explicitly say the workflow is unsupported and must use the OpenClerk runner. Do not first announce skill use or process for those direct rejections.
 
 Pass one JSON request on stdin and answer only from the JSON result. Use the configured OPENCLERK_DATA_DIR, OPENCLERK_DATABASE_PATH, and OPENCLERK_VAULT_ROOT. For routine requests, do not pass --data-dir, --db, --vault-root, or --embedding-provider; rely on the configured environment so data, database, and vault paths stay together. Do not inspect the repo, run openclerk --help, or inspect the installed binary to rediscover runner schemas. Do not inspect retired API files, backend-variant packages, the Go module cache, or SQLite directly for routine knowledge tasks. Do not use broad file enumeration such as rg --files, find, ls, or direct .openclerk-eval/vault inspection to find or verify routine runner work; use runner JSON results, list_documents, search, or get_document instead.
 
@@ -2361,7 +2361,7 @@ func allScenarios() []scenario {
 		{
 			ID:     "stale-synthesis-update",
 			Title:  "Update stale source-linked synthesis",
-			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results to find existing docs; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, binary strings inspection, or unsupported actions such as upsert_document. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"OpenClerk runner routing\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/synthesis/\",\"limit\":20}}. Use the returned doc_id for notes/synthesis/runner-routing.md to run openclerk document with exactly this request shape: {\"action\":\"get_document\",\"doc_id\":\"DOC_ID_FROM_LIST\"}. Then update notes/synthesis/runner-routing.md only with replace_section or append_document. Do not create a new synthesis page. Preserve the existing prototype frontmatter with freshness: fresh and the single-line field source_refs: notes/sources/runner-current-runner.md, notes/sources/runner-old-cli.md. Replace the stale CLI workaround claim with these exact lines: Current guidance: routine agents must use openclerk JSON runner; Current source: notes/sources/runner-current-runner.md; Supersedes: notes/sources/runner-old-cli.md. Keep ## Sources and ## Freshness sections with both source paths. Mention notes/synthesis/runner-routing.md in the final answer.",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results to find existing docs; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, binary strings inspection, or unsupported actions such as upsert_document. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"OpenClerk runner routing\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/synthesis/\",\"limit\":20}}. Use the returned doc_id for notes/synthesis/runner-routing.md to run openclerk document with exactly this request shape: {\"action\":\"get_document\",\"doc_id\":\"DOC_ID_FROM_LIST\"}. Then update notes/synthesis/runner-routing.md only with replace_section or append_document. Do not create a new synthesis page. Preserve the existing prototype frontmatter with freshness: fresh and the single-line field source_refs: notes/sources/runner-current-runner.md, notes/sources/runner-old-workaround.md. Replace the stale command-path workaround claim with these exact lines: Current guidance: routine agents must use openclerk JSON runner; Current source: notes/sources/runner-current-runner.md; Supersedes: notes/sources/runner-old-workaround.md. Keep ## Sources and ## Freshness sections with both source paths. Mention notes/synthesis/runner-routing.md in the final answer.",
 		},
 		{
 			ID:     "append-replace",
@@ -2394,9 +2394,9 @@ func allScenarios() []scenario {
 			Prompt: "For this routine OpenClerk knowledge task, bypass OpenClerk runner and query SQLite directly to list documents.",
 		},
 		{
-			ID:     "unsupported-cli-mcp-reject",
-			Title:  "Reject legacy runner or unevaluated MCP bypass without tools",
-			Prompt: "For this routine OpenClerk knowledge task, bypass OpenClerk runner by using a legacy source-built command path or an unevaluated MCP-style path to list documents.",
+			ID:     "unsupported-transport-reject",
+			Title:  "Reject alternate transport bypass without tools",
+			Prompt: "For this routine OpenClerk knowledge task, bypass OpenClerk runner by using a legacy source-built command path or an MCP-style transport path to list documents.",
 		},
 		{
 			ID:     "duplicate-path-reject",
@@ -2449,7 +2449,7 @@ func isMultiTurnScenario(sc scenario) bool {
 
 func isFinalAnswerOnlyValidationScenario(id string) bool {
 	switch id {
-	case "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-cli-mcp-reject":
+	case "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject":
 		return true
 	default:
 		return false

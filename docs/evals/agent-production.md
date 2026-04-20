@@ -17,23 +17,12 @@ HTTP server calls, direct SQLite access, ad hoc runtime programs, repo-wide
 spelunking, module-cache inspection, stale API paths, and
 backend-specific variants are not active production agent surfaces.
 
-## Adapter Eligibility
+## Evaluation Purpose
 
-CLI and MCP surfaces may be evaluated only as adapters over OpenClerk runner-equivalent
-task shapes. An adapter must preserve the same document and retrieval semantics,
-validation behavior, provenance access, and final-answer-only rejection rules as
-the runner-backed production skill.
-
-An adapter is eligible for adoption only if it:
-
-- passes the same correctness checks as production OpenClerk runner
-- avoids stale surface inspection, direct SQLite, backend variants, broad
-  repo search, module-cache inspection, and routine lower-level runtime work
-- ties or improves OpenClerk runner tool count
-- improves at least one measured agent-behavior metric such as latency,
-  non-cached input tokens, clarity of failure handling, or multi-turn continuity
-- does not require new public API surface unless the eval shows the current
-  OpenClerk runner surface is insufficient
+The eval harness validates the AgentOps contract and the knowledge-model
+behaviors implemented behind it. It checks that routine tasks use runner JSON
+requests, that bypass attempts are rejected before tools, and that synthesis,
+records, provenance, and freshness behavior remain reliable.
 
 ## Harness
 
@@ -111,8 +100,8 @@ The `ockp` harness covers routine local knowledge-plane workflows:
 - duplicate canonical path rejection without overwrite
 - mixed document/retrieval workflows that require both runner domains
 - final-answer-only direct rejections for missing required fields, invalid
-  limits, unsupported lower-level routine workflows, and legacy source-built command paths or
-  unevaluated MCP bypass attempts
+  limits, unsupported lower-level routine workflows, and bypass attempts through
+  legacy source-built command paths or alternate transports
 - true multi-turn workflows that require resumed context across ordered turns
 
 ## Production Gate
@@ -126,15 +115,5 @@ Production OpenClerk AgentOps is release-ready only when:
   executions, and at most one assistant answer
 - the eval context preflight confirms the model-visible agent context is the
   shipped skill and runner, not hidden evaluator-only instructions
-
-CLI or MCP adapters beat production OpenClerk runner only when:
-
-- the adapter wraps OpenClerk runner-equivalent task semantics
-- the adapter passes every selected scenario
-- the adapter has no forbidden access patterns
-- the adapter ties or beats production total tools
-- the adapter improves at least one explicit measured agent-behavior metric
-- the adapter preserves provenance, projection freshness, and validation
-  rejection behavior
 
 Current reduced eval reports are written under `docs/evals/results/`.

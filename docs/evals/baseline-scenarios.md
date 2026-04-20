@@ -1,8 +1,8 @@
 # Baseline Scenarios
 
-These scenarios define the eval task set for the installed OpenClerk AgentOps
-runner/skill surface. They also define the proof obligations for the
-eval-backed knowledge-plane ADR in
+These scenarios define regression coverage for the installed OpenClerk AgentOps
+runner/skill surface and the knowledge-model behavior behind it. They also
+define proof obligations for the AgentOps-only knowledge-plane direction in
 `docs/architecture/eval-backed-knowledge-plane-adr.md`.
 
 ## Source-Grounded Retrieval
@@ -68,14 +68,12 @@ eval-backed knowledge-plane ADR in
   `provenance_events`, and `projection_states` before writing durable
   synthesis.
 
-## Agent Surface Comparison
+## AgentOps Contract Enforcement
 
-- Verify production tasks use `openclerk` rather than direct SQLite, backend
-  variants, stale API paths, or ad hoc runtime programs.
-- Verify routine attempts to bypass the OpenClerk runner through legacy
-  source-built command paths or an unevaluated MCP-style path are rejected
-  final-answer-only without tools.
-- Compare the runner against CLI-style or MCP-style alternatives only when the
-  alternative exposes equivalent task-shaped document and retrieval semantics.
-- Accept a CLI or MCP adapter only if it matches runner correctness and improves
-  a measured agent-behavior metric without increasing forbidden access patterns.
+- Verify production tasks use `openclerk` JSON runner requests rather than
+  direct SQLite, backend variants, stale API paths, ad hoc runtime programs, or
+  source-built command paths.
+- Verify routine attempts to bypass the OpenClerk runner through lower-level or
+  alternate transports are rejected final-answer-only without tools.
+- Verify the selected knowledge-model workflows stay expressible through
+  documented document and retrieval runner actions.

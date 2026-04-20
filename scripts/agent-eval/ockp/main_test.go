@@ -40,7 +40,7 @@ func TestRunJobsPreservesDeterministicOrder(t *testing.T) {
 	jobs := []evalJob{
 		{Index: 0, Variant: "production", Scenario: scenario{ID: "first", Title: "First"}},
 		{Index: 1, Variant: "production", Scenario: scenario{ID: "second", Title: "Second"}},
-		{Index: 2, Variant: "adapter-smoke", Scenario: scenario{ID: "third", Title: "Third"}},
+		{Index: 2, Variant: "variant-smoke", Scenario: scenario{ID: "third", Title: "Third"}},
 	}
 	results := runJobs(context.Background(), runConfig{Parallel: 3}, jobs, cacheConfig{Mode: cacheModeIsolated}, func(_ context.Context, _ runConfig, job evalJob, _ cacheConfig) jobResult {
 		if job.Index == 0 {
@@ -62,7 +62,7 @@ func TestRunJobsPreservesDeterministicOrder(t *testing.T) {
 func TestRunJobsPreservesErrorIdentity(t *testing.T) {
 	jobs := []evalJob{
 		{Index: 0, Variant: "production", Scenario: scenario{ID: "ok", Title: "OK"}},
-		{Index: 1, Variant: "adapter-smoke", Scenario: scenario{ID: "bad", Title: "Bad"}},
+		{Index: 1, Variant: "variant-smoke", Scenario: scenario{ID: "bad", Title: "Bad"}},
 	}
 	results := runJobs(context.Background(), runConfig{Parallel: 2}, jobs, cacheConfig{Mode: cacheModeIsolated}, func(_ context.Context, _ runConfig, job evalJob, _ cacheConfig) jobResult {
 		result := jobResult{Variant: job.Variant, Scenario: job.Scenario.ID}
@@ -74,7 +74,7 @@ func TestRunJobsPreservesErrorIdentity(t *testing.T) {
 		result.Status = "completed"
 		return result
 	})
-	if results[1].Variant != "adapter-smoke" || results[1].Scenario != "bad" || results[1].Error != "boom" {
+	if results[1].Variant != "variant-smoke" || results[1].Scenario != "bad" || results[1].Error != "boom" {
 		t.Fatalf("error result = %+v", results[1])
 	}
 }
@@ -395,9 +395,9 @@ func TestVerifyFinalAnswerOnlyRequiresRejectionAndNoTools(t *testing.T) {
 		t.Fatalf("plain refusal rejection failed: %+v", result)
 	}
 
-	cliMCP := scenario{ID: "unsupported-cli-mcp-reject"}
-	if result := verifyFinalAnswerOnly(cliMCP, "I can't bypass OpenClerk runner through the CLI or MCP for this routine task.", noTools); !result.Passed {
-		t.Fatalf("CLI/MCP bypass rejection failed: %+v", result)
+	unsupportedTransport := scenario{ID: "unsupported-transport-reject"}
+	if result := verifyFinalAnswerOnly(unsupportedTransport, "I can't bypass OpenClerk runner through a legacy command path or MCP-style transport path for this routine task.", noTools); !result.Passed {
+		t.Fatalf("unsupported transport bypass rejection failed: %+v", result)
 	}
 
 	missingPath := scenario{ID: "missing-document-path-reject"}
@@ -412,7 +412,7 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 	for _, id := range scenarioIDs() {
 		ids[id] = true
 	}
-	for _, want := range []string{"answer-filing", "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-cli-mcp-reject"} {
+	for _, want := range []string{"answer-filing", "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
 		if !ids[want] {
 			t.Fatalf("scenarioIDs missing %q in %v", want, scenarioIDs())
 		}
@@ -618,9 +618,9 @@ func TestVerifyStaleSynthesisUpdateRequiresCurrentSourceAndNoDuplicate(t *testin
 	if result.Passed {
 		t.Fatalf("stale synthesis passed before update: %+v", result)
 	}
-	replacement := "Current guidance: routine agents must use openclerk JSON runner.\n\nCurrent source: notes/sources/runner-current-runner.md\n\nSupersedes: notes/sources/runner-old-cli.md\n\nThis stale claim is superseded by current guidance."
+	replacement := "Current guidance: routine agents must use openclerk JSON runner.\n\nCurrent source: notes/sources/runner-current-runner.md\n\nSupersedes: notes/sources/runner-old-workaround.md\n\nThis stale claim is superseded by current guidance."
 	replaceSeedSection(t, ctx, paths, "notes/synthesis/runner-routing.md", "Summary", replacement)
-	replaceSeedSection(t, ctx, paths, "notes/synthesis/runner-routing.md", "Freshness", "Checked current source: notes/sources/runner-current-runner.md\n\nChecked previous source: notes/sources/runner-old-cli.md")
+	replaceSeedSection(t, ctx, paths, "notes/synthesis/runner-routing.md", "Freshness", "Checked current source: notes/sources/runner-current-runner.md\n\nChecked previous source: notes/sources/runner-old-workaround.md")
 	workflowMetrics := metrics{
 		AssistantCalls:    1,
 		SearchUsed:        true,
