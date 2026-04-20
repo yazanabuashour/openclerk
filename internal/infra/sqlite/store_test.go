@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/yazanabuashour/openclerk/internal/domain"
 )
@@ -188,6 +189,270 @@ Production service for routine local knowledge tasks.
 	}
 }
 
+func TestSynthesisProjectionIsFreshForCurrentSources(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+	clock := testClock()
+	store.now = func() time.Time { return clock }
+
+	clock = clock.Add(time.Minute)
+	source, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+		Path:  "notes/sources/current.md",
+		Title: "Current Source",
+		Body:  "# Current Source\n\n## Summary\nCurrent canonical evidence.\n",
+	})
+	if err != nil {
+		t.Fatalf("create source: %v", err)
+	}
+	clock = clock.Add(time.Minute)
+	synthesis, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+		Path:  "notes/synthesis/current.md",
+		Title: "Current Synthesis",
+		Body:  synthesisBody("notes/sources/current.md", "Current canonical evidence."),
+	})
+	if err != nil {
+		t.Fatalf("create synthesis: %v", err)
+	}
+
+	projection := requireSynthesisProjection(t, ctx, store, synthesis.DocID)
+	if projection.Freshness != "fresh" {
+		t.Fatalf("freshness = %q, want fresh: %+v", projection.Freshness, projection)
+	}
+	if projection.SourceRef != "doc:"+source.DocID {
+		t.Fatalf("source_ref = %q, want doc ref for source", projection.SourceRef)
+	}
+	if projection.Details["current_source_refs"] != "notes/sources/current.md" ||
+		projection.Details["source_refs"] != "notes/sources/current.md" ||
+		projection.Details["freshness_reason"] != "sources current" {
+		t.Fatalf("projection details = %+v", projection.Details)
+	}
+}
+
+func TestSynthesisProjectionStaleAfterSourceUpdateAndFreshAfterRepair(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+	clock := testClock()
+	store.now = func() time.Time { return clock }
+
+	clock = clock.Add(time.Minute)
+	source, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+		Path:  "notes/sources/runner.md",
+		Title: "Runner Source",
+		Body:  "# Runner Source\n\n## Summary\nInitial source guidance.\n",
+	})
+	if err != nil {
+		t.Fatalf("create source: %v", err)
+	}
+	clock = clock.Add(time.Minute)
+	synthesis, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+		Path:  "notes/synthesis/runner.md",
+		Title: "Runner Synthesis",
+		Body:  synthesisBody("notes/sources/runner.md", "Initial source guidance."),
+	})
+	if err != nil {
+		t.Fatalf("create synthesis: %v", err)
+	}
+	if got := requireSynthesisProjection(t, ctx, store, synthesis.DocID); got.Freshness != "fresh" {
+		t.Fatalf("initial projection freshness = %q, want fresh", got.Freshness)
+	}
+
+	clock = clock.Add(time.Minute)
+	if _, err := store.ReplaceDocumentSection(ctx, source.DocID, domain.ReplaceSectionInput{
+		Heading: "Summary",
+		Content: "Updated source guidance.",
+	}); err != nil {
+		t.Fatalf("update source: %v", err)
+	}
+	stale := requireSynthesisProjection(t, ctx, store, synthesis.DocID)
+	if stale.Freshness != "stale" ||
+		stale.Details["stale_source_refs"] != "notes/sources/runner.md" ||
+		!strings.Contains(stale.Details["freshness_reason"], "source newer than synthesis") {
+		t.Fatalf("stale projection = %+v", stale)
+	}
+	invalidations, err := store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{
+		RefKind: "projection",
+		RefID:   "synthesis:" + synthesis.DocID,
+		Limit:   10,
+	})
+	if err != nil {
+		t.Fatalf("list invalidations: %v", err)
+	}
+	if !hasEventType(invalidations.Events, "projection_invalidated") {
+		t.Fatalf("missing synthesis invalidation event: %+v", invalidations.Events)
+	}
+	sourceEvents, err := store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{
+		RefKind: "source",
+		RefID:   source.DocID,
+		Limit:   10,
+	})
+	if err != nil {
+		t.Fatalf("list source events: %v", err)
+	}
+	if !hasEventType(sourceEvents.Events, "source_created") || !hasEventType(sourceEvents.Events, "source_updated") {
+		t.Fatalf("source events = %+v, want created and updated", sourceEvents.Events)
+	}
+
+	clock = clock.Add(time.Minute)
+	if _, err := store.ReplaceDocumentSection(ctx, synthesis.DocID, domain.ReplaceSectionInput{
+		Heading: "Freshness",
+		Content: "Checked source: notes/sources/runner.md after the source update.",
+	}); err != nil {
+		t.Fatalf("repair synthesis: %v", err)
+	}
+	repaired := requireSynthesisProjection(t, ctx, store, synthesis.DocID)
+	if repaired.Freshness != "fresh" || repaired.Details["stale_source_refs"] != "" {
+		t.Fatalf("repaired projection = %+v", repaired)
+	}
+	events, err := store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{
+		RefKind: "projection",
+		RefID:   "synthesis:" + synthesis.DocID,
+		Limit:   10,
+	})
+	if err != nil {
+		t.Fatalf("list synthesis events: %v", err)
+	}
+	if !hasEventType(events.Events, "projection_refreshed") {
+		t.Fatalf("missing synthesis refresh event: %+v", events.Events)
+	}
+}
+
+func TestSynthesisProjectionReportsMissingAndSupersededSources(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+	clock := testClock()
+	store.now = func() time.Time { return clock }
+
+	clock = clock.Add(time.Minute)
+	if _, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+		Path:  "notes/sources/old.md",
+		Title: "Old Source",
+		Body: strings.TrimSpace(`---
+status: superseded
+superseded_by: notes/sources/current.md
+---
+# Old Source
+
+## Summary
+Old guidance.
+`) + "\n",
+	}); err != nil {
+		t.Fatalf("create old source: %v", err)
+	}
+	clock = clock.Add(time.Minute)
+	synthesis, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+		Path:  "notes/synthesis/missing.md",
+		Title: "Missing Synthesis",
+		Body:  synthesisBody("notes/sources/old.md, notes/sources/missing.md", "Old guidance."),
+	})
+	if err != nil {
+		t.Fatalf("create synthesis: %v", err)
+	}
+
+	projection := requireSynthesisProjection(t, ctx, store, synthesis.DocID)
+	if projection.Freshness != "stale" {
+		t.Fatalf("freshness = %q, want stale", projection.Freshness)
+	}
+	if projection.Details["missing_source_refs"] != "notes/sources/missing.md" {
+		t.Fatalf("missing source refs = %q", projection.Details["missing_source_refs"])
+	}
+	if projection.Details["superseded_source_refs"] != "notes/sources/old.md" {
+		t.Fatalf("superseded source refs = %q", projection.Details["superseded_source_refs"])
+	}
+	if projection.Details["current_source_refs"] != "notes/sources/current.md" {
+		t.Fatalf("current source refs = %q", projection.Details["current_source_refs"])
+	}
+	if !strings.Contains(projection.Details["freshness_reason"], "current replacement missing from source refs") {
+		t.Fatalf("freshness reason = %q", projection.Details["freshness_reason"])
+	}
+}
+
+func TestSynthesisProjectionFreshWithSupersedesAndSupersededByMetadata(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+	clock := testClock()
+	store.now = func() time.Time { return clock }
+
+	clock = clock.Add(time.Minute)
+	if _, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+		Path:  "notes/sources/old.md",
+		Title: "Old Source",
+		Body: strings.TrimSpace(`---
+status: superseded
+superseded_by: notes/sources/current.md
+---
+# Old Source
+
+## Summary
+Old guidance.
+`) + "\n",
+	}); err != nil {
+		t.Fatalf("create old source: %v", err)
+	}
+	clock = clock.Add(time.Minute)
+	if _, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+		Path:  "notes/sources/current.md",
+		Title: "Current Source",
+		Body: strings.TrimSpace(`---
+supersedes: notes/sources/old.md
+---
+# Current Source
+
+## Summary
+Current guidance.
+`) + "\n",
+	}); err != nil {
+		t.Fatalf("create current source: %v", err)
+	}
+	clock = clock.Add(time.Minute)
+	synthesis, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+		Path:  "notes/synthesis/supersession.md",
+		Title: "Supersession Synthesis",
+		Body:  synthesisBody("notes/sources/current.md, notes/sources/old.md", "Current guidance supersedes old guidance."),
+	})
+	if err != nil {
+		t.Fatalf("create synthesis: %v", err)
+	}
+
+	projection := requireSynthesisProjection(t, ctx, store, synthesis.DocID)
+	if projection.Freshness != "fresh" {
+		t.Fatalf("freshness = %q, want fresh: %+v", projection.Freshness, projection)
+	}
+	if projection.Details["current_source_refs"] != "notes/sources/current.md" {
+		t.Fatalf("current source refs = %q", projection.Details["current_source_refs"])
+	}
+	if projection.Details["superseded_source_refs"] != "notes/sources/old.md" {
+		t.Fatalf("superseded source refs = %q", projection.Details["superseded_source_refs"])
+	}
+}
+
 func TestCreateDocumentPreservesRequestedTitleAcrossRestart(t *testing.T) {
 	t.Parallel()
 
@@ -306,4 +571,55 @@ func openTestStore(t *testing.T, backend domain.BackendKind, dbPath string, vaul
 		t.Fatalf("open test store: %v", err)
 	}
 	return store
+}
+
+func testClock() time.Time {
+	return time.Date(2026, 4, 20, 12, 0, 0, 0, time.UTC)
+}
+
+func synthesisBody(sourceRefs string, summary string) string {
+	return strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: `+sourceRefs+`
+---
+# Synthesis
+
+## Summary
+`+summary+`
+
+## Sources
+- `+sourceRefs+`
+
+## Freshness
+Checked source refs.
+`) + "\n"
+}
+
+func requireSynthesisProjection(t *testing.T, ctx context.Context, store *Store, docID string) domain.ProjectionState {
+	t.Helper()
+
+	result, err := store.ListProjectionStates(ctx, domain.ProjectionStateQuery{
+		Projection: "synthesis",
+		RefKind:    "document",
+		RefID:      docID,
+		Limit:      10,
+	})
+	if err != nil {
+		t.Fatalf("list synthesis projection: %v", err)
+	}
+	if len(result.Projections) != 1 {
+		t.Fatalf("projection count = %d, want 1: %+v", len(result.Projections), result.Projections)
+	}
+	return result.Projections[0]
+}
+
+func hasEventType(events []domain.ProvenanceEvent, eventType string) bool {
+	for _, event := range events {
+		if event.EventType == eventType {
+			return true
+		}
+	}
+	return false
 }

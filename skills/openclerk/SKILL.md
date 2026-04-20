@@ -87,6 +87,9 @@ When writing source-linked synthesis, use this exact AgentOps workflow:
 4. Prefer `replace_section` or `append_document` over creating duplicates.
 5. Inspect `provenance_events` and `projection_states` when the synthesis
    depends on promoted records, services, derivation history, or freshness.
+6. For existing synthesis, inspect `projection_states` with
+   `projection: "synthesis"`, `ref_kind: "document"`, and the synthesis
+   `doc_id` before repairing stale claims.
 
 Prototype synthesis pages live under `notes/synthesis/`. Include frontmatter
 with `type: synthesis`, `status: active`, `freshness: fresh`, and `source_refs`
@@ -96,6 +99,13 @@ citation paths from runner JSON, and a `## Freshness` section that states which
 runner retrieval results were checked. Use only documented runner actions, not
 `upsert_document` or direct file edits. Synthesis is durable compiled knowledge,
 not a higher authority than the canonical sources it cites.
+
+Synthesis freshness is also exposed as a derived projection. A stale synthesis
+projection means at least one referenced source path is missing, a referenced
+source is newer than the synthesis page, or supersession metadata says a
+current replacement source is not represented in `source_refs`. Projection
+details include `current_source_refs`, `superseded_source_refs`,
+`missing_source_refs`, `stale_source_refs`, and `freshness_reason`.
 
 If a synthesis maintenance task feels too repetitive for the documented
 document and retrieval actions, still complete it through AgentOps. Do not
@@ -123,6 +133,7 @@ Common request shapes:
 {"action":"service_record","service_id":"service_id_from_json"}
 {"action":"provenance_events","provenance":{"ref_kind":"document","ref_id":"doc_id_from_json","limit":20}}
 {"action":"projection_states","projection":{"ref_kind":"document","ref_id":"doc_id_from_json","limit":20}}
+{"action":"projection_states","projection":{"projection":"synthesis","ref_kind":"document","ref_id":"synthesis_doc_id_from_json","limit":20}}
 ```
 
 Request fields are `action`, `search`, `doc_id`, `chunk_id`, `node_id`,
@@ -132,10 +143,11 @@ and `limit`.
 Use search for source-grounded answers, document links for explicit markdown
 relationships, graph neighborhoods for nearby derived context, records lookup
 for promoted record-shaped documents, provenance events for derivation history,
-and projection states for freshness. Use services lookup for service-centric
-questions before falling back to plain docs search; canonical markdown remains
-the source of truth and service records are a derived promoted-domain
-projection.
+and projection states for freshness. Use `projection: "synthesis"` to inspect
+whether source-linked synthesis is fresh or stale before repairing it. Use
+services lookup for service-centric questions before falling back to plain docs
+search; canonical markdown remains the source of truth and service records are
+a derived promoted-domain projection.
 
 ## Answering From Results
 

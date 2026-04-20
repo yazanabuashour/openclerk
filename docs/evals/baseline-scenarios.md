@@ -76,10 +76,13 @@ AgentOps eval harness supports them cleanly.
 ## Provenance And Freshness
 
 - Verify document create/update events are emitted.
+- Verify source create/update events are emitted for canonical source docs.
 - Verify projection invalidation and projection refresh events are visible.
 - Verify projection-state reads expose current freshness and version markers.
+- Verify synthesis projection-state reads explain whether a synthesis page is
+  fresh or stale and report current, superseded, missing, and stale source refs.
 - Verify synthesis pages can be traced back to the canonical docs or records
-  they summarize.
+  they summarize and can be repaired after source updates.
 - Verify promoted-record synthesis inspects `records_lookup`,
   `provenance_events`, and `projection_states` before writing durable
   synthesis.

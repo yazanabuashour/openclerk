@@ -735,6 +735,54 @@ Checked source: notes/sources/runner-old-workaround.md
 		if err := createSeedDocument(ctx, cfg, "notes/synthesis/runner-routing.md", "OpenClerk runner Routing", body); err != nil {
 			return err
 		}
+	case "synthesis-freshness-repair":
+		oldBody := strings.TrimSpace(`---
+status: superseded
+superseded_by: notes/sources/repair-current.md
+---
+# Old OpenClerk runner Repair Source
+
+## Summary
+Older repair guidance mentioned a temporary command-path workaround.
+`) + "\n"
+		if err := createSeedDocument(ctx, cfg, "notes/sources/repair-old.md", "Old OpenClerk runner Repair Source", oldBody); err != nil {
+			return err
+		}
+		currentBody := strings.TrimSpace(`---
+supersedes: notes/sources/repair-old.md
+---
+# Current OpenClerk runner Repair Source
+
+## Summary
+Current guidance says routine agents must use openclerk JSON runner for freshness repairs.
+`) + "\n"
+		if err := createSeedDocument(ctx, cfg, "notes/sources/repair-current.md", "Current OpenClerk runner Repair Source", currentBody); err != nil {
+			return err
+		}
+		synthesisBody := strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: notes/sources/repair-current.md, notes/sources/repair-old.md
+---
+# OpenClerk runner Freshness Repair
+
+## Summary
+Stale repair claim: routine agents may use a temporary command-path workaround.
+
+## Sources
+- notes/sources/repair-current.md
+- notes/sources/repair-old.md
+
+## Freshness
+Checked before the latest source update.
+`) + "\n"
+		if err := createSeedDocument(ctx, cfg, "notes/synthesis/runner-repair.md", "OpenClerk runner Freshness Repair", synthesisBody); err != nil {
+			return err
+		}
+		if err := replaceScenarioSeedSection(ctx, cfg, "notes/sources/repair-current.md", "Summary", "Current guidance says routine agents must use openclerk JSON runner for freshness repairs, and notes/sources/repair-old.md is superseded."); err != nil {
+			return err
+		}
 	case "append-replace":
 		if err := createSeedDocument(ctx, cfg, "notes/projects/openclerk-runner.md", "OpenClerk Runner", "## Context\nExisting context stays intact."); err != nil {
 			return err
@@ -799,6 +847,35 @@ func createSeedDocument(ctx context.Context, cfg runclient.Config, path, title, 
 	return nil
 }
 
+func replaceScenarioSeedSection(ctx context.Context, cfg runclient.Config, docPath, heading, content string) error {
+	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{PathPrefix: docPath, Limit: 5},
+	})
+	if err != nil {
+		return err
+	}
+	for _, doc := range list.Documents {
+		if doc.Path != docPath {
+			continue
+		}
+		result, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+			Action:  runner.DocumentTaskActionReplaceSection,
+			DocID:   doc.DocID,
+			Heading: heading,
+			Content: content,
+		})
+		if err != nil {
+			return err
+		}
+		if result.Rejected {
+			return errors.New(result.RejectionReason)
+		}
+		return nil
+	}
+	return fmt.Errorf("seed document %s not found", docPath)
+}
+
 func recordBody(entityID, entityType, name string) string {
 	return strings.TrimSpace(fmt.Sprintf(`---
 entity_id: %s
@@ -841,6 +918,8 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyAnswerFiling(ctx, paths, finalMessage)
 	case "stale-synthesis-update":
 		return verifyStaleSynthesisUpdate(ctx, paths, finalMessage, turnMetrics)
+	case "synthesis-freshness-repair":
+		return verifySynthesisFreshnessRepair(ctx, paths, finalMessage, turnMetrics)
 	case "append-replace":
 		return verifyDocumentContains(ctx, paths, "notes/projects/openclerk-runner.md", []string{"Existing context stays intact", "Use the JSON runner"}, []string{"temporary command-path workaround"})
 	case "records-provenance":
@@ -1140,6 +1219,138 @@ func verifyStaleSynthesisUpdate(ctx context.Context, paths evalPaths, finalMessa
 		AssistantPass: assistantPass && activityPass,
 		Details:       missingDetails(failures),
 		Documents:     []string{docPath},
+	}, nil
+}
+
+func verifySynthesisFreshnessRepair(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	docPath := "notes/synthesis/runner-repair.md"
+	currentSource := "notes/sources/repair-current.md"
+	supersededSource := "notes/sources/repair-old.md"
+	body, found, err := documentBodyByPath(ctx, paths, docPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	exactCount, err := exactDocumentCount(ctx, paths, docPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	docID, docIDFound, err := documentIDByPath(ctx, paths, docPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	projections, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProjectionStates,
+		Projection: runner.ProjectionStateOptions{
+			Projection: "synthesis",
+			RefKind:    "document",
+			RefID:      docID,
+			Limit:      5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	events, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{
+			RefKind: "projection",
+			RefID:   "synthesis:" + docID,
+			Limit:   10,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+
+	failures := []string{}
+	if !found {
+		failures = append(failures, "missing "+docPath)
+	}
+	if exactCount != 1 {
+		failures = append(failures, fmt.Sprintf("expected one %s document, got %d", docPath, exactCount))
+	}
+	if !docIDFound {
+		failures = append(failures, "missing document id for "+docPath)
+	}
+	required := []string{
+		"type: synthesis",
+		"status: active",
+		"freshness: fresh",
+		"source_refs: notes/sources/repair-current.md, notes/sources/repair-old.md",
+		currentSource,
+		supersededSource,
+		"## Sources",
+		"## Freshness",
+	}
+	failures = append(failures, missingRequired(body, required)...)
+	failures = append(failures, presentForbidden(body, []string{"may use a temporary command-path workaround"})...)
+	hasProjection := false
+	hasCurrent := false
+	hasSuperseded := false
+	if projections.Projections != nil && len(projections.Projections.Projections) == 1 {
+		projection := projections.Projections.Projections[0]
+		hasProjection = projection.Freshness == "fresh"
+		hasCurrent = projection.Details["current_source_refs"] == currentSource
+		hasSuperseded = projection.Details["superseded_source_refs"] == supersededSource
+	}
+	if !hasProjection {
+		failures = append(failures, "synthesis projection is not fresh")
+	}
+	if !hasCurrent {
+		failures = append(failures, "synthesis projection missing current source ref")
+	}
+	if !hasSuperseded {
+		failures = append(failures, "synthesis projection missing superseded source ref")
+	}
+	hasInvalidation := events.Provenance != nil && eventTypesInclude(events.Provenance.Events, "projection_invalidated")
+	hasRefresh := events.Provenance != nil && eventTypesInclude(events.Provenance.Events, "projection_refreshed")
+	if !hasInvalidation {
+		failures = append(failures, "synthesis invalidation event missing")
+	}
+	if !hasRefresh {
+		failures = append(failures, "synthesis refresh event missing")
+	}
+	activityPass := turnMetrics.SearchUsed &&
+		turnMetrics.ListDocumentsUsed &&
+		turnMetrics.GetDocumentUsed &&
+		turnMetrics.ProvenanceEventsUsed &&
+		turnMetrics.ProjectionStatesUsed
+	if !turnMetrics.SearchUsed {
+		failures = append(failures, "agent did not use retrieval search")
+	}
+	if !turnMetrics.ListDocumentsUsed {
+		failures = append(failures, "agent did not list existing synthesis candidates")
+	}
+	if !turnMetrics.GetDocumentUsed {
+		failures = append(failures, "agent did not get existing synthesis before update")
+	}
+	if !turnMetrics.ProvenanceEventsUsed {
+		failures = append(failures, "agent did not inspect provenance events")
+	}
+	if !turnMetrics.ProjectionStatesUsed {
+		failures = append(failures, "agent did not inspect projection states")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{docPath, currentSource, supersededSource}) &&
+		messageContainsAny(finalMessage, []string{"fresh", "freshness", "current", "superseded"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not mention repaired freshness and source status")
+	}
+	databasePass := found &&
+		exactCount == 1 &&
+		len(missingRequired(body, required)) == 0 &&
+		len(presentForbidden(body, []string{"may use a temporary command-path workaround"})) == 0 &&
+		hasProjection &&
+		hasCurrent &&
+		hasSuperseded &&
+		hasInvalidation &&
+		hasRefresh
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{docPath, currentSource, supersededSource},
 	}, nil
 }
 
@@ -1498,6 +1709,15 @@ func messageContainsAll(message string, values []string) bool {
 
 func messageContainsAny(message string, values []string) bool {
 	return containsAny(normalizeValidationMessage(message), lowerStrings(values))
+}
+
+func eventTypesInclude(events []runner.ProvenanceEvent, eventType string) bool {
+	for _, event := range events {
+		if event.EventType == eventType {
+			return true
+		}
+	}
+	return false
 }
 
 func lowerStrings(values []string) []string {
@@ -2362,6 +2582,11 @@ func allScenarios() []scenario {
 			ID:     "stale-synthesis-update",
 			Title:  "Update stale source-linked synthesis",
 			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results to find existing docs; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, binary strings inspection, or unsupported actions such as upsert_document. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"OpenClerk runner routing\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/synthesis/\",\"limit\":20}}. Use the returned doc_id for notes/synthesis/runner-routing.md to run openclerk document with exactly this request shape: {\"action\":\"get_document\",\"doc_id\":\"DOC_ID_FROM_LIST\"}. Then update notes/synthesis/runner-routing.md only with replace_section or append_document. Do not create a new synthesis page. Preserve the existing prototype frontmatter with freshness: fresh and the single-line field source_refs: notes/sources/runner-current-runner.md, notes/sources/runner-old-workaround.md. Replace the stale command-path workaround claim with these exact lines: Current guidance: routine agents must use openclerk JSON runner; Current source: notes/sources/runner-current-runner.md; Supersedes: notes/sources/runner-old-workaround.md. Keep ## Sources and ## Freshness sections with both source paths. Mention notes/synthesis/runner-routing.md in the final answer.",
+		},
+		{
+			ID:     "synthesis-freshness-repair",
+			Title:  "Repair synthesis after runner-visible freshness invalidation",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, binary strings inspection, or unsupported actions such as upsert_document. First search for OpenClerk runner repair freshness. Then list notes/synthesis/ candidates, get notes/synthesis/runner-repair.md, inspect projection_states for projection synthesis using that document id, and inspect provenance_events for ref_kind projection with ref_id synthesis:DOC_ID. Repair notes/synthesis/runner-repair.md only with replace_section or append_document. Do not create a duplicate. Preserve the existing source_refs frontmatter exactly as notes/sources/repair-current.md, notes/sources/repair-old.md. The repaired body must state: Current source: notes/sources/repair-current.md; Superseded source: notes/sources/repair-old.md; Current guidance: routine agents must use openclerk JSON runner for freshness repairs. After repair, inspect projection_states again and mention notes/synthesis/runner-repair.md, notes/sources/repair-current.md, notes/sources/repair-old.md, and the final synthesis projection freshness in the final answer.",
 		},
 		{
 			ID:     "append-replace",

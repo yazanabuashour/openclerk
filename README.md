@@ -112,7 +112,8 @@ Override storage with `OPENCLERK_DATA_DIR`, `OPENCLERK_DATABASE_PATH`, or
   records remain selective structured layers for domains that fail as plain
   docs.
 - Provenance and projection-state reads make derivation and freshness
-  inspectable.
+  inspectable, including source-linked synthesis freshness through the
+  `synthesis` projection.
 - Memory and autonomous routing are intentionally out of scope for this release.
 
 See `docs/architecture/agent-knowledge-plane.md` for the in-repo design

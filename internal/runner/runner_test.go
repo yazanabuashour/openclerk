@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/yazanabuashour/openclerk/internal/runclient"
 	"github.com/yazanabuashour/openclerk/internal/runner"
@@ -98,6 +99,96 @@ func TestDocumentTaskCreateListGetAndUpdate(t *testing.T) {
 
 	if _, err := json.Marshal(get); err != nil {
 		t.Fatalf("marshal document task result: %v", err)
+	}
+}
+
+func TestRetrievalTaskSynthesisFreshnessProjectionAndProvenance(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DataDir: filepath.Join(t.TempDir(), "data")}
+	source := createDocument(t, ctx, config, "notes/sources/runner.md", "Runner Source", "# Runner Source\n\n## Summary\nInitial source guidance.\n")
+	synthesis := createDocument(t, ctx, config, "notes/synthesis/runner.md", "Runner Synthesis", strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: notes/sources/runner.md
+---
+# Runner Synthesis
+
+## Summary
+Initial source guidance.
+
+## Sources
+- notes/sources/runner.md
+
+## Freshness
+Checked source refs.
+`)+"\n")
+
+	time.Sleep(time.Millisecond)
+	updated, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action:  runner.DocumentTaskActionReplaceSection,
+		DocID:   source.DocID,
+		Heading: "Summary",
+		Content: "Updated source guidance.",
+	})
+	if err != nil {
+		t.Fatalf("update source: %v", err)
+	}
+	if updated.Document == nil {
+		t.Fatalf("update result = %+v", updated)
+	}
+
+	projections, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProjectionStates,
+		Projection: runner.ProjectionStateOptions{
+			Projection: "synthesis",
+			RefKind:    "document",
+			RefID:      synthesis.DocID,
+			Limit:      10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("synthesis projection task: %v", err)
+	}
+	if projections.Projections == nil ||
+		len(projections.Projections.Projections) != 1 ||
+		projections.Projections.Projections[0].Freshness != "stale" ||
+		projections.Projections.Projections[0].Details["stale_source_refs"] != "notes/sources/runner.md" {
+		t.Fatalf("synthesis projections result = %+v", projections)
+	}
+
+	sourceEvents, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{
+			RefKind: "source",
+			RefID:   source.DocID,
+			Limit:   10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("source provenance task: %v", err)
+	}
+	if sourceEvents.Provenance == nil ||
+		!runnerEventTypesInclude(sourceEvents.Provenance.Events, "source_created") ||
+		!runnerEventTypesInclude(sourceEvents.Provenance.Events, "source_updated") {
+		t.Fatalf("source provenance result = %+v", sourceEvents)
+	}
+
+	synthesisEvents, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{
+			RefKind: "projection",
+			RefID:   "synthesis:" + synthesis.DocID,
+			Limit:   10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("synthesis provenance task: %v", err)
+	}
+	if synthesisEvents.Provenance == nil || !runnerEventTypesInclude(synthesisEvents.Provenance.Events, "projection_invalidated") {
+		t.Fatalf("synthesis provenance result = %+v", synthesisEvents)
 	}
 }
 
@@ -347,4 +438,13 @@ func createDocument(t *testing.T, ctx context.Context, config runclient.Config, 
 		t.Fatalf("create %s result = %+v", path, result)
 	}
 	return *result.Document
+}
+
+func runnerEventTypesInclude(events []runner.ProvenanceEvent, eventType string) bool {
+	for _, event := range events {
+		if event.EventType == eventType {
+			return true
+		}
+	}
+	return false
 }

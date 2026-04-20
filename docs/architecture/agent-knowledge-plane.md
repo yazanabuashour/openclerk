@@ -60,6 +60,8 @@ The active synthesis lifecycle workflow is:
 - search canonical sources before writing synthesis
 - list `notes/synthesis/` candidates before creating a new synthesis page
 - retrieve an existing synthesis document before updating it
+- inspect the `synthesis` projection state for existing synthesis documents
+  before repairing stale claims
 - prefer section replacement or append over duplicate creation
 - preserve source refs, citations, `## Sources`, and `## Freshness`
 - repair stale or contradictory claims by naming current sources and superseded
@@ -139,10 +141,13 @@ The provenance layer now exposes:
 Current event and projection semantics are intentionally minimal:
 
 - document create/update events
+- source create/update events for canonical source docs
 - projection invalidation events
 - projection refresh events
 - record extraction events
 - fresh/stale projection state for current derived outputs
+- synthesis projection state for source-linked synthesis pages, including
+  current, superseded, missing, and stale source refs plus a freshness reason
 
 ## Agent evals
 
