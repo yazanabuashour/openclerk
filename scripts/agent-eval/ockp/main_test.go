@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"os"
@@ -199,20 +200,106 @@ func TestEvalEnvSharedAndIsolatedCache(t *testing.T) {
 	}
 }
 
-func TestVariantInstructionsUseProductionRunnerOnly(t *testing.T) {
-	production, err := variantInstructions("production")
-	if err != nil {
-		t.Fatalf("production instructions: %v", err)
+func TestCopyRepoSkipsEvalContextContamination(t *testing.T) {
+	src := t.TempDir()
+	dst := filepath.Join(t.TempDir(), "copy")
+	files := map[string]string{
+		"README.md":                                      "kept",
+		"AGENTS.md":                                      "root instructions",
+		".agents/skills/openclerk/SKILL.md":              "stale skill",
+		".dolt/config":                                   "dolt",
+		"docs/evals/results/previous.md":                 "report",
+		"scripts/agent-eval/ockp/main.go":                "harness",
+		"scripts/agent-eval/ockp/nested/fixture.txt":     "harness fixture",
+		"scripts/agent-eval/other-harness/kept-file.txt": "other harness",
 	}
-	if !strings.Contains(production, "openclerk") || strings.Contains(production, "runclient.Open") {
-		t.Fatalf("production instructions = %s", production)
-	}
-	if !strings.Contains(production, "reject final-answer-only") {
-		t.Fatalf("production instructions missing direct rejection guidance = %s", production)
+	for path, content := range files {
+		target := filepath.Join(src, path)
+		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", path, err)
+		}
+		if err := os.WriteFile(target, []byte(content), 0o644); err != nil {
+			t.Fatalf("write %s: %v", path, err)
+		}
 	}
 
-	if _, err := variantInstructions("unknown"); err == nil {
+	if err := copyRepo(src, dst); err != nil {
+		t.Fatalf("copy repo: %v", err)
+	}
+	for _, want := range []string{"README.md", "scripts/agent-eval/other-harness/kept-file.txt"} {
+		if _, err := os.Stat(filepath.Join(dst, want)); err != nil {
+			t.Fatalf("expected copied %s: %v", want, err)
+		}
+	}
+	for _, skipped := range []string{
+		"AGENTS.md",
+		".agents/skills/openclerk/SKILL.md",
+		".dolt/config",
+		"docs/evals/results/previous.md",
+		"scripts/agent-eval/ockp/main.go",
+		"scripts/agent-eval/ockp/nested/fixture.txt",
+	} {
+		if _, err := os.Stat(filepath.Join(dst, skipped)); !os.IsNotExist(err) {
+			t.Fatalf("expected %s to be skipped, stat err=%v", skipped, err)
+		}
+	}
+}
+
+func TestInstallVariantInstallsExactSkillAndNoAgentsFile(t *testing.T) {
+	repoRoot := t.TempDir()
+	repoDir := t.TempDir()
+	sourceSkill := []byte("# OpenClerk\n\nUse the runner.\n")
+	skillDir := filepath.Join(repoRoot, "skills", "openclerk")
+	if err := os.MkdirAll(skillDir, 0o755); err != nil {
+		t.Fatalf("mkdir skill dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), sourceSkill, 0o644); err != nil {
+		t.Fatalf("write source skill: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(skillDir, "skill_payload_test.go"), []byte("package ignored\n"), 0o644); err != nil {
+		t.Fatalf("write source test helper: %v", err)
+	}
+
+	if err := installVariant(repoRoot, repoDir, productionVariant); err != nil {
+		t.Fatalf("install production variant: %v", err)
+	}
+	installedSkill, err := os.ReadFile(filepath.Join(repoDir, ".agents", "skills", "openclerk", "SKILL.md"))
+	if err != nil {
+		t.Fatalf("read installed skill: %v", err)
+	}
+	if !bytes.Equal(installedSkill, sourceSkill) {
+		t.Fatalf("installed skill bytes = %q, want %q", installedSkill, sourceSkill)
+	}
+	if _, err := os.Stat(filepath.Join(repoDir, "AGENTS.md")); !os.IsNotExist(err) {
+		t.Fatalf("installVariant must not create AGENTS.md, stat err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(repoDir, ".agents", "skills", "openclerk", "skill_payload_test.go")); !os.IsNotExist(err) {
+		t.Fatalf("installVariant must not install Go test payload, stat err=%v", err)
+	}
+}
+
+func TestVariantSelectionProductionOnly(t *testing.T) {
+	variants := selectedVariants(runConfig{})
+	if len(variants) != 1 || variants[0] != productionVariant {
+		t.Fatalf("default variants = %v, want [%s]", variants, productionVariant)
+	}
+
+	repoRoot := t.TempDir()
+	repoDir := t.TempDir()
+	if err := installVariant(repoRoot, repoDir, "unknown"); err == nil {
 		t.Fatal("expected unknown variant error")
+	}
+}
+
+func TestPromptInputPreflightFlagsOpenClerkAgentsInstructions(t *testing.T) {
+	clean := "### Project Skills\n- openclerk: /tmp/repo/.agents/skills/openclerk/SKILL.md\n"
+	if containsOpenClerkAgentsInstructions(clean) {
+		t.Fatalf("clean skill discovery was flagged: %s", clean)
+	}
+
+	contaminated := "# AGENTS.md instructions for /tmp/repo\n\nUse `openclerk document` with create_document JSON action names.\n"
+	if !containsOpenClerkAgentsInstructions(contaminated) {
+		t.Fatalf("contaminated AGENTS block was not flagged: %s", contaminated)
 	}
 }
 

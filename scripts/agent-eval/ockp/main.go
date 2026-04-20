@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -399,10 +400,13 @@ func codexJobRunner(ctx context.Context, config runConfig, job evalJob, cache ca
 		return result
 	}
 	if err := timedPhase(&timings.InstallVariant, func() error {
-		if err := writeVariantInstructions(repoDir, job.Variant); err != nil {
+		if err := installVariant(config.RepoRoot, repoDir, job.Variant); err != nil {
 			return err
 		}
-		return buildOpenClerkRunner(repoDir, jobDir, paths, cache)
+		if err := buildOpenClerkRunner(repoDir, jobDir, paths, cache); err != nil {
+			return err
+		}
+		return preflightEvalContext(config.RepoRoot, repoDir, jobDir, paths, cache, config.CodexBin)
 	}); err != nil {
 		result.Error = fmt.Sprintf("configure variant: %v", err)
 		return result
@@ -2326,49 +2330,6 @@ func roundSeconds(value float64) float64 {
 	return float64(int(value*100+0.5)) / 100
 }
 
-func writeVariantInstructions(repoDir string, variant string) error {
-	instructions, err := variantInstructions(variant)
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(filepath.Join(repoDir, "AGENTS.md"), []byte(instructions), 0o644)
-}
-
-func variantInstructions(variant string) (string, error) {
-	if variant != productionVariant {
-		return "", fmt.Errorf("unsupported variant %q", variant)
-	}
-	return `# OpenClerk Agent Eval Variant: production
-
-For direct user requests to create, list, update, search, or inspect local OpenClerk knowledge, use the production OpenClerk JSON runner:
-
-` + "```bash" + `
-openclerk document
-openclerk retrieval
-` + "```" + `
-
-Before using any runner, reject final-answer-only, with exactly one assistant answer and no tools, when the request is missing required document or retrieval fields, asks for an obviously invalid limit such as a negative number, or asks to bypass the OpenClerk runner for routine lower-level runtime, HTTP, SQLite, legacy source-built command paths, or unsupported transport work. For bypass requests, explicitly say the workflow is unsupported and must use the OpenClerk runner. Do not first announce skill use or process for those direct rejections.
-
-Pass one JSON request on stdin and answer only from the JSON result. Use the configured OPENCLERK_DATA_DIR, OPENCLERK_DATABASE_PATH, and OPENCLERK_VAULT_ROOT. For routine requests, do not pass --data-dir, --db, --vault-root, or --embedding-provider; rely on the configured environment so data, database, and vault paths stay together. Do not inspect the repo, run openclerk --help, or inspect the installed binary to rediscover runner schemas. Do not inspect retired API files, backend-variant packages, the Go module cache, or SQLite directly for routine knowledge tasks. Do not use broad file enumeration such as rg --files, find, ls, or direct .openclerk-eval/vault inspection to find or verify routine runner work; use runner JSON results, list_documents, search, or get_document instead.
-
-Use these JSON shapes directly:
-{"action":"create_document","document":{"path":"notes/projects/example.md","title":"Example","body":"# Example\n\n## Summary\nReusable knowledge.\n"}}
-{"action":"list_documents","list":{"path_prefix":"notes/","limit":20}}
-{"action":"get_document","doc_id":"doc_id_from_json"}
-{"action":"append_document","doc_id":"doc_id_from_json","content":"## Decisions\nUse the OpenClerk runner."}
-{"action":"replace_section","doc_id":"doc_id_from_json","heading":"Decisions","content":"Use the OpenClerk runner."}
-{"action":"search","search":{"text":"architecture","limit":10}}
-{"action":"document_links","doc_id":"doc_id_from_json"}
-{"action":"records_lookup","records":{"text":"OpenClerk runner","limit":10}}
-{"action":"services_lookup","services":{"text":"OpenClerk runner","interface":"JSON runner","limit":10}}
-{"action":"service_record","service_id":"service_id_from_json"}
-{"action":"provenance_events","provenance":{"ref_kind":"document","ref_id":"doc_id_from_json","limit":20}}
-{"action":"projection_states","projection":{"ref_kind":"document","ref_id":"doc_id_from_json","limit":20}}
-
-For source-linked synthesis, search first, list notes/synthesis/ candidates, get an existing synthesis document before modifying it, and update existing synthesis instead of creating duplicates. Synthesis pages must live under notes/synthesis/ and include frontmatter with type: synthesis, status: active, freshness: fresh, and a single-line comma-separated source_refs field. Do not use YAML list syntax for source_refs. Include a ## Sources section with source paths or citation paths from runner JSON, and a ## Freshness section that states which search, provenance_events, or projection_states results were checked. When synthesis depends on promoted records or services, inspect records_lookup or services_lookup plus provenance_events and projection_states before writing the synthesis. Use only the documented openclerk document/retrieval actions; do not use upsert_document or direct file edits.
-`, nil
-}
-
 func copyRepo(srcRoot string, dstRoot string) error {
 	absSrc, err := filepath.Abs(srcRoot)
 	if err != nil {
@@ -2416,7 +2377,7 @@ func copyRepo(srcRoot string, dstRoot string) error {
 func shouldSkipCopy(rel string, entry fs.DirEntry) bool {
 	parts := strings.Split(filepath.ToSlash(rel), "/")
 	switch parts[0] {
-	case ".git", ".beads":
+	case ".git", ".beads", ".dolt", ".agents":
 		return entry.IsDir()
 	case "AGENTS.md":
 		return true
@@ -2429,6 +2390,120 @@ func shouldSkipCopy(rel string, entry fs.DirEntry) bool {
 		return true
 	}
 	return false
+}
+
+func installVariant(repoRoot string, repoDir string, variant string) error {
+	if variant != productionVariant {
+		return fmt.Errorf("unsupported variant %q", variant)
+	}
+	dest := filepath.Join(repoDir, ".agents", "skills", "openclerk")
+	if err := os.RemoveAll(dest); err != nil {
+		return err
+	}
+	return copyDir(filepath.Join(repoRoot, "skills", "openclerk"), dest)
+}
+
+func preflightEvalContext(repoRoot string, repoDir string, runDir string, paths evalPaths, cache cacheConfig, codexBin string) error {
+	sourceSkill := filepath.Join(repoRoot, "skills", "openclerk", "SKILL.md")
+	installedSkill := filepath.Join(repoDir, ".agents", "skills", "openclerk", "SKILL.md")
+	sourceBytes, err := os.ReadFile(sourceSkill)
+	if err != nil {
+		return err
+	}
+	installedBytes, err := os.ReadFile(installedSkill)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(sourceBytes, installedBytes) {
+		return errors.New("installed production skill does not match shipped SKILL.md")
+	}
+	if _, err := os.Stat(filepath.Join(repoDir, "AGENTS.md")); !os.IsNotExist(err) {
+		if err == nil {
+			return errors.New("production eval repo must not contain AGENTS.md")
+		}
+		return err
+	}
+
+	cmd := exec.Command(codexBin, "debug", "prompt-input", "Use OpenClerk to list notes.")
+	cmd.Dir = repoDir
+	cmd.Env = evalEnv(runDir, paths, cache)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(output)))
+	}
+	rendered := string(output)
+	if !strings.Contains(rendered, "- openclerk:") {
+		return errors.New("rendered prompt is missing openclerk skill discovery")
+	}
+	if !strings.Contains(rendered, ".agents/skills/openclerk/SKILL.md") {
+		return errors.New("rendered prompt does not point openclerk to the installed project skill")
+	}
+	if containsOpenClerkAgentsInstructions(rendered) {
+		return errors.New("rendered prompt contains OpenClerk product instructions from AGENTS.md")
+	}
+	return nil
+}
+
+func containsOpenClerkAgentsInstructions(rendered string) bool {
+	const marker = "# AGENTS.md instructions"
+	index := strings.Index(rendered, marker)
+	if index < 0 {
+		return false
+	}
+	agentsText := rendered[index:]
+	for _, forbidden := range []string{
+		"openclerk",
+		"create_document",
+		"list_documents",
+		"records_lookup",
+		"services_lookup",
+		"provenance_events",
+		"projection_states",
+		"reject final-answer-only",
+		"product data task",
+	} {
+		if strings.Contains(agentsText, forbidden) {
+			return true
+		}
+	}
+	return false
+}
+
+func copyDir(src string, dst string) error {
+	return filepath.WalkDir(src, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), "_test.go") {
+			return nil
+		}
+		rel, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		if rel == "." {
+			return os.MkdirAll(dst, 0o755)
+		}
+		target := filepath.Join(dst, rel)
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			return nil
+		}
+		if entry.IsDir() {
+			return os.MkdirAll(target, info.Mode().Perm())
+		}
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+			return err
+		}
+		return os.WriteFile(target, content, info.Mode().Perm())
+	})
 }
 
 func writeJSON(path string, value any) error {

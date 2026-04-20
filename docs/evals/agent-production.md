@@ -52,10 +52,16 @@ copy:
 - `OPENCLERK_DATABASE_PATH=<run-root>/<variant>/<scenario>/repo/.openclerk-eval/openclerk.db`
 - `OPENCLERK_VAULT_ROOT=<run-root>/<variant>/<scenario>/repo/.openclerk-eval/vault`
 
-The copied repo omits root `AGENTS.md`, VCS metadata, Beads metadata, eval
-artifacts, and the eval harness itself before installing the selected variant
-instructions. Raw event logs are not committed; reduced reports refer to them
-with `<run-root>` placeholders.
+The copied repo omits root `AGENTS.md`, stale `.agents` contents, VCS metadata,
+Beads/Dolt metadata, eval artifacts, and the eval harness itself before
+installing the shipped `skills/openclerk` skill into
+`.agents/skills/openclerk/`. The harness does not generate evaluator-only
+OpenClerk `AGENTS.md` instructions. Before each job runs, it preflights the
+rendered Codex context with `codex debug prompt-input` to verify that the
+project skill points at `.agents/skills/openclerk/SKILL.md` and that no
+OpenClerk product instructions leak through an `AGENTS.md` block. Raw event logs
+are not committed; reduced reports refer to them with `<run-root>`
+placeholders.
 
 The harness defaults to `--cache-mode shared`, which prewarms one shared Go
 module/build cache under `<run-root>/shared-cache` while keeping OpenClerk
