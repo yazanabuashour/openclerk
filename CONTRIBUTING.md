@@ -35,7 +35,7 @@ The current local validation commands are:
 ```bash
 test -z "$(gofmt -l $(git ls-files '*.go'))"
 go test ./...
-golangci-lint run
+mise exec -- golangci-lint run
 ```
 
 Outside contributors may use their own local tooling if they can satisfy the

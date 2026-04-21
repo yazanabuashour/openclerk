@@ -1,5 +1,6 @@
 - For all committed docs, reports, and artifact references, use repo-relative paths or neutral repo-relative placeholders. Never use machine-absolute filesystem paths.
 - Do work on the current branch. Do not create or switch to another branch unless explicitly instructed.
+- For repo-pinned developer tools declared in `mise.toml`, run commands through `mise exec -- ...` so agents use the same tool versions as local docs and CI.
 
 ## OpenClerk Knowledge Requests
 

@@ -135,7 +135,7 @@ Repository development uses the full local toolchain:
 mise install
 test -z "$(gofmt -l $(git ls-files '*.go'))"
 go test ./...
-golangci-lint run
+mise exec -- golangci-lint run
 ```
 
 ## Release Contract
