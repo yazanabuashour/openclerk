@@ -379,6 +379,8 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		`{"type":"tool_call","item":{"type":"tool_call","command":"rg --files"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"rg --files /Users/y/.codex"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"search\",\"search\":{\"text\":\"runner\"}}' | openclerk retrieval"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"search\",\"search\":{\"text\":\"runner\",\"path_prefix\":\"notes/rag/\"}}' | openclerk retrieval"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"search\",\"search\":{\"text\":\"runner\",\"metadata_key\":\"rag_scope\",\"metadata_value\":\"active-policy\"}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/synthesis/\"}}' | openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"get_document\",\"doc_id\":\"doc_1\"}' | openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"records_lookup\",\"records\":{\"text\":\"runner\"}}' | openclerk retrieval"}}`,
@@ -397,7 +399,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	if parsed.sessionID != "session-123" || parsed.finalMessage != "done" {
 		t.Fatalf("parsed = %+v", parsed)
 	}
-	if parsed.metrics.ToolCalls != 10 || parsed.metrics.CommandExecutions != 10 || parsed.metrics.AssistantCalls != 1 {
+	if parsed.metrics.ToolCalls != 12 || parsed.metrics.CommandExecutions != 12 || parsed.metrics.AssistantCalls != 1 {
 		t.Fatalf("metrics = %+v", parsed.metrics)
 	}
 	if !parsed.metrics.BroadRepoSearch {
@@ -412,12 +414,15 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		t.Fatalf("token metrics = %+v", parsed.metrics)
 	}
 	for name, used := range map[string]bool{
-		"search":            parsed.metrics.SearchUsed,
-		"list_documents":    parsed.metrics.ListDocumentsUsed,
-		"get_document":      parsed.metrics.GetDocumentUsed,
-		"records_lookup":    parsed.metrics.RecordsLookupUsed,
-		"provenance_events": parsed.metrics.ProvenanceEventsUsed,
-		"projection_states": parsed.metrics.ProjectionStatesUsed,
+		"search":                 parsed.metrics.SearchUsed,
+		"search_unfiltered":      parsed.metrics.SearchUnfilteredUsed,
+		"search_path_filter":     parsed.metrics.SearchPathFilterUsed,
+		"search_metadata_filter": parsed.metrics.SearchMetadataFilterUsed,
+		"list_documents":         parsed.metrics.ListDocumentsUsed,
+		"get_document":           parsed.metrics.GetDocumentUsed,
+		"records_lookup":         parsed.metrics.RecordsLookupUsed,
+		"provenance_events":      parsed.metrics.ProvenanceEventsUsed,
+		"projection_states":      parsed.metrics.ProjectionStatesUsed,
 	} {
 		if !used {
 			t.Fatalf("expected %s action metric in %+v", name, parsed.metrics)
@@ -441,9 +446,15 @@ func TestAggregateMetricsRequiresAllTurnsExposeUsage(t *testing.T) {
 
 func TestFinalAnswerOnlyAndProductionGates(t *testing.T) {
 	prodTokens := 80
-	results := []jobResult{
-		comparisonResult(productionVariant, "missing-document-path-reject", true, 0, 0, 1, prodTokens),
-		comparisonResult(productionVariant, "create-note", true, 2, 2, 1, prodTokens),
+	results := []jobResult{}
+	for _, scenarioID := range scenarioIDs() {
+		tools := 2
+		commands := 2
+		if isFinalAnswerOnlyValidationScenario(scenarioID) {
+			tools = 0
+			commands = 0
+		}
+		results = append(results, comparisonResult(productionVariant, scenarioID, true, tools, commands, 1, prodTokens))
 	}
 	summary := buildProductionGateSummary(results)
 	if summary == nil {
@@ -499,7 +510,7 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 	for _, id := range scenarioIDs() {
 		ids[id] = true
 	}
-	for _, want := range []string{"answer-filing", "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
+	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
 		if !ids[want] {
 			t.Fatalf("scenarioIDs missing %q in %v", want, scenarioIDs())
 		}
@@ -531,6 +542,106 @@ func TestVerifyAnswerFilingRequiresFiledSourceLinkedDocument(t *testing.T) {
 	}
 	if !result.Passed {
 		t.Fatalf("answer filing failed: %+v", result)
+	}
+}
+
+func TestSeedRAGRetrievalBaselineCreatesFilteredFixture(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: ragRetrievalScenarioID}); err != nil {
+		t.Fatalf("seed RAG scenario: %v", err)
+	}
+	for _, path := range []string{ragCurrentPolicyPath, ragDecoyPolicyPath, ragArchivedPolicyPath} {
+		if _, found, err := documentIDByPath(ctx, paths, path); err != nil {
+			t.Fatalf("find %s: %v", path, err)
+		} else if !found {
+			t.Fatalf("missing seeded document %s", path)
+		}
+	}
+	body, found, err := documentBodyByPath(ctx, paths, ragCurrentPolicyPath)
+	if err != nil {
+		t.Fatalf("get current policy: %v", err)
+	}
+	if !found || !strings.Contains(body, "rag_scope: active-policy") || !strings.Contains(body, ragCurrentPolicyDecision) {
+		t.Fatalf("current policy body = %q", body)
+	}
+	count, err := documentCountWithPrefix(ctx, paths, ragPathPrefix)
+	if err != nil {
+		t.Fatalf("count RAG docs: %v", err)
+	}
+	if count != 2 {
+		t.Fatalf("RAG path count = %d, want 2", count)
+	}
+}
+
+func TestVerifyRAGRetrievalBaselineRequiresFiltersCitationsAndNoSynthesis(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: ragRetrievalScenarioID}); err != nil {
+		t.Fatalf("seed RAG scenario: %v", err)
+	}
+	top := requireRAGMetadataTopHit(t, ctx, paths)
+	completeMetrics := metrics{
+		AssistantCalls:           1,
+		SearchUsed:               true,
+		SearchUnfilteredUsed:     true,
+		SearchPathFilterUsed:     true,
+		SearchMetadataFilterUsed: true,
+		EventTypeCounts:          map[string]int{},
+	}
+	finalAnswer := "The active policy is to use the OpenClerk JSON runner. Source: " + ragCurrentPolicyPath + " doc_id " + top.DocID + " chunk_id " + top.ChunkID + "."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: ragRetrievalScenarioID}, 1, finalAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify complete RAG baseline: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("complete RAG baseline failed: %+v", result)
+	}
+
+	missingFilters := completeMetrics
+	missingFilters.SearchPathFilterUsed = false
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: ragRetrievalScenarioID}, 1, finalAnswer, missingFilters)
+	if err != nil {
+		t.Fatalf("verify missing filter metric: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("RAG baseline without path-filtered search metric passed: %+v", result)
+	}
+
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: ragRetrievalScenarioID}, 1, "The active policy is to use the OpenClerk JSON runner from "+ragCurrentPolicyPath+".", completeMetrics)
+	if err != nil {
+		t.Fatalf("verify missing citation answer: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("RAG baseline without doc_id/chunk_id answer passed: %+v", result)
+	}
+
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	if err := createSeedDocument(ctx, cfg, "notes/synthesis/rag-summary.md", "RAG Summary", "# RAG Summary\n"); err != nil {
+		t.Fatalf("create forbidden synthesis: %v", err)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: ragRetrievalScenarioID}, 1, finalAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify forbidden synthesis: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("RAG baseline with synthesis document passed: %+v", result)
+	}
+}
+
+func TestRAGRetrievalBaselineRepeatedFilteredSearchIsDeterministic(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: ragRetrievalScenarioID}); err != nil {
+		t.Fatalf("seed RAG scenario: %v", err)
+	}
+	first := requireRAGMetadataTopHit(t, ctx, paths)
+	second := requireRAGMetadataTopHit(t, ctx, paths)
+	if first.DocID != second.DocID || first.ChunkID != second.ChunkID {
+		t.Fatalf("repeated metadata search changed top hit: first=%+v second=%+v", first, second)
+	}
+	if !searchHitHasCitation(first) {
+		t.Fatalf("top hit missing citation fields: %+v", first)
 	}
 }
 
@@ -790,7 +901,7 @@ func TestDuplicatePathRejectRequiresAnswerFailure(t *testing.T) {
 	}
 }
 
-func TestProductionGatePassesWithoutGate(t *testing.T) {
+func TestProductionGateFailsPartialScenarioRun(t *testing.T) {
 	results := []jobResult{
 		comparisonResult(productionVariant, "create-note", true, 1, 1, 1, 80),
 	}
@@ -798,11 +909,27 @@ func TestProductionGatePassesWithoutGate(t *testing.T) {
 	if summary == nil {
 		t.Fatal("missing summary")
 	}
-	if !summary.PassesGate {
-		t.Fatalf("production-only gate failed: %+v", summary)
+	if summary.PassesGate {
+		t.Fatalf("partial production run passed gate: %+v", summary)
 	}
-	if summary.Recommendation != "use_agentops_runner_for_routine_openclerk_operations" {
+	if summary.Recommendation != "fix_production_agentops_before_release" {
 		t.Fatalf("recommendation = %q", summary.Recommendation)
+	}
+	criteria := map[string]productionGateCriterion{}
+	for _, criterion := range summary.Criteria {
+		criteria[criterion.Name] = criterion
+	}
+	if criteria["production_passes_all_scenarios"].Passed {
+		t.Fatalf("partial run passed scenario criterion: %+v", summary.Criteria)
+	}
+	if !strings.Contains(criteria["production_passes_all_scenarios"].Details, "missing:") {
+		t.Fatalf("scenario criterion did not list missing scenarios: %+v", criteria["production_passes_all_scenarios"])
+	}
+	if criteria["validation_scenarios_are_final_answer_only"].Passed {
+		t.Fatalf("partial run passed validation criterion: %+v", summary.Criteria)
+	}
+	if !strings.Contains(criteria["validation_scenarios_are_final_answer_only"].Details, "not evaluated") {
+		t.Fatalf("validation criterion did not explain partial run: %+v", criteria["validation_scenarios_are_final_answer_only"])
 	}
 }
 
@@ -828,6 +955,31 @@ func replaceSeedSection(t *testing.T, ctx context.Context, paths evalPaths, docP
 	if result.Rejected {
 		t.Fatalf("replace %s rejected: %s", docPath, result.RejectionReason)
 	}
+}
+
+func requireRAGMetadataTopHit(t *testing.T, ctx context.Context, paths evalPaths) runner.SearchHit {
+	t.Helper()
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	result, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
+			Text:          ragSearchText,
+			MetadataKey:   ragMetadataKey,
+			MetadataValue: ragMetadataValue,
+			Limit:         5,
+		},
+	})
+	if err != nil {
+		t.Fatalf("metadata search: %v", err)
+	}
+	top, ok := topSearchHit(result)
+	if !ok {
+		t.Fatalf("metadata search returned no hits: %+v", result)
+	}
+	if searchHitPath(top) != ragCurrentPolicyPath {
+		t.Fatalf("metadata search top path = %q, want %q; result=%+v", searchHitPath(top), ragCurrentPolicyPath, result.Search)
+	}
+	return top
 }
 
 func comparisonResult(variant string, scenario string, passed bool, tools int, commands int, assistant int, nonCached int) jobResult {

@@ -13,6 +13,11 @@ in `docs/evals/knowledge-plane-archetype-matrix.md`.
 - Create canonical notes with stable headings and exact terms.
 - Verify search returns the correct `doc_id`, `chunk_id`, and citations.
 - Verify path-prefix and metadata filters reduce scope correctly.
+- Verify the `rag-retrieval-baseline` scenario can answer accurately from
+  retrieval-only search while preserving source path, `doc_id`, `chunk_id`, and
+  line citations.
+- Verify repeated retrieval-only answers rerun search and do not create
+  `notes/synthesis/` durable synthesis unless explicitly filed.
 
 ## Source Ingest And Synthesis
 

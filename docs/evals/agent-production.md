@@ -93,6 +93,9 @@ The `ockp` harness covers routine local knowledge-plane workflows:
 
 - canonical note creation with stable paths, frontmatter, headings, body content,
   and vault/document-registry verification
+- RAG-style retrieval-only answering with unfiltered search, path-prefix
+  filtering, metadata filtering, repeated-query stability, chunk citations, and
+  no implicit synthesis filing
 - source-grounded search followed by source-linked synthesis creation or update
   under `notes/synthesis/` with `type: synthesis`, `status: active`,
   `freshness: fresh`, `source_refs`, `## Sources`, and `## Freshness`

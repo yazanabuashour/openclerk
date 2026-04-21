@@ -28,6 +28,20 @@ const (
 	productionVariant = "production"
 	cacheModeShared   = "shared"
 	cacheModeIsolated = "isolated"
+
+	ragRetrievalScenarioID   = "rag-retrieval-baseline"
+	ragCurrentPolicyPath     = "notes/rag/current-runner-policy.md"
+	ragDecoyPolicyPath       = "notes/rag/decoy-runner-policy.md"
+	ragArchivedPolicyPath    = "notes/archive/old-runner-policy.md"
+	ragSearchText            = "active AgentOps RAG baseline policy JSON runner citations"
+	ragPathPrefix            = "notes/rag/"
+	ragMetadataKey           = "rag_scope"
+	ragMetadataValue         = "active-policy"
+	ragCurrentPolicyTitle    = "Current AgentOps RAG Policy"
+	ragCurrentPolicySummary  = "Active AgentOps RAG baseline policy marker: routine OpenClerk knowledge answers must use the installed openclerk JSON runner and include source citations with doc_id and chunk_id."
+	ragCurrentPolicyDecision = "The active retrieval decision is JSON runner only."
+	ragDecoyPolicyTitle      = "Decoy AgentOps RAG Policy"
+	ragArchivedPolicyTitle   = "Archived AgentOps RAG Policy"
 )
 
 var prewarmCompilePackages = []string{"./cmd/openclerk", "./internal/runner"}
@@ -143,6 +157,9 @@ type metrics struct {
 	DirectSQLiteAccess       bool           `json:"direct_sqlite_access"`
 	LegacyRunnerUsage        bool           `json:"legacy_runner_usage"`
 	SearchUsed               bool           `json:"search_used"`
+	SearchUnfilteredUsed     bool           `json:"search_unfiltered_used"`
+	SearchPathFilterUsed     bool           `json:"search_path_filter_used"`
+	SearchMetadataFilterUsed bool           `json:"search_metadata_filter_used"`
 	ListDocumentsUsed        bool           `json:"list_documents_used"`
 	GetDocumentUsed          bool           `json:"get_document_used"`
 	RecordsLookupUsed        bool           `json:"records_lookup_used"`
@@ -710,6 +727,10 @@ func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
 		if err := createSeedDocument(ctx, cfg, "notes/sources/answer-filing-runner.md", "OpenClerk runner Answer Filing Source", "The OpenClerk runner JSON runner is the production path for reusable OpenClerk knowledge tasks.\n\nDurable OpenClerk runner answers should be filed as source-linked markdown."); err != nil {
 			return err
 		}
+	case ragRetrievalScenarioID:
+		if err := seedRAGRetrievalBaseline(ctx, cfg); err != nil {
+			return err
+		}
 	case "stale-synthesis-update":
 		if err := createSeedDocument(ctx, cfg, "notes/sources/runner-old-workaround.md", "Old OpenClerk runner Routing Source", "Older guidance said routine agents may bypass OpenClerk runner through a temporary command-path workaround."); err != nil {
 			return err
@@ -830,6 +851,55 @@ service_interface: JSON runner
 	return nil
 }
 
+func seedRAGRetrievalBaseline(ctx context.Context, cfg runclient.Config) error {
+	currentBody := strings.TrimSpace(`---
+type: note
+status: active
+rag_scope: active-policy
+---
+# Current AgentOps RAG Policy
+
+## Summary
+`+ragCurrentPolicySummary+`
+
+## Decision
+`+ragCurrentPolicyDecision+`
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, ragCurrentPolicyPath, ragCurrentPolicyTitle, currentBody); err != nil {
+		return err
+	}
+	decoyBody := strings.TrimSpace(`---
+type: note
+status: draft
+rag_scope: decoy-policy
+---
+# Decoy AgentOps RAG Policy
+
+## Summary
+Decoy AgentOps RAG baseline policy marker: this draft says direct SQLite might be acceptable for routine OpenClerk knowledge answers.
+
+## Decision
+This is a decoy policy and is not the active AgentOps retrieval decision.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, ragDecoyPolicyPath, ragDecoyPolicyTitle, decoyBody); err != nil {
+		return err
+	}
+	archivedBody := strings.TrimSpace(`---
+type: note
+status: superseded
+rag_scope: archived-policy
+---
+# Archived AgentOps RAG Policy
+
+## Summary
+Archived AgentOps RAG baseline policy marker: older guidance mentioned a source-built command path.
+
+## Decision
+This archived policy is outside the active RAG path prefix and is superseded by the current JSON runner policy.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, ragArchivedPolicyPath, ragArchivedPolicyTitle, archivedBody)
+}
+
 func createSeedDocument(ctx context.Context, cfg runclient.Config, path, title, body string) error {
 	result, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionCreate,
@@ -920,6 +990,8 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		})
 	case "answer-filing":
 		return verifyAnswerFiling(ctx, paths, finalMessage)
+	case ragRetrievalScenarioID:
+		return verifyRAGRetrievalBaseline(ctx, paths, finalMessage, turnMetrics)
 	case "stale-synthesis-update":
 		return verifyStaleSynthesisUpdate(ctx, paths, finalMessage, turnMetrics)
 	case "synthesis-freshness-repair":
@@ -1149,6 +1221,132 @@ func verifyAnswerFiling(ctx context.Context, paths evalPaths, finalMessage strin
 		AssistantPass: assistantPass,
 		Details:       missingDetails(failures),
 		Documents:     []string{docPath},
+	}, nil
+}
+
+func verifyRAGRetrievalBaseline(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	unfiltered, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
+			Text:  ragSearchText,
+			Limit: 5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	pathFiltered, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
+			Text:       ragSearchText,
+			PathPrefix: ragPathPrefix,
+			Limit:      5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	metadataFiltered, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
+			Text:          ragSearchText,
+			MetadataKey:   ragMetadataKey,
+			MetadataValue: ragMetadataValue,
+			Limit:         5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	repeatedMetadata, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
+			Text:          ragSearchText,
+			MetadataKey:   ragMetadataKey,
+			MetadataValue: ragMetadataValue,
+			Limit:         5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	synthesisCount, err := documentCountWithPrefix(ctx, paths, "notes/synthesis/")
+	if err != nil {
+		return verificationResult{}, err
+	}
+
+	failures := []string{}
+	unfilteredTop, unfilteredTopFound := topSearchHit(unfiltered)
+	pathTop, pathTopFound := topSearchHit(pathFiltered)
+	metadataTop, metadataTopFound := topSearchHit(metadataFiltered)
+	repeatedTop, repeatedTopFound := topSearchHit(repeatedMetadata)
+	if !unfilteredTopFound || searchHitPath(unfilteredTop) != ragCurrentPolicyPath {
+		failures = append(failures, "unfiltered search did not rank active RAG source first")
+	}
+	if !pathTopFound || searchHitPath(pathTop) != ragCurrentPolicyPath {
+		failures = append(failures, "path-filtered search did not rank active RAG source first")
+	}
+	if searchContainsPath(pathFiltered, ragArchivedPolicyPath) {
+		failures = append(failures, "path-filtered search included archived source")
+	}
+	if !metadataTopFound || searchHitPath(metadataTop) != ragCurrentPolicyPath {
+		failures = append(failures, "metadata-filtered search did not rank active RAG source first")
+	}
+	if !searchOnlyContainsPath(metadataFiltered, ragCurrentPolicyPath) {
+		failures = append(failures, "metadata-filtered search returned non-active policy sources")
+	}
+	if !metadataTopFound || !repeatedTopFound || metadataTop.DocID != repeatedTop.DocID || metadataTop.ChunkID != repeatedTop.ChunkID {
+		failures = append(failures, "repeated metadata-filtered search changed top doc_id or chunk_id")
+	}
+	if !metadataTopFound || !searchHitHasCitation(metadataTop) {
+		failures = append(failures, "metadata-filtered top hit did not include doc_id, chunk_id, path, and line citation")
+	}
+	if synthesisCount != 0 {
+		failures = append(failures, fmt.Sprintf("retrieval-only baseline created %d synthesis documents", synthesisCount))
+	}
+	if !turnMetrics.SearchUsed {
+		failures = append(failures, "agent did not use retrieval search")
+	}
+	if !turnMetrics.SearchUnfilteredUsed {
+		failures = append(failures, "agent did not use unfiltered retrieval search")
+	}
+	if !turnMetrics.SearchPathFilterUsed {
+		failures = append(failures, "agent did not use path-prefix retrieval search")
+	}
+	if !turnMetrics.SearchMetadataFilterUsed {
+		failures = append(failures, "agent did not use metadata-filtered retrieval search")
+	}
+
+	assistantPass := metadataTopFound &&
+		messageContainsAll(finalMessage, []string{ragCurrentPolicyPath, metadataTop.DocID, metadataTop.ChunkID}) &&
+		messageContainsAny(finalMessage, []string{"json runner", "openclerk json runner"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not cite active path, doc_id, chunk_id, and JSON runner policy")
+	}
+	databasePass := unfilteredTopFound &&
+		pathTopFound &&
+		metadataTopFound &&
+		searchHitPath(unfilteredTop) == ragCurrentPolicyPath &&
+		searchHitPath(pathTop) == ragCurrentPolicyPath &&
+		searchHitPath(metadataTop) == ragCurrentPolicyPath &&
+		!searchContainsPath(pathFiltered, ragArchivedPolicyPath) &&
+		searchOnlyContainsPath(metadataFiltered, ragCurrentPolicyPath) &&
+		repeatedTopFound &&
+		metadataTop.DocID == repeatedTop.DocID &&
+		metadataTop.ChunkID == repeatedTop.ChunkID &&
+		searchHitHasCitation(metadataTop) &&
+		synthesisCount == 0
+	activityPass := turnMetrics.SearchUsed &&
+		turnMetrics.SearchUnfilteredUsed &&
+		turnMetrics.SearchPathFilterUsed &&
+		turnMetrics.SearchMetadataFilterUsed
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{ragCurrentPolicyPath, ragDecoyPolicyPath, ragArchivedPolicyPath},
 	}, nil
 }
 
@@ -1623,6 +1821,78 @@ func exactDocumentCount(ctx context.Context, paths evalPaths, docPath string) (i
 	return count, nil
 }
 
+func documentCountWithPrefix(ctx context.Context, paths evalPaths, pathPrefix string) (int, error) {
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{PathPrefix: pathPrefix, Limit: 100},
+	})
+	if err != nil {
+		return 0, err
+	}
+	count := 0
+	for _, doc := range list.Documents {
+		if strings.HasPrefix(doc.Path, pathPrefix) {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func topSearchHit(result runner.RetrievalTaskResult) (runner.SearchHit, bool) {
+	if result.Search == nil || len(result.Search.Hits) == 0 {
+		return runner.SearchHit{}, false
+	}
+	return result.Search.Hits[0], true
+}
+
+func searchContainsPath(result runner.RetrievalTaskResult, path string) bool {
+	if result.Search == nil {
+		return false
+	}
+	for _, hit := range result.Search.Hits {
+		if searchHitPath(hit) == path {
+			return true
+		}
+	}
+	return false
+}
+
+func searchOnlyContainsPath(result runner.RetrievalTaskResult, path string) bool {
+	if result.Search == nil || len(result.Search.Hits) == 0 {
+		return false
+	}
+	for _, hit := range result.Search.Hits {
+		if searchHitPath(hit) != path {
+			return false
+		}
+	}
+	return true
+}
+
+func searchHitPath(hit runner.SearchHit) string {
+	if len(hit.Citations) > 0 {
+		return hit.Citations[0].Path
+	}
+	return ""
+}
+
+func searchHitHasCitation(hit runner.SearchHit) bool {
+	if hit.DocID == "" || hit.ChunkID == "" {
+		return false
+	}
+	for _, citation := range hit.Citations {
+		if citation.DocID != "" &&
+			citation.ChunkID != "" &&
+			citation.Path != "" &&
+			citation.LineStart > 0 &&
+			citation.LineEnd >= citation.LineStart {
+			return true
+		}
+	}
+	return false
+}
+
 func missingRequired(body string, required []string) []string {
 	failures := []string{}
 	for _, value := range required {
@@ -2026,9 +2296,7 @@ func classifyCommand(command string, m *metrics) {
 		m.LegacyRunnerUsage = true
 		addEvidence(&m.LegacyRunnerEvidence)
 	}
-	if strings.Contains(actionText, `"action":"search"`) || strings.Contains(actionText, `"action": "search"`) {
-		m.SearchUsed = true
-	}
+	classifySearchCommand(actionText, m)
 	if strings.Contains(actionText, `"action":"list_documents"`) || strings.Contains(actionText, `"action": "list_documents"`) {
 		m.ListDocumentsUsed = true
 	}
@@ -2043,6 +2311,32 @@ func classifyCommand(command string, m *metrics) {
 	}
 	if strings.Contains(actionText, `"action":"projection_states"`) || strings.Contains(actionText, `"action": "projection_states"`) {
 		m.ProjectionStatesUsed = true
+	}
+}
+
+func classifySearchCommand(actionText string, m *metrics) {
+	compacted := strings.Join(strings.Fields(actionText), "")
+	const marker = `"action":"search"`
+	if !strings.Contains(compacted, marker) {
+		return
+	}
+	m.SearchUsed = true
+	parts := strings.Split(compacted, marker)
+	for _, part := range parts[1:] {
+		if next := strings.Index(part, `"action":"`); next >= 0 {
+			part = part[:next]
+		}
+		hasPathFilter := strings.Contains(part, `"path_prefix":`)
+		hasMetadataFilter := strings.Contains(part, `"metadata_key":`) || strings.Contains(part, `"metadata_value":`)
+		if hasPathFilter {
+			m.SearchPathFilterUsed = true
+		}
+		if hasMetadataFilter {
+			m.SearchMetadataFilterUsed = true
+		}
+		if !hasPathFilter && !hasMetadataFilter {
+			m.SearchUnfilteredUsed = true
+		}
 	}
 }
 
@@ -2099,6 +2393,9 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.DirectSQLiteAccess = out.DirectSQLiteAccess || current.DirectSQLiteAccess
 		out.LegacyRunnerUsage = out.LegacyRunnerUsage || current.LegacyRunnerUsage
 		out.SearchUsed = out.SearchUsed || current.SearchUsed
+		out.SearchUnfilteredUsed = out.SearchUnfilteredUsed || current.SearchUnfilteredUsed
+		out.SearchPathFilterUsed = out.SearchPathFilterUsed || current.SearchPathFilterUsed
+		out.SearchMetadataFilterUsed = out.SearchMetadataFilterUsed || current.SearchMetadataFilterUsed
 		out.ListDocumentsUsed = out.ListDocumentsUsed || current.ListDocumentsUsed
 		out.GetDocumentUsed = out.GetDocumentUsed || current.GetDocumentUsed
 		out.RecordsLookupUsed = out.RecordsLookupUsed || current.RecordsLookupUsed
@@ -2186,15 +2483,25 @@ func buildProductionGateSummary(results []jobResult) *productionGateSummary {
 	noDirectSQLite := true
 	validationFinalAnswerOnly := true
 	validationFailures := []string{}
-	productionScenarioIDs := []string{}
-	for _, scenarioID := range scenarioIDs() {
+	missingValidationScenarios := []string{}
+	expectedScenarioIDs := scenarioIDs()
+	passedExpectedScenarios := 0
+	missingProductionScenarios := []string{}
+	for _, scenarioID := range expectedScenarioIDs {
 		production, ok := productionByScenario[scenarioID]
 		if !ok {
+			productionPassedAll = false
+			missingProductionScenarios = append(missingProductionScenarios, scenarioID)
+			if isFinalAnswerOnlyValidationScenario(scenarioID) {
+				validationFinalAnswerOnly = false
+				missingValidationScenarios = append(missingValidationScenarios, scenarioID)
+			}
 			continue
 		}
-		productionScenarioIDs = append(productionScenarioIDs, scenarioID)
 		if !production.Passed {
 			productionPassedAll = false
+		} else {
+			passedExpectedScenarios++
 		}
 		if production.Metrics.GeneratedFileInspection {
 			noGenerated = false
@@ -2218,13 +2525,13 @@ func buildProductionGateSummary(results []jobResult) *productionGateSummary {
 		}
 	}
 	criteria := []productionGateCriterion{
-		{Name: "production_passes_all_scenarios", Passed: productionPassedAll, Details: fmt.Sprintf("%d/%d production scenarios passed", countPassed(productionByScenario), len(productionScenarioIDs))},
+		{Name: "production_passes_all_scenarios", Passed: productionPassedAll, Details: productionScenariosDetails(passedExpectedScenarios, len(expectedScenarioIDs), missingProductionScenarios)},
 		{Name: "no_direct_generated_file_inspection", Passed: noGenerated, Details: "production must not inspect retired API files or generated server files"},
 		{Name: "no_module_cache_inspection", Passed: noModuleCache, Details: "production must not inspect the Go module cache"},
 		{Name: "no_broad_repo_search", Passed: noBroadSearch, Details: "production must not use broad repo search in routine OpenClerk knowledge tasks"},
 		{Name: "no_legacy_source_runner_usage", Passed: noLegacyRunnerUsage, Details: "production must not invoke source-built or legacy runner paths instead of installed openclerk"},
 		{Name: "no_direct_sqlite_access", Passed: noDirectSQLite, Details: "production must not query SQLite directly"},
-		{Name: "validation_scenarios_are_final_answer_only", Passed: validationFinalAnswerOnly, Details: validationFinalAnswerDetails(validationFailures)},
+		{Name: "validation_scenarios_are_final_answer_only", Passed: validationFinalAnswerOnly, Details: validationFinalAnswerDetails(validationFailures, missingValidationScenarios)},
 	}
 	passes := true
 	for _, criterion := range criteria {
@@ -2245,17 +2552,36 @@ func buildProductionGateSummary(results []jobResult) *productionGateSummary {
 	}
 }
 
-func validationFinalAnswerDetails(failures []string) string {
-	if len(failures) == 0 {
-		return "rule-covered validation scenarios used no tools, no command executions, and at most one assistant answer"
+func productionScenariosDetails(passed int, total int, missing []string) string {
+	details := fmt.Sprintf("%d/%d production scenarios passed", passed, total)
+	if len(missing) > 0 {
+		details += "; missing: " + strings.Join(missing, ", ")
 	}
-	return "not final-answer-only: " + strings.Join(failures, ", ")
+	return details
 }
 
-func countPassed(results map[string]jobResult) int {
+func validationFinalAnswerDetails(failures []string, missing []string) string {
+	if len(failures) == 0 && len(missing) == 0 {
+		return "rule-covered validation scenarios used no tools, no command executions, and at most one assistant answer"
+	}
+	parts := []string{}
+	if len(failures) > 0 {
+		parts = append(parts, "not final-answer-only: "+strings.Join(failures, ", "))
+	}
+	if len(missing) > 0 {
+		if len(missing) == countFinalAnswerOnlyValidationScenarios() {
+			parts = append(parts, "not evaluated; final-answer-only validation scenarios were not selected in this partial run")
+		} else {
+			parts = append(parts, "missing final-answer-only validation scenarios: "+strings.Join(missing, ", "))
+		}
+	}
+	return strings.Join(parts, "; ")
+}
+
+func countFinalAnswerOnlyValidationScenarios() int {
 	count := 0
-	for _, result := range results {
-		if result.Passed {
+	for _, scenarioID := range scenarioIDs() {
+		if isFinalAnswerOnlyValidationScenario(scenarioID) {
 			count++
 		}
 	}
@@ -2652,6 +2978,14 @@ func allScenarios() []scenario {
 			ID:     "answer-filing",
 			Title:  "File durable answer into source-linked synthesis",
 			Prompt: "Use the configured local OpenClerk data path. Search for the answer filing source, answer from it, and file the reusable answer into notes/synthesis/filed-runner-answer.md titled Filed OpenClerk runner Answer. The body must include the exact source line Source: notes/sources/answer-filing-runner.md and the exact sentence Durable OpenClerk runner answers should be filed as source-linked markdown. Mention notes/synthesis/filed-runner-answer.md in the final answer.",
+		},
+		{
+			ID:    ragRetrievalScenarioID,
+			Title: "RAG retrieval-only baseline",
+			Turns: []scenarioTurn{
+				{Prompt: "Use the configured local OpenClerk data path. Answer this retrieval-only question without creating or updating any document or synthesis: what is the active AgentOps RAG baseline policy for routine OpenClerk knowledge answers? Use only openclerk retrieval search requests. Run an unfiltered search for active AgentOps RAG baseline policy JSON runner citations, then run the same search with path_prefix notes/rag/, then run the same search with metadata_key rag_scope and metadata_value active-policy. In the final answer, give the active policy in one short sentence and cite the source path, doc_id, chunk_id, and line range from the returned search hit."},
+				{Prompt: "Repeat the same retrieval-only question. Do not create, update, append, replace, or file any notes/synthesis/ document. Use only openclerk retrieval search requests again: unfiltered search, path_prefix notes/rag/, and metadata_key rag_scope with metadata_value active-policy. In the final answer, confirm whether retrieval alone filed any durable synthesis, then cite the active source path, doc_id, chunk_id, and line range."},
+			},
 		},
 		{
 			ID:     "stale-synthesis-update",
