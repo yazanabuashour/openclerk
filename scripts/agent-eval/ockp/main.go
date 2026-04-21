@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -44,7 +45,11 @@ const (
 	ragArchivedPolicyTitle   = "Archived AgentOps RAG Policy"
 )
 
-var prewarmCompilePackages = []string{"./cmd/openclerk", "./internal/runner"}
+var (
+	prewarmCompilePackages = []string{"./cmd/openclerk", "./internal/runner"}
+	unixHomePathPattern    = regexp.MustCompile(`/(Users|home)/[^/\s"'\\]+`)
+	windowsHomePathPattern = regexp.MustCompile(`(?i)[A-Z]:\\Users\\[^\\\s"']+`)
+)
 
 type runConfig struct {
 	Parallel   int
@@ -2349,9 +2354,14 @@ func sanitizeMetricEvidence(value string) string {
 		replacements = append(replacements, tmp, "<tmp>")
 	}
 	if len(replacements) == 0 {
-		return value
+		return sanitizeKnownHomePrefixes(value)
 	}
-	return strings.NewReplacer(replacements...).Replace(value)
+	return sanitizeKnownHomePrefixes(strings.NewReplacer(replacements...).Replace(value))
+}
+
+func sanitizeKnownHomePrefixes(value string) string {
+	value = unixHomePathPattern.ReplaceAllString(value, "<home>")
+	return windowsHomePathPattern.ReplaceAllString(value, "<home>")
 }
 
 func isFileInspectionCommand(command string) bool {

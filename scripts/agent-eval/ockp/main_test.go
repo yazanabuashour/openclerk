@@ -378,6 +378,8 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		`{"type":"tool_call","item":{"type":"tool_call","command":"openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"rg --files"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"rg --files /Users/y/.codex"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"rg --files /home/runner/.codex"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"rg --files C:\\Users\\runner\\.codex"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"search\",\"search\":{\"text\":\"runner\"}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"search\",\"search\":{\"text\":\"runner\",\"path_prefix\":\"notes/rag/\"}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"search\",\"search\":{\"text\":\"runner\",\"metadata_key\":\"rag_scope\",\"metadata_value\":\"active-policy\"}}' | openclerk retrieval"}}`,
@@ -399,15 +401,18 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	if parsed.sessionID != "session-123" || parsed.finalMessage != "done" {
 		t.Fatalf("parsed = %+v", parsed)
 	}
-	if parsed.metrics.ToolCalls != 12 || parsed.metrics.CommandExecutions != 12 || parsed.metrics.AssistantCalls != 1 {
+	if parsed.metrics.ToolCalls != 14 || parsed.metrics.CommandExecutions != 14 || parsed.metrics.AssistantCalls != 1 {
 		t.Fatalf("metrics = %+v", parsed.metrics)
 	}
 	if !parsed.metrics.BroadRepoSearch {
 		t.Fatalf("expected broad repo search metric")
 	}
+	forbiddenEvidencePaths := []string{"/Users/y", "/home/runner", `C:\Users\runner`}
 	for _, evidence := range parsed.metrics.BroadRepoSearchEvidence {
-		if strings.Contains(evidence, "/Users/y") {
-			t.Fatalf("evidence was not sanitized: %v", parsed.metrics.BroadRepoSearchEvidence)
+		for _, forbidden := range forbiddenEvidencePaths {
+			if strings.Contains(evidence, forbidden) {
+				t.Fatalf("evidence was not sanitized: %v", parsed.metrics.BroadRepoSearchEvidence)
+			}
 		}
 	}
 	if parsed.metrics.NonCachedInputTokens == nil || *parsed.metrics.NonCachedInputTokens != 70 || parsed.metrics.OutputTokens == nil || *parsed.metrics.OutputTokens != 12 {
