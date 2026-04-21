@@ -65,7 +65,7 @@ jobs:
           subject-path: dist/*
 
       - name: Attest SBOM
-        uses: actions/attest-sbom@51e74621a501c89df81fc1391c5a8f4cfc9fab2f
+        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34
         with:
           subject-path: dist/openclerk_${{ steps.meta.outputs.asset_version }}_source.tar.gz
           sbom-path: dist/openclerk_${{ steps.meta.outputs.asset_version }}_sbom.json
