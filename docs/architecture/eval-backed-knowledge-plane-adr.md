@@ -96,9 +96,9 @@ OpenClerk product surface.
 - Routine agent tasks must use the OpenClerk AgentOps surface.
 - New public runner actions are added only when repeated AgentOps workflows show
   that existing document and retrieval actions force brittle behavior.
-- `oc-0em` proved the current AgentOps document/retrieval runner actions are
-  sufficient for the source-linked synthesis prototype; no dedicated synthesis
-  action or new public API is part of this slice.
+- `oc-rsj` verified the current AgentOps document/retrieval runner actions are
+  sufficient for source-linked synthesis lifecycle maintenance; no dedicated
+  synthesis action or new public API is part of this slice.
 
 ## Regression Gates
 
