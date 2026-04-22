@@ -159,6 +159,8 @@ references using `<run-root>` placeholders.
 
 The current architecture direction is recorded in
 [`eval-backed-knowledge-plane-adr.md`](eval-backed-knowledge-plane-adr.md).
+The normative v1 knowledge configuration contract is recorded in
+[`knowledge-configuration-v1-adr.md`](knowledge-configuration-v1-adr.md).
 The final POC recommendation for the AgentOps knowledge-plane path is recorded
 in
 [`agentops-knowledge-plane-poc-decision.md`](agentops-knowledge-plane-poc-decision.md).
