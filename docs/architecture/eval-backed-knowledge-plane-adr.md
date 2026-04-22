@@ -4,6 +4,9 @@
 
 Accepted as the current architecture direction.
 
+The final POC recommendation for this direction is recorded in
+[`agentops-knowledge-plane-poc-decision.md`](agentops-knowledge-plane-poc-decision.md).
+
 ## Context
 
 OpenClerk is being shaped as a local-first, agent-facing knowledge plane. The
