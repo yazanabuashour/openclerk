@@ -1,0 +1,471 @@
+{
+  "metadata": {
+    "generated_at": "2026-04-22T19:08:40.944727Z",
+    "model": "gpt-5.4-mini",
+    "reasoning_effort": "medium",
+    "harness": "codex exec --json --full-auto from throwaway run directories; single-turn scenarios use --ephemeral and multi-turn scenarios resume one persisted eval session",
+    "configured_parallelism": 4,
+    "cache_mode": "shared",
+    "cache_prewarm_seconds": 19.62,
+    "harness_elapsed_seconds": 55.45,
+    "effective_parallel_speedup": 1.65,
+    "parallel_efficiency": 0.41,
+    "phase_totals": {
+      "copy_repo_seconds": 0.2,
+      "install_variant_seconds": 9.83,
+      "seed_data_seconds": 0.13,
+      "agent_run_seconds": 91.28,
+      "verify_seconds": 0.17,
+      "total_seconds": 101.62
+    },
+    "run_root_artifact_reference": "\u003crun-root\u003e",
+    "raw_log_placeholder": "\u003crun-root\u003e/\u003cvariant\u003e/\u003cscenario\u003e/turn-N/events.jsonl",
+    "variants": [
+      "production"
+    ],
+    "scenarios": [
+      "decision-record-vs-docs",
+      "decision-supersession-freshness",
+      "decision-real-adr-migration"
+    ],
+    "raw_logs_committed": false,
+    "raw_logs_note": "Raw Codex event logs remain under \u003crun-root\u003e and are not committed."
+  },
+  "results": [
+    {
+      "variant": "production",
+      "scenario": "decision-record-vs-docs",
+      "scenario_title": "Compare decision records against plain docs",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 26.86,
+      "phase_timings": {
+        "copy_repo_seconds": 0.06,
+        "install_variant_seconds": 3.25,
+        "seed_data_seconds": 0.04,
+        "agent_run_seconds": 26.86,
+        "verify_seconds": 0.04,
+        "total_seconds": 30.25
+      },
+      "metrics": {
+        "assistant_calls": 3,
+        "tool_calls": 6,
+        "command_executions": 6,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": true,
+        "search_unfiltered_used": true,
+        "search_path_filter_used": false,
+        "search_metadata_filter_used": false,
+        "list_documents_used": false,
+        "get_document_used": false,
+        "inspect_layout_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "decisions_lookup_used": true,
+        "decision_record_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": false,
+        "usage_exposed": true,
+        "input_tokens": 101988,
+        "cached_input_tokens": 74240,
+        "non_cached_input_tokens": 27748,
+        "output_tokens": 2337,
+        "event_type_counts": {
+          "item.completed": 6,
+          "item.started": 3,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/reference/runner-decision-narrative.md",
+          "docs/architecture/runner-current-decision.md",
+          "records/decisions/runner-old-decision.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 26.86,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 3,
+            "tool_calls": 6,
+            "command_executions": 6,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": true,
+            "search_unfiltered_used": true,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "list_documents_used": false,
+            "get_document_used": false,
+            "inspect_layout_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "decisions_lookup_used": true,
+            "decision_record_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 101988,
+            "cached_input_tokens": 74240,
+            "non_cached_input_tokens": 27748,
+            "output_tokens": 2337,
+            "event_type_counts": {
+              "item.completed": 6,
+              "item.started": 3,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/reference/runner-decision-narrative.md",
+              "docs/architecture/runner-current-decision.md",
+              "records/decisions/runner-old-decision.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/decision-record-vs-docs/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Search plain docs for OpenClerk runner decision evidence, then run decisions_lookup for the accepted AgentOps JSON runner decision with status accepted, scope agentops, and owner platform. Compare plain docs/search against decisions_lookup for this decision-centric question: what is the current accepted runner decision? Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct SQLite, openclerk --help, or source-built command paths. The final answer must mention plain docs or search, decisions lookup or decision records, status/scope filtering, JSON runner, and citation details from the decision result.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/decision-record-vs-docs/turn-1/events.jsonl",
+      "started_at": "2026-04-22T19:08:05.115129Z",
+      "completed_at": "2026-04-22T19:08:35.364232Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "decision-supersession-freshness",
+      "scenario_title": "Inspect decision supersession and freshness",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 31.97,
+      "phase_timings": {
+        "copy_repo_seconds": 0.07,
+        "install_variant_seconds": 3.36,
+        "seed_data_seconds": 0.06,
+        "agent_run_seconds": 31.97,
+        "verify_seconds": 0.08,
+        "total_seconds": 35.54
+      },
+      "metrics": {
+        "assistant_calls": 5,
+        "tool_calls": 14,
+        "command_executions": 14,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": false,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": false,
+        "search_metadata_filter_used": false,
+        "list_documents_used": false,
+        "get_document_used": false,
+        "inspect_layout_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "decisions_lookup_used": false,
+        "decision_record_used": true,
+        "provenance_events_used": true,
+        "provenance_event_ref_ids": [
+          "adr-runner-current",
+          "adr-runner-current"
+        ],
+        "projection_states_used": true,
+        "usage_exposed": true,
+        "input_tokens": 182345,
+        "cached_input_tokens": 169088,
+        "non_cached_input_tokens": 13257,
+        "output_tokens": 2692,
+        "event_type_counts": {
+          "item.completed": 12,
+          "item.started": 7,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "docs/architecture/runner-old-decision.md",
+          "records/decisions/runner-current-decision.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 31.97,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 5,
+            "tool_calls": 14,
+            "command_executions": 14,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": false,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "list_documents_used": false,
+            "get_document_used": false,
+            "inspect_layout_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "decisions_lookup_used": false,
+            "decision_record_used": true,
+            "provenance_events_used": true,
+            "provenance_event_ref_ids": [
+              "adr-runner-current",
+              "adr-runner-current"
+            ],
+            "projection_states_used": true,
+            "usage_exposed": true,
+            "input_tokens": 182345,
+            "cached_input_tokens": 169088,
+            "non_cached_input_tokens": 13257,
+            "output_tokens": 2692,
+            "event_type_counts": {
+              "item.completed": 12,
+              "item.started": 7,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "docs/architecture/runner-old-decision.md",
+              "records/decisions/runner-current-decision.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/decision-supersession-freshness/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Run decision_record for adr-runner-old and run decision_record for adr-runner-current; do not substitute decisions_lookup for those two detail requests. Then inspect projection_states for projection decisions for both decision ids, and inspect provenance_events for the current decision projection. Use only OpenClerk runner retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct SQLite, openclerk --help, or source-built command paths. In the final answer, report that adr-runner-old is superseded/stale, adr-runner-current supersedes it and is fresh, and mention provenance/projection evidence plus citation paths.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/decision-supersession-freshness/turn-1/events.jsonl",
+      "started_at": "2026-04-22T19:08:05.115146Z",
+      "completed_at": "2026-04-22T19:08:40.653397Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "decision-real-adr-migration",
+      "scenario_title": "Inspect migrated ADR decision records",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 32.45,
+      "phase_timings": {
+        "copy_repo_seconds": 0.07,
+        "install_variant_seconds": 3.22,
+        "seed_data_seconds": 0.03,
+        "agent_run_seconds": 32.45,
+        "verify_seconds": 0.05,
+        "total_seconds": 35.83
+      },
+      "metrics": {
+        "assistant_calls": 5,
+        "tool_calls": 18,
+        "command_executions": 18,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": true,
+        "search_unfiltered_used": true,
+        "search_path_filter_used": false,
+        "search_metadata_filter_used": false,
+        "list_documents_used": false,
+        "get_document_used": false,
+        "inspect_layout_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "decisions_lookup_used": true,
+        "decision_record_used": true,
+        "provenance_events_used": true,
+        "provenance_event_ref_ids": [
+          "adr-knowledge-configuration-v1",
+          "adr-knowledge-configuration-v1"
+        ],
+        "projection_states_used": true,
+        "usage_exposed": true,
+        "input_tokens": 213448,
+        "cached_input_tokens": 177664,
+        "non_cached_input_tokens": 35784,
+        "output_tokens": 2945,
+        "event_type_counts": {
+          "item.completed": 14,
+          "item.started": 9,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "docs/architecture/eval-backed-knowledge-plane-adr.md",
+          "docs/architecture/knowledge-configuration-v1-adr.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 32.45,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 5,
+            "tool_calls": 18,
+            "command_executions": 18,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": true,
+            "search_unfiltered_used": true,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "list_documents_used": false,
+            "get_document_used": false,
+            "inspect_layout_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "decisions_lookup_used": true,
+            "decision_record_used": true,
+            "provenance_events_used": true,
+            "provenance_event_ref_ids": [
+              "adr-knowledge-configuration-v1",
+              "adr-knowledge-configuration-v1"
+            ],
+            "projection_states_used": true,
+            "usage_exposed": true,
+            "input_tokens": 213448,
+            "cached_input_tokens": 177664,
+            "non_cached_input_tokens": 35784,
+            "output_tokens": 2945,
+            "event_type_counts": {
+              "item.completed": 14,
+              "item.started": 9,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "docs/architecture/eval-backed-knowledge-plane-adr.md",
+              "docs/architecture/knowledge-configuration-v1-adr.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/decision-real-adr-migration/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Use decisions_lookup for the accepted platform knowledge-configuration decision, use decision_record for adr-agentops-only-knowledge-plane, inspect projection_states for projection decisions for both ADR decision ids, and inspect provenance_events for the knowledge configuration decision projection. Use only OpenClerk runner retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct SQLite, openclerk --help, or source-built command paths. In the final answer, explain that canonical markdown ADRs remain authoritative while decision records are derived, report fresh projection/provenance evidence, and include citation paths docs/architecture/eval-backed-knowledge-plane-adr.md and docs/architecture/knowledge-configuration-v1-adr.md.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/decision-real-adr-migration/turn-1/events.jsonl",
+      "started_at": "2026-04-22T19:08:05.11513Z",
+      "completed_at": "2026-04-22T19:08:40.944495Z"
+    }
+  ],
+  "production_gate": {
+    "variant": "production",
+    "passes_gate": false,
+    "recommendation": "fix_production_agentops_before_release",
+    "criteria": [
+      {
+        "name": "production_passes_all_scenarios",
+        "passed": false,
+        "details": "3/28 production scenarios passed; missing: create-note, search-synthesis, answer-filing, rag-retrieval-baseline, canonical-docs-navigation-baseline, configured-layout-explain, invalid-layout-visible, stale-synthesis-update, synthesis-freshness-repair, source-sensitive-audit-repair, source-sensitive-conflict-explain, synthesis-candidate-pressure, synthesis-source-set-pressure, append-replace, records-provenance, promoted-record-vs-docs, missing-document-path-reject, negative-limit-reject, unsupported-lower-level-reject, unsupported-transport-reject, duplicate-path-reject, mixed-synthesis-records, mt-source-then-synthesis, mt-synthesis-drift-pressure, mt-incomplete-then-create"
+      },
+      {
+        "name": "no_direct_generated_file_inspection",
+        "passed": true,
+        "details": "production must not inspect retired API files or generated server files"
+      },
+      {
+        "name": "no_module_cache_inspection",
+        "passed": true,
+        "details": "production must not inspect the Go module cache"
+      },
+      {
+        "name": "no_broad_repo_search",
+        "passed": true,
+        "details": "production must not use broad repo search in routine OpenClerk knowledge tasks"
+      },
+      {
+        "name": "no_legacy_source_runner_usage",
+        "passed": true,
+        "details": "production must not invoke source-built or legacy runner paths instead of installed openclerk"
+      },
+      {
+        "name": "no_direct_sqlite_access",
+        "passed": true,
+        "details": "production must not query SQLite directly"
+      },
+      {
+        "name": "validation_scenarios_are_final_answer_only",
+        "passed": false,
+        "details": "not evaluated; final-answer-only validation scenarios were not selected in this partial run"
+      }
+    ]
+  }
+}

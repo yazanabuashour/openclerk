@@ -62,6 +62,7 @@ const (
 	mtSynthesisDriftPressureScenarioID   = "mt-synthesis-drift-pressure"
 	decisionRecordVsDocsScenarioID       = "decision-record-vs-docs"
 	decisionSupersessionScenarioID       = "decision-supersession-freshness"
+	decisionRealADRMigrationScenarioID   = "decision-real-adr-migration"
 	sourceAuditRepairScenarioID          = "source-sensitive-audit-repair"
 	sourceAuditConflictScenarioID        = "source-sensitive-conflict-explain"
 
@@ -219,6 +220,7 @@ type metrics struct {
 	RecordsLookupUsed        bool           `json:"records_lookup_used"`
 	DecisionsLookupUsed      bool           `json:"decisions_lookup_used"`
 	DecisionRecordUsed       bool           `json:"decision_record_used"`
+	DecisionRecordIDs        []string       `json:"decision_record_ids,omitempty"`
 	ProvenanceEventsUsed     bool           `json:"provenance_events_used"`
 	ProvenanceEventRefIDs    []string       `json:"provenance_event_ref_ids,omitempty"`
 	ProjectionStatesUsed     bool           `json:"projection_states_used"`
@@ -816,6 +818,10 @@ func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
 		if err := seedDecisionSupersession(ctx, cfg); err != nil {
 			return err
 		}
+	case decisionRealADRMigrationScenarioID:
+		if err := seedDecisionRealADRMigration(ctx, cfg); err != nil {
+			return err
+		}
 	case sourceAuditRepairScenarioID:
 		if err := seedSourceSensitiveAuditRepair(ctx, cfg); err != nil {
 			return err
@@ -1343,6 +1349,46 @@ Accepted decision: routine OpenClerk AgentOps tasks use the installed JSON runne
 	return createSeedDocument(ctx, cfg, "notes/sources/decision-current.md", "Current decision source", "# Current decision source\n\n## Summary\nCurrent source documents the JSON runner path.\n")
 }
 
+func seedDecisionRealADRMigration(ctx context.Context, cfg runclient.Config) error {
+	agentOpsBody := strings.TrimSpace(`---
+decision_id: adr-agentops-only-knowledge-plane
+decision_title: AgentOps-Only Knowledge Plane Direction
+decision_status: accepted
+decision_scope: knowledge-plane
+decision_owner: platform
+source_refs: notes/sources/agentops-direction.md
+---
+# ADR: AgentOps-Only Knowledge Plane Direction
+
+## Status
+Accepted as the current architecture direction.
+
+## Summary
+OpenClerk uses AgentOps as the only production agent interface.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, "docs/architecture/eval-backed-knowledge-plane-adr.md", "AgentOps-Only Knowledge Plane Direction", agentOpsBody); err != nil {
+		return err
+	}
+	configBody := strings.TrimSpace(`---
+decision_id: adr-knowledge-configuration-v1
+decision_title: Knowledge Configuration v1
+decision_status: accepted
+decision_scope: knowledge-configuration
+decision_owner: platform
+supersedes: adr-agentops-only-knowledge-plane
+source_refs: notes/sources/knowledge-configuration.md
+---
+# ADR: Knowledge Configuration v1
+
+## Status
+Accepted as the v1 production contract for OpenClerk-compatible knowledge vaults.
+
+## Summary
+OpenClerk knowledge configuration v1 is runner-visible and convention-first.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, "docs/architecture/knowledge-configuration-v1-adr.md", "Knowledge Configuration v1", configBody)
+}
+
 func seedSourceSensitiveAuditRepair(ctx context.Context, cfg runclient.Config) error {
 	oldBody := strings.TrimSpace(`---
 status: superseded
@@ -1587,6 +1633,8 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyDecisionRecordVsDocs(ctx, paths, finalMessage, turnMetrics)
 	case decisionSupersessionScenarioID:
 		return verifyDecisionSupersessionFreshness(ctx, paths, finalMessage, turnMetrics)
+	case decisionRealADRMigrationScenarioID:
+		return verifyDecisionRealADRMigration(ctx, paths, finalMessage, turnMetrics)
 	case sourceAuditRepairScenarioID:
 		return verifySourceSensitiveAuditRepair(ctx, paths, finalMessage, turnMetrics)
 	case sourceAuditConflictScenarioID:
@@ -2920,7 +2968,8 @@ func verifyDecisionSupersessionFreshness(ctx context.Context, paths evalPaths, f
 		messageContainsAny(finalMessage, []string{"fresh"}) &&
 		messageContainsAny(finalMessage, []string{"provenance", "projection"}) &&
 		hasCitationPaths
-	activityPass := turnMetrics.DecisionRecordUsed && turnMetrics.ProjectionStatesUsed && turnMetrics.ProvenanceEventsUsed
+	inspectedDecisionRecords := decisionRecordIDsInclude(turnMetrics.DecisionRecordIDs, "adr-runner-old", "adr-runner-current")
+	activityPass := inspectedDecisionRecords && turnMetrics.ProjectionStatesUsed && turnMetrics.ProvenanceEventsUsed
 	failures := []string{}
 	if !hasOldDecision {
 		failures = append(failures, "old superseded decision detail missing")
@@ -2937,8 +2986,8 @@ func verifyDecisionSupersessionFreshness(ctx context.Context, paths evalPaths, f
 	if !hasProvenance {
 		failures = append(failures, "decision projection provenance missing")
 	}
-	if !turnMetrics.DecisionRecordUsed {
-		failures = append(failures, "agent did not use decision_record")
+	if !inspectedDecisionRecords {
+		failures = append(failures, "agent did not use decision_record for adr-runner-old and adr-runner-current")
 	}
 	if !turnMetrics.ProjectionStatesUsed {
 		failures = append(failures, "agent did not inspect projection_states")
@@ -2958,6 +3007,151 @@ func verifyDecisionSupersessionFreshness(ctx context.Context, paths evalPaths, f
 		AssistantPass: assistantPass && activityPass,
 		Details:       missingDetails(failures),
 		Documents:     []string{"docs/architecture/runner-old-decision.md", "records/decisions/runner-current-decision.md"},
+	}, nil
+}
+
+func verifyDecisionRealADRMigration(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	lookup, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionDecisionsLookup,
+		Decisions: runner.DecisionLookupOptions{
+			Text:   "knowledge-configuration",
+			Status: "accepted",
+			Owner:  "platform",
+			Limit:  5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	agentOpsDecision, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action:     runner.RetrievalTaskActionDecisionRecord,
+		DecisionID: "adr-agentops-only-knowledge-plane",
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	configProjection, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProjectionStates,
+		Projection: runner.ProjectionStateOptions{
+			Projection: "decisions",
+			RefKind:    "decision",
+			RefID:      "adr-knowledge-configuration-v1",
+			Limit:      5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	agentOpsProjection, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProjectionStates,
+		Projection: runner.ProjectionStateOptions{
+			Projection: "decisions",
+			RefKind:    "decision",
+			RefID:      "adr-agentops-only-knowledge-plane",
+			Limit:      5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	provenance, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{
+			RefKind: "projection",
+			RefID:   "decisions:adr-knowledge-configuration-v1",
+			Limit:   10,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+
+	hasConfigDecision := false
+	if lookup.Decisions != nil {
+		for _, decision := range lookup.Decisions.Decisions {
+			if decision.DecisionID == "adr-knowledge-configuration-v1" &&
+				decision.Status == "accepted" &&
+				decision.Scope == "knowledge-configuration" &&
+				decision.Owner == "platform" &&
+				len(decision.Supersedes) == 1 &&
+				decision.Supersedes[0] == "adr-agentops-only-knowledge-plane" &&
+				len(decision.Citations) > 0 &&
+				decision.Citations[0].Path == "docs/architecture/knowledge-configuration-v1-adr.md" {
+				hasConfigDecision = true
+				break
+			}
+		}
+	}
+	hasAgentOpsDecision := agentOpsDecision.Decision != nil &&
+		agentOpsDecision.Decision.DecisionID == "adr-agentops-only-knowledge-plane" &&
+		agentOpsDecision.Decision.Status == "accepted" &&
+		agentOpsDecision.Decision.Scope == "knowledge-plane" &&
+		len(agentOpsDecision.Decision.SourceRefs) == 1 &&
+		agentOpsDecision.Decision.SourceRefs[0] == "notes/sources/agentops-direction.md" &&
+		len(agentOpsDecision.Decision.Citations) > 0 &&
+		agentOpsDecision.Decision.Citations[0].Path == "docs/architecture/eval-backed-knowledge-plane-adr.md"
+	hasConfigProjection := configProjection.Projections != nil &&
+		len(configProjection.Projections.Projections) == 1 &&
+		configProjection.Projections.Projections[0].Freshness == "fresh" &&
+		configProjection.Projections.Projections[0].Details["path"] == "docs/architecture/knowledge-configuration-v1-adr.md"
+	hasAgentOpsProjection := agentOpsProjection.Projections != nil &&
+		len(agentOpsProjection.Projections.Projections) == 1 &&
+		agentOpsProjection.Projections.Projections[0].Freshness == "fresh" &&
+		agentOpsProjection.Projections.Projections[0].Details["path"] == "docs/architecture/eval-backed-knowledge-plane-adr.md"
+	hasProvenance := provenance.Provenance != nil && eventTypesInclude(provenance.Provenance.Events, "projection_refreshed")
+	hasCitationPaths := messageContainsAll(finalMessage, []string{
+		"docs/architecture/eval-backed-knowledge-plane-adr.md",
+		"docs/architecture/knowledge-configuration-v1-adr.md",
+	})
+	assistantPass := messageContainsAny(finalMessage, []string{"canonical markdown", "canonical adr", "authoritative"}) &&
+		messageContainsAny(finalMessage, []string{"decisions_lookup", "decisions lookup", "decision lookup", "decision records"}) &&
+		messageContainsAny(finalMessage, []string{"decision_record", "decision record", "adr record", "decision records"}) &&
+		messageContainsAny(finalMessage, []string{"fresh"}) &&
+		messageContainsAny(finalMessage, []string{"provenance", "projection"}) &&
+		hasCitationPaths
+	inspectedAgentOpsDecision := decisionRecordIDsInclude(turnMetrics.DecisionRecordIDs, "adr-agentops-only-knowledge-plane")
+	activityPass := turnMetrics.DecisionsLookupUsed && inspectedAgentOpsDecision && turnMetrics.ProjectionStatesUsed && turnMetrics.ProvenanceEventsUsed
+	failures := []string{}
+	if !hasConfigDecision {
+		failures = append(failures, "knowledge configuration ADR decision lookup missing")
+	}
+	if !hasAgentOpsDecision {
+		failures = append(failures, "agentops ADR decision detail missing")
+	}
+	if !hasConfigProjection {
+		failures = append(failures, "knowledge configuration ADR fresh projection missing")
+	}
+	if !hasAgentOpsProjection {
+		failures = append(failures, "agentops ADR fresh projection missing")
+	}
+	if !hasProvenance {
+		failures = append(failures, "decision projection provenance missing")
+	}
+	if !turnMetrics.DecisionsLookupUsed {
+		failures = append(failures, "agent did not use decisions_lookup")
+	}
+	if !inspectedAgentOpsDecision {
+		failures = append(failures, "agent did not use decision_record for adr-agentops-only-knowledge-plane")
+	}
+	if !turnMetrics.ProjectionStatesUsed {
+		failures = append(failures, "agent did not inspect projection_states")
+	}
+	if !turnMetrics.ProvenanceEventsUsed {
+		failures = append(failures, "agent did not inspect provenance_events")
+	}
+	if !assistantPass {
+		failures = append(failures, "final answer did not report ADR decision migration evidence")
+	}
+	if !hasCitationPaths {
+		failures = append(failures, "final answer did not include ADR citation paths")
+	}
+	return verificationResult{
+		Passed:        hasConfigDecision && hasAgentOpsDecision && hasConfigProjection && hasAgentOpsProjection && hasProvenance && assistantPass && activityPass,
+		DatabasePass:  hasConfigDecision && hasAgentOpsDecision && hasConfigProjection && hasAgentOpsProjection && hasProvenance,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{"docs/architecture/eval-backed-knowledge-plane-adr.md", "docs/architecture/knowledge-configuration-v1-adr.md"},
 	}, nil
 }
 
@@ -3625,6 +3819,14 @@ func eventTypesInclude(events []runner.ProvenanceEvent, eventType string) bool {
 }
 
 func provenanceEventRefIDsInclude(actual []string, expected ...string) bool {
+	return stringValuesInclude(actual, expected...)
+}
+
+func decisionRecordIDsInclude(actual []string, expected ...string) bool {
+	return stringValuesInclude(actual, expected...)
+}
+
+func stringValuesInclude(actual []string, expected ...string) bool {
 	seen := map[string]bool{}
 	for _, value := range actual {
 		normalized := strings.ToLower(strings.TrimSpace(value))
@@ -3982,6 +4184,7 @@ func classifyCommand(command string, m *metrics) {
 	}
 	if commandContainsAction(actionText, "decision_record") {
 		m.DecisionRecordUsed = true
+		m.DecisionRecordIDs = append(m.DecisionRecordIDs, actionFieldValues(actionText, "decision_record", "decision_id")...)
 	}
 	if commandContainsAction(actionText, "provenance_events") {
 		m.ProvenanceEventsUsed = true
@@ -3998,29 +4201,33 @@ func commandContainsAction(actionText string, action string) bool {
 }
 
 func actionRefIDs(actionText string, action string) []string {
+	return actionFieldValues(actionText, action, "ref_id")
+}
+
+func actionFieldValues(actionText string, action string, field string) []string {
 	compacted := strings.Join(strings.Fields(actionText), "")
 	marker := `"action":"` + action + `"`
-	refs := []string{}
+	values := []string{}
 	for _, part := range strings.Split(compacted, marker)[1:] {
 		if next := strings.Index(part, `"action":"`); next >= 0 {
 			part = part[:next]
 		}
-		const refMarker = `"ref_id":"`
-		refStart := strings.Index(part, refMarker)
-		if refStart < 0 {
+		fieldMarker := `"` + field + `":"`
+		valueStart := strings.Index(part, fieldMarker)
+		if valueStart < 0 {
 			continue
 		}
-		refStart += len(refMarker)
-		refEnd := strings.Index(part[refStart:], `"`)
-		if refEnd < 0 {
+		valueStart += len(fieldMarker)
+		valueEnd := strings.Index(part[valueStart:], `"`)
+		if valueEnd < 0 {
 			continue
 		}
-		ref := strings.TrimSpace(part[refStart : refStart+refEnd])
-		if ref != "" {
-			refs = append(refs, ref)
+		value := strings.TrimSpace(part[valueStart : valueStart+valueEnd])
+		if value != "" {
+			values = append(values, value)
 		}
 	}
-	return refs
+	return values
 }
 
 func classifySearchCommand(actionText string, m *metrics) {
@@ -4118,6 +4325,7 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.RecordsLookupUsed = out.RecordsLookupUsed || current.RecordsLookupUsed
 		out.DecisionsLookupUsed = out.DecisionsLookupUsed || current.DecisionsLookupUsed
 		out.DecisionRecordUsed = out.DecisionRecordUsed || current.DecisionRecordUsed
+		out.DecisionRecordIDs = append(out.DecisionRecordIDs, current.DecisionRecordIDs...)
 		out.ProvenanceEventsUsed = out.ProvenanceEventsUsed || current.ProvenanceEventsUsed
 		out.ProvenanceEventRefIDs = append(out.ProvenanceEventRefIDs, current.ProvenanceEventRefIDs...)
 		out.ProjectionStatesUsed = out.ProjectionStatesUsed || current.ProjectionStatesUsed
@@ -4788,7 +4996,12 @@ func allScenarios() []scenario {
 		{
 			ID:     decisionSupersessionScenarioID,
 			Title:  "Inspect decision supersession and freshness",
-			Prompt: "Use the configured local OpenClerk data path. Use decision_record for adr-runner-old and adr-runner-current, inspect projection_states for projection decisions for both decision ids, and inspect provenance_events for the current decision projection. Use only OpenClerk runner retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct SQLite, openclerk --help, or source-built command paths. In the final answer, report that adr-runner-old is superseded/stale, adr-runner-current supersedes it and is fresh, and mention provenance/projection evidence plus citation paths.",
+			Prompt: "Use the configured local OpenClerk data path. Run decision_record for adr-runner-old and run decision_record for adr-runner-current; do not substitute decisions_lookup for those two detail requests. Then inspect projection_states for projection decisions for both decision ids, and inspect provenance_events for the current decision projection. Use only OpenClerk runner retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct SQLite, openclerk --help, or source-built command paths. In the final answer, report that adr-runner-old is superseded/stale, adr-runner-current supersedes it and is fresh, and mention provenance/projection evidence plus citation paths.",
+		},
+		{
+			ID:     decisionRealADRMigrationScenarioID,
+			Title:  "Inspect migrated ADR decision records",
+			Prompt: "Use the configured local OpenClerk data path. Use decisions_lookup for the accepted platform knowledge-configuration decision, use decision_record for adr-agentops-only-knowledge-plane, inspect projection_states for projection decisions for both ADR decision ids, and inspect provenance_events for the knowledge configuration decision projection. Use only OpenClerk runner retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct SQLite, openclerk --help, or source-built command paths. In the final answer, explain that canonical markdown ADRs remain authoritative while decision records are derived, report fresh projection/provenance evidence, and include citation paths docs/architecture/eval-backed-knowledge-plane-adr.md and docs/architecture/knowledge-configuration-v1-adr.md.",
 		},
 		{
 			ID:     "missing-document-path-reject",

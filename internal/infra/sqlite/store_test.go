@@ -394,6 +394,180 @@ Accepted decision uses the JSON runner.
 	}
 }
 
+func TestDecisionProjectionCoversADRMarkdownAndClassificationSearch(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+
+	if _, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+		Path:  "docs/architecture/eval-backed-knowledge-plane-adr.md",
+		Title: "AgentOps-Only Knowledge Plane Direction",
+		Body: strings.TrimSpace(`---
+decision_id: adr-agentops-only-knowledge-plane
+decision_title: AgentOps-Only Knowledge Plane Direction
+decision_status: accepted
+decision_scope: knowledge-plane
+decision_owner: platform
+source_refs: notes/sources/agentops-direction.md
+---
+# ADR: AgentOps-Only Knowledge Plane Direction
+
+## Status
+Accepted as the current architecture direction.
+
+## Summary
+OpenClerk uses AgentOps as the only production agent interface.
+`) + "\n",
+	}); err != nil {
+		t.Fatalf("create adr decision: %v", err)
+	}
+	if _, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+		Path:  "docs/architecture/knowledge-configuration-v1-adr.md",
+		Title: "Knowledge Configuration v1",
+		Body: strings.TrimSpace(`---
+decision_id: adr-knowledge-configuration-v1
+decision_title: Knowledge Configuration v1
+decision_status: accepted
+decision_scope: knowledge-configuration
+decision_owner: platform
+supersedes: adr-agentops-only-knowledge-plane
+---
+# ADR: Knowledge Configuration v1
+
+## Status
+Accepted as the v1 production contract.
+
+## Summary
+OpenClerk knowledge configuration v1 is runner-visible and convention-first.
+`) + "\n",
+	}); err != nil {
+		t.Fatalf("create second adr decision: %v", err)
+	}
+
+	lookup, err := store.DecisionsLookup(ctx, domain.DecisionLookupInput{Text: "knowledge-plane", Limit: 10})
+	if err != nil {
+		t.Fatalf("decision lookup by classification text: %v", err)
+	}
+	if len(lookup.Decisions) != 2 {
+		t.Fatalf("classification lookup = %+v, want both knowledge-plane decisions", lookup.Decisions)
+	}
+	sourceRefLookup, err := store.DecisionsLookup(ctx, domain.DecisionLookupInput{Text: "notes/sources/agentops-direction.md", Limit: 10})
+	if err != nil {
+		t.Fatalf("decision lookup by source ref: %v", err)
+	}
+	if len(sourceRefLookup.Decisions) != 1 ||
+		sourceRefLookup.Decisions[0].DecisionID != "adr-agentops-only-knowledge-plane" ||
+		len(sourceRefLookup.Decisions[0].Citations) == 0 ||
+		sourceRefLookup.Decisions[0].Citations[0].Path != "docs/architecture/eval-backed-knowledge-plane-adr.md" ||
+		len(sourceRefLookup.Decisions[0].SourceRefs) != 1 ||
+		sourceRefLookup.Decisions[0].SourceRefs[0] != "notes/sources/agentops-direction.md" {
+		t.Fatalf("source ref lookup = %+v", sourceRefLookup.Decisions)
+	}
+
+	projection := requireDecisionProjection(t, ctx, store, "adr-agentops-only-knowledge-plane")
+	if projection.Freshness != "fresh" ||
+		projection.Details["path"] != "docs/architecture/eval-backed-knowledge-plane-adr.md" ||
+		projection.Details["freshness_reason"] != "decision current" {
+		t.Fatalf("adr projection = %+v", projection)
+	}
+	events, err := store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{
+		RefKind: "decision",
+		RefID:   "adr-agentops-only-knowledge-plane",
+		Limit:   10,
+	})
+	if err != nil {
+		t.Fatalf("decision provenance: %v", err)
+	}
+	if !hasEventType(events.Events, "decision_extracted_from_doc") {
+		t.Fatalf("events = %+v", events)
+	}
+}
+
+func TestDecisionProjectionRefreshesFromCanonicalADRMarkdownOnReopen(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+
+	path := "docs/architecture/eval-backed-knowledge-plane-adr.md"
+	if _, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+		Path:  path,
+		Title: "AgentOps-Only Knowledge Plane Direction",
+		Body: strings.TrimSpace(`---
+decision_id: adr-agentops-only-knowledge-plane
+decision_title: AgentOps-Only Knowledge Plane Direction
+decision_status: accepted
+decision_scope: knowledge-plane
+decision_owner: platform
+---
+# ADR: AgentOps-Only Knowledge Plane Direction
+
+## Summary
+Initial canonical decision text.
+`) + "\n",
+	}); err != nil {
+		t.Fatalf("create adr decision: %v", err)
+	}
+	initial, err := store.GetDecisionRecord(ctx, "adr-agentops-only-knowledge-plane")
+	if err != nil {
+		t.Fatalf("initial decision detail: %v", err)
+	}
+	if initial.Title != "AgentOps-Only Knowledge Plane Direction" ||
+		initial.Summary != "Initial canonical decision text." {
+		t.Fatalf("initial decision = %+v", initial)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatalf("close initial store: %v", err)
+	}
+
+	updatedBody := strings.TrimSpace(`---
+decision_id: adr-agentops-only-knowledge-plane
+decision_title: Updated AgentOps Knowledge Plane Direction
+decision_status: accepted
+decision_scope: knowledge-plane
+decision_owner: platform
+source_refs: notes/sources/updated-agentops-direction.md
+---
+# ADR: AgentOps-Only Knowledge Plane Direction
+
+## Summary
+Updated canonical decision text from markdown.
+`) + "\n"
+	if err := os.WriteFile(filepath.Join(vaultRoot, filepath.FromSlash(path)), []byte(updatedBody), 0o644); err != nil {
+		t.Fatalf("write updated adr markdown: %v", err)
+	}
+
+	reopened := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = reopened.Close()
+	}()
+	updated, err := reopened.GetDecisionRecord(ctx, "adr-agentops-only-knowledge-plane")
+	if err != nil {
+		t.Fatalf("updated decision detail: %v", err)
+	}
+	if updated.Title != "Updated AgentOps Knowledge Plane Direction" ||
+		updated.Summary != "Updated canonical decision text from markdown." ||
+		len(updated.SourceRefs) != 1 ||
+		updated.SourceRefs[0] != "notes/sources/updated-agentops-direction.md" ||
+		len(updated.Citations) == 0 ||
+		updated.Citations[0].Path != path {
+		t.Fatalf("updated decision = %+v", updated)
+	}
+	projection := requireDecisionProjection(t, ctx, reopened, "adr-agentops-only-knowledge-plane")
+	if projection.Details["path"] != path ||
+		projection.Details["source_refs"] != "notes/sources/updated-agentops-direction.md" {
+		t.Fatalf("projection after reopen = %+v", projection)
+	}
+}
+
 func TestSynthesisProjectionIsFreshForCurrentSources(t *testing.T) {
 	t.Parallel()
 

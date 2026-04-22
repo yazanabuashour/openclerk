@@ -1,3 +1,10 @@
+---
+decision_id: adr-knowledge-configuration-v1
+decision_title: Knowledge Configuration v1
+decision_status: accepted
+decision_scope: knowledge-configuration
+decision_owner: platform
+---
 # ADR: Knowledge Configuration v1
 
 ## Status
@@ -270,6 +277,15 @@ Targeted AgentOps evidence is recorded in
 decision-vs-doc precision, supersession freshness, no broad repo search, no
 direct SQLite, no source-built runner usage, final-answer-only invalid-request
 rejection, and preserved citations/source refs/freshness.
+
+Follow-up hardening evidence for `oc-j0a` is recorded in
+`docs/evals/results/ockp-decision-records-hardening.md`. The targeted partial
+run covers migrated real ADR markdown under `docs/architecture/`, widened
+decision text lookup, explicit `decision_record` supersession checks, fresh
+decision projection states, provenance, and repo-relative citation paths. All
+3 selected decision scenarios passed; the production gate remained false only
+because unrelated scenarios and final-answer-only validation scenarios were not
+selected in that partial run.
 
 ## `oc-za6.5` POC Decision
 

@@ -721,9 +721,9 @@ func (s *Store) DecisionsLookup(ctx context.Context, input domain.DecisionLookup
 	args := []any{}
 	clauses := []string{}
 	if text := strings.ToLower(strings.TrimSpace(input.Text)); text != "" {
-		clauses = append(clauses, "(LOWER(decision_id) LIKE ? OR LOWER(title) LIKE ? OR LOWER(summary) LIKE ? OR LOWER(source_refs) LIKE ?)")
+		clauses = append(clauses, "(LOWER(decision_id) LIKE ? OR LOWER(title) LIKE ? OR LOWER(status) LIKE ? OR LOWER(scope) LIKE ? OR LOWER(owner) LIKE ? OR LOWER(summary) LIKE ? OR LOWER(supersedes) LIKE ? OR LOWER(superseded_by) LIKE ? OR LOWER(source_refs) LIKE ?)")
 		pattern := "%" + text + "%"
-		args = append(args, pattern, pattern, pattern, pattern)
+		args = append(args, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern)
 	}
 	if status := strings.TrimSpace(input.Status); status != "" {
 		clauses = append(clauses, "LOWER(status) = ?")

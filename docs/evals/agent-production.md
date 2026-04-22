@@ -115,6 +115,8 @@ The `ockp` harness covers routine local knowledge-plane workflows:
   projection states, and freshness-aware synthesis when records are summarized
 - service registry lookup comparison against plain docs retrieval for
   service-centric tasks
+- decision record lookup comparison, supersession freshness, and migrated ADR
+  markdown projection with citations, provenance, and projection freshness
 - duplicate canonical path rejection without overwrite
 - mixed document/retrieval workflows that require both runner domains
 - final-answer-only direct rejections for missing required fields, invalid

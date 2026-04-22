@@ -1,3 +1,10 @@
+---
+decision_id: adr-agentops-only-knowledge-plane
+decision_title: AgentOps-Only Knowledge Plane Direction
+decision_status: accepted
+decision_scope: knowledge-plane
+decision_owner: platform
+---
 # ADR: AgentOps-Only Knowledge Plane Direction
 
 ## Status

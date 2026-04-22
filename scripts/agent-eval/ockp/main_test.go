@@ -434,6 +434,9 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	if !provenanceEventRefIDsInclude(parsed.metrics.ProvenanceEventRefIDs, "doc_alpha") {
 		t.Fatalf("expected provenance event ref id in %+v", parsed.metrics)
 	}
+	if !decisionRecordIDsInclude(parsed.metrics.DecisionRecordIDs, "adr-runner") {
+		t.Fatalf("expected decision record id in %+v", parsed.metrics)
+	}
 	for name, used := range map[string]bool{
 		"search":                 parsed.metrics.SearchUsed,
 		"search_unfiltered":      parsed.metrics.SearchUnfilteredUsed,
@@ -1327,8 +1330,9 @@ func TestVerifyDecisionSupersessionFreshnessRequiresProjectionAndProvenance(t *t
 	if err := seedScenario(ctx, paths, scenario{ID: decisionSupersessionScenarioID}); err != nil {
 		t.Fatalf("seed supersession scenario: %v", err)
 	}
-	noProjection := metrics{AssistantCalls: 1, DecisionRecordUsed: true, EventTypeCounts: map[string]int{}}
-	completeMetrics := metrics{AssistantCalls: 1, DecisionRecordUsed: true, ProjectionStatesUsed: true, ProvenanceEventsUsed: true, EventTypeCounts: map[string]int{}}
+	noProjection := metrics{AssistantCalls: 1, DecisionRecordUsed: true, DecisionRecordIDs: []string{"adr-runner-old", "adr-runner-current"}, EventTypeCounts: map[string]int{}}
+	incompleteDecisionRecord := metrics{AssistantCalls: 1, DecisionRecordUsed: true, DecisionRecordIDs: []string{"adr-runner-old"}, ProjectionStatesUsed: true, ProvenanceEventsUsed: true, EventTypeCounts: map[string]int{}}
+	completeMetrics := metrics{AssistantCalls: 1, DecisionRecordUsed: true, DecisionRecordIDs: []string{"adr-runner-old", "adr-runner-current"}, ProjectionStatesUsed: true, ProvenanceEventsUsed: true, EventTypeCounts: map[string]int{}}
 	noCitationAnswer := "adr-runner-old is superseded and stale; adr-runner-current supersedes it and is fresh, with provenance and projection evidence."
 	completeAnswer := noCitationAnswer + " Citation paths: docs/architecture/runner-old-decision.md and records/decisions/runner-current-decision.md."
 	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: decisionSupersessionScenarioID}, 1, completeAnswer, noProjection)
@@ -1337,6 +1341,13 @@ func TestVerifyDecisionSupersessionFreshnessRequiresProjectionAndProvenance(t *t
 	}
 	if result.Passed {
 		t.Fatalf("no-projection supersession passed: %+v", result)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: decisionSupersessionScenarioID}, 1, completeAnswer, incompleteDecisionRecord)
+	if err != nil {
+		t.Fatalf("verify supersession incomplete decision record ids: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("incomplete decision record ids supersession passed: %+v", result)
 	}
 	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: decisionSupersessionScenarioID}, 1, noCitationAnswer, completeMetrics)
 	if err != nil {
@@ -1351,6 +1362,39 @@ func TestVerifyDecisionSupersessionFreshnessRequiresProjectionAndProvenance(t *t
 	}
 	if !result.Passed {
 		t.Fatalf("supersession failed: %+v", result)
+	}
+}
+
+func TestVerifyDecisionRealADRMigrationRequiresDecisionProjectionEvidence(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: decisionRealADRMigrationScenarioID}); err != nil {
+		t.Fatalf("seed real adr scenario: %v", err)
+	}
+	noProjection := metrics{AssistantCalls: 1, DecisionsLookupUsed: true, DecisionRecordUsed: true, DecisionRecordIDs: []string{"adr-agentops-only-knowledge-plane"}, EventTypeCounts: map[string]int{}}
+	completeMetrics := metrics{AssistantCalls: 1, DecisionsLookupUsed: true, DecisionRecordUsed: true, DecisionRecordIDs: []string{"adr-agentops-only-knowledge-plane"}, ProjectionStatesUsed: true, ProvenanceEventsUsed: true, EventTypeCounts: map[string]int{}}
+	noCitationAnswer := "Canonical markdown ADRs remain authoritative; decisions_lookup and decision_record return derived decision records with fresh projection and provenance evidence."
+	completeAnswer := noCitationAnswer + " Citation paths: docs/architecture/eval-backed-knowledge-plane-adr.md and docs/architecture/knowledge-configuration-v1-adr.md."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: decisionRealADRMigrationScenarioID}, 1, completeAnswer, noProjection)
+	if err != nil {
+		t.Fatalf("verify real adr no projection: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("no-projection real adr migration passed: %+v", result)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: decisionRealADRMigrationScenarioID}, 1, noCitationAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify real adr no citation: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("no-citation real adr migration passed: %+v", result)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: decisionRealADRMigrationScenarioID}, 1, completeAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify real adr migration: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("real adr migration failed: %+v", result)
 	}
 }
 
