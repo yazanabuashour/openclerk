@@ -1,49 +1,50 @@
-# OpenClerk Agent Eval
+# OpenClerk Agent Eval Status
 
-- Model: `gpt-5.4-mini`
-- Reasoning effort: `medium`
-- Configured parallelism: `4`
-- Cache mode: `shared`
-- Cache prewarm seconds: `17.64`
-- Harness elapsed seconds: `54.73`
-- Effective parallel speedup: `0.63x`
-- Parallel efficiency: `0.16`
+This file is a status pointer, not a raw eval report.
+
+The previous contents recorded an older partial production run where
+`production` passed 1/17 selected scenarios. That run is superseded and should
+not be used as current OpenClerk AgentOps status.
+
+## Current Full Production Gate
+
+Use `docs/evals/results/ockp-agentops-production.md` as the current full
+production gate artifact.
+
+- Variant: `production`
+- Gate: passing
+- Scenario coverage: 18/18 production scenarios passed
+- Recommendation: use the AgentOps runner for routine OpenClerk operations
 - Raw logs: `<run-root>/<variant>/<scenario>/turn-N/events.jsonl`
 
-## Production Gate
+That report is the current release-gate evidence for routine OpenClerk
+knowledge workflows through the installed `openclerk` runner.
 
-Variant: `production`
+## Later Targeted POC Evidence
 
-Passes gate: `false`
+The following later reports are targeted POC evidence. Their production gates
+may be false because they intentionally selected only a subset of scenarios;
+use their selected scenario results and decision notes as POC evidence, not as
+full release-gate replacements.
 
-Recommendation: `fix_production_agentops_before_release`
-
-| Criterion | Status | Details |
+| Area | Report | Status |
 | --- | --- | --- |
-| `production_passes_all_scenarios` | `fail` | 1/17 production scenarios passed; missing: create-note, search-synthesis, answer-filing, stale-synthesis-update, synthesis-freshness-repair, append-replace, records-provenance, promoted-record-vs-docs, missing-document-path-reject, negative-limit-reject, unsupported-lower-level-reject, unsupported-transport-reject, duplicate-path-reject, mixed-synthesis-records, mt-source-then-synthesis, mt-incomplete-then-create |
-| `no_direct_generated_file_inspection` | `pass` | production must not inspect retired API files or generated server files |
-| `no_module_cache_inspection` | `pass` | production must not inspect the Go module cache |
-| `no_broad_repo_search` | `pass` | production must not use broad repo search in routine OpenClerk knowledge tasks |
-| `no_legacy_source_runner_usage` | `pass` | production must not invoke source-built or legacy runner paths instead of installed openclerk |
-| `no_direct_sqlite_access` | `pass` | production must not query SQLite directly |
-| `validation_scenarios_are_final_answer_only` | `fail` | not evaluated; final-answer-only validation scenarios were not selected in this partial run |
+| Convention-first layout inspection | `docs/evals/results/ockp-layout-configuration.md` | `configured-layout-explain` and `invalid-layout-visible` completed |
+| Synthesis compiler pressure | `docs/evals/results/ockp-synthesis-compiler-pressure.md` | Selected synthesis pressure and contract scenarios completed |
+| Decision records POC | `docs/evals/results/ockp-decision-records-poc.md` | Selected decision lookup and supersession scenarios completed |
+| Decision records hardening | `docs/evals/results/ockp-decision-records-hardening.md` | Real ADR migration and decision projection hardening scenarios completed |
+| Source-sensitive audit | `docs/evals/results/ockp-source-sensitive-audit-poc.md` | Stale repair and unresolved conflict scenarios completed |
+| Graph semantics reference | `docs/evals/results/ockp-graph-semantics-reference-poc.md` | Graph semantic-label pressure scenario completed as reference evidence |
+| Memory/router reference | `docs/evals/results/ockp-memory-router-reference-poc.md` | Memory and router pressure scenario completed as reference evidence |
 
-## Phase Timings
+## Interpretation
 
-| Phase | Seconds |
-| --- | ---: |
-| prepare_run_dir | 0.00 |
-| copy_repo | 0.01 |
-| install_variant | 2.27 |
-| warm_cache | 0.00 |
-| seed_data | 0.03 |
-| agent_run | 34.67 |
-| parse_metrics | 0.00 |
-| verify | 0.10 |
-| total | 37.09 |
+OpenClerk is currently proven for the v1 AgentOps runner slice: canonical docs,
+source-linked synthesis, promoted records, provenance events, projection
+freshness, and final-answer-only rejection gates.
 
-## Results
-
-| Variant | Scenario | Status | Tools | Commands | Assistant Calls | Non-Cached Input | Wall Seconds | Raw Log |
-| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `production` | `rag-retrieval-baseline` | `completed` | 14 | 14 | 5 | 57053 | 34.67 | `<run-root>/production/rag-retrieval-baseline/turn-2/events.jsonl` |
+The later targeted POCs do not promote Mem0 or a memory API, an autonomous
+router, a semantic graph truth layer, a broad contradiction engine, or new
+public runner actions. Those capabilities remain deferred until eval evidence
+shows the existing `openclerk document` and `openclerk retrieval` actions are
+structurally insufficient.

@@ -1,22 +1,22 @@
 {
   "metadata": {
-    "generated_at": "2026-04-21T15:43:01.78929Z",
+    "generated_at": "2026-04-22T14:13:43.9157Z",
     "model": "gpt-5.4-mini",
     "reasoning_effort": "medium",
     "harness": "codex exec --json --full-auto from throwaway run directories; single-turn scenarios use --ephemeral and multi-turn scenarios resume one persisted eval session",
     "configured_parallelism": 4,
     "cache_mode": "shared",
-    "cache_prewarm_seconds": 17.64,
-    "harness_elapsed_seconds": 54.73,
-    "effective_parallel_speedup": 0.63,
-    "parallel_efficiency": 0.16,
+    "cache_prewarm_seconds": 20.79,
+    "harness_elapsed_seconds": 179.94,
+    "effective_parallel_speedup": 2.81,
+    "parallel_efficiency": 0.7,
     "phase_totals": {
-      "copy_repo_seconds": 0.01,
-      "install_variant_seconds": 2.27,
-      "seed_data_seconds": 0.03,
-      "agent_run_seconds": 34.67,
-      "verify_seconds": 0.1,
-      "total_seconds": 37.09
+      "copy_repo_seconds": 0.26,
+      "install_variant_seconds": 45.67,
+      "seed_data_seconds": 0.25,
+      "agent_run_seconds": 505.82,
+      "verify_seconds": 0.54,
+      "total_seconds": 552.59
     },
     "run_root_artifact_reference": "\u003crun-root\u003e",
     "raw_log_placeholder": "\u003crun-root\u003e/\u003cvariant\u003e/\u003cscenario\u003e/turn-N/events.jsonl",
@@ -24,7 +24,24 @@
       "production"
     ],
     "scenarios": [
-      "rag-retrieval-baseline"
+      "create-note",
+      "search-synthesis",
+      "answer-filing",
+      "rag-retrieval-baseline",
+      "canonical-docs-navigation-baseline",
+      "stale-synthesis-update",
+      "synthesis-freshness-repair",
+      "append-replace",
+      "records-provenance",
+      "promoted-record-vs-docs",
+      "missing-document-path-reject",
+      "negative-limit-reject",
+      "unsupported-lower-level-reject",
+      "unsupported-transport-reject",
+      "duplicate-path-reject",
+      "mixed-synthesis-records",
+      "mt-source-then-synthesis",
+      "mt-incomplete-then-create"
     ],
     "raw_logs_committed": false,
     "raw_logs_note": "Raw Codex event logs remain under \u003crun-root\u003e and are not committed."
@@ -32,19 +49,369 @@
   "results": [
     {
       "variant": "production",
+      "scenario": "create-note",
+      "scenario_title": "Create canonical note",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 34.5,
+      "phase_timings": {
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 3.32,
+        "agent_run_seconds": 34.5,
+        "verify_seconds": 0.01,
+        "total_seconds": 37.85
+      },
+      "metrics": {
+        "assistant_calls": 6,
+        "tool_calls": 16,
+        "command_executions": 16,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": false,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": false,
+        "search_metadata_filter_used": false,
+        "list_documents_used": false,
+        "get_document_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": false,
+        "usage_exposed": true,
+        "input_tokens": 232254,
+        "cached_input_tokens": 212864,
+        "non_cached_input_tokens": 19390,
+        "output_tokens": 2378,
+        "event_type_counts": {
+          "item.completed": 14,
+          "item.started": 8,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/projects/openclerk-runner.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 34.5,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 6,
+            "tool_calls": 16,
+            "command_executions": 16,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": false,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "list_documents_used": false,
+            "get_document_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 232254,
+            "cached_input_tokens": 212864,
+            "non_cached_input_tokens": 19390,
+            "output_tokens": 2378,
+            "event_type_counts": {
+              "item.completed": 14,
+              "item.started": 8,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/projects/openclerk-runner.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/create-note/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Create an OpenClerk canonical project note at notes/projects/openclerk-runner.md titled OpenClerk Runner with active frontmatter and a short body saying the JSON runner is the production path. Use the configured local OpenClerk data path and verify it exists.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/create-note/turn-1/events.jsonl",
+      "started_at": "2026-04-22T14:11:04.763682Z",
+      "completed_at": "2026-04-22T14:11:42.618969Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "search-synthesis",
+      "scenario_title": "Search before source-linked synthesis",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 37.81,
+      "phase_timings": {
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 2.61,
+        "seed_data_seconds": 0.02,
+        "agent_run_seconds": 37.81,
+        "verify_seconds": 0.02,
+        "total_seconds": 40.48
+      },
+      "metrics": {
+        "assistant_calls": 5,
+        "tool_calls": 10,
+        "command_executions": 10,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": true,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": true,
+        "search_metadata_filter_used": false,
+        "list_documents_used": true,
+        "get_document_used": true,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": false,
+        "usage_exposed": true,
+        "input_tokens": 154272,
+        "cached_input_tokens": 143616,
+        "non_cached_input_tokens": 10656,
+        "output_tokens": 2811,
+        "event_type_counts": {
+          "item.completed": 10,
+          "item.started": 5,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/synthesis/openclerk-runner.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 37.81,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 5,
+            "tool_calls": 10,
+            "command_executions": 10,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": true,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": true,
+            "search_metadata_filter_used": false,
+            "list_documents_used": true,
+            "get_document_used": true,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 154272,
+            "cached_input_tokens": 143616,
+            "non_cached_input_tokens": 10656,
+            "output_tokens": 2811,
+            "event_type_counts": {
+              "item.completed": 10,
+              "item.started": 5,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/synthesis/openclerk-runner.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/search-synthesis/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Search existing notes for OpenClerk runner context, list existing notes/synthesis/ candidates, then create or update notes/synthesis/openclerk-runner.md with a source-linked synthesis. Use only openclerk document/retrieval actions; do not use direct file edits or unsupported actions such as upsert_document. The synthesis must have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: notes/sources/openclerk-runner.md. Do not use YAML list syntax for source_refs. The body must include ## Sources citing notes/sources/openclerk-runner.md and ## Freshness describing the runner retrieval checks. Mention notes/synthesis/openclerk-runner.md in the final answer.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/search-synthesis/turn-1/events.jsonl",
+      "started_at": "2026-04-22T14:11:04.763684Z",
+      "completed_at": "2026-04-22T14:11:45.246404Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "answer-filing",
+      "scenario_title": "File durable answer into source-linked synthesis",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 25.51,
+      "phase_timings": {
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 3.43,
+        "seed_data_seconds": 0.01,
+        "agent_run_seconds": 25.51,
+        "verify_seconds": 0.02,
+        "total_seconds": 29.01
+      },
+      "metrics": {
+        "assistant_calls": 5,
+        "tool_calls": 8,
+        "command_executions": 8,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": true,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": true,
+        "search_metadata_filter_used": false,
+        "list_documents_used": true,
+        "get_document_used": true,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": false,
+        "usage_exposed": true,
+        "input_tokens": 128286,
+        "cached_input_tokens": 103808,
+        "non_cached_input_tokens": 24478,
+        "output_tokens": 1616,
+        "event_type_counts": {
+          "item.completed": 9,
+          "item.started": 4,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/synthesis/filed-runner-answer.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 25.51,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 5,
+            "tool_calls": 8,
+            "command_executions": 8,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": true,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": true,
+            "search_metadata_filter_used": false,
+            "list_documents_used": true,
+            "get_document_used": true,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 128286,
+            "cached_input_tokens": 103808,
+            "non_cached_input_tokens": 24478,
+            "output_tokens": 1616,
+            "event_type_counts": {
+              "item.completed": 9,
+              "item.started": 4,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/synthesis/filed-runner-answer.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/answer-filing/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Search for the answer filing source, answer from it, and file the reusable answer into notes/synthesis/filed-runner-answer.md titled Filed OpenClerk runner Answer. The body must include the exact source line Source: notes/sources/answer-filing-runner.md and the exact sentence Durable OpenClerk runner answers should be filed as source-linked markdown. Mention notes/synthesis/filed-runner-answer.md in the final answer.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/answer-filing/turn-1/events.jsonl",
+      "started_at": "2026-04-22T14:11:04.763692Z",
+      "completed_at": "2026-04-22T14:11:33.76967Z"
+    },
+    {
+      "variant": "production",
       "scenario": "rag-retrieval-baseline",
       "scenario_title": "RAG retrieval-only baseline",
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 34.67,
+      "wall_seconds": 34.48,
       "phase_timings": {
-        "copy_repo_seconds": 0.01,
-        "install_variant_seconds": 2.27,
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 3.43,
         "seed_data_seconds": 0.03,
-        "agent_run_seconds": 34.67,
+        "agent_run_seconds": 34.48,
         "verify_seconds": 0.1,
-        "total_seconds": 37.09
+        "total_seconds": 38.08
       },
       "metrics": {
         "assistant_calls": 5,
@@ -62,14 +429,16 @@
         "search_metadata_filter_used": true,
         "list_documents_used": false,
         "get_document_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
         "records_lookup_used": false,
         "provenance_events_used": false,
         "projection_states_used": false,
         "usage_exposed": true,
-        "input_tokens": 383965,
-        "cached_input_tokens": 326912,
-        "non_cached_input_tokens": 57053,
-        "output_tokens": 3505,
+        "input_tokens": 382321,
+        "cached_input_tokens": 352000,
+        "non_cached_input_tokens": 30321,
+        "output_tokens": 4083,
         "event_type_counts": {
           "item.completed": 12,
           "item.started": 7,
@@ -93,7 +462,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 22.33,
+          "wall_seconds": 19.92,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 3,
@@ -111,14 +480,16 @@
             "search_metadata_filter_used": true,
             "list_documents_used": false,
             "get_document_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
             "records_lookup_used": false,
             "provenance_events_used": false,
             "projection_states_used": false,
             "usage_exposed": true,
-            "input_tokens": 130859,
-            "cached_input_tokens": 118656,
-            "non_cached_input_tokens": 12203,
-            "output_tokens": 1439,
+            "input_tokens": 129893,
+            "cached_input_tokens": 121728,
+            "non_cached_input_tokens": 8165,
+            "output_tokens": 1669,
             "event_type_counts": {
               "item.completed": 7,
               "item.started": 4,
@@ -143,7 +514,7 @@
         },
         {
           "turn_index": 2,
-          "wall_seconds": 12.34,
+          "wall_seconds": 14.56,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 2,
@@ -161,14 +532,16 @@
             "search_metadata_filter_used": true,
             "list_documents_used": false,
             "get_document_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
             "records_lookup_used": false,
             "provenance_events_used": false,
             "projection_states_used": false,
             "usage_exposed": true,
-            "input_tokens": 253106,
-            "cached_input_tokens": 208256,
-            "non_cached_input_tokens": 44850,
-            "output_tokens": 2066,
+            "input_tokens": 252428,
+            "cached_input_tokens": 230272,
+            "non_cached_input_tokens": 22156,
+            "output_tokens": 2414,
             "event_type_counts": {
               "item.completed": 5,
               "item.started": 3,
@@ -194,19 +567,1721 @@
       ],
       "prompt_summary": "turn 1: Use the configured local OpenClerk data path. Answer this retrieval-only question without creating or updating any document or synthesis: what is the active AgentOps RAG baseline policy for routine OpenClerk knowledge answers? Use only openclerk retrieval search requests. Run an unfiltered search for active AgentOps RAG baseline policy JSON runner citations, then run the same search with path_prefix notes/rag/, then run the same search with metadata_key rag_scope and metadata_value active-policy. In the final answer, give the active policy in one short sentence and cite the source path, doc_id, chunk_id, and line range from the returned search hit. | turn 2: Repeat the same retrieval-only question. Do not create, update, append, replace, or file any notes/synthesis/ document. Use only openclerk retrieval search requests again: unfiltered search, path_prefix notes/rag/, and metadata_key rag_scope with metadata_value active-policy. In the final answer, confirm whether retrieval alone filed any durable synthesis, then cite the active source path, doc_id, chunk_id, and line range.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/rag-retrieval-baseline/turn-2/events.jsonl",
-      "started_at": "2026-04-21T15:42:24.697985Z",
-      "completed_at": "2026-04-21T15:43:01.788981Z"
+      "started_at": "2026-04-22T14:11:04.763701Z",
+      "completed_at": "2026-04-22T14:11:42.841473Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "canonical-docs-navigation-baseline",
+      "scenario_title": "Canonical docs directory and link navigation baseline",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 58.69,
+      "phase_timings": {
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 2.09,
+        "seed_data_seconds": 0.04,
+        "agent_run_seconds": 58.69,
+        "verify_seconds": 0.07,
+        "total_seconds": 60.92
+      },
+      "metrics": {
+        "assistant_calls": 5,
+        "tool_calls": 16,
+        "command_executions": 16,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": false,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": false,
+        "search_metadata_filter_used": false,
+        "list_documents_used": true,
+        "get_document_used": true,
+        "document_links_used": true,
+        "graph_neighborhood_used": true,
+        "records_lookup_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": true,
+        "usage_exposed": true,
+        "input_tokens": 190334,
+        "cached_input_tokens": 180352,
+        "non_cached_input_tokens": 9982,
+        "output_tokens": 5157,
+        "event_type_counts": {
+          "item.completed": 13,
+          "item.started": 8,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/wiki/agentops/index.md",
+          "notes/wiki/agentops/runner-policy.md",
+          "notes/wiki/architecture/knowledge-plane.md",
+          "notes/wiki/ops/runner-playbook.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 58.69,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 5,
+            "tool_calls": 16,
+            "command_executions": 16,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": false,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "list_documents_used": true,
+            "get_document_used": true,
+            "document_links_used": true,
+            "graph_neighborhood_used": true,
+            "records_lookup_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": true,
+            "usage_exposed": true,
+            "input_tokens": 190334,
+            "cached_input_tokens": 180352,
+            "non_cached_input_tokens": 9982,
+            "output_tokens": 5157,
+            "event_type_counts": {
+              "item.completed": 13,
+              "item.started": 8,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/wiki/agentops/index.md",
+              "notes/wiki/agentops/runner-policy.md",
+              "notes/wiki/architecture/knowledge-plane.md",
+              "notes/wiki/ops/runner-playbook.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/canonical-docs-navigation-baseline/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, or unsupported actions. First run openclerk document list_documents with path_prefix notes/wiki/agentops/ and limit 10. Use the returned doc_id for notes/wiki/agentops/index.md to run get_document, and use its returned headings in your analysis. Then run openclerk retrieval document_links for that index doc_id and identify both outgoing links and incoming backlinks. Then run openclerk retrieval graph_neighborhood for that index doc_id with limit 20, and inspect projection_states with projection graph, ref_kind document, and that index doc_id. In the final answer, explain where directory/path navigation is sufficient, where plain folders and markdown links fail, and what AgentOps-backed document_links, backlinks, graph_neighborhood, and graph projection freshness add. Mention notes/wiki/agentops/index.md and at least one linked source path.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/canonical-docs-navigation-baseline/turn-1/events.jsonl",
+      "started_at": "2026-04-22T14:11:33.770031Z",
+      "completed_at": "2026-04-22T14:12:34.690789Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "stale-synthesis-update",
+      "scenario_title": "Update stale source-linked synthesis",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 26.34,
+      "phase_timings": {
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 3.05,
+        "seed_data_seconds": 0.02,
+        "agent_run_seconds": 26.34,
+        "verify_seconds": 0.07,
+        "total_seconds": 29.5
+      },
+      "metrics": {
+        "assistant_calls": 4,
+        "tool_calls": 12,
+        "command_executions": 12,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": true,
+        "search_unfiltered_used": true,
+        "search_path_filter_used": false,
+        "search_metadata_filter_used": false,
+        "list_documents_used": true,
+        "get_document_used": true,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": false,
+        "usage_exposed": true,
+        "input_tokens": 183437,
+        "cached_input_tokens": 170624,
+        "non_cached_input_tokens": 12813,
+        "output_tokens": 1707,
+        "event_type_counts": {
+          "item.completed": 10,
+          "item.started": 6,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/synthesis/runner-routing.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 26.34,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 4,
+            "tool_calls": 12,
+            "command_executions": 12,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": true,
+            "search_unfiltered_used": true,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "list_documents_used": true,
+            "get_document_used": true,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 183437,
+            "cached_input_tokens": 170624,
+            "non_cached_input_tokens": 12813,
+            "output_tokens": 1707,
+            "event_type_counts": {
+              "item.completed": 10,
+              "item.started": 6,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/synthesis/runner-routing.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/stale-synthesis-update/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results to find existing docs; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, binary strings inspection, or unsupported actions such as upsert_document. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"OpenClerk runner routing\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/synthesis/\",\"limit\":20}}. Use the returned doc_id for notes/synthesis/runner-routing.md to run openclerk document with exactly this request shape: {\"action\":\"get_document\",\"doc_id\":\"DOC_ID_FROM_LIST\"}. Then update notes/synthesis/runner-routing.md only with replace_section or append_document. Do not create a new synthesis page. Preserve the existing prototype frontmatter with freshness: fresh and the single-line field source_refs: notes/sources/runner-current-runner.md, notes/sources/runner-old-workaround.md. Replace the stale command-path workaround claim with these exact lines: Current guidance: routine agents must use openclerk JSON runner; Current source: notes/sources/runner-current-runner.md; Supersedes: notes/sources/runner-old-workaround.md. Keep ## Sources and ## Freshness sections with both source paths. Mention notes/synthesis/runner-routing.md in the final answer.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/stale-synthesis-update/turn-1/events.jsonl",
+      "started_at": "2026-04-22T14:11:42.619221Z",
+      "completed_at": "2026-04-22T14:12:12.121137Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "synthesis-freshness-repair",
+      "scenario_title": "Repair synthesis after runner-visible freshness invalidation",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 56.14,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 3.7,
+        "seed_data_seconds": 0.05,
+        "agent_run_seconds": 56.14,
+        "verify_seconds": 0.06,
+        "total_seconds": 59.96
+      },
+      "metrics": {
+        "assistant_calls": 6,
+        "tool_calls": 20,
+        "command_executions": 20,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": true,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": true,
+        "search_metadata_filter_used": false,
+        "list_documents_used": true,
+        "get_document_used": true,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "provenance_events_used": true,
+        "projection_states_used": true,
+        "usage_exposed": true,
+        "input_tokens": 190225,
+        "cached_input_tokens": 155264,
+        "non_cached_input_tokens": 34961,
+        "output_tokens": 5615,
+        "event_type_counts": {
+          "item.completed": 16,
+          "item.started": 10,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/synthesis/runner-repair.md",
+          "notes/sources/repair-current.md",
+          "notes/sources/repair-old.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 56.14,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 6,
+            "tool_calls": 20,
+            "command_executions": 20,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": true,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": true,
+            "search_metadata_filter_used": false,
+            "list_documents_used": true,
+            "get_document_used": true,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "provenance_events_used": true,
+            "projection_states_used": true,
+            "usage_exposed": true,
+            "input_tokens": 190225,
+            "cached_input_tokens": 155264,
+            "non_cached_input_tokens": 34961,
+            "output_tokens": 5615,
+            "event_type_counts": {
+              "item.completed": 16,
+              "item.started": 10,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/synthesis/runner-repair.md",
+              "notes/sources/repair-current.md",
+              "notes/sources/repair-old.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/synthesis-freshness-repair/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, binary strings inspection, or unsupported actions such as upsert_document. First search for OpenClerk runner repair freshness. Then list notes/synthesis/ candidates, get notes/synthesis/runner-repair.md, inspect projection_states for projection synthesis using that document id, and inspect provenance_events for ref_kind projection with ref_id synthesis:DOC_ID. Repair notes/synthesis/runner-repair.md only with replace_section or append_document. Do not create a duplicate. Preserve the existing source_refs frontmatter exactly as notes/sources/repair-current.md, notes/sources/repair-old.md. The repaired body must state: Current source: notes/sources/repair-current.md; Superseded source: notes/sources/repair-old.md; Current guidance: routine agents must use openclerk JSON runner for freshness repairs. After repair, inspect projection_states again and mention notes/synthesis/runner-repair.md, notes/sources/repair-current.md, notes/sources/repair-old.md, and the final synthesis projection freshness in the final answer.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/synthesis-freshness-repair/turn-1/events.jsonl",
+      "started_at": "2026-04-22T14:11:42.841764Z",
+      "completed_at": "2026-04-22T14:12:42.806343Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "append-replace",
+      "scenario_title": "Append and replace sections",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 23.69,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 1.98,
+        "seed_data_seconds": 0.01,
+        "agent_run_seconds": 23.69,
+        "verify_seconds": 0.01,
+        "total_seconds": 25.7
+      },
+      "metrics": {
+        "assistant_calls": 4,
+        "tool_calls": 10,
+        "command_executions": 10,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": false,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": false,
+        "search_metadata_filter_used": false,
+        "list_documents_used": true,
+        "get_document_used": true,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": false,
+        "usage_exposed": true,
+        "input_tokens": 150682,
+        "cached_input_tokens": 143616,
+        "non_cached_input_tokens": 7066,
+        "output_tokens": 1165,
+        "event_type_counts": {
+          "item.completed": 9,
+          "item.started": 5,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/projects/openclerk-runner.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 23.69,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 4,
+            "tool_calls": 10,
+            "command_executions": 10,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": false,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "list_documents_used": true,
+            "get_document_used": true,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 150682,
+            "cached_input_tokens": 143616,
+            "non_cached_input_tokens": 7066,
+            "output_tokens": 1165,
+            "event_type_counts": {
+              "item.completed": 9,
+              "item.started": 5,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/projects/openclerk-runner.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/append-replace/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Append a Decisions section to notes/projects/openclerk-runner.md, then replace only that Decisions section with: Use the JSON runner for routine AgentOps knowledge tasks. Do not remove the existing Context section.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/append-replace/turn-1/events.jsonl",
+      "started_at": "2026-04-22T14:11:45.2466Z",
+      "completed_at": "2026-04-22T14:12:10.946252Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "records-provenance",
+      "scenario_title": "Records and provenance inspection",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 26,
+      "phase_timings": {
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 2.57,
+        "seed_data_seconds": 0.01,
+        "agent_run_seconds": 26,
+        "verify_seconds": 0.02,
+        "total_seconds": 28.63
+      },
+      "metrics": {
+        "assistant_calls": 4,
+        "tool_calls": 16,
+        "command_executions": 16,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": false,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": false,
+        "search_metadata_filter_used": false,
+        "list_documents_used": false,
+        "get_document_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": true,
+        "provenance_events_used": true,
+        "projection_states_used": true,
+        "usage_exposed": true,
+        "input_tokens": 152045,
+        "cached_input_tokens": 144128,
+        "non_cached_input_tokens": 7917,
+        "output_tokens": 2351,
+        "event_type_counts": {
+          "item.completed": 12,
+          "item.started": 8,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok"
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 26,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 4,
+            "tool_calls": 16,
+            "command_executions": 16,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": false,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "list_documents_used": false,
+            "get_document_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": true,
+            "provenance_events_used": true,
+            "projection_states_used": true,
+            "usage_exposed": true,
+            "input_tokens": 152045,
+            "cached_input_tokens": 144128,
+            "non_cached_input_tokens": 7917,
+            "output_tokens": 2351,
+            "event_type_counts": {
+              "item.completed": 12,
+              "item.started": 8,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok"
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/records-provenance/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Inspect the promoted-record-shaped OpenClerk runner document through records_lookup, provenance_events, and projection_states. Report the records lookup result plus provenance event and projection freshness details.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/records-provenance/turn-1/events.jsonl",
+      "started_at": "2026-04-22T14:12:10.946468Z",
+      "completed_at": "2026-04-22T14:12:39.57927Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "promoted-record-vs-docs",
+      "scenario_title": "Compare promoted records against plain docs",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 31.35,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 2.11,
+        "seed_data_seconds": 0.02,
+        "agent_run_seconds": 31.35,
+        "verify_seconds": 0.03,
+        "total_seconds": 33.52
+      },
+      "metrics": {
+        "assistant_calls": 4,
+        "tool_calls": 8,
+        "command_executions": 8,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": true,
+        "search_unfiltered_used": true,
+        "search_path_filter_used": false,
+        "search_metadata_filter_used": false,
+        "list_documents_used": true,
+        "get_document_used": true,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": false,
+        "usage_exposed": true,
+        "input_tokens": 128714,
+        "cached_input_tokens": 120704,
+        "non_cached_input_tokens": 8010,
+        "output_tokens": 2435,
+        "event_type_counts": {
+          "item.completed": 8,
+          "item.started": 4,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/reference/runner-service.md",
+          "records/services/openclerk-runner.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 31.35,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 4,
+            "tool_calls": 8,
+            "command_executions": 8,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": true,
+            "search_unfiltered_used": true,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "list_documents_used": true,
+            "get_document_used": true,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 128714,
+            "cached_input_tokens": 120704,
+            "non_cached_input_tokens": 8010,
+            "output_tokens": 2435,
+            "event_type_counts": {
+              "item.completed": 8,
+              "item.started": 4,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/reference/runner-service.md",
+              "records/services/openclerk-runner.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/promoted-record-vs-docs/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Search plain docs for OpenClerk runner evidence, then run services lookup for OpenClerk runner. Compare plain docs/search against services lookup for this service-centric question: what is the production interface? The final answer must mention plain docs or search, services lookup or service registry, and JSON runner.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/promoted-record-vs-docs/turn-1/events.jsonl",
+      "started_at": "2026-04-22T14:12:12.121514Z",
+      "completed_at": "2026-04-22T14:12:45.638635Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "missing-document-path-reject",
+      "scenario_title": "Reject missing document path without tools",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 6.74,
+      "phase_timings": {
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 2.34,
+        "agent_run_seconds": 6.74,
+        "total_seconds": 9.09
+      },
+      "metrics": {
+        "assistant_calls": 1,
+        "tool_calls": 0,
+        "command_executions": 0,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": false,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": false,
+        "search_metadata_filter_used": false,
+        "list_documents_used": false,
+        "get_document_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": false,
+        "usage_exposed": true,
+        "input_tokens": 22665,
+        "cached_input_tokens": 19840,
+        "non_cached_input_tokens": 2825,
+        "output_tokens": 156,
+        "event_type_counts": {
+          "item.completed": 1,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok"
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 6.74,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 1,
+            "tool_calls": 0,
+            "command_executions": 0,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": false,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "list_documents_used": false,
+            "get_document_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 22665,
+            "cached_input_tokens": 19840,
+            "non_cached_input_tokens": 2825,
+            "output_tokens": 156,
+            "event_type_counts": {
+              "item.completed": 1,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok"
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/missing-document-path-reject/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Create an OpenClerk document titled Missing Path with body content, but I did not provide a path.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/missing-document-path-reject/turn-1/events.jsonl",
+      "started_at": "2026-04-22T14:12:34.690962Z",
+      "completed_at": "2026-04-22T14:12:43.785989Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "negative-limit-reject",
+      "scenario_title": "Reject negative retrieval limit without tools",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 7,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 2.04,
+        "agent_run_seconds": 7,
+        "total_seconds": 9.05
+      },
+      "metrics": {
+        "assistant_calls": 1,
+        "tool_calls": 0,
+        "command_executions": 0,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": false,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": false,
+        "search_metadata_filter_used": false,
+        "list_documents_used": false,
+        "get_document_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": false,
+        "usage_exposed": true,
+        "input_tokens": 22653,
+        "cached_input_tokens": 19840,
+        "non_cached_input_tokens": 2813,
+        "output_tokens": 154,
+        "event_type_counts": {
+          "item.completed": 1,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok"
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 7,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 1,
+            "tool_calls": 0,
+            "command_executions": 0,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": false,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "list_documents_used": false,
+            "get_document_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 22653,
+            "cached_input_tokens": 19840,
+            "non_cached_input_tokens": 2813,
+            "output_tokens": 154,
+            "event_type_counts": {
+              "item.completed": 1,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok"
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/negative-limit-reject/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Search my local OpenClerk knowledge for runner with limit -3.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/negative-limit-reject/turn-1/events.jsonl",
+      "started_at": "2026-04-22T14:12:39.579527Z",
+      "completed_at": "2026-04-22T14:12:48.628035Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "unsupported-lower-level-reject",
+      "scenario_title": "Reject unsupported lower-level workflow without tools",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 7.58,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 2.1,
+        "agent_run_seconds": 7.58,
+        "total_seconds": 9.69
+      },
+      "metrics": {
+        "assistant_calls": 1,
+        "tool_calls": 0,
+        "command_executions": 0,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": false,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": false,
+        "search_metadata_filter_used": false,
+        "list_documents_used": false,
+        "get_document_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": false,
+        "usage_exposed": true,
+        "input_tokens": 22671,
+        "cached_input_tokens": 19840,
+        "non_cached_input_tokens": 2831,
+        "output_tokens": 163,
+        "event_type_counts": {
+          "item.completed": 1,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok"
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 7.58,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 1,
+            "tool_calls": 0,
+            "command_executions": 0,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": false,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "list_documents_used": false,
+            "get_document_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 22671,
+            "cached_input_tokens": 19840,
+            "non_cached_input_tokens": 2831,
+            "output_tokens": 163,
+            "event_type_counts": {
+              "item.completed": 1,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok"
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/unsupported-lower-level-reject/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "For this routine OpenClerk knowledge task, bypass OpenClerk runner and query SQLite directly to list documents.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/unsupported-lower-level-reject/turn-1/events.jsonl",
+      "started_at": "2026-04-22T14:12:42.806515Z",
+      "completed_at": "2026-04-22T14:12:52.494768Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "unsupported-transport-reject",
+      "scenario_title": "Reject alternate transport bypass without tools",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 7.24,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 2.18,
+        "agent_run_seconds": 7.24,
+        "total_seconds": 9.43
+      },
+      "metrics": {
+        "assistant_calls": 1,
+        "tool_calls": 0,
+        "command_executions": 0,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": false,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": false,
+        "search_metadata_filter_used": false,
+        "list_documents_used": false,
+        "get_document_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": false,
+        "usage_exposed": true,
+        "input_tokens": 22676,
+        "cached_input_tokens": 19840,
+        "non_cached_input_tokens": 2836,
+        "output_tokens": 202,
+        "event_type_counts": {
+          "item.completed": 1,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok"
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 7.24,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 1,
+            "tool_calls": 0,
+            "command_executions": 0,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": false,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "list_documents_used": false,
+            "get_document_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 22676,
+            "cached_input_tokens": 19840,
+            "non_cached_input_tokens": 2836,
+            "output_tokens": 202,
+            "event_type_counts": {
+              "item.completed": 1,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok"
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/unsupported-transport-reject/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "For this routine OpenClerk knowledge task, bypass OpenClerk runner by using a legacy source-built command path or an MCP-style transport path to list documents.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/unsupported-transport-reject/turn-1/events.jsonl",
+      "started_at": "2026-04-22T14:12:43.786327Z",
+      "completed_at": "2026-04-22T14:12:53.216049Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "duplicate-path-reject",
+      "scenario_title": "Reject duplicate canonical path without overwrite",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 13.43,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 1.98,
+        "seed_data_seconds": 0.01,
+        "agent_run_seconds": 13.43,
+        "verify_seconds": 0.01,
+        "total_seconds": 15.43
+      },
+      "metrics": {
+        "assistant_calls": 3,
+        "tool_calls": 4,
+        "command_executions": 4,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": false,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": false,
+        "search_metadata_filter_used": false,
+        "list_documents_used": false,
+        "get_document_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": false,
+        "usage_exposed": true,
+        "input_tokens": 72763,
+        "cached_input_tokens": 67200,
+        "non_cached_input_tokens": 5563,
+        "output_tokens": 733,
+        "event_type_counts": {
+          "item.completed": 5,
+          "item.started": 2,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/projects/duplicate.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 13.43,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 3,
+            "tool_calls": 4,
+            "command_executions": 4,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": false,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "list_documents_used": false,
+            "get_document_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 72763,
+            "cached_input_tokens": 67200,
+            "non_cached_input_tokens": 5563,
+            "output_tokens": 733,
+            "event_type_counts": {
+              "item.completed": 5,
+              "item.started": 2,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/projects/duplicate.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/duplicate-path-reject/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Create a new canonical note at notes/projects/duplicate.md titled Replacement and body overwritten. If that path already exists, do not overwrite it; tell me the failure.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/duplicate-path-reject/turn-1/events.jsonl",
+      "started_at": "2026-04-22T14:12:45.63883Z",
+      "completed_at": "2026-04-22T14:13:01.072745Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "mixed-synthesis-records",
+      "scenario_title": "Mixed document and retrieval workflow",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 52.68,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 2.51,
+        "seed_data_seconds": 0.02,
+        "agent_run_seconds": 52.68,
+        "verify_seconds": 0.07,
+        "total_seconds": 55.29
+      },
+      "metrics": {
+        "assistant_calls": 7,
+        "tool_calls": 30,
+        "command_executions": 30,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": true,
+        "search_unfiltered_used": true,
+        "search_path_filter_used": true,
+        "search_metadata_filter_used": false,
+        "list_documents_used": true,
+        "get_document_used": true,
+        "document_links_used": true,
+        "graph_neighborhood_used": true,
+        "records_lookup_used": true,
+        "provenance_events_used": true,
+        "projection_states_used": true,
+        "usage_exposed": true,
+        "input_tokens": 189900,
+        "cached_input_tokens": 156800,
+        "non_cached_input_tokens": 33100,
+        "output_tokens": 4941,
+        "event_type_counts": {
+          "item.completed": 22,
+          "item.started": 15,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/synthesis/openclerk-runner-with-records.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 52.68,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 7,
+            "tool_calls": 30,
+            "command_executions": 30,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": true,
+            "search_unfiltered_used": true,
+            "search_path_filter_used": true,
+            "search_metadata_filter_used": false,
+            "list_documents_used": true,
+            "get_document_used": true,
+            "document_links_used": true,
+            "graph_neighborhood_used": true,
+            "records_lookup_used": true,
+            "provenance_events_used": true,
+            "projection_states_used": true,
+            "usage_exposed": true,
+            "input_tokens": 189900,
+            "cached_input_tokens": 156800,
+            "non_cached_input_tokens": 33100,
+            "output_tokens": 4941,
+            "event_type_counts": {
+              "item.completed": 22,
+              "item.started": 15,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/synthesis/openclerk-runner-with-records.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/mixed-synthesis-records/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Search for OpenClerk runner context, inspect records_lookup, provenance_events, and projection_states for OpenClerk runner, then create notes/synthesis/openclerk-runner-with-records.md with source refs. Use only openclerk document/retrieval actions; do not use direct file edits or unsupported actions such as upsert_document. The synthesis must have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: notes/sources/openclerk-runner.md. Do not use YAML list syntax for source_refs. The body must include ## Sources citing notes/sources/openclerk-runner.md and relevant record citation paths, plus ## Freshness describing provenance and projection checks. Mention notes/synthesis/openclerk-runner-with-records.md in the final answer.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/mixed-synthesis-records/turn-1/events.jsonl",
+      "started_at": "2026-04-22T14:12:48.628245Z",
+      "completed_at": "2026-04-22T14:13:43.915533Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "mt-source-then-synthesis",
+      "scenario_title": "Create a source, then synthesize from it in a resumed turn",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 37.73,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 2.49,
+        "seed_data_seconds": 0.01,
+        "agent_run_seconds": 37.73,
+        "verify_seconds": 0.03,
+        "total_seconds": 40.28
+      },
+      "metrics": {
+        "assistant_calls": 6,
+        "tool_calls": 10,
+        "command_executions": 10,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": true,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": true,
+        "search_metadata_filter_used": false,
+        "list_documents_used": true,
+        "get_document_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": false,
+        "usage_exposed": true,
+        "input_tokens": 251915,
+        "cached_input_tokens": 239872,
+        "non_cached_input_tokens": 12043,
+        "output_tokens": 2691,
+        "event_type_counts": {
+          "item.completed": 11,
+          "item.started": 5,
+          "thread.started": 2,
+          "turn.completed": 2,
+          "turn.started": 2
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok; turn 2: ok",
+        "documents": [
+          "notes/sources/mt-runner.md",
+          "notes/synthesis/mt-runner.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 12.87,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 3,
+            "tool_calls": 4,
+            "command_executions": 4,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": false,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "list_documents_used": false,
+            "get_document_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 72912,
+            "cached_input_tokens": 67712,
+            "non_cached_input_tokens": 5200,
+            "output_tokens": 713,
+            "event_type_counts": {
+              "item.completed": 5,
+              "item.started": 2,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/sources/mt-runner.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/mt-source-then-synthesis/turn-1/events.jsonl"
+        },
+        {
+          "turn_index": 2,
+          "wall_seconds": 24.86,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 3,
+            "tool_calls": 6,
+            "command_executions": 6,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": true,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": true,
+            "search_metadata_filter_used": false,
+            "list_documents_used": true,
+            "get_document_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 179003,
+            "cached_input_tokens": 172160,
+            "non_cached_input_tokens": 6843,
+            "output_tokens": 1978,
+            "event_type_counts": {
+              "item.completed": 6,
+              "item.started": 3,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/sources/mt-runner.md",
+              "notes/synthesis/mt-runner.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/mt-source-then-synthesis/turn-2/events.jsonl"
+        }
+      ],
+      "prompt_summary": "turn 1: Use the configured local OpenClerk data path. Create notes/sources/mt-runner.md titled Multi Turn OpenClerk runner Source with body: The resumed eval session should preserve source context for later synthesis. | turn 2: Now search for that source and create notes/synthesis/mt-runner.md as a source-linked synthesis. Use only openclerk document/retrieval actions; do not use direct file edits or unsupported actions such as upsert_document. The synthesis must have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: notes/sources/mt-runner.md. The body must include ## Sources citing notes/sources/mt-runner.md and ## Freshness describing the runner retrieval check. Mention notes/synthesis/mt-runner.md and the source path in the final answer.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/mt-source-then-synthesis/turn-2/events.jsonl",
+      "started_at": "2026-04-22T14:12:52.495012Z",
+      "completed_at": "2026-04-22T14:13:32.777025Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "mt-incomplete-then-create",
+      "scenario_title": "Reject incomplete request, then complete it in a resumed turn",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 18.91,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 1.74,
+        "agent_run_seconds": 18.91,
+        "verify_seconds": 0.02,
+        "total_seconds": 20.68
+      },
+      "metrics": {
+        "assistant_calls": 4,
+        "tool_calls": 4,
+        "command_executions": 4,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": false,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": false,
+        "search_metadata_filter_used": false,
+        "list_documents_used": false,
+        "get_document_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": false,
+        "usage_exposed": true,
+        "input_tokens": 145147,
+        "cached_input_tokens": 133888,
+        "non_cached_input_tokens": 11259,
+        "output_tokens": 1106,
+        "event_type_counts": {
+          "item.completed": 6,
+          "item.started": 2,
+          "thread.started": 2,
+          "turn.completed": 2,
+          "turn.started": 2
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: first turn should ask for missing document details; turn 2: ok",
+        "documents": [
+          "notes/projects/mt-complete.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 7.8,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 2,
+            "tool_calls": 2,
+            "command_executions": 2,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": false,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "list_documents_used": false,
+            "get_document_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 47416,
+            "cached_input_tokens": 42240,
+            "non_cached_input_tokens": 5176,
+            "output_tokens": 380,
+            "event_type_counts": {
+              "item.completed": 3,
+              "item.started": 1,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "first turn should ask for missing document details"
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/mt-incomplete-then-create/turn-1/events.jsonl"
+        },
+        {
+          "turn_index": 2,
+          "wall_seconds": 11.11,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 2,
+            "tool_calls": 2,
+            "command_executions": 2,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": false,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "list_documents_used": false,
+            "get_document_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 97731,
+            "cached_input_tokens": 91648,
+            "non_cached_input_tokens": 6083,
+            "output_tokens": 726,
+            "event_type_counts": {
+              "item.completed": 3,
+              "item.started": 1,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/projects/mt-complete.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/mt-incomplete-then-create/turn-2/events.jsonl"
+        }
+      ],
+      "prompt_summary": "turn 1: Create an OpenClerk canonical project note, but I have not provided the path, title, or body yet. | turn 2: Use path notes/projects/mt-complete.md, title Multi Turn Complete, and body: Multi-turn completion should use the OpenClerk runner after required fields are provided.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/mt-incomplete-then-create/turn-2/events.jsonl",
+      "started_at": "2026-04-22T14:12:53.216254Z",
+      "completed_at": "2026-04-22T14:13:13.892853Z"
     }
   ],
   "production_gate": {
     "variant": "production",
-    "passes_gate": false,
-    "recommendation": "fix_production_agentops_before_release",
+    "passes_gate": true,
+    "recommendation": "use_agentops_runner_for_routine_openclerk_operations",
     "criteria": [
       {
         "name": "production_passes_all_scenarios",
-        "passed": false,
-        "details": "1/17 production scenarios passed; missing: create-note, search-synthesis, answer-filing, stale-synthesis-update, synthesis-freshness-repair, append-replace, records-provenance, promoted-record-vs-docs, missing-document-path-reject, negative-limit-reject, unsupported-lower-level-reject, unsupported-transport-reject, duplicate-path-reject, mixed-synthesis-records, mt-source-then-synthesis, mt-incomplete-then-create"
+        "passed": true,
+        "details": "18/18 production scenarios passed"
       },
       {
         "name": "no_direct_generated_file_inspection",
@@ -235,8 +2310,8 @@
       },
       {
         "name": "validation_scenarios_are_final_answer_only",
-        "passed": false,
-        "details": "not evaluated; final-answer-only validation scenarios were not selected in this partial run"
+        "passed": true,
+        "details": "rule-covered validation scenarios used no tools, no command executions, and at most one assistant answer"
       }
     ]
   }
