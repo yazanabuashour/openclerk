@@ -87,6 +87,11 @@ in `docs/evals/knowledge-plane-archetype-matrix.md`.
 - Verify graph `projection_states` exposes fresh derived graph state.
 - Require the final answer to document where directory/link navigation is
   sufficient, where it fails, and what AgentOps-backed graph behavior adds.
+- Run the `graph-semantics-reference-poc` scenario from `oc-za6.6`.
+- Compare semantic relationship words in canonical markdown against search,
+  `document_links`, backlinks, `graph_neighborhood`, and graph freshness.
+- Verify richer relationship labels remain canonical markdown evidence rather
+  than promoted graph edge authority.
 
 ## Graph/Memory Reference Archetype
 
@@ -96,6 +101,9 @@ AgentOps eval harness supports them cleanly.
 
 - Compare derived graph navigation against docs search and link expansion.
 - Verify graph answers preserve source citations and projection freshness.
+- Keep semantic graph labeling as a reference/deferred pattern unless eval
+  evidence shows it adds value over markdown text, links, backlinks, graph
+  neighborhoods, and search.
 - Verify temporal retrieval distinguishes current, observed, effective, and
   superseded facts.
 - Verify session-derived or feedback-weighted recall can explain source refs

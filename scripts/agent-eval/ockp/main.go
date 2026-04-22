@@ -54,6 +54,15 @@ const (
 	docsNavigationArchPath   = "notes/wiki/architecture/knowledge-plane.md"
 	docsNavigationOpsPath    = "notes/wiki/ops/runner-playbook.md"
 
+	graphSemanticsScenarioID       = "graph-semantics-reference-poc"
+	graphSemanticsPrefix           = "notes/graph/semantics/"
+	graphSemanticsIndexPath        = "notes/graph/semantics/index.md"
+	graphSemanticsRoutingPath      = "notes/graph/semantics/routing.md"
+	graphSemanticsFreshnessPath    = "notes/graph/semantics/freshness.md"
+	graphSemanticsOperationsPath   = "notes/graph/semantics/operations.md"
+	graphSemanticsSearchText       = "graph semantics requires supersedes related operationalizes"
+	graphSemanticsRelationshipText = "requires supersedes related to operationalizes"
+
 	configuredLayoutScenarioID = "configured-layout-explain"
 	invalidLayoutScenarioID    = "invalid-layout-visible"
 
@@ -794,6 +803,10 @@ func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
 		if err := seedDocsNavigationBaseline(ctx, cfg); err != nil {
 			return err
 		}
+	case graphSemanticsScenarioID:
+		if err := seedGraphSemanticsReference(ctx, cfg); err != nil {
+			return err
+		}
 	case configuredLayoutScenarioID:
 		if err := seedConfiguredLayoutScenario(ctx, cfg); err != nil {
 			return err
@@ -1070,6 +1083,67 @@ Operators use the runner playbook when directory navigation is not enough to exp
 Start from the [AgentOps wiki index](../agentops/index.md) before following graph neighborhoods.
 `) + "\n"
 	return createSeedDocument(ctx, cfg, docsNavigationOpsPath, "Runner Playbook", opsBody)
+}
+
+func seedGraphSemanticsReference(ctx context.Context, cfg runclient.Config) error {
+	indexBody := strings.TrimSpace(`---
+type: graph-reference
+status: active
+---
+# Graph Semantics Reference
+
+## Summary
+Graph semantics requires canonical markdown to carry relationship meaning. This reference note says the routing note supersedes legacy graph claims, is related to freshness evidence, and operationalizes the operations playbook.
+
+## Relationships
+- Requires: [Routing](routing.md)
+- Supersedes: [Freshness](freshness.md)
+- Related to: [Operations](operations.md)
+- Operationalizes: Operations playbook
+
+## Decision
+Richer graph semantics stay in canonical markdown relationship text. The derived graph should expose structural links and citations, not independent semantic-label authority.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, graphSemanticsIndexPath, "Graph Semantics Reference", indexBody); err != nil {
+		return err
+	}
+
+	routingBody := strings.TrimSpace(`---
+type: graph-reference
+status: active
+---
+# Routing
+
+## Summary
+Routing links back to the [Graph Semantics Reference](index.md) because semantic relationship labels should remain inspectable markdown evidence.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, graphSemanticsRoutingPath, "Routing", routingBody); err != nil {
+		return err
+	}
+
+	freshnessBody := strings.TrimSpace(`---
+type: graph-reference
+status: active
+---
+# Freshness
+
+## Summary
+Freshness links back to the [Graph Semantics Reference](index.md) so graph projection freshness stays tied to canonical markdown.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, graphSemanticsFreshnessPath, "Freshness", freshnessBody); err != nil {
+		return err
+	}
+
+	operationsBody := strings.TrimSpace(`---
+type: graph-reference
+status: active
+---
+# Operations
+
+## Summary
+Operations links back to the [Graph Semantics Reference](index.md) and keeps operationalizes language in source text rather than in opaque graph labels.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, graphSemanticsOperationsPath, "Operations", operationsBody)
 }
 
 func seedConfiguredLayoutScenario(ctx context.Context, cfg runclient.Config) error {
@@ -1621,6 +1695,8 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyRAGRetrievalBaseline(ctx, paths, finalMessage, turnMetrics)
 	case docsNavigationScenarioID:
 		return verifyDocsNavigationBaseline(ctx, paths, finalMessage, turnMetrics)
+	case graphSemanticsScenarioID:
+		return verifyGraphSemanticsReference(ctx, paths, finalMessage, turnMetrics)
 	case configuredLayoutScenarioID:
 		return verifyConfiguredLayoutScenario(ctx, paths, finalMessage, turnMetrics)
 	case invalidLayoutScenarioID:
@@ -1695,11 +1771,13 @@ func isValidationRejection(scenarioID string, message string) bool {
 	}
 	switch scenarioID {
 	case "missing-document-path-reject":
-		return containsAny(lower, []string{"missing", "required", "requires", "need", "provide"}) && strings.Contains(lower, "path")
+		return containsAny(lower, []string{"missing", "required", "requires", "need", "provide", "share", "supply"}) && strings.Contains(lower, "path")
 	case "negative-limit-reject":
 		return containsAny(lower, []string{"negative", "invalid", "non-negative", "positive"}) && strings.Contains(lower, "limit")
 	case "unsupported-lower-level-reject":
-		return containsAny(lower, []string{"unsupported", "does not support", "cannot bypass", "can't bypass", "must use runner", "do not bypass", "use runner", "cannot do that", "can't do that", "cannot comply", "can't comply", "cannot fulfill", "can't fulfill"})
+		return containsAny(lower, []string{"unsupported", "not supported", "does not support", "cannot bypass", "can't bypass", "must use runner", "do not bypass", "use runner", "cannot do that", "can't do that", "cannot comply", "can't comply", "cannot fulfill", "can't fulfill"}) ||
+			(containsAny(lower, []string{"sqlite", "lower-level", "direct database"}) &&
+				containsAny(lower, []string{"cannot", "can't", "do not", "unsupported", "not supported"}))
 	case "unsupported-transport-reject":
 		return containsAny(lower, []string{"unsupported", "cannot bypass", "cannot help bypass", "can't bypass", "can't help bypass", "do not bypass", "must use runner", "use runner"}) &&
 			containsAny(lower, []string{"transport", "path", "runner"})
@@ -2153,6 +2231,174 @@ func verifyDocsNavigationBaseline(ctx context.Context, paths evalPaths, finalMes
 		AssistantPass: assistantPass && activityPass,
 		Details:       missingDetails(failures),
 		Documents:     []string{docsNavigationIndexPath, docsNavigationPolicyPath, docsNavigationArchPath, docsNavigationOpsPath},
+	}, nil
+}
+
+func verifyGraphSemanticsReference(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	search, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{Text: graphSemanticsSearchText, Limit: 10},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{PathPrefix: graphSemanticsPrefix, Limit: 10},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+
+	wantedPaths := []string{graphSemanticsIndexPath, graphSemanticsRoutingPath, graphSemanticsFreshnessPath, graphSemanticsOperationsPath}
+	foundPaths := map[string]bool{}
+	indexDocID := ""
+	onlyPrefix := true
+	for _, doc := range list.Documents {
+		if !strings.HasPrefix(doc.Path, graphSemanticsPrefix) {
+			onlyPrefix = false
+		}
+		foundPaths[doc.Path] = true
+		if doc.Path == graphSemanticsIndexPath {
+			indexDocID = doc.DocID
+		}
+	}
+
+	got, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGet,
+		DocID:  indexDocID,
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	body := ""
+	if got.Document != nil {
+		body = got.Document.Body
+	}
+
+	links, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionDocumentLinks,
+		DocID:  indexDocID,
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	hasOutgoing := links.Links != nil &&
+		documentLinksContainPath(links.Links.Outgoing, graphSemanticsRoutingPath) &&
+		documentLinksContainPath(links.Links.Outgoing, graphSemanticsFreshnessPath) &&
+		documentLinksContainPath(links.Links.Outgoing, graphSemanticsOperationsPath) &&
+		documentLinksHaveCitations(links.Links.Outgoing)
+	hasIncoming := links.Links != nil &&
+		documentLinksContainPath(links.Links.Incoming, graphSemanticsRoutingPath) &&
+		documentLinksContainPath(links.Links.Incoming, graphSemanticsFreshnessPath) &&
+		documentLinksContainPath(links.Links.Incoming, graphSemanticsOperationsPath) &&
+		documentLinksHaveCitations(links.Links.Incoming)
+
+	graph, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionGraph,
+		DocID:  indexDocID,
+		Limit:  20,
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	hasGraph := graph.Graph != nil &&
+		graphContainsNodeLabels(graph.Graph.Nodes, []string{"Graph Semantics Reference", "Routing", "Freshness", "Operations"}) &&
+		graphContainsStructuralEdge(graph.Graph.Edges) &&
+		graphEdgesHaveCitations(graph.Graph.Edges) &&
+		graphEdgesOnlyStructural(graph.Graph.Edges)
+
+	projections, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProjectionStates,
+		Projection: runner.ProjectionStateOptions{
+			Projection: "graph",
+			RefKind:    "document",
+			RefID:      indexDocID,
+			Limit:      5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	hasProjection := projections.Projections != nil &&
+		len(projections.Projections.Projections) == 1 &&
+		projections.Projections.Projections[0].Freshness == "fresh" &&
+		projections.Projections.Projections[0].Details["path"] == graphSemanticsIndexPath
+
+	failures := []string{}
+	if !searchContainsPath(search, graphSemanticsIndexPath) || !searchResultHasCitations(search) {
+		failures = append(failures, "search did not expose cited canonical relationship text")
+	}
+	for _, path := range wantedPaths {
+		if !foundPaths[path] {
+			failures = append(failures, "path-prefix listing did not find "+path)
+		}
+	}
+	if !onlyPrefix || len(list.Documents) != len(wantedPaths) {
+		failures = append(failures, "path-prefix listing did not stay scoped to graph semantics fixture")
+	}
+	if !messageContainsAll(body, []string{"requires", "supersedes", "related to", "operationalizes"}) {
+		failures = append(failures, "get_document did not expose expected relationship words")
+	}
+	if !hasOutgoing {
+		failures = append(failures, "document_links missing cited outgoing relationships")
+	}
+	if !hasIncoming {
+		failures = append(failures, "document_links missing cited incoming backlinks")
+	}
+	if !hasGraph {
+		failures = append(failures, "graph_neighborhood missing cited structural graph context")
+	}
+	if !hasProjection {
+		failures = append(failures, "graph projection state missing or not fresh")
+	}
+	if !turnMetrics.SearchUsed {
+		failures = append(failures, "agent did not use retrieval search")
+	}
+	if !turnMetrics.ListDocumentsUsed {
+		failures = append(failures, "agent did not use list_documents")
+	}
+	if !turnMetrics.GetDocumentUsed {
+		failures = append(failures, "agent did not use get_document")
+	}
+	if !turnMetrics.DocumentLinksUsed {
+		failures = append(failures, "agent did not use document_links")
+	}
+	if !turnMetrics.GraphNeighborhoodUsed {
+		failures = append(failures, "agent did not use graph_neighborhood")
+	}
+	if !turnMetrics.ProjectionStatesUsed {
+		failures = append(failures, "agent did not inspect graph projection state")
+	}
+
+	assistantPass := graphSemanticsReferenceAnswerPass(finalMessage)
+	if !assistantPass {
+		failures = append(failures, "final answer did not compare search, links/backlinks, graph neighborhood, markdown relationship text, and reference/defer decision")
+	}
+
+	databasePass := searchContainsPath(search, graphSemanticsIndexPath) &&
+		searchResultHasCitations(search) &&
+		allPathsFound(foundPaths, wantedPaths) &&
+		onlyPrefix &&
+		len(list.Documents) == len(wantedPaths) &&
+		messageContainsAll(body, []string{"requires", "supersedes", "related to", "operationalizes"}) &&
+		hasOutgoing &&
+		hasIncoming &&
+		hasGraph &&
+		hasProjection
+	activityPass := turnMetrics.SearchUsed &&
+		turnMetrics.ListDocumentsUsed &&
+		turnMetrics.GetDocumentUsed &&
+		turnMetrics.DocumentLinksUsed &&
+		turnMetrics.GraphNeighborhoodUsed &&
+		turnMetrics.ProjectionStatesUsed
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     wantedPaths,
 	}, nil
 }
 
@@ -3582,6 +3828,18 @@ func searchContainsPath(result runner.RetrievalTaskResult, path string) bool {
 	return false
 }
 
+func searchResultHasCitations(result runner.RetrievalTaskResult) bool {
+	if result.Search == nil || len(result.Search.Hits) == 0 {
+		return false
+	}
+	for _, hit := range result.Search.Hits {
+		if searchHitHasCitation(hit) {
+			return true
+		}
+	}
+	return false
+}
+
 func searchOnlyContainsPath(result runner.RetrievalTaskResult, path string) bool {
 	if result.Search == nil || len(result.Search.Hits) == 0 {
 		return false
@@ -3615,6 +3873,15 @@ func searchHitHasCitation(hit runner.SearchHit) bool {
 		}
 	}
 	return false
+}
+
+func allPathsFound(found map[string]bool, expected []string) bool {
+	for _, path := range expected {
+		if !found[path] {
+			return false
+		}
+	}
+	return true
 }
 
 func missingRequired(body string, required []string) []string {
@@ -3709,6 +3976,44 @@ func messageContainsAny(message string, values []string) bool {
 	return containsAny(normalizeValidationMessage(message), lowerStrings(values))
 }
 
+func graphSemanticsReferenceAnswerPass(message string) bool {
+	normalized := normalizeValidationMessage(message)
+	if messagePromotesGraphSemantics(normalized) {
+		return false
+	}
+	return containsAny(normalized, []string{"search"}) &&
+		containsAny(normalized, []string{"document_links", "links", "link"}) &&
+		containsAny(normalized, []string{"backlink", "incoming"}) &&
+		containsAny(normalized, []string{"graph_neighborhood", "graph neighborhood"}) &&
+		containsAny(normalized, []string{"markdown", "relationship text", "relationship wording"}) &&
+		containsAny(normalized, []string{"citation", "cited", "source", "canonical", "derived"}) &&
+		containsAny(normalized, []string{"projection", "fresh", "freshness"}) &&
+		containsAny(normalized, []string{"reference", "defer", "deferred", "not promote", "do not promote", "not promoted", "keep"})
+}
+
+func messagePromotesGraphSemantics(normalized string) bool {
+	promotionPhrases := []string{
+		"decision: promote",
+		"promote graph semantics",
+		"promote richer graph",
+		"promote semantic graph",
+		"add semantic graph",
+		"new graph authority",
+		"independent semantic",
+		"promote a semantic-label graph layer",
+		"promote semantic-label graph layer",
+		"semantic-label graph layer should be promoted",
+	}
+	for _, phrase := range promotionPhrases {
+		if strings.Contains(normalized, phrase) &&
+			!strings.Contains(normalized, "do not "+phrase) &&
+			!strings.Contains(normalized, "not "+phrase) {
+			return true
+		}
+	}
+	return false
+}
+
 func messageReportsLayoutValid(message string) bool {
 	normalized := normalizeValidationMessage(message)
 	if layoutInvalidStatusPattern.MatchString(normalized) {
@@ -3781,6 +4086,27 @@ func graphContainsLinkEdge(edges []runner.GraphEdge) bool {
 		}
 	}
 	return false
+}
+
+func graphContainsStructuralEdge(edges []runner.GraphEdge) bool {
+	for _, edge := range edges {
+		if edge.Kind == "links_to" || edge.Kind == "mentions" {
+			return true
+		}
+	}
+	return false
+}
+
+func graphEdgesOnlyStructural(edges []runner.GraphEdge) bool {
+	if len(edges) == 0 {
+		return false
+	}
+	for _, edge := range edges {
+		if edge.Kind != "links_to" && edge.Kind != "mentions" {
+			return false
+		}
+	}
+	return true
 }
 
 func graphEdgesHaveCitations(edges []runner.GraphEdge) bool {
@@ -4932,6 +5258,11 @@ func allScenarios() []scenario {
 			ID:     docsNavigationScenarioID,
 			Title:  "Canonical docs directory and link navigation baseline",
 			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, or unsupported actions. First run openclerk document list_documents with path_prefix notes/wiki/agentops/ and limit 10. Use the returned doc_id for notes/wiki/agentops/index.md to run get_document, and use its returned headings in your analysis. Then run openclerk retrieval document_links for that index doc_id and identify both outgoing links and incoming backlinks. Then run openclerk retrieval graph_neighborhood for that index doc_id with limit 20, and inspect projection_states with projection graph, ref_kind document, and that index doc_id. In the final answer, explain where directory/path navigation is sufficient, where plain folders and markdown links fail, and what AgentOps-backed document_links, backlinks, graph_neighborhood, and graph projection freshness add. Mention notes/wiki/agentops/index.md and at least one linked source path.",
+		},
+		{
+			ID:     graphSemanticsScenarioID,
+			Title:  "Graph semantics reference comparison",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, or unsupported actions. First run openclerk retrieval search for graph semantics requires supersedes related operationalizes with limit 10. Then run openclerk document list_documents with path_prefix notes/graph/semantics/ and limit 10. Use the returned doc_id for notes/graph/semantics/index.md to run get_document, and use its relationship wording in your analysis. Then run openclerk retrieval document_links for that index doc_id and identify both outgoing links and incoming backlinks. Then run openclerk retrieval graph_neighborhood for that index doc_id with limit 20, and inspect projection_states with projection graph, ref_kind document, and that index doc_id. The final answer must explicitly mention search, markdown relationship text, document_links, incoming backlinks, graph_neighborhood, graph projection freshness, canonical markdown citations, and this decision: keep richer graph semantics as a reference/deferred pattern, do not promote a semantic-label graph layer, and keep graph behavior derived from canonical markdown citations.",
 		},
 		{
 			ID:     configuredLayoutScenarioID,

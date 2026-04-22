@@ -521,6 +521,9 @@ func TestVerifyFinalAnswerOnlyRequiresRejectionAndNoTools(t *testing.T) {
 	if result := verifyFinalAnswerOnly(unsupported, "I can't do that for routine OpenClerk knowledge tasks.", noTools); !result.Passed {
 		t.Fatalf("plain refusal rejection failed: %+v", result)
 	}
+	if result := verifyFinalAnswerOnly(unsupported, "I can't query SQLite directly for routine OpenClerk knowledge tasks.", noTools); !result.Passed {
+		t.Fatalf("direct SQLite rejection failed: %+v", result)
+	}
 
 	unsupportedTransport := scenario{ID: "unsupported-transport-reject"}
 	if result := verifyFinalAnswerOnly(unsupportedTransport, "I can't bypass OpenClerk runner through a legacy command path or MCP-style transport path for this routine task.", noTools); !result.Passed {
@@ -715,6 +718,76 @@ func TestVerifyDocsNavigationBaselineRequiresLinksGraphAndProjection(t *testing.
 	}
 	if result.Passed {
 		t.Fatalf("docs navigation baseline with incomplete answer passed: %+v", result)
+	}
+}
+
+func TestVerifyGraphSemanticsReferenceRequiresSearchLinksGraphProjectionAndDecision(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: graphSemanticsScenarioID}); err != nil {
+		t.Fatalf("seed graph semantics scenario: %v", err)
+	}
+	for _, path := range []string{graphSemanticsIndexPath, graphSemanticsRoutingPath, graphSemanticsFreshnessPath, graphSemanticsOperationsPath} {
+		if _, found, err := documentIDByPath(ctx, paths, path); err != nil {
+			t.Fatalf("lookup %s: %v", path, err)
+		} else if !found {
+			t.Fatalf("seed missing %s", path)
+		}
+	}
+
+	completeMetrics := metrics{
+		AssistantCalls:        1,
+		SearchUsed:            true,
+		ListDocumentsUsed:     true,
+		GetDocumentUsed:       true,
+		DocumentLinksUsed:     true,
+		GraphNeighborhoodUsed: true,
+		ProjectionStatesUsed:  true,
+		EventTypeCounts:       map[string]int{},
+	}
+	finalAnswer := "Search finds canonical markdown relationship text: requires, supersedes, related to, and operationalizes. document_links shows outgoing links and incoming backlinks with citations. graph_neighborhood shows structural links_to and mentions context, and graph projection freshness is fresh. Decision: keep richer graph semantics as a reference/deferred pattern; do not promote a semantic-label graph layer because canonical markdown remains the cited source."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: graphSemanticsScenarioID}, 1, finalAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify graph semantics reference: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("graph semantics reference failed: %+v", result)
+	}
+
+	for name, mutate := range map[string]func(*metrics){
+		"missing search":     func(m *metrics) { m.SearchUsed = false },
+		"missing graph":      func(m *metrics) { m.GraphNeighborhoodUsed = false },
+		"missing projection": func(m *metrics) { m.ProjectionStatesUsed = false },
+	} {
+		t.Run(name, func(t *testing.T) {
+			incompleteMetrics := completeMetrics
+			mutate(&incompleteMetrics)
+			result, err := verifyScenarioTurn(ctx, paths, scenario{ID: graphSemanticsScenarioID}, 1, finalAnswer, incompleteMetrics)
+			if err != nil {
+				t.Fatalf("verify %s: %v", name, err)
+			}
+			if result.Passed {
+				t.Fatalf("%s passed unexpectedly: %+v", name, result)
+			}
+		})
+	}
+
+	promotionAnswer := "Search finds markdown relationship text and document_links plus incoming backlinks. graph_neighborhood has canonical markdown citations and graph projection freshness is fresh. Decision: keep canonical markdown citations, but promote a semantic-label graph layer as reference."
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: graphSemanticsScenarioID}, 1, promotionAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify promotion answer: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("promotion answer passed unexpectedly: %+v", result)
+	}
+
+	incompleteAnswer := "Search and graph_neighborhood are enough, so keep it as reference."
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: graphSemanticsScenarioID}, 1, incompleteAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify incomplete answer: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("incomplete answer passed unexpectedly: %+v", result)
 	}
 }
 

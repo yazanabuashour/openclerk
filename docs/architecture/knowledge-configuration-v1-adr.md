@@ -313,6 +313,27 @@ intentionally not selected. No follow-up implementation issue is filed unless
 future evals show repeated failures that the existing provenance/freshness
 workflow cannot address.
 
+## `oc-za6.6` POC Decision
+
+Decision: keep richer graph semantics as a reference pattern and do not promote
+a semantic-label graph layer for v1.
+
+The POC keeps relationship meaning in canonical markdown. Agents can search for
+relationship words such as requires, supersedes, related to, and
+operationalizes; inspect the source document; expand outgoing links and
+incoming backlinks; inspect the derived graph neighborhood; and verify graph
+projection freshness. The derived graph remains structural and cited: edge
+kinds such as `links_to` and `mentions` explain navigation, while canonical
+markdown remains the source of semantic relationship authority.
+
+Targeted AgentOps evidence is recorded in
+`docs/evals/results/ockp-graph-semantics-reference-poc.md`. The targeted run
+covers graph semantic-label pressure, canonical docs navigation, no broad repo
+search, no direct SQLite, no source-built runner usage, final-answer-only
+invalid-request rejection, and preserved citations/source refs/freshness. No
+follow-up implementation issue is filed because the POC decision is reference
+and deferred rather than promoted.
+
 ## Production-Valid for AgentOps
 
 A vault is valid enough for production AgentOps use when:
