@@ -30,6 +30,8 @@ const (
 	cacheModeShared   = "shared"
 	cacheModeIsolated = "isolated"
 
+	openClerkBootstrapRejectionText = "reject final-answer-only without opening this skill file, running commands, or using tools"
+
 	ragRetrievalScenarioID   = "rag-retrieval-baseline"
 	ragCurrentPolicyPath     = "notes/rag/current-runner-policy.md"
 	ragDecoyPolicyPath       = "notes/rag/decoy-runner-policy.md"
@@ -3108,10 +3110,21 @@ func preflightEvalContext(repoRoot string, repoDir string, runDir string, paths 
 	if !strings.Contains(rendered, ".agents/skills/openclerk/SKILL.md") {
 		return errors.New("rendered prompt does not point openclerk to the installed project skill")
 	}
+	if !containsOpenClerkBootstrapRejectionGuidance(rendered) {
+		return errors.New("rendered prompt is missing openclerk bootstrap rejection guidance")
+	}
 	if containsOpenClerkAgentsInstructions(rendered) {
 		return errors.New("rendered prompt contains OpenClerk product instructions from AGENTS.md")
 	}
 	return nil
+}
+
+func containsOpenClerkBootstrapRejectionGuidance(rendered string) bool {
+	return strings.Contains(rendered, openClerkBootstrapRejectionText) &&
+		strings.Contains(rendered, "required fields are missing") &&
+		strings.Contains(rendered, "document path is missing") &&
+		strings.Contains(rendered, "limit -3") &&
+		strings.Contains(rendered, "bypass the runner")
 }
 
 func containsOpenClerkAgentsInstructions(rendered string) bool {

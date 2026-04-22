@@ -1,6 +1,6 @@
 ---
 name: openclerk
-description: Use OpenClerk for local-first knowledge-plane tasks over canonical notes, source-linked synthesis, promoted records, provenance-backed retrieval, and projection freshness through the installed openclerk JSON runner.
+description: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner. Bootstrap rejection rule for routine OpenClerk requests - if required fields are missing, if creating a document but the document path is missing, if a numeric limit is negative such as limit -3, or if the user asks to bypass the runner through SQLite, HTTP, MCP, legacy or source-built paths, or unsupported transports, this description is complete; reject final-answer-only without opening this skill file, running commands, or using tools.
 license: MIT
 compatibility: Requires local filesystem access and an installed openclerk binary on PATH.
 ---
@@ -28,13 +28,15 @@ environment.
 
 ## Reject Before Tools
 
-Before using any runner, reject final-answer-only, with exactly one assistant
-answer and no tools, when the request:
+Before using any runner or opening this skill file during an agent run, reject
+final-answer-only, with exactly one assistant answer and no tools, when the
+request:
 
 - is missing required document or retrieval fields
-- asks for an obviously invalid limit, such as a negative number
-- asks to bypass the runner for routine lower-level runtime, HTTP, SQLite,
-  legacy source-built command paths, or unsupported transport work
+- asks to create or validate a document but the document path is missing
+- asks for an obviously invalid limit, such as a negative number or `limit -3`
+- asks to bypass the runner for routine lower-level runtime, HTTP, SQLite, MCP,
+  legacy or source-built command paths, or unsupported transport work
 
 For bypass requests, explicitly say the workflow is unsupported and must use
 the OpenClerk runner.

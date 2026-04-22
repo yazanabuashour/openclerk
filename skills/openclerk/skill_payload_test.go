@@ -129,6 +129,53 @@ func TestSkillUsesInstalledRunnerForRoutineWork(t *testing.T) {
 	}
 }
 
+func TestSkillDescriptionContainsBootstrapRejectionGuard(t *testing.T) {
+	t.Parallel()
+
+	content, err := os.ReadFile("SKILL.md")
+	if err != nil {
+		t.Fatalf("read skill: %v", err)
+	}
+	description := frontmatterDescription(string(content))
+	if description == "" {
+		t.Fatal("SKILL.md frontmatter description is empty")
+	}
+	for _, want := range []string{
+		"Bootstrap rejection rule",
+		"required fields are missing",
+		"document path is missing",
+		"limit -3",
+		"bypass the runner",
+		"SQLite",
+		"HTTP",
+		"MCP",
+		"legacy or source-built paths",
+		"unsupported transports",
+		"this description is complete",
+		"reject final-answer-only without opening this skill file, running commands, or using tools",
+	} {
+		if !strings.Contains(description, want) {
+			t.Fatalf("SKILL.md description missing %q: %s", want, description)
+		}
+	}
+}
+
+func frontmatterDescription(content string) string {
+	lines := strings.Split(content, "\n")
+	if len(lines) == 0 || lines[0] != "---" {
+		return ""
+	}
+	for _, line := range lines[1:] {
+		if line == "---" {
+			return ""
+		}
+		if strings.HasPrefix(line, "description: ") {
+			return strings.TrimPrefix(line, "description: ")
+		}
+	}
+	return ""
+}
+
 func shouldSkipLinkTarget(target string) bool {
 	return target == "" ||
 		strings.HasPrefix(target, "#") ||

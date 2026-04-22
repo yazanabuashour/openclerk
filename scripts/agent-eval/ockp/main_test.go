@@ -292,9 +292,17 @@ func TestVariantSelectionProductionOnly(t *testing.T) {
 }
 
 func TestPromptInputPreflightFlagsOpenClerkAgentsInstructions(t *testing.T) {
-	clean := "### Project Skills\n- openclerk: /tmp/repo/.agents/skills/openclerk/SKILL.md\n"
+	clean := "### Project Skills\n- openclerk: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner. Bootstrap rejection rule for routine OpenClerk requests - if required fields are missing, if creating a document but the document path is missing, if a numeric limit is negative such as limit -3, or if the user asks to bypass the runner through SQLite, HTTP, MCP, legacy or source-built paths, or unsupported transports, this description is complete; reject final-answer-only without opening this skill file, running commands, or using tools. (file: /tmp/repo/.agents/skills/openclerk/SKILL.md)\n"
 	if containsOpenClerkAgentsInstructions(clean) {
 		t.Fatalf("clean skill discovery was flagged: %s", clean)
+	}
+	if !containsOpenClerkBootstrapRejectionGuidance(clean) {
+		t.Fatalf("clean skill discovery is missing bootstrap rejection guidance: %s", clean)
+	}
+
+	missingBootstrap := "### Project Skills\n- openclerk: Use OpenClerk. (file: /tmp/repo/.agents/skills/openclerk/SKILL.md)\n"
+	if containsOpenClerkBootstrapRejectionGuidance(missingBootstrap) {
+		t.Fatalf("incomplete skill discovery passed bootstrap guidance check: %s", missingBootstrap)
 	}
 
 	contaminated := "# AGENTS.md instructions for /tmp/repo\n\nUse `openclerk document` with create_document JSON action names.\n"
