@@ -437,6 +437,12 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	if !decisionRecordIDsInclude(parsed.metrics.DecisionRecordIDs, "adr-runner") {
 		t.Fatalf("expected decision record id in %+v", parsed.metrics)
 	}
+	if !containsAllStrings(parsed.metrics.ListDocumentPathPrefixes, []string{"notes/synthesis/"}) {
+		t.Fatalf("expected list document path prefix in %+v", parsed.metrics)
+	}
+	if !containsAllStrings(parsed.metrics.GetDocumentDocIDs, []string{"doc_1"}) {
+		t.Fatalf("expected get document doc id in %+v", parsed.metrics)
+	}
 	for name, used := range map[string]bool{
 		"search":                 parsed.metrics.SearchUsed,
 		"search_unfiltered":      parsed.metrics.SearchUnfilteredUsed,
@@ -542,7 +548,7 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 	for _, id := range scenarioIDs() {
 		ids[id] = true
 	}
-	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
+	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, graphSemanticsScenarioID, memoryRouterScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
 		if !ids[want] {
 			t.Fatalf("scenarioIDs missing %q in %v", want, scenarioIDs())
 		}
@@ -788,6 +794,143 @@ func TestVerifyGraphSemanticsReferenceRequiresSearchLinksGraphProjectionAndDecis
 	}
 	if result.Passed {
 		t.Fatalf("incomplete answer passed unexpectedly: %+v", result)
+	}
+}
+
+func TestVerifyMemoryRouterReferenceRequiresSourceFreshnessAndReferenceDecision(t *testing.T) {
+	ctx := context.Background()
+	t.Run("rejects wrong first-turn fixture", func(t *testing.T) {
+		paths := scenarioPaths(t.TempDir())
+		sc := scenario{ID: memoryRouterScenarioID, Turns: []scenarioTurn{{Prompt: "first"}, {Prompt: "second"}}}
+		if err := seedScenario(ctx, paths, sc); err != nil {
+			t.Fatalf("seed memory/router scenario: %v", err)
+		}
+		cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+		wrongBody := strings.Replace(memoryRouterSessionObservationBody(), "Positive feedback weight 0.8", "Positive feedback weight 0.1", 1)
+		if err := createSeedDocument(ctx, cfg, memoryRouterSessionObservationPath, memoryRouterSessionObservationTitle, wrongBody); err != nil {
+			t.Fatalf("create wrong session observation: %v", err)
+		}
+		result, err := verifyScenarioTurn(ctx, paths, sc, 1, memoryRouterSessionObservationPath, metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}})
+		if err != nil {
+			t.Fatalf("verify wrong first turn: %v", err)
+		}
+		if result.Passed {
+			t.Fatalf("wrong first-turn fixture passed unexpectedly: %+v", result)
+		}
+	})
+
+	paths := scenarioPaths(t.TempDir())
+	sc := scenario{ID: memoryRouterScenarioID, Turns: []scenarioTurn{{Prompt: "first"}, {Prompt: "second"}}}
+	if err := seedScenario(ctx, paths, sc); err != nil {
+		t.Fatalf("seed memory/router scenario: %v", err)
+	}
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	if err := createSeedDocument(ctx, cfg, memoryRouterSessionObservationPath, memoryRouterSessionObservationTitle, memoryRouterSessionObservationBody()); err != nil {
+		t.Fatalf("create session observation: %v", err)
+	}
+	turnOne, err := verifyScenarioTurn(ctx, paths, sc, 1, memoryRouterSessionObservationPath, metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}})
+	if err != nil {
+		t.Fatalf("verify memory/router turn one: %v", err)
+	}
+	if !turnOne.Passed {
+		t.Fatalf("memory/router turn one failed: %+v", turnOne)
+	}
+
+	synthesisBody := strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: notes/memory-router/session-observation.md, notes/memory-router/temporal-policy.md, notes/memory-router/feedback-weighting.md, notes/memory-router/routing-policy.md
+---
+# Memory Router Reference
+
+## Summary
+Temporal status: current canonical docs outrank stale session observations.
+Session promotion path: durable canonical markdown with source refs.
+Feedback weighting: advisory only.
+Routing choice: existing AgentOps document and retrieval actions.
+Decision: keep memory and autonomous routing as reference/deferred.
+
+## Sources
+- notes/memory-router/session-observation.md
+- notes/memory-router/temporal-policy.md
+- notes/memory-router/feedback-weighting.md
+- notes/memory-router/routing-policy.md
+
+## Freshness
+Checked provenance for the session observation and synthesis projection freshness after filing the reference note.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, memoryRouterSynthesisPath, "Memory Router Reference", synthesisBody); err != nil {
+		t.Fatalf("create memory/router synthesis: %v", err)
+	}
+	sessionDocID, _, err := documentIDByPath(ctx, paths, memoryRouterSessionObservationPath)
+	if err != nil {
+		t.Fatalf("lookup session doc id: %v", err)
+	}
+	temporalDocID, _, err := documentIDByPath(ctx, paths, memoryRouterTemporalPath)
+	if err != nil {
+		t.Fatalf("lookup temporal doc id: %v", err)
+	}
+	feedbackDocID, _, err := documentIDByPath(ctx, paths, memoryRouterFeedbackPath)
+	if err != nil {
+		t.Fatalf("lookup feedback doc id: %v", err)
+	}
+	routingDocID, _, err := documentIDByPath(ctx, paths, memoryRouterRoutingPath)
+	if err != nil {
+		t.Fatalf("lookup routing doc id: %v", err)
+	}
+	completeMetrics := metrics{
+		AssistantCalls:           1,
+		SearchUsed:               true,
+		ListDocumentsUsed:        true,
+		ListDocumentPathPrefixes: []string{memoryRouterPrefix},
+		GetDocumentUsed:          true,
+		GetDocumentDocIDs:        []string{sessionDocID, temporalDocID, feedbackDocID, routingDocID},
+		ProvenanceEventsUsed:     true,
+		ProjectionStatesUsed:     true,
+		EventTypeCounts:          map[string]int{},
+	}
+	completeAnswer := "Temporal status is current for canonical docs and stale for unpromoted session observations. Session promotion happened through canonical markdown in notes/synthesis/memory-router-reference.md with source refs. Feedback weighting is advisory, routing stays on existing AgentOps document and retrieval actions, and provenance plus projection freshness were checked. Decision: keep memory/router reference/deferred and do not promote remember/recall or autonomous routing."
+	result, err := verifyScenarioTurn(ctx, paths, sc, 2, completeAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify memory/router reference: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("memory/router reference failed: %+v", result)
+	}
+
+	for name, mutate := range map[string]func(*metrics, *string){
+		"missing list prefix": func(m *metrics, _ *string) { m.ListDocumentPathPrefixes = nil },
+		"missing temporal get": func(m *metrics, _ *string) {
+			m.GetDocumentDocIDs = []string{sessionDocID, feedbackDocID, routingDocID}
+		},
+		"missing provenance": func(m *metrics, _ *string) { m.ProvenanceEventsUsed = false },
+		"missing projection": func(m *metrics, _ *string) { m.ProjectionStatesUsed = false },
+		"missing session promotion": func(_ *metrics, answer *string) {
+			*answer = "Temporal status is current. Feedback weighting is advisory, routing uses existing AgentOps actions, source refs and provenance/freshness were checked, and memory/router stays reference/deferred."
+		},
+		"missing feedback": func(_ *metrics, answer *string) {
+			*answer = "Temporal status is current. Session promotion uses canonical markdown, routing uses existing AgentOps actions, source refs and provenance/freshness were checked, and memory/router stays reference/deferred."
+		},
+		"missing routing": func(_ *metrics, answer *string) {
+			*answer = "Temporal status is current. Session promotion uses canonical markdown, feedback weighting is advisory, source refs and provenance/freshness were checked, and this memory capability stays reference/deferred."
+		},
+		"promoted memory/router": func(_ *metrics, answer *string) {
+			*answer = "Temporal status is current. Session promotion uses canonical markdown, feedback weighting is advisory, routing is clear, source refs and provenance/freshness were checked. Decision: promote memory/router."
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			incompleteMetrics := completeMetrics
+			answer := completeAnswer
+			mutate(&incompleteMetrics, &answer)
+			result, err := verifyScenarioTurn(ctx, paths, sc, 2, answer, incompleteMetrics)
+			if err != nil {
+				t.Fatalf("verify %s: %v", name, err)
+			}
+			if result.Passed {
+				t.Fatalf("%s passed unexpectedly: %+v", name, result)
+			}
+		})
 	}
 }
 

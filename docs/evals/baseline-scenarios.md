@@ -104,10 +104,16 @@ AgentOps eval harness supports them cleanly.
 - Keep semantic graph labeling as a reference/deferred pattern unless eval
   evidence shows it adds value over markdown text, links, backlinks, graph
   neighborhoods, and search.
+- Run the `memory-router-reference-poc` scenario from `oc-za6.7` as a
+  reference-only benchmark for temporal recall, session promotion, feedback
+  weighting, and routing.
 - Verify temporal retrieval distinguishes current, observed, effective, and
   superseded facts.
 - Verify session-derived or feedback-weighted recall can explain source refs
   and freshness before being trusted.
+- Verify memory/router answers remain subordinate to canonical docs and
+  promoted records, expose provenance/freshness, and do not promote
+  `remember`/`recall`, autonomous routing, or a new production interface.
 
 ## Promoted-Domain Lookup
 

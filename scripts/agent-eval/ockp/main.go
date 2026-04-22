@@ -63,6 +63,16 @@ const (
 	graphSemanticsSearchText       = "graph semantics requires supersedes related operationalizes"
 	graphSemanticsRelationshipText = "requires supersedes related to operationalizes"
 
+	memoryRouterScenarioID              = "memory-router-reference-poc"
+	memoryRouterPrefix                  = "notes/memory-router/"
+	memoryRouterSessionObservationPath  = "notes/memory-router/session-observation.md"
+	memoryRouterTemporalPath            = "notes/memory-router/temporal-policy.md"
+	memoryRouterFeedbackPath            = "notes/memory-router/feedback-weighting.md"
+	memoryRouterRoutingPath             = "notes/memory-router/routing-policy.md"
+	memoryRouterSynthesisPath           = "notes/synthesis/memory-router-reference.md"
+	memoryRouterSearchText              = "memory router temporal recall session promotion feedback weighting routing canonical docs"
+	memoryRouterSessionObservationTitle = "Memory Router Session Observation"
+
 	configuredLayoutScenarioID = "configured-layout-explain"
 	invalidLayoutScenarioID    = "invalid-layout-visible"
 
@@ -222,7 +232,9 @@ type metrics struct {
 	SearchPathFilterUsed     bool           `json:"search_path_filter_used"`
 	SearchMetadataFilterUsed bool           `json:"search_metadata_filter_used"`
 	ListDocumentsUsed        bool           `json:"list_documents_used"`
+	ListDocumentPathPrefixes []string       `json:"list_document_path_prefixes,omitempty"`
 	GetDocumentUsed          bool           `json:"get_document_used"`
+	GetDocumentDocIDs        []string       `json:"get_document_doc_ids,omitempty"`
 	InspectLayoutUsed        bool           `json:"inspect_layout_used"`
 	DocumentLinksUsed        bool           `json:"document_links_used"`
 	GraphNeighborhoodUsed    bool           `json:"graph_neighborhood_used"`
@@ -807,6 +819,10 @@ func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
 		if err := seedGraphSemanticsReference(ctx, cfg); err != nil {
 			return err
 		}
+	case memoryRouterScenarioID:
+		if err := seedMemoryRouterReference(ctx, cfg); err != nil {
+			return err
+		}
 	case configuredLayoutScenarioID:
 		if err := seedConfiguredLayoutScenario(ctx, cfg); err != nil {
 			return err
@@ -1144,6 +1160,71 @@ status: active
 Operations links back to the [Graph Semantics Reference](index.md) and keeps operationalizes language in source text rather than in opaque graph labels.
 `) + "\n"
 	return createSeedDocument(ctx, cfg, graphSemanticsOperationsPath, "Operations", operationsBody)
+}
+
+func seedMemoryRouterReference(ctx context.Context, cfg runclient.Config) error {
+	temporalBody := strings.TrimSpace(`---
+type: memory-router-reference
+status: active
+effective_at: 2026-04-22
+---
+# Temporal Recall Policy
+
+## Summary
+Temporal recall stays source-grounded: current canonical docs and promoted records outrank stale session observations, and agents must name the temporal status before trusting a result.
+
+## Guidance
+Current evidence should be described as current or effective. Older or superseded evidence should be described as stale before it is reused.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, memoryRouterTemporalPath, "Temporal Recall Policy", temporalBody); err != nil {
+		return err
+	}
+
+	feedbackBody := strings.TrimSpace(`---
+type: memory-router-reference
+status: active
+---
+# Feedback Weighting
+
+## Summary
+Feedback weighting is advisory only. A high-weight remembered result can help rank what to inspect next, but it cannot hide source refs, freshness, provenance, or weaker conflicting evidence.
+
+## Guidance
+The reference weight for the session observation is 0.8 because the user marked it useful, but the answer must still cite canonical markdown.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, memoryRouterFeedbackPath, "Feedback Weighting", feedbackBody); err != nil {
+		return err
+	}
+
+	routingBody := strings.TrimSpace(`---
+type: memory-router-reference
+status: active
+---
+# Routing Policy
+
+## Summary
+Routing is an explainable choice among existing AgentOps document and retrieval actions. Use canonical docs and provenance for source-sensitive claims, promoted records for typed domains, graph navigation for relationship questions, and never use autonomous routing as hidden authority.
+
+## Guidance
+The correct route for this reference POC is canonical docs plus provenance and projection freshness, not a memory-first router.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, memoryRouterRoutingPath, "Routing Policy", routingBody)
+}
+
+func memoryRouterSessionObservationBody() string {
+	return strings.TrimSpace(`---
+type: source
+status: active
+observed_at: 2026-04-22
+---
+# Memory Router Session Observation
+
+## Summary
+Session observation: a user asked whether memory routing should promote recall. Useful session material must be promoted only by writing canonical markdown with source refs.
+
+## Feedback
+Positive feedback weight 0.8 is advisory only and cannot hide stale canonical evidence.
+`) + "\n"
 }
 
 func seedConfiguredLayoutScenario(ctx context.Context, cfg runclient.Config) error {
@@ -1665,6 +1746,8 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		switch sc.ID {
 		case "mt-source-then-synthesis":
 			return verifyDocuments(ctx, paths, []string{"notes/sources/mt-runner.md"}, finalMessage)
+		case memoryRouterScenarioID:
+			return verifyMemoryRouterSessionObservation(ctx, paths, finalMessage)
 		case mtSynthesisDriftPressureScenarioID:
 			return verifySourceLinkedSynthesis(ctx, paths, mtDriftSynthesisPath, finalMessage, sourceLinkedSynthesisExpectations{
 				SourceRefs:      []string{mtDriftCurrentPath, mtDriftOldSourcePath},
@@ -1697,6 +1780,8 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyDocsNavigationBaseline(ctx, paths, finalMessage, turnMetrics)
 	case graphSemanticsScenarioID:
 		return verifyGraphSemanticsReference(ctx, paths, finalMessage, turnMetrics)
+	case memoryRouterScenarioID:
+		return verifyMemoryRouterReference(ctx, paths, finalMessage, turnMetrics)
 	case configuredLayoutScenarioID:
 		return verifyConfiguredLayoutScenario(ctx, paths, finalMessage, turnMetrics)
 	case invalidLayoutScenarioID:
@@ -1838,6 +1923,38 @@ func verifyDocuments(ctx context.Context, paths evalPaths, wanted []string, fina
 		AssistantPass: assistantPass,
 		Details:       missingDetails(missing),
 		Documents:     wanted,
+	}, nil
+}
+
+func verifyMemoryRouterSessionObservation(ctx context.Context, paths evalPaths, finalMessage string) (verificationResult, error) {
+	doc, found, err := documentByPath(ctx, paths, memoryRouterSessionObservationPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := []string{}
+	if !found || doc == nil {
+		failures = append(failures, "missing "+memoryRouterSessionObservationPath)
+	} else {
+		if doc.Title != memoryRouterSessionObservationTitle {
+			failures = append(failures, "expected title "+memoryRouterSessionObservationTitle)
+		}
+		if doc.Body != memoryRouterSessionObservationBody() {
+			failures = append(failures, "session observation body does not match exact fixture")
+		}
+	}
+	assistantPass := strings.TrimSpace(finalMessage) != ""
+	if !assistantPass {
+		failures = append(failures, "missing final answer")
+	}
+	databasePass := found && doc != nil &&
+		doc.Title == memoryRouterSessionObservationTitle &&
+		doc.Body == memoryRouterSessionObservationBody()
+	return verificationResult{
+		Passed:        databasePass && assistantPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{memoryRouterSessionObservationPath},
 	}, nil
 }
 
@@ -2399,6 +2516,181 @@ func verifyGraphSemanticsReference(ctx context.Context, paths evalPaths, finalMe
 		AssistantPass: assistantPass && activityPass,
 		Details:       missingDetails(failures),
 		Documents:     wantedPaths,
+	}, nil
+}
+
+func verifyMemoryRouterReference(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	sourceRefs := []string{
+		memoryRouterSessionObservationPath,
+		memoryRouterTemporalPath,
+		memoryRouterFeedbackPath,
+		memoryRouterRoutingPath,
+	}
+	body, found, err := documentBodyByPath(ctx, paths, memoryRouterSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	exactCount, err := exactDocumentCount(ctx, paths, memoryRouterSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	sessionDocID, sessionFound, err := documentIDByPath(ctx, paths, memoryRouterSessionObservationPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	temporalDocID, temporalFound, err := documentIDByPath(ctx, paths, memoryRouterTemporalPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	feedbackDocID, feedbackFound, err := documentIDByPath(ctx, paths, memoryRouterFeedbackPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	routingDocID, routingFound, err := documentIDByPath(ctx, paths, memoryRouterRoutingPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	synthesisDocID, synthesisDocIDFound, err := documentIDByPath(ctx, paths, memoryRouterSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	search, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{Text: memoryRouterSearchText, Limit: 10},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	provenance, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{
+			RefKind: "document",
+			RefID:   sessionDocID,
+			Limit:   10,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projection, err := firstSynthesisProjection(ctx, paths, synthesisDocID)
+	if err != nil {
+		return verificationResult{}, err
+	}
+
+	required := []string{
+		"type: synthesis",
+		"status: active",
+		"freshness: fresh",
+		"Temporal status: current canonical docs outrank stale session observations.",
+		"Session promotion path: durable canonical markdown with source refs.",
+		"Feedback weighting: advisory only.",
+		"Routing choice: existing AgentOps document and retrieval actions.",
+		"Decision: keep memory and autonomous routing as reference/deferred.",
+		"## Sources",
+		"## Freshness",
+	}
+	failures := []string{}
+	if !found {
+		failures = append(failures, "missing "+memoryRouterSynthesisPath)
+	}
+	if exactCount != 1 {
+		failures = append(failures, fmt.Sprintf("expected one %s document, got %d", memoryRouterSynthesisPath, exactCount))
+	}
+	if !sessionFound {
+		failures = append(failures, "missing "+memoryRouterSessionObservationPath)
+	}
+	if !temporalFound {
+		failures = append(failures, "missing "+memoryRouterTemporalPath)
+	}
+	if !feedbackFound {
+		failures = append(failures, "missing "+memoryRouterFeedbackPath)
+	}
+	if !routingFound {
+		failures = append(failures, "missing "+memoryRouterRoutingPath)
+	}
+	if !synthesisDocIDFound {
+		failures = append(failures, "missing document id for "+memoryRouterSynthesisPath)
+	}
+	failures = append(failures, missingRequired(body, required)...)
+	failures = append(failures, sourceRefsFrontmatterFailures(body, sourceRefs)...)
+	if !searchResultHasCitations(search) || !searchContainsPath(search, memoryRouterTemporalPath) {
+		failures = append(failures, "search did not expose cited memory/router reference docs")
+	}
+	hasProvenance := sessionFound && provenance.Provenance != nil && len(provenance.Provenance.Events) > 0
+	if !hasProvenance {
+		failures = append(failures, "session observation provenance missing")
+	}
+	hasProjection := projection != nil &&
+		projection.Freshness == "fresh" &&
+		projectionDetailContains(projection.Details, "current_source_refs", memoryRouterSessionObservationPath) &&
+		projectionDetailContains(projection.Details, "current_source_refs", memoryRouterTemporalPath) &&
+		projectionDetailContains(projection.Details, "current_source_refs", memoryRouterFeedbackPath) &&
+		projectionDetailContains(projection.Details, "current_source_refs", memoryRouterRoutingPath)
+	if !hasProjection {
+		failures = append(failures, "memory/router synthesis projection is not fresh with all source refs")
+	}
+	if !turnMetrics.SearchUsed {
+		failures = append(failures, "agent did not use retrieval search")
+	}
+	listedMemoryRouterPrefix := containsAllStrings(turnMetrics.ListDocumentPathPrefixes, []string{memoryRouterPrefix})
+	if !turnMetrics.ListDocumentsUsed || !listedMemoryRouterPrefix {
+		failures = append(failures, "agent did not list memory/router reference docs with path prefix")
+	}
+	requiredGetDocIDs := []string{sessionDocID, temporalDocID, feedbackDocID, routingDocID}
+	gotMemoryRouterDocs := containsAllStrings(turnMetrics.GetDocumentDocIDs, requiredGetDocIDs)
+	if !turnMetrics.GetDocumentUsed || !gotMemoryRouterDocs {
+		failures = append(failures, "agent did not get every canonical memory/router doc")
+	}
+	if !turnMetrics.ProvenanceEventsUsed {
+		failures = append(failures, "agent did not inspect provenance events")
+	}
+	if !turnMetrics.ProjectionStatesUsed {
+		failures = append(failures, "agent did not inspect projection freshness")
+	}
+	if turnMetrics.BroadRepoSearch {
+		failures = append(failures, "agent used broad repo search")
+	}
+	if turnMetrics.DirectSQLiteAccess {
+		failures = append(failures, "agent used direct SQLite")
+	}
+	if turnMetrics.LegacyRunnerUsage {
+		failures = append(failures, "agent used source-built or legacy runner path")
+	}
+	assistantPass := memoryRouterReferenceAnswerPass(finalMessage)
+	if !assistantPass {
+		failures = append(failures, "final answer did not explain temporal status, session promotion, feedback weighting, routing, source refs, freshness/provenance, and reference/defer decision")
+	}
+
+	databasePass := found &&
+		exactCount == 1 &&
+		sessionFound &&
+		temporalFound &&
+		feedbackFound &&
+		routingFound &&
+		synthesisDocIDFound &&
+		len(missingRequired(body, required)) == 0 &&
+		len(sourceRefsFrontmatterFailures(body, sourceRefs)) == 0 &&
+		searchResultHasCitations(search) &&
+		searchContainsPath(search, memoryRouterTemporalPath) &&
+		hasProvenance &&
+		hasProjection
+	activityPass := turnMetrics.SearchUsed &&
+		turnMetrics.ListDocumentsUsed &&
+		listedMemoryRouterPrefix &&
+		turnMetrics.GetDocumentUsed &&
+		gotMemoryRouterDocs &&
+		turnMetrics.ProvenanceEventsUsed &&
+		turnMetrics.ProjectionStatesUsed &&
+		!turnMetrics.BroadRepoSearch &&
+		!turnMetrics.DirectSQLiteAccess &&
+		!turnMetrics.LegacyRunnerUsage
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     append([]string{memoryRouterSynthesisPath}, sourceRefs...),
 	}, nil
 }
 
@@ -3693,18 +3985,29 @@ func verifyDocumentContains(ctx context.Context, paths evalPaths, docPath string
 	}, nil
 }
 
-func documentBodyByPath(ctx context.Context, paths evalPaths, docPath string) (string, bool, error) {
+func documentByPath(ctx context.Context, paths evalPaths, docPath string) (*runner.Document, bool, error) {
 	docID, found, err := documentIDByPath(ctx, paths, docPath)
 	if err != nil || !found {
-		return "", found, err
+		return nil, found, err
 	}
 	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
 	got, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{Action: runner.DocumentTaskActionGet, DocID: docID})
 	if err != nil {
-		return "", false, err
+		return nil, false, err
 	}
 	if got.Document != nil {
-		return got.Document.Body, true, nil
+		return got.Document, true, nil
+	}
+	return nil, false, nil
+}
+
+func documentBodyByPath(ctx context.Context, paths evalPaths, docPath string) (string, bool, error) {
+	doc, found, err := documentByPath(ctx, paths, docPath)
+	if err != nil || !found {
+		return "", found, err
+	}
+	if doc != nil {
+		return doc.Body, true, nil
 	}
 	return "", false, nil
 }
@@ -4008,6 +4311,53 @@ func messagePromotesGraphSemantics(normalized string) bool {
 		if strings.Contains(normalized, phrase) &&
 			!strings.Contains(normalized, "do not "+phrase) &&
 			!strings.Contains(normalized, "not "+phrase) {
+			return true
+		}
+	}
+	return false
+}
+
+func memoryRouterReferenceAnswerPass(message string) bool {
+	normalized := normalizeValidationMessage(message)
+	if messagePromotesMemoryRouter(normalized) {
+		return false
+	}
+	return containsAny(normalized, []string{"temporal", "current", "stale", "effective"}) &&
+		containsAny(normalized, []string{"session promotion", "session-derived", "session observation", "canonical markdown", "canonicalization"}) &&
+		containsAny(normalized, []string{"feedback", "weight", "weighted", "advisory"}) &&
+		containsAny(normalized, []string{"routing", "route", "router"}) &&
+		containsAny(normalized, []string{"source_refs", "source ref", "source refs", "citation", "cited", "source path"}) &&
+		containsAny(normalized, []string{"freshness", "fresh", "provenance", "projection"}) &&
+		containsAny(normalized, []string{"reference", "defer", "deferred", "not promote", "do not promote", "not promoted", "keep"})
+}
+
+func messagePromotesMemoryRouter(normalized string) bool {
+	promotionPhrases := []string{
+		"decision: promote memory",
+		"decision: promote router",
+		"decision: promote memory/router",
+		"promote memory/router",
+		"promote memory router",
+		"promote autonomous routing",
+		"promote remember",
+		"promote recall",
+		"add a memory interface",
+		"add memory interface",
+		"add a router interface",
+		"add router interface",
+		"add remember/recall",
+		"new memory interface",
+		"new router interface",
+		"memory should outrank",
+		"memory outranks canonical",
+		"autonomous router should choose",
+		"autonomous routing should choose",
+	}
+	for _, phrase := range promotionPhrases {
+		if strings.Contains(normalized, phrase) &&
+			!strings.Contains(normalized, "do not "+phrase) &&
+			!strings.Contains(normalized, "not "+phrase) &&
+			!strings.Contains(normalized, "without "+phrase) {
 			return true
 		}
 	}
@@ -4489,9 +4839,11 @@ func classifyCommand(command string, m *metrics) {
 	classifySearchCommand(actionText, m)
 	if commandContainsAction(actionText, "list_documents") {
 		m.ListDocumentsUsed = true
+		m.ListDocumentPathPrefixes = append(m.ListDocumentPathPrefixes, actionFieldValues(actionText, "list_documents", "path_prefix")...)
 	}
 	if commandContainsAction(actionText, "get_document") {
 		m.GetDocumentUsed = true
+		m.GetDocumentDocIDs = append(m.GetDocumentDocIDs, actionFieldValues(actionText, "get_document", "doc_id")...)
 	}
 	if commandContainsAction(actionText, "inspect_layout") {
 		m.InspectLayoutUsed = true
@@ -4644,7 +4996,9 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.SearchPathFilterUsed = out.SearchPathFilterUsed || current.SearchPathFilterUsed
 		out.SearchMetadataFilterUsed = out.SearchMetadataFilterUsed || current.SearchMetadataFilterUsed
 		out.ListDocumentsUsed = out.ListDocumentsUsed || current.ListDocumentsUsed
+		out.ListDocumentPathPrefixes = append(out.ListDocumentPathPrefixes, current.ListDocumentPathPrefixes...)
 		out.GetDocumentUsed = out.GetDocumentUsed || current.GetDocumentUsed
+		out.GetDocumentDocIDs = append(out.GetDocumentDocIDs, current.GetDocumentDocIDs...)
 		out.InspectLayoutUsed = out.InspectLayoutUsed || current.InspectLayoutUsed
 		out.DocumentLinksUsed = out.DocumentLinksUsed || current.DocumentLinksUsed
 		out.GraphNeighborhoodUsed = out.GraphNeighborhoodUsed || current.GraphNeighborhoodUsed
@@ -5263,6 +5617,14 @@ func allScenarios() []scenario {
 			ID:     graphSemanticsScenarioID,
 			Title:  "Graph semantics reference comparison",
 			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, or unsupported actions. First run openclerk retrieval search for graph semantics requires supersedes related operationalizes with limit 10. Then run openclerk document list_documents with path_prefix notes/graph/semantics/ and limit 10. Use the returned doc_id for notes/graph/semantics/index.md to run get_document, and use its relationship wording in your analysis. Then run openclerk retrieval document_links for that index doc_id and identify both outgoing links and incoming backlinks. Then run openclerk retrieval graph_neighborhood for that index doc_id with limit 20, and inspect projection_states with projection graph, ref_kind document, and that index doc_id. The final answer must explicitly mention search, markdown relationship text, document_links, incoming backlinks, graph_neighborhood, graph projection freshness, canonical markdown citations, and this decision: keep richer graph semantics as a reference/deferred pattern, do not promote a semantic-label graph layer, and keep graph behavior derived from canonical markdown citations.",
+		},
+		{
+			ID:    memoryRouterScenarioID,
+			Title: "Memory and router reference comparison",
+			Turns: []scenarioTurn{
+				{Prompt: "Use the configured local OpenClerk data path. Create notes/memory-router/session-observation.md titled Memory Router Session Observation with this exact body: ---\ntype: source\nstatus: active\nobserved_at: 2026-04-22\n---\n# Memory Router Session Observation\n\n## Summary\nSession observation: a user asked whether memory routing should promote recall. Useful session material must be promoted only by writing canonical markdown with source refs.\n\n## Feedback\nPositive feedback weight 0.8 is advisory only and cannot hide stale canonical evidence.\nDo not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, memory transports, or unsupported actions."},
+				{Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, memory transports, remember/recall actions, autonomous router APIs, or unsupported actions. First run openclerk retrieval search for memory router temporal recall session promotion feedback weighting routing canonical docs with limit 10. Then run openclerk document list_documents with path_prefix notes/memory-router/ and limit 10. Use the returned doc_ids for notes/memory-router/session-observation.md, notes/memory-router/temporal-policy.md, notes/memory-router/feedback-weighting.md, and notes/memory-router/routing-policy.md to run get_document for each. Inspect provenance_events for ref_kind document and the session observation doc_id. Then create notes/synthesis/memory-router-reference.md titled Memory Router Reference with frontmatter type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: notes/memory-router/session-observation.md, notes/memory-router/temporal-policy.md, notes/memory-router/feedback-weighting.md, notes/memory-router/routing-policy.md. The body must include these exact sentences: Temporal status: current canonical docs outrank stale session observations. Session promotion path: durable canonical markdown with source refs. Feedback weighting: advisory only. Routing choice: existing AgentOps document and retrieval actions. Decision: keep memory and autonomous routing as reference/deferred. Include ## Sources with all four source paths and ## Freshness describing the provenance and synthesis projection checks. After creating the synthesis, list documents to get its doc_id and inspect projection_states for projection synthesis with ref_kind document and that synthesis doc_id. In the final answer, mention temporal status, session promotion, feedback weighting, routing choice, source refs or citations, provenance/freshness, notes/synthesis/memory-router-reference.md, and that memory/router remains reference/deferred with no promoted remember/recall or autonomous routing surface."},
+			},
 		},
 		{
 			ID:     configuredLayoutScenarioID,

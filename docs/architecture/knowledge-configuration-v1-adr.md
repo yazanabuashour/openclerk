@@ -334,6 +334,27 @@ invalid-request rejection, and preserved citations/source refs/freshness. No
 follow-up implementation issue is filed because the POC decision is reference
 and deferred rather than promoted.
 
+## `oc-za6.7` POC Decision
+
+Decision: keep memory and autonomous routing as reference/deferred benchmark
+pressure and do not promote a production memory/router interface for v1.
+
+The POC evaluates temporal recall, session promotion, feedback weighting, and
+routing by requiring agents to use existing AgentOps document and retrieval
+actions. Session-derived material becomes useful only when it is canonicalized
+as markdown with source refs. Temporal and feedback signals are advisory unless
+the answer also preserves source paths, provenance, and projection freshness.
+Routing remains an explainable choice among existing runner actions rather than
+a hidden autonomous router or memory-first authority.
+
+Targeted AgentOps evidence is recorded in
+`docs/evals/results/ockp-memory-router-reference-poc.md`. The targeted run
+covers memory/router reference pressure, no broad repo search, no direct
+SQLite, no source-built runner usage, final-answer-only invalid-request
+rejection, and preserved citations/source refs/freshness. No follow-up
+implementation issue is filed because the POC decision is reference and
+deferred rather than promoted.
+
 ## Production-Valid for AgentOps
 
 A vault is valid enough for production AgentOps use when:
