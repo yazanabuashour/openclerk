@@ -1,0 +1,201 @@
+{
+  "metadata": {
+    "generated_at": "2026-04-21T19:47:17.525925Z",
+    "model": "gpt-5.4-mini",
+    "reasoning_effort": "medium",
+    "harness": "codex exec --json --full-auto from throwaway run directories; single-turn scenarios use --ephemeral and multi-turn scenarios resume one persisted eval session",
+    "configured_parallelism": 1,
+    "cache_mode": "shared",
+    "cache_prewarm_seconds": 18.84,
+    "harness_elapsed_seconds": 52.54,
+    "effective_parallel_speedup": 0.6,
+    "parallel_efficiency": 0.6,
+    "phase_totals": {
+      "copy_repo_seconds": 0.01,
+      "install_variant_seconds": 2.16,
+      "seed_data_seconds": 0.04,
+      "agent_run_seconds": 31.41,
+      "parse_metrics_seconds": 0.01,
+      "verify_seconds": 0.07,
+      "total_seconds": 33.7
+    },
+    "run_root_artifact_reference": "\u003crun-root\u003e",
+    "raw_log_placeholder": "\u003crun-root\u003e/\u003cvariant\u003e/\u003cscenario\u003e/turn-N/events.jsonl",
+    "variants": [
+      "production"
+    ],
+    "scenarios": [
+      "canonical-docs-navigation-baseline"
+    ],
+    "raw_logs_committed": false,
+    "raw_logs_note": "Raw Codex event logs remain under \u003crun-root\u003e and are not committed."
+  },
+  "results": [
+    {
+      "variant": "production",
+      "scenario": "canonical-docs-navigation-baseline",
+      "scenario_title": "Canonical docs directory and link navigation baseline",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 31.41,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 2.16,
+        "seed_data_seconds": 0.04,
+        "agent_run_seconds": 31.41,
+        "parse_metrics_seconds": 0.01,
+        "verify_seconds": 0.07,
+        "total_seconds": 33.7
+      },
+      "metrics": {
+        "assistant_calls": 3,
+        "tool_calls": 12,
+        "command_executions": 12,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": false,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": false,
+        "search_metadata_filter_used": false,
+        "list_documents_used": true,
+        "get_document_used": true,
+        "document_links_used": true,
+        "graph_neighborhood_used": true,
+        "records_lookup_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": true,
+        "usage_exposed": true,
+        "input_tokens": 182882,
+        "cached_input_tokens": 169088,
+        "non_cached_input_tokens": 13794,
+        "output_tokens": 2225,
+        "event_type_counts": {
+          "item.completed": 9,
+          "item.started": 6,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/wiki/agentops/index.md",
+          "notes/wiki/agentops/runner-policy.md",
+          "notes/wiki/architecture/knowledge-plane.md",
+          "notes/wiki/ops/runner-playbook.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 31.41,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 3,
+            "tool_calls": 12,
+            "command_executions": 12,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": false,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "list_documents_used": true,
+            "get_document_used": true,
+            "document_links_used": true,
+            "graph_neighborhood_used": true,
+            "records_lookup_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": true,
+            "usage_exposed": true,
+            "input_tokens": 182882,
+            "cached_input_tokens": 169088,
+            "non_cached_input_tokens": 13794,
+            "output_tokens": 2225,
+            "event_type_counts": {
+              "item.completed": 9,
+              "item.started": 6,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/wiki/agentops/index.md",
+              "notes/wiki/agentops/runner-policy.md",
+              "notes/wiki/architecture/knowledge-plane.md",
+              "notes/wiki/ops/runner-playbook.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/canonical-docs-navigation-baseline/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, or unsupported actions. First run openclerk document list_documents with path_prefix notes/wiki/agentops/ and limit 10. Use the returned doc_id for notes/wiki/agentops/index.md to run get_document, and use its returned headings in your analysis. Then run openclerk retrieval document_links for that index doc_id and identify both outgoing links and incoming backlinks. Then run openclerk retrieval graph_neighborhood for that index doc_id with limit 20, and inspect projection_states with projection graph, ref_kind document, and that index doc_id. In the final answer, explain where directory/path navigation is sufficient, where plain folders and markdown links fail, and what AgentOps-backed document_links, backlinks, graph_neighborhood, and graph projection freshness add. Mention notes/wiki/agentops/index.md and at least one linked source path.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/canonical-docs-navigation-baseline/turn-1/events.jsonl",
+      "started_at": "2026-04-21T19:46:43.828697Z",
+      "completed_at": "2026-04-21T19:47:17.525609Z"
+    }
+  ],
+  "production_gate": {
+    "variant": "production",
+    "passes_gate": false,
+    "recommendation": "fix_production_agentops_before_release",
+    "criteria": [
+      {
+        "name": "production_passes_all_scenarios",
+        "passed": false,
+        "details": "1/18 production scenarios passed; missing: create-note, search-synthesis, answer-filing, rag-retrieval-baseline, stale-synthesis-update, synthesis-freshness-repair, append-replace, records-provenance, promoted-record-vs-docs, missing-document-path-reject, negative-limit-reject, unsupported-lower-level-reject, unsupported-transport-reject, duplicate-path-reject, mixed-synthesis-records, mt-source-then-synthesis, mt-incomplete-then-create"
+      },
+      {
+        "name": "no_direct_generated_file_inspection",
+        "passed": true,
+        "details": "production must not inspect retired API files or generated server files"
+      },
+      {
+        "name": "no_module_cache_inspection",
+        "passed": true,
+        "details": "production must not inspect the Go module cache"
+      },
+      {
+        "name": "no_broad_repo_search",
+        "passed": true,
+        "details": "production must not use broad repo search in routine OpenClerk knowledge tasks"
+      },
+      {
+        "name": "no_legacy_source_runner_usage",
+        "passed": true,
+        "details": "production must not invoke source-built or legacy runner paths instead of installed openclerk"
+      },
+      {
+        "name": "no_direct_sqlite_access",
+        "passed": true,
+        "details": "production must not query SQLite directly"
+      },
+      {
+        "name": "validation_scenarios_are_final_answer_only",
+        "passed": false,
+        "details": "not evaluated; final-answer-only validation scenarios were not selected in this partial run"
+      }
+    ]
+  }
+}

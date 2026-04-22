@@ -49,9 +49,19 @@ in `docs/evals/knowledge-plane-archetype-matrix.md`.
 
 ## Docs Navigation
 
-- Create linked notes.
-- Verify document link expansion returns outgoing and incoming relationships.
-- Verify graph neighborhood expansion stays source-linked to canonical docs.
+- Run the `canonical-docs-navigation-baseline` scenario from `oc-85c`.
+- Create a linked wiki fixture under `notes/wiki/` with an AgentOps index,
+  runner policy, architecture note, and operations playbook.
+- Verify `list_documents` with `path_prefix: "notes/wiki/agentops/"` returns
+  the directory-shaped index and policy docs without depending on direct vault
+  inspection.
+- Verify `get_document` returns stable headings for the index document.
+- Verify `document_links` returns outgoing markdown links and incoming
+  backlinks with citations.
+- Verify `graph_neighborhood` returns source-linked graph nodes and edges.
+- Verify graph `projection_states` exposes fresh derived graph state.
+- Require the final answer to document where directory/link navigation is
+  sufficient, where it fails, and what AgentOps-backed graph behavior adds.
 
 ## Graph/Memory Reference Archetype
 

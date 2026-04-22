@@ -385,6 +385,8 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"search\",\"search\":{\"text\":\"runner\",\"metadata_key\":\"rag_scope\",\"metadata_value\":\"active-policy\"}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/synthesis/\"}}' | openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"get_document\",\"doc_id\":\"doc_1\"}' | openclerk document"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\n  \"document_links\",\"doc_id\":\"doc_1\"}' | openclerk retrieval"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\n  \"graph_neighborhood\",\"doc_id\":\"doc_1\"}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"records_lookup\",\"records\":{\"text\":\"runner\"}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"provenance_events\",\"provenance\":{\"limit\":10}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"projection_states\",\"projection\":{\"limit\":10}}' | openclerk retrieval"}}`,
@@ -401,7 +403,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	if parsed.sessionID != "session-123" || parsed.finalMessage != "done" {
 		t.Fatalf("parsed = %+v", parsed)
 	}
-	if parsed.metrics.ToolCalls != 14 || parsed.metrics.CommandExecutions != 14 || parsed.metrics.AssistantCalls != 1 {
+	if parsed.metrics.ToolCalls != 16 || parsed.metrics.CommandExecutions != 16 || parsed.metrics.AssistantCalls != 1 {
 		t.Fatalf("metrics = %+v", parsed.metrics)
 	}
 	if !parsed.metrics.BroadRepoSearch {
@@ -425,6 +427,8 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		"search_metadata_filter": parsed.metrics.SearchMetadataFilterUsed,
 		"list_documents":         parsed.metrics.ListDocumentsUsed,
 		"get_document":           parsed.metrics.GetDocumentUsed,
+		"document_links":         parsed.metrics.DocumentLinksUsed,
+		"graph_neighborhood":     parsed.metrics.GraphNeighborhoodUsed,
 		"records_lookup":         parsed.metrics.RecordsLookupUsed,
 		"provenance_events":      parsed.metrics.ProvenanceEventsUsed,
 		"projection_states":      parsed.metrics.ProjectionStatesUsed,
@@ -515,7 +519,7 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 	for _, id := range scenarioIDs() {
 		ids[id] = true
 	}
-	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
+	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
 		if !ids[want] {
 			t.Fatalf("scenarioIDs missing %q in %v", want, scenarioIDs())
 		}
@@ -647,6 +651,65 @@ func TestRAGRetrievalBaselineRepeatedFilteredSearchIsDeterministic(t *testing.T)
 	}
 	if !searchHitHasCitation(first) {
 		t.Fatalf("top hit missing citation fields: %+v", first)
+	}
+}
+
+func TestVerifyDocsNavigationBaselineRequiresLinksGraphAndProjection(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: docsNavigationScenarioID}); err != nil {
+		t.Fatalf("seed docs navigation scenario: %v", err)
+	}
+	completeMetrics := metrics{
+		AssistantCalls:        1,
+		ListDocumentsUsed:     true,
+		GetDocumentUsed:       true,
+		DocumentLinksUsed:     true,
+		GraphNeighborhoodUsed: true,
+		ProjectionStatesUsed:  true,
+		EventTypeCounts:       map[string]int{},
+	}
+	finalAnswer := "Directory/path navigation is sufficient for notes/wiki/agentops/index.md and notes/wiki/agentops/runner-policy.md, but folders and markdown links fail for backlinks and cross-directory context. document_links shows incoming backlinks, graph_neighborhood adds cited relationship context, and graph projection freshness confirms the derived graph is fresh."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: docsNavigationScenarioID}, 1, finalAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify docs navigation baseline: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("docs navigation baseline failed: %+v", result)
+	}
+
+	missingGraphMetric := completeMetrics
+	missingGraphMetric.GraphNeighborhoodUsed = false
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: docsNavigationScenarioID}, 1, finalAnswer, missingGraphMetric)
+	if err != nil {
+		t.Fatalf("verify missing graph metric: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("docs navigation baseline without graph metric passed: %+v", result)
+	}
+
+	incompleteAnswer := "Directory navigation is enough for notes/wiki/agentops/index.md."
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: docsNavigationScenarioID}, 1, incompleteAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify incomplete final answer: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("docs navigation baseline with incomplete answer passed: %+v", result)
+	}
+}
+
+func TestGraphContainsNodeLabelsRequiresEveryCitedLabel(t *testing.T) {
+	nodes := []runner.GraphNode{
+		{Label: "AgentOps Wiki Index", Citations: []runner.Citation{{DocID: "doc_1"}}},
+		{Label: "Runner Policy", Citations: []runner.Citation{{DocID: "doc_2"}}},
+		{Label: "Knowledge Plane", Citations: []runner.Citation{{DocID: "doc_3"}}},
+	}
+	if graphContainsNodeLabels(nodes, []string{"AgentOps Wiki Index", "Runner Policy", "Knowledge Plane", "Runner Playbook"}) {
+		t.Fatal("graph labels passed without the runner playbook node")
+	}
+	nodes = append(nodes, runner.GraphNode{Label: "Runner Playbook", Citations: []runner.Citation{{DocID: "doc_4"}}})
+	if !graphContainsNodeLabels(nodes, []string{"AgentOps Wiki Index", "Runner Policy", "Knowledge Plane", "Runner Playbook"}) {
+		t.Fatal("graph labels failed with every required cited node")
 	}
 }
 

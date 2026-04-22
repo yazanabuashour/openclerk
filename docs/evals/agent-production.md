@@ -93,6 +93,9 @@ The `ockp` harness covers routine local knowledge-plane workflows:
 
 - canonical note creation with stable paths, frontmatter, headings, body content,
   and vault/document-registry verification
+- canonical directory and link navigation with path-prefix listing, exact
+  document heading retrieval, outgoing links, incoming backlinks, graph
+  neighborhood expansion, and graph projection freshness
 - RAG-style retrieval-only answering with unfiltered search, path-prefix
   filtering, metadata filtering, repeated-query stability, chunk citations, and
   no implicit synthesis filing

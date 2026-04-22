@@ -43,6 +43,13 @@ const (
 	ragCurrentPolicyDecision = "The active retrieval decision is JSON runner only."
 	ragDecoyPolicyTitle      = "Decoy AgentOps RAG Policy"
 	ragArchivedPolicyTitle   = "Archived AgentOps RAG Policy"
+
+	docsNavigationScenarioID = "canonical-docs-navigation-baseline"
+	docsNavigationPrefix     = "notes/wiki/agentops/"
+	docsNavigationIndexPath  = "notes/wiki/agentops/index.md"
+	docsNavigationPolicyPath = "notes/wiki/agentops/runner-policy.md"
+	docsNavigationArchPath   = "notes/wiki/architecture/knowledge-plane.md"
+	docsNavigationOpsPath    = "notes/wiki/ops/runner-playbook.md"
 )
 
 var (
@@ -167,6 +174,8 @@ type metrics struct {
 	SearchMetadataFilterUsed bool           `json:"search_metadata_filter_used"`
 	ListDocumentsUsed        bool           `json:"list_documents_used"`
 	GetDocumentUsed          bool           `json:"get_document_used"`
+	DocumentLinksUsed        bool           `json:"document_links_used"`
+	GraphNeighborhoodUsed    bool           `json:"graph_neighborhood_used"`
 	RecordsLookupUsed        bool           `json:"records_lookup_used"`
 	ProvenanceEventsUsed     bool           `json:"provenance_events_used"`
 	ProjectionStatesUsed     bool           `json:"projection_states_used"`
@@ -736,6 +745,10 @@ func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
 		if err := seedRAGRetrievalBaseline(ctx, cfg); err != nil {
 			return err
 		}
+	case docsNavigationScenarioID:
+		if err := seedDocsNavigationBaseline(ctx, cfg); err != nil {
+			return err
+		}
 	case "stale-synthesis-update":
 		if err := createSeedDocument(ctx, cfg, "notes/sources/runner-old-workaround.md", "Old OpenClerk runner Routing Source", "Older guidance said routine agents may bypass OpenClerk runner through a temporary command-path workaround."); err != nil {
 			return err
@@ -905,6 +918,75 @@ This archived policy is outside the active RAG path prefix and is superseded by 
 	return createSeedDocument(ctx, cfg, ragArchivedPolicyPath, ragArchivedPolicyTitle, archivedBody)
 }
 
+func seedDocsNavigationBaseline(ctx context.Context, cfg runclient.Config) error {
+	indexBody := strings.TrimSpace(`---
+type: wiki
+status: active
+---
+# AgentOps Wiki Index
+
+## Summary
+Canonical directory navigation starts here for the AgentOps wiki baseline.
+
+## Links
+- [Runner policy](runner-policy.md)
+- [Knowledge plane](../architecture/knowledge-plane.md)
+- [Runner playbook](../ops/runner-playbook.md)
+
+## Limits
+Folder paths and headings show the local index, but they do not explain backlinks or cross-directory relationship neighborhoods without retrieval actions.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, docsNavigationIndexPath, "AgentOps Wiki Index", indexBody); err != nil {
+		return err
+	}
+
+	policyBody := strings.TrimSpace(`---
+type: policy
+status: active
+---
+# Runner Policy
+
+## Summary
+Routine OpenClerk knowledge work uses the installed JSON runner and cites returned source paths.
+
+## Navigation
+Return to the [AgentOps wiki index](index.md) and compare with the [knowledge plane](../architecture/knowledge-plane.md).
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, docsNavigationPolicyPath, "Runner Policy", policyBody); err != nil {
+		return err
+	}
+
+	architectureBody := strings.TrimSpace(`---
+type: architecture
+status: active
+---
+# Knowledge Plane
+
+## Summary
+The knowledge plane keeps canonical markdown as source authority and derives graph relationships from links.
+
+## Navigation
+The [AgentOps wiki index](../agentops/index.md) links this architecture note to runner policy context.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, docsNavigationArchPath, "Knowledge Plane", architectureBody); err != nil {
+		return err
+	}
+
+	opsBody := strings.TrimSpace(`---
+type: runbook
+status: active
+---
+# Runner Playbook
+
+## Summary
+Operators use the runner playbook when directory navigation is not enough to explain related policy and architecture docs.
+
+## Navigation
+Start from the [AgentOps wiki index](../agentops/index.md) before following graph neighborhoods.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, docsNavigationOpsPath, "Runner Playbook", opsBody)
+}
+
 func createSeedDocument(ctx context.Context, cfg runclient.Config, path, title, body string) error {
 	result, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionCreate,
@@ -997,6 +1079,8 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyAnswerFiling(ctx, paths, finalMessage)
 	case ragRetrievalScenarioID:
 		return verifyRAGRetrievalBaseline(ctx, paths, finalMessage, turnMetrics)
+	case docsNavigationScenarioID:
+		return verifyDocsNavigationBaseline(ctx, paths, finalMessage, turnMetrics)
 	case "stale-synthesis-update":
 		return verifyStaleSynthesisUpdate(ctx, paths, finalMessage, turnMetrics)
 	case "synthesis-freshness-repair":
@@ -1352,6 +1436,163 @@ func verifyRAGRetrievalBaseline(ctx context.Context, paths evalPaths, finalMessa
 		AssistantPass: assistantPass && activityPass,
 		Details:       missingDetails(failures),
 		Documents:     []string{ragCurrentPolicyPath, ragDecoyPolicyPath, ragArchivedPolicyPath},
+	}, nil
+}
+
+func verifyDocsNavigationBaseline(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{PathPrefix: docsNavigationPrefix, Limit: 10},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	indexDocID, indexFound := "", false
+	policyFound := false
+	onlyPrefix := true
+	for _, doc := range list.Documents {
+		if !strings.HasPrefix(doc.Path, docsNavigationPrefix) {
+			onlyPrefix = false
+		}
+		switch doc.Path {
+		case docsNavigationIndexPath:
+			indexDocID = doc.DocID
+			indexFound = true
+		case docsNavigationPolicyPath:
+			policyFound = true
+		}
+	}
+
+	got, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGet,
+		DocID:  indexDocID,
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	hasHeadings := got.Document != nil && containsAllStrings(got.Document.Headings, []string{"AgentOps Wiki Index", "Summary", "Links", "Limits"})
+
+	links, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionDocumentLinks,
+		DocID:  indexDocID,
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	hasOutgoing := links.Links != nil &&
+		documentLinksContainPath(links.Links.Outgoing, docsNavigationPolicyPath) &&
+		documentLinksContainPath(links.Links.Outgoing, docsNavigationArchPath) &&
+		documentLinksContainPath(links.Links.Outgoing, docsNavigationOpsPath) &&
+		documentLinksHaveCitations(links.Links.Outgoing)
+	hasIncoming := links.Links != nil &&
+		documentLinksContainPath(links.Links.Incoming, docsNavigationPolicyPath) &&
+		documentLinksContainPath(links.Links.Incoming, docsNavigationArchPath) &&
+		documentLinksContainPath(links.Links.Incoming, docsNavigationOpsPath) &&
+		documentLinksHaveCitations(links.Links.Incoming)
+
+	graph, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionGraph,
+		DocID:  indexDocID,
+		Limit:  20,
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	hasGraph := graph.Graph != nil &&
+		graphContainsNodeLabels(graph.Graph.Nodes, []string{"AgentOps Wiki Index", "Runner Policy", "Knowledge Plane", "Runner Playbook"}) &&
+		graphContainsLinkEdge(graph.Graph.Edges) &&
+		graphEdgesHaveCitations(graph.Graph.Edges)
+
+	projections, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProjectionStates,
+		Projection: runner.ProjectionStateOptions{
+			Projection: "graph",
+			RefKind:    "document",
+			RefID:      indexDocID,
+			Limit:      5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	hasProjection := projections.Projections != nil &&
+		len(projections.Projections.Projections) == 1 &&
+		projections.Projections.Projections[0].Freshness == "fresh" &&
+		projections.Projections.Projections[0].Details["path"] == docsNavigationIndexPath
+
+	failures := []string{}
+	if !indexFound {
+		failures = append(failures, "path-prefix listing did not find "+docsNavigationIndexPath)
+	}
+	if !policyFound {
+		failures = append(failures, "path-prefix listing did not find "+docsNavigationPolicyPath)
+	}
+	if !onlyPrefix || len(list.Documents) != 2 {
+		failures = append(failures, "path-prefix listing did not stay scoped to agentops directory")
+	}
+	if !hasHeadings {
+		failures = append(failures, "get_document did not expose expected index headings")
+	}
+	if !hasOutgoing {
+		failures = append(failures, "document_links missing cited outgoing links")
+	}
+	if !hasIncoming {
+		failures = append(failures, "document_links missing cited incoming backlinks")
+	}
+	if !hasGraph {
+		failures = append(failures, "graph_neighborhood missing cited nodes or edges")
+	}
+	if !hasProjection {
+		failures = append(failures, "graph projection state missing or not fresh")
+	}
+	if !turnMetrics.ListDocumentsUsed {
+		failures = append(failures, "agent did not use list_documents")
+	}
+	if !turnMetrics.GetDocumentUsed {
+		failures = append(failures, "agent did not use get_document")
+	}
+	if !turnMetrics.DocumentLinksUsed {
+		failures = append(failures, "agent did not use document_links")
+	}
+	if !turnMetrics.GraphNeighborhoodUsed {
+		failures = append(failures, "agent did not use graph_neighborhood")
+	}
+	if !turnMetrics.ProjectionStatesUsed {
+		failures = append(failures, "agent did not inspect graph projection state")
+	}
+
+	assistantPass := messageContainsAny(finalMessage, []string{"directory", "folder", "path-prefix", "path prefix"}) &&
+		messageContainsAny(finalMessage, []string{"link", "markdown"}) &&
+		messageContainsAny(finalMessage, []string{"backlink", "incoming"}) &&
+		messageContainsAny(finalMessage, []string{"graph neighborhood", "graph_neighborhood"}) &&
+		messageContainsAny(finalMessage, []string{"sufficient", "enough"}) &&
+		messageContainsAny(finalMessage, []string{"fails", "fail", "limits", "not enough"}) &&
+		messageContainsAll(finalMessage, []string{docsNavigationIndexPath})
+	if !assistantPass {
+		failures = append(failures, "final answer did not compare directory, links/backlinks, graph neighborhood, limits, and source path")
+	}
+
+	databasePass := indexFound &&
+		policyFound &&
+		onlyPrefix &&
+		len(list.Documents) == 2 &&
+		hasHeadings &&
+		hasOutgoing &&
+		hasIncoming &&
+		hasGraph &&
+		hasProjection
+	activityPass := turnMetrics.ListDocumentsUsed &&
+		turnMetrics.GetDocumentUsed &&
+		turnMetrics.DocumentLinksUsed &&
+		turnMetrics.GraphNeighborhoodUsed &&
+		turnMetrics.ProjectionStatesUsed
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{docsNavigationIndexPath, docsNavigationPolicyPath, docsNavigationArchPath, docsNavigationOpsPath},
 	}, nil
 }
 
@@ -1990,6 +2231,86 @@ func messageContainsAny(message string, values []string) bool {
 	return containsAny(normalizeValidationMessage(message), lowerStrings(values))
 }
 
+func containsAllStrings(values []string, expected []string) bool {
+	present := map[string]bool{}
+	for _, value := range values {
+		present[value] = true
+	}
+	for _, value := range expected {
+		if !present[value] {
+			return false
+		}
+	}
+	return true
+}
+
+func documentLinksContainPath(links []runner.DocumentLink, path string) bool {
+	for _, link := range links {
+		if link.Path == path {
+			return true
+		}
+	}
+	return false
+}
+
+func documentLinksHaveCitations(links []runner.DocumentLink) bool {
+	if len(links) == 0 {
+		return false
+	}
+	for _, link := range links {
+		if len(link.Citations) == 0 {
+			return false
+		}
+		for _, citation := range link.Citations {
+			if citation.DocID == "" || citation.ChunkID == "" || citation.Path == "" || citation.LineStart == 0 {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func graphContainsNodeLabels(nodes []runner.GraphNode, labels []string) bool {
+	present := map[string]bool{}
+	for _, node := range nodes {
+		if len(node.Citations) > 0 {
+			present[node.Label] = true
+		}
+	}
+	for _, label := range labels {
+		if !present[label] {
+			return false
+		}
+	}
+	return true
+}
+
+func graphContainsLinkEdge(edges []runner.GraphEdge) bool {
+	for _, edge := range edges {
+		if edge.Kind == "links_to" {
+			return true
+		}
+	}
+	return false
+}
+
+func graphEdgesHaveCitations(edges []runner.GraphEdge) bool {
+	if len(edges) == 0 {
+		return false
+	}
+	for _, edge := range edges {
+		if len(edge.Citations) == 0 {
+			return false
+		}
+		for _, citation := range edge.Citations {
+			if citation.DocID == "" || citation.ChunkID == "" || citation.Path == "" || citation.LineStart == 0 {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func eventTypesInclude(events []runner.ProvenanceEvent, eventType string) bool {
 	for _, event := range events {
 		if event.EventType == eventType {
@@ -2302,21 +2623,32 @@ func classifyCommand(command string, m *metrics) {
 		addEvidence(&m.LegacyRunnerEvidence)
 	}
 	classifySearchCommand(actionText, m)
-	if strings.Contains(actionText, `"action":"list_documents"`) || strings.Contains(actionText, `"action": "list_documents"`) {
+	if commandContainsAction(actionText, "list_documents") {
 		m.ListDocumentsUsed = true
 	}
-	if strings.Contains(actionText, `"action":"get_document"`) || strings.Contains(actionText, `"action": "get_document"`) {
+	if commandContainsAction(actionText, "get_document") {
 		m.GetDocumentUsed = true
 	}
-	if strings.Contains(actionText, `"action":"records_lookup"`) || strings.Contains(actionText, `"action": "records_lookup"`) {
+	if commandContainsAction(actionText, "document_links") {
+		m.DocumentLinksUsed = true
+	}
+	if commandContainsAction(actionText, "graph_neighborhood") {
+		m.GraphNeighborhoodUsed = true
+	}
+	if commandContainsAction(actionText, "records_lookup") {
 		m.RecordsLookupUsed = true
 	}
-	if strings.Contains(actionText, `"action":"provenance_events"`) || strings.Contains(actionText, `"action": "provenance_events"`) {
+	if commandContainsAction(actionText, "provenance_events") {
 		m.ProvenanceEventsUsed = true
 	}
-	if strings.Contains(actionText, `"action":"projection_states"`) || strings.Contains(actionText, `"action": "projection_states"`) {
+	if commandContainsAction(actionText, "projection_states") {
 		m.ProjectionStatesUsed = true
 	}
+}
+
+func commandContainsAction(actionText string, action string) bool {
+	compacted := strings.Join(strings.Fields(actionText), "")
+	return strings.Contains(compacted, `"action":"`+action+`"`)
 }
 
 func classifySearchCommand(actionText string, m *metrics) {
@@ -2408,6 +2740,8 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.SearchMetadataFilterUsed = out.SearchMetadataFilterUsed || current.SearchMetadataFilterUsed
 		out.ListDocumentsUsed = out.ListDocumentsUsed || current.ListDocumentsUsed
 		out.GetDocumentUsed = out.GetDocumentUsed || current.GetDocumentUsed
+		out.DocumentLinksUsed = out.DocumentLinksUsed || current.DocumentLinksUsed
+		out.GraphNeighborhoodUsed = out.GraphNeighborhoodUsed || current.GraphNeighborhoodUsed
 		out.RecordsLookupUsed = out.RecordsLookupUsed || current.RecordsLookupUsed
 		out.ProvenanceEventsUsed = out.ProvenanceEventsUsed || current.ProvenanceEventsUsed
 		out.ProjectionStatesUsed = out.ProjectionStatesUsed || current.ProjectionStatesUsed
@@ -2996,6 +3330,11 @@ func allScenarios() []scenario {
 				{Prompt: "Use the configured local OpenClerk data path. Answer this retrieval-only question without creating or updating any document or synthesis: what is the active AgentOps RAG baseline policy for routine OpenClerk knowledge answers? Use only openclerk retrieval search requests. Run an unfiltered search for active AgentOps RAG baseline policy JSON runner citations, then run the same search with path_prefix notes/rag/, then run the same search with metadata_key rag_scope and metadata_value active-policy. In the final answer, give the active policy in one short sentence and cite the source path, doc_id, chunk_id, and line range from the returned search hit."},
 				{Prompt: "Repeat the same retrieval-only question. Do not create, update, append, replace, or file any notes/synthesis/ document. Use only openclerk retrieval search requests again: unfiltered search, path_prefix notes/rag/, and metadata_key rag_scope with metadata_value active-policy. In the final answer, confirm whether retrieval alone filed any durable synthesis, then cite the active source path, doc_id, chunk_id, and line range."},
 			},
+		},
+		{
+			ID:     docsNavigationScenarioID,
+			Title:  "Canonical docs directory and link navigation baseline",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, or unsupported actions. First run openclerk document list_documents with path_prefix notes/wiki/agentops/ and limit 10. Use the returned doc_id for notes/wiki/agentops/index.md to run get_document, and use its returned headings in your analysis. Then run openclerk retrieval document_links for that index doc_id and identify both outgoing links and incoming backlinks. Then run openclerk retrieval graph_neighborhood for that index doc_id with limit 20, and inspect projection_states with projection graph, ref_kind document, and that index doc_id. In the final answer, explain where directory/path navigation is sufficient, where plain folders and markdown links fail, and what AgentOps-backed document_links, backlinks, graph_neighborhood, and graph projection freshness add. Mention notes/wiki/agentops/index.md and at least one linked source path.",
 		},
 		{
 			ID:     "stale-synthesis-update",
