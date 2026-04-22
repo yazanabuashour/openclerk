@@ -93,6 +93,19 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 			Document: &converted,
 			Summary:  fmt.Sprintf("replaced section in document %s", converted.DocID),
 		}, nil
+	case DocumentTaskActionInspectLayout:
+		layout, err := inspectKnowledgeLayout(ctx, client)
+		if err != nil {
+			return DocumentTaskResult{}, err
+		}
+		status := "valid"
+		if !layout.Valid {
+			status = "invalid"
+		}
+		return DocumentTaskResult{
+			Layout:  &layout,
+			Summary: fmt.Sprintf("inspected %s OpenClerk knowledge layout", status),
+		}, nil
 	default:
 		return DocumentTaskResult{}, fmt.Errorf("unsupported document task action %q", normalized.Action)
 	}
@@ -160,6 +173,8 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		}
 		return normalized, ""
 	case DocumentTaskActionResolvePaths:
+		return normalized, ""
+	case DocumentTaskActionInspectLayout:
 		return normalized, ""
 	default:
 		return normalizedDocumentTaskRequest{}, fmt.Sprintf("unsupported document task action %q", action)

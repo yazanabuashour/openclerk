@@ -192,6 +192,123 @@ Checked source refs.
 	}
 }
 
+func TestDocumentTaskInspectLayout(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DataDir: filepath.Join(t.TempDir(), "data")}
+	createDocument(t, ctx, config, "notes/sources/runner.md", "Runner Source", "# Runner Source\n\n## Summary\nCanonical source guidance.\n")
+	createDocument(t, ctx, config, "notes/synthesis/runner.md", "Runner Synthesis", strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: notes/sources/runner.md
+---
+# Runner Synthesis
+
+## Summary
+Canonical source guidance.
+
+## Sources
+- notes/sources/runner.md
+
+## Freshness
+Checked source refs.
+`)+"\n")
+	createDocument(t, ctx, config, "records/assets/openclerk-runner.md", "OpenClerk runner record", "---\nentity_type: tool\nentity_name: OpenClerk runner\n---\n# OpenClerk runner record\n\n## Facts\n- status: active\n")
+	createDocument(t, ctx, config, "records/services/openclerk-runner.md", "OpenClerk runner", "---\nservice_id: openclerk-runner\nservice_name: OpenClerk runner\nservice_status: active\nservice_owner: runner\nservice_interface: JSON runner\n---\n# OpenClerk runner\n\n## Summary\nProduction service.\n")
+
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionInspectLayout,
+	})
+	if err != nil {
+		t.Fatalf("inspect layout: %v", err)
+	}
+	if result.Layout == nil || !result.Layout.Valid {
+		t.Fatalf("layout = %+v", result.Layout)
+	}
+	if result.Layout.Mode != "convention_first" || result.Layout.ConfigArtifactRequired {
+		t.Fatalf("layout configuration = %+v", result.Layout)
+	}
+	if !layoutChecksInclude(result.Layout.Checks, "synthesis_source_refs_resolve", "pass") ||
+		!layoutChecksInclude(result.Layout.Checks, "service_identity_metadata", "pass") ||
+		!layoutChecksInclude(result.Layout.Checks, "record_identity_metadata", "pass") {
+		t.Fatalf("layout checks = %+v", result.Layout.Checks)
+	}
+}
+
+func TestDocumentTaskInspectLayoutReportsInvalidConventions(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DataDir: filepath.Join(t.TempDir(), "data")}
+	createDocument(t, ctx, config, "notes/synthesis/incomplete.md", "Incomplete Synthesis", "# Incomplete Synthesis\n\n## Summary\nMissing evidence conventions.\n")
+	createDocument(t, ctx, config, "records/services/incomplete.md", "Incomplete Service", "---\nservice_id: incomplete\n---\n# Incomplete Service\n\n## Summary\nMissing service name.\n")
+
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionInspectLayout,
+	})
+	if err != nil {
+		t.Fatalf("inspect invalid layout: %v", err)
+	}
+	if result.Layout == nil || result.Layout.Valid {
+		t.Fatalf("layout = %+v, want invalid", result.Layout)
+	}
+	for _, id := range []string{
+		"synthesis_source_refs",
+		"synthesis_sources_section",
+		"synthesis_freshness_section",
+		"service_identity_metadata",
+	} {
+		if !layoutChecksInclude(result.Layout.Checks, id, "fail") {
+			t.Fatalf("layout checks missing failing %s: %+v", id, result.Layout.Checks)
+		}
+	}
+}
+
+func TestDocumentTaskInspectLayoutRequiresLevelTwoSynthesisSections(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DataDir: filepath.Join(t.TempDir(), "data")}
+	createDocument(t, ctx, config, "notes/sources/runner.md", "Runner Source", "# Runner Source\n\n## Summary\nCanonical source guidance.\n")
+	createDocument(t, ctx, config, "notes/synthesis/wrong-levels.md", "Wrong Level Synthesis", strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: notes/sources/runner.md
+---
+# Wrong Level Synthesis
+
+## Summary
+Canonical source guidance.
+
+# Sources
+- notes/sources/runner.md
+
+### Freshness
+Checked source refs.
+`)+"\n")
+
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionInspectLayout,
+	})
+	if err != nil {
+		t.Fatalf("inspect wrong-level layout: %v", err)
+	}
+	if result.Layout == nil || result.Layout.Valid {
+		t.Fatalf("layout = %+v, want invalid", result.Layout)
+	}
+	for _, id := range []string{
+		"synthesis_sources_section",
+		"synthesis_freshness_section",
+	} {
+		if !layoutChecksInclude(result.Layout.Checks, id, "fail") {
+			t.Fatalf("layout checks missing failing %s: %+v", id, result.Layout.Checks)
+		}
+	}
+}
+
 func TestRetrievalTaskSearchLinksRecordsAndProvenance(t *testing.T) {
 	t.Parallel()
 
@@ -443,6 +560,15 @@ func createDocument(t *testing.T, ctx context.Context, config runclient.Config, 
 func runnerEventTypesInclude(events []runner.ProvenanceEvent, eventType string) bool {
 	for _, event := range events {
 		if event.EventType == eventType {
+			return true
+		}
+	}
+	return false
+}
+
+func layoutChecksInclude(checks []runner.KnowledgeLayoutCheck, id string, status string) bool {
+	for _, check := range checks {
+		if check.ID == id && check.Status == status {
 			return true
 		}
 	}

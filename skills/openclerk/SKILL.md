@@ -71,6 +71,7 @@ Common request shapes:
 {"action":"append_document","doc_id":"doc_id_from_json","content":"## Decisions\nUse the OpenClerk runner."}
 {"action":"replace_section","doc_id":"doc_id_from_json","heading":"Decisions","content":"Use the OpenClerk runner for routine local knowledge tasks."}
 {"action":"resolve_paths"}
+{"action":"inspect_layout"}
 ```
 
 Request fields are `action`, `document`, `doc_id`, `content`, `heading`, and
@@ -79,6 +80,14 @@ Request fields are `action`, `document`, `doc_id`, `content`, `heading`, and
 
 Validation rejections are normal JSON results with `rejected: true` and
 `rejection_reason`. Runtime failures exit non-zero and write errors to stderr.
+
+Use `inspect_layout` when asked to explain or validate the configured
+OpenClerk knowledge layout. Answer from its `layout` JSON: `mode`,
+`config_artifact_required`, `conventional_paths`, `document_kinds`, and
+`checks`. The v1 layout is convention-first and does not require a committed
+manifest. Failing layout checks are runner-visible results; do not inspect the
+vault, SQLite, source files, or lower-level runtime state to diagnose routine
+layout problems.
 
 When writing source-linked synthesis, use this exact AgentOps workflow:
 

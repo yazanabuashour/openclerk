@@ -47,6 +47,23 @@ in `docs/evals/knowledge-plane-archetype-matrix.md`.
 - Verify the final answer identifies which source is current when the prompt is
   source-sensitive.
 
+## Synthesis Compiler Pressure
+
+- Seed current and superseded sources, an existing stale synthesis page, and a
+  decoy synthesis candidate; verify the agent selects and repairs the target
+  synthesis without creating a duplicate.
+- Seed a multi-source evidence set; verify a new synthesis preserves every
+  source ref as single-line comma-separated frontmatter and includes
+  `## Sources` and `## Freshness`.
+- Run a resumed multi-turn drift repair where the first turn creates synthesis
+  and the second turn updates newer source evidence before repairing the
+  synthesis.
+- Verify pressure scenarios still use only `search`, `list_documents`,
+  `get_document`, `replace_section` or `append_document`, and
+  `projection_states` where freshness is relevant.
+- Promote a dedicated synthesis/compiler action only if repeated failures show
+  the existing runner workflow is structurally too many steps.
+
 ## Docs Navigation
 
 - Run the `canonical-docs-navigation-baseline` scenario from `oc-85c`.
@@ -101,6 +118,19 @@ AgentOps eval harness supports them cleanly.
 - Verify promoted-record synthesis inspects `records_lookup`,
   `provenance_events`, and `projection_states` before writing durable
   synthesis.
+
+## Knowledge Layout Inspection
+
+- Verify `inspect_layout` explains the effective convention-first layout
+  through runner JSON only.
+- Verify layout JSON reports `config_artifact_required: false`, conventional
+  prefixes such as `notes/sources/` and `notes/synthesis/`, first-class
+  document kinds, and pass/warn/fail checks.
+- Verify invalid or incomplete synthesis, missing `source_refs`, missing
+  `## Sources` or `## Freshness`, missing source paths, and partial
+  record/service identity metadata are visible as failed layout checks.
+- Verify agents do not inspect the vault, SQLite, source files, or alternate
+  transports to explain routine layout validity.
 
 ## AgentOps Contract Enforcement
 

@@ -7,9 +7,8 @@ vaults on the current AgentOps surface.
 
 This ADR defines the contract agents can rely on through the installed
 `openclerk` JSON runner and `skills/openclerk/SKILL.md`. It does not require a
-committed manifest file. `oc-za6.2` will decide whether convention-first layout
-remains sufficient, whether runner-derived configuration inspection is enough,
-or whether a small runner-visible configuration artifact should be promoted.
+committed manifest file. `oc-za6.2` promoted runner-derived layout inspection
+through `inspect_layout` and kept the underlying v1 layout convention-first.
 
 ## Context
 
@@ -61,9 +60,9 @@ hard-coded:
   through supported runner path resolution and environment/config inputs.
 
 No committed manifest, schema file, or separate configuration document is
-required for v1. If future evals show that convention-first layout cannot be
-validated or explained well enough through runner JSON, `oc-za6.2` should
-promote a small runner-visible configuration model or artifact.
+required for v1. `inspect_layout` is the runner-visible configuration model:
+it explains the effective conventions and reports invalid or incomplete
+layouts through JSON checks without making a committed artifact authoritative.
 
 ## V1 Concepts
 
@@ -146,6 +145,8 @@ The v1 document runner actions are:
 - `validate` checks document request shape without writing a document.
 - `resolve_paths` exposes the effective OpenClerk data, database, and vault
   paths.
+- `inspect_layout` exposes the convention-first layout contract, conventional
+  prefixes, first-class document kinds, and pass/warn/fail validation checks.
 - `create_document` writes a new canonical markdown document and registers it.
 - `list_documents` exposes document registry entries by path prefix or metadata.
 - `get_document` returns a canonical document by stable `doc_id`.
@@ -169,6 +170,74 @@ The v1 retrieval runner actions are:
 These actions are the production agent interface for explaining and validating
 knowledge layout. Unsupported lower-level workflows should be rejected rather
 than routed around the runner.
+
+## `oc-za6.2` POC Decision
+
+Decision: promote runner-derived layout inspection and keep v1
+convention-first. A committed manifest or separate config artifact is not
+needed for v1.
+
+The POC compared three options:
+
+- convention-first only: paths, frontmatter, and discovery are enough for
+  routine operation, but agents needed too many separate reads to explain why a
+  layout is valid or invalid.
+- runner-derived inspection: `inspect_layout` can explain the configured
+  layout and report incomplete synthesis, source refs, record, and service
+  identity conventions through one JSON result.
+- committed config artifact: deferred or killed for v1 because it would create
+  a second source of truth without improving canonical markdown authority.
+
+The promoted model is therefore not a manifest. It is a runner-visible
+inspection result derived from canonical markdown registry state. Targeted
+AgentOps evidence is recorded in
+`docs/evals/results/ockp-layout-configuration.md`: both
+`configured-layout-explain` and `invalid-layout-visible` passed while
+preserving the no broad repo search, no direct SQLite, and no source-built
+runner invariants.
+
+## `oc-za6.3` POC Decision
+
+Decision: keep the existing document and retrieval actions for source-linked
+synthesis maintenance. Do not promote a dedicated synthesis/compiler action for
+v1.
+
+The POC pressure-tested the current workflow against candidate-selection,
+multi-source creation, stale repair, mixed records/synthesis, and resumed
+multi-turn drift repair. The selected pressure scenarios required agents to
+search source evidence, list `notes/synthesis/` candidates, retrieve existing
+synthesis before editing, inspect synthesis projection freshness where
+relevant, preserve single-line `source_refs`, keep `## Sources` and
+`## Freshness`, and update without duplicate synthesis pages.
+
+Targeted AgentOps evidence is recorded in
+`docs/evals/results/ockp-synthesis-compiler-pressure.md`. This was a targeted
+run, not a full production-gate run: all 12 selected synthesis, pressure, and
+contract-enforcement scenarios passed; the production gate remained false only
+because unrelated scenarios were intentionally not selected. The selected run
+also preserved the no broad repo search, no direct SQLite, no source-built
+runner usage, final-answer-only invalid-request rejection, and citation/source
+freshness invariants.
+
+The deferred candidate action shape remains:
+
+```json
+{
+  "action": "compile_synthesis",
+  "synthesis": {
+    "path": "notes/synthesis/example.md",
+    "title": "Example",
+    "source_refs": ["notes/sources/source-a.md", "notes/sources/source-b.md"],
+    "body": "# Example\n\n## Summary\n...\n\n## Sources\n...\n\n## Freshness\n...",
+    "mode": "create_or_update"
+  }
+}
+```
+
+Future work should revisit that shape only if repeated eval failures show the
+document/retrieval workflow is structurally too many steps and directly causes
+missed candidate discovery, missed freshness inspection, duplicate synthesis,
+or dropped source refs.
 
 ## Production-Valid for AgentOps
 

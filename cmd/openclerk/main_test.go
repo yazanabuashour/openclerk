@@ -61,6 +61,16 @@ func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 	if serviceDetail.Service == nil || serviceDetail.Service.Interface != "JSON runner" {
 		t.Fatalf("service detail = %+v", serviceDetail)
 	}
+
+	layoutRequest := `{"action":"inspect_layout"}`
+	var layoutResult runner.DocumentTaskResult
+	code, stderr = runJSON(t, []string{"document", "--data-dir", dataDir}, layoutRequest, &layoutResult)
+	if code != 0 {
+		t.Fatalf("inspect layout exit = %d stderr=%s", code, stderr)
+	}
+	if layoutResult.Layout == nil || !layoutResult.Layout.Valid || layoutResult.Layout.Mode != "convention_first" {
+		t.Fatalf("layout result = %+v", layoutResult)
+	}
 }
 
 func TestRunnerValidationRejectionDoesNotCreateDatabase(t *testing.T) {

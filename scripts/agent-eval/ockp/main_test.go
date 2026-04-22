@@ -393,6 +393,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"search\",\"search\":{\"text\":\"runner\",\"metadata_key\":\"rag_scope\",\"metadata_value\":\"active-policy\"}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/synthesis/\"}}' | openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"get_document\",\"doc_id\":\"doc_1\"}' | openclerk document"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"inspect_layout\"}' | openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\n  \"document_links\",\"doc_id\":\"doc_1\"}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\n  \"graph_neighborhood\",\"doc_id\":\"doc_1\"}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"records_lookup\",\"records\":{\"text\":\"runner\"}}' | openclerk retrieval"}}`,
@@ -411,7 +412,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	if parsed.sessionID != "session-123" || parsed.finalMessage != "done" {
 		t.Fatalf("parsed = %+v", parsed)
 	}
-	if parsed.metrics.ToolCalls != 16 || parsed.metrics.CommandExecutions != 16 || parsed.metrics.AssistantCalls != 1 {
+	if parsed.metrics.ToolCalls != 17 || parsed.metrics.CommandExecutions != 17 || parsed.metrics.AssistantCalls != 1 {
 		t.Fatalf("metrics = %+v", parsed.metrics)
 	}
 	if !parsed.metrics.BroadRepoSearch {
@@ -435,6 +436,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		"search_metadata_filter": parsed.metrics.SearchMetadataFilterUsed,
 		"list_documents":         parsed.metrics.ListDocumentsUsed,
 		"get_document":           parsed.metrics.GetDocumentUsed,
+		"inspect_layout":         parsed.metrics.InspectLayoutUsed,
 		"document_links":         parsed.metrics.DocumentLinksUsed,
 		"graph_neighborhood":     parsed.metrics.GraphNeighborhoodUsed,
 		"records_lookup":         parsed.metrics.RecordsLookupUsed,
@@ -527,7 +529,7 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 	for _, id := range scenarioIDs() {
 		ids[id] = true
 	}
-	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
+	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
 		if !ids[want] {
 			t.Fatalf("scenarioIDs missing %q in %v", want, scenarioIDs())
 		}
@@ -703,6 +705,45 @@ func TestVerifyDocsNavigationBaselineRequiresLinksGraphAndProjection(t *testing.
 	}
 	if result.Passed {
 		t.Fatalf("docs navigation baseline with incomplete answer passed: %+v", result)
+	}
+}
+
+func TestVerifyConfiguredLayoutRequiresUnambiguousValidAnswer(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: configuredLayoutScenarioID}); err != nil {
+		t.Fatalf("seed configured layout scenario: %v", err)
+	}
+	completeMetrics := metrics{
+		AssistantCalls:    1,
+		InspectLayoutUsed: true,
+		EventTypeCounts:   map[string]int{},
+	}
+	invalidAnswer := "The convention-first layout has no committed manifest, includes notes/sources/ and notes/synthesis/, and requires source_refs. The layout is invalid."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: configuredLayoutScenarioID}, 1, invalidAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify invalid status answer: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("configured layout answer with invalid status passed: %+v", result)
+	}
+
+	negatedAnswer := "The convention-first layout has no committed manifest, includes notes/sources/ and notes/synthesis/, and requires source_refs. The layout is not valid."
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: configuredLayoutScenarioID}, 1, negatedAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify negated valid status answer: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("configured layout answer with not valid status passed: %+v", result)
+	}
+
+	validAnswer := "The convention-first layout has no committed manifest, includes notes/sources/ and notes/synthesis/, and requires source_refs. The layout is valid."
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: configuredLayoutScenarioID}, 1, validAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify valid status answer: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("configured layout answer with valid status failed: %+v", result)
 	}
 }
 
@@ -922,6 +963,172 @@ func TestVerifyStaleSynthesisUpdateRequiresCurrentSourceAndNoDuplicate(t *testin
 	}
 }
 
+func TestVerifySynthesisCandidatePressureRequiresCandidateWorkflowAndNoDuplicate(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: synthesisCandidatePressureScenarioID}); err != nil {
+		t.Fatalf("seed candidate pressure scenario: %v", err)
+	}
+	noTools := metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}}
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: synthesisCandidatePressureScenarioID}, 1, "Updated "+synthesisCandidatePath+".", noTools)
+	if err != nil {
+		t.Fatalf("verify candidate no tools: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("candidate pressure passed before repair: %+v", result)
+	}
+
+	replaceSeedSection(t, ctx, paths, synthesisCandidatePath, "Summary", "Current compiler decision: existing document and retrieval actions are sufficient for synthesis compiler pressure repairs.\n\nCurrent source: "+synthesisCandidateCurrentSrc+"\n\nSuperseded source: "+synthesisCandidateOldSrc)
+	replaceSeedSection(t, ctx, paths, synthesisCandidatePath, "Freshness", "Checked synthesis projection freshness after searching sources and listing candidates.")
+	workflowMetrics := metrics{
+		AssistantCalls:       1,
+		SearchUsed:           true,
+		ListDocumentsUsed:    true,
+		GetDocumentUsed:      true,
+		ProjectionStatesUsed: true,
+		EventTypeCounts:      map[string]int{},
+		CommandExecutions:    4,
+		ToolCalls:            4,
+	}
+	finalAnswer := "Updated " + synthesisCandidatePath + " from " + synthesisCandidateCurrentSrc + "; projection freshness is fresh."
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: synthesisCandidatePressureScenarioID}, 1, finalAnswer, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify candidate repair: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("candidate pressure repair failed: %+v", result)
+	}
+
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	if err := createSeedDocument(ctx, cfg, "notes/synthesis/compiler-routing-copy.md", "Compiler Routing Copy", "# Duplicate\n"); err != nil {
+		t.Fatalf("create duplicate candidate synthesis: %v", err)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: synthesisCandidatePressureScenarioID}, 1, finalAnswer, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify candidate duplicate: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("candidate pressure passed with duplicate synthesis: %+v", result)
+	}
+}
+
+func TestVerifySynthesisSourceSetPressureRequiresAllSources(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: synthesisSourceSetPressureScenarioID}); err != nil {
+		t.Fatalf("seed source set pressure scenario: %v", err)
+	}
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	body := strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: notes/sources/source-set-alpha.md, notes/sources/source-set-beta.md, notes/sources/source-set-gamma.md
+---
+# Compiler Source Set
+
+## Summary
+Alpha, beta, and gamma source refs show the synthesis compiler pressure workflow can preserve freshness.
+
+## Sources
+- notes/sources/source-set-alpha.md
+- notes/sources/source-set-beta.md
+- notes/sources/source-set-gamma.md
+
+## Freshness
+Checked runner search results and synthesis candidate listing for all source refs.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, synthesisSourceSetPath, "Compiler Source Set", body); err != nil {
+		t.Fatalf("create source set synthesis: %v", err)
+	}
+	completeMetrics := metrics{
+		AssistantCalls:    1,
+		SearchUsed:        true,
+		ListDocumentsUsed: true,
+		EventTypeCounts:   map[string]int{},
+	}
+	finalAnswer := "Created " + synthesisSourceSetPath + " with alpha, beta, and gamma sources."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: synthesisSourceSetPressureScenarioID}, 1, finalAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify source set pressure: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("source set pressure failed: %+v", result)
+	}
+
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: synthesisSourceSetPressureScenarioID}, 1, finalAnswer, metrics{AssistantCalls: 1, SearchUsed: true, EventTypeCounts: map[string]int{}})
+	if err != nil {
+		t.Fatalf("verify missing list metric: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("source set pressure passed without candidate listing metric: %+v", result)
+	}
+}
+
+func TestVerifyMTSynthesisDriftPressureRequiresSourceUpdateAndRepair(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	sc := requireScenarioByID(t, mtSynthesisDriftPressureScenarioID)
+	if err := seedScenario(ctx, paths, sc); err != nil {
+		t.Fatalf("seed drift pressure scenario: %v", err)
+	}
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	initialBody := strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: notes/sources/drift-current.md, notes/sources/drift-old.md
+---
+# Drift Runner
+
+## Summary
+Initial drift synthesis says the decision is still under review.
+
+## Sources
+- notes/sources/drift-current.md
+- notes/sources/drift-old.md
+
+## Freshness
+Checked initial source refs.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, mtDriftSynthesisPath, "Drift Runner", initialBody); err != nil {
+		t.Fatalf("create initial drift synthesis: %v", err)
+	}
+	turnOneMetrics := metrics{
+		AssistantCalls:    1,
+		SearchUsed:        true,
+		ListDocumentsUsed: true,
+		EventTypeCounts:   map[string]int{},
+	}
+	result, err := verifyScenarioTurn(ctx, paths, sc, 1, "Created "+mtDriftSynthesisPath+".", turnOneMetrics)
+	if err != nil {
+		t.Fatalf("verify drift turn one: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("drift turn one failed: %+v", result)
+	}
+
+	replaceSeedSection(t, ctx, paths, mtDriftCurrentPath, "Summary", "Current drift decision says existing document and retrieval actions should stay the v1 synthesis path.")
+	replaceSeedSection(t, ctx, paths, mtDriftSynthesisPath, "Summary", "Current drift decision: keep existing document and retrieval actions.\n\nCurrent source: "+mtDriftCurrentPath+"\n\nSuperseded source: "+mtDriftOldSourcePath)
+	replaceSeedSection(t, ctx, paths, mtDriftSynthesisPath, "Freshness", "Checked synthesis projection freshness after the current source update.")
+	turnTwoMetrics := metrics{
+		AssistantCalls:       1,
+		SearchUsed:           true,
+		ListDocumentsUsed:    true,
+		GetDocumentUsed:      true,
+		ProjectionStatesUsed: true,
+		EventTypeCounts:      map[string]int{},
+	}
+	finalAnswer := "Updated " + mtDriftSynthesisPath + " from " + mtDriftCurrentPath + "; final freshness is fresh."
+	result, err = verifyScenarioTurn(ctx, paths, sc, 2, finalAnswer, turnTwoMetrics)
+	if err != nil {
+		t.Fatalf("verify drift turn two: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("drift turn two failed: %+v", result)
+	}
+}
+
 func TestVerifyPromotedRecordVsDocsRequiresComparisonAnswer(t *testing.T) {
 	ctx := context.Background()
 	paths := scenarioPaths(t.TempDir())
@@ -1078,6 +1285,17 @@ func comparisonResult(variant string, scenario string, passed bool, tools int, c
 			EventTypeCounts:      map[string]int{},
 		},
 	}
+}
+
+func requireScenarioByID(t *testing.T, id string) scenario {
+	t.Helper()
+	for _, sc := range allScenarios() {
+		if sc.ID == id {
+			return sc
+		}
+	}
+	t.Fatalf("missing scenario %q", id)
+	return scenario{}
 }
 
 func containsValue(args []string, value string) bool {

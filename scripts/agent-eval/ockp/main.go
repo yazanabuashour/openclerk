@@ -52,12 +52,36 @@ const (
 	docsNavigationPolicyPath = "notes/wiki/agentops/runner-policy.md"
 	docsNavigationArchPath   = "notes/wiki/architecture/knowledge-plane.md"
 	docsNavigationOpsPath    = "notes/wiki/ops/runner-playbook.md"
+
+	configuredLayoutScenarioID = "configured-layout-explain"
+	invalidLayoutScenarioID    = "invalid-layout-visible"
+
+	synthesisCandidatePressureScenarioID = "synthesis-candidate-pressure"
+	synthesisSourceSetPressureScenarioID = "synthesis-source-set-pressure"
+	mtSynthesisDriftPressureScenarioID   = "mt-synthesis-drift-pressure"
+
+	synthesisCandidatePath       = "notes/synthesis/compiler-routing.md"
+	synthesisCandidateDecoyPath  = "notes/synthesis/compiler-routing-decoy.md"
+	synthesisCandidateCurrentSrc = "notes/sources/compiler-current.md"
+	synthesisCandidateOldSrc     = "notes/sources/compiler-old.md"
+
+	synthesisSourceSetPath = "notes/synthesis/compiler-source-set.md"
+	sourceSetAlphaPath     = "notes/sources/source-set-alpha.md"
+	sourceSetBetaPath      = "notes/sources/source-set-beta.md"
+	sourceSetGammaPath     = "notes/sources/source-set-gamma.md"
+
+	mtDriftSynthesisPath = "notes/synthesis/drift-runner.md"
+	mtDriftOldSourcePath = "notes/sources/drift-old.md"
+	mtDriftCurrentPath   = "notes/sources/drift-current.md"
 )
 
 var (
-	prewarmCompilePackages = []string{"./cmd/openclerk", "./internal/runner"}
-	unixHomePathPattern    = regexp.MustCompile(`/(Users|home)/[^/\s"'\\]+`)
-	windowsHomePathPattern = regexp.MustCompile(`(?i)[A-Z]:\\Users\\[^\\\s"']+`)
+	prewarmCompilePackages     = []string{"./cmd/openclerk", "./internal/runner"}
+	unixHomePathPattern        = regexp.MustCompile(`/(Users|home)/[^/\s"'\\]+`)
+	windowsHomePathPattern     = regexp.MustCompile(`(?i)[A-Z]:\\Users\\[^\\\s"']+`)
+	layoutExplicitValidPattern = regexp.MustCompile(`\bvalid\s*[:=]?\s*true\b|\blayout(?:\s+\w+){0,3}\s+valid\b|\bvalid\s+layout\b`)
+	layoutInvalidStatusPattern = regexp.MustCompile(`\binvalid\b|\bvalid\s*[:=]?\s*false\b|\bnot\s+valid\b`)
+	layoutValidStatusPattern   = regexp.MustCompile(`\bvalid\b|\bpass(?:es|ed)?\b`)
 )
 
 type runConfig struct {
@@ -176,6 +200,7 @@ type metrics struct {
 	SearchMetadataFilterUsed bool           `json:"search_metadata_filter_used"`
 	ListDocumentsUsed        bool           `json:"list_documents_used"`
 	GetDocumentUsed          bool           `json:"get_document_used"`
+	InspectLayoutUsed        bool           `json:"inspect_layout_used"`
 	DocumentLinksUsed        bool           `json:"document_links_used"`
 	GraphNeighborhoodUsed    bool           `json:"graph_neighborhood_used"`
 	RecordsLookupUsed        bool           `json:"records_lookup_used"`
@@ -751,6 +776,26 @@ func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
 		if err := seedDocsNavigationBaseline(ctx, cfg); err != nil {
 			return err
 		}
+	case configuredLayoutScenarioID:
+		if err := seedConfiguredLayoutScenario(ctx, cfg); err != nil {
+			return err
+		}
+	case invalidLayoutScenarioID:
+		if err := seedInvalidLayoutScenario(ctx, cfg); err != nil {
+			return err
+		}
+	case synthesisCandidatePressureScenarioID:
+		if err := seedSynthesisCandidatePressure(ctx, cfg); err != nil {
+			return err
+		}
+	case synthesisSourceSetPressureScenarioID:
+		if err := seedSynthesisSourceSetPressure(ctx, cfg); err != nil {
+			return err
+		}
+	case mtSynthesisDriftPressureScenarioID:
+		if err := seedMTSynthesisDriftPressure(ctx, cfg); err != nil {
+			return err
+		}
 	case "stale-synthesis-update":
 		if err := createSeedDocument(ctx, cfg, "notes/sources/runner-old-workaround.md", "Old OpenClerk runner Routing Source", "Older guidance said routine agents may bypass OpenClerk runner through a temporary command-path workaround."); err != nil {
 			return err
@@ -989,6 +1034,237 @@ Start from the [AgentOps wiki index](../agentops/index.md) before following grap
 	return createSeedDocument(ctx, cfg, docsNavigationOpsPath, "Runner Playbook", opsBody)
 }
 
+func seedConfiguredLayoutScenario(ctx context.Context, cfg runclient.Config) error {
+	sourceBody := strings.TrimSpace(`---
+type: source
+status: active
+---
+# Layout Runner Source
+
+## Summary
+Convention-first OpenClerk knowledge layout uses runner-visible JSON inspection rather than a committed manifest.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, "notes/sources/layout-runner.md", "Layout Runner Source", sourceBody); err != nil {
+		return err
+	}
+	synthesisBody := strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: notes/sources/layout-runner.md
+---
+# Layout Runner Synthesis
+
+## Summary
+The configured layout keeps canonical markdown and source-linked synthesis convention-first.
+
+## Sources
+- notes/sources/layout-runner.md
+
+## Freshness
+Checked source refs through runner-visible layout inspection.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, "notes/synthesis/layout-runner.md", "Layout Runner Synthesis", synthesisBody); err != nil {
+		return err
+	}
+	recordBody := strings.TrimSpace(`---
+entity_id: layout-runner-record
+entity_type: policy
+entity_name: Layout Runner Policy
+---
+# Layout Runner Policy
+
+## Facts
+- status: active
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, "records/policies/layout-runner.md", "Layout Runner Policy", recordBody); err != nil {
+		return err
+	}
+	serviceBody := strings.TrimSpace(`---
+service_id: layout-runner
+service_name: Layout Runner
+service_status: active
+service_owner: runner
+service_interface: JSON runner
+---
+# Layout Runner
+
+## Summary
+Runner-visible layout inspection explains configured knowledge conventions.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, "records/services/layout-runner.md", "Layout Runner", serviceBody)
+}
+
+func seedInvalidLayoutScenario(ctx context.Context, cfg runclient.Config) error {
+	synthesisBody := strings.TrimSpace(`---
+type: synthesis
+status: active
+source_refs: notes/sources/missing-layout-source.md
+---
+# Broken Layout Synthesis
+
+## Summary
+This synthesis references a missing source and omits the required freshness section.
+
+## Sources
+- notes/sources/missing-layout-source.md
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, "notes/synthesis/broken-layout.md", "Broken Layout Synthesis", synthesisBody); err != nil {
+		return err
+	}
+	serviceBody := strings.TrimSpace(`---
+service_id: broken-layout-service
+---
+# Broken Layout Service
+
+## Summary
+This service-shaped document is missing service_name.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, "records/services/broken-layout-service.md", "Broken Layout Service", serviceBody)
+}
+
+func seedSynthesisCandidatePressure(ctx context.Context, cfg runclient.Config) error {
+	oldBody := strings.TrimSpace(`---
+status: superseded
+superseded_by: notes/sources/compiler-current.md
+---
+# Compiler Old Source
+
+## Summary
+Older compiler guidance said routine synthesis repairs need a dedicated compile_synthesis action.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, synthesisCandidateOldSrc, "Compiler Old Source", oldBody); err != nil {
+		return err
+	}
+	synthesisBody := strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: notes/sources/compiler-current.md, notes/sources/compiler-old.md
+---
+# Compiler Routing
+
+## Summary
+Stale compiler claim: routine synthesis repairs require a dedicated compile_synthesis runner action.
+
+## Sources
+- notes/sources/compiler-current.md
+- notes/sources/compiler-old.md
+
+## Freshness
+Checked before the latest compiler pressure source was registered.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, synthesisCandidatePath, "Compiler Routing", synthesisBody); err != nil {
+		return err
+	}
+	decoyBody := strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: notes/sources/compiler-old.md
+---
+# Compiler Routing Decoy
+
+## Summary
+This decoy page is not the compiler pressure decision target.
+
+## Sources
+- notes/sources/compiler-old.md
+
+## Freshness
+Checked decoy source only.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, synthesisCandidateDecoyPath, "Compiler Routing Decoy", decoyBody); err != nil {
+		return err
+	}
+	currentBody := strings.TrimSpace(`---
+supersedes: notes/sources/compiler-old.md
+---
+# Compiler Current Source
+
+## Summary
+Current compiler pressure guidance says existing document and retrieval actions are sufficient when agents search sources, list synthesis candidates, inspect freshness, and update without duplicates.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, synthesisCandidateCurrentSrc, "Compiler Current Source", currentBody)
+}
+
+func seedSynthesisSourceSetPressure(ctx context.Context, cfg runclient.Config) error {
+	sourceBodies := map[string]string{
+		sourceSetAlphaPath: strings.TrimSpace(`---
+type: source
+status: active
+source_set: compiler-pressure
+---
+# Source Set Alpha
+
+## Summary
+Alpha source says synthesis compiler pressure requires source search before durable synthesis.
+`) + "\n",
+		sourceSetBetaPath: strings.TrimSpace(`---
+type: source
+status: active
+source_set: compiler-pressure
+---
+# Source Set Beta
+
+## Summary
+Beta source says synthesis compiler pressure requires listing existing synthesis candidates.
+`) + "\n",
+		sourceSetGammaPath: strings.TrimSpace(`---
+type: source
+status: active
+source_set: compiler-pressure
+---
+# Source Set Gamma
+
+## Summary
+Gamma source says synthesis compiler pressure requires preserving freshness and source refs.
+`) + "\n",
+	}
+	for _, path := range []string{sourceSetAlphaPath, sourceSetBetaPath, sourceSetGammaPath} {
+		if err := createSeedDocument(ctx, cfg, path, sourceTitleFromPath(path), sourceBodies[path]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func seedMTSynthesisDriftPressure(ctx context.Context, cfg runclient.Config) error {
+	oldBody := strings.TrimSpace(`---
+status: superseded
+superseded_by: notes/sources/drift-current.md
+---
+# Drift Old Source
+
+## Summary
+Older drift guidance said synthesis compiler pressure should be promoted immediately.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, mtDriftOldSourcePath, "Drift Old Source", oldBody); err != nil {
+		return err
+	}
+	currentBody := strings.TrimSpace(`---
+supersedes: notes/sources/drift-old.md
+---
+# Drift Current Source
+
+## Summary
+Initial drift guidance is still under review.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, mtDriftCurrentPath, "Drift Current Source", currentBody)
+}
+
+func sourceTitleFromPath(path string) string {
+	name := strings.TrimSuffix(filepath.Base(path), ".md")
+	parts := strings.Split(name, "-")
+	for i, part := range parts {
+		if part == "" {
+			continue
+		}
+		parts[i] = strings.ToUpper(part[:1]) + part[1:]
+	}
+	return strings.Join(parts, " ")
+}
+
 func createSeedDocument(ctx context.Context, cfg runclient.Config, path, title, body string) error {
 	result, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionCreate,
@@ -1062,6 +1338,15 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		switch sc.ID {
 		case "mt-source-then-synthesis":
 			return verifyDocuments(ctx, paths, []string{"notes/sources/mt-runner.md"}, finalMessage)
+		case mtSynthesisDriftPressureScenarioID:
+			return verifySourceLinkedSynthesis(ctx, paths, mtDriftSynthesisPath, finalMessage, sourceLinkedSynthesisExpectations{
+				SourceRefs:      []string{mtDriftCurrentPath, mtDriftOldSourcePath},
+				RequireSearch:   true,
+				RequireList:     true,
+				Metrics:         turnMetrics,
+				FinalAnswerPath: true,
+				AdditionalDocs:  []string{mtDriftCurrentPath, mtDriftOldSourcePath},
+			})
 		case "mt-incomplete-then-create":
 			return verifyNoDocument(ctx, paths, "notes/projects/mt-complete.md", "first turn should ask for missing document details"), nil
 		}
@@ -1083,6 +1368,14 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyRAGRetrievalBaseline(ctx, paths, finalMessage, turnMetrics)
 	case docsNavigationScenarioID:
 		return verifyDocsNavigationBaseline(ctx, paths, finalMessage, turnMetrics)
+	case configuredLayoutScenarioID:
+		return verifyConfiguredLayoutScenario(ctx, paths, finalMessage, turnMetrics)
+	case invalidLayoutScenarioID:
+		return verifyInvalidLayoutScenario(ctx, paths, finalMessage, turnMetrics)
+	case synthesisCandidatePressureScenarioID:
+		return verifySynthesisCandidatePressure(ctx, paths, finalMessage, turnMetrics)
+	case synthesisSourceSetPressureScenarioID:
+		return verifySynthesisSourceSetPressure(ctx, paths, finalMessage, turnMetrics)
 	case "stale-synthesis-update":
 		return verifyStaleSynthesisUpdate(ctx, paths, finalMessage, turnMetrics)
 	case "synthesis-freshness-repair":
@@ -1107,6 +1400,8 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		})
 	case "mt-incomplete-then-create":
 		return verifyDocuments(ctx, paths, []string{"notes/projects/mt-complete.md"}, finalMessage)
+	case mtSynthesisDriftPressureScenarioID:
+		return verifyMTSynthesisDriftPressure(ctx, paths, finalMessage, turnMetrics)
 	default:
 		return verificationResult{Passed: true, DatabasePass: true, AssistantPass: true, Details: "no scenario-specific verifier"}, nil
 	}
@@ -1598,6 +1893,63 @@ func verifyDocsNavigationBaseline(ctx context.Context, paths evalPaths, finalMes
 	}, nil
 }
 
+func verifyConfiguredLayoutScenario(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	layoutResult, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{Action: runner.DocumentTaskActionInspectLayout})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := []string{}
+	if layoutResult.Layout == nil {
+		failures = append(failures, "inspect_layout returned no layout")
+	} else if !layoutResult.Layout.Valid {
+		failures = append(failures, "seeded configured layout was not valid")
+	}
+	if !turnMetrics.InspectLayoutUsed {
+		failures = append(failures, "agent did not use inspect_layout")
+	}
+	if !messageContainsAll(finalMessage, []string{"convention", "notes/sources/", "notes/synthesis/", "source_refs"}) ||
+		!messageContainsAny(finalMessage, []string{"no committed manifest", "no manifest", "config artifact required: false", "config_artifact_required false"}) {
+		failures = append(failures, "answer did not explain convention-first layout and no-manifest decision")
+	}
+	if !messageReportsLayoutValid(finalMessage) {
+		failures = append(failures, "answer did not report the layout as valid")
+	}
+	return verificationFromFailures(failures, "configured layout inspection passed", []string{"notes/sources/layout-runner.md", "notes/synthesis/layout-runner.md", "records/services/layout-runner.md"})
+}
+
+func verifyInvalidLayoutScenario(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	layoutResult, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{Action: runner.DocumentTaskActionInspectLayout})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := []string{}
+	if layoutResult.Layout == nil {
+		failures = append(failures, "inspect_layout returned no layout")
+	} else {
+		if layoutResult.Layout.Valid {
+			failures = append(failures, "seeded invalid layout was reported valid")
+		}
+		for _, id := range []string{"synthesis_source_refs_resolve", "synthesis_freshness_section", "service_identity_metadata"} {
+			if !layoutChecksInclude(layoutResult.Layout.Checks, id, "fail") {
+				failures = append(failures, "layout result missing failing check "+id)
+			}
+		}
+	}
+	if !turnMetrics.InspectLayoutUsed {
+		failures = append(failures, "agent did not use inspect_layout")
+	}
+	if !messageContainsAll(finalMessage, []string{"notes/synthesis/broken-layout.md", "records/services/broken-layout-service.md"}) ||
+		!messageContainsAny(finalMessage, []string{"invalid", "valid: false", "valid false"}) ||
+		!messageContainsAny(finalMessage, []string{"missing source", "missing_source_refs", "notes/sources/missing-layout-source.md"}) ||
+		!messageContainsAny(finalMessage, []string{"service_name", "service identity"}) ||
+		!messageContainsAny(finalMessage, []string{"freshness", "## Freshness"}) {
+		failures = append(failures, "answer did not report runner-visible invalid layout failures")
+	}
+	return verificationFromFailures(failures, "invalid layout inspection passed", []string{"notes/synthesis/broken-layout.md", "records/services/broken-layout-service.md"})
+}
+
 func verifyStaleSynthesisUpdate(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
 	docPath := "notes/synthesis/runner-routing.md"
 	body, found, err := documentBodyByPath(ctx, paths, docPath)
@@ -1801,6 +2153,254 @@ func verifySynthesisFreshnessRepair(ctx context.Context, paths evalPaths, finalM
 		AssistantPass: assistantPass && activityPass,
 		Details:       missingDetails(failures),
 		Documents:     []string{docPath, currentSource, supersededSource},
+	}, nil
+}
+
+func verifySynthesisCandidatePressure(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	body, found, err := documentBodyByPath(ctx, paths, synthesisCandidatePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	exactCount, err := exactDocumentCount(ctx, paths, synthesisCandidatePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	synthesisCount, err := documentCountWithPrefix(ctx, paths, "notes/synthesis/")
+	if err != nil {
+		return verificationResult{}, err
+	}
+	docID, docIDFound, err := documentIDByPath(ctx, paths, synthesisCandidatePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projection, err := firstSynthesisProjection(ctx, paths, docID)
+	if err != nil {
+		return verificationResult{}, err
+	}
+
+	required := []string{
+		"type: synthesis",
+		"status: active",
+		"freshness: fresh",
+		"Current compiler decision: existing document and retrieval actions are sufficient for synthesis compiler pressure repairs",
+		"Current source: " + synthesisCandidateCurrentSrc,
+		"Superseded source: " + synthesisCandidateOldSrc,
+		"## Sources",
+		"## Freshness",
+	}
+	sourceRefs := []string{synthesisCandidateCurrentSrc, synthesisCandidateOldSrc}
+	forbidden := []string{"require a dedicated compile_synthesis runner action", "requires a dedicated compile_synthesis runner action"}
+	failures := []string{}
+	if !found {
+		failures = append(failures, "missing "+synthesisCandidatePath)
+	}
+	if exactCount != 1 {
+		failures = append(failures, fmt.Sprintf("expected one %s document, got %d", synthesisCandidatePath, exactCount))
+	}
+	if synthesisCount != 2 {
+		failures = append(failures, fmt.Sprintf("expected exactly target and decoy synthesis documents, got %d", synthesisCount))
+	}
+	if !docIDFound {
+		failures = append(failures, "missing document id for "+synthesisCandidatePath)
+	}
+	failures = append(failures, missingRequired(body, required)...)
+	failures = append(failures, sourceRefsFrontmatterFailures(body, sourceRefs)...)
+	failures = append(failures, presentForbidden(body, forbidden)...)
+	if projection == nil || projection.Freshness != "fresh" {
+		failures = append(failures, "synthesis projection is not fresh")
+	} else {
+		if !projectionDetailContains(projection.Details, "current_source_refs", synthesisCandidateCurrentSrc) {
+			failures = append(failures, "synthesis projection missing current compiler source")
+		}
+		if !projectionDetailContains(projection.Details, "superseded_source_refs", synthesisCandidateOldSrc) {
+			failures = append(failures, "synthesis projection missing superseded compiler source")
+		}
+	}
+	activityPass := turnMetrics.SearchUsed &&
+		turnMetrics.ListDocumentsUsed &&
+		turnMetrics.GetDocumentUsed &&
+		turnMetrics.ProjectionStatesUsed
+	if !turnMetrics.SearchUsed {
+		failures = append(failures, "agent did not use retrieval search")
+	}
+	if !turnMetrics.ListDocumentsUsed {
+		failures = append(failures, "agent did not list synthesis candidates")
+	}
+	if !turnMetrics.GetDocumentUsed {
+		failures = append(failures, "agent did not get existing synthesis before update")
+	}
+	if !turnMetrics.ProjectionStatesUsed {
+		failures = append(failures, "agent did not inspect synthesis projection freshness")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{synthesisCandidatePath, synthesisCandidateCurrentSrc}) &&
+		messageContainsAny(finalMessage, []string{"updated", "repaired", "fresh", "freshness", "existing actions"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report target update and current source")
+	}
+	databasePass := found &&
+		exactCount == 1 &&
+		synthesisCount == 2 &&
+		docIDFound &&
+		len(missingRequired(body, required)) == 0 &&
+		len(sourceRefsFrontmatterFailures(body, sourceRefs)) == 0 &&
+		len(presentForbidden(body, forbidden)) == 0 &&
+		projection != nil &&
+		projection.Freshness == "fresh" &&
+		projectionDetailContains(projection.Details, "current_source_refs", synthesisCandidateCurrentSrc) &&
+		projectionDetailContains(projection.Details, "superseded_source_refs", synthesisCandidateOldSrc)
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{synthesisCandidatePath, synthesisCandidateDecoyPath, synthesisCandidateCurrentSrc, synthesisCandidateOldSrc},
+	}, nil
+}
+
+func verifySynthesisSourceSetPressure(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	base, err := verifySourceLinkedSynthesis(ctx, paths, synthesisSourceSetPath, finalMessage, sourceLinkedSynthesisExpectations{
+		SourceRefs:                 []string{sourceSetAlphaPath, sourceSetBetaPath, sourceSetGammaPath},
+		RequireSearch:              true,
+		RequireList:                true,
+		Metrics:                    turnMetrics,
+		FinalAnswerPath:            true,
+		AdditionalDocs:             []string{sourceSetAlphaPath, sourceSetBetaPath, sourceSetGammaPath},
+		AdditionalBodyRequirements: []string{"alpha", "beta", "gamma", "source refs", "freshness"},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	synthesisCount, err := documentCountWithPrefix(ctx, paths, "notes/synthesis/")
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := []string{}
+	if !base.Passed {
+		failures = append(failures, base.Details)
+	}
+	if synthesisCount != 1 {
+		failures = append(failures, fmt.Sprintf("expected one synthesis document, got %d", synthesisCount))
+	}
+	databasePass := base.DatabasePass && synthesisCount == 1
+	return verificationResult{
+		Passed:        databasePass && base.AssistantPass,
+		DatabasePass:  databasePass,
+		AssistantPass: base.AssistantPass,
+		Details:       missingDetails(failures),
+		Documents:     base.Documents,
+	}, nil
+}
+
+func verifyMTSynthesisDriftPressure(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	body, found, err := documentBodyByPath(ctx, paths, mtDriftSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	currentBody, currentFound, err := documentBodyByPath(ctx, paths, mtDriftCurrentPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	exactCount, err := exactDocumentCount(ctx, paths, mtDriftSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	synthesisCount, err := documentCountWithPrefix(ctx, paths, "notes/synthesis/")
+	if err != nil {
+		return verificationResult{}, err
+	}
+	docID, docIDFound, err := documentIDByPath(ctx, paths, mtDriftSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projection, err := firstSynthesisProjection(ctx, paths, docID)
+	if err != nil {
+		return verificationResult{}, err
+	}
+
+	required := []string{
+		"type: synthesis",
+		"status: active",
+		"freshness: fresh",
+		"Current drift decision: keep existing document and retrieval actions",
+		"Current source: " + mtDriftCurrentPath,
+		"Superseded source: " + mtDriftOldSourcePath,
+		"## Sources",
+		"## Freshness",
+	}
+	sourceRefs := []string{mtDriftCurrentPath, mtDriftOldSourcePath}
+	forbidden := []string{"promoted immediately", "dedicated compile_synthesis action is required"}
+	failures := []string{}
+	if !found {
+		failures = append(failures, "missing "+mtDriftSynthesisPath)
+	}
+	if !currentFound {
+		failures = append(failures, "missing "+mtDriftCurrentPath)
+	}
+	if exactCount != 1 {
+		failures = append(failures, fmt.Sprintf("expected one %s document, got %d", mtDriftSynthesisPath, exactCount))
+	}
+	if synthesisCount != 1 {
+		failures = append(failures, fmt.Sprintf("expected one drift synthesis document, got %d", synthesisCount))
+	}
+	if !docIDFound {
+		failures = append(failures, "missing document id for "+mtDriftSynthesisPath)
+	}
+	failures = append(failures, missingRequired(body, required)...)
+	failures = append(failures, sourceRefsFrontmatterFailures(body, sourceRefs)...)
+	failures = append(failures, presentForbidden(body, forbidden)...)
+	if !strings.Contains(currentBody, "Current drift decision says existing document and retrieval actions should stay the v1 synthesis path.") {
+		failures = append(failures, "current drift source was not updated")
+	}
+	if projection == nil || projection.Freshness != "fresh" {
+		failures = append(failures, "drift synthesis projection is not fresh")
+	} else {
+		if !projectionDetailContains(projection.Details, "current_source_refs", mtDriftCurrentPath) {
+			failures = append(failures, "drift synthesis projection missing current source")
+		}
+		if !projectionDetailContains(projection.Details, "superseded_source_refs", mtDriftOldSourcePath) {
+			failures = append(failures, "drift synthesis projection missing superseded source")
+		}
+	}
+	activityPass := turnMetrics.SearchUsed &&
+		turnMetrics.ListDocumentsUsed &&
+		turnMetrics.GetDocumentUsed &&
+		turnMetrics.ProjectionStatesUsed
+	if !turnMetrics.SearchUsed {
+		failures = append(failures, "agent did not use retrieval search")
+	}
+	if !turnMetrics.ListDocumentsUsed {
+		failures = append(failures, "agent did not list synthesis candidates")
+	}
+	if !turnMetrics.GetDocumentUsed {
+		failures = append(failures, "agent did not get existing synthesis before update")
+	}
+	if !turnMetrics.ProjectionStatesUsed {
+		failures = append(failures, "agent did not inspect synthesis projection freshness")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{mtDriftSynthesisPath, mtDriftCurrentPath}) &&
+		messageContainsAny(finalMessage, []string{"updated", "repaired", "fresh", "current"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report drift repair and current source")
+	}
+	databasePass := found &&
+		currentFound &&
+		exactCount == 1 &&
+		synthesisCount == 1 &&
+		docIDFound &&
+		len(missingRequired(body, required)) == 0 &&
+		len(sourceRefsFrontmatterFailures(body, sourceRefs)) == 0 &&
+		len(presentForbidden(body, forbidden)) == 0 &&
+		strings.Contains(currentBody, "Current drift decision says existing document and retrieval actions should stay the v1 synthesis path.") &&
+		projection != nil &&
+		projection.Freshness == "fresh" &&
+		projectionDetailContains(projection.Details, "current_source_refs", mtDriftCurrentPath) &&
+		projectionDetailContains(projection.Details, "superseded_source_refs", mtDriftOldSourcePath)
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{mtDriftSynthesisPath, mtDriftCurrentPath, mtDriftOldSourcePath},
 	}, nil
 }
 
@@ -2087,6 +2687,34 @@ func documentCountWithPrefix(ctx context.Context, paths evalPaths, pathPrefix st
 	return count, nil
 }
 
+func firstSynthesisProjection(ctx context.Context, paths evalPaths, docID string) (*runner.ProjectionState, error) {
+	if strings.TrimSpace(docID) == "" {
+		return nil, nil
+	}
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	projections, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProjectionStates,
+		Projection: runner.ProjectionStateOptions{
+			Projection: "synthesis",
+			RefKind:    "document",
+			RefID:      docID,
+			Limit:      5,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if projections.Projections == nil || len(projections.Projections.Projections) == 0 {
+		return nil, nil
+	}
+	projection := projections.Projections.Projections[0]
+	return &projection, nil
+}
+
+func projectionDetailContains(details map[string]string, key string, value string) bool {
+	return strings.Contains(details[key], value)
+}
+
 func topSearchHit(result runner.RetrievalTaskResult) (runner.SearchHit, bool) {
 	if result.Search == nil || len(result.Search.Hits) == 0 {
 		return runner.SearchHit{}, false
@@ -2233,6 +2861,17 @@ func messageContainsAny(message string, values []string) bool {
 	return containsAny(normalizeValidationMessage(message), lowerStrings(values))
 }
 
+func messageReportsLayoutValid(message string) bool {
+	normalized := normalizeValidationMessage(message)
+	if layoutInvalidStatusPattern.MatchString(normalized) {
+		return false
+	}
+	if layoutExplicitValidPattern.MatchString(normalized) {
+		return true
+	}
+	return layoutValidStatusPattern.MatchString(normalized)
+}
+
 func containsAllStrings(values []string, expected []string) bool {
 	present := map[string]bool{}
 	for _, value := range values {
@@ -2311,6 +2950,15 @@ func graphEdgesHaveCitations(edges []runner.GraphEdge) bool {
 		}
 	}
 	return true
+}
+
+func layoutChecksInclude(checks []runner.KnowledgeLayoutCheck, id string, status string) bool {
+	for _, check := range checks {
+		if check.ID == id && check.Status == status {
+			return true
+		}
+	}
+	return false
 }
 
 func eventTypesInclude(events []runner.ProvenanceEvent, eventType string) bool {
@@ -2401,6 +3049,21 @@ func missingDetails(values []string) string {
 		return "ok"
 	}
 	return strings.Join(values, "; ")
+}
+
+func verificationFromFailures(failures []string, passDetail string, documents []string) (verificationResult, error) {
+	passed := len(failures) == 0
+	details := passDetail
+	if !passed {
+		details = missingDetails(failures)
+	}
+	return verificationResult{
+		Passed:        passed,
+		DatabasePass:  passed,
+		AssistantPass: passed,
+		Details:       details,
+		Documents:     documents,
+	}, nil
 }
 
 func containsAny(value string, needles []string) bool {
@@ -2631,6 +3294,9 @@ func classifyCommand(command string, m *metrics) {
 	if commandContainsAction(actionText, "get_document") {
 		m.GetDocumentUsed = true
 	}
+	if commandContainsAction(actionText, "inspect_layout") {
+		m.InspectLayoutUsed = true
+	}
 	if commandContainsAction(actionText, "document_links") {
 		m.DocumentLinksUsed = true
 	}
@@ -2742,6 +3408,7 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.SearchMetadataFilterUsed = out.SearchMetadataFilterUsed || current.SearchMetadataFilterUsed
 		out.ListDocumentsUsed = out.ListDocumentsUsed || current.ListDocumentsUsed
 		out.GetDocumentUsed = out.GetDocumentUsed || current.GetDocumentUsed
+		out.InspectLayoutUsed = out.InspectLayoutUsed || current.InspectLayoutUsed
 		out.DocumentLinksUsed = out.DocumentLinksUsed || current.DocumentLinksUsed
 		out.GraphNeighborhoodUsed = out.GraphNeighborhoodUsed || current.GraphNeighborhoodUsed
 		out.RecordsLookupUsed = out.RecordsLookupUsed || current.RecordsLookupUsed
@@ -3350,6 +4017,16 @@ func allScenarios() []scenario {
 			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, or unsupported actions. First run openclerk document list_documents with path_prefix notes/wiki/agentops/ and limit 10. Use the returned doc_id for notes/wiki/agentops/index.md to run get_document, and use its returned headings in your analysis. Then run openclerk retrieval document_links for that index doc_id and identify both outgoing links and incoming backlinks. Then run openclerk retrieval graph_neighborhood for that index doc_id with limit 20, and inspect projection_states with projection graph, ref_kind document, and that index doc_id. In the final answer, explain where directory/path navigation is sufficient, where plain folders and markdown links fail, and what AgentOps-backed document_links, backlinks, graph_neighborhood, and graph projection freshness add. Mention notes/wiki/agentops/index.md and at least one linked source path.",
 		},
 		{
+			ID:     configuredLayoutScenarioID,
+			Title:  "Explain configured convention-first layout",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, or source-built command paths. Run openclerk document inspect_layout. In the final answer, explain the configured knowledge layout from the returned JSON: mention convention-first mode, config_artifact_required false or no committed manifest, conventional prefixes notes/sources/ and notes/synthesis/, synthesis source_refs plus Sources and Freshness requirements, and whether the layout is valid.",
+		},
+		{
+			ID:     invalidLayoutScenarioID,
+			Title:  "Report invalid layout through runner-visible checks",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, or source-built command paths. Run openclerk document inspect_layout. In the final answer, report the invalid runner-visible layout checks for notes/synthesis/broken-layout.md and records/services/broken-layout-service.md, including the missing source ref, missing Freshness section, and missing service identity metadata.",
+		},
+		{
 			ID:     "stale-synthesis-update",
 			Title:  "Update stale source-linked synthesis",
 			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results to find existing docs; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, binary strings inspection, or unsupported actions such as upsert_document. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"OpenClerk runner routing\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/synthesis/\",\"limit\":20}}. Use the returned doc_id for notes/synthesis/runner-routing.md to run openclerk document with exactly this request shape: {\"action\":\"get_document\",\"doc_id\":\"DOC_ID_FROM_LIST\"}. Then update notes/synthesis/runner-routing.md only with replace_section or append_document. Do not create a new synthesis page. Preserve the existing prototype frontmatter with freshness: fresh and the single-line field source_refs: notes/sources/runner-current-runner.md, notes/sources/runner-old-workaround.md. Replace the stale command-path workaround claim with these exact lines: Current guidance: routine agents must use openclerk JSON runner; Current source: notes/sources/runner-current-runner.md; Supersedes: notes/sources/runner-old-workaround.md. Keep ## Sources and ## Freshness sections with both source paths. Mention notes/synthesis/runner-routing.md in the final answer.",
@@ -3358,6 +4035,16 @@ func allScenarios() []scenario {
 			ID:     "synthesis-freshness-repair",
 			Title:  "Repair synthesis after runner-visible freshness invalidation",
 			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, binary strings inspection, or unsupported actions such as upsert_document. First search for OpenClerk runner repair freshness. Then list notes/synthesis/ candidates, get notes/synthesis/runner-repair.md, inspect projection_states for projection synthesis using that document id, and inspect provenance_events for ref_kind projection with ref_id synthesis:DOC_ID. Repair notes/synthesis/runner-repair.md only with replace_section or append_document. Do not create a duplicate. Preserve the existing source_refs frontmatter exactly as notes/sources/repair-current.md, notes/sources/repair-old.md. The repaired body must state: Current source: notes/sources/repair-current.md; Superseded source: notes/sources/repair-old.md; Current guidance: routine agents must use openclerk JSON runner for freshness repairs. After repair, inspect projection_states again and mention notes/synthesis/runner-repair.md, notes/sources/repair-current.md, notes/sources/repair-old.md, and the final synthesis projection freshness in the final answer.",
+		},
+		{
+			ID:     synthesisCandidatePressureScenarioID,
+			Title:  "Pressure-test synthesis candidate selection",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, or unsupported actions such as upsert_document. Search for synthesis compiler pressure evidence, list notes/synthesis/ candidates, choose the existing compiler pressure synthesis rather than the decoy, get it before editing, inspect its synthesis projection freshness, and repair it only with replace_section or append_document. Do not create a duplicate synthesis page. Preserve the existing single-line source_refs for notes/sources/compiler-current.md and notes/sources/compiler-old.md. The repaired body must state: Current compiler decision: existing document and retrieval actions are sufficient for synthesis compiler pressure repairs; Current source: notes/sources/compiler-current.md; Superseded source: notes/sources/compiler-old.md. Keep ## Sources and ## Freshness. Mention notes/synthesis/compiler-routing.md and the final freshness in the final answer.",
+		},
+		{
+			ID:     synthesisSourceSetPressureScenarioID,
+			Title:  "Pressure-test multi-source synthesis creation",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, or unsupported actions such as upsert_document. Search for synthesis compiler pressure source set evidence, list notes/synthesis/ candidates, then create notes/synthesis/compiler-source-set.md as a new source-linked synthesis. The synthesis must have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: notes/sources/source-set-alpha.md, notes/sources/source-set-beta.md, notes/sources/source-set-gamma.md. Do not use YAML list syntax for source_refs. The body must mention alpha, beta, and gamma source evidence, include ## Sources with all three source paths, and include ## Freshness describing the runner search and synthesis-candidate checks. Mention notes/synthesis/compiler-source-set.md in the final answer.",
 		},
 		{
 			ID:     "append-replace",
@@ -3410,6 +4097,14 @@ func allScenarios() []scenario {
 			Turns: []scenarioTurn{
 				{Prompt: "Use the configured local OpenClerk data path. Create notes/sources/mt-runner.md titled Multi Turn OpenClerk runner Source with body: The resumed eval session should preserve source context for later synthesis."},
 				{Prompt: "Now search for that source and create notes/synthesis/mt-runner.md as a source-linked synthesis. Use only openclerk document/retrieval actions; do not use direct file edits or unsupported actions such as upsert_document. The synthesis must have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: notes/sources/mt-runner.md. The body must include ## Sources citing notes/sources/mt-runner.md and ## Freshness describing the runner retrieval check. Mention notes/synthesis/mt-runner.md and the source path in the final answer."},
+			},
+		},
+		{
+			ID:    mtSynthesisDriftPressureScenarioID,
+			Title: "Repair multi-turn synthesis drift",
+			Turns: []scenarioTurn{
+				{Prompt: "Use the configured local OpenClerk data path. Search for drift synthesis compiler pressure evidence, list notes/synthesis/ candidates, then create notes/synthesis/drift-runner.md as a source-linked synthesis. Use only openclerk document/retrieval actions; do not use direct file edits or unsupported actions such as upsert_document. The synthesis must have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: notes/sources/drift-current.md, notes/sources/drift-old.md. The body must include ## Sources citing both source paths and ## Freshness describing the runner retrieval check. Mention notes/synthesis/drift-runner.md in the final answer."},
+				{Prompt: "Use only OpenClerk runner document and retrieval JSON results. First find notes/sources/drift-current.md through list_documents or search, get it, and replace its Summary section with: Current drift decision says existing document and retrieval actions should stay the v1 synthesis path. Then search for drift synthesis compiler pressure evidence, list notes/synthesis/ candidates, get notes/synthesis/drift-runner.md, inspect projection_states for projection synthesis using that document id, and repair notes/synthesis/drift-runner.md only with replace_section or append_document. Do not create a duplicate. Preserve the existing single-line source_refs for notes/sources/drift-current.md and notes/sources/drift-old.md. The repaired body must state: Current drift decision: keep existing document and retrieval actions; Current source: notes/sources/drift-current.md; Superseded source: notes/sources/drift-old.md. Mention notes/synthesis/drift-runner.md, notes/sources/drift-current.md, and final freshness in the final answer."},
 			},
 		},
 		{

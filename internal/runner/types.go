@@ -11,6 +11,7 @@ const (
 	DocumentTaskActionAppend         = "append_document"
 	DocumentTaskActionReplaceSection = "replace_section"
 	DocumentTaskActionResolvePaths   = "resolve_paths"
+	DocumentTaskActionInspectLayout  = "inspect_layout"
 
 	RetrievalTaskActionValidate         = "validate"
 	RetrievalTaskActionSearch           = "search"
@@ -53,6 +54,7 @@ type DocumentTaskResult struct {
 	Document        *Document         `json:"document,omitempty"`
 	Documents       []DocumentSummary `json:"documents,omitempty"`
 	Paths           *Paths            `json:"paths,omitempty"`
+	Layout          *KnowledgeLayout  `json:"layout,omitempty"`
 	PageInfo        PageInfo          `json:"page_info,omitempty"`
 	Summary         string            `json:"summary"`
 }
@@ -132,6 +134,40 @@ type Paths struct {
 	DataDir      string `json:"data_dir"`
 	DatabasePath string `json:"database_path"`
 	VaultRoot    string `json:"vault_root"`
+}
+
+type KnowledgeLayout struct {
+	Valid                  bool                   `json:"valid"`
+	Mode                   string                 `json:"mode"`
+	ConfigArtifactRequired bool                   `json:"config_artifact_required"`
+	ConfigArtifact         string                 `json:"config_artifact"`
+	Paths                  Paths                  `json:"paths"`
+	ConventionalPaths      []LayoutPathConvention `json:"conventional_paths,omitempty"`
+	DocumentKinds          []LayoutDocumentKind   `json:"document_kinds,omitempty"`
+	Checks                 []KnowledgeLayoutCheck `json:"checks,omitempty"`
+}
+
+type LayoutPathConvention struct {
+	Name        string `json:"name"`
+	PathPrefix  string `json:"path_prefix"`
+	Description string `json:"description"`
+	Required    bool   `json:"required"`
+}
+
+type LayoutDocumentKind struct {
+	Kind        string   `json:"kind"`
+	Description string   `json:"description"`
+	Selectors   []string `json:"selectors,omitempty"`
+	Required    []string `json:"required,omitempty"`
+}
+
+type KnowledgeLayoutCheck struct {
+	ID      string            `json:"id"`
+	Status  string            `json:"status"`
+	Message string            `json:"message"`
+	Path    string            `json:"path,omitempty"`
+	DocID   string            `json:"doc_id,omitempty"`
+	Details map[string]string `json:"details,omitempty"`
 }
 
 type Document struct {

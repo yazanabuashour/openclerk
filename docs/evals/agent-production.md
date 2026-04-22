@@ -93,6 +93,9 @@ The `ockp` harness covers routine local knowledge-plane workflows:
 
 - canonical note creation with stable paths, frontmatter, headings, body content,
   and vault/document-registry verification
+- convention-first layout inspection with `inspect_layout`, including resolved
+  configuration mode, no committed manifest requirement, conventional prefixes,
+  first-class document kinds, and runner-visible invalid layout checks
 - canonical directory and link navigation with path-prefix listing, exact
   document heading retrieval, outgoing links, incoming backlinks, graph
   neighborhood expansion, and graph projection freshness
@@ -104,6 +107,9 @@ The `ockp` harness covers routine local knowledge-plane workflows:
   `freshness: fresh`, `source_refs`, `## Sources`, and `## Freshness`
 - durable answer filing into source-linked markdown
 - contradiction or stale synthesis repair against newer canonical sources
+- synthesis compiler pressure checks for candidate selection with decoys,
+  multi-source source-ref preservation, resumed drift repair, projection
+  freshness inspection, and duplicate prevention
 - append and replace-section workflows that preserve unrelated document content
 - promoted-record-shaped document creation, records lookup, provenance events,
   projection states, and freshness-aware synthesis when records are summarized

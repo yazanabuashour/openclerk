@@ -82,6 +82,13 @@ printf '%s\n' '{"action":"services_lookup","services":{"text":"OpenClerk runner"
   openclerk retrieval
 ```
 
+Configured knowledge layout is explained through runner-derived JSON, not a
+committed manifest:
+
+```bash
+printf '%s\n' '{"action":"inspect_layout"}' | openclerk document
+```
+
 Validation rejections are JSON results with `rejected: true`. Runtime failures
 exit non-zero and write errors to stderr.
 
