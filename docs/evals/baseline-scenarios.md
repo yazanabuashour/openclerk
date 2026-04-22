@@ -46,6 +46,14 @@ in `docs/evals/knowledge-plane-archetype-matrix.md`.
   or appending sections.
 - Verify the final answer identifies which source is current when the prompt is
   source-sensitive.
+- Verify source-sensitive audit repair distinguishes current sources,
+  superseded sources, stale synthesis, and decoy synthesis candidates before
+  updating durable markdown.
+- Verify unresolved conflicting current sources are explained with both source
+  paths and no winner is chosen when runner-visible source authority or
+  supersession metadata is absent.
+- Treat arbitrary semantic contradiction detection as a non-goal unless a later
+  promoted primitive is justified by eval failures.
 
 ## Synthesis Compiler Pressure
 
@@ -123,6 +131,9 @@ AgentOps eval harness supports them cleanly.
   synthesis.
 - Verify decision supersession projection states expose stale superseded
   decisions, fresh replacements, provenance, and citation paths.
+- Verify source-sensitive audit workflows inspect `provenance_events` and
+  `projection_states` before repairing stale synthesis and preserve current,
+  superseded, and unresolved conflict source refs in final answers.
 
 ## Knowledge Layout Inspection
 

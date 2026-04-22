@@ -118,6 +118,15 @@ current replacement source is not represented in `source_refs`. Projection
 details include `current_source_refs`, `superseded_source_refs`,
 `missing_source_refs`, `stale_source_refs`, and `freshness_reason`.
 
+For source-sensitive audit or contradiction-like requests, stay narrow and
+source-backed. Search canonical sources first, then distinguish current sources,
+superseded sources, stale synthesis, and unresolved conflicting current sources
+from runner JSON. Inspect `projection_states` and `provenance_events` before
+repairing stale synthesis. If current sources conflict and no supersession or
+other source authority is visible, explain the unresolved conflict with both
+source paths instead of choosing a winner. Do not claim broad semantic
+contradiction detection.
+
 If a synthesis maintenance task feels too repetitive for the documented
 document and retrieval actions, still complete it through AgentOps. Do not
 switch to another routine agent interface. A future improvement should be a

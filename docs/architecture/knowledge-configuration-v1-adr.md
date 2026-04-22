@@ -271,6 +271,32 @@ decision-vs-doc precision, supersession freshness, no broad repo search, no
 direct SQLite, no source-built runner usage, final-answer-only invalid-request
 rejection, and preserved citations/source refs/freshness.
 
+## `oc-za6.5` POC Decision
+
+Decision: keep source-sensitive audit and contradiction-like workflows as a
+reference pattern on existing provenance and freshness primitives. Do not
+promote a broad semantic contradiction engine or a new audit runner action for
+v1.
+
+The POC stays narrow: agents search canonical sources, list existing synthesis
+candidates, retrieve the target synthesis before editing, inspect synthesis
+projection freshness and provenance, then repair stale synthesis without
+creating duplicates. When current sources conflict and no supersession metadata
+or other runner-visible source authority chooses a winner, agents should
+explain the unresolved conflict with both source paths instead of asserting a
+general contradiction result.
+
+Targeted AgentOps evidence is recorded in
+`docs/evals/results/ockp-source-sensitive-audit-poc.md`. The targeted run
+covers stale audit repair, unresolved conflicting current sources, existing
+stale-synthesis repair workflows, no broad repo search, no direct SQLite, no
+source-built runner usage, final-answer-only invalid-request rejection, and
+preserved citations/source refs/freshness. All 8 selected scenarios passed; the
+production gate remained false only because unrelated scenarios were
+intentionally not selected. No follow-up implementation issue is filed unless
+future evals show repeated failures that the existing provenance/freshness
+workflow cannot address.
+
 ## Production-Valid for AgentOps
 
 A vault is valid enough for production AgentOps use when:

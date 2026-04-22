@@ -399,7 +399,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"records_lookup\",\"records\":{\"text\":\"runner\"}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"decisions_lookup\",\"decisions\":{\"text\":\"runner\"}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"decision_record\",\"decision_id\":\"adr-runner\"}' | openclerk retrieval"}}`,
-		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"provenance_events\",\"provenance\":{\"limit\":10}}' | openclerk retrieval"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"provenance_events\",\"provenance\":{\"ref_kind\":\"document\",\"ref_id\":\"doc_alpha\",\"limit\":10}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"projection_states\",\"projection\":{\"limit\":10}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"/bin/zsh -lc \"printf '%s' '{\\\"action\\\":\\\"search\\\",\\\"search\\\":{\\\"text\\\":\\\"runner\\\"}}' | openclerk retrieval\""}}`,
 		`not json`,
@@ -430,6 +430,9 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	}
 	if parsed.metrics.NonCachedInputTokens == nil || *parsed.metrics.NonCachedInputTokens != 70 || parsed.metrics.OutputTokens == nil || *parsed.metrics.OutputTokens != 12 {
 		t.Fatalf("token metrics = %+v", parsed.metrics)
+	}
+	if !provenanceEventRefIDsInclude(parsed.metrics.ProvenanceEventRefIDs, "doc_alpha") {
+		t.Fatalf("expected provenance event ref id in %+v", parsed.metrics)
 	}
 	for name, used := range map[string]bool{
 		"search":                 parsed.metrics.SearchUsed,
@@ -533,7 +536,7 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 	for _, id := range scenarioIDs() {
 		ids[id] = true
 	}
-	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
+	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
 		if !ids[want] {
 			t.Fatalf("scenarioIDs missing %q in %v", want, scenarioIDs())
 		}
@@ -964,6 +967,127 @@ func TestVerifyStaleSynthesisUpdateRequiresCurrentSourceAndNoDuplicate(t *testin
 	}
 	if result.Passed {
 		t.Fatalf("duplicate synthesis passed: %+v", result)
+	}
+}
+
+func TestVerifySourceSensitiveAuditRepairRequiresProvenanceFreshnessAndNoDuplicate(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: sourceAuditRepairScenarioID}); err != nil {
+		t.Fatalf("seed source audit repair scenario: %v", err)
+	}
+	noTools := metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}}
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: sourceAuditRepairScenarioID}, 1, "Updated "+sourceAuditSynthesisPath+".", noTools)
+	if err != nil {
+		t.Fatalf("verify source audit before repair: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("source audit repair passed before update: %+v", result)
+	}
+
+	replaceSeedSection(t, ctx, paths, sourceAuditSynthesisPath, "Summary", "Current audit guidance: use the installed openclerk JSON runner.\n\nCurrent source: "+sourceAuditCurrentSourcePath+"\n\nSuperseded source: "+sourceAuditOldSourcePath)
+	replaceSeedSection(t, ctx, paths, sourceAuditSynthesisPath, "Freshness", "Checked provenance events and synthesis projection freshness after the current source update.")
+	workflowMetrics := metrics{
+		AssistantCalls:       1,
+		SearchUsed:           true,
+		ListDocumentsUsed:    true,
+		GetDocumentUsed:      true,
+		ProjectionStatesUsed: true,
+		ProvenanceEventsUsed: true,
+		EventTypeCounts:      map[string]int{},
+		CommandExecutions:    5,
+		ToolCalls:            5,
+	}
+	finalAnswer := "Updated " + sourceAuditSynthesisPath + " from " + sourceAuditCurrentSourcePath + "; projection freshness is fresh."
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: sourceAuditRepairScenarioID}, 1, finalAnswer, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify source audit repair: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("source audit repair failed: %+v", result)
+	}
+
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	if err := createSeedDocument(ctx, cfg, "notes/synthesis/audit-runner-routing-v2.md", "Audit Runner Routing V2", "# Duplicate\n"); err != nil {
+		t.Fatalf("create duplicate audit synthesis: %v", err)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: sourceAuditRepairScenarioID}, 1, finalAnswer, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify source audit duplicate: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("source audit repair passed with duplicate synthesis: %+v", result)
+	}
+}
+
+func TestVerifySourceSensitiveConflictRequiresUnresolvedExplanationAndNoSynthesis(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: sourceAuditConflictScenarioID}); err != nil {
+		t.Fatalf("seed source audit conflict scenario: %v", err)
+	}
+	alphaID, alphaFound, err := documentIDByPath(ctx, paths, sourceAuditConflictAlphaPath)
+	if err != nil {
+		t.Fatalf("lookup alpha id: %v", err)
+	}
+	bravoID, bravoFound, err := documentIDByPath(ctx, paths, sourceAuditConflictBravoPath)
+	if err != nil {
+		t.Fatalf("lookup bravo id: %v", err)
+	}
+	if !alphaFound || !bravoFound {
+		t.Fatalf("missing conflict source ids: alpha=%v bravo=%v", alphaFound, bravoFound)
+	}
+	noTools := metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}}
+	finalAnswer := sourceAuditConflictAlphaPath + " says seven days; " + sourceAuditConflictBravoPath + " says thirty days. Both are current sources. This conflict is unresolved because there is no supersession metadata, so I cannot choose a winner without source authority."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: sourceAuditConflictScenarioID}, 1, finalAnswer, noTools)
+	if err != nil {
+		t.Fatalf("verify source audit conflict no tools: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("source audit conflict passed without runner workflow: %+v", result)
+	}
+	workflowMetrics := metrics{
+		AssistantCalls:       1,
+		SearchUsed:           true,
+		ProvenanceEventsUsed: true,
+		EventTypeCounts:      map[string]int{},
+		CommandExecutions:    3,
+		ToolCalls:            3,
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: sourceAuditConflictScenarioID}, 1, finalAnswer, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify source audit conflict missing provenance refs: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("source audit conflict passed without both provenance refs: %+v", result)
+	}
+	workflowMetrics.ProvenanceEventRefIDs = []string{alphaID, bravoID}
+	answerWithoutCurrentSources := sourceAuditConflictAlphaPath + " says seven days; " + sourceAuditConflictBravoPath + " says thirty days. This conflict is unresolved because there is no supersession metadata, so I cannot choose a winner without source authority."
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: sourceAuditConflictScenarioID}, 1, answerWithoutCurrentSources, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify source audit conflict missing current-source wording: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("source audit conflict passed without current-source wording: %+v", result)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: sourceAuditConflictScenarioID}, 1, finalAnswer, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify source audit conflict: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("source audit conflict failed: %+v", result)
+	}
+
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	if err := createSeedDocument(ctx, cfg, "notes/synthesis/audit-conflict.md", "Audit Conflict", "# Audit Conflict\n"); err != nil {
+		t.Fatalf("create forbidden conflict synthesis: %v", err)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: sourceAuditConflictScenarioID}, 1, finalAnswer, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify source audit conflict with synthesis: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("source audit conflict passed after creating synthesis: %+v", result)
 	}
 }
 

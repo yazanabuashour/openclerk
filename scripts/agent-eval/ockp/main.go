@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -61,6 +62,8 @@ const (
 	mtSynthesisDriftPressureScenarioID   = "mt-synthesis-drift-pressure"
 	decisionRecordVsDocsScenarioID       = "decision-record-vs-docs"
 	decisionSupersessionScenarioID       = "decision-supersession-freshness"
+	sourceAuditRepairScenarioID          = "source-sensitive-audit-repair"
+	sourceAuditConflictScenarioID        = "source-sensitive-conflict-explain"
 
 	synthesisCandidatePath       = "notes/synthesis/compiler-routing.md"
 	synthesisCandidateDecoyPath  = "notes/synthesis/compiler-routing-decoy.md"
@@ -75,6 +78,14 @@ const (
 	mtDriftSynthesisPath = "notes/synthesis/drift-runner.md"
 	mtDriftOldSourcePath = "notes/sources/drift-old.md"
 	mtDriftCurrentPath   = "notes/sources/drift-current.md"
+
+	sourceAuditSynthesisPath      = "notes/synthesis/audit-runner-routing.md"
+	sourceAuditDecoyPath          = "notes/synthesis/audit-runner-decoy.md"
+	sourceAuditOldSourcePath      = "notes/sources/audit-runner-old.md"
+	sourceAuditCurrentSourcePath  = "notes/sources/audit-runner-current.md"
+	sourceAuditConflictAlphaPath  = "notes/sources/audit-conflict-alpha.md"
+	sourceAuditConflictBravoPath  = "notes/sources/audit-conflict-bravo.md"
+	sourceAuditConflictSearchText = "source sensitive audit conflict runner retention"
 )
 
 var (
@@ -209,6 +220,7 @@ type metrics struct {
 	DecisionsLookupUsed      bool           `json:"decisions_lookup_used"`
 	DecisionRecordUsed       bool           `json:"decision_record_used"`
 	ProvenanceEventsUsed     bool           `json:"provenance_events_used"`
+	ProvenanceEventRefIDs    []string       `json:"provenance_event_ref_ids,omitempty"`
 	ProjectionStatesUsed     bool           `json:"projection_states_used"`
 	GeneratedFileEvidence    []string       `json:"generated_file_evidence,omitempty"`
 	ModuleCacheEvidence      []string       `json:"module_cache_evidence,omitempty"`
@@ -804,6 +816,14 @@ func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
 		if err := seedDecisionSupersession(ctx, cfg); err != nil {
 			return err
 		}
+	case sourceAuditRepairScenarioID:
+		if err := seedSourceSensitiveAuditRepair(ctx, cfg); err != nil {
+			return err
+		}
+	case sourceAuditConflictScenarioID:
+		if err := seedSourceSensitiveConflict(ctx, cfg); err != nil {
+			return err
+		}
 	case mtSynthesisDriftPressureScenarioID:
 		if err := seedMTSynthesisDriftPressure(ctx, cfg); err != nil {
 			return err
@@ -1323,6 +1343,99 @@ Accepted decision: routine OpenClerk AgentOps tasks use the installed JSON runne
 	return createSeedDocument(ctx, cfg, "notes/sources/decision-current.md", "Current decision source", "# Current decision source\n\n## Summary\nCurrent source documents the JSON runner path.\n")
 }
 
+func seedSourceSensitiveAuditRepair(ctx context.Context, cfg runclient.Config) error {
+	oldBody := strings.TrimSpace(`---
+status: superseded
+superseded_by: notes/sources/audit-runner-current.md
+---
+# Audit Runner Old Source
+
+## Summary
+Older source-sensitive audit guidance said agents should prefer a legacy command-path workaround for runner audit repairs.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, sourceAuditOldSourcePath, "Audit Runner Old Source", oldBody); err != nil {
+		return err
+	}
+	currentBody := strings.TrimSpace(`---
+supersedes: notes/sources/audit-runner-old.md
+---
+# Audit Runner Current Source
+
+## Summary
+Current source-sensitive audit guidance says agents must use the installed openclerk JSON runner, inspect provenance and projection freshness, and repair source-linked synthesis without duplicate pages.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, sourceAuditCurrentSourcePath, "Audit Runner Current Source", currentBody); err != nil {
+		return err
+	}
+	synthesisBody := strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: notes/sources/audit-runner-current.md, notes/sources/audit-runner-old.md
+---
+# Audit Runner Routing
+
+## Summary
+Stale audit claim: agents should prefer a legacy command-path workaround for runner audit repairs.
+
+## Sources
+- notes/sources/audit-runner-current.md
+- notes/sources/audit-runner-old.md
+
+## Freshness
+Checked before the current audit source was registered.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, sourceAuditSynthesisPath, "Audit Runner Routing", synthesisBody); err != nil {
+		return err
+	}
+	decoyBody := strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: notes/sources/audit-runner-old.md
+---
+# Audit Runner Decoy
+
+## Summary
+This decoy page is not the source-sensitive audit repair target.
+
+## Sources
+- notes/sources/audit-runner-old.md
+
+## Freshness
+Checked decoy source only.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, sourceAuditDecoyPath, "Audit Runner Decoy", decoyBody); err != nil {
+		return err
+	}
+	return replaceScenarioSeedSection(ctx, cfg, sourceAuditCurrentSourcePath, "Summary", "Current source-sensitive audit guidance says agents must use the installed openclerk JSON runner, inspect provenance and projection freshness, and repair source-linked synthesis without duplicate pages. "+sourceAuditOldSourcePath+" is superseded.")
+}
+
+func seedSourceSensitiveConflict(ctx context.Context, cfg runclient.Config) error {
+	alphaBody := strings.TrimSpace(`---
+type: source
+audit_case: runner-retention
+---
+# Audit Conflict Alpha
+
+## Summary
+Alpha current source says source sensitive audit conflict runner retention should be seven days.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, sourceAuditConflictAlphaPath, "Audit Conflict Alpha", alphaBody); err != nil {
+		return err
+	}
+	bravoBody := strings.TrimSpace(`---
+type: source
+audit_case: runner-retention
+---
+# Audit Conflict Bravo
+
+## Summary
+Bravo current source says source sensitive audit conflict runner retention should be thirty days.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, sourceAuditConflictBravoPath, "Audit Conflict Bravo", bravoBody)
+}
+
 func seedMTSynthesisDriftPressure(ctx context.Context, cfg runclient.Config) error {
 	oldBody := strings.TrimSpace(`---
 status: superseded
@@ -1474,6 +1587,10 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyDecisionRecordVsDocs(ctx, paths, finalMessage, turnMetrics)
 	case decisionSupersessionScenarioID:
 		return verifyDecisionSupersessionFreshness(ctx, paths, finalMessage, turnMetrics)
+	case sourceAuditRepairScenarioID:
+		return verifySourceSensitiveAuditRepair(ctx, paths, finalMessage, turnMetrics)
+	case sourceAuditConflictScenarioID:
+		return verifySourceSensitiveConflict(ctx, paths, finalMessage, turnMetrics)
 	case "stale-synthesis-update":
 		return verifyStaleSynthesisUpdate(ctx, paths, finalMessage, turnMetrics)
 	case "synthesis-freshness-repair":
@@ -2844,6 +2961,217 @@ func verifyDecisionSupersessionFreshness(ctx context.Context, paths evalPaths, f
 	}, nil
 }
 
+func verifySourceSensitiveAuditRepair(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	body, found, err := documentBodyByPath(ctx, paths, sourceAuditSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	exactCount, err := exactDocumentCount(ctx, paths, sourceAuditSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	duplicatePaths, err := disallowedDocumentPathsWithPrefix(ctx, paths, "notes/synthesis/", map[string]bool{
+		sourceAuditSynthesisPath: true,
+		sourceAuditDecoyPath:     true,
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	docID, docIDFound, err := documentIDByPath(ctx, paths, sourceAuditSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projection, err := firstSynthesisProjection(ctx, paths, docID)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	events, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{
+			RefKind: "projection",
+			RefID:   "synthesis:" + docID,
+			Limit:   10,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+
+	required := []string{
+		"type: synthesis",
+		"status: active",
+		"freshness: fresh",
+		"source_refs: " + sourceAuditCurrentSourcePath + ", " + sourceAuditOldSourcePath,
+		"Current audit guidance: use the installed openclerk JSON runner",
+		"Current source: " + sourceAuditCurrentSourcePath,
+		"Superseded source: " + sourceAuditOldSourcePath,
+		"## Sources",
+		"## Freshness",
+	}
+	forbidden := []string{"prefer a legacy command-path workaround for runner audit repairs"}
+	hasProjection := projection != nil &&
+		projection.Freshness == "fresh" &&
+		projectionDetailContains(projection.Details, "current_source_refs", sourceAuditCurrentSourcePath) &&
+		projectionDetailContains(projection.Details, "superseded_source_refs", sourceAuditOldSourcePath)
+	hasInvalidation := events.Provenance != nil && eventTypesInclude(events.Provenance.Events, "projection_invalidated")
+	hasRefresh := events.Provenance != nil && eventTypesInclude(events.Provenance.Events, "projection_refreshed")
+	activityPass := turnMetrics.SearchUsed &&
+		turnMetrics.ListDocumentsUsed &&
+		turnMetrics.GetDocumentUsed &&
+		turnMetrics.ProjectionStatesUsed &&
+		turnMetrics.ProvenanceEventsUsed
+	assistantPass := messageContainsAll(finalMessage, []string{sourceAuditSynthesisPath, sourceAuditCurrentSourcePath}) &&
+		messageContainsAny(finalMessage, []string{"fresh", "freshness", "current", "superseded"})
+
+	failures := []string{}
+	if !found {
+		failures = append(failures, "missing "+sourceAuditSynthesisPath)
+	}
+	if exactCount != 1 {
+		failures = append(failures, fmt.Sprintf("expected one %s document, got %d", sourceAuditSynthesisPath, exactCount))
+	}
+	if len(duplicatePaths) != 0 {
+		failures = append(failures, "created duplicate audit synthesis path: "+strings.Join(duplicatePaths, ", "))
+	}
+	if !docIDFound {
+		failures = append(failures, "missing document id for "+sourceAuditSynthesisPath)
+	}
+	failures = append(failures, missingRequired(body, required)...)
+	failures = append(failures, sourceRefsFrontmatterFailures(body, []string{sourceAuditCurrentSourcePath, sourceAuditOldSourcePath})...)
+	failures = append(failures, presentForbidden(body, forbidden)...)
+	if !hasProjection {
+		failures = append(failures, "audit synthesis projection is not fresh with current and superseded refs")
+	}
+	if !hasInvalidation {
+		failures = append(failures, "audit synthesis invalidation event missing")
+	}
+	if !hasRefresh {
+		failures = append(failures, "audit synthesis refresh event missing")
+	}
+	if !turnMetrics.SearchUsed {
+		failures = append(failures, "agent did not use retrieval search")
+	}
+	if !turnMetrics.ListDocumentsUsed {
+		failures = append(failures, "agent did not list synthesis candidates")
+	}
+	if !turnMetrics.GetDocumentUsed {
+		failures = append(failures, "agent did not get existing synthesis before update")
+	}
+	if !turnMetrics.ProjectionStatesUsed {
+		failures = append(failures, "agent did not inspect projection states")
+	}
+	if !turnMetrics.ProvenanceEventsUsed {
+		failures = append(failures, "agent did not inspect provenance events")
+	}
+	if !assistantPass {
+		failures = append(failures, "final answer did not report audit repair and current source")
+	}
+	databasePass := found &&
+		exactCount == 1 &&
+		len(duplicatePaths) == 0 &&
+		docIDFound &&
+		len(missingRequired(body, required)) == 0 &&
+		len(sourceRefsFrontmatterFailures(body, []string{sourceAuditCurrentSourcePath, sourceAuditOldSourcePath})) == 0 &&
+		len(presentForbidden(body, forbidden)) == 0 &&
+		hasProjection &&
+		hasInvalidation &&
+		hasRefresh
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{sourceAuditSynthesisPath, sourceAuditDecoyPath, sourceAuditCurrentSourcePath, sourceAuditOldSourcePath},
+	}, nil
+}
+
+func verifySourceSensitiveConflict(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	search, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{Text: sourceAuditConflictSearchText, Limit: 10},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	alphaID, alphaFound, err := documentIDByPath(ctx, paths, sourceAuditConflictAlphaPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	bravoID, bravoFound, err := documentIDByPath(ctx, paths, sourceAuditConflictBravoPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	alphaEvents, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{
+			RefKind: "document",
+			RefID:   alphaID,
+			Limit:   5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	bravoEvents, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{
+			RefKind: "document",
+			RefID:   bravoID,
+			Limit:   5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	synthesisCount, err := documentCountWithPrefix(ctx, paths, "notes/synthesis/")
+	if err != nil {
+		return verificationResult{}, err
+	}
+
+	searchHasBoth := searchContainsPath(search, sourceAuditConflictAlphaPath) && searchContainsPath(search, sourceAuditConflictBravoPath)
+	hasProvenance := alphaFound && bravoFound &&
+		alphaEvents.Provenance != nil && len(alphaEvents.Provenance.Events) > 0 &&
+		bravoEvents.Provenance != nil && len(bravoEvents.Provenance.Events) > 0
+	assistantPass := messageContainsAll(finalMessage, []string{sourceAuditConflictAlphaPath, sourceAuditConflictBravoPath}) &&
+		messageContainsAny(finalMessage, []string{"conflict", "conflicting", "contradict", "contradiction"}) &&
+		messageContainsAny(finalMessage, []string{"both are current", "both sources are current", "current sources", "both current"}) &&
+		messageContainsAny(finalMessage, []string{"unresolved", "no supersession", "no source authority", "cannot choose", "do not choose"}) &&
+		messageContainsAny(finalMessage, []string{"seven", "7"}) &&
+		messageContainsAny(finalMessage, []string{"thirty", "30"})
+	inspectedBothProvenanceRefs := provenanceEventRefIDsInclude(turnMetrics.ProvenanceEventRefIDs, alphaID, bravoID)
+	activityPass := turnMetrics.SearchUsed && inspectedBothProvenanceRefs
+
+	failures := []string{}
+	if !searchHasBoth {
+		failures = append(failures, "search did not find both conflict sources")
+	}
+	if !hasProvenance {
+		failures = append(failures, "document provenance missing for conflict sources")
+	}
+	if synthesisCount != 0 {
+		failures = append(failures, fmt.Sprintf("conflict explanation created %d synthesis documents", synthesisCount))
+	}
+	if !turnMetrics.SearchUsed {
+		failures = append(failures, "agent did not use retrieval search")
+	}
+	if !inspectedBothProvenanceRefs {
+		failures = append(failures, "agent did not inspect provenance events for both conflict sources")
+	}
+	if !assistantPass {
+		failures = append(failures, "final answer did not explain unresolved conflicting source evidence")
+	}
+	databasePass := searchHasBoth && hasProvenance && synthesisCount == 0
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{sourceAuditConflictAlphaPath, sourceAuditConflictBravoPath},
+	}, nil
+}
+
 func verifyMixedSynthesisRecords(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
 	base, err := verifySourceLinkedSynthesis(ctx, paths, "notes/synthesis/openclerk-runner-with-records.md", finalMessage, sourceLinkedSynthesisExpectations{
 		SourceRefs:                 []string{"notes/sources/openclerk-runner.md"},
@@ -2992,6 +3320,25 @@ func documentCountWithPrefix(ctx context.Context, paths evalPaths, pathPrefix st
 		}
 	}
 	return count, nil
+}
+
+func disallowedDocumentPathsWithPrefix(ctx context.Context, paths evalPaths, pathPrefix string, allowed map[string]bool) ([]string, error) {
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{PathPrefix: pathPrefix, Limit: 100},
+	})
+	if err != nil {
+		return nil, err
+	}
+	disallowed := []string{}
+	for _, doc := range list.Documents {
+		if strings.HasPrefix(doc.Path, pathPrefix) && !allowed[doc.Path] {
+			disallowed = append(disallowed, doc.Path)
+		}
+	}
+	sort.Strings(disallowed)
+	return disallowed, nil
 }
 
 func firstSynthesisProjection(ctx context.Context, paths evalPaths, docID string) (*runner.ProjectionState, error) {
@@ -3275,6 +3622,23 @@ func eventTypesInclude(events []runner.ProvenanceEvent, eventType string) bool {
 		}
 	}
 	return false
+}
+
+func provenanceEventRefIDsInclude(actual []string, expected ...string) bool {
+	seen := map[string]bool{}
+	for _, value := range actual {
+		normalized := strings.ToLower(strings.TrimSpace(value))
+		if normalized != "" {
+			seen[normalized] = true
+		}
+	}
+	for _, value := range expected {
+		normalized := strings.ToLower(strings.TrimSpace(value))
+		if normalized == "" || !seen[normalized] {
+			return false
+		}
+	}
+	return true
 }
 
 func lowerStrings(values []string) []string {
@@ -3621,6 +3985,7 @@ func classifyCommand(command string, m *metrics) {
 	}
 	if commandContainsAction(actionText, "provenance_events") {
 		m.ProvenanceEventsUsed = true
+		m.ProvenanceEventRefIDs = append(m.ProvenanceEventRefIDs, actionRefIDs(actionText, "provenance_events")...)
 	}
 	if commandContainsAction(actionText, "projection_states") {
 		m.ProjectionStatesUsed = true
@@ -3630,6 +3995,32 @@ func classifyCommand(command string, m *metrics) {
 func commandContainsAction(actionText string, action string) bool {
 	compacted := strings.Join(strings.Fields(actionText), "")
 	return strings.Contains(compacted, `"action":"`+action+`"`)
+}
+
+func actionRefIDs(actionText string, action string) []string {
+	compacted := strings.Join(strings.Fields(actionText), "")
+	marker := `"action":"` + action + `"`
+	refs := []string{}
+	for _, part := range strings.Split(compacted, marker)[1:] {
+		if next := strings.Index(part, `"action":"`); next >= 0 {
+			part = part[:next]
+		}
+		const refMarker = `"ref_id":"`
+		refStart := strings.Index(part, refMarker)
+		if refStart < 0 {
+			continue
+		}
+		refStart += len(refMarker)
+		refEnd := strings.Index(part[refStart:], `"`)
+		if refEnd < 0 {
+			continue
+		}
+		ref := strings.TrimSpace(part[refStart : refStart+refEnd])
+		if ref != "" {
+			refs = append(refs, ref)
+		}
+	}
+	return refs
 }
 
 func classifySearchCommand(actionText string, m *metrics) {
@@ -3728,6 +4119,7 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.DecisionsLookupUsed = out.DecisionsLookupUsed || current.DecisionsLookupUsed
 		out.DecisionRecordUsed = out.DecisionRecordUsed || current.DecisionRecordUsed
 		out.ProvenanceEventsUsed = out.ProvenanceEventsUsed || current.ProvenanceEventsUsed
+		out.ProvenanceEventRefIDs = append(out.ProvenanceEventRefIDs, current.ProvenanceEventRefIDs...)
 		out.ProjectionStatesUsed = out.ProjectionStatesUsed || current.ProjectionStatesUsed
 		out.GeneratedFileEvidence = append(out.GeneratedFileEvidence, current.GeneratedFileEvidence...)
 		out.ModuleCacheEvidence = append(out.ModuleCacheEvidence, current.ModuleCacheEvidence...)
@@ -4352,6 +4744,16 @@ func allScenarios() []scenario {
 			ID:     "synthesis-freshness-repair",
 			Title:  "Repair synthesis after runner-visible freshness invalidation",
 			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, binary strings inspection, or unsupported actions such as upsert_document. First search for OpenClerk runner repair freshness. Then list notes/synthesis/ candidates, get notes/synthesis/runner-repair.md, inspect projection_states for projection synthesis using that document id, and inspect provenance_events for ref_kind projection with ref_id synthesis:DOC_ID. Repair notes/synthesis/runner-repair.md only with replace_section or append_document. Do not create a duplicate. Preserve the existing source_refs frontmatter exactly as notes/sources/repair-current.md, notes/sources/repair-old.md. The repaired body must state: Current source: notes/sources/repair-current.md; Superseded source: notes/sources/repair-old.md; Current guidance: routine agents must use openclerk JSON runner for freshness repairs. After repair, inspect projection_states again and mention notes/synthesis/runner-repair.md, notes/sources/repair-current.md, notes/sources/repair-old.md, and the final synthesis projection freshness in the final answer.",
+		},
+		{
+			ID:     sourceAuditRepairScenarioID,
+			Title:  "Repair source-sensitive audit synthesis",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, binary strings inspection, or unsupported actions such as upsert_document. Search for source-sensitive audit runner repair evidence, list notes/synthesis/ candidates, choose notes/synthesis/audit-runner-routing.md rather than the decoy, get it before editing, inspect projection_states for projection synthesis using that document id, and inspect provenance_events for ref_kind projection with ref_id synthesis:DOC_ID. Repair notes/synthesis/audit-runner-routing.md only with replace_section or append_document. Do not create a duplicate synthesis page. Preserve the existing single-line source_refs for notes/sources/audit-runner-current.md and notes/sources/audit-runner-old.md. The repaired body must state: Current audit guidance: use the installed openclerk JSON runner; Current source: notes/sources/audit-runner-current.md; Superseded source: notes/sources/audit-runner-old.md. Keep ## Sources and ## Freshness. After repair, inspect projection_states again and mention notes/synthesis/audit-runner-routing.md, notes/sources/audit-runner-current.md, and final freshness in the final answer.",
+		},
+		{
+			ID:     sourceAuditConflictScenarioID,
+			Title:  "Explain unresolved source-sensitive conflict",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, or unsupported actions. Search for source sensitive audit conflict runner retention, then inspect provenance_events for both returned source documents. Do not create, update, append, replace, or file a synthesis document. In the final answer, explain that notes/sources/audit-conflict-alpha.md says seven days and notes/sources/audit-conflict-bravo.md says thirty days, that both are current sources with no supersession metadata, and that the conflict is unresolved so the agent cannot choose a winner without source authority.",
 		},
 		{
 			ID:     synthesisCandidatePressureScenarioID,
