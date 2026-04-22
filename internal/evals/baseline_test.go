@@ -18,6 +18,7 @@ func TestUnifiedOpenClerkRunnerGate(t *testing.T) {
 	target := createDocument(t, ctx, config, "notes/projects/openclerk-roadmap.md", "Roadmap", "---\ntype: project\nstatus: active\n---\n# Roadmap\n\n## Summary\nSee the [knowledge plane](../architecture/knowledge-plane.md).\n")
 	createDocument(t, ctx, config, "records/assets/transmission-solenoid.md", "Transmission solenoid", "---\nentity_type: part\nentity_name: Transmission solenoid\nentity_id: transmission-solenoid\ntype: record\nstatus: active\n---\n# Transmission solenoid\n\n## Facts\n- sku: SOL-1\n")
 	createDocument(t, ctx, config, "records/services/openclerk-runner.md", "OpenClerk runner", "---\nservice_id: openclerk-runner\nservice_name: OpenClerk runner\nservice_status: active\nservice_owner: runner\nservice_interface: JSON runner\n---\n# OpenClerk runner\n\n## Summary\nProduction service.\n")
+	createDocument(t, ctx, config, "docs/architecture/runner-decision.md", "Runner decision", "---\ndecision_id: adr-runner\ndecision_title: Use JSON runner\ndecision_status: accepted\ndecision_scope: agentops\ndecision_owner: platform\n---\n# Runner decision\n\n## Summary\nUse the JSON runner for routine AgentOps knowledge tasks.\n")
 
 	search, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
 		Action: runner.RetrievalTaskActionSearch,
@@ -65,6 +66,17 @@ func TestUnifiedOpenClerkRunnerGate(t *testing.T) {
 	}
 	if services.Services == nil || len(services.Services.Services) != 1 {
 		t.Fatalf("services result = %+v", services.Services)
+	}
+
+	decisions, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action:    runner.RetrievalTaskActionDecisionsLookup,
+		Decisions: runner.DecisionLookupOptions{Text: "JSON runner", Status: "accepted", Scope: "agentops", Limit: 10},
+	})
+	if err != nil {
+		t.Fatalf("decisions task: %v", err)
+	}
+	if decisions.Decisions == nil || len(decisions.Decisions.Decisions) != 1 {
+		t.Fatalf("decisions result = %+v", decisions.Decisions)
 	}
 
 	events, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{

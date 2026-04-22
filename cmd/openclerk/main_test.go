@@ -62,6 +62,33 @@ func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 		t.Fatalf("service detail = %+v", serviceDetail)
 	}
 
+	decisionRequest := `{"action":"create_document","document":{"path":"docs/architecture/runner-decision.md","title":"Runner decision","body":"---\ndecision_id: adr-runner\ndecision_title: Use JSON runner\ndecision_status: accepted\ndecision_scope: agentops\ndecision_owner: platform\ndecision_date: 2026-04-22\n---\n# Runner decision\n\n## Summary\nUse the JSON runner.\n"}}`
+	var decisionCreate runner.DocumentTaskResult
+	code, stderr = runJSON(t, []string{"document", "--data-dir", dataDir}, decisionRequest, &decisionCreate)
+	if code != 0 {
+		t.Fatalf("create decision exit = %d stderr=%s", code, stderr)
+	}
+
+	decisionsRequest := `{"action":"decisions_lookup","decisions":{"text":"JSON runner","status":"accepted","scope":"agentops","owner":"platform","limit":10}}`
+	var decisionsResult runner.RetrievalTaskResult
+	code, stderr = runJSON(t, []string{"retrieval", "--data-dir", dataDir}, decisionsRequest, &decisionsResult)
+	if code != 0 {
+		t.Fatalf("decisions exit = %d stderr=%s", code, stderr)
+	}
+	if decisionsResult.Decisions == nil || len(decisionsResult.Decisions.Decisions) != 1 {
+		t.Fatalf("decisions result = %+v", decisionsResult)
+	}
+
+	decisionDetailRequest := `{"action":"decision_record","decision_id":"adr-runner"}`
+	var decisionDetail runner.RetrievalTaskResult
+	code, stderr = runJSON(t, []string{"retrieval", "--data-dir", dataDir}, decisionDetailRequest, &decisionDetail)
+	if code != 0 {
+		t.Fatalf("decision detail exit = %d stderr=%s", code, stderr)
+	}
+	if decisionDetail.Decision == nil || decisionDetail.Decision.Status != "accepted" {
+		t.Fatalf("decision detail = %+v", decisionDetail)
+	}
+
 	layoutRequest := `{"action":"inspect_layout"}`
 	var layoutResult runner.DocumentTaskResult
 	code, stderr = runJSON(t, []string{"document", "--data-dir", dataDir}, layoutRequest, &layoutResult)

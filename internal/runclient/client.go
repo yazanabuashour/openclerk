@@ -76,6 +76,15 @@ type ServiceLookupOptions struct {
 	Cursor    string
 }
 
+type DecisionLookupOptions struct {
+	Text   string
+	Status string
+	Scope  string
+	Owner  string
+	Limit  int
+	Cursor string
+}
+
 type GraphNeighborhoodOptions struct {
 	DocID   string
 	ChunkID string
@@ -214,6 +223,21 @@ type ServiceRecord struct {
 	UpdatedAt time.Time
 }
 
+type DecisionRecord struct {
+	DecisionID   string
+	Title        string
+	Status       string
+	Scope        string
+	Owner        string
+	Date         string
+	Summary      string
+	Supersedes   []string
+	SupersededBy []string
+	SourceRefs   []string
+	Citations    []Citation
+	UpdatedAt    time.Time
+}
+
 type ProvenanceEvent struct {
 	EventID    string
 	EventType  string
@@ -248,6 +272,11 @@ type RecordLookupResult struct {
 type ServiceLookupResult struct {
 	Services []ServiceRecord
 	PageInfo PageInfo
+}
+
+type DecisionLookupResult struct {
+	Decisions []DecisionRecord
+	PageInfo  PageInfo
 }
 
 type ProvenanceEventList struct {
@@ -465,6 +494,33 @@ func (c *Client) GetServiceRecord(ctx context.Context, serviceID string) (Servic
 	return toServiceRecord(serviceRecord), nil
 }
 
+func (c *Client) LookupDecisions(ctx context.Context, options DecisionLookupOptions) (DecisionLookupResult, error) {
+	service, err := c.service()
+	if err != nil {
+		return DecisionLookupResult{}, err
+	}
+	result, err := service.DecisionsLookup(ctx, domain.DecisionLookupInput(options))
+	if err != nil {
+		return DecisionLookupResult{}, wrapError(err)
+	}
+	return DecisionLookupResult{
+		Decisions: toDecisionRecords(result.Decisions),
+		PageInfo:  toPageInfo(result.PageInfo),
+	}, nil
+}
+
+func (c *Client) GetDecisionRecord(ctx context.Context, decisionID string) (DecisionRecord, error) {
+	service, err := c.service()
+	if err != nil {
+		return DecisionRecord{}, err
+	}
+	decision, err := service.GetDecisionRecord(ctx, decisionID)
+	if err != nil {
+		return DecisionRecord{}, wrapError(err)
+	}
+	return toDecisionRecord(decision), nil
+}
+
 func (c *Client) ListProvenanceEvents(ctx context.Context, options ProvenanceEventOptions) (ProvenanceEventList, error) {
 	service, err := c.service()
 	if err != nil {
@@ -676,6 +732,31 @@ func toServiceRecord(service domain.ServiceRecord) ServiceRecord {
 		Facts:     facts,
 		Citations: toCitations(service.Citations),
 		UpdatedAt: service.UpdatedAt,
+	}
+}
+
+func toDecisionRecords(decisions []domain.DecisionRecord) []DecisionRecord {
+	result := make([]DecisionRecord, 0, len(decisions))
+	for _, decision := range decisions {
+		result = append(result, toDecisionRecord(decision))
+	}
+	return result
+}
+
+func toDecisionRecord(decision domain.DecisionRecord) DecisionRecord {
+	return DecisionRecord{
+		DecisionID:   decision.DecisionID,
+		Title:        decision.Title,
+		Status:       decision.Status,
+		Scope:        decision.Scope,
+		Owner:        decision.Owner,
+		Date:         decision.Date,
+		Summary:      decision.Summary,
+		Supersedes:   append([]string(nil), decision.Supersedes...),
+		SupersededBy: append([]string(nil), decision.SupersededBy...),
+		SourceRefs:   append([]string(nil), decision.SourceRefs...),
+		Citations:    toCitations(decision.Citations),
+		UpdatedAt:    decision.UpdatedAt,
 	}
 }
 

@@ -213,6 +213,35 @@ type ServiceLookupResult struct {
 	PageInfo PageInfo
 }
 
+type DecisionLookupInput struct {
+	Text   string
+	Status string
+	Scope  string
+	Owner  string
+	Limit  int
+	Cursor string
+}
+
+type DecisionRecord struct {
+	DecisionID   string
+	Title        string
+	Status       string
+	Scope        string
+	Owner        string
+	Date         string
+	Summary      string
+	Supersedes   []string
+	SupersededBy []string
+	SourceRefs   []string
+	Citations    []Citation
+	UpdatedAt    time.Time
+}
+
+type DecisionLookupResult struct {
+	Decisions []DecisionRecord
+	PageInfo  PageInfo
+}
+
 type ProvenanceEvent struct {
 	EventID    string
 	EventType  string
@@ -275,6 +304,8 @@ type Store interface {
 	GetRecordEntity(context.Context, string) (RecordEntity, error)
 	ServicesLookup(context.Context, ServiceLookupInput) (ServiceLookupResult, error)
 	GetServiceRecord(context.Context, string) (ServiceRecord, error)
+	DecisionsLookup(context.Context, DecisionLookupInput) (DecisionLookupResult, error)
+	GetDecisionRecord(context.Context, string) (DecisionRecord, error)
 	ListProvenanceEvents(context.Context, ProvenanceEventQuery) (ProvenanceEventResult, error)
 	ListProjectionStates(context.Context, ProjectionStateQuery) (ProjectionStateResult, error)
 	Close() error

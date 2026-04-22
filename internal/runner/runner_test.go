@@ -217,6 +217,7 @@ Checked source refs.
 `)+"\n")
 	createDocument(t, ctx, config, "records/assets/openclerk-runner.md", "OpenClerk runner record", "---\nentity_type: tool\nentity_name: OpenClerk runner\n---\n# OpenClerk runner record\n\n## Facts\n- status: active\n")
 	createDocument(t, ctx, config, "records/services/openclerk-runner.md", "OpenClerk runner", "---\nservice_id: openclerk-runner\nservice_name: OpenClerk runner\nservice_status: active\nservice_owner: runner\nservice_interface: JSON runner\n---\n# OpenClerk runner\n\n## Summary\nProduction service.\n")
+	createDocument(t, ctx, config, "docs/architecture/runner-decision.md", "Runner decision", "---\ndecision_id: adr-runner\ndecision_title: Use JSON runner\ndecision_status: accepted\ndecision_scope: agentops\ndecision_owner: platform\n---\n# Runner decision\n\n## Summary\nUse the JSON runner for AgentOps.\n")
 
 	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionInspectLayout,
@@ -232,6 +233,7 @@ Checked source refs.
 	}
 	if !layoutChecksInclude(result.Layout.Checks, "synthesis_source_refs_resolve", "pass") ||
 		!layoutChecksInclude(result.Layout.Checks, "service_identity_metadata", "pass") ||
+		!layoutChecksInclude(result.Layout.Checks, "decision_identity_metadata", "pass") ||
 		!layoutChecksInclude(result.Layout.Checks, "record_identity_metadata", "pass") {
 		t.Fatalf("layout checks = %+v", result.Layout.Checks)
 	}
@@ -244,6 +246,7 @@ func TestDocumentTaskInspectLayoutReportsInvalidConventions(t *testing.T) {
 	config := runclient.Config{DataDir: filepath.Join(t.TempDir(), "data")}
 	createDocument(t, ctx, config, "notes/synthesis/incomplete.md", "Incomplete Synthesis", "# Incomplete Synthesis\n\n## Summary\nMissing evidence conventions.\n")
 	createDocument(t, ctx, config, "records/services/incomplete.md", "Incomplete Service", "---\nservice_id: incomplete\n---\n# Incomplete Service\n\n## Summary\nMissing service name.\n")
+	createDocument(t, ctx, config, "records/decisions/incomplete.md", "Incomplete Decision", "---\ndecision_id: incomplete\n---\n# Incomplete Decision\n\n## Summary\nMissing decision title and status.\n")
 
 	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionInspectLayout,
@@ -259,6 +262,7 @@ func TestDocumentTaskInspectLayoutReportsInvalidConventions(t *testing.T) {
 		"synthesis_sources_section",
 		"synthesis_freshness_section",
 		"service_identity_metadata",
+		"decision_identity_metadata",
 	} {
 		if !layoutChecksInclude(result.Layout.Checks, id, "fail") {
 			t.Fatalf("layout checks missing failing %s: %+v", id, result.Layout.Checks)
@@ -318,6 +322,10 @@ func TestRetrievalTaskSearchLinksRecordsAndProvenance(t *testing.T) {
 	roadmap := createDocument(t, ctx, config, "notes/projects/roadmap.md", "Roadmap", "# Roadmap\n\n## Summary\nSee the [knowledge plane](../architecture/knowledge-plane.md).\n")
 	createDocument(t, ctx, config, "records/assets/transmission-solenoid.md", "Transmission solenoid", "---\nentity_type: part\nentity_name: Transmission solenoid\nentity_id: transmission-solenoid\n---\n# Transmission solenoid\n\n## Facts\n- sku: SOL-1\n")
 	createDocument(t, ctx, config, "records/services/openclerk-runner.md", "OpenClerk runner", "---\nservice_id: openclerk-runner\nservice_name: OpenClerk runner\nservice_status: active\nservice_owner: runner\nservice_interface: JSON runner\n---\n# OpenClerk runner\n\n## Summary\nProduction service for routine knowledge tasks.\n\n## Facts\n- tier: production\n")
+	createDocument(t, ctx, config, "docs/architecture/runner-old-decision.md", "Old runner decision", "---\ndecision_id: adr-runner-old\ndecision_title: Old runner path\ndecision_status: superseded\ndecision_scope: agentops\ndecision_owner: platform\ndecision_date: 2026-04-20\nsuperseded_by: adr-runner-current\nsource_refs: notes/sources/runner-old.md\n---\n# Old runner path\n\n## Summary\nOld decision used a retired runner path.\n")
+	createDocument(t, ctx, config, "notes/sources/runner-old.md", "Old runner source", "# Old runner source\n\n## Summary\nRetired runner path source.\n")
+	createDocument(t, ctx, config, "notes/architecture/runner-current-decision.md", "Current runner decision", "---\ndecision_id: adr-runner-current\ndecision_title: Use JSON runner\ndecision_status: accepted\ndecision_scope: agentops\ndecision_owner: platform\ndecision_date: 2026-04-22\nsupersedes: adr-runner-old\nsource_refs: notes/sources/runner-current.md\n---\n# Use JSON runner\n\n## Summary\nAccepted decision uses the JSON runner for routine AgentOps work.\n")
+	createDocument(t, ctx, config, "notes/sources/runner-current.md", "Current runner source", "# Current runner source\n\n## Summary\nCurrent runner source.\n")
 
 	search, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
 		Action: runner.RetrievalTaskActionSearch,
@@ -408,6 +416,41 @@ func TestRetrievalTaskSearchLinksRecordsAndProvenance(t *testing.T) {
 		t.Fatalf("service result = %+v", service)
 	}
 
+	decisions, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionDecisionsLookup,
+		Decisions: runner.DecisionLookupOptions{
+			Text:   "JSON runner",
+			Status: "accepted",
+			Scope:  "agentops",
+			Owner:  "platform",
+			Limit:  10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("decisions task: %v", err)
+	}
+	if decisions.Decisions == nil ||
+		len(decisions.Decisions.Decisions) != 1 ||
+		decisions.Decisions.Decisions[0].DecisionID != "adr-runner-current" ||
+		len(decisions.Decisions.Decisions[0].Citations) == 0 {
+		t.Fatalf("decisions result = %+v", decisions)
+	}
+
+	decision, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action:     runner.RetrievalTaskActionDecisionRecord,
+		DecisionID: "adr-runner-old",
+	})
+	if err != nil {
+		t.Fatalf("decision record task: %v", err)
+	}
+	if decision.Decision == nil ||
+		decision.Decision.Status != "superseded" ||
+		len(decision.Decision.SupersededBy) != 1 ||
+		decision.Decision.SupersededBy[0] != "adr-runner-current" ||
+		len(decision.Decision.Citations) == 0 {
+		t.Fatalf("decision result = %+v", decision)
+	}
+
 	provenance, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
 		Action: runner.RetrievalTaskActionProvenanceEvents,
 		Provenance: runner.ProvenanceEventOptions{
@@ -456,9 +499,28 @@ func TestRetrievalTaskSearchLinksRecordsAndProvenance(t *testing.T) {
 		serviceProjections.Projections.Projections[0].Freshness != "fresh" {
 		t.Fatalf("service projections result = %+v", serviceProjections)
 	}
+
+	decisionProjections, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProjectionStates,
+		Projection: runner.ProjectionStateOptions{
+			Projection: "decisions",
+			RefKind:    "decision",
+			RefID:      "adr-runner-old",
+			Limit:      10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("decision projection task: %v", err)
+	}
+	if decisionProjections.Projections == nil ||
+		len(decisionProjections.Projections.Projections) != 1 ||
+		decisionProjections.Projections.Projections[0].Freshness != "stale" ||
+		decisionProjections.Projections.Projections[0].Details["superseded_by"] != "adr-runner-current" {
+		t.Fatalf("decision projections result = %+v", decisionProjections)
+	}
 }
 
-func TestRetrievalTaskServiceValidation(t *testing.T) {
+func TestRetrievalTaskTypedRecordValidation(t *testing.T) {
 	t.Parallel()
 
 	missing, err := runner.RunRetrievalTask(context.Background(), runclient.Config{}, runner.RetrievalTaskRequest{
@@ -480,6 +542,27 @@ func TestRetrievalTaskServiceValidation(t *testing.T) {
 	}
 	if !negative.Rejected || negative.RejectionReason != "limit must be greater than or equal to 0" {
 		t.Fatalf("negative result = %+v", negative)
+	}
+
+	missingDecision, err := runner.RunRetrievalTask(context.Background(), runclient.Config{}, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionDecisionRecord,
+	})
+	if err != nil {
+		t.Fatalf("missing decision id validation: %v", err)
+	}
+	if !missingDecision.Rejected || missingDecision.RejectionReason != "decision_id is required" {
+		t.Fatalf("missing decision result = %+v", missingDecision)
+	}
+
+	negativeDecision, err := runner.RunRetrievalTask(context.Background(), runclient.Config{}, runner.RetrievalTaskRequest{
+		Action:    runner.RetrievalTaskActionDecisionsLookup,
+		Decisions: runner.DecisionLookupOptions{Limit: -1},
+	})
+	if err != nil {
+		t.Fatalf("negative decision limit validation: %v", err)
+	}
+	if !negativeDecision.Rejected || negativeDecision.RejectionReason != "limit must be greater than or equal to 0" {
+		t.Fatalf("negative decision result = %+v", negativeDecision)
 	}
 }
 

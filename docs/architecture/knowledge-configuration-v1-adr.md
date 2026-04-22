@@ -163,6 +163,9 @@ The v1 retrieval runner actions are:
 - `record_entity` returns one promoted generic record entity.
 - `services_lookup` finds promoted service records.
 - `service_record` returns one promoted service record.
+- `decisions_lookup` finds promoted decision records with status, scope, owner,
+  and text filters.
+- `decision_record` returns one promoted decision record by stable decision ID.
 - `provenance_events` exposes derivation, update, invalidation, and refresh
   history.
 - `projection_states` exposes current derived freshness and version state.
@@ -238,6 +241,35 @@ Future work should revisit that shape only if repeated eval failures show the
 document/retrieval workflow is structurally too many steps and directly causes
 missed candidate discovery, missed freshness inspection, duplicate synthesis,
 or dropped source refs.
+
+## `oc-za6.4` POC Decision
+
+Decision: promote decision and architecture records as the second typed
+promoted domain after services.
+
+Canonical markdown remains authoritative. Decision projection is driven by
+frontmatter fields such as `decision_id`, `decision_title`, `decision_status`,
+`decision_scope`, `decision_owner`, `decision_date`, `supersedes`,
+`superseded_by`, and `source_refs`; ADR-like filenames are useful conventions
+but are not required. `records/decisions/` is a conventional home, while ADRs
+or decision notes under other paths are valid when the metadata is present.
+
+The POC adds `decisions_lookup` and `decision_record` because decision-centric
+tasks benefit from typed status/scope/owner filters, stable repeatable lookup,
+update safety, citations, and supersession freshness. Plain docs search remains
+useful for broad discovery, but it is weaker for questions such as "what is the
+current accepted decision?" when old and current decisions coexist.
+
+Decision projection freshness treats current decisions as fresh. Superseded
+decisions or decisions with `superseded_by` are stale, with projection details
+that expose the replacement IDs and freshness reason; replacement decisions
+with `supersedes` remain fresh when their canonical markdown source is current.
+
+Targeted AgentOps evidence is recorded in
+`docs/evals/results/ockp-decision-records-poc.md`. The targeted run covers
+decision-vs-doc precision, supersession freshness, no broad repo search, no
+direct SQLite, no source-built runner usage, final-answer-only invalid-request
+rejection, and preserved citations/source refs/freshness.
 
 ## Production-Valid for AgentOps
 

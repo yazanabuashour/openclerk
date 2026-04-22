@@ -197,6 +197,38 @@ func toServiceRecord(service runclient.ServiceRecord) ServiceRecord {
 	}
 }
 
+func toDecisionLookupResult(result runclient.DecisionLookupResult) DecisionLookupResult {
+	return DecisionLookupResult{
+		Decisions: toDecisionRecords(result.Decisions),
+		PageInfo:  toPageInfo(result.PageInfo),
+	}
+}
+
+func toDecisionRecords(decisions []runclient.DecisionRecord) []DecisionRecord {
+	result := make([]DecisionRecord, 0, len(decisions))
+	for _, decision := range decisions {
+		result = append(result, toDecisionRecord(decision))
+	}
+	return result
+}
+
+func toDecisionRecord(decision runclient.DecisionRecord) DecisionRecord {
+	return DecisionRecord{
+		DecisionID:   decision.DecisionID,
+		Title:        decision.Title,
+		Status:       decision.Status,
+		Scope:        decision.Scope,
+		Owner:        decision.Owner,
+		Date:         decision.Date,
+		Summary:      decision.Summary,
+		Supersedes:   append([]string(nil), decision.Supersedes...),
+		SupersededBy: append([]string(nil), decision.SupersededBy...),
+		SourceRefs:   append([]string(nil), decision.SourceRefs...),
+		Citations:    toCitations(decision.Citations),
+		UpdatedAt:    decision.UpdatedAt,
+	}
+}
+
 func toProvenanceEventList(list runclient.ProvenanceEventList) ProvenanceEventList {
 	return ProvenanceEventList{
 		Events:   toProvenanceEvents(list.Events),

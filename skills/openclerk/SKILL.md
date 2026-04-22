@@ -142,14 +142,17 @@ Common request shapes:
 {"action":"record_entity","entity_id":"entity_id_from_json"}
 {"action":"services_lookup","services":{"text":"OpenClerk runner","interface":"JSON runner","limit":10}}
 {"action":"service_record","service_id":"service_id_from_json"}
+{"action":"decisions_lookup","decisions":{"text":"JSON runner","status":"accepted","scope":"runner","limit":10}}
+{"action":"decision_record","decision_id":"decision_id_from_json"}
 {"action":"provenance_events","provenance":{"ref_kind":"document","ref_id":"doc_id_from_json","limit":20}}
 {"action":"projection_states","projection":{"ref_kind":"document","ref_id":"doc_id_from_json","limit":20}}
 {"action":"projection_states","projection":{"projection":"synthesis","ref_kind":"document","ref_id":"synthesis_doc_id_from_json","limit":20}}
+{"action":"projection_states","projection":{"projection":"decisions","ref_kind":"decision","ref_id":"decision_id_from_json","limit":20}}
 ```
 
 Request fields are `action`, `search`, `doc_id`, `chunk_id`, `node_id`,
-`entity_id`, `service_id`, `records`, `services`, `provenance`, `projection`,
-and `limit`.
+`entity_id`, `service_id`, `decision_id`, `records`, `services`, `decisions`,
+`provenance`, `projection`, and `limit`.
 
 Use search for source-grounded answers, document links for explicit markdown
 relationships, graph neighborhoods for nearby derived context, records lookup
@@ -159,6 +162,10 @@ whether source-linked synthesis is fresh or stale before repairing it. Use
 services lookup for service-centric questions before falling back to plain docs
 search; canonical markdown remains the source of truth and service records are
 a derived promoted-domain projection.
+Use decisions lookup for decision- or ADR-centric questions where status,
+scope, owner, supersession, or repeatable lookup matter. Canonical markdown
+remains authoritative; decision records are a derived promoted-domain
+projection with citations and projection freshness.
 
 ## Answering From Results
 

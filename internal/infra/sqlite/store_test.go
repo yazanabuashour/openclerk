@@ -189,6 +189,211 @@ Production service for routine local knowledge tasks.
 	}
 }
 
+func TestDecisionProjectionLookupAndSupersessionFreshness(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+
+	oldDecision, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+		Path:  "docs/architecture/old-runner-decision.md",
+		Title: "Old runner decision",
+		Body: strings.TrimSpace(`---
+decision_id: adr-runner-old
+decision_title: Old runner path
+decision_status: superseded
+decision_scope: agentops
+decision_owner: platform
+decision_date: 2026-04-20
+superseded_by: adr-runner-current
+source_refs: notes/sources/runner-old.md
+---
+# Old runner path
+
+## Summary
+Old decision used a retired runner path.
+`) + "\n",
+	})
+	if err != nil {
+		t.Fatalf("create old decision: %v", err)
+	}
+	if _, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+		Path:  "notes/architecture/current-runner-decision.md",
+		Title: "Current runner decision",
+		Body: strings.TrimSpace(`---
+decision_id: adr-runner-current
+decision_title: Use JSON runner
+decision_status: accepted
+decision_scope: agentops
+decision_owner: platform
+decision_date: 2026-04-22
+supersedes: adr-runner-old
+source_refs: notes/sources/runner-current.md
+---
+# Use JSON runner
+
+## Summary
+Accepted decision uses the JSON runner for routine AgentOps work.
+`) + "\n",
+	}); err != nil {
+		t.Fatalf("create current decision: %v", err)
+	}
+
+	lookup, err := store.DecisionsLookup(ctx, domain.DecisionLookupInput{
+		Text:   "JSON runner",
+		Status: "accepted",
+		Scope:  "agentops",
+		Owner:  "platform",
+		Limit:  10,
+	})
+	if err != nil {
+		t.Fatalf("decision lookup: %v", err)
+	}
+	if len(lookup.Decisions) != 1 ||
+		lookup.Decisions[0].DecisionID != "adr-runner-current" ||
+		len(lookup.Decisions[0].Citations) == 0 ||
+		lookup.Decisions[0].Citations[0].Path != "notes/architecture/current-runner-decision.md" {
+		t.Fatalf("lookup = %+v", lookup)
+	}
+
+	detail, err := store.GetDecisionRecord(ctx, "adr-runner-old")
+	if err != nil {
+		t.Fatalf("decision detail: %v", err)
+	}
+	if detail.Status != "superseded" ||
+		len(detail.SupersededBy) != 1 ||
+		detail.SupersededBy[0] != "adr-runner-current" ||
+		len(detail.Citations) == 0 {
+		t.Fatalf("detail = %+v", detail)
+	}
+
+	projections, err := store.ListProjectionStates(ctx, domain.ProjectionStateQuery{
+		Projection: "decisions",
+		RefKind:    "decision",
+		RefID:      "adr-runner-old",
+		Limit:      10,
+	})
+	if err != nil {
+		t.Fatalf("decision projection: %v", err)
+	}
+	if len(projections.Projections) != 1 ||
+		projections.Projections[0].Freshness != "stale" ||
+		projections.Projections[0].Details["superseded_by"] != "adr-runner-current" {
+		t.Fatalf("old projection = %+v", projections)
+	}
+
+	events, err := store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{
+		RefKind: "decision",
+		RefID:   "adr-runner-current",
+		Limit:   10,
+	})
+	if err != nil {
+		t.Fatalf("decision provenance: %v", err)
+	}
+	if !hasEventType(events.Events, "decision_extracted_from_doc") {
+		t.Fatalf("events = %+v", events)
+	}
+
+	if _, err := store.ReplaceDocumentSection(ctx, oldDecision.DocID, domain.ReplaceSectionInput{
+		Heading: "Summary",
+		Content: "Old decision is explicitly superseded by adr-runner-current.",
+	}); err != nil {
+		t.Fatalf("replace old decision summary: %v", err)
+	}
+	events, err = store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{
+		RefKind: "projection",
+		RefID:   "decisions-source:" + oldDecision.DocID,
+		Limit:   10,
+	})
+	if err != nil {
+		t.Fatalf("decision invalidation events: %v", err)
+	}
+	if !hasEventType(events.Events, "projection_invalidated") {
+		t.Fatalf("invalidation events = %+v", events)
+	}
+}
+
+func TestDecisionProjectionVersionChangesWhenReplacementAppears(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+	clock := testClock()
+	store.now = func() time.Time { return clock }
+
+	clock = clock.Add(time.Minute)
+	if _, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+		Path:  "docs/architecture/old-runner-decision.md",
+		Title: "Old runner decision",
+		Body: strings.TrimSpace(`---
+decision_id: adr-runner-old
+decision_title: Old runner path
+decision_status: superseded
+decision_scope: agentops
+decision_owner: platform
+decision_date: 2026-04-20
+superseded_by: adr-runner-current
+---
+# Old runner path
+
+## Summary
+Old decision used a retired runner path.
+`) + "\n",
+	}); err != nil {
+		t.Fatalf("create old decision: %v", err)
+	}
+	initial := requireDecisionProjection(t, ctx, store, "adr-runner-old")
+	if initial.Details["missing_replacement_ids"] != "adr-runner-current" ||
+		initial.Details["freshness_reason"] != "decision superseded with missing replacement" {
+		t.Fatalf("initial old projection details = %+v", initial.Details)
+	}
+
+	clock = clock.Add(time.Minute)
+	if _, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+		Path:  "records/decisions/current-runner-decision.md",
+		Title: "Current runner decision",
+		Body: strings.TrimSpace(`---
+decision_id: adr-runner-current
+decision_title: Use JSON runner
+decision_status: accepted
+decision_scope: agentops
+decision_owner: platform
+decision_date: 2026-04-22
+supersedes: adr-runner-old
+---
+# Use JSON runner
+
+## Summary
+Accepted decision uses the JSON runner.
+`) + "\n",
+	}); err != nil {
+		t.Fatalf("create current decision: %v", err)
+	}
+	updated := requireDecisionProjection(t, ctx, store, "adr-runner-old")
+	if _, ok := updated.Details["missing_replacement_ids"]; ok {
+		t.Fatalf("updated old projection still has missing replacement: %+v", updated.Details)
+	}
+	if updated.Details["freshness_reason"] != "decision superseded" {
+		t.Fatalf("updated old projection details = %+v", updated.Details)
+	}
+	if updated.ProjectionVersion == initial.ProjectionVersion {
+		t.Fatalf("projection version did not change after replacement appeared: %q", updated.ProjectionVersion)
+	}
+	if !updated.UpdatedAt.After(initial.UpdatedAt) {
+		t.Fatalf("updated_at = %s, want after %s", updated.UpdatedAt, initial.UpdatedAt)
+	}
+}
+
 func TestSynthesisProjectionIsFreshForCurrentSources(t *testing.T) {
 	t.Parallel()
 
@@ -608,6 +813,24 @@ func requireSynthesisProjection(t *testing.T, ctx context.Context, store *Store,
 	})
 	if err != nil {
 		t.Fatalf("list synthesis projection: %v", err)
+	}
+	if len(result.Projections) != 1 {
+		t.Fatalf("projection count = %d, want 1: %+v", len(result.Projections), result.Projections)
+	}
+	return result.Projections[0]
+}
+
+func requireDecisionProjection(t *testing.T, ctx context.Context, store *Store, decisionID string) domain.ProjectionState {
+	t.Helper()
+
+	result, err := store.ListProjectionStates(ctx, domain.ProjectionStateQuery{
+		Projection: "decisions",
+		RefKind:    "decision",
+		RefID:      decisionID,
+		Limit:      10,
+	})
+	if err != nil {
+		t.Fatalf("list decision projection: %v", err)
 	}
 	if len(result.Projections) != 1 {
 		t.Fatalf("projection count = %d, want 1: %+v", len(result.Projections), result.Projections)

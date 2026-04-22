@@ -82,6 +82,13 @@ printf '%s\n' '{"action":"services_lookup","services":{"text":"OpenClerk runner"
   openclerk retrieval
 ```
 
+Decision-centric retrieval can use the second typed promoted-domain projection:
+
+```bash
+printf '%s\n' '{"action":"decisions_lookup","decisions":{"text":"JSON runner","status":"accepted","scope":"agentops","limit":10}}' |
+  openclerk retrieval
+```
+
 Configured knowledge layout is explained through runner-derived JSON, not a
 committed manifest:
 
@@ -115,9 +122,9 @@ Override storage with `OPENCLERK_DATA_DIR`, `OPENCLERK_DATABASE_PATH`, or
 - Source-linked synthesis can live in markdown when it carries citations and
   provenance back to canonical sources.
 - Graph traversal is a derived docs capability, not a second truth system.
-- The service registry is the first typed promoted-domain prototype; promoted
-  records remain selective structured layers for domains that fail as plain
-  docs.
+- The service registry is the first typed promoted-domain prototype, and
+  decision records are the second typed promoted domain for ADR/decision lookup
+  with status, scope, owner, citations, and supersession freshness.
 - Provenance and projection-state reads make derivation and freshness
   inspectable, including source-linked synthesis freshness through the
   `synthesis` projection.

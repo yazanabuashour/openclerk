@@ -59,6 +59,8 @@ const (
 	synthesisCandidatePressureScenarioID = "synthesis-candidate-pressure"
 	synthesisSourceSetPressureScenarioID = "synthesis-source-set-pressure"
 	mtSynthesisDriftPressureScenarioID   = "mt-synthesis-drift-pressure"
+	decisionRecordVsDocsScenarioID       = "decision-record-vs-docs"
+	decisionSupersessionScenarioID       = "decision-supersession-freshness"
 
 	synthesisCandidatePath       = "notes/synthesis/compiler-routing.md"
 	synthesisCandidateDecoyPath  = "notes/synthesis/compiler-routing-decoy.md"
@@ -204,6 +206,8 @@ type metrics struct {
 	DocumentLinksUsed        bool           `json:"document_links_used"`
 	GraphNeighborhoodUsed    bool           `json:"graph_neighborhood_used"`
 	RecordsLookupUsed        bool           `json:"records_lookup_used"`
+	DecisionsLookupUsed      bool           `json:"decisions_lookup_used"`
+	DecisionRecordUsed       bool           `json:"decision_record_used"`
 	ProvenanceEventsUsed     bool           `json:"provenance_events_used"`
 	ProjectionStatesUsed     bool           `json:"projection_states_used"`
 	GeneratedFileEvidence    []string       `json:"generated_file_evidence,omitempty"`
@@ -792,6 +796,14 @@ func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
 		if err := seedSynthesisSourceSetPressure(ctx, cfg); err != nil {
 			return err
 		}
+	case decisionRecordVsDocsScenarioID:
+		if err := seedDecisionRecordVsDocs(ctx, cfg); err != nil {
+			return err
+		}
+	case decisionSupersessionScenarioID:
+		if err := seedDecisionSupersession(ctx, cfg); err != nil {
+			return err
+		}
 	case mtSynthesisDriftPressureScenarioID:
 		if err := seedMTSynthesisDriftPressure(ctx, cfg); err != nil {
 			return err
@@ -1229,6 +1241,88 @@ Gamma source says synthesis compiler pressure requires preserving freshness and 
 	return nil
 }
 
+func seedDecisionRecordVsDocs(ctx context.Context, cfg runclient.Config) error {
+	if err := createSeedDocument(ctx, cfg, "notes/reference/runner-decision-narrative.md", "Runner Decision Narrative", "# Runner Decision Narrative\n\n## Summary\nPlain docs evidence mentions several OpenClerk runner decisions, including an accepted JSON runner decision and older alternatives.\n"); err != nil {
+		return err
+	}
+	currentBody := strings.TrimSpace(`---
+decision_id: adr-runner-current
+decision_title: Use JSON runner
+decision_status: accepted
+decision_scope: agentops
+decision_owner: platform
+decision_date: 2026-04-22
+source_refs: notes/reference/runner-decision-narrative.md
+---
+# Use JSON runner
+
+## Summary
+Accepted decision: routine OpenClerk AgentOps tasks use the installed JSON runner.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, "docs/architecture/runner-current-decision.md", "Use JSON runner", currentBody); err != nil {
+		return err
+	}
+	oldBody := strings.TrimSpace(`---
+decision_id: adr-runner-old
+decision_title: Use retired command path
+decision_status: superseded
+decision_scope: agentops
+decision_owner: platform
+decision_date: 2026-04-20
+superseded_by: adr-runner-current
+source_refs: notes/reference/runner-decision-narrative.md
+---
+# Use retired command path
+
+## Summary
+Superseded decision: older agents used a retired command path.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, "records/decisions/runner-old-decision.md", "Use retired command path", oldBody)
+}
+
+func seedDecisionSupersession(ctx context.Context, cfg runclient.Config) error {
+	oldBody := strings.TrimSpace(`---
+decision_id: adr-runner-old
+decision_title: Use retired command path
+decision_status: superseded
+decision_scope: agentops
+decision_owner: platform
+decision_date: 2026-04-20
+superseded_by: adr-runner-current
+source_refs: notes/sources/decision-old.md
+---
+# Use retired command path
+
+## Summary
+Superseded decision: older agents used a retired command path.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, "docs/architecture/runner-old-decision.md", "Use retired command path", oldBody); err != nil {
+		return err
+	}
+	currentBody := strings.TrimSpace(`---
+decision_id: adr-runner-current
+decision_title: Use JSON runner
+decision_status: accepted
+decision_scope: agentops
+decision_owner: platform
+decision_date: 2026-04-22
+supersedes: adr-runner-old
+source_refs: notes/sources/decision-current.md
+---
+# Use JSON runner
+
+## Summary
+Accepted decision: routine OpenClerk AgentOps tasks use the installed JSON runner.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, "records/decisions/runner-current-decision.md", "Use JSON runner", currentBody); err != nil {
+		return err
+	}
+	if err := createSeedDocument(ctx, cfg, "notes/sources/decision-old.md", "Old decision source", "# Old decision source\n\n## Summary\nOlder source documented the retired path.\n"); err != nil {
+		return err
+	}
+	return createSeedDocument(ctx, cfg, "notes/sources/decision-current.md", "Current decision source", "# Current decision source\n\n## Summary\nCurrent source documents the JSON runner path.\n")
+}
+
 func seedMTSynthesisDriftPressure(ctx context.Context, cfg runclient.Config) error {
 	oldBody := strings.TrimSpace(`---
 status: superseded
@@ -1376,6 +1470,10 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifySynthesisCandidatePressure(ctx, paths, finalMessage, turnMetrics)
 	case synthesisSourceSetPressureScenarioID:
 		return verifySynthesisSourceSetPressure(ctx, paths, finalMessage, turnMetrics)
+	case decisionRecordVsDocsScenarioID:
+		return verifyDecisionRecordVsDocs(ctx, paths, finalMessage, turnMetrics)
+	case decisionSupersessionScenarioID:
+		return verifyDecisionSupersessionFreshness(ctx, paths, finalMessage, turnMetrics)
 	case "stale-synthesis-update":
 		return verifyStaleSynthesisUpdate(ctx, paths, finalMessage, turnMetrics)
 	case "synthesis-freshness-repair":
@@ -2537,6 +2635,215 @@ func verifyPromotedRecordVsDocs(ctx context.Context, paths evalPaths, finalMessa
 	}, nil
 }
 
+func verifyDecisionRecordVsDocs(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	search, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{Text: "OpenClerk runner decisions", PathPrefix: "notes/reference/", Limit: 5},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	decisions, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionDecisionsLookup,
+		Decisions: runner.DecisionLookupOptions{
+			Text:   "JSON runner",
+			Status: "accepted",
+			Scope:  "agentops",
+			Owner:  "platform",
+			Limit:  5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projections, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProjectionStates,
+		Projection: runner.ProjectionStateOptions{
+			Projection: "decisions",
+			RefKind:    "decision",
+			RefID:      "adr-runner-current",
+			Limit:      5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+
+	hasPlainDoc := search.Search != nil && len(search.Search.Hits) > 0
+	hasDecision := false
+	if decisions.Decisions != nil {
+		for _, decision := range decisions.Decisions.Decisions {
+			if decision.DecisionID == "adr-runner-current" &&
+				decision.Status == "accepted" &&
+				decision.Scope == "agentops" &&
+				decision.Owner == "platform" &&
+				len(decision.Citations) > 0 {
+				hasDecision = true
+				break
+			}
+		}
+	}
+	hasProjection := projections.Projections != nil &&
+		len(projections.Projections.Projections) == 1 &&
+		projections.Projections.Projections[0].Freshness == "fresh"
+	hasCitationPath := messageContainsAny(finalMessage, []string{"docs/architecture/runner-current-decision.md"})
+	assistantPass := messageContainsAny(finalMessage, []string{"decisions lookup", "decisions_lookup", "decision records"}) &&
+		messageContainsAny(finalMessage, []string{"plain docs", "plain doc", "search"}) &&
+		messageContainsAny(finalMessage, []string{"status", "scope", "accepted", "agentops"}) &&
+		hasCitationPath
+	activityPass := turnMetrics.SearchUsed && turnMetrics.DecisionsLookupUsed
+	failures := []string{}
+	if !hasPlainDoc {
+		failures = append(failures, "plain docs search evidence missing")
+	}
+	if !hasDecision {
+		failures = append(failures, "decisions lookup evidence missing")
+	}
+	if !hasProjection {
+		failures = append(failures, "decision projection freshness missing")
+	}
+	if !turnMetrics.SearchUsed {
+		failures = append(failures, "agent did not use plain docs search")
+	}
+	if !turnMetrics.DecisionsLookupUsed {
+		failures = append(failures, "agent did not use decisions lookup")
+	}
+	if !assistantPass {
+		failures = append(failures, "final answer did not compare decisions lookup with plain docs")
+	}
+	if !hasCitationPath {
+		failures = append(failures, "final answer did not include decision citation path")
+	}
+	return verificationResult{
+		Passed:        hasPlainDoc && hasDecision && hasProjection && assistantPass && activityPass,
+		DatabasePass:  hasPlainDoc && hasDecision && hasProjection,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{"notes/reference/runner-decision-narrative.md", "docs/architecture/runner-current-decision.md", "records/decisions/runner-old-decision.md"},
+	}, nil
+}
+
+func verifyDecisionSupersessionFreshness(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	oldDecision, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action:     runner.RetrievalTaskActionDecisionRecord,
+		DecisionID: "adr-runner-old",
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	currentDecision, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action:     runner.RetrievalTaskActionDecisionRecord,
+		DecisionID: "adr-runner-current",
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	oldProjection, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProjectionStates,
+		Projection: runner.ProjectionStateOptions{
+			Projection: "decisions",
+			RefKind:    "decision",
+			RefID:      "adr-runner-old",
+			Limit:      5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	currentProjection, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProjectionStates,
+		Projection: runner.ProjectionStateOptions{
+			Projection: "decisions",
+			RefKind:    "decision",
+			RefID:      "adr-runner-current",
+			Limit:      5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	events, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{
+			RefKind: "projection",
+			RefID:   "decisions:adr-runner-current",
+			Limit:   10,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+
+	hasOldDecision := oldDecision.Decision != nil &&
+		oldDecision.Decision.Status == "superseded" &&
+		len(oldDecision.Decision.SupersededBy) == 1 &&
+		oldDecision.Decision.SupersededBy[0] == "adr-runner-current" &&
+		len(oldDecision.Decision.Citations) > 0
+	hasCurrentDecision := currentDecision.Decision != nil &&
+		currentDecision.Decision.Status == "accepted" &&
+		len(currentDecision.Decision.Supersedes) == 1 &&
+		currentDecision.Decision.Supersedes[0] == "adr-runner-old" &&
+		len(currentDecision.Decision.Citations) > 0
+	hasOldProjection := oldProjection.Projections != nil &&
+		len(oldProjection.Projections.Projections) == 1 &&
+		oldProjection.Projections.Projections[0].Freshness == "stale" &&
+		oldProjection.Projections.Projections[0].Details["superseded_by"] == "adr-runner-current"
+	hasCurrentProjection := currentProjection.Projections != nil &&
+		len(currentProjection.Projections.Projections) == 1 &&
+		currentProjection.Projections.Projections[0].Freshness == "fresh"
+	hasProvenance := events.Provenance != nil && eventTypesInclude(events.Provenance.Events, "projection_refreshed")
+	hasCitationPaths := messageContainsAll(finalMessage, []string{
+		"docs/architecture/runner-old-decision.md",
+		"records/decisions/runner-current-decision.md",
+	})
+	assistantPass := messageContainsAny(finalMessage, []string{"superseded", "supersedes"}) &&
+		messageContainsAny(finalMessage, []string{"stale"}) &&
+		messageContainsAny(finalMessage, []string{"fresh"}) &&
+		messageContainsAny(finalMessage, []string{"provenance", "projection"}) &&
+		hasCitationPaths
+	activityPass := turnMetrics.DecisionRecordUsed && turnMetrics.ProjectionStatesUsed && turnMetrics.ProvenanceEventsUsed
+	failures := []string{}
+	if !hasOldDecision {
+		failures = append(failures, "old superseded decision detail missing")
+	}
+	if !hasCurrentDecision {
+		failures = append(failures, "current replacement decision detail missing")
+	}
+	if !hasOldProjection {
+		failures = append(failures, "old decision stale projection missing")
+	}
+	if !hasCurrentProjection {
+		failures = append(failures, "current decision fresh projection missing")
+	}
+	if !hasProvenance {
+		failures = append(failures, "decision projection provenance missing")
+	}
+	if !turnMetrics.DecisionRecordUsed {
+		failures = append(failures, "agent did not use decision_record")
+	}
+	if !turnMetrics.ProjectionStatesUsed {
+		failures = append(failures, "agent did not inspect projection_states")
+	}
+	if !turnMetrics.ProvenanceEventsUsed {
+		failures = append(failures, "agent did not inspect provenance_events")
+	}
+	if !assistantPass {
+		failures = append(failures, "final answer did not report supersession freshness")
+	}
+	if !hasCitationPaths {
+		failures = append(failures, "final answer did not include decision citation paths")
+	}
+	return verificationResult{
+		Passed:        hasOldDecision && hasCurrentDecision && hasOldProjection && hasCurrentProjection && hasProvenance && assistantPass && activityPass,
+		DatabasePass:  hasOldDecision && hasCurrentDecision && hasOldProjection && hasCurrentProjection && hasProvenance,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{"docs/architecture/runner-old-decision.md", "records/decisions/runner-current-decision.md"},
+	}, nil
+}
+
 func verifyMixedSynthesisRecords(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
 	base, err := verifySourceLinkedSynthesis(ctx, paths, "notes/synthesis/openclerk-runner-with-records.md", finalMessage, sourceLinkedSynthesisExpectations{
 		SourceRefs:                 []string{"notes/sources/openclerk-runner.md"},
@@ -3306,6 +3613,12 @@ func classifyCommand(command string, m *metrics) {
 	if commandContainsAction(actionText, "records_lookup") {
 		m.RecordsLookupUsed = true
 	}
+	if commandContainsAction(actionText, "decisions_lookup") {
+		m.DecisionsLookupUsed = true
+	}
+	if commandContainsAction(actionText, "decision_record") {
+		m.DecisionRecordUsed = true
+	}
 	if commandContainsAction(actionText, "provenance_events") {
 		m.ProvenanceEventsUsed = true
 	}
@@ -3412,6 +3725,8 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.DocumentLinksUsed = out.DocumentLinksUsed || current.DocumentLinksUsed
 		out.GraphNeighborhoodUsed = out.GraphNeighborhoodUsed || current.GraphNeighborhoodUsed
 		out.RecordsLookupUsed = out.RecordsLookupUsed || current.RecordsLookupUsed
+		out.DecisionsLookupUsed = out.DecisionsLookupUsed || current.DecisionsLookupUsed
+		out.DecisionRecordUsed = out.DecisionRecordUsed || current.DecisionRecordUsed
 		out.ProvenanceEventsUsed = out.ProvenanceEventsUsed || current.ProvenanceEventsUsed
 		out.ProjectionStatesUsed = out.ProjectionStatesUsed || current.ProjectionStatesUsed
 		out.GeneratedFileEvidence = append(out.GeneratedFileEvidence, current.GeneratedFileEvidence...)
@@ -3807,6 +4122,8 @@ func containsOpenClerkAgentsInstructions(rendered string) bool {
 		"list_documents",
 		"records_lookup",
 		"services_lookup",
+		"decisions_lookup",
+		"decision_record",
 		"provenance_events",
 		"projection_states",
 		"reject final-answer-only",
@@ -4060,6 +4377,16 @@ func allScenarios() []scenario {
 			ID:     "promoted-record-vs-docs",
 			Title:  "Compare promoted records against plain docs",
 			Prompt: "Use the configured local OpenClerk data path. Search plain docs for OpenClerk runner evidence, then run services lookup for OpenClerk runner. Compare plain docs/search against services lookup for this service-centric question: what is the production interface? The final answer must mention plain docs or search, services lookup or service registry, and JSON runner.",
+		},
+		{
+			ID:     decisionRecordVsDocsScenarioID,
+			Title:  "Compare decision records against plain docs",
+			Prompt: "Use the configured local OpenClerk data path. Search plain docs for OpenClerk runner decision evidence, then run decisions_lookup for the accepted AgentOps JSON runner decision with status accepted, scope agentops, and owner platform. Compare plain docs/search against decisions_lookup for this decision-centric question: what is the current accepted runner decision? Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct SQLite, openclerk --help, or source-built command paths. The final answer must mention plain docs or search, decisions lookup or decision records, status/scope filtering, JSON runner, and citation details from the decision result.",
+		},
+		{
+			ID:     decisionSupersessionScenarioID,
+			Title:  "Inspect decision supersession and freshness",
+			Prompt: "Use the configured local OpenClerk data path. Use decision_record for adr-runner-old and adr-runner-current, inspect projection_states for projection decisions for both decision ids, and inspect provenance_events for the current decision projection. Use only OpenClerk runner retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct SQLite, openclerk --help, or source-built command paths. In the final answer, report that adr-runner-old is superseded/stale, adr-runner-current supersedes it and is fresh, and mention provenance/projection evidence plus citation paths.",
 		},
 		{
 			ID:     "missing-document-path-reject",

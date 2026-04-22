@@ -397,6 +397,8 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\n  \"document_links\",\"doc_id\":\"doc_1\"}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\n  \"graph_neighborhood\",\"doc_id\":\"doc_1\"}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"records_lookup\",\"records\":{\"text\":\"runner\"}}' | openclerk retrieval"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"decisions_lookup\",\"decisions\":{\"text\":\"runner\"}}' | openclerk retrieval"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"decision_record\",\"decision_id\":\"adr-runner\"}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"provenance_events\",\"provenance\":{\"limit\":10}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"projection_states\",\"projection\":{\"limit\":10}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"/bin/zsh -lc \"printf '%s' '{\\\"action\\\":\\\"search\\\",\\\"search\\\":{\\\"text\\\":\\\"runner\\\"}}' | openclerk retrieval\""}}`,
@@ -412,7 +414,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	if parsed.sessionID != "session-123" || parsed.finalMessage != "done" {
 		t.Fatalf("parsed = %+v", parsed)
 	}
-	if parsed.metrics.ToolCalls != 17 || parsed.metrics.CommandExecutions != 17 || parsed.metrics.AssistantCalls != 1 {
+	if parsed.metrics.ToolCalls != 19 || parsed.metrics.CommandExecutions != 19 || parsed.metrics.AssistantCalls != 1 {
 		t.Fatalf("metrics = %+v", parsed.metrics)
 	}
 	if !parsed.metrics.BroadRepoSearch {
@@ -440,6 +442,8 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		"document_links":         parsed.metrics.DocumentLinksUsed,
 		"graph_neighborhood":     parsed.metrics.GraphNeighborhoodUsed,
 		"records_lookup":         parsed.metrics.RecordsLookupUsed,
+		"decisions_lookup":       parsed.metrics.DecisionsLookupUsed,
+		"decision_record":        parsed.metrics.DecisionRecordUsed,
 		"provenance_events":      parsed.metrics.ProvenanceEventsUsed,
 		"projection_states":      parsed.metrics.ProjectionStatesUsed,
 	} {
@@ -529,7 +533,7 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 	for _, id := range scenarioIDs() {
 		ids[id] = true
 	}
-	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
+	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
 		if !ids[want] {
 			t.Fatalf("scenarioIDs missing %q in %v", want, scenarioIDs())
 		}
@@ -1157,6 +1161,72 @@ func TestVerifyPromotedRecordVsDocsRequiresComparisonAnswer(t *testing.T) {
 	}
 	if result.Passed {
 		t.Fatalf("incomplete comparison passed: %+v", result)
+	}
+}
+
+func TestVerifyDecisionRecordVsDocsRequiresTypedLookup(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: decisionRecordVsDocsScenarioID}); err != nil {
+		t.Fatalf("seed decision scenario: %v", err)
+	}
+	noTypedLookup := metrics{AssistantCalls: 1, SearchUsed: true, EventTypeCounts: map[string]int{}}
+	completeMetrics := metrics{AssistantCalls: 1, SearchUsed: true, DecisionsLookupUsed: true, EventTypeCounts: map[string]int{}}
+	noCitationAnswer := "Plain docs search agrees, but decisions lookup filters status and scope for the accepted AgentOps JSON runner decision."
+	completeAnswer := noCitationAnswer + " The decision citation path is docs/architecture/runner-current-decision.md."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: decisionRecordVsDocsScenarioID}, 1, completeAnswer, noTypedLookup)
+	if err != nil {
+		t.Fatalf("verify decision no typed lookup: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("no-typed decision comparison passed: %+v", result)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: decisionRecordVsDocsScenarioID}, 1, noCitationAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify decision no citation: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("no-citation decision comparison passed: %+v", result)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: decisionRecordVsDocsScenarioID}, 1, completeAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify decision comparison: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("decision comparison failed: %+v", result)
+	}
+}
+
+func TestVerifyDecisionSupersessionFreshnessRequiresProjectionAndProvenance(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: decisionSupersessionScenarioID}); err != nil {
+		t.Fatalf("seed supersession scenario: %v", err)
+	}
+	noProjection := metrics{AssistantCalls: 1, DecisionRecordUsed: true, EventTypeCounts: map[string]int{}}
+	completeMetrics := metrics{AssistantCalls: 1, DecisionRecordUsed: true, ProjectionStatesUsed: true, ProvenanceEventsUsed: true, EventTypeCounts: map[string]int{}}
+	noCitationAnswer := "adr-runner-old is superseded and stale; adr-runner-current supersedes it and is fresh, with provenance and projection evidence."
+	completeAnswer := noCitationAnswer + " Citation paths: docs/architecture/runner-old-decision.md and records/decisions/runner-current-decision.md."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: decisionSupersessionScenarioID}, 1, completeAnswer, noProjection)
+	if err != nil {
+		t.Fatalf("verify supersession no projection: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("no-projection supersession passed: %+v", result)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: decisionSupersessionScenarioID}, 1, noCitationAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify supersession no citation: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("no-citation supersession passed: %+v", result)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: decisionSupersessionScenarioID}, 1, completeAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify supersession: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("supersession failed: %+v", result)
 	}
 }
 

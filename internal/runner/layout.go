@@ -134,6 +134,8 @@ func inspectDocumentLayout(document Document, documentByPath map[string]Document
 	}
 	if isServiceDocumentCandidate(document) {
 		checks = append(checks, inspectServiceDocumentLayout(document)...)
+	} else if isDecisionDocumentCandidate(document) {
+		checks = append(checks, inspectDecisionDocumentLayout(document)...)
 	} else if isRecordDocumentCandidate(document) {
 		checks = append(checks, inspectRecordDocumentLayout(document)...)
 	}
@@ -199,6 +201,17 @@ func inspectServiceDocumentLayout(document Document) []KnowledgeLayoutCheck {
 	return []KnowledgeLayoutCheck{passLayoutDocumentCheck("service_identity_metadata", document, "Service-shaped document identity metadata is complete.", nil)}
 }
 
+func inspectDecisionDocumentLayout(document Document) []KnowledgeLayoutCheck {
+	required := []string{"decision_id", "decision_title", "decision_status"}
+	missing := missingMetadataKeys(document.Metadata, required)
+	if len(missing) > 0 {
+		return []KnowledgeLayoutCheck{failLayoutDocumentCheck("decision_identity_metadata", document, "Decision-shaped documents must include decision identity and status metadata.", map[string]string{
+			"missing": strings.Join(missing, ", "),
+		})}
+	}
+	return []KnowledgeLayoutCheck{passLayoutDocumentCheck("decision_identity_metadata", document, "Decision-shaped document identity and status metadata is complete.", nil)}
+}
+
 func layoutPathConventions() []LayoutPathConvention {
 	return []LayoutPathConvention{
 		{Name: "vault_root", PathPrefix: "", Description: "Canonical markdown root resolved by the runner.", Required: true},
@@ -206,6 +219,7 @@ func layoutPathConventions() []LayoutPathConvention {
 		{Name: "source_linked_synthesis", PathPrefix: "notes/synthesis/", Description: "Conventional home for durable source-linked synthesis documents.", Required: false},
 		{Name: "generic_records", PathPrefix: "records/", Description: "Conventional home for promoted record-shaped canonical documents.", Required: false},
 		{Name: "service_records", PathPrefix: "records/services/", Description: "Conventional home for service registry records.", Required: false},
+		{Name: "decision_records", PathPrefix: "records/decisions/", Description: "Conventional home for decision and architecture records.", Required: false},
 	}
 }
 
@@ -216,6 +230,7 @@ func layoutDocumentKinds() []LayoutDocumentKind {
 		{Kind: "synthesis_doc", Description: "Durable source-linked synthesis that remains subordinate to canonical sources.", Selectors: []string{"path_prefix:notes/synthesis/", "metadata:type=synthesis"}, Required: []string{"source_refs", "## Sources", "## Freshness"}},
 		{Kind: "record_doc", Description: "Canonical markdown document that feeds the generic promoted records projection.", Selectors: []string{"path_prefix:records/", "metadata:entity_type", "metadata:entity_name"}, Required: []string{"entity_type", "entity_name"}},
 		{Kind: "service_doc", Description: "Canonical markdown document that feeds the service registry projection.", Selectors: []string{"path_prefix:records/services/", "metadata:service_id", "metadata:service_name"}, Required: []string{"service_id", "service_name"}},
+		{Kind: "decision_doc", Description: "Canonical markdown document that feeds the decision records projection.", Selectors: []string{"path_prefix:records/decisions/", "metadata:decision_id", "metadata:decision_title", "metadata:decision_status"}, Required: []string{"decision_id", "decision_title", "decision_status"}},
 	}
 }
 
@@ -258,6 +273,13 @@ func isServiceDocumentCandidate(document Document) bool {
 		document.Metadata["service_owner"] != "" ||
 		document.Metadata["service_interface"] != "" ||
 		strings.EqualFold(strings.TrimSpace(document.Metadata["entity_type"]), "service")
+}
+
+func isDecisionDocumentCandidate(document Document) bool {
+	return strings.HasPrefix(document.Path, "records/decisions/") ||
+		document.Metadata["decision_id"] != "" ||
+		document.Metadata["decision_title"] != "" ||
+		document.Metadata["decision_status"] != ""
 }
 
 func layoutBodyContainsHeadingLevel(body string, want string, level int) bool {

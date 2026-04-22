@@ -102,6 +102,9 @@ AgentOps eval harness supports them cleanly.
 - Update the canonical source and verify the derived projection refreshes.
 - Compare the service registry path against plain docs retrieval for the same
   service-centric task.
+- Compare decision records against plain docs retrieval for decision-centric
+  tasks requiring status, scope, owner, repeatable lookup, citations, and
+  supersession freshness.
 - Accept the promoted-domain path only when it improves precision, update
   safety, or structured lookup behavior without weakening citation correctness.
 
@@ -118,6 +121,8 @@ AgentOps eval harness supports them cleanly.
 - Verify promoted-record synthesis inspects `records_lookup`,
   `provenance_events`, and `projection_states` before writing durable
   synthesis.
+- Verify decision supersession projection states expose stale superseded
+  decisions, fresh replacements, provenance, and citation paths.
 
 ## Knowledge Layout Inspection
 

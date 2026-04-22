@@ -128,6 +128,15 @@ The first explicit promoted-domain prototype is the service registry:
 - service provenance and projection states make derivation and freshness
   inspectable
 
+The second typed promoted domain is decision records:
+
+- ADRs and decision notes remain canonical markdown, independent of filename
+  conventions
+- `decisions_lookup` and `decision_record` expose stable decision IDs, title,
+  status, scope, owner, date, supersession refs, source refs, and citations
+- the `decisions` projection exposes freshness so superseded decisions are
+  visible as stale while replacements remain fresh
+
 The generic records projection remains backward compatible and should be
 extended only where structured state clearly outperforms plain docs.
 
@@ -145,6 +154,7 @@ Current event and projection semantics are intentionally minimal:
 - projection invalidation events
 - projection refresh events
 - record extraction events
+- decision extraction events
 - fresh/stale projection state for current derived outputs
 - synthesis projection state for source-linked synthesis pages, including
   current, superseded, missing, and stale source refs plus a freshness reason

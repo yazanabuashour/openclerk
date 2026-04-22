@@ -21,6 +21,8 @@ const (
 	RetrievalTaskActionRecordEntity     = "record_entity"
 	RetrievalTaskActionServicesLookup   = "services_lookup"
 	RetrievalTaskActionServiceRecord    = "service_record"
+	RetrievalTaskActionDecisionsLookup  = "decisions_lookup"
+	RetrievalTaskActionDecisionRecord   = "decision_record"
 	RetrievalTaskActionProvenanceEvents = "provenance_events"
 	RetrievalTaskActionProjectionStates = "projection_states"
 )
@@ -67,8 +69,10 @@ type RetrievalTaskRequest struct {
 	NodeID     string                 `json:"node_id,omitempty"`
 	EntityID   string                 `json:"entity_id,omitempty"`
 	ServiceID  string                 `json:"service_id,omitempty"`
+	DecisionID string                 `json:"decision_id,omitempty"`
 	Records    RecordLookupOptions    `json:"records,omitempty"`
 	Services   ServiceLookupOptions   `json:"services,omitempty"`
+	Decisions  DecisionLookupOptions  `json:"decisions,omitempty"`
 	Provenance ProvenanceEventOptions `json:"provenance,omitempty"`
 	Projection ProjectionStateOptions `json:"projection,omitempty"`
 	Limit      int                    `json:"limit,omitempty"`
@@ -99,6 +103,15 @@ type ServiceLookupOptions struct {
 	Cursor    string `json:"cursor,omitempty"`
 }
 
+type DecisionLookupOptions struct {
+	Text   string `json:"text,omitempty"`
+	Status string `json:"status,omitempty"`
+	Scope  string `json:"scope,omitempty"`
+	Owner  string `json:"owner,omitempty"`
+	Limit  int    `json:"limit,omitempty"`
+	Cursor string `json:"cursor,omitempty"`
+}
+
 type ProvenanceEventOptions struct {
 	RefKind   string `json:"ref_kind,omitempty"`
 	RefID     string `json:"ref_id,omitempty"`
@@ -116,18 +129,20 @@ type ProjectionStateOptions struct {
 }
 
 type RetrievalTaskResult struct {
-	Rejected        bool                 `json:"rejected"`
-	RejectionReason string               `json:"rejection_reason,omitempty"`
-	Search          *SearchResult        `json:"search,omitempty"`
-	Links           *DocumentLinks       `json:"links,omitempty"`
-	Graph           *GraphNeighborhood   `json:"graph,omitempty"`
-	Records         *RecordLookupResult  `json:"records,omitempty"`
-	Entity          *RecordEntity        `json:"entity,omitempty"`
-	Services        *ServiceLookupResult `json:"services,omitempty"`
-	Service         *ServiceRecord       `json:"service,omitempty"`
-	Provenance      *ProvenanceEventList `json:"provenance,omitempty"`
-	Projections     *ProjectionStateList `json:"projections,omitempty"`
-	Summary         string               `json:"summary"`
+	Rejected        bool                  `json:"rejected"`
+	RejectionReason string                `json:"rejection_reason,omitempty"`
+	Search          *SearchResult         `json:"search,omitempty"`
+	Links           *DocumentLinks        `json:"links,omitempty"`
+	Graph           *GraphNeighborhood    `json:"graph,omitempty"`
+	Records         *RecordLookupResult   `json:"records,omitempty"`
+	Entity          *RecordEntity         `json:"entity,omitempty"`
+	Services        *ServiceLookupResult  `json:"services,omitempty"`
+	Service         *ServiceRecord        `json:"service,omitempty"`
+	Decisions       *DecisionLookupResult `json:"decisions,omitempty"`
+	Decision        *DecisionRecord       `json:"decision,omitempty"`
+	Provenance      *ProvenanceEventList  `json:"provenance,omitempty"`
+	Projections     *ProjectionStateList  `json:"projections,omitempty"`
+	Summary         string                `json:"summary"`
 }
 
 type Paths struct {
@@ -293,6 +308,26 @@ type ServiceRecord struct {
 type ServiceLookupResult struct {
 	Services []ServiceRecord `json:"services,omitempty"`
 	PageInfo PageInfo        `json:"page_info,omitempty"`
+}
+
+type DecisionRecord struct {
+	DecisionID   string     `json:"decision_id"`
+	Title        string     `json:"title"`
+	Status       string     `json:"status,omitempty"`
+	Scope        string     `json:"scope,omitempty"`
+	Owner        string     `json:"owner,omitempty"`
+	Date         string     `json:"date,omitempty"`
+	Summary      string     `json:"summary"`
+	Supersedes   []string   `json:"supersedes,omitempty"`
+	SupersededBy []string   `json:"superseded_by,omitempty"`
+	SourceRefs   []string   `json:"source_refs,omitempty"`
+	Citations    []Citation `json:"citations,omitempty"`
+	UpdatedAt    time.Time  `json:"updated_at"`
+}
+
+type DecisionLookupResult struct {
+	Decisions []DecisionRecord `json:"decision_records,omitempty"`
+	PageInfo  PageInfo         `json:"page_info,omitempty"`
 }
 
 type ProvenanceEvent struct {
