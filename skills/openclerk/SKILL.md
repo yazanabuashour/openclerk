@@ -95,8 +95,11 @@ layout problems.
 When writing source-linked synthesis, use this exact AgentOps workflow:
 
 1. Run retrieval `search` for source evidence.
-2. Run document `list_documents` with `path_prefix: "notes/synthesis/"` to
-   find existing synthesis candidates.
+2. Run document `inspect_layout` if the active synthesis prefix is unclear.
+   Then run document `list_documents` with `path_prefix: "synthesis/"` when
+   the vault root is already the notes directory, or
+   `path_prefix: "notes/synthesis/"` when the vault root contains a nested
+   notes directory, to find existing synthesis candidates.
 3. Run `get_document` before modifying an existing synthesis page.
 4. Prefer `replace_section` or `append_document` over creating duplicates.
 5. Inspect `provenance_events` and `projection_states` when the synthesis
@@ -105,14 +108,16 @@ When writing source-linked synthesis, use this exact AgentOps workflow:
    `projection: "synthesis"`, `ref_kind: "document"`, and the synthesis
    `doc_id` before repairing stale claims.
 
-Prototype synthesis pages live under `notes/synthesis/`. Include frontmatter
-with `type: synthesis`, `status: active`, `freshness: fresh`, and `source_refs`
-set to a single-line comma-separated source path list. Do not use YAML list
-syntax for `source_refs`. Include a `## Sources` section with source paths or
-citation paths from runner JSON, and a `## Freshness` section that states which
-runner retrieval results were checked. Use only documented runner actions, not
-`upsert_document` or direct file edits. Synthesis is durable compiled knowledge,
-not a higher authority than the canonical sources it cites.
+Prototype synthesis pages live under `synthesis/` when the vault root is
+already the notes directory, or under `notes/synthesis/` when the vault root
+contains a nested notes directory. Include frontmatter with `type: synthesis`,
+`status: active`, `freshness: fresh`, and `source_refs` set to a single-line
+comma-separated source path list. Do not use YAML list syntax for `source_refs`.
+Include a `## Sources` section with source paths or citation paths from runner
+JSON, and a `## Freshness` section that states which runner retrieval results
+were checked. Use only documented runner actions, not `upsert_document` or
+direct file edits. Synthesis is durable compiled knowledge, not a higher
+authority than the canonical sources it cites.
 
 Synthesis freshness is also exposed as a derived projection. A stale synthesis
 projection means at least one referenced source path is missing, a referenced

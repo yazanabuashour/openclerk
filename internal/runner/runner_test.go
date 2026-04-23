@@ -239,6 +239,57 @@ Checked source refs.
 	}
 }
 
+func TestDocumentTaskInspectLayoutSupportsRootRelativeNotesVaultPaths(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DataDir: filepath.Join(t.TempDir(), "data")}
+	createDocument(t, ctx, config, "sources/runner.md", "Runner Source", "# Runner Source\n\n## Summary\nCanonical source guidance.\n")
+	createDocument(t, ctx, config, "synthesis/runner.md", "Runner Synthesis", strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: "sources/runner.md"
+---
+# Runner Synthesis
+
+## Summary
+Canonical source guidance.
+
+## Sources
+- sources/runner.md
+
+## Freshness
+Checked source refs.
+`)+"\n")
+
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionInspectLayout,
+	})
+	if err != nil {
+		t.Fatalf("inspect layout: %v", err)
+	}
+	if result.Layout == nil || !result.Layout.Valid {
+		t.Fatalf("layout = %+v", result.Layout)
+	}
+	if !layoutPathConventionsInclude(result.Layout.ConventionalPaths, "sources/") ||
+		!layoutPathConventionsInclude(result.Layout.ConventionalPaths, "synthesis/") {
+		t.Fatalf("layout conventions = %+v", result.Layout.ConventionalPaths)
+	}
+	if !layoutChecksInclude(result.Layout.Checks, "synthesis_source_refs_resolve", "pass") {
+		t.Fatalf("layout checks = %+v", result.Layout.Checks)
+	}
+	for _, check := range result.Layout.Checks {
+		if check.ID != "optional_conventional_prefixes" {
+			continue
+		}
+		prefixes := check.Details["path_prefixes"]
+		if strings.Contains(prefixes, "notes/sources/") || strings.Contains(prefixes, "notes/synthesis/") {
+			t.Fatalf("optional prefix warning still reports equivalent nested notes paths: %+v", check)
+		}
+	}
+}
+
 func TestDocumentTaskInspectLayoutReportsInvalidConventions(t *testing.T) {
 	t.Parallel()
 
@@ -652,6 +703,15 @@ func runnerEventTypesInclude(events []runner.ProvenanceEvent, eventType string) 
 func layoutChecksInclude(checks []runner.KnowledgeLayoutCheck, id string, status string) bool {
 	for _, check := range checks {
 		if check.ID == id && check.Status == status {
+			return true
+		}
+	}
+	return false
+}
+
+func layoutPathConventionsInclude(conventions []runner.LayoutPathConvention, pathPrefix string) bool {
+	for _, convention := range conventions {
+		if convention.PathPrefix == pathPrefix {
 			return true
 		}
 	}

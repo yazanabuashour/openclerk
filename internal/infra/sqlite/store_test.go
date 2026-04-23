@@ -614,6 +614,52 @@ func TestSynthesisProjectionIsFreshForCurrentSources(t *testing.T) {
 	}
 }
 
+func TestSynthesisProjectionSupportsRootRelativeNotesVaultPaths(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+	clock := testClock()
+	store.now = func() time.Time { return clock }
+
+	clock = clock.Add(time.Minute)
+	source, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+		Path:  "sources/current.md",
+		Title: "Current Source",
+		Body:  "# Current Source\n\n## Summary\nCurrent canonical evidence.\n",
+	})
+	if err != nil {
+		t.Fatalf("create source: %v", err)
+	}
+	clock = clock.Add(time.Minute)
+	synthesis, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+		Path:  "synthesis/current.md",
+		Title: "Current Synthesis",
+		Body:  synthesisBody("\"sources/current.md\"", "Current canonical evidence."),
+	})
+	if err != nil {
+		t.Fatalf("create synthesis: %v", err)
+	}
+
+	projection := requireSynthesisProjection(t, ctx, store, synthesis.DocID)
+	if projection.Freshness != "fresh" {
+		t.Fatalf("freshness = %q, want fresh: %+v", projection.Freshness, projection)
+	}
+	if projection.SourceRef != "doc:"+source.DocID {
+		t.Fatalf("source_ref = %q, want doc ref for root-relative source", projection.SourceRef)
+	}
+	if projection.Details["current_source_refs"] != "sources/current.md" ||
+		projection.Details["source_refs"] != "sources/current.md" ||
+		projection.Details["freshness_reason"] != "sources current" {
+		t.Fatalf("projection details = %+v", projection.Details)
+	}
+}
+
 func TestSynthesisProjectionStaleAfterSourceUpdateAndFreshAfterRepair(t *testing.T) {
 	t.Parallel()
 

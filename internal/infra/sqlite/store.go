@@ -24,7 +24,12 @@ import (
 	"github.com/yazanabuashour/openclerk/internal/domain"
 )
 
-const embeddingDimensions = 16
+const (
+	embeddingDimensions = 16
+
+	rootSynthesisPathPrefix   = "synthesis/"
+	nestedSynthesisPathPrefix = "notes/synthesis/"
+)
 
 var (
 	headingPattern = regexp.MustCompile(`^(#{1,6})\s+(.*?)\s*$`)
@@ -2936,9 +2941,26 @@ func parseFrontmatter(lines []string) (map[string]string, int) {
 		if !ok {
 			continue
 		}
-		frontmatter[strings.TrimSpace(strings.ToLower(key))] = strings.TrimSpace(value)
+		frontmatter[strings.TrimSpace(strings.ToLower(key))] = cleanFrontmatterValue(value)
 	}
 	return map[string]string{}, 0
+}
+
+func cleanFrontmatterValue(value string) string {
+	trimmed := strings.TrimSpace(value)
+	if len(trimmed) < 2 {
+		return trimmed
+	}
+	if strings.HasPrefix(trimmed, `"`) && strings.HasSuffix(trimmed, `"`) {
+		unquoted, err := strconv.Unquote(trimmed)
+		if err == nil {
+			return strings.TrimSpace(unquoted)
+		}
+	}
+	if strings.HasPrefix(trimmed, "'") && strings.HasSuffix(trimmed, "'") {
+		return strings.TrimSpace(trimmed[1 : len(trimmed)-1])
+	}
+	return trimmed
 }
 
 func documentTitle(relPath string, body string, headings []string, frontmatter map[string]string) string {
@@ -3158,7 +3180,11 @@ func synthesisProjectionInputs(documents []domain.Document) []synthesisProjectio
 }
 
 func isSynthesisDocument(docPath string, frontmatter map[string]string) bool {
-	return strings.HasPrefix(docPath, "notes/synthesis/") && strings.EqualFold(strings.TrimSpace(frontmatter["type"]), "synthesis")
+	return isSynthesisPath(docPath) && strings.EqualFold(strings.TrimSpace(frontmatter["type"]), "synthesis")
+}
+
+func isSynthesisPath(docPath string) bool {
+	return strings.HasPrefix(docPath, rootSynthesisPathPrefix) || strings.HasPrefix(docPath, nestedSynthesisPathPrefix)
 }
 
 func buildSynthesisProjectionState(input synthesisProjectionInput, documentsByPath map[string]domain.Document, now time.Time) domain.ProjectionState {

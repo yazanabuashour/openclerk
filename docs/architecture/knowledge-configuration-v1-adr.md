@@ -57,8 +57,12 @@ hard-coded:
 
 - `vault/` is the conventional markdown root under the effective data
   directory.
-- `notes/sources/` is the conventional home for canonical source docs.
-- `notes/synthesis/` is the conventional home for source-linked synthesis.
+- `sources/` and `notes/sources/` are conventional homes for canonical source
+  docs. `sources/` is for vault roots that are already the notes directory;
+  `notes/sources/` is for vault roots that contain a nested notes directory.
+- `synthesis/` and `notes/synthesis/` are conventional homes for
+  source-linked synthesis, following the same root-relative versus nested
+  notes-directory distinction.
 - record-shaped and service-shaped markdown conventions feed promoted record
   projections.
 - `source_refs`, `## Sources`, and `## Freshness` are conventional synthesis
@@ -80,16 +84,17 @@ are the default source of truth for local knowledge.
 
 Canonical source docs are canonical docs used as source authority for later
 answers, synthesis pages, or promoted records. They conventionally live under
-`notes/sources/`, but source authority comes from runner-visible citations,
-paths, chunk ids, metadata, provenance, and freshness, not from folder naming
-alone.
+`sources/` or `notes/sources/`, but source authority comes from runner-visible
+citations, paths, chunk ids, metadata, provenance, and freshness, not from
+folder naming alone.
 
 Synthesis docs are durable compiled knowledge pages that summarize or reconcile
-canonical evidence. They conventionally live under `notes/synthesis/` with
-frontmatter containing `type: synthesis`, `status: active`, `freshness: fresh`,
-and single-line comma-separated `source_refs`. They include `## Sources` and
-`## Freshness` sections. Synthesis docs do not outrank the canonical source
-docs or promoted records they cite.
+canonical evidence. They conventionally live under `synthesis/` or
+`notes/synthesis/` with frontmatter containing `type: synthesis`,
+`status: active`, `freshness: fresh`, and single-line comma-separated
+`source_refs`. They include `## Sources` and `## Freshness` sections.
+Synthesis docs do not outrank the canonical source docs or promoted records
+they cite.
 
 Promoted records are selective structured projections derived from canonical
 markdown docs when a domain benefits from typed lookup. Generic record-shaped
@@ -132,9 +137,9 @@ Compatibility requires these observable properties:
   and `search` without direct vault inspection.
 - source-sensitive answers can cite runner-visible paths, `doc_id`, `chunk_id`,
   headings, line ranges, source refs, or provenance.
-- synthesis pages under `notes/synthesis/` preserve `type: synthesis`,
-  `status: active`, `freshness: fresh`, `source_refs`, `## Sources`, and
-  `## Freshness`.
+- synthesis pages under `synthesis/` or `notes/synthesis/` preserve
+  `type: synthesis`, `status: active`, `freshness: fresh`, `source_refs`,
+  `## Sources`, and `## Freshness`.
 - promoted records and services remain derived from canonical markdown and are
   inspectable through records, services, provenance, and projection-state
   runner actions.
@@ -215,10 +220,10 @@ v1.
 The POC pressure-tested the current workflow against candidate-selection,
 multi-source creation, stale repair, mixed records/synthesis, and resumed
 multi-turn drift repair. The selected pressure scenarios required agents to
-search source evidence, list `notes/synthesis/` candidates, retrieve existing
-synthesis before editing, inspect synthesis projection freshness where
-relevant, preserve single-line `source_refs`, keep `## Sources` and
-`## Freshness`, and update without duplicate synthesis pages.
+search source evidence, list `synthesis/` or `notes/synthesis/` candidates,
+retrieve existing synthesis before editing, inspect synthesis projection
+freshness where relevant, preserve single-line `source_refs`, keep
+`## Sources` and `## Freshness`, and update without duplicate synthesis pages.
 
 Targeted AgentOps evidence is recorded in
 `docs/evals/results/ockp-synthesis-compiler-pressure.md`. This was a targeted
@@ -235,9 +240,9 @@ The deferred candidate action shape remains:
 {
   "action": "compile_synthesis",
   "synthesis": {
-    "path": "notes/synthesis/example.md",
+    "path": "synthesis/example.md",
     "title": "Example",
-    "source_refs": ["notes/sources/source-a.md", "notes/sources/source-b.md"],
+    "source_refs": ["sources/source-a.md", "sources/source-b.md"],
     "body": "# Example\n\n## Summary\n...\n\n## Sources\n...\n\n## Freshness\n...",
     "mode": "create_or_update"
   }
