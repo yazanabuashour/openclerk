@@ -75,12 +75,11 @@ The `0.1.0` repository administration target is:
 - GitHub Releases are created from `v0.y.z` tags.
 - Release publication runs in a protected `release` environment.
 - `v*` tags are protected against deletion and non-fast-forward updates.
+- Published GitHub Releases are immutable.
 - Security reports use GitHub private vulnerability reporting.
 
-Add the CodeQL status check to required `main` checks after the new CodeQL
-workflow has run once and GitHub exposes the exact reported check name. Tighten
-code-owner review enforcement, admin bypass, and review separation once a
-second maintainer can satisfy those controls.
+Tighten code-owner review enforcement, admin bypass, and review separation once
+a second maintainer can satisfy those controls.
 
 Untrusted pull request policy:
 
@@ -123,8 +122,6 @@ Tag a version like `v0.1.0`, push the tag, and let the release workflow:
 - verify the expected asset set, generate attestations, publish the draft, and verify latest
 
 The release bundle logic lives in `scripts/build-release-bundle.sh`. The
-installer logic lives in `scripts/install.sh`.
-
-After the first draft-first release succeeds, enable GitHub release immutability
-for future releases when repository settings support it. Fix bad artifacts with
-a new patch release instead of replacing published assets.
+installer logic lives in `scripts/install.sh`. GitHub release immutability is
+enabled; fix bad artifacts with a new patch release instead of replacing
+published assets.
