@@ -57,17 +57,18 @@ append/replace, promoted records, service lookup comparison, mixed
 synthesis/records, and multi-turn synthesis scenarios. The failed scenarios are
 validation and contract-enforcement gaps: missing required fields, negative
 limits, unsupported lower-level requests, unsupported transport requests,
-final-answer-only rejection, and one lower-level bypass attempt that still used
-broad repo search and direct SQLite. Those failures should be fixed before
+no-tools invalid-request handling, and one lower-level bypass attempt that
+still used broad repo search and direct SQLite. Those failures should be fixed before
 release, but they do not change the selected knowledge-model path.
 
 ## Next Build Slice
 
 The next build slice should be:
 
-- harden final-answer-only rejection for invalid OpenClerk knowledge requests,
-  including missing document fields, invalid limits, unsupported lower-level
-  workflows, and unsupported transports.
+- harden no-tools invalid-request handling for OpenClerk knowledge requests:
+  missing document fields should trigger one clarification response naming the
+  missing fields, while invalid limits, unsupported lower-level workflows, and
+  unsupported transports remain explicit rejects.
 - keep source-linked synthesis behind `openclerk document` and
   `openclerk retrieval`; do not add a dedicated synthesis action unless future
   eval evidence shows repeated brittle multi-step behavior.

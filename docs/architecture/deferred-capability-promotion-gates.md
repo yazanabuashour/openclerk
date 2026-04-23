@@ -55,8 +55,9 @@ Every candidate must preserve the current AgentOps invariants:
 - routine agents do not use direct SQLite, broad repo search, source-built
   runner paths, HTTP/MCP bypasses, backend variants, module-cache inspection,
   or ad hoc runtime programs
-- invalid routine requests still reject final-answer-only where the
-  OpenClerk skill requires that behavior
+- invalid routine requests still preserve the OpenClerk no-tools contract:
+  missing required fields clarify, while invalid limits and bypass requests
+  reject
 
 If a candidate cannot preserve these invariants, kill or defer it.
 

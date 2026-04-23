@@ -71,14 +71,14 @@ func TestOpenClerkSkillUsesInstalledRunnerForRoutineWork(t *testing.T) {
 	}
 	text := string(content)
 	for _, want := range []string{
-		"name: openclerk",
+		"name: OpenClerk",
 		"openclerk document",
 		"openclerk retrieval",
 		"AgentOps",
 		"Agent",
 		"Skills-compatible",
 		"Do not inspect source files",
-		"reject final-answer-only",
+		"one no-tools assistant answer",
 		"notes/synthesis/",
 		"source_refs",
 		"## Sources",
@@ -124,7 +124,7 @@ func TestOpenClerkSkillUsesInstalledRunnerForRoutineWork(t *testing.T) {
 	}
 }
 
-func TestOpenClerkSkillDescriptionContainsBootstrapRejectionGuard(t *testing.T) {
+func TestOpenClerkSkillDescriptionContainsBootstrapNoToolsGuard(t *testing.T) {
 	t.Parallel()
 
 	content, err := os.ReadFile(openClerkSkillPath(t))
@@ -136,9 +136,11 @@ func TestOpenClerkSkillDescriptionContainsBootstrapRejectionGuard(t *testing.T) 
 		t.Fatal("SKILL.md frontmatter description is empty")
 	}
 	for _, want := range []string{
-		"Bootstrap rejection rule",
+		"Bootstrap no-tools rule",
 		"required fields are missing",
 		"document path is missing",
+		"name the missing fields",
+		"ask the user to provide them",
 		"limit -3",
 		"bypass the runner",
 		"SQLite",
@@ -147,7 +149,7 @@ func TestOpenClerkSkillDescriptionContainsBootstrapRejectionGuard(t *testing.T) 
 		"legacy or source-built paths",
 		"unsupported transports",
 		"this description is complete",
-		"reject final-answer-only without opening this skill file, running commands, or using tools",
+		"respond with exactly one no-tools assistant answer",
 	} {
 		if !strings.Contains(description, want) {
 			t.Fatalf("SKILL.md description missing %q: %s", want, description)

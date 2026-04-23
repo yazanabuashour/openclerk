@@ -119,6 +119,9 @@ Evals validate AgentOps behavior and knowledge-model quality.
 - source-sensitive answers preserve citations, chunk ids, paths, or explicit
   source refs
 - provenance and projection-state reads can explain freshness
+- missing required document or retrieval fields produce one no-tools
+  clarification response that names the missing fields and asks the user to
+  provide them
 - promoted records, including the service registry, preserve citation
   correctness and improve structured lookup behavior for their target domain
 - no production scenario requires direct SQLite, backend variants, module-cache

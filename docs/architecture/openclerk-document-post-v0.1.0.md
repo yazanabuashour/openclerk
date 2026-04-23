@@ -96,8 +96,32 @@ Each workflow must preserve the current v0.1.0 invariants:
 - routine agents do not use direct SQLite, broad repo search, source-built
   runner paths, HTTP/MCP bypasses, backend variants, module-cache inspection,
   or ad hoc runtime programs
-- invalid routine requests still reject final-answer-only where the skill
-  requires that behavior
+- invalid routine requests still use no-tools handling where the skill requires
+  it: missing required fields clarify, while invalid limits and bypass requests
+  reject
+
+## Path Choice And Organization
+
+Autonomous vault path choice is aligned with the longer-term agent-first
+knowledge-plane direction, but it is not part of the v0.1.0 document contract.
+
+The current public request shape still requires explicit `document.path`.
+OpenClerk should not silently guess or invent canonical paths in v1. When a
+request is missing `document.path`, the correct interaction is a single
+no-tools clarification response that asks the user to provide it.
+
+Post-v0.1.0 evaluation may justify a narrower capability such as path
+recommendation or constrained autonomous placement, but only if targeted
+AgentOps evidence shows explicit user-provided paths are structurally
+insufficient for routine knowledge work.
+
+Any future promotion must preserve:
+
+- vault-relative inspectability rather than hidden placement heuristics
+- canonical markdown authority, source refs, provenance, and freshness
+- explainable placement decisions through runner-visible evidence
+- compatibility with existing explicit-path workflows
+- no routine bypass to direct vault inspection or ad hoc filesystem logic
 
 ## Relationship To Git And Sync
 
@@ -148,6 +172,8 @@ A future follow-up must first define:
 - compatibility behavior for existing vaults
 - privacy expectations for raw diffs and private document bodies
 - failure modes for stale, missing, rejected, or conflicting revisions
+- whether path recommendation or autonomous placement needs a new public
+  capability, and the eval pressure that justifies it
 - targeted AgentOps eval scenarios
 - pass/fail gates for source refs, provenance, freshness, rollback safety, and
   bypass prevention

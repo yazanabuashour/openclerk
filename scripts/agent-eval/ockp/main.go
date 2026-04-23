@@ -31,7 +31,7 @@ const (
 	cacheModeShared   = "shared"
 	cacheModeIsolated = "isolated"
 
-	openClerkBootstrapRejectionText = "reject final-answer-only without opening this skill file, running commands, or using tools"
+	openClerkBootstrapRejectionText = "respond with exactly one no-tools assistant answer"
 
 	ragRetrievalScenarioID   = "rag-retrieval-baseline"
 	ragCurrentPolicyPath     = "notes/rag/current-runner-policy.md"
@@ -582,6 +582,8 @@ type evalPaths struct {
 	VaultRoot    string
 	GoCache      string
 	GoModCache   string
+	CodexHome    string
+	ZDotDir      string
 	Temp         string
 }
 
@@ -595,6 +597,8 @@ func scenarioPaths(repoDir string) evalPaths {
 
 func evalPathsFor(runDir string, paths evalPaths, cache cacheConfig) evalPaths {
 	out := paths
+	out.CodexHome = filepath.Join(runDir, "codex-home")
+	out.ZDotDir = filepath.Join(runDir, "zdotdir")
 	out.Temp = filepath.Join(runDir, "tmp")
 	if cache.Mode == cacheModeShared {
 		out.GoCache = filepath.Join(cache.RunRoot, "shared-cache", "gocache")
@@ -706,12 +710,24 @@ func appendAddDirs(args []string, roots []string) []string {
 
 func evalEnv(runDir string, paths evalPaths, cache cacheConfig) []string {
 	effective := evalPathsFor(runDir, paths, cache)
-	env := os.Environ()
+	env := filteredEnv(os.Environ(),
+		"CODEX_HOME",
+		"OPENCLERK_DATA_DIR",
+		"OPENCLERK_DATABASE_PATH",
+		"OPENCLERK_VAULT_ROOT",
+		"GOCACHE",
+		"GOMODCACHE",
+		"TMPDIR",
+		"PATH",
+		"ZDOTDIR",
+	)
 	pathValue := filepath.Join(runDir, "bin")
 	if existing := os.Getenv("PATH"); existing != "" {
 		pathValue += string(os.PathListSeparator) + existing
 	}
 	env = append(env,
+		"CODEX_HOME="+effective.CodexHome,
+		"ZDOTDIR="+effective.ZDotDir,
 		"OPENCLERK_DATA_DIR="+effective.DataDir,
 		"OPENCLERK_DATABASE_PATH="+effective.DatabasePath,
 		"OPENCLERK_VAULT_ROOT="+effective.VaultRoot,
@@ -723,12 +739,80 @@ func evalEnv(runDir string, paths evalPaths, cache cacheConfig) []string {
 	return env
 }
 
+func filteredEnv(env []string, keys ...string) []string {
+	if len(keys) == 0 {
+		return append([]string{}, env...)
+	}
+	blocked := make(map[string]struct{}, len(keys))
+	for _, key := range keys {
+		blocked[key] = struct{}{}
+	}
+	filtered := make([]string, 0, len(env))
+	for _, entry := range env {
+		key, _, found := strings.Cut(entry, "=")
+		if found {
+			if _, blockedKey := blocked[key]; blockedKey {
+				continue
+			}
+		}
+		filtered = append(filtered, entry)
+	}
+	return filtered
+}
+
 func prepareRunDir(runDir string, cache cacheConfig) error {
 	if err := os.MkdirAll(runDir, 0o755); err != nil {
 		return err
 	}
 	paths := evalPathsFor(runDir, evalPaths{}, cache)
-	return os.MkdirAll(paths.Temp, 0o755)
+	for _, dir := range []string{paths.CodexHome, paths.ZDotDir, paths.Temp} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return err
+		}
+	}
+	if err := seedEvalCodexHome(paths.CodexHome); err != nil {
+		return err
+	}
+	return nil
+}
+
+func seedEvalCodexHome(dst string) error {
+	srcRoot, err := hostCodexHome()
+	if err != nil {
+		return nil
+	}
+	for _, name := range []string{"auth.json", "config.toml", "installation_id"} {
+		src := filepath.Join(srcRoot, name)
+		info, err := os.Stat(src)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return err
+		}
+		if info.IsDir() {
+			continue
+		}
+		data, err := os.ReadFile(src)
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(dst, name), data, info.Mode().Perm()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func hostCodexHome() (string, error) {
+	if configured := strings.TrimSpace(os.Getenv("CODEX_HOME")); configured != "" {
+		return configured, nil
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".codex"), nil
 }
 
 func warmGoModules(repoDir string, runDir string, paths evalPaths, cache cacheConfig) error {
@@ -1758,7 +1842,7 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 				AdditionalDocs:  []string{mtDriftCurrentPath, mtDriftOldSourcePath},
 			})
 		case "mt-incomplete-then-create":
-			return verifyNoDocument(ctx, paths, "notes/projects/mt-complete.md", "first turn should ask for missing document details"), nil
+			return verifyMissingFieldClarification(ctx, paths, "notes/projects/mt-complete.md", finalMessage, turnMetrics, []string{"path", "title", "body"})
 		}
 	}
 	switch sc.ID {
@@ -1849,6 +1933,28 @@ func verifyFinalAnswerOnly(sc scenario, finalMessage string, turnMetrics metrics
 	}
 }
 
+func verifyMissingFieldClarification(ctx context.Context, paths evalPaths, docPath string, finalMessage string, turnMetrics metrics, fields []string) (verificationResult, error) {
+	noDocument := verifyNoDocument(ctx, paths, docPath, "first turn should clarify missing document details without tools")
+	clarificationPass := isMissingFieldClarification(finalMessage, fields)
+	metricsPass := turnMetrics.ToolCalls == 0 && turnMetrics.CommandExecutions == 0 && turnMetrics.AssistantCalls <= 1
+	failures := []string{}
+	if !noDocument.DatabasePass {
+		failures = append(failures, noDocument.Details)
+	}
+	if !clarificationPass {
+		failures = append(failures, "answer did not name the missing fields and ask the user to provide them")
+	}
+	if !metricsPass {
+		failures = append(failures, fmt.Sprintf("expected no tools and at most one assistant answer, got tools=%d commands=%d assistant=%d", turnMetrics.ToolCalls, turnMetrics.CommandExecutions, turnMetrics.AssistantCalls))
+	}
+	return verificationResult{
+		Passed:        noDocument.DatabasePass && clarificationPass && metricsPass,
+		DatabasePass:  noDocument.DatabasePass && metricsPass,
+		AssistantPass: clarificationPass && metricsPass,
+		Details:       missingDetails(failures),
+	}, nil
+}
+
 func isValidationRejection(scenarioID string, message string) bool {
 	lower := normalizeValidationMessage(message)
 	if lower == "" {
@@ -1869,6 +1975,25 @@ func isValidationRejection(scenarioID string, message string) bool {
 	default:
 		return false
 	}
+}
+
+func isMissingFieldClarification(message string, fields []string) bool {
+	lower := normalizeValidationMessage(message)
+	if lower == "" {
+		return false
+	}
+	if !containsAny(lower, []string{"missing", "required"}) {
+		return false
+	}
+	if !containsAny(lower, []string{"provide", "share", "supply", "send"}) {
+		return false
+	}
+	for _, field := range fields {
+		if !strings.Contains(lower, field) {
+			return false
+		}
+	}
+	return true
 }
 
 func normalizeValidationMessage(message string) string {
@@ -5366,11 +5491,14 @@ func preflightEvalContext(repoRoot string, repoDir string, runDir string, paths 
 		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(output)))
 	}
 	rendered := string(output)
-	if !strings.Contains(rendered, "- openclerk:") {
+	if !containsOpenClerkSkillDiscovery(rendered) {
 		return errors.New("rendered prompt is missing openclerk skill discovery")
 	}
 	if !strings.Contains(rendered, ".agents/skills/openclerk/SKILL.md") {
 		return errors.New("rendered prompt does not point openclerk to the installed project skill")
+	}
+	if strings.Contains(rendered, filepath.ToSlash(filepath.Join(evalPathsFor(runDir, paths, cache).CodexHome, "skills", "openclerk", "SKILL.md"))) {
+		return errors.New("rendered prompt exposes a competing CODEX_HOME openclerk skill")
 	}
 	if !containsOpenClerkBootstrapRejectionGuidance(rendered) {
 		return errors.New("rendered prompt is missing openclerk bootstrap rejection guidance")
@@ -5379,6 +5507,10 @@ func preflightEvalContext(repoRoot string, repoDir string, runDir string, paths 
 		return errors.New("rendered prompt contains OpenClerk product instructions from AGENTS.md")
 	}
 	return nil
+}
+
+func containsOpenClerkSkillDiscovery(rendered string) bool {
+	return strings.Contains(rendered, "- OpenClerk:") || strings.Contains(rendered, "- openclerk:")
 }
 
 func containsOpenClerkBootstrapRejectionGuidance(rendered string) bool {
@@ -5698,7 +5830,7 @@ func allScenarios() []scenario {
 		},
 		{
 			ID:     "missing-document-path-reject",
-			Title:  "Reject missing document path without tools",
+			Title:  "Clarify missing document path without tools",
 			Prompt: "Create an OpenClerk document titled Missing Path with body content, but I did not provide a path.",
 		},
 		{
@@ -5744,7 +5876,7 @@ func allScenarios() []scenario {
 		},
 		{
 			ID:    "mt-incomplete-then-create",
-			Title: "Reject incomplete request, then complete it in a resumed turn",
+			Title: "Clarify incomplete request, then complete it in a resumed turn",
 			Turns: []scenarioTurn{
 				{Prompt: "Create an OpenClerk canonical project note, but I have not provided the path, title, or body yet."},
 				{Prompt: "Use path notes/projects/mt-complete.md, title Multi Turn Complete, and body: Multi-turn completion should use the OpenClerk runner after required fields are provided."},

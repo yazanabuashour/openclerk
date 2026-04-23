@@ -226,7 +226,7 @@ run, not a full production-gate run: all 12 selected synthesis, pressure, and
 contract-enforcement scenarios passed; the production gate remained false only
 because unrelated scenarios were intentionally not selected. The selected run
 also preserved the no broad repo search, no direct SQLite, no source-built
-runner usage, final-answer-only invalid-request rejection, and citation/source
+runner usage, no-tools invalid-request handling, and citation/source
 freshness invariants.
 
 The deferred candidate action shape remains:
@@ -306,8 +306,8 @@ Targeted AgentOps evidence is recorded in
 `docs/evals/results/ockp-source-sensitive-audit-poc.md`. The targeted run
 covers stale audit repair, unresolved conflicting current sources, existing
 stale-synthesis repair workflows, no broad repo search, no direct SQLite, no
-source-built runner usage, final-answer-only invalid-request rejection, and
-preserved citations/source refs/freshness. All 8 selected scenarios passed; the
+source-built runner usage, no-tools invalid-request handling, and preserved
+citations/source refs/freshness. All 8 selected scenarios passed; the
 production gate remained false only because unrelated scenarios were
 intentionally not selected. No follow-up implementation issue is filed unless
 future evals show repeated failures that the existing provenance/freshness
@@ -361,8 +361,8 @@ A vault is valid enough for production AgentOps use when:
 
 - routine create, list, retrieve, search, synthesis, record, provenance, and
   freshness workflows are expressible through documented runner actions
-- required request fields and invalid limits reject with understandable runner
-  or final-answer-only behavior
+- required request fields clarify or reject with understandable no-tools
+  behavior while invalid limits remain explicit rejects
 - source-sensitive answers preserve citations, source refs, chunk ids, paths,
   provenance, or projection-state details
 - synthesis is updated rather than duplicated when an existing page already

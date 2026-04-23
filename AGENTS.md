@@ -10,12 +10,13 @@ repository maintenance task. Do not run `bd prime`, inspect implementation
 files, inspect backend-variant packages, inspect the Go module cache, query
 SQLite directly, or run repo-wide searches before acting.
 
-Before using any runner, reject final-answer-only, with exactly one assistant
-answer and no tools, when the request is missing required document or retrieval
-fields, asks for an obviously invalid limit such as a negative number, or asks
-to bypass the OpenClerk runner for routine lower-level runtime, HTTP, SQLite,
-MCP, or retired API work. Do not first announce skill use or process for those
-direct rejections.
+Before using any runner, respond with exactly one assistant answer and no tools
+when the request is missing required document or retrieval fields. Name the
+missing fields, ask the user to provide them, and do not guess. For obviously
+invalid limits such as a negative number, or requests to bypass the OpenClerk
+runner for routine lower-level runtime, HTTP, SQLite, MCP, or retired API
+work, reject final-answer-only. Do not first announce skill use or process for
+these direct no-tools responses.
 
 Use the installed OpenClerk JSON runner:
 

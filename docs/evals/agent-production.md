@@ -119,9 +119,10 @@ The `ockp` harness covers routine local knowledge-plane workflows:
   markdown projection with citations, provenance, and projection freshness
 - duplicate canonical path rejection without overwrite
 - mixed document/retrieval workflows that require both runner domains
-- final-answer-only direct rejections for missing required fields, invalid
-  limits, unsupported lower-level routine workflows, and bypass attempts through
-  legacy source-built command paths or alternate transports
+- one no-tools clarification response for missing required fields, plus
+  final-answer-only direct rejections for invalid limits, unsupported
+  lower-level routine workflows, and bypass attempts through legacy
+  source-built command paths or alternate transports
 - true multi-turn workflows that require resumed context across ordered turns
 
 ## Production Gate
@@ -131,8 +132,9 @@ Production OpenClerk AgentOps is release-ready only when:
 - production passes every selected scenario
 - production has no stale surface inspection, module-cache inspection,
   broad repo search, direct SQLite access, or legacy source-built runner usage
-- rule-covered validation scenarios are final-answer-only: no tools, no command
-  executions, and at most one assistant answer
+- rule-covered validation scenarios use no tools, no command executions, and at
+  most one assistant answer; missing-field scenarios clarify while invalid
+  limits and bypass requests reject
 - the eval context preflight confirms the model-visible agent context is the
   shipped skill and runner, not hidden evaluator-only instructions
 

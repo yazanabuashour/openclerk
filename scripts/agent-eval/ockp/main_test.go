@@ -291,8 +291,48 @@ func TestVariantSelectionProductionOnly(t *testing.T) {
 	}
 }
 
+func TestEvalEnvOverridesHostOpenClerkPaths(t *testing.T) {
+	t.Setenv("CODEX_HOME", "/host/.codex")
+	t.Setenv("OPENCLERK_DATA_DIR", "/host/data")
+	t.Setenv("OPENCLERK_DATABASE_PATH", "/host/openclerk.db")
+	t.Setenv("OPENCLERK_VAULT_ROOT", "/host/vault")
+
+	runDir := filepath.Join(t.TempDir(), "run")
+	paths := evalPaths{
+		DataDir:      filepath.Join(runDir, "data"),
+		DatabasePath: filepath.Join(runDir, "openclerk.db"),
+		VaultRoot:    filepath.Join(runDir, "vault"),
+	}
+	env := evalEnv(runDir, paths, cacheConfig{})
+	got := map[string]string{}
+	for _, entry := range env {
+		key, value, found := strings.Cut(entry, "=")
+		if found {
+			got[key] = value
+		}
+	}
+	if got["CODEX_HOME"] != filepath.Join(runDir, "codex-home") {
+		t.Fatalf("CODEX_HOME = %q, want %q", got["CODEX_HOME"], filepath.Join(runDir, "codex-home"))
+	}
+	if got["ZDOTDIR"] != filepath.Join(runDir, "zdotdir") {
+		t.Fatalf("ZDOTDIR = %q, want %q", got["ZDOTDIR"], filepath.Join(runDir, "zdotdir"))
+	}
+	if got["OPENCLERK_DATA_DIR"] != paths.DataDir {
+		t.Fatalf("OPENCLERK_DATA_DIR = %q, want %q", got["OPENCLERK_DATA_DIR"], paths.DataDir)
+	}
+	if got["OPENCLERK_DATABASE_PATH"] != paths.DatabasePath {
+		t.Fatalf("OPENCLERK_DATABASE_PATH = %q, want %q", got["OPENCLERK_DATABASE_PATH"], paths.DatabasePath)
+	}
+	if got["OPENCLERK_VAULT_ROOT"] != paths.VaultRoot {
+		t.Fatalf("OPENCLERK_VAULT_ROOT = %q, want %q", got["OPENCLERK_VAULT_ROOT"], paths.VaultRoot)
+	}
+}
+
 func TestPromptInputPreflightFlagsOpenClerkAgentsInstructions(t *testing.T) {
-	clean := "### Project Skills\n- openclerk: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner. Bootstrap rejection rule for routine OpenClerk requests - if required fields are missing, if creating a document but the document path is missing, if a numeric limit is negative such as limit -3, or if the user asks to bypass the runner through SQLite, HTTP, MCP, legacy or source-built paths, or unsupported transports, this description is complete; reject final-answer-only without opening this skill file, running commands, or using tools. (file: /tmp/repo/.agents/skills/openclerk/SKILL.md)\n"
+	clean := "### Project Skills\n- OpenClerk: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner. Bootstrap no-tools rule for routine OpenClerk requests - if required fields are missing, if creating a document but the document path is missing, or if the request omits required document fields such as title or body, this description is complete; respond with exactly one no-tools assistant answer that names the missing fields and asks the user to provide them. If a numeric limit is negative such as limit -3, or if the user asks to bypass the runner through SQLite, HTTP, MCP, legacy or source-built paths, or unsupported transports, reject final-answer-only without opening this skill file, running commands, or using tools. (file: /tmp/repo/.agents/skills/openclerk/SKILL.md)\n"
+	if !containsOpenClerkSkillDiscovery(clean) {
+		t.Fatalf("clean skill discovery is missing the OpenClerk skill marker: %s", clean)
+	}
 	if containsOpenClerkAgentsInstructions(clean) {
 		t.Fatalf("clean skill discovery was flagged: %s", clean)
 	}
@@ -308,6 +348,50 @@ func TestPromptInputPreflightFlagsOpenClerkAgentsInstructions(t *testing.T) {
 	contaminated := "# AGENTS.md instructions for /tmp/repo\n\nUse `openclerk document` with create_document JSON action names.\n"
 	if !containsOpenClerkAgentsInstructions(contaminated) {
 		t.Fatalf("contaminated AGENTS block was not flagged: %s", contaminated)
+	}
+}
+
+func TestPrepareRunDirCreatesCodexHome(t *testing.T) {
+	hostCodexHome := filepath.Join(t.TempDir(), "host-codex-home")
+	if err := os.MkdirAll(hostCodexHome, 0o755); err != nil {
+		t.Fatalf("mkdir host codex home: %v", err)
+	}
+	for name, content := range map[string]string{
+		"auth.json":       `{"token":"test"}`,
+		"config.toml":     "model = \"gpt-5.4-mini\"\n",
+		"installation_id": "test-installation\n",
+	} {
+		if err := os.WriteFile(filepath.Join(hostCodexHome, name), []byte(content), 0o600); err != nil {
+			t.Fatalf("write host codex home %s: %v", name, err)
+		}
+	}
+	t.Setenv("CODEX_HOME", hostCodexHome)
+
+	runDir := filepath.Join(t.TempDir(), "run")
+	if err := prepareRunDir(runDir, cacheConfig{}); err != nil {
+		t.Fatalf("prepare run dir: %v", err)
+	}
+	for _, want := range []string{
+		filepath.Join(runDir, "codex-home"),
+		filepath.Join(runDir, "zdotdir"),
+		filepath.Join(runDir, "tmp"),
+	} {
+		if info, err := os.Stat(want); err != nil || !info.IsDir() {
+			t.Fatalf("expected directory %s, stat err=%v", want, err)
+		}
+	}
+	for name, want := range map[string]string{
+		"auth.json":       `{"token":"test"}`,
+		"config.toml":     "model = \"gpt-5.4-mini\"\n",
+		"installation_id": "test-installation\n",
+	} {
+		got, err := os.ReadFile(filepath.Join(runDir, "codex-home", name))
+		if err != nil {
+			t.Fatalf("read seeded %s: %v", name, err)
+		}
+		if string(got) != want {
+			t.Fatalf("seeded %s = %q, want %q", name, got, want)
+		}
 	}
 }
 
@@ -537,9 +621,50 @@ func TestVerifyFinalAnswerOnlyRequiresRejectionAndNoTools(t *testing.T) {
 	}
 
 	missingPath := scenario{ID: "missing-document-path-reject"}
-	message := "Unsupported: creating an OpenClerk document requires a `path`. Use the OpenClerk JSON runner with a create_document request that includes document.path."
+	message := "I can't create the document yet because document.path is missing. Provide the target path and I can continue with the OpenClerk runner."
 	if result := verifyFinalAnswerOnly(missingPath, message, noTools); !result.Passed {
 		t.Fatalf("requires path rejection failed: %+v", result)
+	}
+}
+
+func TestVerifyMissingFieldClarificationRequiresNoToolsAndFieldNames(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: "mt-incomplete-then-create"}); err != nil {
+		t.Fatalf("seed scenario: %v", err)
+	}
+	noTools := metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}}
+	result, err := verifyMissingFieldClarification(ctx, paths, "notes/projects/mt-complete.md", "I can't create the note yet because path, title, and body are missing. Provide them and I can continue.", noTools, []string{"path", "title", "body"})
+	if err != nil {
+		t.Fatalf("verify clarification: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("valid clarification failed: %+v", result)
+	}
+
+	withTools := metrics{AssistantCalls: 1, ToolCalls: 1, CommandExecutions: 1, EventTypeCounts: map[string]int{}}
+	result, err = verifyMissingFieldClarification(ctx, paths, "notes/projects/mt-complete.md", "I can't create the note yet because path, title, and body are missing. Provide them and I can continue.", withTools, []string{"path", "title", "body"})
+	if err != nil {
+		t.Fatalf("verify clarification with tools: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("tool-using clarification passed: %+v", result)
+	}
+
+	result, err = verifyMissingFieldClarification(ctx, paths, "notes/projects/mt-complete.md", "I need more information.", noTools, []string{"path", "title", "body"})
+	if err != nil {
+		t.Fatalf("verify incomplete clarification: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("missing-fields clarification passed without naming fields: %+v", result)
+	}
+
+	result, err = verifyMissingFieldClarification(ctx, paths, "notes/projects/mt-complete.md", "I need to use the HTTP transport for path, title, and body.", noTools, []string{"path", "title", "body"})
+	if err != nil {
+		t.Fatalf("verify non-clarifying message: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("non-clarifying message passed: %+v", result)
 	}
 }
 

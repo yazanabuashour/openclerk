@@ -12,7 +12,7 @@ func TestRunAcceptsValidSkillWithFrontmatter(t *testing.T) {
 	t.Parallel()
 
 	skillDir := writeSkill(t, "openclerk", `---
-name: openclerk
+name: OpenClerk
 description: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner.
 compatibility: Requires local filesystem access and an installed openclerk binary on PATH.
 license: MIT
@@ -54,21 +54,21 @@ func TestRunRejectsInvalidSkillPayloads(t *testing.T) {
 		{
 			name: "missing opening delimiter",
 			files: map[string]string{
-				"SKILL.md": "name: openclerk\n",
+				"SKILL.md": "name: OpenClerk\n",
 			},
 			wantErr: "must start with YAML frontmatter",
 		},
 		{
 			name: "missing closing delimiter",
 			files: map[string]string{
-				"SKILL.md": "---\nname: openclerk\n",
+				"SKILL.md": "---\nname: OpenClerk\n",
 			},
 			wantErr: "must include a closing ---",
 		},
 		{
 			name: "non scalar frontmatter",
 			files: map[string]string{
-				"SKILL.md": "---\nname: openclerk\ndescription\n---\n",
+				"SKILL.md": "---\nname: OpenClerk\ndescription\n---\n",
 			},
 			wantErr: "must be a scalar key-value pair",
 		},
@@ -82,9 +82,16 @@ func TestRunRejectsInvalidSkillPayloads(t *testing.T) {
 		{
 			name: "description too long",
 			files: map[string]string{
-				"SKILL.md": "---\nname: openclerk\ndescription: " + strings.Repeat("a", 1025) + "\n---\n",
+				"SKILL.md": "---\nname: OpenClerk\ndescription: " + strings.Repeat("a", 1025) + "\n---\n",
 			},
 			wantErr: "description must be 1024 characters or fewer",
+		},
+		{
+			name: "name must normalize to slug",
+			files: map[string]string{
+				"SKILL.md": "---\nname: WrongSkill\ndescription: Use OpenClerk locally.\n---\n",
+			},
+			wantErr: "must normalize to the parent directory slug",
 		},
 		{
 			name: "missing referenced file",

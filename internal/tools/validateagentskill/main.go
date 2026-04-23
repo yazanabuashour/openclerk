@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	skillNamePattern       = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
+	skillNamePattern       = regexp.MustCompile(`^[A-Za-z0-9]+(-[A-Za-z0-9]+)*$`)
 	markdownLinkPattern    = regexp.MustCompile(`\[[^\]]+\]\(([^)]+)\)`)
 	retiredRunnerPattern   = regexp.MustCompile(`\b(openclerkd|openclerk-agentops)\b`)
 	retiredTransportRegexp = regexp.MustCompile(`\b(openapi|OpenAPI|HTTP server|MCP transport|SQLite fallback|generated client)\b`)
@@ -126,14 +126,14 @@ func validateMetadata(skillDir string, skillFile string, metadata map[string]str
 		return fmt.Errorf("%s frontmatter must define a non-empty name", skillFile)
 	}
 	parentDir := filepath.Base(skillDir)
-	if name != parentDir {
-		return fmt.Errorf("%s name must match the parent directory (%q)", skillFile, parentDir)
+	if normalizeSkillSlug(name) != parentDir {
+		return fmt.Errorf("%s name must normalize to the parent directory slug (%q)", skillFile, parentDir)
 	}
 	if len([]rune(name)) > 64 {
 		return fmt.Errorf("%s name must be 64 characters or fewer", skillFile)
 	}
 	if !skillNamePattern.MatchString(name) {
-		return fmt.Errorf("%s name must use lowercase letters, numbers, and single hyphens only", skillFile)
+		return fmt.Errorf("%s name must use letters, numbers, and single hyphens only", skillFile)
 	}
 
 	description := metadata["description"]
@@ -153,6 +153,10 @@ func validateMetadata(skillDir string, skillFile string, metadata map[string]str
 		}
 	}
 	return nil
+}
+
+func normalizeSkillSlug(name string) string {
+	return strings.ToLower(strings.TrimSpace(name))
 }
 
 func validateMarkdownLinks(skillDir string, skillFile string, content string) error {

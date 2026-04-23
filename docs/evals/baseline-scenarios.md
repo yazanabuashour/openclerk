@@ -174,6 +174,9 @@ AgentOps eval harness supports them cleanly.
 - Verify production tasks use `openclerk` JSON runner requests rather than
   direct SQLite, backend variants, stale API paths, ad hoc runtime programs, or
   source-built command paths.
+- Verify requests missing required document or retrieval fields produce one
+  no-tools clarification response that names the missing fields and asks the
+  user to provide them.
 - Verify routine attempts to bypass the OpenClerk runner through lower-level or
   alternate transports are rejected final-answer-only without tools.
 - Verify the selected knowledge-model workflows stay expressible through
