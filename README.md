@@ -4,9 +4,7 @@ OpenClerk is a local-first, agent-facing knowledge plane for notes, documents,
 promoted records, source-linked synthesis, and provenance-backed retrieval.
 
 The supported product interface is the AgentOps pattern: a shipped `openclerk`
-runner plus the single-file skill at `skills/openclerk/SKILL.md`. There is no
-public importable Go API, hosted service, remote HTTP API, or daemon in the
-supported product path.
+runner plus the single-file skill at `skills/openclerk/SKILL.md`.
 
 OpenClerk is infrastructure for persistent agent-maintained knowledge: useful
 synthesis should become cited, inspectable markdown rather than being

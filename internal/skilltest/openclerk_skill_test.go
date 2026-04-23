@@ -1,41 +1,36 @@
-package openclerkskill_test
+package skilltest_test
 
 import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 )
 
-func TestSkillPayloadContainsOnlySkillMarkdown(t *testing.T) {
+func TestOpenClerkSkillPayloadContainsOnlySkillMarkdown(t *testing.T) {
 	t.Parallel()
 
-	entries, err := os.ReadDir(".")
+	entries, err := os.ReadDir(openClerkSkillDir(t))
 	if err != nil {
 		t.Fatalf("read skill dir: %v", err)
 	}
-	payloadEntries := []string{}
+	names := make([]string, 0, len(entries))
 	for _, entry := range entries {
-		if strings.HasSuffix(entry.Name(), "_test.go") {
-			continue
-		}
-		payloadEntries = append(payloadEntries, entry.Name())
+		names = append(names, entry.Name())
 	}
-	if len(payloadEntries) != 1 || payloadEntries[0] != "SKILL.md" {
-		names := make([]string, 0, len(entries))
-		for _, entry := range entries {
-			names = append(names, entry.Name())
-		}
+	if len(names) != 1 || names[0] != "SKILL.md" {
 		t.Fatalf("skill payload files = %v, want exactly SKILL.md", names)
 	}
 }
 
-func TestSkillMarkdownLinksReferenceInstalledFiles(t *testing.T) {
+func TestOpenClerkSkillMarkdownLinksReferenceInstalledFiles(t *testing.T) {
 	t.Parallel()
 
+	skillDir := openClerkSkillDir(t)
 	markdownFiles := []string{}
-	if err := filepath.WalkDir(".", func(path string, entry os.DirEntry, err error) error {
+	if err := filepath.WalkDir(skillDir, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -67,10 +62,10 @@ func TestSkillMarkdownLinksReferenceInstalledFiles(t *testing.T) {
 	}
 }
 
-func TestSkillUsesInstalledRunnerForRoutineWork(t *testing.T) {
+func TestOpenClerkSkillUsesInstalledRunnerForRoutineWork(t *testing.T) {
 	t.Parallel()
 
-	content, err := os.ReadFile("SKILL.md")
+	content, err := os.ReadFile(openClerkSkillPath(t))
 	if err != nil {
 		t.Fatalf("read skill: %v", err)
 	}
@@ -129,10 +124,10 @@ func TestSkillUsesInstalledRunnerForRoutineWork(t *testing.T) {
 	}
 }
 
-func TestSkillDescriptionContainsBootstrapRejectionGuard(t *testing.T) {
+func TestOpenClerkSkillDescriptionContainsBootstrapRejectionGuard(t *testing.T) {
 	t.Parallel()
 
-	content, err := os.ReadFile("SKILL.md")
+	content, err := os.ReadFile(openClerkSkillPath(t))
 	if err != nil {
 		t.Fatalf("read skill: %v", err)
 	}
@@ -158,6 +153,25 @@ func TestSkillDescriptionContainsBootstrapRejectionGuard(t *testing.T) {
 			t.Fatalf("SKILL.md description missing %q: %s", want, description)
 		}
 	}
+}
+
+func openClerkSkillPath(t *testing.T) string {
+	t.Helper()
+	return filepath.Join(openClerkSkillDir(t), "SKILL.md")
+}
+
+func openClerkSkillDir(t *testing.T) string {
+	t.Helper()
+	return filepath.Join(repoRoot(t), "skills", "openclerk")
+}
+
+func repoRoot(t *testing.T) string {
+	t.Helper()
+	_, currentFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("locate current test file")
+	}
+	return filepath.Clean(filepath.Join(filepath.Dir(currentFile), "..", ".."))
 }
 
 func frontmatterDescription(content string) string {

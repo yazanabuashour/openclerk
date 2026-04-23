@@ -22,6 +22,8 @@ The product model is:
   default storage shape
 - provenance and projection-state runner actions make derivation and freshness
   inspectable
+- post-v0.1.0 document history and review controls should make
+  agent-authored durable edits inspectable, reviewable, and restorable
 - memory and routing remain deferred until the docs, synthesis, and truth-sync
   layers are reliable through AgentOps
 
@@ -76,6 +78,12 @@ The docs layer now exposes:
 - safe write operations for canonical docs
 - docs-centric link expansion
 - citation-bearing retrieval results
+
+Post-v0.1.0 document lifecycle planning is recorded in
+[`openclerk-document-post-v0.1.0.md`](openclerk-document-post-v0.1.0.md).
+The direction is to add agent-visible document history, review, and rollback
+semantics after the first release without replacing Git or adding a new public
+runner action before eval evidence justifies it.
 
 ### LLM Wiki alignment
 
@@ -177,6 +185,8 @@ in
 The promotion/defer/kill gate for memory, routing, semantic graph, broad
 contradiction detection, and new public runner actions is recorded in
 [`deferred-capability-promotion-gates.md`](deferred-capability-promotion-gates.md).
+The post-v0.1.0 document lifecycle vision is recorded in
+[`openclerk-document-post-v0.1.0.md`](openclerk-document-post-v0.1.0.md).
 
 ## Out of scope for this rewrite
 
