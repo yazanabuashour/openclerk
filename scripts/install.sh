@@ -161,9 +161,23 @@ cp "openclerk_${asset_version}_${os}_${arch}/openclerk" "${install_dir}/opencler
 chmod 755 "${install_dir}/openclerk"
 
 log "Installed openclerk runner to ${install_dir}/openclerk"
+installed_version="$("${install_dir}/openclerk" --version)"
+log "Runner version: ${installed_version}"
+
+active_path="$(command -v openclerk 2>/dev/null || true)"
+if path_contains_dir "$install_dir"; then
+  [ -n "$active_path" ] || fail "openclerk is not callable even though ${install_dir} is on PATH"
+  active_version="$(openclerk --version 2>/dev/null || true)"
+  if [ "$active_version" != "$installed_version" ]; then
+    log ""
+    log "Warning: active openclerk resolves to ${active_path}, not ${install_dir}/openclerk."
+    log "Your current shell may still invoke another openclerk binary."
+    fail "active openclerk reports ${active_version:-unavailable}; expected ${installed_version}"
+  fi
+fi
 
 if path_contains_dir "$install_dir"; then
-  openclerk --help
+  "${install_dir}/openclerk" --help
 else
   "${install_dir}/openclerk" --help
   log ""
@@ -172,7 +186,8 @@ else
 fi
 
 log ""
-log "Install the Agent Skills-compatible skill with your agent's native skill installer or skill directory:"
-log "  https://github.com/${repo}/tree/${tag}/skills/openclerk"
-log ""
-log "This installer does not choose an agent-specific skill location."
+log "To complete OpenClerk installation, register the OpenClerk skill with your agent:"
+log "  Source: https://github.com/${repo}/tree/${tag}/skills/openclerk"
+log "  Archive: ${release_url}/openclerk_${asset_version}_skill.tar.gz"
+log "Use your agent's native skill location or installer."
+log "Do not report OpenClerk installed until both the runner and skill are installed."

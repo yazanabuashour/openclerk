@@ -8,10 +8,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime/debug"
 
 	"github.com/yazanabuashour/openclerk/internal/runclient"
 	"github.com/yazanabuashour/openclerk/internal/runner"
 )
+
+var version string
 
 func main() {
 	os.Exit(run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
@@ -26,6 +29,9 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 	switch args[0] {
 	case "help", "-h", "--help":
 		usage(stdout)
+		return 0
+	case "version", "--version":
+		writeVersion(stdout)
 		return 0
 	case "document":
 		return runDocument(args[1:], stdin, stdout, stderr)
@@ -120,6 +126,25 @@ func decodeRequest[T any](stdin io.Reader, request *T) error {
 	return nil
 }
 
+func writeVersion(w io.Writer) {
+	info, ok := readBuildInfo()
+	_, _ = fmt.Fprintf(w, "openclerk %s\n", resolvedVersion(version, info, ok))
+}
+
+func readBuildInfo() (*debug.BuildInfo, bool) {
+	return debug.ReadBuildInfo()
+}
+
+func resolvedVersion(linkerVersion string, info *debug.BuildInfo, ok bool) string {
+	if linkerVersion != "" {
+		return linkerVersion
+	}
+	if ok && info != nil && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		return info.Main.Version
+	}
+	return "dev"
+}
+
 func usage(stderr io.Writer) {
-	_, _ = fmt.Fprintln(stderr, "usage: openclerk <document|retrieval> [--data-dir path] [--db path] [--vault-root path] [--embedding-provider name]")
+	_, _ = fmt.Fprintln(stderr, "usage: openclerk <version|document|retrieval> [--data-dir path] [--db path] [--vault-root path] [--embedding-provider name]")
 }

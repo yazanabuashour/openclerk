@@ -27,7 +27,7 @@ for target in "${targets[@]}"; do
   IFS=/ read -r os arch <<< "${target}"
   name="openclerk_${asset_version}_${os}_${arch}"
   mkdir -p "${out_dir}/${name}"
-  GOOS="${os}" GOARCH="${arch}" go build -trimpath -ldflags="-s -w" -o "${out_dir}/${name}/openclerk" ./cmd/openclerk
+  GOOS="${os}" GOARCH="${arch}" go build -trimpath -ldflags="-s -w -X main.version=${version}" -o "${out_dir}/${name}/openclerk" ./cmd/openclerk
   tar -C "${out_dir}" -czf "${out_dir}/${name}.tar.gz" "${name}"
   rm -rf "${out_dir:?}/${name}"
 done

@@ -164,6 +164,9 @@ range. Each tagged GitHub Release publishes binary archives, the skill archive,
 a release installer, a canonical source archive, SHA256 checksums, an SBOM, and
 GitHub attestations for release verification.
 
+See `docs/release-verification.md` for checksum, attestation, installer, and
+SBOM verification steps.
+
 ## Contributing
 
 Outside contributors can work entirely through GitHub issues and pull requests.

@@ -27,11 +27,18 @@ jobs:
             SECURITY.md
             CODE_OF_CONDUCT.md
             skills/openclerk/SKILL.md
+            CHANGELOG.md
+            docs/release-notes/v0.1.0.md
+            docs/release-verification.md
+            docs/security-operations.md
             .github/CODEOWNERS
             .github/PULL_REQUEST_TEMPLATE.md
             .github/dependabot.yml
             .github/workflows/pull-request.yml
             .github/workflows/release.yml
+            .github/workflows/codeql.yml
+            scripts/validate-agent-skill.sh
+            scripts/validate-release-docs.sh
           )
 
           for file in "${required_files[@]}"; do
@@ -53,11 +60,11 @@ jobs:
             exit 1
           fi
 
-      - name: Validate Agent Skills package
-        run: |
-          python3 -m venv "${RUNNER_TEMP}/agentskills"
-          "${RUNNER_TEMP}/agentskills/bin/pip" install skills-ref
-          "${RUNNER_TEMP}/agentskills/bin/agentskills" validate skills/openclerk
+      - name: Validate Agent Skill
+        run: ./scripts/validate-agent-skill.sh skills/openclerk
+
+      - name: Validate release docs
+        run: ./scripts/validate-release-docs.sh v0.1.0
 
   go-checks:
     name: Go checks

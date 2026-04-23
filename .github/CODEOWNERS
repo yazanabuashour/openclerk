@@ -5,6 +5,14 @@
 /.github/PULL_REQUEST_TEMPLATE.md @yazanabuashour
 /.github/dependabot.yml @yazanabuashour
 /.github/workflows/ @yazanabuashour
+/CHANGELOG.md @yazanabuashour
 /SECURITY.md @yazanabuashour
 /skills/openclerk/ @yazanabuashour
 /docs/maintainers.md @yazanabuashour
+/docs/release-notes/ @yazanabuashour
+/docs/release-verification.md @yazanabuashour
+/docs/security-operations.md @yazanabuashour
+/scripts/build-release-bundle.sh @yazanabuashour
+/scripts/install.sh @yazanabuashour
+/scripts/validate-agent-skill.sh @yazanabuashour
+/scripts/validate-release-docs.sh @yazanabuashour

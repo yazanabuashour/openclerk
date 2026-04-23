@@ -1,6 +1,6 @@
 module github.com/yazanabuashour/openclerk
 
-go 1.26.0
+go 1.26.2
 
 require modernc.org/sqlite v1.49.1
 

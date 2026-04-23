@@ -4,30 +4,16 @@ on:
   push:
     tags:
       - "v*"
-  workflow_dispatch:
-    inputs:
-      ref:
-        description: Git ref to package in a release dry run
-        required: false
-        default: main
-
-permissions:
-  contents: write
-  id-token: write
-  attestations: write
-  artifact-metadata: write
 
 jobs:
-  publish-release:
-    name: Publish GitHub Release
+  verify-release:
+    name: Verify release inputs
     runs-on: ubuntu-latest
-    environment: release
+    permissions:
+      contents: read
     steps:
       - name: Check out repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
 
       - name: Set up Go
         uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
@@ -35,29 +21,123 @@ jobs:
           go-version-file: go.mod
           check-latest: true
 
-      - name: Resolve release metadata
-        id: meta
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          INPUT_REF: ${{ inputs.ref }}
-          GITHUB_REF_NAME_VALUE: ${{ github.ref_name }}
-        run: |
-          if [ "${EVENT_NAME}" = "push" ]; then
-            version="${GITHUB_REF_NAME_VALUE}"
-            publish=true
-          else
-            version="dry-run-$(printf '%s' "${INPUT_REF:-main}" | sed 's#^refs/heads/##; s#^refs/tags/##; s#[^A-Za-z0-9._-]#-#g')"
-            publish=false
-          fi
-          echo "version=${version}" >> "${GITHUB_OUTPUT}"
-          echo "asset_version=${version#v}" >> "${GITHUB_OUTPUT}"
-          echo "publish=${publish}" >> "${GITHUB_OUTPUT}"
+      - name: Validate release notes and changelog
+        run: ./scripts/validate-release-docs.sh "${GITHUB_REF_NAME}"
 
-      - name: Run release validation
+      - name: Validate Agent Skill
+        run: ./scripts/validate-agent-skill.sh skills/openclerk
+
+      - name: Check formatting
+        run: test -z "$(gofmt -l $(git ls-files '*.go'))"
+
+      - name: Run tests
         run: go test ./...
 
+      - name: Run golangci-lint
+        run: go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.4 run
+
+  publish-release:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    needs:
+      - verify-release
+    environment:
+      name: release
+    permissions:
+      attestations: write
+      contents: write
+      id-token: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: Prepare release metadata
+        id: meta
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          archive="openclerk_${version}_source.tar.gz"
+          skill="openclerk_${version}_skill.tar.gz"
+          checksum="openclerk_${version}_checksums.txt"
+          sbom="openclerk_${version}_sbom.json"
+          installer="install.sh"
+          assets_json="$(printf '%s\n' \
+            "${installer}" \
+            "${checksum}" \
+            "openclerk_${version}_darwin_amd64.tar.gz" \
+            "openclerk_${version}_darwin_arm64.tar.gz" \
+            "openclerk_${version}_linux_amd64.tar.gz" \
+            "openclerk_${version}_linux_arm64.tar.gz" \
+            "${sbom}" \
+            "${skill}" \
+            "${archive}" \
+            | jq -R . | jq -cs .)"
+
+          {
+            echo "archive=${archive}"
+            echo "skill=${skill}"
+            echo "checksum=${checksum}"
+            echo "sbom=${sbom}"
+            echo "installer=${installer}"
+            echo "assets_json=${assets_json}"
+          } >> "${GITHUB_OUTPUT}"
+
       - name: Build release assets
-        run: bash ./scripts/build-release-bundle.sh "${{ steps.meta.outputs.version }}" dist
+        run: bash ./scripts/build-release-bundle.sh "${GITHUB_REF_NAME}" dist
+
+      - name: Create draft GitHub Release from tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes_file="docs/release-notes/${GITHUB_REF_NAME}.md"
+          release_json="$(gh release view "${GITHUB_REF_NAME}" --json isDraft 2>/dev/null || true)"
+          if [ -n "${release_json}" ]; then
+            is_draft="$(printf '%s\n' "${release_json}" | jq -r '.isDraft')"
+            if [ "${is_draft}" != "true" ]; then
+              echo "Release ${GITHUB_REF_NAME} already exists and is not a draft; refusing to mutate a published release." >&2
+              exit 1
+            fi
+            echo "Release already exists for ${GITHUB_REF_NAME}"
+            gh release edit "${GITHUB_REF_NAME}" --notes-file "${notes_file}"
+          else
+            gh release create "${GITHUB_REF_NAME}" \
+              --draft \
+              --verify-tag \
+              --notes-file "${notes_file}"
+          fi
+
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${GITHUB_REF_NAME}" \
+            dist/* \
+            --clobber
+
+      - name: Verify draft GitHub Release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_ASSETS: ${{ steps.meta.outputs.assets_json }}
+        run: |
+          release_json="$(gh release view "${GITHUB_REF_NAME}" --json isDraft,assets)"
+          is_draft="$(printf '%s\n' "${release_json}" | jq -r '.isDraft')"
+          [ "${is_draft}" = "true" ] || { echo "Release ${GITHUB_REF_NAME} is not draft before publish" >&2; exit 1; }
+
+          actual_assets="$(printf '%s\n' "${release_json}" | jq -c '[.assets[].name] | sort')"
+          expected_assets="$(printf '%s\n' "${EXPECTED_ASSETS}" | jq -c 'sort')"
+          [ "${actual_assets}" = "${expected_assets}" ] || {
+            echo "Draft release assets do not match expected set" >&2
+            echo "expected: ${expected_assets}" >&2
+            echo "actual:   ${actual_assets}" >&2
+            exit 1
+          }
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a
@@ -67,20 +147,23 @@ jobs:
       - name: Attest SBOM
         uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34
         with:
-          subject-path: dist/openclerk_${{ steps.meta.outputs.asset_version }}_source.tar.gz
-          sbom-path: dist/openclerk_${{ steps.meta.outputs.asset_version }}_sbom.json
+          subject-path: dist/${{ steps.meta.outputs.archive }}
+          sbom-path: dist/${{ steps.meta.outputs.sbom }}
 
-      - name: Create or update GitHub Release
-        if: steps.meta.outputs.publish == 'true'
+      - name: Publish draft GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "${GITHUB_REF_NAME}" --draft=false --latest
+
+      - name: Verify published GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
-            gh release upload "${GITHUB_REF_NAME}" dist/* --clobber
-            exit 0
-          fi
+          release_json="$(gh release view "${GITHUB_REF_NAME}" --json isDraft,isPrerelease)"
+          is_draft="$(printf '%s\n' "${release_json}" | jq -r '.isDraft')"
+          is_prerelease="$(printf '%s\n' "${release_json}" | jq -r '.isPrerelease')"
+          [ "${is_draft}" = "false" ] || { echo "Release ${GITHUB_REF_NAME} is still draft" >&2; exit 1; }
+          [ "${is_prerelease}" = "false" ] || { echo "Release ${GITHUB_REF_NAME} is prerelease" >&2; exit 1; }
 
-          gh release create "${GITHUB_REF_NAME}" \
-            --verify-tag \
-            --generate-notes \
-            dist/*
+          latest_tag="$(gh release view --json tagName --jq '.tagName')"
+          [ "${latest_tag}" = "${GITHUB_REF_NAME}" ] || { echo "Latest release is ${latest_tag}, expected ${GITHUB_REF_NAME}" >&2; exit 1; }

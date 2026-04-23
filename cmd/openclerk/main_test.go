@@ -5,11 +5,75 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"testing"
 
 	"github.com/yazanabuashour/openclerk/internal/runner"
 )
+
+func TestRunnerVersion(t *testing.T) {
+	t.Parallel()
+
+	for _, args := range [][]string{{"--version"}, {"version"}} {
+		var stdout bytes.Buffer
+		var stderr bytes.Buffer
+		code := run(args, strings.NewReader(""), &stdout, &stderr)
+		if code != 0 {
+			t.Fatalf("run %v exit = %d stderr=%s", args, code, stderr.String())
+		}
+		if got := strings.TrimSpace(stdout.String()); !strings.HasPrefix(got, "openclerk ") {
+			t.Fatalf("version output = %q, want openclerk prefix", got)
+		}
+	}
+}
+
+func TestResolvedVersion(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		linkerVersion string
+		info          *debug.BuildInfo
+		ok            bool
+		want          string
+	}{
+		{
+			name:          "linker version wins",
+			linkerVersion: "v0.1.0",
+			info:          &debug.BuildInfo{Main: debug.Module{Version: "v0.0.9"}},
+			ok:            true,
+			want:          "v0.1.0",
+		},
+		{
+			name: "module version",
+			info: &debug.BuildInfo{Main: debug.Module{Version: "v0.1.0"}},
+			ok:   true,
+			want: "v0.1.0",
+		},
+		{
+			name: "development fallback",
+			info: &debug.BuildInfo{Main: debug.Module{Version: "(devel)"}},
+			ok:   true,
+			want: "dev",
+		},
+		{
+			name: "missing build info fallback",
+			want: "dev",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := resolvedVersion(tt.linkerVersion, tt.info, tt.ok); got != tt.want {
+				t.Fatalf("resolvedVersion = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
 
 func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 	t.Parallel()
