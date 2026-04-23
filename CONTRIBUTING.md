@@ -2,25 +2,16 @@
 
 Outside contributors do not need Beads to contribute to this repository.
 
-## Current Project Shape
+## Project Shape
 
-The shipped product surface is the installed `openclerk` JSON runner plus the
-single-file skill at `skills/openclerk/SKILL.md`. There is no public importable
-Go API, hosted service, remote HTTP API, or daemon in the supported product
-path.
+This repository exposes a production `openclerk` runner binary in
+`cmd/openclerk` and a single-file OpenClerk skill in
+`skills/openclerk/SKILL.md`. The supported product path is the installed runner
+plus the skill; OpenClerk does not ship a public Go API, hosted service, remote
+HTTP API, or daemon contract.
 
-## Public Install Contract
-
-For agents, install the repository:
-
-```text
-Install https://github.com/yazanabuashour/openclerk
-```
-
-The repository publishes an Agent Skills-compatible skill at `skills/openclerk`
-and an `openclerk` runner binary. Agents should use their native skill installer
-or skill directory; docs should not assume a specific agent vendor or fixed
-skill path.
+Changes to the runner, skill, storage behavior, or docs must keep runtime
+behavior, setup docs, and CI checks aligned.
 
 ## Local Setup
 
@@ -30,51 +21,57 @@ Maintainers prefer:
 mise install
 ```
 
-The current local validation commands are:
+Outside contributors may use their own tooling if they can satisfy the
+repository checks. Beads and Dolt are maintainer-only tools and are not required
+to open, review, or merge pull requests.
+
+Contributors should be able to run:
 
 ```bash
+printf '%s\n' '{"action":"resolve_paths"}' | \
+  OPENCLERK_DATA_DIR="$(mktemp -d)" mise exec -- go run ./cmd/openclerk document
 test -z "$(gofmt -l $(git ls-files '*.go'))"
-go test ./...
 mise exec -- golangci-lint run
+mise exec -- go test ./...
+mise exec -- ./scripts/validate-agent-skill.sh skills/openclerk
 ```
 
-Outside contributors may use their own local tooling if they can satisfy the
-repository checks.
+If a change touches release notes or release workflow behavior, also run:
 
-Beads and Dolt are maintainer-only tools. They are optional for outside
-contributors and are not required to open, review, or merge pull requests.
+```bash
+mise exec -- ./scripts/validate-release-docs.sh v0.1.0
+```
+
+`golangci-lint` is pinned by `mise.toml`; run it through `mise exec` instead
+of relying on a global binary.
 
 ## Pull Request Expectations
 
 - Keep changes reviewable without access to Beads state.
 - Update repository docs when the public contract or storage behavior changes.
 - Do not commit credentials, private infrastructure details, or sensitive sample data.
-- Route security issues through the private process in `SECURITY.md`, not through public issues or pull requests.
+- Route security issues through the private process in [SECURITY.md](SECURITY.md), not through public issues or pull requests.
 
-## Checks And Review Rules
+## Checks and Review Rules
 
-Current pull request checks validate:
+Pull request checks validate repository policy, Agent Skill metadata shape,
+release docs, Go formatting, Go linting, unit tests, CodeQL, and
+dependency-review safety.
 
-- required repository policy files
-- machine-path hygiene in committed docs
-- Agent Skills package validity
-- Go formatting
-- Go tests
-- `golangci-lint`
-- dependency-review safety
+Pull requests that touch Go code are expected to leave the repository in a
+runnable, formatted, lint-clean, and test-clean state. Changes to
+`skills/openclerk/SKILL.md` should also pass
+`mise exec -- ./scripts/validate-agent-skill.sh skills/openclerk`.
 
-Pull requests that touch the internal runtime, runner, or skill should
-leave the repository in a public-safe, policy-consistent, and runnable state
-without requiring a local daemon.
+## Support and Compatibility
 
-If a change affects the public product story, keep the docs aligned with the
-single-surface agent knowledge plane framing in `README.md` and
-`docs/architecture/agent-knowledge-plane.md`.
+Before `1.0`, compatibility is best effort and may change between releases.
+The production install story is the `openclerk` runner plus the single-file
+OpenClerk skill.
 
-## Support And Compatibility
+Go `1.26.2` is required for repository development and CI validation on
+`ubuntu-latest`. Routine client-agent use should not require a Go toolchain.
+OpenClerk does not promise a hosted deployment target, remote HTTP API
+contract, or public Go package contract.
 
-Before `1.0.0`, compatibility is best effort and may change between releases.
-The current support target is Go `1.26.x` on current Linux and macOS
-environments using the installed local runner.
-
-Maintainer workflow notes live in `docs/maintainers.md`.
+Maintainer workflow notes live in [docs/maintainers.md](docs/maintainers.md).

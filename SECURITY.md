@@ -2,14 +2,9 @@
 
 ## Supported Versions
 
-This project ships an installed local runner and an Agent Skills-compatible
-skill for local document storage. There is no public importable Go API, hosted
-service, or long-running daemon in the supported user path.
-
-Until `1.0.0`, the supported code lines are:
-
-- the current default branch
-- the most recent `v0.y.z` tag
+This project is pre-`1.0` and ships a production `openclerk` runner plus a
+single-file OpenClerk skill. The supported code lines are the current default
+branch and the most recent `v0.y.z` tag, if one exists.
 
 Older pre-`1.0` tags are not guaranteed to receive fixes or backports.
 
@@ -23,12 +18,12 @@ Include:
 - a clear description of the issue
 - affected files or workflow surfaces
 - reproduction steps or proof-of-concept details
-- expected impact and any known mitigations
+- expected impact and known mitigations
 
-If GitHub private reporting is temporarily unavailable, contact the repository
-owner through an existing private channel and share only enough detail to
-establish a private handoff. Do not disclose the vulnerability publicly while
-that handoff is being arranged.
+If GitHub private reporting is unavailable, contact the repository owner through
+an existing private channel and share only enough detail to arrange private
+handoff. Do not disclose the vulnerability publicly while that handoff is being
+arranged.
 
 ## Response Expectations
 
@@ -43,7 +38,7 @@ These are targets, not contractual guarantees:
 
 ## Severity Handling
 
-Maintainers will triage reports using practical impact on repository users and
+Maintainers triage reports using practical impact on repository users and
 maintainers:
 
 - Critical: repository compromise, credential exposure, arbitrary code execution in trusted automation, or release-integrity failure.
@@ -63,12 +58,6 @@ this file remain the public source of truth for vulnerability reports.
 - Fixes land privately first when needed to avoid widening exposure.
 - Public release notes should avoid exploit-enabling detail until a fix or mitigation is available.
 - If the repository later adopts GitHub Security Advisories, maintainers should publish advisories for material fixes.
-
-## Release integrity
-
-Tagged releases publish runner archives, a skill archive, a source archive,
-checksums, an SBOM, and GitHub attestations. Users should verify checksums and
-artifact attestations before treating a tag as trusted.
 
 ## Emergency Releases and Hotfixes
 
