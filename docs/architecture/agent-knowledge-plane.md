@@ -174,6 +174,9 @@ The normative v1 knowledge configuration contract is recorded in
 The final POC recommendation for the AgentOps knowledge-plane path is recorded
 in
 [`agentops-knowledge-plane-poc-decision.md`](agentops-knowledge-plane-poc-decision.md).
+The promotion/defer/kill gate for memory, routing, semantic graph, broad
+contradiction detection, and new public runner actions is recorded in
+[`deferred-capability-promotion-gates.md`](deferred-capability-promotion-gates.md).
 
 ## Out of scope for this rewrite
 

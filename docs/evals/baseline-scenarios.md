@@ -8,6 +8,13 @@ define proof obligations for the AgentOps-only knowledge-plane direction in
 The benchmark archetypes and comparison axes behind these scenarios are defined
 in `docs/evals/knowledge-plane-archetype-matrix.md`.
 
+Deferred capability promotion gates are defined in
+`docs/architecture/deferred-capability-promotion-gates.md`. Mem0 or memory
+APIs, autonomous routing, semantic graph truth, broad contradiction engines,
+and new public runner actions require targeted AgentOps eval evidence and an
+explicit promote/defer/kill/reference decision before any implementation issue
+is filed.
+
 ## Source-Grounded Retrieval
 
 - Create canonical notes with stable headings and exact terms.
