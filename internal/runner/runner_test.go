@@ -17,7 +17,7 @@ func TestDocumentTaskCreateListGetAndUpdate(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	config := runclient.Config{DataDir: filepath.Join(t.TempDir(), "data")}
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
 	create, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionCreate,
 		Document: runner.DocumentInput{
@@ -106,13 +106,13 @@ func TestRetrievalTaskSynthesisFreshnessProjectionAndProvenance(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	config := runclient.Config{DataDir: filepath.Join(t.TempDir(), "data")}
-	source := createDocument(t, ctx, config, "notes/sources/runner.md", "Runner Source", "# Runner Source\n\n## Summary\nInitial source guidance.\n")
-	synthesis := createDocument(t, ctx, config, "notes/synthesis/runner.md", "Runner Synthesis", strings.TrimSpace(`---
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	source := createDocument(t, ctx, config, "sources/runner.md", "Runner Source", "# Runner Source\n\n## Summary\nInitial source guidance.\n")
+	synthesis := createDocument(t, ctx, config, "synthesis/runner.md", "Runner Synthesis", strings.TrimSpace(`---
 type: synthesis
 status: active
 freshness: fresh
-source_refs: notes/sources/runner.md
+source_refs: sources/runner.md
 ---
 # Runner Synthesis
 
@@ -120,7 +120,7 @@ source_refs: notes/sources/runner.md
 Initial source guidance.
 
 ## Sources
-- notes/sources/runner.md
+- sources/runner.md
 
 ## Freshness
 Checked source refs.
@@ -155,7 +155,7 @@ Checked source refs.
 	if projections.Projections == nil ||
 		len(projections.Projections.Projections) != 1 ||
 		projections.Projections.Projections[0].Freshness != "stale" ||
-		projections.Projections.Projections[0].Details["stale_source_refs"] != "notes/sources/runner.md" {
+		projections.Projections.Projections[0].Details["stale_source_refs"] != "sources/runner.md" {
 		t.Fatalf("synthesis projections result = %+v", projections)
 	}
 
@@ -196,13 +196,13 @@ func TestDocumentTaskInspectLayout(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	config := runclient.Config{DataDir: filepath.Join(t.TempDir(), "data")}
-	createDocument(t, ctx, config, "notes/sources/runner.md", "Runner Source", "# Runner Source\n\n## Summary\nCanonical source guidance.\n")
-	createDocument(t, ctx, config, "notes/synthesis/runner.md", "Runner Synthesis", strings.TrimSpace(`---
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "sources/runner.md", "Runner Source", "# Runner Source\n\n## Summary\nCanonical source guidance.\n")
+	createDocument(t, ctx, config, "synthesis/runner.md", "Runner Synthesis", strings.TrimSpace(`---
 type: synthesis
 status: active
 freshness: fresh
-source_refs: notes/sources/runner.md
+source_refs: sources/runner.md
 ---
 # Runner Synthesis
 
@@ -210,7 +210,7 @@ source_refs: notes/sources/runner.md
 Canonical source guidance.
 
 ## Sources
-- notes/sources/runner.md
+- sources/runner.md
 
 ## Freshness
 Checked source refs.
@@ -239,11 +239,11 @@ Checked source refs.
 	}
 }
 
-func TestDocumentTaskInspectLayoutSupportsRootRelativeNotesVaultPaths(t *testing.T) {
+func TestDocumentTaskInspectLayoutUsesRootRelativeSourceAndSynthesisPaths(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	config := runclient.Config{DataDir: filepath.Join(t.TempDir(), "data")}
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
 	createDocument(t, ctx, config, "sources/runner.md", "Runner Source", "# Runner Source\n\n## Summary\nCanonical source guidance.\n")
 	createDocument(t, ctx, config, "synthesis/runner.md", "Runner Synthesis", strings.TrimSpace(`---
 type: synthesis
@@ -284,8 +284,31 @@ Checked source refs.
 			continue
 		}
 		prefixes := check.Details["path_prefixes"]
-		if strings.Contains(prefixes, "notes/sources/") || strings.Contains(prefixes, "notes/synthesis/") {
-			t.Fatalf("optional prefix warning still reports equivalent nested notes paths: %+v", check)
+		if strings.Contains(prefixes, "sources/") || strings.Contains(prefixes, "synthesis/") {
+			t.Fatalf("optional prefix warning reports populated root paths: %+v", check)
+		}
+	}
+}
+
+func TestDocumentTaskInspectLayoutDoesNotTreatNestedNotesSynthesisPathAsConvention(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "notes/synthesis/legacy.md", "Legacy Synthesis", "# Legacy Synthesis\n\n## Summary\nLegacy nested path.\n")
+
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionInspectLayout,
+	})
+	if err != nil {
+		t.Fatalf("inspect layout: %v", err)
+	}
+	if result.Layout == nil || !result.Layout.Valid {
+		t.Fatalf("layout = %+v", result.Layout)
+	}
+	for _, id := range []string{"synthesis_source_refs", "synthesis_sources_section", "synthesis_freshness_section"} {
+		if layoutChecksInclude(result.Layout.Checks, id, "fail") {
+			t.Fatalf("layout checks treated nested notes path as synthesis convention: %+v", result.Layout.Checks)
 		}
 	}
 }
@@ -294,8 +317,8 @@ func TestDocumentTaskInspectLayoutReportsInvalidConventions(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	config := runclient.Config{DataDir: filepath.Join(t.TempDir(), "data")}
-	createDocument(t, ctx, config, "notes/synthesis/incomplete.md", "Incomplete Synthesis", "# Incomplete Synthesis\n\n## Summary\nMissing evidence conventions.\n")
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "synthesis/incomplete.md", "Incomplete Synthesis", "# Incomplete Synthesis\n\n## Summary\nMissing evidence conventions.\n")
 	createDocument(t, ctx, config, "records/services/incomplete.md", "Incomplete Service", "---\nservice_id: incomplete\n---\n# Incomplete Service\n\n## Summary\nMissing service name.\n")
 	createDocument(t, ctx, config, "records/decisions/incomplete.md", "Incomplete Decision", "---\ndecision_id: incomplete\n---\n# Incomplete Decision\n\n## Summary\nMissing decision title and status.\n")
 
@@ -325,13 +348,13 @@ func TestDocumentTaskInspectLayoutRequiresLevelTwoSynthesisSections(t *testing.T
 	t.Parallel()
 
 	ctx := context.Background()
-	config := runclient.Config{DataDir: filepath.Join(t.TempDir(), "data")}
-	createDocument(t, ctx, config, "notes/sources/runner.md", "Runner Source", "# Runner Source\n\n## Summary\nCanonical source guidance.\n")
-	createDocument(t, ctx, config, "notes/synthesis/wrong-levels.md", "Wrong Level Synthesis", strings.TrimSpace(`---
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "sources/runner.md", "Runner Source", "# Runner Source\n\n## Summary\nCanonical source guidance.\n")
+	createDocument(t, ctx, config, "synthesis/wrong-levels.md", "Wrong Level Synthesis", strings.TrimSpace(`---
 type: synthesis
 status: active
 freshness: fresh
-source_refs: notes/sources/runner.md
+source_refs: sources/runner.md
 ---
 # Wrong Level Synthesis
 
@@ -339,7 +362,7 @@ source_refs: notes/sources/runner.md
 Canonical source guidance.
 
 # Sources
-- notes/sources/runner.md
+- sources/runner.md
 
 ### Freshness
 Checked source refs.
@@ -368,15 +391,15 @@ func TestRetrievalTaskSearchLinksRecordsAndProvenance(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	config := runclient.Config{DataDir: filepath.Join(t.TempDir(), "data")}
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
 	architecture := createDocument(t, ctx, config, "notes/architecture/knowledge-plane.md", "Knowledge plane", "# Knowledge plane\n\n## Summary\nCanonical architecture note.\n")
 	roadmap := createDocument(t, ctx, config, "notes/projects/roadmap.md", "Roadmap", "# Roadmap\n\n## Summary\nSee the [knowledge plane](../architecture/knowledge-plane.md).\n")
 	createDocument(t, ctx, config, "records/assets/transmission-solenoid.md", "Transmission solenoid", "---\nentity_type: part\nentity_name: Transmission solenoid\nentity_id: transmission-solenoid\n---\n# Transmission solenoid\n\n## Facts\n- sku: SOL-1\n")
 	createDocument(t, ctx, config, "records/services/openclerk-runner.md", "OpenClerk runner", "---\nservice_id: openclerk-runner\nservice_name: OpenClerk runner\nservice_status: active\nservice_owner: runner\nservice_interface: JSON runner\n---\n# OpenClerk runner\n\n## Summary\nProduction service for routine knowledge tasks.\n\n## Facts\n- tier: production\n")
-	createDocument(t, ctx, config, "docs/architecture/runner-old-decision.md", "Old runner decision", "---\ndecision_id: adr-runner-old\ndecision_title: Old runner path\ndecision_status: superseded\ndecision_scope: agentops\ndecision_owner: platform\ndecision_date: 2026-04-20\nsuperseded_by: adr-runner-current\nsource_refs: notes/sources/runner-old.md\n---\n# Old runner path\n\n## Summary\nOld decision used a retired runner path.\n")
-	createDocument(t, ctx, config, "notes/sources/runner-old.md", "Old runner source", "# Old runner source\n\n## Summary\nRetired runner path source.\n")
-	createDocument(t, ctx, config, "notes/architecture/runner-current-decision.md", "Current runner decision", "---\ndecision_id: adr-runner-current\ndecision_title: Use JSON runner\ndecision_status: accepted\ndecision_scope: agentops\ndecision_owner: platform\ndecision_date: 2026-04-22\nsupersedes: adr-runner-old\nsource_refs: notes/sources/runner-current.md\n---\n# Use JSON runner\n\n## Summary\nAccepted decision uses the JSON runner for routine AgentOps work.\n")
-	createDocument(t, ctx, config, "notes/sources/runner-current.md", "Current runner source", "# Current runner source\n\n## Summary\nCurrent runner source.\n")
+	createDocument(t, ctx, config, "docs/architecture/runner-old-decision.md", "Old runner decision", "---\ndecision_id: adr-runner-old\ndecision_title: Old runner path\ndecision_status: superseded\ndecision_scope: agentops\ndecision_owner: platform\ndecision_date: 2026-04-20\nsuperseded_by: adr-runner-current\nsource_refs: sources/runner-old.md\n---\n# Old runner path\n\n## Summary\nOld decision used a retired runner path.\n")
+	createDocument(t, ctx, config, "sources/runner-old.md", "Old runner source", "# Old runner source\n\n## Summary\nRetired runner path source.\n")
+	createDocument(t, ctx, config, "notes/architecture/runner-current-decision.md", "Current runner decision", "---\ndecision_id: adr-runner-current\ndecision_title: Use JSON runner\ndecision_status: accepted\ndecision_scope: agentops\ndecision_owner: platform\ndecision_date: 2026-04-22\nsupersedes: adr-runner-old\nsource_refs: sources/runner-current.md\n---\n# Use JSON runner\n\n## Summary\nAccepted decision uses the JSON runner for routine AgentOps work.\n")
+	createDocument(t, ctx, config, "sources/runner-current.md", "Current runner source", "# Current runner source\n\n## Summary\nCurrent runner source.\n")
 
 	search, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
 		Action: runner.RetrievalTaskActionSearch,
@@ -621,7 +644,7 @@ func TestValidationRejectionDoesNotCreateRuntimeFiles(t *testing.T) {
 	t.Parallel()
 
 	dataDir := filepath.Join(t.TempDir(), "data")
-	result, err := runner.RunDocumentTask(context.Background(), runclient.Config{DataDir: dataDir}, runner.DocumentTaskRequest{
+	result, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(dataDir, "openclerk.sqlite")}, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionCreate,
 		Document: runner.DocumentInput{
 			Title: "Missing path",
@@ -639,10 +662,9 @@ func TestValidationRejectionDoesNotCreateRuntimeFiles(t *testing.T) {
 	}
 }
 
-func TestResolvePathsHonorsOpenClerkEnvOverrides(t *testing.T) {
-	t.Setenv("OPENCLERK_DATA_DIR", filepath.Join(t.TempDir(), "env-data"))
-	t.Setenv("OPENCLERK_DATABASE_PATH", filepath.Join(t.TempDir(), "env-db", "openclerk.sqlite"))
-	t.Setenv("OPENCLERK_VAULT_ROOT", filepath.Join(t.TempDir(), "env-vault"))
+func TestResolvePathsUsesDatabaseAnchoredConfig(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "env-db", "openclerk.sqlite")
+	t.Setenv("OPENCLERK_DATABASE_PATH", dbPath)
 
 	result, err := runner.RunDocumentTask(context.Background(), runclient.Config{}, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionResolvePaths,
@@ -651,24 +673,65 @@ func TestResolvePathsHonorsOpenClerkEnvOverrides(t *testing.T) {
 		t.Fatalf("resolve paths: %v", err)
 	}
 	if result.Paths == nil ||
-		result.Paths.DataDir != os.Getenv("OPENCLERK_DATA_DIR") ||
-		result.Paths.DatabasePath != os.Getenv("OPENCLERK_DATABASE_PATH") ||
-		result.Paths.VaultRoot != os.Getenv("OPENCLERK_VAULT_ROOT") {
+		result.Paths.DataDir != filepath.Dir(dbPath) ||
+		result.Paths.DatabasePath != dbPath ||
+		result.Paths.VaultRoot != filepath.Join(filepath.Dir(dbPath), "vault") {
 		t.Fatalf("paths = %+v", result.Paths)
 	}
 
+	boundVaultRoot := filepath.Join(t.TempDir(), "wiki")
+	initialized, err := runclient.InitializePaths(runclient.Config{DatabasePath: dbPath}, boundVaultRoot)
+	if err != nil {
+		t.Fatalf("initialize paths: %v", err)
+	}
+	if initialized.VaultRoot != boundVaultRoot {
+		t.Fatalf("initialized paths = %+v, want vault %q", initialized, boundVaultRoot)
+	}
+
 	explicit, err := runner.RunDocumentTask(context.Background(), runclient.Config{
-		DataDir:      filepath.Join(t.TempDir(), "explicit-data"),
 		DatabasePath: filepath.Join(t.TempDir(), "explicit-db", "openclerk.sqlite"),
-		VaultRoot:    filepath.Join(t.TempDir(), "explicit-vault"),
 	}, runner.DocumentTaskRequest{Action: runner.DocumentTaskActionResolvePaths})
 	if err != nil {
 		t.Fatalf("resolve explicit paths: %v", err)
 	}
-	if explicit.Paths.DataDir == os.Getenv("OPENCLERK_DATA_DIR") ||
-		explicit.Paths.DatabasePath == os.Getenv("OPENCLERK_DATABASE_PATH") ||
-		explicit.Paths.VaultRoot == os.Getenv("OPENCLERK_VAULT_ROOT") {
+	if explicit.Paths.DatabasePath == os.Getenv("OPENCLERK_DATABASE_PATH") ||
+		explicit.Paths.VaultRoot == boundVaultRoot {
 		t.Fatalf("explicit config did not take precedence: %+v", explicit.Paths)
+	}
+
+	again, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: dbPath}, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionResolvePaths,
+	})
+	if err != nil {
+		t.Fatalf("resolve persisted paths: %v", err)
+	}
+	if again.Paths == nil || again.Paths.VaultRoot != boundVaultRoot {
+		t.Fatalf("persisted paths = %+v, want vault %q", again.Paths, boundVaultRoot)
+	}
+}
+
+func TestResolvePathsZeroConfigCreatesDefaultDatabaseAndVaultConfig(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", filepath.Join(t.TempDir(), "xdg"))
+	t.Setenv("OPENCLERK_DATABASE_PATH", "")
+
+	result, err := runner.RunDocumentTask(context.Background(), runclient.Config{}, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionResolvePaths,
+	})
+	if err != nil {
+		t.Fatalf("resolve paths: %v", err)
+	}
+	wantDB := filepath.Join(os.Getenv("XDG_DATA_HOME"), "openclerk", "openclerk.sqlite")
+	wantVault := filepath.Join(filepath.Dir(wantDB), "vault")
+	if result.Paths == nil ||
+		result.Paths.DatabasePath != wantDB ||
+		result.Paths.VaultRoot != wantVault {
+		t.Fatalf("paths = %+v, want db %q vault %q", result.Paths, wantDB, wantVault)
+	}
+	if _, err := os.Stat(wantDB); err != nil {
+		t.Fatalf("default database was not created: %v", err)
+	}
+	if _, err := os.Stat(wantVault); err != nil {
+		t.Fatalf("default vault was not created: %v", err)
 	}
 }
 

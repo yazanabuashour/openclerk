@@ -24,7 +24,7 @@ is filed.
   retrieval-only search while preserving source path, `doc_id`, `chunk_id`, and
   line citations.
 - Verify repeated retrieval-only answers rerun search and do not create
-  `notes/synthesis/` durable synthesis unless explicitly filed.
+  `synthesis/` durable synthesis unless explicitly filed.
 
 ## Source Ingest And Synthesis
 
@@ -32,7 +32,7 @@ is filed.
   cites it.
 - Add a second source that updates or challenges the synthesis.
 - Verify the synthesis is updated rather than duplicated.
-- Verify synthesis pages live under `notes/synthesis/`, include `type:
+- Verify synthesis pages live under `synthesis/`, include `type:
   synthesis`, `status: active`, `freshness: fresh`, `source_refs`, a
   `Sources` section, and a `Freshness` section.
 - Verify source-sensitive claims preserve citation paths, chunk ids, or explicit
@@ -161,7 +161,7 @@ AgentOps eval harness supports them cleanly.
 - Verify `inspect_layout` explains the effective convention-first layout
   through runner JSON only.
 - Verify layout JSON reports `config_artifact_required: false`, conventional
-  prefixes such as `notes/sources/` and `notes/synthesis/`, first-class
+  prefixes such as `sources/` and `synthesis/`, first-class
   document kinds, and pass/warn/fail checks.
 - Verify invalid or incomplete synthesis, missing `source_refs`, missing
   `## Sources` or `## Freshness`, missing source paths, and partial

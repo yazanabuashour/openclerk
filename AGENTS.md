@@ -26,15 +26,16 @@ openclerk retrieval
 ```
 
 Pass one JSON request on stdin and answer only from the JSON result. The runner
-honors `OPENCLERK_DATA_DIR`,
-`OPENCLERK_DATABASE_PATH`, and `OPENCLERK_VAULT_ROOT`. Optional `--data-dir`,
-`--db`, `--vault-root`, and `--embedding-provider` flags are for explicit
-datasets, tests, or manual debugging only. For routine requests, do not pass
-those flags; rely on the configured environment so data, database, and vault
-paths stay together. Do not inspect the repo to rediscover runner schemas; use
-the documented request shapes directly. For unsupported workflows not covered
-by the direct rejection rule above, say the production OpenClerk runner does not
-support that workflow yet.
+honors `OPENCLERK_DATABASE_PATH` as the routine storage anchor; the SQLite
+database stores the configured vault root and conventions. Optional `--db` and
+`--embedding-provider` flags are for explicit datasets, tests, or manual
+debugging only. For routine requests, do not pass those flags; rely on the
+configured database path so data, database, and vault paths stay together. Use
+`openclerk init --vault-root <path>` only when explicitly binding an existing
+vault. Do not inspect the repo to rediscover runner schemas; use the documented
+request shapes directly. For unsupported workflows not covered by the direct
+rejection rule above, say the production OpenClerk runner does not support that
+workflow yet.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker

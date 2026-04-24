@@ -51,7 +51,7 @@ Canonical docs are markdown files under the vault with stable `doc_id`, `chunk_i
 The docs layer also supports source-linked synthesis: topic pages, entity
 pages, comparisons, overview notes, and filed answers that compile existing
 evidence into reusable markdown. Prototype synthesis pages live under
-`notes/synthesis/`, carry `type: synthesis`, `status: active`, `freshness:
+`synthesis/`, carry `type: synthesis`, `status: active`, `freshness:
 fresh`, and single-line comma-separated `source_refs` frontmatter, and include
 `## Sources` plus `## Freshness` sections. These pages are durable knowledge
 artifacts, but they do not outrank the canonical source docs or promoted
@@ -60,7 +60,7 @@ records they cite.
 The active synthesis lifecycle workflow is:
 
 - search canonical sources before writing synthesis
-- list `notes/synthesis/` candidates before creating a new synthesis page
+- list `synthesis/` candidates before creating a new synthesis page
 - retrieve an existing synthesis document before updating it
 - inspect the `synthesis` projection state for existing synthesis documents
   before repairing stale claims

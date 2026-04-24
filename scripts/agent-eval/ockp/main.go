@@ -69,7 +69,7 @@ const (
 	memoryRouterTemporalPath            = "notes/memory-router/temporal-policy.md"
 	memoryRouterFeedbackPath            = "notes/memory-router/feedback-weighting.md"
 	memoryRouterRoutingPath             = "notes/memory-router/routing-policy.md"
-	memoryRouterSynthesisPath           = "notes/synthesis/memory-router-reference.md"
+	memoryRouterSynthesisPath           = "synthesis/memory-router-reference.md"
 	memoryRouterSearchText              = "memory router temporal recall session promotion feedback weighting routing canonical docs"
 	memoryRouterSessionObservationTitle = "Memory Router Session Observation"
 
@@ -85,26 +85,26 @@ const (
 	sourceAuditRepairScenarioID          = "source-sensitive-audit-repair"
 	sourceAuditConflictScenarioID        = "source-sensitive-conflict-explain"
 
-	synthesisCandidatePath       = "notes/synthesis/compiler-routing.md"
-	synthesisCandidateDecoyPath  = "notes/synthesis/compiler-routing-decoy.md"
-	synthesisCandidateCurrentSrc = "notes/sources/compiler-current.md"
-	synthesisCandidateOldSrc     = "notes/sources/compiler-old.md"
+	synthesisCandidatePath       = "synthesis/compiler-routing.md"
+	synthesisCandidateDecoyPath  = "synthesis/compiler-routing-decoy.md"
+	synthesisCandidateCurrentSrc = "sources/compiler-current.md"
+	synthesisCandidateOldSrc     = "sources/compiler-old.md"
 
-	synthesisSourceSetPath = "notes/synthesis/compiler-source-set.md"
-	sourceSetAlphaPath     = "notes/sources/source-set-alpha.md"
-	sourceSetBetaPath      = "notes/sources/source-set-beta.md"
-	sourceSetGammaPath     = "notes/sources/source-set-gamma.md"
+	synthesisSourceSetPath = "synthesis/compiler-source-set.md"
+	sourceSetAlphaPath     = "sources/source-set-alpha.md"
+	sourceSetBetaPath      = "sources/source-set-beta.md"
+	sourceSetGammaPath     = "sources/source-set-gamma.md"
 
-	mtDriftSynthesisPath = "notes/synthesis/drift-runner.md"
-	mtDriftOldSourcePath = "notes/sources/drift-old.md"
-	mtDriftCurrentPath   = "notes/sources/drift-current.md"
+	mtDriftSynthesisPath = "synthesis/drift-runner.md"
+	mtDriftOldSourcePath = "sources/drift-old.md"
+	mtDriftCurrentPath   = "sources/drift-current.md"
 
-	sourceAuditSynthesisPath      = "notes/synthesis/audit-runner-routing.md"
-	sourceAuditDecoyPath          = "notes/synthesis/audit-runner-decoy.md"
-	sourceAuditOldSourcePath      = "notes/sources/audit-runner-old.md"
-	sourceAuditCurrentSourcePath  = "notes/sources/audit-runner-current.md"
-	sourceAuditConflictAlphaPath  = "notes/sources/audit-conflict-alpha.md"
-	sourceAuditConflictBravoPath  = "notes/sources/audit-conflict-bravo.md"
+	sourceAuditSynthesisPath      = "synthesis/audit-runner-routing.md"
+	sourceAuditDecoyPath          = "synthesis/audit-runner-decoy.md"
+	sourceAuditOldSourcePath      = "sources/audit-runner-old.md"
+	sourceAuditCurrentSourcePath  = "sources/audit-runner-current.md"
+	sourceAuditConflictAlphaPath  = "sources/audit-conflict-alpha.md"
+	sourceAuditConflictBravoPath  = "sources/audit-conflict-bravo.md"
 	sourceAuditConflictSearchText = "source sensitive audit conflict runner retention"
 )
 
@@ -577,9 +577,7 @@ func codexJobRunner(ctx context.Context, config runConfig, job evalJob, cache ca
 }
 
 type evalPaths struct {
-	DataDir      string
 	DatabasePath string
-	VaultRoot    string
 	GoCache      string
 	GoModCache   string
 	CodexHome    string
@@ -589,9 +587,7 @@ type evalPaths struct {
 
 func scenarioPaths(repoDir string) evalPaths {
 	return evalPaths{
-		DataDir:      filepath.Join(repoDir, ".openclerk-eval", "data"),
 		DatabasePath: filepath.Join(repoDir, ".openclerk-eval", "openclerk.db"),
-		VaultRoot:    filepath.Join(repoDir, ".openclerk-eval", "vault"),
 	}
 }
 
@@ -728,9 +724,7 @@ func evalEnv(runDir string, paths evalPaths, cache cacheConfig) []string {
 	env = append(env,
 		"CODEX_HOME="+effective.CodexHome,
 		"ZDOTDIR="+effective.ZDotDir,
-		"OPENCLERK_DATA_DIR="+effective.DataDir,
 		"OPENCLERK_DATABASE_PATH="+effective.DatabasePath,
-		"OPENCLERK_VAULT_ROOT="+effective.VaultRoot,
 		"GOCACHE="+effective.GoCache,
 		"GOMODCACHE="+effective.GoModCache,
 		"TMPDIR="+effective.Temp,
@@ -834,11 +828,9 @@ func warmGoModules(repoDir string, runDir string, paths evalPaths, cache cacheCo
 
 func prewarmSharedCache(repoRoot string, cache cacheConfig) error {
 	paths := evalPathsFor(filepath.Join(cache.RunRoot, "shared-cache"), evalPaths{
-		DataDir:      filepath.Join(cache.RunRoot, "shared-cache", "data"),
 		DatabasePath: filepath.Join(cache.RunRoot, "shared-cache", "prewarm.db"),
-		VaultRoot:    filepath.Join(cache.RunRoot, "shared-cache", "vault"),
 	}, cache)
-	for _, dir := range []string{paths.GoCache, paths.GoModCache, paths.Temp, paths.DataDir, paths.VaultRoot} {
+	for _, dir := range []string{paths.GoCache, paths.GoModCache, paths.Temp} {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return err
 		}
@@ -878,17 +870,15 @@ func buildOpenClerkRunner(repoDir string, runDir string, paths evalPaths, cache 
 
 func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
 	cfg := runclient.Config{
-		DataDir:      paths.DataDir,
 		DatabasePath: paths.DatabasePath,
-		VaultRoot:    paths.VaultRoot,
 	}
 	switch sc.ID {
 	case "search-synthesis", "mt-source-then-synthesis":
-		if err := createSeedDocument(ctx, cfg, "notes/sources/openclerk-runner.md", "OpenClerk Runner Source", "The OpenClerk runner uses JSON requests for OpenClerk knowledge tasks.\n\nIt preserves source refs for synthesis pages."); err != nil {
+		if err := createSeedDocument(ctx, cfg, "sources/openclerk-runner.md", "OpenClerk Runner Source", "The OpenClerk runner uses JSON requests for OpenClerk knowledge tasks.\n\nIt preserves source refs for synthesis pages."); err != nil {
 			return err
 		}
 	case "answer-filing":
-		if err := createSeedDocument(ctx, cfg, "notes/sources/answer-filing-runner.md", "OpenClerk runner Answer Filing Source", "The OpenClerk runner JSON runner is the production path for reusable OpenClerk knowledge tasks.\n\nDurable OpenClerk runner answers should be filed as source-linked markdown."); err != nil {
+		if err := createSeedDocument(ctx, cfg, "sources/answer-filing-runner.md", "OpenClerk runner Answer Filing Source", "The OpenClerk runner JSON runner is the production path for reusable OpenClerk knowledge tasks.\n\nDurable OpenClerk runner answers should be filed as source-linked markdown."); err != nil {
 			return err
 		}
 	case ragRetrievalScenarioID:
@@ -948,17 +938,17 @@ func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
 			return err
 		}
 	case "stale-synthesis-update":
-		if err := createSeedDocument(ctx, cfg, "notes/sources/runner-old-workaround.md", "Old OpenClerk runner Routing Source", "Older guidance said routine agents may bypass OpenClerk runner through a temporary command-path workaround."); err != nil {
+		if err := createSeedDocument(ctx, cfg, "sources/runner-old-workaround.md", "Old OpenClerk runner Routing Source", "Older guidance said routine agents may bypass OpenClerk runner through a temporary command-path workaround."); err != nil {
 			return err
 		}
-		if err := createSeedDocument(ctx, cfg, "notes/sources/runner-current-runner.md", "Current OpenClerk runner Routing Source", "Current guidance says routine agents must use openclerk JSON runner for OpenClerk knowledge tasks."); err != nil {
+		if err := createSeedDocument(ctx, cfg, "sources/runner-current-runner.md", "Current OpenClerk runner Routing Source", "Current guidance says routine agents must use openclerk JSON runner for OpenClerk knowledge tasks."); err != nil {
 			return err
 		}
 		body := strings.TrimSpace(`---
 type: synthesis
 status: active
 freshness: fresh
-source_refs: notes/sources/runner-current-runner.md, notes/sources/runner-old-workaround.md
+source_refs: sources/runner-current-runner.md, sources/runner-old-workaround.md
 ---
 
 # OpenClerk runner Routing
@@ -967,44 +957,44 @@ source_refs: notes/sources/runner-current-runner.md, notes/sources/runner-old-wo
 Stale claim: routine agents may bypass OpenClerk runner through a temporary command-path workaround.
 
 ## Sources
-- notes/sources/runner-current-runner.md
-- notes/sources/runner-old-workaround.md
+- sources/runner-current-runner.md
+- sources/runner-old-workaround.md
 
 ## Freshness
-Checked source: notes/sources/runner-old-workaround.md
+Checked source: sources/runner-old-workaround.md
 `)
-		if err := createSeedDocument(ctx, cfg, "notes/synthesis/runner-routing.md", "OpenClerk runner Routing", body); err != nil {
+		if err := createSeedDocument(ctx, cfg, "synthesis/runner-routing.md", "OpenClerk runner Routing", body); err != nil {
 			return err
 		}
 	case "synthesis-freshness-repair":
 		oldBody := strings.TrimSpace(`---
 status: superseded
-superseded_by: notes/sources/repair-current.md
+superseded_by: sources/repair-current.md
 ---
 # Old OpenClerk runner Repair Source
 
 ## Summary
 Older repair guidance mentioned a temporary command-path workaround.
 `) + "\n"
-		if err := createSeedDocument(ctx, cfg, "notes/sources/repair-old.md", "Old OpenClerk runner Repair Source", oldBody); err != nil {
+		if err := createSeedDocument(ctx, cfg, "sources/repair-old.md", "Old OpenClerk runner Repair Source", oldBody); err != nil {
 			return err
 		}
 		currentBody := strings.TrimSpace(`---
-supersedes: notes/sources/repair-old.md
+supersedes: sources/repair-old.md
 ---
 # Current OpenClerk runner Repair Source
 
 ## Summary
 Current guidance says routine agents must use openclerk JSON runner for freshness repairs.
 `) + "\n"
-		if err := createSeedDocument(ctx, cfg, "notes/sources/repair-current.md", "Current OpenClerk runner Repair Source", currentBody); err != nil {
+		if err := createSeedDocument(ctx, cfg, "sources/repair-current.md", "Current OpenClerk runner Repair Source", currentBody); err != nil {
 			return err
 		}
 		synthesisBody := strings.TrimSpace(`---
 type: synthesis
 status: active
 freshness: fresh
-source_refs: notes/sources/repair-current.md, notes/sources/repair-old.md
+source_refs: sources/repair-current.md, sources/repair-old.md
 ---
 # OpenClerk runner Freshness Repair
 
@@ -1012,16 +1002,16 @@ source_refs: notes/sources/repair-current.md, notes/sources/repair-old.md
 Stale repair claim: routine agents may use a temporary command-path workaround.
 
 ## Sources
-- notes/sources/repair-current.md
-- notes/sources/repair-old.md
+- sources/repair-current.md
+- sources/repair-old.md
 
 ## Freshness
 Checked before the latest source update.
 `) + "\n"
-		if err := createSeedDocument(ctx, cfg, "notes/synthesis/runner-repair.md", "OpenClerk runner Freshness Repair", synthesisBody); err != nil {
+		if err := createSeedDocument(ctx, cfg, "synthesis/runner-repair.md", "OpenClerk runner Freshness Repair", synthesisBody); err != nil {
 			return err
 		}
-		if err := replaceScenarioSeedSection(ctx, cfg, "notes/sources/repair-current.md", "Summary", "Current guidance says routine agents must use openclerk JSON runner for freshness repairs, and notes/sources/repair-old.md is superseded."); err != nil {
+		if err := replaceScenarioSeedSection(ctx, cfg, "sources/repair-current.md", "Summary", "Current guidance says routine agents must use openclerk JSON runner for freshness repairs, and sources/repair-old.md is superseded."); err != nil {
 			return err
 		}
 	case "append-replace":
@@ -1033,7 +1023,7 @@ Checked before the latest source update.
 			return err
 		}
 	case "mixed-synthesis-records":
-		if err := createSeedDocument(ctx, cfg, "notes/sources/openclerk-runner.md", "OpenClerk Runner Source", "The OpenClerk runner uses JSON requests for OpenClerk knowledge tasks.\n\nIt preserves source refs for synthesis pages."); err != nil {
+		if err := createSeedDocument(ctx, cfg, "sources/openclerk-runner.md", "OpenClerk Runner Source", "The OpenClerk runner uses JSON requests for OpenClerk knowledge tasks.\n\nIt preserves source refs for synthesis pages."); err != nil {
 			return err
 		}
 		if err := createSeedDocument(ctx, cfg, "records/services/openclerk-runner.md", "OpenClerk runner", recordBody("openclerk-runner", "service", "OpenClerk runner")); err != nil {
@@ -1321,14 +1311,14 @@ status: active
 ## Summary
 Convention-first OpenClerk knowledge layout uses runner-visible JSON inspection rather than a committed manifest.
 `) + "\n"
-	if err := createSeedDocument(ctx, cfg, "notes/sources/layout-runner.md", "Layout Runner Source", sourceBody); err != nil {
+	if err := createSeedDocument(ctx, cfg, "sources/layout-runner.md", "Layout Runner Source", sourceBody); err != nil {
 		return err
 	}
 	synthesisBody := strings.TrimSpace(`---
 type: synthesis
 status: active
 freshness: fresh
-source_refs: notes/sources/layout-runner.md
+source_refs: sources/layout-runner.md
 ---
 # Layout Runner Synthesis
 
@@ -1336,12 +1326,12 @@ source_refs: notes/sources/layout-runner.md
 The configured layout keeps canonical markdown and source-linked synthesis convention-first.
 
 ## Sources
-- notes/sources/layout-runner.md
+- sources/layout-runner.md
 
 ## Freshness
 Checked source refs through runner-visible layout inspection.
 `) + "\n"
-	if err := createSeedDocument(ctx, cfg, "notes/synthesis/layout-runner.md", "Layout Runner Synthesis", synthesisBody); err != nil {
+	if err := createSeedDocument(ctx, cfg, "synthesis/layout-runner.md", "Layout Runner Synthesis", synthesisBody); err != nil {
 		return err
 	}
 	recordBody := strings.TrimSpace(`---
@@ -1376,7 +1366,7 @@ func seedInvalidLayoutScenario(ctx context.Context, cfg runclient.Config) error 
 	synthesisBody := strings.TrimSpace(`---
 type: synthesis
 status: active
-source_refs: notes/sources/missing-layout-source.md
+source_refs: sources/missing-layout-source.md
 ---
 # Broken Layout Synthesis
 
@@ -1384,9 +1374,9 @@ source_refs: notes/sources/missing-layout-source.md
 This synthesis references a missing source and omits the required freshness section.
 
 ## Sources
-- notes/sources/missing-layout-source.md
+- sources/missing-layout-source.md
 `) + "\n"
-	if err := createSeedDocument(ctx, cfg, "notes/synthesis/broken-layout.md", "Broken Layout Synthesis", synthesisBody); err != nil {
+	if err := createSeedDocument(ctx, cfg, "synthesis/broken-layout.md", "Broken Layout Synthesis", synthesisBody); err != nil {
 		return err
 	}
 	serviceBody := strings.TrimSpace(`---
@@ -1403,7 +1393,7 @@ This service-shaped document is missing service_name.
 func seedSynthesisCandidatePressure(ctx context.Context, cfg runclient.Config) error {
 	oldBody := strings.TrimSpace(`---
 status: superseded
-superseded_by: notes/sources/compiler-current.md
+superseded_by: sources/compiler-current.md
 ---
 # Compiler Old Source
 
@@ -1417,7 +1407,7 @@ Older compiler guidance said routine synthesis repairs need a dedicated compile_
 type: synthesis
 status: active
 freshness: fresh
-source_refs: notes/sources/compiler-current.md, notes/sources/compiler-old.md
+source_refs: sources/compiler-current.md, sources/compiler-old.md
 ---
 # Compiler Routing
 
@@ -1425,8 +1415,8 @@ source_refs: notes/sources/compiler-current.md, notes/sources/compiler-old.md
 Stale compiler claim: routine synthesis repairs require a dedicated compile_synthesis runner action.
 
 ## Sources
-- notes/sources/compiler-current.md
-- notes/sources/compiler-old.md
+- sources/compiler-current.md
+- sources/compiler-old.md
 
 ## Freshness
 Checked before the latest compiler pressure source was registered.
@@ -1438,7 +1428,7 @@ Checked before the latest compiler pressure source was registered.
 type: synthesis
 status: active
 freshness: fresh
-source_refs: notes/sources/compiler-old.md
+source_refs: sources/compiler-old.md
 ---
 # Compiler Routing Decoy
 
@@ -1446,7 +1436,7 @@ source_refs: notes/sources/compiler-old.md
 This decoy page is not the compiler pressure decision target.
 
 ## Sources
-- notes/sources/compiler-old.md
+- sources/compiler-old.md
 
 ## Freshness
 Checked decoy source only.
@@ -1455,7 +1445,7 @@ Checked decoy source only.
 		return err
 	}
 	currentBody := strings.TrimSpace(`---
-supersedes: notes/sources/compiler-old.md
+supersedes: sources/compiler-old.md
 ---
 # Compiler Current Source
 
@@ -1554,7 +1544,7 @@ decision_scope: agentops
 decision_owner: platform
 decision_date: 2026-04-20
 superseded_by: adr-runner-current
-source_refs: notes/sources/decision-old.md
+source_refs: sources/decision-old.md
 ---
 # Use retired command path
 
@@ -1572,7 +1562,7 @@ decision_scope: agentops
 decision_owner: platform
 decision_date: 2026-04-22
 supersedes: adr-runner-old
-source_refs: notes/sources/decision-current.md
+source_refs: sources/decision-current.md
 ---
 # Use JSON runner
 
@@ -1582,10 +1572,10 @@ Accepted decision: routine OpenClerk AgentOps tasks use the installed JSON runne
 	if err := createSeedDocument(ctx, cfg, "records/decisions/runner-current-decision.md", "Use JSON runner", currentBody); err != nil {
 		return err
 	}
-	if err := createSeedDocument(ctx, cfg, "notes/sources/decision-old.md", "Old decision source", "# Old decision source\n\n## Summary\nOlder source documented the retired path.\n"); err != nil {
+	if err := createSeedDocument(ctx, cfg, "sources/decision-old.md", "Old decision source", "# Old decision source\n\n## Summary\nOlder source documented the retired path.\n"); err != nil {
 		return err
 	}
-	return createSeedDocument(ctx, cfg, "notes/sources/decision-current.md", "Current decision source", "# Current decision source\n\n## Summary\nCurrent source documents the JSON runner path.\n")
+	return createSeedDocument(ctx, cfg, "sources/decision-current.md", "Current decision source", "# Current decision source\n\n## Summary\nCurrent source documents the JSON runner path.\n")
 }
 
 func seedDecisionRealADRMigration(ctx context.Context, cfg runclient.Config) error {
@@ -1595,7 +1585,7 @@ decision_title: AgentOps-Only Knowledge Plane Direction
 decision_status: accepted
 decision_scope: knowledge-plane
 decision_owner: platform
-source_refs: notes/sources/agentops-direction.md
+source_refs: sources/agentops-direction.md
 ---
 # ADR: AgentOps-Only Knowledge Plane Direction
 
@@ -1615,7 +1605,7 @@ decision_status: accepted
 decision_scope: knowledge-configuration
 decision_owner: platform
 supersedes: adr-agentops-only-knowledge-plane
-source_refs: notes/sources/knowledge-configuration.md
+source_refs: sources/knowledge-configuration.md
 ---
 # ADR: Knowledge Configuration v1
 
@@ -1631,7 +1621,7 @@ OpenClerk knowledge configuration v1 is runner-visible and convention-first.
 func seedSourceSensitiveAuditRepair(ctx context.Context, cfg runclient.Config) error {
 	oldBody := strings.TrimSpace(`---
 status: superseded
-superseded_by: notes/sources/audit-runner-current.md
+superseded_by: sources/audit-runner-current.md
 ---
 # Audit Runner Old Source
 
@@ -1642,7 +1632,7 @@ Older source-sensitive audit guidance said agents should prefer a legacy command
 		return err
 	}
 	currentBody := strings.TrimSpace(`---
-supersedes: notes/sources/audit-runner-old.md
+supersedes: sources/audit-runner-old.md
 ---
 # Audit Runner Current Source
 
@@ -1656,7 +1646,7 @@ Current source-sensitive audit guidance says agents must use the installed openc
 type: synthesis
 status: active
 freshness: fresh
-source_refs: notes/sources/audit-runner-current.md, notes/sources/audit-runner-old.md
+source_refs: sources/audit-runner-current.md, sources/audit-runner-old.md
 ---
 # Audit Runner Routing
 
@@ -1664,8 +1654,8 @@ source_refs: notes/sources/audit-runner-current.md, notes/sources/audit-runner-o
 Stale audit claim: agents should prefer a legacy command-path workaround for runner audit repairs.
 
 ## Sources
-- notes/sources/audit-runner-current.md
-- notes/sources/audit-runner-old.md
+- sources/audit-runner-current.md
+- sources/audit-runner-old.md
 
 ## Freshness
 Checked before the current audit source was registered.
@@ -1677,7 +1667,7 @@ Checked before the current audit source was registered.
 type: synthesis
 status: active
 freshness: fresh
-source_refs: notes/sources/audit-runner-old.md
+source_refs: sources/audit-runner-old.md
 ---
 # Audit Runner Decoy
 
@@ -1685,7 +1675,7 @@ source_refs: notes/sources/audit-runner-old.md
 This decoy page is not the source-sensitive audit repair target.
 
 ## Sources
-- notes/sources/audit-runner-old.md
+- sources/audit-runner-old.md
 
 ## Freshness
 Checked decoy source only.
@@ -1724,7 +1714,7 @@ Bravo current source says source sensitive audit conflict runner retention shoul
 func seedMTSynthesisDriftPressure(ctx context.Context, cfg runclient.Config) error {
 	oldBody := strings.TrimSpace(`---
 status: superseded
-superseded_by: notes/sources/drift-current.md
+superseded_by: sources/drift-current.md
 ---
 # Drift Old Source
 
@@ -1735,7 +1725,7 @@ Older drift guidance said synthesis compiler pressure should be promoted immedia
 		return err
 	}
 	currentBody := strings.TrimSpace(`---
-supersedes: notes/sources/drift-old.md
+supersedes: sources/drift-old.md
 ---
 # Drift Current Source
 
@@ -1829,7 +1819,7 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 	if isMultiTurnScenario(sc) && turnIndex == 1 {
 		switch sc.ID {
 		case "mt-source-then-synthesis":
-			return verifyDocuments(ctx, paths, []string{"notes/sources/mt-runner.md"}, finalMessage)
+			return verifyDocuments(ctx, paths, []string{"sources/mt-runner.md"}, finalMessage)
 		case memoryRouterScenarioID:
 			return verifyMemoryRouterSessionObservation(ctx, paths, finalMessage)
 		case mtSynthesisDriftPressureScenarioID:
@@ -1849,8 +1839,8 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 	case "create-note":
 		return verifyDocuments(ctx, paths, []string{"notes/projects/openclerk-runner.md"}, finalMessage)
 	case "search-synthesis":
-		return verifySourceLinkedSynthesis(ctx, paths, "notes/synthesis/openclerk-runner.md", finalMessage, sourceLinkedSynthesisExpectations{
-			SourceRefs:      []string{"notes/sources/openclerk-runner.md"},
+		return verifySourceLinkedSynthesis(ctx, paths, "synthesis/openclerk-runner.md", finalMessage, sourceLinkedSynthesisExpectations{
+			SourceRefs:      []string{"sources/openclerk-runner.md"},
 			RequireSearch:   true,
 			RequireList:     true,
 			Metrics:         turnMetrics,
@@ -1899,12 +1889,12 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 	case "mixed-synthesis-records":
 		return verifyMixedSynthesisRecords(ctx, paths, finalMessage, turnMetrics)
 	case "mt-source-then-synthesis":
-		return verifySourceLinkedSynthesis(ctx, paths, "notes/synthesis/mt-runner.md", finalMessage, sourceLinkedSynthesisExpectations{
-			SourceRefs:      []string{"notes/sources/mt-runner.md"},
+		return verifySourceLinkedSynthesis(ctx, paths, "synthesis/mt-runner.md", finalMessage, sourceLinkedSynthesisExpectations{
+			SourceRefs:      []string{"sources/mt-runner.md"},
 			RequireSearch:   true,
 			Metrics:         turnMetrics,
 			FinalAnswerPath: true,
-			AdditionalDocs:  []string{"notes/sources/mt-runner.md"},
+			AdditionalDocs:  []string{"sources/mt-runner.md"},
 		})
 	case "mt-incomplete-then-create":
 		return verifyDocuments(ctx, paths, []string{"notes/projects/mt-complete.md"}, finalMessage)
@@ -2006,7 +1996,7 @@ func normalizeValidationMessage(message string) string {
 }
 
 func verifyNoDocument(ctx context.Context, paths evalPaths, docPath string, detail string) verificationResult {
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionList,
 		List:   runner.DocumentListOptions{PathPrefix: docPath, Limit: 5},
@@ -2023,7 +2013,7 @@ func verifyNoDocument(ctx context.Context, paths evalPaths, docPath string, deta
 }
 
 func verifyDocuments(ctx context.Context, paths evalPaths, wanted []string, finalMessage string) (verificationResult, error) {
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionList,
 		List:   runner.DocumentListOptions{Limit: 100},
@@ -2163,7 +2153,7 @@ func verifySourceLinkedSynthesis(ctx context.Context, paths evalPaths, docPath s
 }
 
 func verifyAnswerFiling(ctx context.Context, paths evalPaths, finalMessage string) (verificationResult, error) {
-	docPath := "notes/synthesis/filed-runner-answer.md"
+	docPath := "synthesis/filed-runner-answer.md"
 	body, found, err := documentBodyByPath(ctx, paths, docPath)
 	if err != nil {
 		return verificationResult{}, err
@@ -2173,7 +2163,7 @@ func verifyAnswerFiling(ctx context.Context, paths evalPaths, finalMessage strin
 		failures = append(failures, "missing "+docPath)
 	}
 	failures = append(failures, missingRequired(body, []string{
-		"notes/sources/answer-filing-runner.md",
+		"sources/answer-filing-runner.md",
 		"Durable OpenClerk runner answers should be filed as source-linked markdown",
 	})...)
 	assistantPass := messageContainsAll(finalMessage, []string{docPath})
@@ -2181,7 +2171,7 @@ func verifyAnswerFiling(ctx context.Context, paths evalPaths, finalMessage strin
 		failures = append(failures, "final answer did not mention "+docPath)
 	}
 	databasePass := found && len(missingRequired(body, []string{
-		"notes/sources/answer-filing-runner.md",
+		"sources/answer-filing-runner.md",
 		"Durable OpenClerk runner answers should be filed as source-linked markdown",
 	})) == 0
 	return verificationResult{
@@ -2194,7 +2184,7 @@ func verifyAnswerFiling(ctx context.Context, paths evalPaths, finalMessage strin
 }
 
 func verifyRAGRetrievalBaseline(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	unfiltered, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
 		Action: runner.RetrievalTaskActionSearch,
 		Search: runner.SearchOptions{
@@ -2240,7 +2230,7 @@ func verifyRAGRetrievalBaseline(ctx context.Context, paths evalPaths, finalMessa
 	if err != nil {
 		return verificationResult{}, err
 	}
-	synthesisCount, err := documentCountWithPrefix(ctx, paths, "notes/synthesis/")
+	synthesisCount, err := documentCountWithPrefix(ctx, paths, "synthesis/")
 	if err != nil {
 		return verificationResult{}, err
 	}
@@ -2320,7 +2310,7 @@ func verifyRAGRetrievalBaseline(ctx context.Context, paths evalPaths, finalMessa
 }
 
 func verifyDocsNavigationBaseline(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionList,
 		List:   runner.DocumentListOptions{PathPrefix: docsNavigationPrefix, Limit: 10},
@@ -2477,7 +2467,7 @@ func verifyDocsNavigationBaseline(ctx context.Context, paths evalPaths, finalMes
 }
 
 func verifyGraphSemanticsReference(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	search, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
 		Action: runner.RetrievalTaskActionSearch,
 		Search: runner.SearchOptions{Text: graphSemanticsSearchText, Limit: 10},
@@ -2645,7 +2635,7 @@ func verifyGraphSemanticsReference(ctx context.Context, paths evalPaths, finalMe
 }
 
 func verifyMemoryRouterReference(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	sourceRefs := []string{
 		memoryRouterSessionObservationPath,
 		memoryRouterTemporalPath,
@@ -2820,7 +2810,7 @@ func verifyMemoryRouterReference(ctx context.Context, paths evalPaths, finalMess
 }
 
 func verifyConfiguredLayoutScenario(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	layoutResult, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{Action: runner.DocumentTaskActionInspectLayout})
 	if err != nil {
 		return verificationResult{}, err
@@ -2834,18 +2824,18 @@ func verifyConfiguredLayoutScenario(ctx context.Context, paths evalPaths, finalM
 	if !turnMetrics.InspectLayoutUsed {
 		failures = append(failures, "agent did not use inspect_layout")
 	}
-	if !messageContainsAll(finalMessage, []string{"convention", "notes/sources/", "notes/synthesis/", "source_refs"}) ||
+	if !messageContainsAll(finalMessage, []string{"convention", "sources/", "synthesis/", "source_refs"}) ||
 		!messageContainsAny(finalMessage, []string{"no committed manifest", "no manifest", "config artifact required: false", "config_artifact_required false"}) {
 		failures = append(failures, "answer did not explain convention-first layout and no-manifest decision")
 	}
 	if !messageReportsLayoutValid(finalMessage) {
 		failures = append(failures, "answer did not report the layout as valid")
 	}
-	return verificationFromFailures(failures, "configured layout inspection passed", []string{"notes/sources/layout-runner.md", "notes/synthesis/layout-runner.md", "records/services/layout-runner.md"})
+	return verificationFromFailures(failures, "configured layout inspection passed", []string{"sources/layout-runner.md", "synthesis/layout-runner.md", "records/services/layout-runner.md"})
 }
 
 func verifyInvalidLayoutScenario(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	layoutResult, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{Action: runner.DocumentTaskActionInspectLayout})
 	if err != nil {
 		return verificationResult{}, err
@@ -2866,18 +2856,18 @@ func verifyInvalidLayoutScenario(ctx context.Context, paths evalPaths, finalMess
 	if !turnMetrics.InspectLayoutUsed {
 		failures = append(failures, "agent did not use inspect_layout")
 	}
-	if !messageContainsAll(finalMessage, []string{"notes/synthesis/broken-layout.md", "records/services/broken-layout-service.md"}) ||
+	if !messageContainsAll(finalMessage, []string{"synthesis/broken-layout.md", "records/services/broken-layout-service.md"}) ||
 		!messageContainsAny(finalMessage, []string{"invalid", "valid: false", "valid false"}) ||
-		!messageContainsAny(finalMessage, []string{"missing source", "missing_source_refs", "notes/sources/missing-layout-source.md"}) ||
+		!messageContainsAny(finalMessage, []string{"missing source", "missing_source_refs", "sources/missing-layout-source.md"}) ||
 		!messageContainsAny(finalMessage, []string{"service_name", "service identity"}) ||
 		!messageContainsAny(finalMessage, []string{"freshness", "## Freshness"}) {
 		failures = append(failures, "answer did not report runner-visible invalid layout failures")
 	}
-	return verificationFromFailures(failures, "invalid layout inspection passed", []string{"notes/synthesis/broken-layout.md", "records/services/broken-layout-service.md"})
+	return verificationFromFailures(failures, "invalid layout inspection passed", []string{"synthesis/broken-layout.md", "records/services/broken-layout-service.md"})
 }
 
 func verifyStaleSynthesisUpdate(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
-	docPath := "notes/synthesis/runner-routing.md"
+	docPath := "synthesis/runner-routing.md"
 	body, found, err := documentBodyByPath(ctx, paths, docPath)
 	if err != nil {
 		return verificationResult{}, err
@@ -2886,11 +2876,11 @@ func verifyStaleSynthesisUpdate(ctx context.Context, paths evalPaths, finalMessa
 	if err != nil {
 		return verificationResult{}, err
 	}
-	createdCurrent, err := exactDocumentCount(ctx, paths, "notes/synthesis/runner-routing-current.md")
+	createdCurrent, err := exactDocumentCount(ctx, paths, "synthesis/runner-routing-current.md")
 	if err != nil {
 		return verificationResult{}, err
 	}
-	createdUpdated, err := exactDocumentCount(ctx, paths, "notes/synthesis/runner-routing-updated.md")
+	createdUpdated, err := exactDocumentCount(ctx, paths, "synthesis/runner-routing-updated.md")
 	if err != nil {
 		return verificationResult{}, err
 	}
@@ -2909,12 +2899,12 @@ func verifyStaleSynthesisUpdate(ctx context.Context, paths evalPaths, finalMessa
 		"status: active",
 		"freshness: fresh",
 		"Current guidance: routine agents must use openclerk JSON runner",
-		"Current source: notes/sources/runner-current-runner.md",
-		"Supersedes: notes/sources/runner-old-workaround.md",
+		"Current source: sources/runner-current-runner.md",
+		"Supersedes: sources/runner-old-workaround.md",
 		"## Sources",
 		"## Freshness",
 	}
-	sourceRefs := []string{"notes/sources/runner-current-runner.md", "notes/sources/runner-old-workaround.md"}
+	sourceRefs := []string{"sources/runner-current-runner.md", "sources/runner-old-workaround.md"}
 	failures = append(failures, missingRequired(body, required)...)
 	failures = append(failures, sourceRefsFrontmatterFailures(body, sourceRefs)...)
 	failures = append(failures, presentForbidden(body, []string{"may bypass OpenClerk runner through a temporary command-path workaround"})...)
@@ -2951,9 +2941,9 @@ func verifyStaleSynthesisUpdate(ctx context.Context, paths evalPaths, finalMessa
 }
 
 func verifySynthesisFreshnessRepair(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
-	docPath := "notes/synthesis/runner-repair.md"
-	currentSource := "notes/sources/repair-current.md"
-	supersededSource := "notes/sources/repair-old.md"
+	docPath := "synthesis/runner-repair.md"
+	currentSource := "sources/repair-current.md"
+	supersededSource := "sources/repair-old.md"
 	body, found, err := documentBodyByPath(ctx, paths, docPath)
 	if err != nil {
 		return verificationResult{}, err
@@ -2966,7 +2956,7 @@ func verifySynthesisFreshnessRepair(ctx context.Context, paths evalPaths, finalM
 	if err != nil {
 		return verificationResult{}, err
 	}
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	projections, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
 		Action: runner.RetrievalTaskActionProjectionStates,
 		Projection: runner.ProjectionStateOptions{
@@ -3005,7 +2995,7 @@ func verifySynthesisFreshnessRepair(ctx context.Context, paths evalPaths, finalM
 		"type: synthesis",
 		"status: active",
 		"freshness: fresh",
-		"source_refs: notes/sources/repair-current.md, notes/sources/repair-old.md",
+		"source_refs: sources/repair-current.md, sources/repair-old.md",
 		currentSource,
 		supersededSource,
 		"## Sources",
@@ -3091,7 +3081,7 @@ func verifySynthesisCandidatePressure(ctx context.Context, paths evalPaths, fina
 	if err != nil {
 		return verificationResult{}, err
 	}
-	synthesisCount, err := documentCountWithPrefix(ctx, paths, "notes/synthesis/")
+	synthesisCount, err := documentCountWithPrefix(ctx, paths, "synthesis/")
 	if err != nil {
 		return verificationResult{}, err
 	}
@@ -3196,7 +3186,7 @@ func verifySynthesisSourceSetPressure(ctx context.Context, paths evalPaths, fina
 	if err != nil {
 		return verificationResult{}, err
 	}
-	synthesisCount, err := documentCountWithPrefix(ctx, paths, "notes/synthesis/")
+	synthesisCount, err := documentCountWithPrefix(ctx, paths, "synthesis/")
 	if err != nil {
 		return verificationResult{}, err
 	}
@@ -3230,7 +3220,7 @@ func verifyMTSynthesisDriftPressure(ctx context.Context, paths evalPaths, finalM
 	if err != nil {
 		return verificationResult{}, err
 	}
-	synthesisCount, err := documentCountWithPrefix(ctx, paths, "notes/synthesis/")
+	synthesisCount, err := documentCountWithPrefix(ctx, paths, "synthesis/")
 	if err != nil {
 		return verificationResult{}, err
 	}
@@ -3364,7 +3354,7 @@ func isDuplicateRejection(message string) bool {
 }
 
 func verifyPromotedRecordVsDocs(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	search, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
 		Action: runner.RetrievalTaskActionSearch,
 		Search: runner.SearchOptions{Text: "Plain docs evidence", PathPrefix: "notes/reference/", Limit: 5},
@@ -3464,7 +3454,7 @@ func verifyPromotedRecordVsDocs(ctx context.Context, paths evalPaths, finalMessa
 }
 
 func verifyDecisionRecordVsDocs(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	search, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
 		Action: runner.RetrievalTaskActionSearch,
 		Search: runner.SearchOptions{Text: "OpenClerk runner decisions", PathPrefix: "notes/reference/", Limit: 5},
@@ -3553,7 +3543,7 @@ func verifyDecisionRecordVsDocs(ctx context.Context, paths evalPaths, finalMessa
 }
 
 func verifyDecisionSupersessionFreshness(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	oldDecision, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
 		Action:     runner.RetrievalTaskActionDecisionRecord,
 		DecisionID: "adr-runner-old",
@@ -3674,7 +3664,7 @@ func verifyDecisionSupersessionFreshness(ctx context.Context, paths evalPaths, f
 }
 
 func verifyDecisionRealADRMigration(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	lookup, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
 		Action: runner.RetrievalTaskActionDecisionsLookup,
 		Decisions: runner.DecisionLookupOptions{
@@ -3751,7 +3741,7 @@ func verifyDecisionRealADRMigration(ctx context.Context, paths evalPaths, finalM
 		agentOpsDecision.Decision.Status == "accepted" &&
 		agentOpsDecision.Decision.Scope == "knowledge-plane" &&
 		len(agentOpsDecision.Decision.SourceRefs) == 1 &&
-		agentOpsDecision.Decision.SourceRefs[0] == "notes/sources/agentops-direction.md" &&
+		agentOpsDecision.Decision.SourceRefs[0] == "sources/agentops-direction.md" &&
 		len(agentOpsDecision.Decision.Citations) > 0 &&
 		agentOpsDecision.Decision.Citations[0].Path == "docs/architecture/eval-backed-knowledge-plane-adr.md"
 	hasConfigProjection := configProjection.Projections != nil &&
@@ -3827,7 +3817,7 @@ func verifySourceSensitiveAuditRepair(ctx context.Context, paths evalPaths, fina
 	if err != nil {
 		return verificationResult{}, err
 	}
-	duplicatePaths, err := disallowedDocumentPathsWithPrefix(ctx, paths, "notes/synthesis/", map[string]bool{
+	duplicatePaths, err := disallowedDocumentPathsWithPrefix(ctx, paths, "synthesis/", map[string]bool{
 		sourceAuditSynthesisPath: true,
 		sourceAuditDecoyPath:     true,
 	})
@@ -3842,7 +3832,7 @@ func verifySourceSensitiveAuditRepair(ctx context.Context, paths evalPaths, fina
 	if err != nil {
 		return verificationResult{}, err
 	}
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	events, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
 		Action: runner.RetrievalTaskActionProvenanceEvents,
 		Provenance: runner.ProvenanceEventOptions{
@@ -3944,7 +3934,7 @@ func verifySourceSensitiveAuditRepair(ctx context.Context, paths evalPaths, fina
 }
 
 func verifySourceSensitiveConflict(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	search, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
 		Action: runner.RetrievalTaskActionSearch,
 		Search: runner.SearchOptions{Text: sourceAuditConflictSearchText, Limit: 10},
@@ -3982,7 +3972,7 @@ func verifySourceSensitiveConflict(ctx context.Context, paths evalPaths, finalMe
 	if err != nil {
 		return verificationResult{}, err
 	}
-	synthesisCount, err := documentCountWithPrefix(ctx, paths, "notes/synthesis/")
+	synthesisCount, err := documentCountWithPrefix(ctx, paths, "synthesis/")
 	if err != nil {
 		return verificationResult{}, err
 	}
@@ -4030,8 +4020,8 @@ func verifySourceSensitiveConflict(ctx context.Context, paths evalPaths, finalMe
 }
 
 func verifyMixedSynthesisRecords(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
-	base, err := verifySourceLinkedSynthesis(ctx, paths, "notes/synthesis/openclerk-runner-with-records.md", finalMessage, sourceLinkedSynthesisExpectations{
-		SourceRefs:                 []string{"notes/sources/openclerk-runner.md"},
+	base, err := verifySourceLinkedSynthesis(ctx, paths, "synthesis/openclerk-runner-with-records.md", finalMessage, sourceLinkedSynthesisExpectations{
+		SourceRefs:                 []string{"sources/openclerk-runner.md"},
 		RequireSearch:              true,
 		RequireRecordsLookup:       true,
 		RequireProvenanceEvents:    true,
@@ -4043,7 +4033,7 @@ func verifyMixedSynthesisRecords(ctx context.Context, paths evalPaths, finalMess
 	if err != nil {
 		return verificationResult{}, err
 	}
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	records, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
 		Action:  runner.RetrievalTaskActionRecordsLookup,
 		Records: runner.RecordLookupOptions{Text: "OpenClerk runner", Limit: 5},
@@ -4087,7 +4077,7 @@ func verifyMixedSynthesisRecords(ctx context.Context, paths evalPaths, finalMess
 		DatabasePass:  databasePass,
 		AssistantPass: assistantPass,
 		Details:       missingDetails(failures),
-		Documents:     []string{"notes/synthesis/openclerk-runner-with-records.md"},
+		Documents:     []string{"synthesis/openclerk-runner-with-records.md"},
 	}, nil
 }
 
@@ -4115,7 +4105,7 @@ func documentByPath(ctx context.Context, paths evalPaths, docPath string) (*runn
 	if err != nil || !found {
 		return nil, found, err
 	}
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	got, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{Action: runner.DocumentTaskActionGet, DocID: docID})
 	if err != nil {
 		return nil, false, err
@@ -4138,7 +4128,7 @@ func documentBodyByPath(ctx context.Context, paths evalPaths, docPath string) (s
 }
 
 func documentIDByPath(ctx context.Context, paths evalPaths, docPath string) (string, bool, error) {
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionList,
 		List:   runner.DocumentListOptions{PathPrefix: docPath, Limit: 100},
@@ -4155,7 +4145,7 @@ func documentIDByPath(ctx context.Context, paths evalPaths, docPath string) (str
 }
 
 func exactDocumentCount(ctx context.Context, paths evalPaths, docPath string) (int, error) {
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionList,
 		List:   runner.DocumentListOptions{PathPrefix: docPath, Limit: 100},
@@ -4173,7 +4163,7 @@ func exactDocumentCount(ctx context.Context, paths evalPaths, docPath string) (i
 }
 
 func documentCountWithPrefix(ctx context.Context, paths evalPaths, pathPrefix string) (int, error) {
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionList,
 		List:   runner.DocumentListOptions{PathPrefix: pathPrefix, Limit: 100},
@@ -4191,7 +4181,7 @@ func documentCountWithPrefix(ctx context.Context, paths evalPaths, pathPrefix st
 }
 
 func disallowedDocumentPathsWithPrefix(ctx context.Context, paths evalPaths, pathPrefix string, allowed map[string]bool) ([]string, error) {
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionList,
 		List:   runner.DocumentListOptions{PathPrefix: pathPrefix, Limit: 100},
@@ -4213,7 +4203,7 @@ func firstSynthesisProjection(ctx context.Context, paths evalPaths, docID string
 	if strings.TrimSpace(docID) == "" {
 		return nil, nil
 	}
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	projections, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
 		Action: runner.RetrievalTaskActionProjectionStates,
 		Projection: runner.ProjectionStateOptions{
@@ -4653,7 +4643,7 @@ func lowerStrings(values []string) []string {
 }
 
 func verifyRecordsAndProvenance(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	records, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
 		Action:  runner.RetrievalTaskActionRecordsLookup,
 		Records: runner.RecordLookupOptions{Text: "OpenClerk runner", Limit: 5},
@@ -5725,19 +5715,19 @@ func allScenarios() []scenario {
 		{
 			ID:     "search-synthesis",
 			Title:  "Search before source-linked synthesis",
-			Prompt: "Use the configured local OpenClerk data path. Search existing notes for OpenClerk runner context, list existing notes/synthesis/ candidates, then create or update notes/synthesis/openclerk-runner.md with a source-linked synthesis. Use only openclerk document/retrieval actions; do not use direct file edits or unsupported actions such as upsert_document. The synthesis must have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: notes/sources/openclerk-runner.md. Do not use YAML list syntax for source_refs. The body must include ## Sources citing notes/sources/openclerk-runner.md and ## Freshness describing the runner retrieval checks. Mention notes/synthesis/openclerk-runner.md in the final answer.",
+			Prompt: "Use the configured local OpenClerk data path. Search existing notes for OpenClerk runner context, list existing synthesis/ candidates, then create or update synthesis/openclerk-runner.md with a source-linked synthesis. Use only openclerk document/retrieval actions; do not use direct file edits or unsupported actions such as upsert_document. The synthesis must have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: sources/openclerk-runner.md. Do not use YAML list syntax for source_refs. The body must include ## Sources citing sources/openclerk-runner.md and ## Freshness describing the runner retrieval checks. Mention synthesis/openclerk-runner.md in the final answer.",
 		},
 		{
 			ID:     "answer-filing",
 			Title:  "File durable answer into source-linked synthesis",
-			Prompt: "Use the configured local OpenClerk data path. Search for the answer filing source, answer from it, and file the reusable answer into notes/synthesis/filed-runner-answer.md titled Filed OpenClerk runner Answer. The body must include the exact source line Source: notes/sources/answer-filing-runner.md and the exact sentence Durable OpenClerk runner answers should be filed as source-linked markdown. Mention notes/synthesis/filed-runner-answer.md in the final answer.",
+			Prompt: "Use the configured local OpenClerk data path. Search for the answer filing source, answer from it, and file the reusable answer into synthesis/filed-runner-answer.md titled Filed OpenClerk runner Answer. The body must include the exact source line Source: sources/answer-filing-runner.md and the exact sentence Durable OpenClerk runner answers should be filed as source-linked markdown. Mention synthesis/filed-runner-answer.md in the final answer.",
 		},
 		{
 			ID:    ragRetrievalScenarioID,
 			Title: "RAG retrieval-only baseline",
 			Turns: []scenarioTurn{
 				{Prompt: "Use the configured local OpenClerk data path. Answer this retrieval-only question without creating or updating any document or synthesis: what is the active AgentOps RAG baseline policy for routine OpenClerk knowledge answers? Use only openclerk retrieval search requests. Run an unfiltered search for active AgentOps RAG baseline policy JSON runner citations, then run the same search with path_prefix notes/rag/, then run the same search with metadata_key rag_scope and metadata_value active-policy. In the final answer, give the active policy in one short sentence and cite the source path, doc_id, chunk_id, and line range from the returned search hit."},
-				{Prompt: "Repeat the same retrieval-only question. Do not create, update, append, replace, or file any notes/synthesis/ document. Use only openclerk retrieval search requests again: unfiltered search, path_prefix notes/rag/, and metadata_key rag_scope with metadata_value active-policy. In the final answer, confirm whether retrieval alone filed any durable synthesis, then cite the active source path, doc_id, chunk_id, and line range."},
+				{Prompt: "Repeat the same retrieval-only question. Do not create, update, append, replace, or file any synthesis/ document. Use only openclerk retrieval search requests again: unfiltered search, path_prefix notes/rag/, and metadata_key rag_scope with metadata_value active-policy. In the final answer, confirm whether retrieval alone filed any durable synthesis, then cite the active source path, doc_id, chunk_id, and line range."},
 			},
 		},
 		{
@@ -5755,48 +5745,48 @@ func allScenarios() []scenario {
 			Title: "Memory and router reference comparison",
 			Turns: []scenarioTurn{
 				{Prompt: "Use the configured local OpenClerk data path. Create notes/memory-router/session-observation.md titled Memory Router Session Observation with this exact body: ---\ntype: source\nstatus: active\nobserved_at: 2026-04-22\n---\n# Memory Router Session Observation\n\n## Summary\nSession observation: a user asked whether memory routing should promote recall. Useful session material must be promoted only by writing canonical markdown with source refs.\n\n## Feedback\nPositive feedback weight 0.8 is advisory only and cannot hide stale canonical evidence.\nDo not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, memory transports, or unsupported actions."},
-				{Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, memory transports, remember/recall actions, autonomous router APIs, or unsupported actions. First run openclerk retrieval search for memory router temporal recall session promotion feedback weighting routing canonical docs with limit 10. Then run openclerk document list_documents with path_prefix notes/memory-router/ and limit 10. Use the returned doc_ids for notes/memory-router/session-observation.md, notes/memory-router/temporal-policy.md, notes/memory-router/feedback-weighting.md, and notes/memory-router/routing-policy.md to run get_document for each. Inspect provenance_events for ref_kind document and the session observation doc_id. Then create notes/synthesis/memory-router-reference.md titled Memory Router Reference with frontmatter type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: notes/memory-router/session-observation.md, notes/memory-router/temporal-policy.md, notes/memory-router/feedback-weighting.md, notes/memory-router/routing-policy.md. The body must include these exact sentences: Temporal status: current canonical docs outrank stale session observations. Session promotion path: durable canonical markdown with source refs. Feedback weighting: advisory only. Routing choice: existing AgentOps document and retrieval actions. Decision: keep memory and autonomous routing as reference/deferred. Include ## Sources with all four source paths and ## Freshness describing the provenance and synthesis projection checks. After creating the synthesis, list documents to get its doc_id and inspect projection_states for projection synthesis with ref_kind document and that synthesis doc_id. In the final answer, mention temporal status, session promotion, feedback weighting, routing choice, source refs or citations, provenance/freshness, notes/synthesis/memory-router-reference.md, and that memory/router remains reference/deferred with no promoted remember/recall or autonomous routing surface."},
+				{Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, memory transports, remember/recall actions, autonomous router APIs, or unsupported actions. First run openclerk retrieval search for memory router temporal recall session promotion feedback weighting routing canonical docs with limit 10. Then run openclerk document list_documents with path_prefix notes/memory-router/ and limit 10. Use the returned doc_ids for notes/memory-router/session-observation.md, notes/memory-router/temporal-policy.md, notes/memory-router/feedback-weighting.md, and notes/memory-router/routing-policy.md to run get_document for each. Inspect provenance_events for ref_kind document and the session observation doc_id. Then create synthesis/memory-router-reference.md titled Memory Router Reference with frontmatter type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: notes/memory-router/session-observation.md, notes/memory-router/temporal-policy.md, notes/memory-router/feedback-weighting.md, notes/memory-router/routing-policy.md. The body must include these exact sentences: Temporal status: current canonical docs outrank stale session observations. Session promotion path: durable canonical markdown with source refs. Feedback weighting: advisory only. Routing choice: existing AgentOps document and retrieval actions. Decision: keep memory and autonomous routing as reference/deferred. Include ## Sources with all four source paths and ## Freshness describing the provenance and synthesis projection checks. After creating the synthesis, list documents to get its doc_id and inspect projection_states for projection synthesis with ref_kind document and that synthesis doc_id. In the final answer, mention temporal status, session promotion, feedback weighting, routing choice, source refs or citations, provenance/freshness, synthesis/memory-router-reference.md, and that memory/router remains reference/deferred with no promoted remember/recall or autonomous routing surface."},
 			},
 		},
 		{
 			ID:     configuredLayoutScenarioID,
 			Title:  "Explain configured convention-first layout",
-			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, or source-built command paths. Run openclerk document inspect_layout. In the final answer, explain the configured knowledge layout from the returned JSON: mention convention-first mode, config_artifact_required false or no committed manifest, conventional prefixes notes/sources/ and notes/synthesis/, synthesis source_refs plus Sources and Freshness requirements, and whether the layout is valid.",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, or source-built command paths. Run openclerk document inspect_layout. In the final answer, explain the configured knowledge layout from the returned JSON: mention convention-first mode, config_artifact_required false or no committed manifest, conventional prefixes sources/ and synthesis/, synthesis source_refs plus Sources and Freshness requirements, and whether the layout is valid.",
 		},
 		{
 			ID:     invalidLayoutScenarioID,
 			Title:  "Report invalid layout through runner-visible checks",
-			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, or source-built command paths. Run openclerk document inspect_layout. In the final answer, report the invalid runner-visible layout checks for notes/synthesis/broken-layout.md and records/services/broken-layout-service.md, including the missing source ref, missing Freshness section, and missing service identity metadata.",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, or source-built command paths. Run openclerk document inspect_layout. In the final answer, report the invalid runner-visible layout checks for synthesis/broken-layout.md and records/services/broken-layout-service.md, including the missing source ref, missing Freshness section, and missing service identity metadata.",
 		},
 		{
 			ID:     "stale-synthesis-update",
 			Title:  "Update stale source-linked synthesis",
-			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results to find existing docs; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, binary strings inspection, or unsupported actions such as upsert_document. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"OpenClerk runner routing\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/synthesis/\",\"limit\":20}}. Use the returned doc_id for notes/synthesis/runner-routing.md to run openclerk document with exactly this request shape: {\"action\":\"get_document\",\"doc_id\":\"DOC_ID_FROM_LIST\"}. Then update notes/synthesis/runner-routing.md only with replace_section or append_document. Do not create a new synthesis page. Preserve the existing prototype frontmatter with freshness: fresh and the single-line field source_refs: notes/sources/runner-current-runner.md, notes/sources/runner-old-workaround.md. Replace the stale command-path workaround claim with these exact lines: Current guidance: routine agents must use openclerk JSON runner; Current source: notes/sources/runner-current-runner.md; Supersedes: notes/sources/runner-old-workaround.md. Keep ## Sources and ## Freshness sections with both source paths. Mention notes/synthesis/runner-routing.md in the final answer.",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results to find existing docs; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, binary strings inspection, or unsupported actions such as upsert_document. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"OpenClerk runner routing\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\",\"limit\":20}}. Use the returned doc_id for synthesis/runner-routing.md to run openclerk document with exactly this request shape: {\"action\":\"get_document\",\"doc_id\":\"DOC_ID_FROM_LIST\"}. Then update synthesis/runner-routing.md only with replace_section or append_document. Do not create a new synthesis page. Preserve the existing prototype frontmatter with freshness: fresh and the single-line field source_refs: sources/runner-current-runner.md, sources/runner-old-workaround.md. Replace the stale command-path workaround claim with these exact lines: Current guidance: routine agents must use openclerk JSON runner; Current source: sources/runner-current-runner.md; Supersedes: sources/runner-old-workaround.md. Keep ## Sources and ## Freshness sections with both source paths. Mention synthesis/runner-routing.md in the final answer.",
 		},
 		{
 			ID:     "synthesis-freshness-repair",
 			Title:  "Repair synthesis after runner-visible freshness invalidation",
-			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, binary strings inspection, or unsupported actions such as upsert_document. First search for OpenClerk runner repair freshness. Then list notes/synthesis/ candidates, get notes/synthesis/runner-repair.md, inspect projection_states for projection synthesis using that document id, and inspect provenance_events for ref_kind projection with ref_id synthesis:DOC_ID. Repair notes/synthesis/runner-repair.md only with replace_section or append_document. Do not create a duplicate. Preserve the existing source_refs frontmatter exactly as notes/sources/repair-current.md, notes/sources/repair-old.md. The repaired body must state: Current source: notes/sources/repair-current.md; Superseded source: notes/sources/repair-old.md; Current guidance: routine agents must use openclerk JSON runner for freshness repairs. After repair, inspect projection_states again and mention notes/synthesis/runner-repair.md, notes/sources/repair-current.md, notes/sources/repair-old.md, and the final synthesis projection freshness in the final answer.",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, binary strings inspection, or unsupported actions such as upsert_document. First search for OpenClerk runner repair freshness. Then list synthesis/ candidates, get synthesis/runner-repair.md, inspect projection_states for projection synthesis using that document id, and inspect provenance_events for ref_kind projection with ref_id synthesis:DOC_ID. Repair synthesis/runner-repair.md only with replace_section or append_document. Do not create a duplicate. Preserve the existing source_refs frontmatter exactly as sources/repair-current.md, sources/repair-old.md. The repaired body must state: Current source: sources/repair-current.md; Superseded source: sources/repair-old.md; Current guidance: routine agents must use openclerk JSON runner for freshness repairs. After repair, inspect projection_states again and mention synthesis/runner-repair.md, sources/repair-current.md, sources/repair-old.md, and the final synthesis projection freshness in the final answer.",
 		},
 		{
 			ID:     sourceAuditRepairScenarioID,
 			Title:  "Repair source-sensitive audit synthesis",
-			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, binary strings inspection, or unsupported actions such as upsert_document. Search for source-sensitive audit runner repair evidence, list notes/synthesis/ candidates, choose notes/synthesis/audit-runner-routing.md rather than the decoy, get it before editing, inspect projection_states for projection synthesis using that document id, and inspect provenance_events for ref_kind projection with ref_id synthesis:DOC_ID. Repair notes/synthesis/audit-runner-routing.md only with replace_section or append_document. Do not create a duplicate synthesis page. Preserve the existing single-line source_refs for notes/sources/audit-runner-current.md and notes/sources/audit-runner-old.md. The repaired body must state: Current audit guidance: use the installed openclerk JSON runner; Current source: notes/sources/audit-runner-current.md; Superseded source: notes/sources/audit-runner-old.md. Keep ## Sources and ## Freshness. After repair, inspect projection_states again and mention notes/synthesis/audit-runner-routing.md, notes/sources/audit-runner-current.md, and final freshness in the final answer.",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, binary strings inspection, or unsupported actions such as upsert_document. Search for source-sensitive audit runner repair evidence, list synthesis/ candidates, choose synthesis/audit-runner-routing.md rather than the decoy, get it before editing, inspect projection_states for projection synthesis using that document id, and inspect provenance_events for ref_kind projection with ref_id synthesis:DOC_ID. Repair synthesis/audit-runner-routing.md only with replace_section or append_document. Do not create a duplicate synthesis page. Preserve the existing single-line source_refs for sources/audit-runner-current.md and sources/audit-runner-old.md. The repaired body must state: Current audit guidance: use the installed openclerk JSON runner; Current source: sources/audit-runner-current.md; Superseded source: sources/audit-runner-old.md. Keep ## Sources and ## Freshness. After repair, inspect projection_states again and mention synthesis/audit-runner-routing.md, sources/audit-runner-current.md, and final freshness in the final answer.",
 		},
 		{
 			ID:     sourceAuditConflictScenarioID,
 			Title:  "Explain unresolved source-sensitive conflict",
-			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, or unsupported actions. Search for source sensitive audit conflict runner retention, then inspect provenance_events for both returned source documents. Do not create, update, append, replace, or file a synthesis document. In the final answer, explain that notes/sources/audit-conflict-alpha.md says seven days and notes/sources/audit-conflict-bravo.md says thirty days, that both are current sources with no supersession metadata, and that the conflict is unresolved so the agent cannot choose a winner without source authority.",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, or unsupported actions. Search for source sensitive audit conflict runner retention, then inspect provenance_events for both returned source documents. Do not create, update, append, replace, or file a synthesis document. In the final answer, explain that sources/audit-conflict-alpha.md says seven days and sources/audit-conflict-bravo.md says thirty days, that both are current sources with no supersession metadata, and that the conflict is unresolved so the agent cannot choose a winner without source authority.",
 		},
 		{
 			ID:     synthesisCandidatePressureScenarioID,
 			Title:  "Pressure-test synthesis candidate selection",
-			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, or unsupported actions such as upsert_document. Search for synthesis compiler pressure evidence, list notes/synthesis/ candidates, choose the existing compiler pressure synthesis rather than the decoy, get it before editing, inspect its synthesis projection freshness, and repair it only with replace_section or append_document. Do not create a duplicate synthesis page. Preserve the existing single-line source_refs for notes/sources/compiler-current.md and notes/sources/compiler-old.md. The repaired body must state: Current compiler decision: existing document and retrieval actions are sufficient for synthesis compiler pressure repairs; Current source: notes/sources/compiler-current.md; Superseded source: notes/sources/compiler-old.md. Keep ## Sources and ## Freshness. Mention notes/synthesis/compiler-routing.md and the final freshness in the final answer.",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, or unsupported actions such as upsert_document. Search for synthesis compiler pressure evidence, list synthesis/ candidates, choose the existing compiler pressure synthesis rather than the decoy, get it before editing, inspect its synthesis projection freshness, and repair it only with replace_section or append_document. Do not create a duplicate synthesis page. Preserve the existing single-line source_refs for sources/compiler-current.md and sources/compiler-old.md. The repaired body must state: Current compiler decision: existing document and retrieval actions are sufficient for synthesis compiler pressure repairs; Current source: sources/compiler-current.md; Superseded source: sources/compiler-old.md. Keep ## Sources and ## Freshness. Mention synthesis/compiler-routing.md and the final freshness in the final answer.",
 		},
 		{
 			ID:     synthesisSourceSetPressureScenarioID,
 			Title:  "Pressure-test multi-source synthesis creation",
-			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, or unsupported actions such as upsert_document. Search for synthesis compiler pressure source set evidence, list notes/synthesis/ candidates, then create notes/synthesis/compiler-source-set.md as a new source-linked synthesis. The synthesis must have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: notes/sources/source-set-alpha.md, notes/sources/source-set-beta.md, notes/sources/source-set-gamma.md. Do not use YAML list syntax for source_refs. The body must mention alpha, beta, and gamma source evidence, include ## Sources with all three source paths, and include ## Freshness describing the runner search and synthesis-candidate checks. Mention notes/synthesis/compiler-source-set.md in the final answer.",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, or unsupported actions such as upsert_document. Search for synthesis compiler pressure source set evidence, list synthesis/ candidates, then create synthesis/compiler-source-set.md as a new source-linked synthesis. The synthesis must have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: sources/source-set-alpha.md, sources/source-set-beta.md, sources/source-set-gamma.md. Do not use YAML list syntax for source_refs. The body must mention alpha, beta, and gamma source evidence, include ## Sources with all three source paths, and include ## Freshness describing the runner search and synthesis-candidate checks. Mention synthesis/compiler-source-set.md in the final answer.",
 		},
 		{
 			ID:     "append-replace",
@@ -5856,22 +5846,22 @@ func allScenarios() []scenario {
 		{
 			ID:     "mixed-synthesis-records",
 			Title:  "Mixed document and retrieval workflow",
-			Prompt: "Use the configured local OpenClerk data path. Search for OpenClerk runner context, inspect records_lookup, provenance_events, and projection_states for OpenClerk runner, then create notes/synthesis/openclerk-runner-with-records.md with source refs. Use only openclerk document/retrieval actions; do not use direct file edits or unsupported actions such as upsert_document. The synthesis must have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: notes/sources/openclerk-runner.md. Do not use YAML list syntax for source_refs. The body must include ## Sources citing notes/sources/openclerk-runner.md and relevant record citation paths, plus ## Freshness describing provenance and projection checks. Mention notes/synthesis/openclerk-runner-with-records.md in the final answer.",
+			Prompt: "Use the configured local OpenClerk data path. Search for OpenClerk runner context, inspect records_lookup, provenance_events, and projection_states for OpenClerk runner, then create synthesis/openclerk-runner-with-records.md with source refs. Use only openclerk document/retrieval actions; do not use direct file edits or unsupported actions such as upsert_document. The synthesis must have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: sources/openclerk-runner.md. Do not use YAML list syntax for source_refs. The body must include ## Sources citing sources/openclerk-runner.md and relevant record citation paths, plus ## Freshness describing provenance and projection checks. Mention synthesis/openclerk-runner-with-records.md in the final answer.",
 		},
 		{
 			ID:    "mt-source-then-synthesis",
 			Title: "Create a source, then synthesize from it in a resumed turn",
 			Turns: []scenarioTurn{
-				{Prompt: "Use the configured local OpenClerk data path. Create notes/sources/mt-runner.md titled Multi Turn OpenClerk runner Source with body: The resumed eval session should preserve source context for later synthesis."},
-				{Prompt: "Now search for that source and create notes/synthesis/mt-runner.md as a source-linked synthesis. Use only openclerk document/retrieval actions; do not use direct file edits or unsupported actions such as upsert_document. The synthesis must have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: notes/sources/mt-runner.md. The body must include ## Sources citing notes/sources/mt-runner.md and ## Freshness describing the runner retrieval check. Mention notes/synthesis/mt-runner.md and the source path in the final answer."},
+				{Prompt: "Use the configured local OpenClerk data path. Create sources/mt-runner.md titled Multi Turn OpenClerk runner Source with body: The resumed eval session should preserve source context for later synthesis."},
+				{Prompt: "Now search for that source and create synthesis/mt-runner.md as a source-linked synthesis. Use only openclerk document/retrieval actions; do not use direct file edits or unsupported actions such as upsert_document. The synthesis must have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: sources/mt-runner.md. The body must include ## Sources citing sources/mt-runner.md and ## Freshness describing the runner retrieval check. Mention synthesis/mt-runner.md and the source path in the final answer."},
 			},
 		},
 		{
 			ID:    mtSynthesisDriftPressureScenarioID,
 			Title: "Repair multi-turn synthesis drift",
 			Turns: []scenarioTurn{
-				{Prompt: "Use the configured local OpenClerk data path. Search for drift synthesis compiler pressure evidence, list notes/synthesis/ candidates, then create notes/synthesis/drift-runner.md as a source-linked synthesis. Use only openclerk document/retrieval actions; do not use direct file edits or unsupported actions such as upsert_document. The synthesis must have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: notes/sources/drift-current.md, notes/sources/drift-old.md. The body must include ## Sources citing both source paths and ## Freshness describing the runner retrieval check. Mention notes/synthesis/drift-runner.md in the final answer."},
-				{Prompt: "Use only OpenClerk runner document and retrieval JSON results. First find notes/sources/drift-current.md through list_documents or search, get it, and replace its Summary section with: Current drift decision says existing document and retrieval actions should stay the v1 synthesis path. Then search for drift synthesis compiler pressure evidence, list notes/synthesis/ candidates, get notes/synthesis/drift-runner.md, inspect projection_states for projection synthesis using that document id, and repair notes/synthesis/drift-runner.md only with replace_section or append_document. Do not create a duplicate. Preserve the existing single-line source_refs for notes/sources/drift-current.md and notes/sources/drift-old.md. The repaired body must state: Current drift decision: keep existing document and retrieval actions; Current source: notes/sources/drift-current.md; Superseded source: notes/sources/drift-old.md. Mention notes/synthesis/drift-runner.md, notes/sources/drift-current.md, and final freshness in the final answer."},
+				{Prompt: "Use the configured local OpenClerk data path. Search for drift synthesis compiler pressure evidence, list synthesis/ candidates, then create synthesis/drift-runner.md as a source-linked synthesis. Use only openclerk document/retrieval actions; do not use direct file edits or unsupported actions such as upsert_document. The synthesis must have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: sources/drift-current.md, sources/drift-old.md. The body must include ## Sources citing both source paths and ## Freshness describing the runner retrieval check. Mention synthesis/drift-runner.md in the final answer."},
+				{Prompt: "Use only OpenClerk runner document and retrieval JSON results. First find sources/drift-current.md through list_documents or search, get it, and replace its Summary section with: Current drift decision says existing document and retrieval actions should stay the v1 synthesis path. Then search for drift synthesis compiler pressure evidence, list synthesis/ candidates, get synthesis/drift-runner.md, inspect projection_states for projection synthesis using that document id, and repair synthesis/drift-runner.md only with replace_section or append_document. Do not create a duplicate. Preserve the existing single-line source_refs for sources/drift-current.md and sources/drift-old.md. The repaired body must state: Current drift decision: keep existing document and retrieval actions; Current source: sources/drift-current.md; Superseded source: sources/drift-old.md. Mention synthesis/drift-runner.md, sources/drift-current.md, and final freshness in the final answer."},
 			},
 		},
 		{

@@ -17,14 +17,17 @@ openclerk retrieval
 ```
 
 Pipe exactly one JSON request to one runner command, then answer only from the
-JSON result. The configured local data path is already available through the
-environment. For routine requests, do not pass `--data-dir`, `--db`,
-`--vault-root`, or `--embedding-provider` unless the user explicitly names a
-specific dataset.
+JSON result. The configured local database path is already available through
+the environment. For routine requests, do not pass `--db` or
+`--embedding-provider` unless the user explicitly names a specific dataset.
 
-The runner honors `OPENCLERK_DATA_DIR`, `OPENCLERK_DATABASE_PATH`, and
-`OPENCLERK_VAULT_ROOT`. Keep those paths together by relying on the configured
-environment.
+The runner honors `OPENCLERK_DATABASE_PATH`. The database stores the configured
+vault root, so routine agent work should use the configured environment and
+runner JSON results instead of maintaining separate filesystem roots.
+
+If the user explicitly asks to initialize OpenClerk for an existing vault, run
+`openclerk init --vault-root <vault-root>`. This is setup work, not a routine
+knowledge task.
 
 ## No-Tools Handling Before Runners
 
@@ -95,11 +98,8 @@ layout problems.
 When writing source-linked synthesis, use this exact AgentOps workflow:
 
 1. Run retrieval `search` for source evidence.
-2. Run document `inspect_layout` if the active synthesis prefix is unclear.
-   Then run document `list_documents` with `path_prefix: "synthesis/"` when
-   the vault root is already the notes directory, or
-   `path_prefix: "notes/synthesis/"` when the vault root contains a nested
-   notes directory, to find existing synthesis candidates.
+2. Run document `list_documents` with `path_prefix: "synthesis/"` to find
+   existing synthesis candidates.
 3. Run `get_document` before modifying an existing synthesis page.
 4. Prefer `replace_section` or `append_document` over creating duplicates.
 5. Inspect `provenance_events` and `projection_states` when the synthesis
@@ -108,11 +108,10 @@ When writing source-linked synthesis, use this exact AgentOps workflow:
    `projection: "synthesis"`, `ref_kind: "document"`, and the synthesis
    `doc_id` before repairing stale claims.
 
-Prototype synthesis pages live under `synthesis/` when the vault root is
-already the notes directory, or under `notes/synthesis/` when the vault root
-contains a nested notes directory. Include frontmatter with `type: synthesis`,
-`status: active`, `freshness: fresh`, and `source_refs` set to a single-line
-comma-separated source path list. Do not use YAML list syntax for `source_refs`.
+Prototype synthesis pages live under `synthesis/`. Canonical source docs live
+under `sources/`. Include frontmatter with `type: synthesis`, `status: active`,
+`freshness: fresh`, and `source_refs` set to a single-line comma-separated
+source path list. Do not use YAML list syntax for `source_refs`.
 Include a `## Sources` section with source paths or citation paths from runner
 JSON, and a `## Freshness` section that states which runner retrieval results
 were checked. Use only documented runner actions, not `upsert_document` or

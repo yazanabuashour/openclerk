@@ -90,10 +90,16 @@ exit non-zero and write errors to stderr.
 
 ## Local Storage
 
-The default data directory is
-`${XDG_DATA_HOME:-~/.local/share}/openclerk`. It contains `openclerk.sqlite`
-and the markdown `vault/`. Override storage with `OPENCLERK_DATA_DIR`,
-`OPENCLERK_DATABASE_PATH`, or `OPENCLERK_VAULT_ROOT`.
+The default database is
+`${XDG_DATA_HOME:-~/.local/share}/openclerk/openclerk.sqlite`. The database
+stores the configured markdown vault root. Override the database location with
+`OPENCLERK_DATABASE_PATH` or `--db`.
+
+For an existing vault, bind it once:
+
+```bash
+openclerk init --vault-root <vault-root>
+```
 
 ## Eval Evidence
 
@@ -112,7 +118,7 @@ Use the full local toolchain for repository development:
 ```bash
 mise install
 printf '%s\n' '{"action":"resolve_paths"}' | \
-  OPENCLERK_DATA_DIR="$(mktemp -d)" mise exec -- go run ./cmd/openclerk document
+  OPENCLERK_DATABASE_PATH="$(mktemp -d)/openclerk.sqlite" mise exec -- go run ./cmd/openclerk document
 test -z "$(gofmt -l $(git ls-files '*.go'))"
 mise exec -- golangci-lint run
 mise exec -- go test ./...

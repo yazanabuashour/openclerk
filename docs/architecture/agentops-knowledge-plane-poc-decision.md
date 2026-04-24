@@ -72,7 +72,7 @@ The next build slice should be:
 - keep source-linked synthesis behind `openclerk document` and
   `openclerk retrieval`; do not add a dedicated synthesis action unless future
   eval evidence shows repeated brittle multi-step behavior.
-- keep synthesis markdown under `notes/synthesis/` with `type: synthesis`,
+- keep synthesis markdown under `synthesis/` with `type: synthesis`,
   `status: active`, `freshness: fresh`, stable `source_refs`, `## Sources`,
   and `## Freshness`.
 - preserve the workflow that searches canonical sources first, lists existing

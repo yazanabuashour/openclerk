@@ -78,10 +78,10 @@ func TestResolvedVersion(t *testing.T) {
 func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 	t.Parallel()
 
-	dataDir := filepath.Join(t.TempDir(), "data")
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
 	createRequest := `{"action":"create_document","document":{"path":"notes/runner.md","title":"Runner","body":"# Runner\n\n## Summary\nOpenClerk runner note.\n"}}`
 	var createResult runner.DocumentTaskResult
-	code, stderr := runJSON(t, []string{"document", "--data-dir", dataDir}, createRequest, &createResult)
+	code, stderr := runJSON(t, []string{"document", "--db", dbPath}, createRequest, &createResult)
 	if code != 0 {
 		t.Fatalf("create exit = %d stderr=%s", code, stderr)
 	}
@@ -91,7 +91,7 @@ func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 
 	searchRequest := `{"action":"search","search":{"text":"runner","limit":10}}`
 	var searchResult runner.RetrievalTaskResult
-	code, stderr = runJSON(t, []string{"retrieval", "--data-dir", dataDir}, searchRequest, &searchResult)
+	code, stderr = runJSON(t, []string{"retrieval", "--db", dbPath}, searchRequest, &searchResult)
 	if code != 0 {
 		t.Fatalf("search exit = %d stderr=%s", code, stderr)
 	}
@@ -101,14 +101,14 @@ func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 
 	serviceRequest := `{"action":"create_document","document":{"path":"records/services/openclerk-runner.md","title":"OpenClerk runner","body":"---\nservice_id: openclerk-runner\nservice_name: OpenClerk runner\nservice_status: active\nservice_owner: runner\nservice_interface: JSON runner\n---\n# OpenClerk runner\n\n## Summary\nProduction service.\n"}}`
 	var serviceCreate runner.DocumentTaskResult
-	code, stderr = runJSON(t, []string{"document", "--data-dir", dataDir}, serviceRequest, &serviceCreate)
+	code, stderr = runJSON(t, []string{"document", "--db", dbPath}, serviceRequest, &serviceCreate)
 	if code != 0 {
 		t.Fatalf("create service exit = %d stderr=%s", code, stderr)
 	}
 
 	servicesRequest := `{"action":"services_lookup","services":{"text":"OpenClerk runner","interface":"JSON runner","limit":10}}`
 	var servicesResult runner.RetrievalTaskResult
-	code, stderr = runJSON(t, []string{"retrieval", "--data-dir", dataDir}, servicesRequest, &servicesResult)
+	code, stderr = runJSON(t, []string{"retrieval", "--db", dbPath}, servicesRequest, &servicesResult)
 	if code != 0 {
 		t.Fatalf("services exit = %d stderr=%s", code, stderr)
 	}
@@ -118,7 +118,7 @@ func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 
 	serviceDetailRequest := `{"action":"service_record","service_id":"openclerk-runner"}`
 	var serviceDetail runner.RetrievalTaskResult
-	code, stderr = runJSON(t, []string{"retrieval", "--data-dir", dataDir}, serviceDetailRequest, &serviceDetail)
+	code, stderr = runJSON(t, []string{"retrieval", "--db", dbPath}, serviceDetailRequest, &serviceDetail)
 	if code != 0 {
 		t.Fatalf("service detail exit = %d stderr=%s", code, stderr)
 	}
@@ -128,14 +128,14 @@ func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 
 	decisionRequest := `{"action":"create_document","document":{"path":"docs/architecture/runner-decision.md","title":"Runner decision","body":"---\ndecision_id: adr-runner\ndecision_title: Use JSON runner\ndecision_status: accepted\ndecision_scope: agentops\ndecision_owner: platform\ndecision_date: 2026-04-22\n---\n# Runner decision\n\n## Summary\nUse the JSON runner.\n"}}`
 	var decisionCreate runner.DocumentTaskResult
-	code, stderr = runJSON(t, []string{"document", "--data-dir", dataDir}, decisionRequest, &decisionCreate)
+	code, stderr = runJSON(t, []string{"document", "--db", dbPath}, decisionRequest, &decisionCreate)
 	if code != 0 {
 		t.Fatalf("create decision exit = %d stderr=%s", code, stderr)
 	}
 
 	decisionsRequest := `{"action":"decisions_lookup","decisions":{"text":"JSON runner","status":"accepted","scope":"agentops","owner":"platform","limit":10}}`
 	var decisionsResult runner.RetrievalTaskResult
-	code, stderr = runJSON(t, []string{"retrieval", "--data-dir", dataDir}, decisionsRequest, &decisionsResult)
+	code, stderr = runJSON(t, []string{"retrieval", "--db", dbPath}, decisionsRequest, &decisionsResult)
 	if code != 0 {
 		t.Fatalf("decisions exit = %d stderr=%s", code, stderr)
 	}
@@ -145,7 +145,7 @@ func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 
 	decisionDetailRequest := `{"action":"decision_record","decision_id":"adr-runner"}`
 	var decisionDetail runner.RetrievalTaskResult
-	code, stderr = runJSON(t, []string{"retrieval", "--data-dir", dataDir}, decisionDetailRequest, &decisionDetail)
+	code, stderr = runJSON(t, []string{"retrieval", "--db", dbPath}, decisionDetailRequest, &decisionDetail)
 	if code != 0 {
 		t.Fatalf("decision detail exit = %d stderr=%s", code, stderr)
 	}
@@ -155,7 +155,7 @@ func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 
 	layoutRequest := `{"action":"inspect_layout"}`
 	var layoutResult runner.DocumentTaskResult
-	code, stderr = runJSON(t, []string{"document", "--data-dir", dataDir}, layoutRequest, &layoutResult)
+	code, stderr = runJSON(t, []string{"document", "--db", dbPath}, layoutRequest, &layoutResult)
 	if code != 0 {
 		t.Fatalf("inspect layout exit = %d stderr=%s", code, stderr)
 	}
@@ -167,17 +167,17 @@ func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 func TestRunnerValidationRejectionDoesNotCreateDatabase(t *testing.T) {
 	t.Parallel()
 
-	dataDir := filepath.Join(t.TempDir(), "data")
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
 	request := `{"action":"create_document","document":{"title":"Missing path","body":"# Missing path\n"}}`
 	var result runner.DocumentTaskResult
-	code, stderr := runJSON(t, []string{"document", "--data-dir", dataDir}, request, &result)
+	code, stderr := runJSON(t, []string{"document", "--db", dbPath}, request, &result)
 	if code != 0 {
 		t.Fatalf("exit = %d stderr=%s", code, stderr)
 	}
 	if !result.Rejected || result.RejectionReason == "" {
 		t.Fatalf("result = %+v, want rejection", result)
 	}
-	if _, err := os.Stat(dataDir); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Dir(dbPath)); !os.IsNotExist(err) {
 		t.Fatalf("data dir exists after rejected request: %v", err)
 	}
 }
@@ -219,10 +219,10 @@ func TestRunnerErrors(t *testing.T) {
 func TestRunnerRuntimeErrorExitsNonZero(t *testing.T) {
 	t.Parallel()
 
-	dataDir := filepath.Join(t.TempDir(), "data")
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
 	request := `{"action":"get_document","doc_id":"missing"}`
 	var result runner.DocumentTaskResult
-	code, stderr := runJSON(t, []string{"document", "--data-dir", dataDir}, request, &result)
+	code, stderr := runJSON(t, []string{"document", "--db", dbPath}, request, &result)
 	if code == 0 {
 		t.Fatalf("exit = 0, want non-zero")
 	}
@@ -243,6 +243,36 @@ func TestRunnerDBFlag(t *testing.T) {
 	}
 	if result.Paths == nil || result.Paths.DatabasePath != dbPath {
 		t.Fatalf("paths = %+v, want db %q", result.Paths, dbPath)
+	}
+	if result.Paths.VaultRoot != filepath.Join(filepath.Dir(dbPath), "vault") {
+		t.Fatalf("paths = %+v, want default sibling vault", result.Paths)
+	}
+}
+
+func TestRunnerInitBindsVaultRoot(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "custom", "openclerk.sqlite")
+	vaultRoot := filepath.Join(t.TempDir(), "wiki")
+	var initResult struct {
+		Paths runner.Paths `json:"paths"`
+	}
+	code, stderr := runJSON(t, []string{"init", "--db", dbPath, "--vault-root", vaultRoot}, "", &initResult)
+	if code != 0 {
+		t.Fatalf("init exit = %d stderr=%s", code, stderr)
+	}
+	if initResult.Paths.DatabasePath != dbPath || initResult.Paths.VaultRoot != vaultRoot {
+		t.Fatalf("init paths = %+v", initResult.Paths)
+	}
+
+	request := `{"action":"resolve_paths"}`
+	var result runner.DocumentTaskResult
+	code, stderr = runJSON(t, []string{"document", "--db", dbPath}, request, &result)
+	if code != 0 {
+		t.Fatalf("resolve exit = %d stderr=%s", code, stderr)
+	}
+	if result.Paths == nil || result.Paths.VaultRoot != vaultRoot {
+		t.Fatalf("paths = %+v, want vault %q", result.Paths, vaultRoot)
 	}
 }
 

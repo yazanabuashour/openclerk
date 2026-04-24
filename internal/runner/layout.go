@@ -16,10 +16,8 @@ const (
 	layoutCheckWarn           = "warn"
 	layoutCheckFail           = "fail"
 
-	rootSourcesPathPrefix     = "sources/"
-	nestedSourcesPathPrefix   = "notes/sources/"
-	rootSynthesisPathPrefix   = "synthesis/"
-	nestedSynthesisPathPrefix = "notes/synthesis/"
+	sourcesPathPrefix         = "sources/"
+	synthesisPathPrefix       = "synthesis/"
 	recordsPathPrefix         = "records/"
 	serviceRecordsPathPrefix  = "records/services/"
 	decisionRecordsPathPrefix = "records/decisions/"
@@ -81,7 +79,7 @@ func inspectKnowledgeLayout(ctx context.Context, client *runclient.Client) (Know
 
 	missingOptional := []string{}
 	for _, convention := range layout.ConventionalPaths {
-		if convention.Required || conventionSatisfied(convention, prefixCounts) {
+		if convention.Required || prefixCounts[convention.PathPrefix] > 0 {
 			continue
 		}
 		missingOptional = append(missingOptional, convention.PathPrefix)
@@ -223,10 +221,8 @@ func inspectDecisionDocumentLayout(document Document) []KnowledgeLayoutCheck {
 func layoutPathConventions() []LayoutPathConvention {
 	return []LayoutPathConvention{
 		{Name: "vault_root", PathPrefix: "", Description: "Canonical markdown root resolved by the runner.", Required: true},
-		{Name: "canonical_sources", PathPrefix: rootSourcesPathPrefix, Description: "Root-relative home for canonical source documents when the vault root is already the notes directory.", Required: false},
-		{Name: "canonical_sources_nested", PathPrefix: nestedSourcesPathPrefix, Description: "Nested home for canonical source documents when the vault root contains a notes directory.", Required: false},
-		{Name: "source_linked_synthesis", PathPrefix: rootSynthesisPathPrefix, Description: "Root-relative home for durable source-linked synthesis documents when the vault root is already the notes directory.", Required: false},
-		{Name: "source_linked_synthesis_nested", PathPrefix: nestedSynthesisPathPrefix, Description: "Nested home for durable source-linked synthesis documents when the vault root contains a notes directory.", Required: false},
+		{Name: "canonical_sources", PathPrefix: sourcesPathPrefix, Description: "Home for canonical source documents under the configured vault root.", Required: false},
+		{Name: "source_linked_synthesis", PathPrefix: synthesisPathPrefix, Description: "Home for durable source-linked synthesis documents under the configured vault root.", Required: false},
 		{Name: "generic_records", PathPrefix: recordsPathPrefix, Description: "Conventional home for promoted record-shaped canonical documents.", Required: false},
 		{Name: "service_records", PathPrefix: serviceRecordsPathPrefix, Description: "Conventional home for service registry records.", Required: false},
 		{Name: "decision_records", PathPrefix: decisionRecordsPathPrefix, Description: "Conventional home for decision and architecture records.", Required: false},
@@ -236,31 +232,11 @@ func layoutPathConventions() []LayoutPathConvention {
 func layoutDocumentKinds() []LayoutDocumentKind {
 	return []LayoutDocumentKind{
 		{Kind: "canonical_doc", Description: "Any registered markdown document under the runner-resolved vault root.", Selectors: []string{"*.md"}},
-		{Kind: "canonical_source_doc", Description: "Canonical source authority document, conventionally under sources/ or notes/sources/.", Selectors: []string{"path_prefix:sources/", "path_prefix:notes/sources/"}},
-		{Kind: "synthesis_doc", Description: "Durable source-linked synthesis that remains subordinate to canonical sources.", Selectors: []string{"path_prefix:synthesis/", "path_prefix:notes/synthesis/", "metadata:type=synthesis"}, Required: []string{"source_refs", "## Sources", "## Freshness"}},
+		{Kind: "canonical_source_doc", Description: "Canonical source authority document, conventionally under sources/.", Selectors: []string{"path_prefix:sources/"}},
+		{Kind: "synthesis_doc", Description: "Durable source-linked synthesis that remains subordinate to canonical sources.", Selectors: []string{"path_prefix:synthesis/", "metadata:type=synthesis"}, Required: []string{"source_refs", "## Sources", "## Freshness"}},
 		{Kind: "record_doc", Description: "Canonical markdown document that feeds the generic promoted records projection.", Selectors: []string{"path_prefix:records/", "metadata:entity_type", "metadata:entity_name"}, Required: []string{"entity_type", "entity_name"}},
 		{Kind: "service_doc", Description: "Canonical markdown document that feeds the service registry projection.", Selectors: []string{"path_prefix:records/services/", "metadata:service_id", "metadata:service_name"}, Required: []string{"service_id", "service_name"}},
 		{Kind: "decision_doc", Description: "Canonical markdown document that feeds the decision records projection.", Selectors: []string{"path_prefix:records/decisions/", "metadata:decision_id", "metadata:decision_title", "metadata:decision_status"}, Required: []string{"decision_id", "decision_title", "decision_status"}},
-	}
-}
-
-func conventionSatisfied(convention LayoutPathConvention, prefixCounts map[string]int) bool {
-	for _, prefix := range equivalentConventionalPrefixes(convention.PathPrefix) {
-		if prefixCounts[prefix] > 0 {
-			return true
-		}
-	}
-	return false
-}
-
-func equivalentConventionalPrefixes(pathPrefix string) []string {
-	switch pathPrefix {
-	case rootSourcesPathPrefix, nestedSourcesPathPrefix:
-		return []string{rootSourcesPathPrefix, nestedSourcesPathPrefix}
-	case rootSynthesisPathPrefix, nestedSynthesisPathPrefix:
-		return []string{rootSynthesisPathPrefix, nestedSynthesisPathPrefix}
-	default:
-		return []string{pathPrefix}
 	}
 }
 
@@ -290,7 +266,7 @@ func isSynthesisDocument(document Document) bool {
 }
 
 func isSynthesisPath(docPath string) bool {
-	return strings.HasPrefix(docPath, rootSynthesisPathPrefix) || strings.HasPrefix(docPath, nestedSynthesisPathPrefix)
+	return strings.HasPrefix(docPath, synthesisPathPrefix)
 }
 
 func isIndexDocumentPath(docPath string) bool {

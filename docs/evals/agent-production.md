@@ -48,9 +48,10 @@ logs live under `<run-root>/<variant>/<scenario>/turn-N/`.
 Each job gets an isolated copied repo and OpenClerk storage rooted inside that
 copy:
 
-- `OPENCLERK_DATA_DIR=<run-root>/<variant>/<scenario>/repo/.openclerk-eval/data`
 - `OPENCLERK_DATABASE_PATH=<run-root>/<variant>/<scenario>/repo/.openclerk-eval/openclerk.db`
-- `OPENCLERK_VAULT_ROOT=<run-root>/<variant>/<scenario>/repo/.openclerk-eval/vault`
+
+The scenario setup initializes that database with the copied repo's
+`.openclerk-eval/vault` as the configured vault root.
 
 The copied repo omits root `AGENTS.md`, stale `.agents` contents, VCS metadata,
 Beads/Dolt metadata, eval artifacts, and the eval harness itself before
@@ -103,7 +104,7 @@ The `ockp` harness covers routine local knowledge-plane workflows:
   filtering, metadata filtering, repeated-query stability, chunk citations, and
   no implicit synthesis filing
 - source-grounded search followed by source-linked synthesis creation or update
-  under `notes/synthesis/` with `type: synthesis`, `status: active`,
+  under `synthesis/` with `type: synthesis`, `status: active`,
   `freshness: fresh`, `source_refs`, `## Sources`, and `## Freshness`
 - durable answer filing into source-linked markdown
 - contradiction or stale synthesis repair against newer canonical sources

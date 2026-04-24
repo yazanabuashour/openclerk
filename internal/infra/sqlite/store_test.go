@@ -211,7 +211,7 @@ decision_scope: agentops
 decision_owner: platform
 decision_date: 2026-04-20
 superseded_by: adr-runner-current
-source_refs: notes/sources/runner-old.md
+source_refs: sources/runner-old.md
 ---
 # Old runner path
 
@@ -233,7 +233,7 @@ decision_scope: agentops
 decision_owner: platform
 decision_date: 2026-04-22
 supersedes: adr-runner-old
-source_refs: notes/sources/runner-current.md
+source_refs: sources/runner-current.md
 ---
 # Use JSON runner
 
@@ -414,7 +414,7 @@ decision_title: AgentOps-Only Knowledge Plane Direction
 decision_status: accepted
 decision_scope: knowledge-plane
 decision_owner: platform
-source_refs: notes/sources/agentops-direction.md
+source_refs: sources/agentops-direction.md
 ---
 # ADR: AgentOps-Only Knowledge Plane Direction
 
@@ -457,7 +457,7 @@ OpenClerk knowledge configuration v1 is runner-visible and convention-first.
 	if len(lookup.Decisions) != 2 {
 		t.Fatalf("classification lookup = %+v, want both knowledge-plane decisions", lookup.Decisions)
 	}
-	sourceRefLookup, err := store.DecisionsLookup(ctx, domain.DecisionLookupInput{Text: "notes/sources/agentops-direction.md", Limit: 10})
+	sourceRefLookup, err := store.DecisionsLookup(ctx, domain.DecisionLookupInput{Text: "sources/agentops-direction.md", Limit: 10})
 	if err != nil {
 		t.Fatalf("decision lookup by source ref: %v", err)
 	}
@@ -466,7 +466,7 @@ OpenClerk knowledge configuration v1 is runner-visible and convention-first.
 		len(sourceRefLookup.Decisions[0].Citations) == 0 ||
 		sourceRefLookup.Decisions[0].Citations[0].Path != "docs/architecture/eval-backed-knowledge-plane-adr.md" ||
 		len(sourceRefLookup.Decisions[0].SourceRefs) != 1 ||
-		sourceRefLookup.Decisions[0].SourceRefs[0] != "notes/sources/agentops-direction.md" {
+		sourceRefLookup.Decisions[0].SourceRefs[0] != "sources/agentops-direction.md" {
 		t.Fatalf("source ref lookup = %+v", sourceRefLookup.Decisions)
 	}
 
@@ -534,7 +534,7 @@ decision_title: Updated AgentOps Knowledge Plane Direction
 decision_status: accepted
 decision_scope: knowledge-plane
 decision_owner: platform
-source_refs: notes/sources/updated-agentops-direction.md
+source_refs: sources/updated-agentops-direction.md
 ---
 # ADR: AgentOps-Only Knowledge Plane Direction
 
@@ -556,14 +556,14 @@ Updated canonical decision text from markdown.
 	if updated.Title != "Updated AgentOps Knowledge Plane Direction" ||
 		updated.Summary != "Updated canonical decision text from markdown." ||
 		len(updated.SourceRefs) != 1 ||
-		updated.SourceRefs[0] != "notes/sources/updated-agentops-direction.md" ||
+		updated.SourceRefs[0] != "sources/updated-agentops-direction.md" ||
 		len(updated.Citations) == 0 ||
 		updated.Citations[0].Path != path {
 		t.Fatalf("updated decision = %+v", updated)
 	}
 	projection := requireDecisionProjection(t, ctx, reopened, "adr-agentops-only-knowledge-plane")
 	if projection.Details["path"] != path ||
-		projection.Details["source_refs"] != "notes/sources/updated-agentops-direction.md" {
+		projection.Details["source_refs"] != "sources/updated-agentops-direction.md" {
 		t.Fatalf("projection after reopen = %+v", projection)
 	}
 }
@@ -583,7 +583,7 @@ func TestSynthesisProjectionIsFreshForCurrentSources(t *testing.T) {
 
 	clock = clock.Add(time.Minute)
 	source, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
-		Path:  "notes/sources/current.md",
+		Path:  "sources/current.md",
 		Title: "Current Source",
 		Body:  "# Current Source\n\n## Summary\nCurrent canonical evidence.\n",
 	})
@@ -592,9 +592,9 @@ func TestSynthesisProjectionIsFreshForCurrentSources(t *testing.T) {
 	}
 	clock = clock.Add(time.Minute)
 	synthesis, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
-		Path:  "notes/synthesis/current.md",
+		Path:  "synthesis/current.md",
 		Title: "Current Synthesis",
-		Body:  synthesisBody("notes/sources/current.md", "Current canonical evidence."),
+		Body:  synthesisBody("sources/current.md", "Current canonical evidence."),
 	})
 	if err != nil {
 		t.Fatalf("create synthesis: %v", err)
@@ -607,8 +607,8 @@ func TestSynthesisProjectionIsFreshForCurrentSources(t *testing.T) {
 	if projection.SourceRef != "doc:"+source.DocID {
 		t.Fatalf("source_ref = %q, want doc ref for source", projection.SourceRef)
 	}
-	if projection.Details["current_source_refs"] != "notes/sources/current.md" ||
-		projection.Details["source_refs"] != "notes/sources/current.md" ||
+	if projection.Details["current_source_refs"] != "sources/current.md" ||
+		projection.Details["source_refs"] != "sources/current.md" ||
 		projection.Details["freshness_reason"] != "sources current" {
 		t.Fatalf("projection details = %+v", projection.Details)
 	}
@@ -675,7 +675,7 @@ func TestSynthesisProjectionStaleAfterSourceUpdateAndFreshAfterRepair(t *testing
 
 	clock = clock.Add(time.Minute)
 	source, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
-		Path:  "notes/sources/runner.md",
+		Path:  "sources/runner.md",
 		Title: "Runner Source",
 		Body:  "# Runner Source\n\n## Summary\nInitial source guidance.\n",
 	})
@@ -684,9 +684,9 @@ func TestSynthesisProjectionStaleAfterSourceUpdateAndFreshAfterRepair(t *testing
 	}
 	clock = clock.Add(time.Minute)
 	synthesis, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
-		Path:  "notes/synthesis/runner.md",
+		Path:  "synthesis/runner.md",
 		Title: "Runner Synthesis",
-		Body:  synthesisBody("notes/sources/runner.md", "Initial source guidance."),
+		Body:  synthesisBody("sources/runner.md", "Initial source guidance."),
 	})
 	if err != nil {
 		t.Fatalf("create synthesis: %v", err)
@@ -704,7 +704,7 @@ func TestSynthesisProjectionStaleAfterSourceUpdateAndFreshAfterRepair(t *testing
 	}
 	stale := requireSynthesisProjection(t, ctx, store, synthesis.DocID)
 	if stale.Freshness != "stale" ||
-		stale.Details["stale_source_refs"] != "notes/sources/runner.md" ||
+		stale.Details["stale_source_refs"] != "sources/runner.md" ||
 		!strings.Contains(stale.Details["freshness_reason"], "source newer than synthesis") {
 		t.Fatalf("stale projection = %+v", stale)
 	}
@@ -734,7 +734,7 @@ func TestSynthesisProjectionStaleAfterSourceUpdateAndFreshAfterRepair(t *testing
 	clock = clock.Add(time.Minute)
 	if _, err := store.ReplaceDocumentSection(ctx, synthesis.DocID, domain.ReplaceSectionInput{
 		Heading: "Freshness",
-		Content: "Checked source: notes/sources/runner.md after the source update.",
+		Content: "Checked source: sources/runner.md after the source update.",
 	}); err != nil {
 		t.Fatalf("repair synthesis: %v", err)
 	}
@@ -770,11 +770,11 @@ func TestSynthesisProjectionReportsMissingAndSupersededSources(t *testing.T) {
 
 	clock = clock.Add(time.Minute)
 	if _, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
-		Path:  "notes/sources/old.md",
+		Path:  "sources/old.md",
 		Title: "Old Source",
 		Body: strings.TrimSpace(`---
 status: superseded
-superseded_by: notes/sources/current.md
+superseded_by: sources/current.md
 ---
 # Old Source
 
@@ -786,9 +786,9 @@ Old guidance.
 	}
 	clock = clock.Add(time.Minute)
 	synthesis, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
-		Path:  "notes/synthesis/missing.md",
+		Path:  "synthesis/missing.md",
 		Title: "Missing Synthesis",
-		Body:  synthesisBody("notes/sources/old.md, notes/sources/missing.md", "Old guidance."),
+		Body:  synthesisBody("sources/old.md, sources/missing.md", "Old guidance."),
 	})
 	if err != nil {
 		t.Fatalf("create synthesis: %v", err)
@@ -798,13 +798,13 @@ Old guidance.
 	if projection.Freshness != "stale" {
 		t.Fatalf("freshness = %q, want stale", projection.Freshness)
 	}
-	if projection.Details["missing_source_refs"] != "notes/sources/missing.md" {
+	if projection.Details["missing_source_refs"] != "sources/missing.md" {
 		t.Fatalf("missing source refs = %q", projection.Details["missing_source_refs"])
 	}
-	if projection.Details["superseded_source_refs"] != "notes/sources/old.md" {
+	if projection.Details["superseded_source_refs"] != "sources/old.md" {
 		t.Fatalf("superseded source refs = %q", projection.Details["superseded_source_refs"])
 	}
-	if projection.Details["current_source_refs"] != "notes/sources/current.md" {
+	if projection.Details["current_source_refs"] != "sources/current.md" {
 		t.Fatalf("current source refs = %q", projection.Details["current_source_refs"])
 	}
 	if !strings.Contains(projection.Details["freshness_reason"], "current replacement missing from source refs") {
@@ -827,11 +827,11 @@ func TestSynthesisProjectionFreshWithSupersedesAndSupersededByMetadata(t *testin
 
 	clock = clock.Add(time.Minute)
 	if _, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
-		Path:  "notes/sources/old.md",
+		Path:  "sources/old.md",
 		Title: "Old Source",
 		Body: strings.TrimSpace(`---
 status: superseded
-superseded_by: notes/sources/current.md
+superseded_by: sources/current.md
 ---
 # Old Source
 
@@ -843,10 +843,10 @@ Old guidance.
 	}
 	clock = clock.Add(time.Minute)
 	if _, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
-		Path:  "notes/sources/current.md",
+		Path:  "sources/current.md",
 		Title: "Current Source",
 		Body: strings.TrimSpace(`---
-supersedes: notes/sources/old.md
+supersedes: sources/old.md
 ---
 # Current Source
 
@@ -858,9 +858,9 @@ Current guidance.
 	}
 	clock = clock.Add(time.Minute)
 	synthesis, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
-		Path:  "notes/synthesis/supersession.md",
+		Path:  "synthesis/supersession.md",
 		Title: "Supersession Synthesis",
-		Body:  synthesisBody("notes/sources/current.md, notes/sources/old.md", "Current guidance supersedes old guidance."),
+		Body:  synthesisBody("sources/current.md, sources/old.md", "Current guidance supersedes old guidance."),
 	})
 	if err != nil {
 		t.Fatalf("create synthesis: %v", err)
@@ -870,10 +870,10 @@ Current guidance.
 	if projection.Freshness != "fresh" {
 		t.Fatalf("freshness = %q, want fresh: %+v", projection.Freshness, projection)
 	}
-	if projection.Details["current_source_refs"] != "notes/sources/current.md" {
+	if projection.Details["current_source_refs"] != "sources/current.md" {
 		t.Fatalf("current source refs = %q", projection.Details["current_source_refs"])
 	}
-	if projection.Details["superseded_source_refs"] != "notes/sources/old.md" {
+	if projection.Details["superseded_source_refs"] != "sources/old.md" {
 		t.Fatalf("superseded source refs = %q", projection.Details["superseded_source_refs"])
 	}
 }

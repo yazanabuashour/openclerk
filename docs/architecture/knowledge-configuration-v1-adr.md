@@ -43,8 +43,8 @@ OpenClerk knowledge configuration v1 is runner-visible and convention-first.
 
 An OpenClerk-compatible vault is defined by:
 
-- runner-resolved storage paths for the effective data directory, database
-  path, and vault root
+- runner-resolved storage paths for the effective database path and configured
+  vault root
 - vault-relative markdown paths under the vault root
 - document frontmatter and section conventions for first-class document kinds
 - runner-maintained document registry entries with stable ids, chunk ids,
@@ -52,23 +52,17 @@ An OpenClerk-compatible vault is defined by:
 - derived SQLite projections for graph, records, services, provenance, and
   projection freshness that remain explainable through runner JSON
 
-The conventional layout is part of the product contract, but not every path is
-hard-coded:
+The conventional layout is part of the product contract:
 
-- `vault/` is the conventional markdown root under the effective data
-  directory.
-- `sources/` and `notes/sources/` are conventional homes for canonical source
-  docs. `sources/` is for vault roots that are already the notes directory;
-  `notes/sources/` is for vault roots that contain a nested notes directory.
-- `synthesis/` and `notes/synthesis/` are conventional homes for
-  source-linked synthesis, following the same root-relative versus nested
-  notes-directory distinction.
+- the configured vault root is the markdown knowledge root.
+- `sources/` is the conventional home for canonical source docs.
+- `synthesis/` is the conventional home for source-linked synthesis.
 - record-shaped and service-shaped markdown conventions feed promoted record
   projections.
 - `source_refs`, `## Sources`, and `## Freshness` are conventional synthesis
   evidence and freshness fields.
-- the effective data directory, database path, and vault root are configurable
-  through supported runner path resolution and environment/config inputs.
+- the database path is the routine storage anchor. The vault root is stored in
+  SQLite runtime configuration and is visible through runner path resolution.
 
 No committed manifest, schema file, or separate configuration document is
 required for v1. `inspect_layout` is the runner-visible configuration model:
@@ -84,17 +78,15 @@ are the default source of truth for local knowledge.
 
 Canonical source docs are canonical docs used as source authority for later
 answers, synthesis pages, or promoted records. They conventionally live under
-`sources/` or `notes/sources/`, but source authority comes from runner-visible
-citations, paths, chunk ids, metadata, provenance, and freshness, not from
-folder naming alone.
+`sources/`, but source authority comes from runner-visible citations, paths,
+chunk ids, metadata, provenance, and freshness, not from folder naming alone.
 
 Synthesis docs are durable compiled knowledge pages that summarize or reconcile
-canonical evidence. They conventionally live under `synthesis/` or
-`notes/synthesis/` with frontmatter containing `type: synthesis`,
-`status: active`, `freshness: fresh`, and single-line comma-separated
-`source_refs`. They include `## Sources` and `## Freshness` sections.
-Synthesis docs do not outrank the canonical source docs or promoted records
-they cite.
+canonical evidence. They conventionally live under `synthesis/` with
+frontmatter containing `type: synthesis`, `status: active`,
+`freshness: fresh`, and single-line comma-separated `source_refs`. They include
+`## Sources` and `## Freshness` sections. Synthesis docs do not outrank the
+canonical source docs or promoted records they cite.
 
 Promoted records are selective structured projections derived from canonical
 markdown docs when a domain benefits from typed lookup. Generic record-shaped
@@ -129,17 +121,17 @@ provenance, and inspect projection freshness.
 
 Compatibility requires these observable properties:
 
-- `openclerk document` can resolve the effective data directory, database path,
-  and vault root.
+- `openclerk document` can resolve the effective database path and configured
+  vault root.
 - documents use vault-relative paths and markdown bodies accepted by
   `validate` or `create_document`.
 - canonical docs are discoverable through `list_documents`, `get_document`,
   and `search` without direct vault inspection.
 - source-sensitive answers can cite runner-visible paths, `doc_id`, `chunk_id`,
   headings, line ranges, source refs, or provenance.
-- synthesis pages under `synthesis/` or `notes/synthesis/` preserve
-  `type: synthesis`, `status: active`, `freshness: fresh`, `source_refs`,
-  `## Sources`, and `## Freshness`.
+- synthesis pages under `synthesis/` preserve `type: synthesis`,
+  `status: active`, `freshness: fresh`, `source_refs`, `## Sources`, and
+  `## Freshness`.
 - promoted records and services remain derived from canonical markdown and are
   inspectable through records, services, provenance, and projection-state
   runner actions.
@@ -220,8 +212,8 @@ v1.
 The POC pressure-tested the current workflow against candidate-selection,
 multi-source creation, stale repair, mixed records/synthesis, and resumed
 multi-turn drift repair. The selected pressure scenarios required agents to
-search source evidence, list `synthesis/` or `notes/synthesis/` candidates,
-retrieve existing synthesis before editing, inspect synthesis projection
+search source evidence, list `synthesis/` candidates, retrieve existing
+synthesis before editing, inspect synthesis projection
 freshness where relevant, preserve single-line `source_refs`, keep
 `## Sources` and `## Freshness`, and update without duplicate synthesis pages.
 

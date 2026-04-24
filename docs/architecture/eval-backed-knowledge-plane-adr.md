@@ -69,7 +69,7 @@ knowledge-model build slice behind AgentOps:
 - canonical docs remain markdown-backed and inspectable
 - source-linked synthesis lives inside the docs layer
 - synthesis must preserve source refs, citations, or equivalent stable evidence
-  in `notes/synthesis/` markdown with `type: synthesis`, `status: active`,
+  in `synthesis/` markdown with `type: synthesis`, `status: active`,
   `freshness: fresh`, `source_refs`, `## Sources`, and `## Freshness`
 - synthesis lifecycle behavior must search canonical sources first, find and
   update existing synthesis before creating duplicates, preserve source

@@ -79,7 +79,7 @@ func TestOpenClerkSkillUsesInstalledRunnerForRoutineWork(t *testing.T) {
 		"Skills-compatible",
 		"Do not inspect source files",
 		"one no-tools assistant answer",
-		"notes/synthesis/",
+		"synthesis/",
 		"source_refs",
 		"## Sources",
 		"## Freshness",

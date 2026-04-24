@@ -29,7 +29,7 @@ Contributors should be able to run:
 
 ```bash
 printf '%s\n' '{"action":"resolve_paths"}' | \
-  OPENCLERK_DATA_DIR="$(mktemp -d)" mise exec -- go run ./cmd/openclerk document
+  OPENCLERK_DATABASE_PATH="$(mktemp -d)/openclerk.sqlite" mise exec -- go run ./cmd/openclerk document
 test -z "$(gofmt -l $(git ls-files '*.go'))"
 mise exec -- golangci-lint run
 mise exec -- go test ./...

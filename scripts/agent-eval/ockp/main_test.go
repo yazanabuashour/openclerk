@@ -299,9 +299,7 @@ func TestEvalEnvOverridesHostOpenClerkPaths(t *testing.T) {
 
 	runDir := filepath.Join(t.TempDir(), "run")
 	paths := evalPaths{
-		DataDir:      filepath.Join(runDir, "data"),
 		DatabasePath: filepath.Join(runDir, "openclerk.db"),
-		VaultRoot:    filepath.Join(runDir, "vault"),
 	}
 	env := evalEnv(runDir, paths, cacheConfig{})
 	got := map[string]string{}
@@ -317,14 +315,14 @@ func TestEvalEnvOverridesHostOpenClerkPaths(t *testing.T) {
 	if got["ZDOTDIR"] != filepath.Join(runDir, "zdotdir") {
 		t.Fatalf("ZDOTDIR = %q, want %q", got["ZDOTDIR"], filepath.Join(runDir, "zdotdir"))
 	}
-	if got["OPENCLERK_DATA_DIR"] != paths.DataDir {
-		t.Fatalf("OPENCLERK_DATA_DIR = %q, want %q", got["OPENCLERK_DATA_DIR"], paths.DataDir)
+	if _, ok := got["OPENCLERK_DATA_DIR"]; ok {
+		t.Fatalf("OPENCLERK_DATA_DIR should not be exported: %v", got)
 	}
 	if got["OPENCLERK_DATABASE_PATH"] != paths.DatabasePath {
 		t.Fatalf("OPENCLERK_DATABASE_PATH = %q, want %q", got["OPENCLERK_DATABASE_PATH"], paths.DatabasePath)
 	}
-	if got["OPENCLERK_VAULT_ROOT"] != paths.VaultRoot {
-		t.Fatalf("OPENCLERK_VAULT_ROOT = %q, want %q", got["OPENCLERK_VAULT_ROOT"], paths.VaultRoot)
+	if _, ok := got["OPENCLERK_VAULT_ROOT"]; ok {
+		t.Fatalf("OPENCLERK_VAULT_ROOT should not be exported: %v", got)
 	}
 }
 
@@ -475,7 +473,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"search\",\"search\":{\"text\":\"runner\"}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"search\",\"search\":{\"text\":\"runner\",\"path_prefix\":\"notes/rag/\"}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"search\",\"search\":{\"text\":\"runner\",\"metadata_key\":\"rag_scope\",\"metadata_value\":\"active-policy\"}}' | openclerk retrieval"}}`,
-		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/synthesis/\"}}' | openclerk document"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\"}}' | openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"get_document\",\"doc_id\":\"doc_1\"}' | openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"inspect_layout\"}' | openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\n  \"document_links\",\"doc_id\":\"doc_1\"}' | openclerk retrieval"}}`,
@@ -521,7 +519,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	if !decisionRecordIDsInclude(parsed.metrics.DecisionRecordIDs, "adr-runner") {
 		t.Fatalf("expected decision record id in %+v", parsed.metrics)
 	}
-	if !containsAllStrings(parsed.metrics.ListDocumentPathPrefixes, []string{"notes/synthesis/"}) {
+	if !containsAllStrings(parsed.metrics.ListDocumentPathPrefixes, []string{"synthesis/"}) {
 		t.Fatalf("expected list document path prefix in %+v", parsed.metrics)
 	}
 	if !containsAllStrings(parsed.metrics.GetDocumentDocIDs, []string{"doc_1"}) {
@@ -687,19 +685,19 @@ func TestVerifyAnswerFilingRequiresFiledSourceLinkedDocument(t *testing.T) {
 		t.Fatalf("seed scenario: %v", err)
 	}
 	noTools := metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}}
-	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: "answer-filing"}, 1, "notes/synthesis/filed-runner-answer.md", noTools)
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: "answer-filing"}, 1, "synthesis/filed-runner-answer.md", noTools)
 	if err != nil {
 		t.Fatalf("verify missing answer filing: %v", err)
 	}
 	if result.Passed {
 		t.Fatalf("missing filed document passed: %+v", result)
 	}
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
-	body := "# Filed OpenClerk runner Answer\n\n## Summary\nSource: notes/sources/answer-filing-runner.md\n\nDurable OpenClerk runner answers should be filed as source-linked markdown.\n"
-	if err := createSeedDocument(ctx, cfg, "notes/synthesis/filed-runner-answer.md", "Filed OpenClerk runner Answer", body); err != nil {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	body := "# Filed OpenClerk runner Answer\n\n## Summary\nSource: sources/answer-filing-runner.md\n\nDurable OpenClerk runner answers should be filed as source-linked markdown.\n"
+	if err := createSeedDocument(ctx, cfg, "synthesis/filed-runner-answer.md", "Filed OpenClerk runner Answer", body); err != nil {
 		t.Fatalf("create filed answer: %v", err)
 	}
-	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: "answer-filing"}, 1, "Created notes/synthesis/filed-runner-answer.md.", noTools)
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: "answer-filing"}, 1, "Created synthesis/filed-runner-answer.md.", noTools)
 	if err != nil {
 		t.Fatalf("verify answer filing: %v", err)
 	}
@@ -779,8 +777,8 @@ func TestVerifyRAGRetrievalBaselineRequiresFiltersCitationsAndNoSynthesis(t *tes
 		t.Fatalf("RAG baseline without doc_id/chunk_id answer passed: %+v", result)
 	}
 
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
-	if err := createSeedDocument(ctx, cfg, "notes/synthesis/rag-summary.md", "RAG Summary", "# RAG Summary\n"); err != nil {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	if err := createSeedDocument(ctx, cfg, "synthesis/rag-summary.md", "RAG Summary", "# RAG Summary\n"); err != nil {
 		t.Fatalf("create forbidden synthesis: %v", err)
 	}
 	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: ragRetrievalScenarioID}, 1, finalAnswer, completeMetrics)
@@ -930,7 +928,7 @@ func TestVerifyMemoryRouterReferenceRequiresSourceFreshnessAndReferenceDecision(
 		if err := seedScenario(ctx, paths, sc); err != nil {
 			t.Fatalf("seed memory/router scenario: %v", err)
 		}
-		cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+		cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 		wrongBody := strings.Replace(memoryRouterSessionObservationBody(), "Positive feedback weight 0.8", "Positive feedback weight 0.1", 1)
 		if err := createSeedDocument(ctx, cfg, memoryRouterSessionObservationPath, memoryRouterSessionObservationTitle, wrongBody); err != nil {
 			t.Fatalf("create wrong session observation: %v", err)
@@ -949,7 +947,7 @@ func TestVerifyMemoryRouterReferenceRequiresSourceFreshnessAndReferenceDecision(
 	if err := seedScenario(ctx, paths, sc); err != nil {
 		t.Fatalf("seed memory/router scenario: %v", err)
 	}
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	if err := createSeedDocument(ctx, cfg, memoryRouterSessionObservationPath, memoryRouterSessionObservationTitle, memoryRouterSessionObservationBody()); err != nil {
 		t.Fatalf("create session observation: %v", err)
 	}
@@ -1015,7 +1013,7 @@ Checked provenance for the session observation and synthesis projection freshnes
 		ProjectionStatesUsed:     true,
 		EventTypeCounts:          map[string]int{},
 	}
-	completeAnswer := "Temporal status is current for canonical docs and stale for unpromoted session observations. Session promotion happened through canonical markdown in notes/synthesis/memory-router-reference.md with source refs. Feedback weighting is advisory, routing stays on existing AgentOps document and retrieval actions, and provenance plus projection freshness were checked. Decision: keep memory/router reference/deferred and do not promote remember/recall or autonomous routing."
+	completeAnswer := "Temporal status is current for canonical docs and stale for unpromoted session observations. Session promotion happened through canonical markdown in synthesis/memory-router-reference.md with source refs. Feedback weighting is advisory, routing stays on existing AgentOps document and retrieval actions, and provenance plus projection freshness were checked. Decision: keep memory/router reference/deferred and do not promote remember/recall or autonomous routing."
 	result, err := verifyScenarioTurn(ctx, paths, sc, 2, completeAnswer, completeMetrics)
 	if err != nil {
 		t.Fatalf("verify memory/router reference: %v", err)
@@ -1070,7 +1068,7 @@ func TestVerifyConfiguredLayoutRequiresUnambiguousValidAnswer(t *testing.T) {
 		InspectLayoutUsed: true,
 		EventTypeCounts:   map[string]int{},
 	}
-	invalidAnswer := "The convention-first layout has no committed manifest, includes notes/sources/ and notes/synthesis/, and requires source_refs. The layout is invalid."
+	invalidAnswer := "The convention-first layout has no committed manifest, includes sources/ and synthesis/, and requires source_refs. The layout is invalid."
 	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: configuredLayoutScenarioID}, 1, invalidAnswer, completeMetrics)
 	if err != nil {
 		t.Fatalf("verify invalid status answer: %v", err)
@@ -1079,7 +1077,7 @@ func TestVerifyConfiguredLayoutRequiresUnambiguousValidAnswer(t *testing.T) {
 		t.Fatalf("configured layout answer with invalid status passed: %+v", result)
 	}
 
-	negatedAnswer := "The convention-first layout has no committed manifest, includes notes/sources/ and notes/synthesis/, and requires source_refs. The layout is not valid."
+	negatedAnswer := "The convention-first layout has no committed manifest, includes sources/ and synthesis/, and requires source_refs. The layout is not valid."
 	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: configuredLayoutScenarioID}, 1, negatedAnswer, completeMetrics)
 	if err != nil {
 		t.Fatalf("verify negated valid status answer: %v", err)
@@ -1088,7 +1086,7 @@ func TestVerifyConfiguredLayoutRequiresUnambiguousValidAnswer(t *testing.T) {
 		t.Fatalf("configured layout answer with not valid status passed: %+v", result)
 	}
 
-	validAnswer := "The convention-first layout has no committed manifest, includes notes/sources/ and notes/synthesis/, and requires source_refs. The layout is valid."
+	validAnswer := "The convention-first layout has no committed manifest, includes sources/ and synthesis/, and requires source_refs. The layout is valid."
 	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: configuredLayoutScenarioID}, 1, validAnswer, completeMetrics)
 	if err != nil {
 		t.Fatalf("verify valid status answer: %v", err)
@@ -1119,7 +1117,7 @@ func TestVerifySourceLinkedSynthesisRequiresSourcesFreshnessAndWorkflow(t *testi
 	if err := seedScenario(ctx, paths, scenario{ID: "search-synthesis"}); err != nil {
 		t.Fatalf("seed scenario: %v", err)
 	}
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	incomplete := `---
 type: synthesis
 status: active
@@ -1133,10 +1131,10 @@ freshness: fresh
 ## Freshness
 Checked search results.
 `
-	if err := createSeedDocument(ctx, cfg, "notes/synthesis/openclerk-runner.md", "OpenClerk runner", incomplete); err != nil {
+	if err := createSeedDocument(ctx, cfg, "synthesis/openclerk-runner.md", "OpenClerk runner", incomplete); err != nil {
 		t.Fatalf("create incomplete synthesis: %v", err)
 	}
-	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: "search-synthesis"}, 1, "Created notes/synthesis/openclerk-runner.md.", metrics{
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: "search-synthesis"}, 1, "Created synthesis/openclerk-runner.md.", metrics{
 		AssistantCalls:    1,
 		SearchUsed:        true,
 		ListDocumentsUsed: true,
@@ -1152,13 +1150,13 @@ Checked search results.
 	if err := seedScenario(ctx, yamlListPaths, scenario{ID: "search-synthesis"}); err != nil {
 		t.Fatalf("seed YAML-list source_refs scenario: %v", err)
 	}
-	yamlListCfg := runclient.Config{DataDir: yamlListPaths.DataDir, DatabasePath: yamlListPaths.DatabasePath, VaultRoot: yamlListPaths.VaultRoot}
+	yamlListCfg := runclient.Config{DatabasePath: yamlListPaths.DatabasePath}
 	yamlListSourceRefs := `---
 type: synthesis
 status: active
 freshness: fresh
 source_refs:
-  - notes/sources/openclerk-runner.md
+  - sources/openclerk-runner.md
 ---
 
 # OpenClerk runner
@@ -1167,15 +1165,15 @@ source_refs:
 The runner preserves source refs.
 
 ## Sources
-- notes/sources/openclerk-runner.md
+- sources/openclerk-runner.md
 
 ## Freshness
-Checked runner search results for notes/sources/openclerk-runner.md.
+Checked runner search results for sources/openclerk-runner.md.
 `
-	if err := createSeedDocument(ctx, yamlListCfg, "notes/synthesis/openclerk-runner.md", "OpenClerk runner", yamlListSourceRefs); err != nil {
+	if err := createSeedDocument(ctx, yamlListCfg, "synthesis/openclerk-runner.md", "OpenClerk runner", yamlListSourceRefs); err != nil {
 		t.Fatalf("create YAML-list source_refs synthesis: %v", err)
 	}
-	result, err = verifyScenarioTurn(ctx, yamlListPaths, scenario{ID: "search-synthesis"}, 1, "Created notes/synthesis/openclerk-runner.md.", metrics{
+	result, err = verifyScenarioTurn(ctx, yamlListPaths, scenario{ID: "search-synthesis"}, 1, "Created synthesis/openclerk-runner.md.", metrics{
 		AssistantCalls:    1,
 		SearchUsed:        true,
 		ListDocumentsUsed: true,
@@ -1191,22 +1189,22 @@ Checked runner search results for notes/sources/openclerk-runner.md.
 	if err := seedScenario(ctx, missingFreshnessPaths, scenario{ID: "search-synthesis"}); err != nil {
 		t.Fatalf("seed missing freshness scenario: %v", err)
 	}
-	missingFreshnessCfg := runclient.Config{DataDir: missingFreshnessPaths.DataDir, DatabasePath: missingFreshnessPaths.DatabasePath, VaultRoot: missingFreshnessPaths.VaultRoot}
+	missingFreshnessCfg := runclient.Config{DatabasePath: missingFreshnessPaths.DatabasePath}
 	missingFreshness := `---
 type: synthesis
 status: active
-source_refs: notes/sources/openclerk-runner.md
+source_refs: sources/openclerk-runner.md
 ---
 
 # OpenClerk runner
 
 ## Sources
-- notes/sources/openclerk-runner.md
+- sources/openclerk-runner.md
 `
-	if err := createSeedDocument(ctx, missingFreshnessCfg, "notes/synthesis/openclerk-runner.md", "OpenClerk runner", missingFreshness); err != nil {
+	if err := createSeedDocument(ctx, missingFreshnessCfg, "synthesis/openclerk-runner.md", "OpenClerk runner", missingFreshness); err != nil {
 		t.Fatalf("create missing freshness synthesis: %v", err)
 	}
-	result, err = verifyScenarioTurn(ctx, missingFreshnessPaths, scenario{ID: "search-synthesis"}, 1, "Created notes/synthesis/openclerk-runner.md.", metrics{
+	result, err = verifyScenarioTurn(ctx, missingFreshnessPaths, scenario{ID: "search-synthesis"}, 1, "Created synthesis/openclerk-runner.md.", metrics{
 		AssistantCalls:    1,
 		SearchUsed:        true,
 		ListDocumentsUsed: true,
@@ -1222,12 +1220,12 @@ source_refs: notes/sources/openclerk-runner.md
 	if err := seedScenario(ctx, completePaths, scenario{ID: "search-synthesis"}); err != nil {
 		t.Fatalf("seed complete scenario: %v", err)
 	}
-	completeCfg := runclient.Config{DataDir: completePaths.DataDir, DatabasePath: completePaths.DatabasePath, VaultRoot: completePaths.VaultRoot}
+	completeCfg := runclient.Config{DatabasePath: completePaths.DatabasePath}
 	complete := `---
 type: synthesis
 status: active
 freshness: fresh
-source_refs: notes/sources/openclerk-runner.md
+source_refs: sources/openclerk-runner.md
 ---
 
 # OpenClerk runner
@@ -1236,15 +1234,15 @@ source_refs: notes/sources/openclerk-runner.md
 The runner preserves source refs.
 
 ## Sources
-- notes/sources/openclerk-runner.md
+- sources/openclerk-runner.md
 
 ## Freshness
-Checked runner search results for notes/sources/openclerk-runner.md.
+Checked runner search results for sources/openclerk-runner.md.
 `
-	if err := createSeedDocument(ctx, completeCfg, "notes/synthesis/openclerk-runner.md", "OpenClerk runner", complete); err != nil {
+	if err := createSeedDocument(ctx, completeCfg, "synthesis/openclerk-runner.md", "OpenClerk runner", complete); err != nil {
 		t.Fatalf("create complete synthesis: %v", err)
 	}
-	result, err = verifyScenarioTurn(ctx, completePaths, scenario{ID: "search-synthesis"}, 1, "Created notes/synthesis/openclerk-runner.md.", metrics{
+	result, err = verifyScenarioTurn(ctx, completePaths, scenario{ID: "search-synthesis"}, 1, "Created synthesis/openclerk-runner.md.", metrics{
 		AssistantCalls:    1,
 		SearchUsed:        true,
 		ListDocumentsUsed: true,
@@ -1277,16 +1275,16 @@ func TestVerifyStaleSynthesisUpdateRequiresCurrentSourceAndNoDuplicate(t *testin
 		t.Fatalf("seed scenario: %v", err)
 	}
 	noTools := metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}}
-	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: "stale-synthesis-update"}, 1, "Updated notes/synthesis/runner-routing.md.", noTools)
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: "stale-synthesis-update"}, 1, "Updated synthesis/runner-routing.md.", noTools)
 	if err != nil {
 		t.Fatalf("verify stale before update: %v", err)
 	}
 	if result.Passed {
 		t.Fatalf("stale synthesis passed before update: %+v", result)
 	}
-	replacement := "Current guidance: routine agents must use openclerk JSON runner.\n\nCurrent source: notes/sources/runner-current-runner.md\n\nSupersedes: notes/sources/runner-old-workaround.md\n\nThis stale claim is superseded by current guidance."
-	replaceSeedSection(t, ctx, paths, "notes/synthesis/runner-routing.md", "Summary", replacement)
-	replaceSeedSection(t, ctx, paths, "notes/synthesis/runner-routing.md", "Freshness", "Checked current source: notes/sources/runner-current-runner.md\n\nChecked previous source: notes/sources/runner-old-workaround.md")
+	replacement := "Current guidance: routine agents must use openclerk JSON runner.\n\nCurrent source: sources/runner-current-runner.md\n\nSupersedes: sources/runner-old-workaround.md\n\nThis stale claim is superseded by current guidance."
+	replaceSeedSection(t, ctx, paths, "synthesis/runner-routing.md", "Summary", replacement)
+	replaceSeedSection(t, ctx, paths, "synthesis/runner-routing.md", "Freshness", "Checked current source: sources/runner-current-runner.md\n\nChecked previous source: sources/runner-old-workaround.md")
 	workflowMetrics := metrics{
 		AssistantCalls:    1,
 		SearchUsed:        true,
@@ -1294,18 +1292,18 @@ func TestVerifyStaleSynthesisUpdateRequiresCurrentSourceAndNoDuplicate(t *testin
 		GetDocumentUsed:   true,
 		EventTypeCounts:   map[string]int{},
 	}
-	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: "stale-synthesis-update"}, 1, "Updated notes/synthesis/runner-routing.md with current guidance.", workflowMetrics)
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: "stale-synthesis-update"}, 1, "Updated synthesis/runner-routing.md with current guidance.", workflowMetrics)
 	if err != nil {
 		t.Fatalf("verify stale after update: %v", err)
 	}
 	if !result.Passed {
 		t.Fatalf("updated stale synthesis failed: %+v", result)
 	}
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
-	if err := createSeedDocument(ctx, cfg, "notes/synthesis/runner-routing-current.md", "OpenClerk runner Routing Current", "# Duplicate\n"); err != nil {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	if err := createSeedDocument(ctx, cfg, "synthesis/runner-routing-current.md", "OpenClerk runner Routing Current", "# Duplicate\n"); err != nil {
 		t.Fatalf("create duplicate synthesis: %v", err)
 	}
-	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: "stale-synthesis-update"}, 1, "Updated notes/synthesis/runner-routing.md with current guidance.", workflowMetrics)
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: "stale-synthesis-update"}, 1, "Updated synthesis/runner-routing.md with current guidance.", workflowMetrics)
 	if err != nil {
 		t.Fatalf("verify stale duplicate: %v", err)
 	}
@@ -1351,8 +1349,8 @@ func TestVerifySourceSensitiveAuditRepairRequiresProvenanceFreshnessAndNoDuplica
 		t.Fatalf("source audit repair failed: %+v", result)
 	}
 
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
-	if err := createSeedDocument(ctx, cfg, "notes/synthesis/audit-runner-routing-v2.md", "Audit Runner Routing V2", "# Duplicate\n"); err != nil {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	if err := createSeedDocument(ctx, cfg, "synthesis/audit-runner-routing-v2.md", "Audit Runner Routing V2", "# Duplicate\n"); err != nil {
 		t.Fatalf("create duplicate audit synthesis: %v", err)
 	}
 	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: sourceAuditRepairScenarioID}, 1, finalAnswer, workflowMetrics)
@@ -1422,8 +1420,8 @@ func TestVerifySourceSensitiveConflictRequiresUnresolvedExplanationAndNoSynthesi
 		t.Fatalf("source audit conflict failed: %+v", result)
 	}
 
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
-	if err := createSeedDocument(ctx, cfg, "notes/synthesis/audit-conflict.md", "Audit Conflict", "# Audit Conflict\n"); err != nil {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	if err := createSeedDocument(ctx, cfg, "synthesis/audit-conflict.md", "Audit Conflict", "# Audit Conflict\n"); err != nil {
 		t.Fatalf("create forbidden conflict synthesis: %v", err)
 	}
 	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: sourceAuditConflictScenarioID}, 1, finalAnswer, workflowMetrics)
@@ -1471,8 +1469,8 @@ func TestVerifySynthesisCandidatePressureRequiresCandidateWorkflowAndNoDuplicate
 		t.Fatalf("candidate pressure repair failed: %+v", result)
 	}
 
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
-	if err := createSeedDocument(ctx, cfg, "notes/synthesis/compiler-routing-copy.md", "Compiler Routing Copy", "# Duplicate\n"); err != nil {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	if err := createSeedDocument(ctx, cfg, "synthesis/compiler-routing-copy.md", "Compiler Routing Copy", "# Duplicate\n"); err != nil {
 		t.Fatalf("create duplicate candidate synthesis: %v", err)
 	}
 	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: synthesisCandidatePressureScenarioID}, 1, finalAnswer, workflowMetrics)
@@ -1490,12 +1488,12 @@ func TestVerifySynthesisSourceSetPressureRequiresAllSources(t *testing.T) {
 	if err := seedScenario(ctx, paths, scenario{ID: synthesisSourceSetPressureScenarioID}); err != nil {
 		t.Fatalf("seed source set pressure scenario: %v", err)
 	}
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	body := strings.TrimSpace(`---
 type: synthesis
 status: active
 freshness: fresh
-source_refs: notes/sources/source-set-alpha.md, notes/sources/source-set-beta.md, notes/sources/source-set-gamma.md
+source_refs: sources/source-set-alpha.md, sources/source-set-beta.md, sources/source-set-gamma.md
 ---
 # Compiler Source Set
 
@@ -1503,9 +1501,9 @@ source_refs: notes/sources/source-set-alpha.md, notes/sources/source-set-beta.md
 Alpha, beta, and gamma source refs show the synthesis compiler pressure workflow can preserve freshness.
 
 ## Sources
-- notes/sources/source-set-alpha.md
-- notes/sources/source-set-beta.md
-- notes/sources/source-set-gamma.md
+- sources/source-set-alpha.md
+- sources/source-set-beta.md
+- sources/source-set-gamma.md
 
 ## Freshness
 Checked runner search results and synthesis candidate listing for all source refs.
@@ -1544,12 +1542,12 @@ func TestVerifyMTSynthesisDriftPressureRequiresSourceUpdateAndRepair(t *testing.
 	if err := seedScenario(ctx, paths, sc); err != nil {
 		t.Fatalf("seed drift pressure scenario: %v", err)
 	}
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	initialBody := strings.TrimSpace(`---
 type: synthesis
 status: active
 freshness: fresh
-source_refs: notes/sources/drift-current.md, notes/sources/drift-old.md
+source_refs: sources/drift-current.md, sources/drift-old.md
 ---
 # Drift Runner
 
@@ -1557,8 +1555,8 @@ source_refs: notes/sources/drift-current.md, notes/sources/drift-old.md
 Initial drift synthesis says the decision is still under review.
 
 ## Sources
-- notes/sources/drift-current.md
-- notes/sources/drift-old.md
+- sources/drift-current.md
+- sources/drift-old.md
 
 ## Freshness
 Checked initial source refs.
@@ -1804,7 +1802,7 @@ func replaceSeedSection(t *testing.T, ctx context.Context, paths evalPaths, docP
 	if !found {
 		t.Fatalf("missing %s", docPath)
 	}
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	result, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
 		Action:  runner.DocumentTaskActionReplaceSection,
 		DocID:   docID,
@@ -1821,7 +1819,7 @@ func replaceSeedSection(t *testing.T, ctx context.Context, paths evalPaths, docP
 
 func requireRAGMetadataTopHit(t *testing.T, ctx context.Context, paths evalPaths) runner.SearchHit {
 	t.Helper()
-	cfg := runclient.Config{DataDir: paths.DataDir, DatabasePath: paths.DatabasePath, VaultRoot: paths.VaultRoot}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	result, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
 		Action: runner.RetrievalTaskActionSearch,
 		Search: runner.SearchOptions{

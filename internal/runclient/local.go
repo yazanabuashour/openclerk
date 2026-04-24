@@ -18,11 +18,9 @@ const (
 	defaultVaultDir = "vault"
 )
 
-// Config controls where the internal runtime stores SQLite and canonical markdown data.
+// Config controls where the internal runtime stores SQLite-backed OpenClerk data.
 type Config struct {
-	DataDir           string
 	DatabasePath      string
-	VaultRoot         string
 	EmbeddingProvider string
 }
 
@@ -57,27 +55,38 @@ func (r *Runtime) Paths() Paths {
 
 // ResolvePaths returns the effective storage layout for an internal runtime.
 func ResolvePaths(cfg Config) (Paths, error) {
-	dataDir, err := resolveDataDir(cfg)
+	databasePath, err := resolveDatabasePath(cfg)
 	if err != nil {
 		return Paths{}, err
 	}
-	explicitDataDir := strings.TrimSpace(cfg.DataDir) != ""
-	paths := Paths{DataDir: filepath.Clean(dataDir)}
-	if strings.TrimSpace(cfg.DatabasePath) != "" {
-		paths.DatabasePath = filepath.Clean(cfg.DatabasePath)
-	} else if envDatabasePath := strings.TrimSpace(os.Getenv("OPENCLERK_DATABASE_PATH")); !explicitDataDir && envDatabasePath != "" {
-		paths.DatabasePath = filepath.Clean(envDatabasePath)
-	} else {
-		paths.DatabasePath = filepath.Join(paths.DataDir, defaultDBFile)
+	databasePath = filepath.Clean(databasePath)
+	dataDir := filepath.Dir(databasePath)
+	runtimeConfig, err := sqlite.ResolveRuntimeConfig(context.Background(), databasePath, filepath.Join(dataDir, defaultVaultDir))
+	if err != nil {
+		return Paths{}, err
 	}
-	if strings.TrimSpace(cfg.VaultRoot) != "" {
-		paths.VaultRoot = filepath.Clean(cfg.VaultRoot)
-	} else if envVaultRoot := strings.TrimSpace(os.Getenv("OPENCLERK_VAULT_ROOT")); !explicitDataDir && envVaultRoot != "" {
-		paths.VaultRoot = filepath.Clean(envVaultRoot)
-	} else {
-		paths.VaultRoot = filepath.Join(paths.DataDir, defaultVaultDir)
+	return Paths{DataDir: dataDir, DatabasePath: databasePath, VaultRoot: runtimeConfig.VaultRoot}, nil
+}
+
+func InitializePaths(cfg Config, vaultRoot string) (Paths, error) {
+	databasePath, err := resolveDatabasePath(cfg)
+	if err != nil {
+		return Paths{}, err
 	}
-	return paths, nil
+	databasePath = filepath.Clean(databasePath)
+	dataDir := filepath.Dir(databasePath)
+	if strings.TrimSpace(vaultRoot) != "" {
+		absVaultRoot, err := filepath.Abs(vaultRoot)
+		if err != nil {
+			return Paths{}, fmt.Errorf("resolve vault root: %w", err)
+		}
+		vaultRoot = absVaultRoot
+	}
+	runtimeConfig, err := sqlite.InitializeRuntimeConfig(context.Background(), databasePath, vaultRoot, filepath.Join(dataDir, defaultVaultDir))
+	if err != nil {
+		return Paths{}, err
+	}
+	return Paths{DataDir: dataDir, DatabasePath: databasePath, VaultRoot: runtimeConfig.VaultRoot}, nil
 }
 
 func newRuntime(backend domain.BackendKind, cfg Config) (*Runtime, error) {
@@ -108,22 +117,18 @@ func withDefaultEmbeddingProvider(cfg Config) Config {
 	return cfg
 }
 
-func resolveDataDir(cfg Config) (string, error) {
+func resolveDatabasePath(cfg Config) (string, error) {
 	switch {
-	case strings.TrimSpace(cfg.DataDir) != "":
-		return cfg.DataDir, nil
 	case strings.TrimSpace(cfg.DatabasePath) != "":
-		return filepath.Dir(cfg.DatabasePath), nil
-	case strings.TrimSpace(cfg.VaultRoot) != "":
-		return filepath.Dir(cfg.VaultRoot), nil
-	case strings.TrimSpace(os.Getenv("OPENCLERK_DATA_DIR")) != "":
-		return os.Getenv("OPENCLERK_DATA_DIR"), nil
+		return cfg.DatabasePath, nil
 	case strings.TrimSpace(os.Getenv("OPENCLERK_DATABASE_PATH")) != "":
-		return filepath.Dir(os.Getenv("OPENCLERK_DATABASE_PATH")), nil
-	case strings.TrimSpace(os.Getenv("OPENCLERK_VAULT_ROOT")) != "":
-		return filepath.Dir(os.Getenv("OPENCLERK_VAULT_ROOT")), nil
+		return os.Getenv("OPENCLERK_DATABASE_PATH"), nil
 	default:
-		return defaultDataDir()
+		dataDir, err := defaultDataDir()
+		if err != nil {
+			return "", err
+		}
+		return filepath.Join(dataDir, defaultDBFile), nil
 	}
 }
 
