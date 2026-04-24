@@ -1,6 +1,6 @@
 ---
 name: OpenClerk
-description: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner. Bootstrap no-tools rule for routine OpenClerk requests - if required fields are missing, if creating a document but the document path is missing, or if the request omits required document fields such as title or body, this description is complete; respond with exactly one no-tools assistant answer that will name the missing fields and ask the user to provide them. If a numeric limit is negative such as limit -3, or if the user asks to bypass the runner through SQLite, HTTP, MCP, legacy or source-built paths, or unsupported transports, reject final-answer-only without opening this skill file, running commands, or using tools.
+description: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner. Bootstrap no-tools rule for routine OpenClerk requests - if required fields are missing, if creating a document but the document path, title, or body is missing, this description is complete; respond with exactly one no-tools assistant answer that will name the missing fields and ask the user to provide them. Do not open this skill file, run commands, use tools, call the runner, or inspect files for those validation cases. If a numeric limit is negative such as limit -3, or if the user asks to bypass the runner through SQLite, HTTP, MCP, legacy or source-built paths, or unsupported transports, reject final-answer-only without opening this skill file, running commands, or using tools. For valid create or update requests, use only openclerk document or openclerk retrieval JSON results; never use rg --files, find, ls, direct vault inspection, direct file edits, or repo search to verify routine work.
 license: MIT
 compatibility: Requires local filesystem access and an installed openclerk binary on PATH.
 ---
@@ -31,11 +31,13 @@ knowledge task.
 
 ## No-Tools Handling Before Runners
 
-Before using any runner or opening this skill file during an agent run, answer
-with exactly one assistant response and no tools when the request:
+Before using any runner, opening this skill file, running commands, or using
+tools during an agent run, answer with exactly one assistant response and no
+tools when the request:
 
 - is missing required document or retrieval fields
-- asks to create or validate a document but the document path is missing
+- asks to create or validate a document but the document path, title, or body
+  is missing
 - asks for an obviously invalid limit, such as a negative number or `limit -3`
 - asks to bypass the runner for routine lower-level runtime, HTTP, SQLite, MCP,
   legacy or source-built command paths, or unsupported transport work

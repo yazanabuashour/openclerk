@@ -340,7 +340,7 @@ func TestEvalEnvOverridesHostOpenClerkPaths(t *testing.T) {
 }
 
 func TestPromptInputPreflightFlagsOpenClerkAgentsInstructions(t *testing.T) {
-	clean := "### Project Skills\n- OpenClerk: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner. Bootstrap no-tools rule for routine OpenClerk requests - if required fields are missing, if creating a document but the document path is missing, or if the request omits required document fields such as title or body, this description is complete; respond with exactly one no-tools assistant answer that names the missing fields and asks the user to provide them. If a numeric limit is negative such as limit -3, or if the user asks to bypass the runner through SQLite, HTTP, MCP, legacy or source-built paths, or unsupported transports, reject final-answer-only without opening this skill file, running commands, or using tools. (file: /tmp/repo/.agents/skills/openclerk/SKILL.md)\n"
+	clean := "### Project Skills\n- OpenClerk: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner. Bootstrap no-tools rule for routine OpenClerk requests - if required fields are missing, if creating a document but the document path, title, or body is missing, this description is complete; respond with exactly one no-tools assistant answer that names the missing fields and asks the user to provide them. Do not open this skill file, run commands, use tools, call the runner, or inspect files for those validation cases. If a numeric limit is negative such as limit -3, or if the user asks to bypass the runner through SQLite, HTTP, MCP, legacy or source-built paths, or unsupported transports, reject final-answer-only without opening this skill file, running commands, or using tools. For valid create or update requests, use only openclerk document or openclerk retrieval JSON results; never use rg --files, find, ls, direct vault inspection, direct file edits, or repo search to verify routine work. (file: /tmp/repo/.agents/skills/openclerk/SKILL.md)\n"
 	if !containsOpenClerkSkillDiscovery(clean) {
 		t.Fatalf("clean skill discovery is missing the OpenClerk skill marker: %s", clean)
 	}
@@ -611,6 +611,32 @@ func TestFinalAnswerOnlyAndProductionGates(t *testing.T) {
 	for _, name := range []string{"production_passes_all_scenarios", "validation_scenarios_are_final_answer_only", "no_direct_sqlite_access"} {
 		if !criteria[name] {
 			t.Fatalf("%s failed in %+v", name, summary.Criteria)
+		}
+	}
+}
+
+func TestCreateNoteScenarioForbidsBroadInspection(t *testing.T) {
+	prompt := ""
+	for _, sc := range allScenarios() {
+		if sc.ID == "create-note" {
+			prompt = sc.Prompt
+			break
+		}
+	}
+	if prompt == "" {
+		t.Fatal("create-note scenario missing")
+	}
+	for _, want := range []string{
+		"Use only OpenClerk runner document JSON results",
+		"do not use rg",
+		"find",
+		"ls",
+		"repo search",
+		"direct vault inspection",
+		"direct file edits",
+	} {
+		if !strings.Contains(prompt, want) {
+			t.Fatalf("create-note prompt missing %q: %s", want, prompt)
 		}
 	}
 }

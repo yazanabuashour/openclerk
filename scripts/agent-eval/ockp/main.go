@@ -5491,7 +5491,7 @@ func containsOpenClerkSkillDiscovery(rendered string) bool {
 func containsOpenClerkBootstrapRejectionGuidance(rendered string) bool {
 	return strings.Contains(rendered, openClerkBootstrapRejectionText) &&
 		strings.Contains(rendered, "required fields are missing") &&
-		strings.Contains(rendered, "document path is missing") &&
+		strings.Contains(rendered, "document path, title, or body is missing") &&
 		strings.Contains(rendered, "limit -3") &&
 		strings.Contains(rendered, "bypass the runner")
 }
@@ -5695,7 +5695,7 @@ func allScenarios() []scenario {
 		{
 			ID:     "create-note",
 			Title:  "Create canonical note",
-			Prompt: "Create an OpenClerk canonical project note at notes/projects/openclerk-runner.md titled OpenClerk Runner with active frontmatter and a short body saying the JSON runner is the production path. Use the configured local OpenClerk data path and verify it exists.",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document JSON results; do not use rg, find, ls, repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, or source-built command paths. Create an OpenClerk canonical project note at notes/projects/openclerk-runner.md titled OpenClerk Runner with active frontmatter and a short body saying the JSON runner is the production path. Verify it exists from the create_document JSON result or a list_documents/get_document JSON result, and mention notes/projects/openclerk-runner.md in the final answer.",
 		},
 		{
 			ID:     "search-synthesis",

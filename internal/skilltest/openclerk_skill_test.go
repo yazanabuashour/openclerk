@@ -138,9 +138,13 @@ func TestOpenClerkSkillDescriptionContainsBootstrapNoToolsGuard(t *testing.T) {
 	for _, want := range []string{
 		"Bootstrap no-tools rule",
 		"required fields are missing",
-		"document path is missing",
+		"document path, title, or body is missing",
 		"name the missing fields",
 		"ask the user to provide them",
+		"Do not open this skill file",
+		"run commands",
+		"use tools",
+		"call the runner",
 		"limit -3",
 		"bypass the runner",
 		"SQLite",
@@ -150,6 +154,13 @@ func TestOpenClerkSkillDescriptionContainsBootstrapNoToolsGuard(t *testing.T) {
 		"unsupported transports",
 		"this description is complete",
 		"respond with exactly one no-tools assistant answer",
+		"openclerk document",
+		"openclerk retrieval",
+		"rg --files",
+		"find",
+		"ls",
+		"direct vault inspection",
+		"repo search",
 	} {
 		if !strings.Contains(description, want) {
 			t.Fatalf("SKILL.md description missing %q: %s", want, description)
