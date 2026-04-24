@@ -146,7 +146,6 @@ type RetrievalTaskResult struct {
 }
 
 type Paths struct {
-	DataDir      string `json:"data_dir"`
 	DatabasePath string `json:"database_path"`
 	VaultRoot    string `json:"vault_root"`
 }

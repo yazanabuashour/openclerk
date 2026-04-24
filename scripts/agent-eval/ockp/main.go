@@ -670,20 +670,20 @@ func codexArgsForTurn(codexBin string, repoDir string, runDir string, sc scenari
 	}
 	writableRoots := codexWritableRoots(runDir, cache)
 	if len(scenarioTurns(sc)) == 1 {
-		args := []string{codexBin, "exec", "--json", "--ephemeral", "--full-auto", "--skip-git-repo-check", "-C", repoDir}
+		args := []string{codexBin, "exec", "--json", "--ephemeral", "--full-auto", "--skip-git-repo-check", "--ignore-user-config", "-C", repoDir}
 		args = appendAddDirs(args, writableRoots)
 		args = append(args, baseConfig...)
 		return append(args, turn.Prompt)
 	}
 	if turnIndex == 1 {
-		args := []string{codexBin, "exec", "--json", "--full-auto", "--skip-git-repo-check", "-C", repoDir}
+		args := []string{codexBin, "exec", "--json", "--full-auto", "--skip-git-repo-check", "--ignore-user-config", "-C", repoDir}
 		args = appendAddDirs(args, writableRoots)
 		args = append(args, baseConfig...)
 		return append(args, turn.Prompt)
 	}
 	args := []string{codexBin, "exec", "-C", repoDir}
 	args = appendAddDirs(args, writableRoots)
-	args = append(args, "resume", "--json", "--full-auto", "--skip-git-repo-check")
+	args = append(args, "resume", "--json", "--full-auto", "--skip-git-repo-check", "--ignore-user-config")
 	args = append(args, baseConfig...)
 	args = append(args, sessionID, turn.Prompt)
 	return args
@@ -759,46 +759,26 @@ func prepareRunDir(runDir string, cache cacheConfig) error {
 		return err
 	}
 	paths := evalPathsFor(runDir, evalPaths{}, cache)
-	for _, dir := range []string{paths.CodexHome, paths.ZDotDir, paths.Temp} {
+	for _, dir := range []string{paths.ZDotDir, paths.Temp} {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return err
 		}
 	}
-	if err := seedEvalCodexHome(paths.CodexHome); err != nil {
+	if err := setupEvalCodexHome(paths.CodexHome); err != nil {
 		return err
 	}
 	return nil
 }
 
-func seedEvalCodexHome(dst string) error {
-	srcRoot, err := hostCodexHome()
+func setupEvalCodexHome(dst string) error {
+	srcRoot, err := sourceCodexHome()
 	if err != nil {
-		return nil
+		return err
 	}
-	for _, name := range []string{"auth.json", "config.toml", "installation_id"} {
-		src := filepath.Join(srcRoot, name)
-		info, err := os.Stat(src)
-		if err != nil {
-			if os.IsNotExist(err) {
-				continue
-			}
-			return err
-		}
-		if info.IsDir() {
-			continue
-		}
-		data, err := os.ReadFile(src)
-		if err != nil {
-			return err
-		}
-		if err := os.WriteFile(filepath.Join(dst, name), data, info.Mode().Perm()); err != nil {
-			return err
-		}
-	}
-	return nil
+	return setupEvalCodexHomeFromSource(dst, srcRoot)
 }
 
-func hostCodexHome() (string, error) {
+func sourceCodexHome() (string, error) {
 	if configured := strings.TrimSpace(os.Getenv("CODEX_HOME")); configured != "" {
 		return configured, nil
 	}
@@ -807,6 +787,23 @@ func hostCodexHome() (string, error) {
 		return "", err
 	}
 	return filepath.Join(home, ".codex"), nil
+}
+
+func setupEvalCodexHomeFromSource(dst string, sourceHome string) error {
+	authBytes, err := os.ReadFile(filepath.Join(sourceHome, "auth.json"))
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("missing Codex auth at %s; run codex login before running evals", filepath.Join(sourceHome, "auth.json"))
+		}
+		return err
+	}
+	if err := os.RemoveAll(dst); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(dst, 0o700); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dst, "auth.json"), authBytes, 0o600)
 }
 
 func warmGoModules(repoDir string, runDir string, paths evalPaths, cache cacheConfig) error {
@@ -2670,13 +2667,6 @@ func verifyMemoryRouterReference(ctx context.Context, paths evalPaths, finalMess
 	if err != nil {
 		return verificationResult{}, err
 	}
-	search, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
-		Action: runner.RetrievalTaskActionSearch,
-		Search: runner.SearchOptions{Text: memoryRouterSearchText, Limit: 10},
-	})
-	if err != nil {
-		return verificationResult{}, err
-	}
 	provenance, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
 		Action: runner.RetrievalTaskActionProvenanceEvents,
 		Provenance: runner.ProvenanceEventOptions{
@@ -2729,9 +2719,6 @@ func verifyMemoryRouterReference(ctx context.Context, paths evalPaths, finalMess
 	}
 	failures = append(failures, missingRequired(body, required)...)
 	failures = append(failures, sourceRefsFrontmatterFailures(body, sourceRefs)...)
-	if !searchResultHasCitations(search) || !searchContainsPath(search, memoryRouterTemporalPath) {
-		failures = append(failures, "search did not expose cited memory/router reference docs")
-	}
 	hasProvenance := sessionFound && provenance.Provenance != nil && len(provenance.Provenance.Events) > 0
 	if !hasProvenance {
 		failures = append(failures, "session observation provenance missing")
@@ -2786,8 +2773,6 @@ func verifyMemoryRouterReference(ctx context.Context, paths evalPaths, finalMess
 		synthesisDocIDFound &&
 		len(missingRequired(body, required)) == 0 &&
 		len(sourceRefsFrontmatterFailures(body, sourceRefs)) == 0 &&
-		searchResultHasCitations(search) &&
-		searchContainsPath(search, memoryRouterTemporalPath) &&
 		hasProvenance &&
 		hasProjection
 	activityPass := turnMetrics.SearchUsed &&

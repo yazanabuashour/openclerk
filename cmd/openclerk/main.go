@@ -61,7 +61,6 @@ func runInit(args []string, stdout io.Writer, stderr io.Writer) int {
 		Summary string       `json:"summary"`
 	}{
 		Paths: runner.Paths{
-			DataDir:      paths.DataDir,
 			DatabasePath: paths.DatabasePath,
 			VaultRoot:    paths.VaultRoot,
 		},
@@ -122,7 +121,6 @@ func parseConfig(name string, args []string, stderr io.Writer) (runclient.Config
 	fs := flag.NewFlagSet("openclerk "+name, flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	databasePath := fs.String("db", "", "OpenClerk SQLite database path")
-	embeddingProvider := fs.String("embedding-provider", "", "embedding provider name")
 	if err := fs.Parse(args); err != nil {
 		return runclient.Config{}, false
 	}
@@ -130,10 +128,7 @@ func parseConfig(name string, args []string, stderr io.Writer) (runclient.Config
 		_, _ = fmt.Fprintf(stderr, "unexpected positional arguments: %v\n", fs.Args())
 		return runclient.Config{}, false
 	}
-	return runclient.Config{
-		DatabasePath:      *databasePath,
-		EmbeddingProvider: *embeddingProvider,
-	}, true
+	return runclient.Config{DatabasePath: *databasePath}, true
 }
 
 func parseInitConfig(args []string, stderr io.Writer) (runclient.Config, string, bool) {
@@ -187,6 +182,6 @@ func resolvedVersion(linkerVersion string, info *debug.BuildInfo, ok bool) strin
 }
 
 func usage(stderr io.Writer) {
-	_, _ = fmt.Fprintln(stderr, "usage: openclerk <version|init|document|retrieval> [--db path] [--embedding-provider name]")
+	_, _ = fmt.Fprintln(stderr, "usage: openclerk <version|init|document|retrieval> [--db path]")
 	_, _ = fmt.Fprintln(stderr, "       openclerk init [--db path] [--vault-root path]")
 }

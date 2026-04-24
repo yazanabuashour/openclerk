@@ -39,11 +39,14 @@ go run ./scripts/agent-eval/ockp run --report-name ockp-final
 `(variant, scenario)` jobs with deterministic report ordering even when jobs
 finish out of order.
 
-Single-turn scenarios use `codex exec --ephemeral`. Multi-turn scenarios use one
-persisted eval session per variant/scenario: the first turn creates a session in
-the throwaway copied repo, and later turns use `codex exec resume` with explicit
-writable roots for the scenario run directory and shared Go cache. Per-turn raw
-logs live under `<run-root>/<variant>/<scenario>/turn-N/`.
+The harness creates an isolated Codex home for each job and seeds it with the
+user's `auth.json` only. Single-turn scenarios use
+`codex exec --ephemeral --ignore-user-config`. Multi-turn scenarios use one
+persisted eval session per variant/scenario inside the isolated eval Codex home:
+the first turn creates a session in the throwaway copied repo, and later turns
+use `codex exec resume --ignore-user-config` with explicit writable roots for
+the scenario run directory and shared Go cache. Per-turn raw logs live under
+`<run-root>/<variant>/<scenario>/turn-N/`.
 
 Each job gets an isolated copied repo and OpenClerk storage rooted inside that
 copy:
@@ -60,9 +63,10 @@ installing the shipped `skills/openclerk` skill into
 OpenClerk `AGENTS.md` instructions. Before each job runs, it preflights the
 rendered Codex context with `codex debug prompt-input` to verify that the
 project skill points at `.agents/skills/openclerk/SKILL.md` and that no
-OpenClerk product instructions leak through an `AGENTS.md` block. Raw event logs
-are not committed; reduced reports refer to them with `<run-root>`
-placeholders.
+OpenClerk product instructions leak through an `AGENTS.md` block. The preflight
+uses the same isolated `CODEX_HOME`; `codex debug prompt-input` does not expose
+an `--ignore-user-config` flag in the current CLI. Raw event logs are not
+committed; reduced reports refer to them with `<run-root>` placeholders.
 
 The harness defaults to `--cache-mode shared`, which prewarms one shared Go
 module/build cache under `<run-root>/shared-cache` while keeping OpenClerk

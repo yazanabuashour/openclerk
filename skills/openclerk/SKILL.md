@@ -18,8 +18,8 @@ openclerk retrieval
 
 Pipe exactly one JSON request to one runner command, then answer only from the
 JSON result. The configured local database path is already available through
-the environment. For routine requests, do not pass `--db` or
-`--embedding-provider` unless the user explicitly names a specific dataset.
+the environment. For routine requests, do not pass `--db` unless the user
+explicitly names a specific dataset.
 
 The runner honors `OPENCLERK_DATABASE_PATH`. The database stores the configured
 vault root, so routine agent work should use the configured environment and

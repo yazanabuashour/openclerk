@@ -171,11 +171,24 @@ func TestCodexArgsForSingleAndResumedTurns(t *testing.T) {
 	if !containsValue(singleArgs, "--ephemeral") {
 		t.Fatalf("single args must use --ephemeral: %v", singleArgs)
 	}
+	if !containsValue(singleArgs, "--ignore-user-config") {
+		t.Fatalf("single args missing --ignore-user-config: %v", singleArgs)
+	}
 
 	multi := scenario{ID: "multi", Turns: []scenarioTurn{{Prompt: "first"}, {Prompt: "second"}}}
+	firstArgs := codexArgsForTurn("codex", "run-root/production/multi/repo", "run-root/production/multi", multi, scenarioTurn{Prompt: "first"}, 1, "", cache)
+	if !containsValue(firstArgs, "--ignore-user-config") {
+		t.Fatalf("first multi-turn args missing --ignore-user-config: %v", firstArgs)
+	}
+	if containsValue(firstArgs, "--ephemeral") {
+		t.Fatalf("first multi-turn args must persist the session: %v", firstArgs)
+	}
 	resumeArgs := codexArgsForTurn("codex", "run-root/production/multi/repo", "run-root/production/multi", multi, scenarioTurn{Prompt: "second"}, 2, "session-123", cache)
 	if containsValue(resumeArgs, "--ephemeral") {
 		t.Fatalf("resume args must not use --ephemeral: %v", resumeArgs)
+	}
+	if !containsValue(resumeArgs, "--ignore-user-config") {
+		t.Fatalf("resume args missing --ignore-user-config: %v", resumeArgs)
 	}
 	if !containsValue(resumeArgs, "resume") || !containsValue(resumeArgs, "session-123") {
 		t.Fatalf("resume args must persist the multi-turn session: %v", resumeArgs)
@@ -349,15 +362,16 @@ func TestPromptInputPreflightFlagsOpenClerkAgentsInstructions(t *testing.T) {
 	}
 }
 
-func TestPrepareRunDirCreatesCodexHome(t *testing.T) {
+func TestPrepareRunDirCreatesAuthOnlyCodexHome(t *testing.T) {
 	hostCodexHome := filepath.Join(t.TempDir(), "host-codex-home")
-	if err := os.MkdirAll(hostCodexHome, 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(hostCodexHome, "sessions"), 0o755); err != nil {
 		t.Fatalf("mkdir host codex home: %v", err)
 	}
 	for name, content := range map[string]string{
-		"auth.json":       `{"token":"test"}`,
-		"config.toml":     "model = \"gpt-5.4-mini\"\n",
-		"installation_id": "test-installation\n",
+		"auth.json":          `{"token":"test"}`,
+		"config.toml":        "model = \"gpt-5.4-mini\"\n",
+		"installation_id":    "test-installation\n",
+		"sessions/old.jsonl": "old session\n",
 	} {
 		if err := os.WriteFile(filepath.Join(hostCodexHome, name), []byte(content), 0o600); err != nil {
 			t.Fatalf("write host codex home %s: %v", name, err)
@@ -378,18 +392,31 @@ func TestPrepareRunDirCreatesCodexHome(t *testing.T) {
 			t.Fatalf("expected directory %s, stat err=%v", want, err)
 		}
 	}
-	for name, want := range map[string]string{
-		"auth.json":       `{"token":"test"}`,
-		"config.toml":     "model = \"gpt-5.4-mini\"\n",
-		"installation_id": "test-installation\n",
-	} {
-		got, err := os.ReadFile(filepath.Join(runDir, "codex-home", name))
-		if err != nil {
-			t.Fatalf("read seeded %s: %v", name, err)
+	got, err := os.ReadFile(filepath.Join(runDir, "codex-home", "auth.json"))
+	if err != nil {
+		t.Fatalf("read seeded auth: %v", err)
+	}
+	if string(got) != `{"token":"test"}` {
+		t.Fatalf("seeded auth = %q, want copied auth", got)
+	}
+	homeInfo, err := os.Stat(filepath.Join(runDir, "codex-home"))
+	if err != nil {
+		t.Fatalf("stat eval codex home: %v", err)
+	}
+	if homeInfo.Mode().Perm()&0o077 != 0 {
+		t.Fatalf("eval codex home permissions = %v, want no group/other access", homeInfo.Mode().Perm())
+	}
+	for _, unwanted := range []string{"config.toml", "installation_id", filepath.Join("sessions", "old.jsonl")} {
+		if _, err := os.Stat(filepath.Join(runDir, "codex-home", unwanted)); !os.IsNotExist(err) {
+			t.Fatalf("unexpected copied %s: stat error = %v", unwanted, err)
 		}
-		if string(got) != want {
-			t.Fatalf("seeded %s = %q, want %q", name, got, want)
-		}
+	}
+}
+
+func TestSetupEvalCodexHomeRequiresAuth(t *testing.T) {
+	err := setupEvalCodexHomeFromSource(filepath.Join(t.TempDir(), "codex-home"), t.TempDir())
+	if err == nil || !strings.Contains(err.Error(), "run codex login") {
+		t.Fatalf("setupEvalCodexHomeFromSource() error = %v, want login guidance", err)
 	}
 }
 

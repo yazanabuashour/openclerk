@@ -25,8 +25,6 @@ import (
 )
 
 const (
-	embeddingDimensions = 16
-
 	configKeyVaultRoot               = "vault_root"
 	configKeyLayoutConventionVersion = "layout_convention_version"
 	defaultLayoutConventionVersion   = "root_v1"
@@ -40,10 +38,9 @@ var (
 )
 
 type Config struct {
-	Backend           domain.BackendKind
-	DatabasePath      string
-	VaultRoot         string
-	EmbeddingProvider string
+	Backend      domain.BackendKind
+	DatabasePath string
+	VaultRoot    string
 }
 
 type RuntimeConfig struct {
@@ -149,11 +146,10 @@ ON CONFLICT(key_name) DO UPDATE SET
 }
 
 type Store struct {
-	db                *sql.DB
-	backend           domain.BackendKind
-	vaultRoot         string
-	embeddingProvider string
-	now               func() time.Time
+	db        *sql.DB
+	backend   domain.BackendKind
+	vaultRoot string
+	now       func() time.Time
 }
 
 type storedProjectionState struct {
@@ -217,11 +213,10 @@ func New(ctx context.Context, cfg Config) (*Store, error) {
 	db.SetMaxOpenConns(1)
 
 	store := &Store{
-		db:                db,
-		backend:           cfg.Backend,
-		vaultRoot:         cfg.VaultRoot,
-		embeddingProvider: strings.TrimSpace(cfg.EmbeddingProvider),
-		now:               time.Now,
+		db:        db,
+		backend:   cfg.Backend,
+		vaultRoot: cfg.VaultRoot,
+		now:       time.Now,
 	}
 	if err := store.initSchema(ctx); err != nil {
 		_ = db.Close()
@@ -254,9 +249,6 @@ func (s *Store) Capabilities(_ context.Context) (domain.Capabilities, error) {
 		SearchModes: []string{"lexical"},
 		Extensions:  []string{"provenance"},
 	}
-	if supportsHybridSearch(s.backend) && s.embeddingProvider != "" {
-		capabilities.SearchModes = []string{"lexical", "vector", "hybrid"}
-	}
 	if supportsGraph(s.backend) {
 		capabilities.Extensions = append(capabilities.Extensions, "graph")
 	}
@@ -285,9 +277,6 @@ func (s *Store) Search(ctx context.Context, query domain.SearchQuery) (domain.Se
 	}
 	if (query.MetadataKey == "") != (query.MetadataValue == "") {
 		return domain.SearchResult{}, domain.ValidationError("metadataKey and metadataValue must be provided together", nil)
-	}
-	if supportsHybridSearch(s.backend) && s.embeddingProvider != "" {
-		return s.hybridSearch(ctx, query, limit, decodeCursor(query.Cursor))
 	}
 	return s.lexicalSearch(ctx, query, limit, decodeCursor(query.Cursor))
 }
@@ -1302,11 +1291,6 @@ func (s *Store) initSchema(ctx context.Context) error {
 			content,
 			tokenize = 'unicode61'
 		);`,
-		`CREATE TABLE IF NOT EXISTS embeddings (
-			chunk_id TEXT PRIMARY KEY,
-			vector_json TEXT NOT NULL,
-			FOREIGN KEY (chunk_id) REFERENCES chunks(chunk_id) ON DELETE CASCADE
-		);`,
 		`CREATE TABLE IF NOT EXISTS graph_nodes (
 			node_id TEXT PRIMARY KEY,
 			type TEXT NOT NULL,
@@ -1540,9 +1524,6 @@ func (s *Store) pruneMissingDocuments(ctx context.Context, livePaths []string) e
 			return domain.InternalError("delete missing document", err)
 		}
 	}
-	if _, err := tx.ExecContext(ctx, `DELETE FROM embeddings WHERE chunk_id NOT IN (SELECT chunk_id FROM chunks)`); err != nil {
-		return domain.InternalError("prune embeddings after document deletion", err)
-	}
 	if err := tx.Commit(); err != nil {
 		return domain.InternalError("commit prune missing documents", err)
 	}
@@ -1647,10 +1628,6 @@ VALUES (?, ?, ?)`,
 	if _, err := tx.ExecContext(ctx, `DELETE FROM chunks WHERE doc_id = ?`, docID); err != nil {
 		return domain.InternalError("delete chunks", err)
 	}
-	if _, err := tx.ExecContext(ctx, `DELETE FROM embeddings WHERE chunk_id NOT IN (SELECT chunk_id FROM chunks)`); err != nil {
-		return domain.InternalError("prune embeddings", err)
-	}
-
 	for _, sec := range sections {
 		chunkID := chunkIDForSection(docID, sec)
 		if _, err := tx.ExecContext(ctx, `
@@ -1676,17 +1653,6 @@ VALUES (?, ?, ?, ?, ?)`,
 			sec.Content,
 		); err != nil {
 			return domain.InternalError("insert chunk index", err)
-		}
-		if s.embeddingProvider != "" {
-			vectorJSON, err := json.Marshal(embedText(sec.Content))
-			if err != nil {
-				return domain.InternalError("encode embedding", err)
-			}
-			if _, err := tx.ExecContext(ctx, `
-INSERT INTO embeddings (chunk_id, vector_json)
-VALUES (?, ?)`, chunkID, string(vectorJSON)); err != nil {
-				return domain.InternalError("insert embedding", err)
-			}
 		}
 	}
 
@@ -1886,109 +1852,6 @@ LIMIT ? OFFSET ?`
 		return domain.SearchResult{}, domain.InternalError("iterate lexical results", err)
 	}
 	return paginateSearchResults(hits, limit, offset), nil
-}
-
-func (s *Store) hybridSearch(ctx context.Context, query domain.SearchQuery, limit int, offset int) (domain.SearchResult, error) {
-	lexical, err := s.lexicalSearch(ctx, query, max(limit*2, 20), 0)
-	if err != nil {
-		return domain.SearchResult{}, err
-	}
-	queryVector := embedText(query.Text)
-	baseQuery := `
-SELECT c.chunk_id, c.doc_id, d.title, c.path, c.heading, c.content, c.line_start, c.line_end, e.vector_json
-FROM chunks c
-JOIN documents d ON d.doc_id = c.doc_id
-JOIN embeddings e ON e.chunk_id = c.chunk_id`
-	whereClause, args := filteredDocumentClauses(query)
-	sqlQuery := baseQuery
-	if whereClause != "" {
-		sqlQuery += "\nWHERE " + whereClause
-	}
-	rows, err := s.db.QueryContext(ctx, sqlQuery, args...)
-	if err != nil {
-		return domain.SearchResult{}, domain.InternalError("query embeddings", err)
-	}
-	defer func() {
-		_ = rows.Close()
-	}()
-
-	type candidate struct {
-		hit domain.SearchHit
-	}
-	vectorCandidates := make([]candidate, 0, 32)
-	for rows.Next() {
-		var (
-			hit        domain.SearchHit
-			pathValue  string
-			heading    string
-			content    string
-			lineStart  int
-			lineEnd    int
-			vectorJSON string
-		)
-		if err := rows.Scan(&hit.ChunkID, &hit.DocID, &hit.Title, &pathValue, &heading, &content, &lineStart, &lineEnd, &vectorJSON); err != nil {
-			return domain.SearchResult{}, domain.InternalError("scan embedding row", err)
-		}
-		var vector []float64
-		if err := json.Unmarshal([]byte(vectorJSON), &vector); err != nil {
-			return domain.SearchResult{}, domain.InternalError("decode embedding", err)
-		}
-		hit.Score = cosineSimilarity(queryVector, vector)
-		hit.Snippet = snippetForSearch(content, query.Text)
-		hit.Citations = []domain.Citation{{
-			DocID:     hit.DocID,
-			ChunkID:   hit.ChunkID,
-			Path:      pathValue,
-			Heading:   heading,
-			LineStart: lineStart,
-			LineEnd:   lineEnd,
-		}}
-		vectorCandidates = append(vectorCandidates, candidate{hit: hit})
-	}
-	if err := rows.Err(); err != nil {
-		return domain.SearchResult{}, domain.InternalError("iterate embeddings", err)
-	}
-	sort.Slice(vectorCandidates, func(i, j int) bool {
-		if vectorCandidates[i].hit.Score == vectorCandidates[j].hit.Score {
-			return vectorCandidates[i].hit.ChunkID < vectorCandidates[j].hit.ChunkID
-		}
-		return vectorCandidates[i].hit.Score > vectorCandidates[j].hit.Score
-	})
-
-	fused := map[string]*domain.SearchHit{}
-	for rank, hit := range lexical.Hits {
-		copyHit := hit
-		copyHit.Score = 1.0 / float64(60+rank+1)
-		fused[hit.ChunkID] = &copyHit
-	}
-	for rank, candidate := range vectorCandidates {
-		if rank >= max(limit*4, 50) {
-			break
-		}
-		score := 1.0 / float64(60+rank+1)
-		if existing, ok := fused[candidate.hit.ChunkID]; ok {
-			existing.Score += score
-			continue
-		}
-		copyHit := candidate.hit
-		copyHit.Score = score
-		fused[candidate.hit.ChunkID] = &copyHit
-	}
-
-	hits := make([]domain.SearchHit, 0, len(fused))
-	for _, hit := range fused {
-		hits = append(hits, *hit)
-	}
-	sort.Slice(hits, func(i, j int) bool {
-		if hits[i].Score == hits[j].Score {
-			return hits[i].ChunkID < hits[j].ChunkID
-		}
-		return hits[i].Score > hits[j].Score
-	})
-	if offset > len(hits) {
-		offset = len(hits)
-	}
-	return paginateSearchResults(hits[offset:], limit, offset), nil
 }
 
 func (s *Store) rebuildGraph(ctx context.Context) error {
@@ -2896,10 +2759,6 @@ func ensureColumn(ctx context.Context, db *sql.DB, table string, column string, 
 	return nil
 }
 
-func supportsHybridSearch(backend domain.BackendKind) bool {
-	return backend == domain.BackendOpenClerk
-}
-
 func supportsGraph(backend domain.BackendKind) bool {
 	return backend == domain.BackendOpenClerk
 }
@@ -3208,42 +3067,6 @@ func ftsExpression(text string) string {
 		return `"` + strings.ReplaceAll(strings.TrimSpace(text), `"`, `""`) + `"`
 	}
 	return strings.Join(parts, " ")
-}
-
-func embedText(text string) []float64 {
-	vector := make([]float64, embeddingDimensions)
-	for _, token := range wordPattern.FindAllString(strings.ToLower(text), -1) {
-		sum := sha256.Sum256([]byte(token))
-		index := int(sum[0]) % embeddingDimensions
-		sign := 1.0
-		if sum[1]%2 == 1 {
-			sign = -1.0
-		}
-		vector[index] += sign
-	}
-	var norm float64
-	for _, value := range vector {
-		norm += value * value
-	}
-	if norm == 0 {
-		return vector
-	}
-	norm = math.Sqrt(norm)
-	for idx := range vector {
-		vector[idx] /= norm
-	}
-	return vector
-}
-
-func cosineSimilarity(left []float64, right []float64) float64 {
-	if len(left) != len(right) || len(left) == 0 {
-		return 0
-	}
-	var score float64
-	for idx := range left {
-		score += left[idx] * right[idx]
-	}
-	return score
 }
 
 func extractMarkdownLinks(content string) []string {

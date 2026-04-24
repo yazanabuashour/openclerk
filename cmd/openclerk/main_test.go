@@ -197,6 +197,7 @@ func TestRunnerErrors(t *testing.T) {
 		{name: "multiple json", args: []string{"document"}, input: `{} {}`, want: 1, stderr: "multiple JSON values"},
 		{name: "unknown json field", args: []string{"document"}, input: `{"action":"validate","extra":true}`, want: 1, stderr: "unknown field"},
 		{name: "unexpected arg", args: []string{"retrieval", "extra"}, input: `{}`, want: 2, stderr: "unexpected positional arguments"},
+		{name: "retired embedding provider flag", args: []string{"document", "--embedding-provider", "local"}, input: `{}`, want: 2, stderr: "embedding-provider"},
 	}
 
 	for _, tt := range tests {
@@ -265,14 +266,23 @@ func TestRunnerInitBindsVaultRoot(t *testing.T) {
 		t.Fatalf("init paths = %+v", initResult.Paths)
 	}
 
+	reboundVaultRoot := filepath.Join(t.TempDir(), "rebound-wiki")
+	code, stderr = runJSON(t, []string{"init", "--db", dbPath, "--vault-root", reboundVaultRoot}, "", &initResult)
+	if code != 0 {
+		t.Fatalf("rebind init exit = %d stderr=%s", code, stderr)
+	}
+	if initResult.Paths.DatabasePath != dbPath || initResult.Paths.VaultRoot != reboundVaultRoot {
+		t.Fatalf("rebind init paths = %+v", initResult.Paths)
+	}
+
 	request := `{"action":"resolve_paths"}`
 	var result runner.DocumentTaskResult
 	code, stderr = runJSON(t, []string{"document", "--db", dbPath}, request, &result)
 	if code != 0 {
 		t.Fatalf("resolve exit = %d stderr=%s", code, stderr)
 	}
-	if result.Paths == nil || result.Paths.VaultRoot != vaultRoot {
-		t.Fatalf("paths = %+v, want vault %q", result.Paths, vaultRoot)
+	if result.Paths == nil || result.Paths.VaultRoot != reboundVaultRoot {
+		t.Fatalf("paths = %+v, want vault %q", result.Paths, reboundVaultRoot)
 	}
 }
 

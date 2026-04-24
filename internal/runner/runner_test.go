@@ -673,7 +673,6 @@ func TestResolvePathsUsesDatabaseAnchoredConfig(t *testing.T) {
 		t.Fatalf("resolve paths: %v", err)
 	}
 	if result.Paths == nil ||
-		result.Paths.DataDir != filepath.Dir(dbPath) ||
 		result.Paths.DatabasePath != dbPath ||
 		result.Paths.VaultRoot != filepath.Join(filepath.Dir(dbPath), "vault") {
 		t.Fatalf("paths = %+v", result.Paths)
@@ -713,6 +712,8 @@ func TestResolvePathsUsesDatabaseAnchoredConfig(t *testing.T) {
 func TestResolvePathsZeroConfigCreatesDefaultDatabaseAndVaultConfig(t *testing.T) {
 	t.Setenv("XDG_DATA_HOME", filepath.Join(t.TempDir(), "xdg"))
 	t.Setenv("OPENCLERK_DATABASE_PATH", "")
+	t.Setenv("OPENCLERK_DATA_DIR", filepath.Join(t.TempDir(), "retired-data"))
+	t.Setenv("OPENCLERK_VAULT_ROOT", filepath.Join(t.TempDir(), "retired-vault"))
 
 	result, err := runner.RunDocumentTask(context.Background(), runclient.Config{}, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionResolvePaths,

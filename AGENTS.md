@@ -27,9 +27,9 @@ openclerk retrieval
 
 Pass one JSON request on stdin and answer only from the JSON result. The runner
 honors `OPENCLERK_DATABASE_PATH` as the routine storage anchor; the SQLite
-database stores the configured vault root and conventions. Optional `--db` and
-`--embedding-provider` flags are for explicit datasets, tests, or manual
-debugging only. For routine requests, do not pass those flags; rely on the
+database stores the configured vault root and conventions. Optional `--db` is
+for explicit datasets, tests, or manual debugging only. For routine requests,
+do not pass that flag; rely on the
 configured database path so data, database, and vault paths stay together. Use
 `openclerk init --vault-root <path>` only when explicitly binding an existing
 vault. Do not inspect the repo to rediscover runner schemas; use the documented

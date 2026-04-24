@@ -20,13 +20,11 @@ const (
 
 // Config controls where the internal runtime stores SQLite-backed OpenClerk data.
 type Config struct {
-	DatabasePath      string
-	EmbeddingProvider string
+	DatabasePath string
 }
 
 // Paths describes the resolved runtime locations on disk.
 type Paths struct {
-	DataDir      string
 	DatabasePath string
 	VaultRoot    string
 }
@@ -60,12 +58,11 @@ func ResolvePaths(cfg Config) (Paths, error) {
 		return Paths{}, err
 	}
 	databasePath = filepath.Clean(databasePath)
-	dataDir := filepath.Dir(databasePath)
-	runtimeConfig, err := sqlite.ResolveRuntimeConfig(context.Background(), databasePath, filepath.Join(dataDir, defaultVaultDir))
+	runtimeConfig, err := sqlite.ResolveRuntimeConfig(context.Background(), databasePath, filepath.Join(filepath.Dir(databasePath), defaultVaultDir))
 	if err != nil {
 		return Paths{}, err
 	}
-	return Paths{DataDir: dataDir, DatabasePath: databasePath, VaultRoot: runtimeConfig.VaultRoot}, nil
+	return Paths{DatabasePath: databasePath, VaultRoot: runtimeConfig.VaultRoot}, nil
 }
 
 func InitializePaths(cfg Config, vaultRoot string) (Paths, error) {
@@ -86,7 +83,7 @@ func InitializePaths(cfg Config, vaultRoot string) (Paths, error) {
 	if err != nil {
 		return Paths{}, err
 	}
-	return Paths{DataDir: dataDir, DatabasePath: databasePath, VaultRoot: runtimeConfig.VaultRoot}, nil
+	return Paths{DatabasePath: databasePath, VaultRoot: runtimeConfig.VaultRoot}, nil
 }
 
 func newRuntime(backend domain.BackendKind, cfg Config) (*Runtime, error) {
@@ -95,10 +92,9 @@ func newRuntime(backend domain.BackendKind, cfg Config) (*Runtime, error) {
 		return nil, err
 	}
 	store, err := sqlite.New(context.Background(), sqlite.Config{
-		Backend:           backend,
-		DatabasePath:      paths.DatabasePath,
-		VaultRoot:         paths.VaultRoot,
-		EmbeddingProvider: cfg.EmbeddingProvider,
+		Backend:      backend,
+		DatabasePath: paths.DatabasePath,
+		VaultRoot:    paths.VaultRoot,
 	})
 	if err != nil {
 		return nil, err
@@ -108,13 +104,6 @@ func newRuntime(backend domain.BackendKind, cfg Config) (*Runtime, error) {
 		paths:   paths,
 		service: service,
 	}, nil
-}
-
-func withDefaultEmbeddingProvider(cfg Config) Config {
-	if strings.TrimSpace(cfg.EmbeddingProvider) == "" {
-		cfg.EmbeddingProvider = "local"
-	}
-	return cfg
 }
 
 func resolveDatabasePath(cfg Config) (string, error) {

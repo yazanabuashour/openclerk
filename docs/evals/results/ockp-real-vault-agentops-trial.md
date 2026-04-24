@@ -9,8 +9,8 @@ Result: completed with sanitized evidence.
 The trial used a harness-managed current-branch runner install as production-like
 setup infrastructure. The runner was built into `<run-root>/bin/openclerk`,
 `<run-root>/bin` was prepended to `PATH`, and private OpenClerk storage was
-provided through `OPENCLERK_DATA_DIR`, `OPENCLERK_DATABASE_PATH`, and
-`OPENCLERK_VAULT_ROOT`.
+anchored by `OPENCLERK_DATABASE_PATH`; the private vault root was stored as
+SQLite runtime config.
 
 The workflow under test used only installed runner JSON through
 `openclerk document` and `openclerk retrieval`. The trial did not use direct
@@ -23,8 +23,8 @@ raw logs as evidence.
 | Check | Result | Classification |
 | --- | --- | --- |
 | Harness-managed current-branch runner available at `<run-root>/bin/openclerk` | pass | setup |
-| Private vault root available to the runner through `OPENCLERK_VAULT_ROOT` | pass | setup |
-| Isolated data directory and database available through `OPENCLERK_DATA_DIR` and `OPENCLERK_DATABASE_PATH` | pass | setup |
+| Private vault root available through SQLite runtime config | pass | setup |
+| Isolated database available through `OPENCLERK_DATABASE_PATH` | pass | setup |
 | `inspect_layout` returned runner-visible layout state | pass | setup |
 
 The setup mirrors the production-like AgentOps eval pattern: harness setup may

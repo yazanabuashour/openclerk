@@ -4,7 +4,6 @@ import "github.com/yazanabuashour/openclerk/internal/runclient"
 
 func toPaths(paths runclient.Paths) Paths {
 	return Paths{
-		DataDir:      paths.DataDir,
 		DatabasePath: paths.DatabasePath,
 		VaultRoot:    paths.VaultRoot,
 	}

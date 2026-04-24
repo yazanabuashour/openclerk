@@ -291,7 +291,7 @@ type ProjectionStateList struct {
 
 // Open creates the primary embedded OpenClerk client without binding a local port.
 func Open(cfg Config) (*Client, error) {
-	runtime, err := newRuntime(domain.BackendOpenClerk, withDefaultEmbeddingProvider(cfg))
+	runtime, err := newRuntime(domain.BackendOpenClerk, cfg)
 	if err != nil {
 		return nil, wrapError(err)
 	}
