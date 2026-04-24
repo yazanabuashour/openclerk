@@ -24,6 +24,11 @@ behaviors implemented behind it. It checks that routine tasks use runner JSON
 requests, that bypass attempts are rejected before tools, and that synthesis,
 records, provenance, and freshness behavior remain reliable.
 
+The planned populated-vault e2e lane is defined in
+[`populated-vault-agentops-e2e.md`](populated-vault-agentops-e2e.md). It is a
+targeted eval lane for heterogeneous synthetic vault pressure, not part of the
+current release-blocking production gate.
+
 ## Harness
 
 Use `scripts/agent-eval/ockp`:
