@@ -187,6 +187,11 @@ contradiction detection, and new public runner actions is recorded in
 [`deferred-capability-promotion-gates.md`](deferred-capability-promotion-gates.md).
 The post-v0.1.0 document lifecycle vision is recorded in
 [`openclerk-document-post-v0.1.0.md`](openclerk-document-post-v0.1.0.md).
+The deferred post-v1 design/eval spike for agent-chosen vault path selection is
+recorded in
+[`agent-chosen-vault-path-selection-adr.md`](agent-chosen-vault-path-selection-adr.md)
+and
+[`../evals/agent-chosen-path-selection-poc.md`](../evals/agent-chosen-path-selection-poc.md).
 
 ## Out of scope for this rewrite
 
