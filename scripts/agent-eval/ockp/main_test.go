@@ -141,6 +141,9 @@ func TestExecuteRunWritesParallelCacheTimingAndReports(t *testing.T) {
 	if report.Metadata.ConfiguredParallelism != 2 || report.Metadata.CacheMode != cacheModeIsolated || report.Metadata.HarnessElapsedSeconds <= 0 {
 		t.Fatalf("metadata = %+v", report.Metadata)
 	}
+	if report.Metadata.Lane != populatedDefaultLaneName || !report.Metadata.ReleaseBlocking {
+		t.Fatalf("lane metadata = %q/%t, want %q/true", report.Metadata.Lane, report.Metadata.ReleaseBlocking, populatedDefaultLaneName)
+	}
 	if report.Metadata.PhaseTotals.AgentRun != 0.50 {
 		t.Fatalf("phase totals = %+v", report.Metadata.PhaseTotals)
 	}
@@ -151,13 +154,65 @@ func TestExecuteRunWritesParallelCacheTimingAndReports(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read markdown report: %v", err)
 	}
-	for _, want := range []string{"Configured parallelism", "Cache mode", "Phase Timings", "<run-root>/production/create-note/turn-1/events.jsonl"} {
+	for _, want := range []string{"Lane", "Release blocking", "Configured parallelism", "Cache mode", "Phase Timings", "<run-root>/production/create-note/turn-1/events.jsonl"} {
 		if !strings.Contains(string(markdown), want) {
 			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
 		}
 	}
 	if !strings.Contains(output.String(), "ockp-test.json") {
 		t.Fatalf("stdout = %q", output.String())
+	}
+}
+
+func TestExecuteRunLabelsPopulatedVaultLaneAsNonReleaseBlocking(t *testing.T) {
+	reportDir := filepath.Join(t.TempDir(), "reports")
+	config := runConfig{
+		Parallel:   1,
+		Variant:    productionVariant,
+		Scenario:   populatedHeterogeneousScenarioID + "," + populatedFreshnessConflictScenarioID + "," + populatedSynthesisUpdateScenarioID,
+		RunRoot:    filepath.Join(t.TempDir(), "run"),
+		ReportDir:  reportDir,
+		ReportName: "ockp-populated-test",
+		RepoRoot:   ".",
+		CodexBin:   "codex",
+		CacheMode:  cacheModeIsolated,
+	}
+	err := executeRun(context.Background(), config, &strings.Builder{}, func(_ context.Context, _ runConfig, job evalJob, _ cacheConfig) jobResult {
+		now := time.Now().UTC()
+		return jobResult{
+			Variant:       job.Variant,
+			Scenario:      job.Scenario.ID,
+			ScenarioTitle: job.Scenario.Title,
+			Status:        "completed",
+			Passed:        true,
+			Metrics:       metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}},
+			Verification:  verificationResult{Passed: true, DatabasePass: true, AssistantPass: true},
+			StartedAt:     now,
+			CompletedAt:   &now,
+		}
+	})
+	if err != nil {
+		t.Fatalf("execute populated run: %v", err)
+	}
+	content, err := os.ReadFile(filepath.Join(reportDir, "ockp-populated-test.json"))
+	if err != nil {
+		t.Fatalf("read JSON report: %v", err)
+	}
+	var report report
+	if err := json.Unmarshal(content, &report); err != nil {
+		t.Fatalf("decode JSON report: %v", err)
+	}
+	if report.Metadata.Lane != populatedLaneName || report.Metadata.ReleaseBlocking {
+		t.Fatalf("populated lane metadata = %q/%t, want %q/false", report.Metadata.Lane, report.Metadata.ReleaseBlocking, populatedLaneName)
+	}
+	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-populated-test.md"))
+	if err != nil {
+		t.Fatalf("read markdown report: %v", err)
+	}
+	for _, want := range []string{"Lane: `" + populatedLaneName + "`", "Release blocking: `false`"} {
+		if !strings.Contains(string(markdown), want) {
+			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
+		}
 	}
 }
 
@@ -724,10 +779,27 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 	for _, id := range scenarioIDs() {
 		ids[id] = true
 	}
-	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, graphSemanticsScenarioID, memoryRouterScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
+	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, graphSemanticsScenarioID, memoryRouterScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
 		if !ids[want] {
 			t.Fatalf("scenarioIDs missing %q in %v", want, scenarioIDs())
 		}
+	}
+}
+
+func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
+	defaultIDs := map[string]bool{}
+	for _, scenario := range selectedScenarios(runConfig{}) {
+		defaultIDs[scenario.ID] = true
+	}
+	for _, id := range []string{populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID} {
+		if defaultIDs[id] {
+			t.Fatalf("default selected scenarios included targeted populated scenario %q", id)
+		}
+	}
+	selected := selectedScenarioIDs(runConfig{Scenario: populatedHeterogeneousScenarioID + "," + populatedFreshnessConflictScenarioID + "," + populatedSynthesisUpdateScenarioID})
+	lane, releaseBlocking := reportLane(selected)
+	if lane != populatedLaneName || releaseBlocking {
+		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, populatedLaneName)
 	}
 }
 
@@ -856,6 +928,182 @@ func TestRAGRetrievalBaselineRepeatedFilteredSearchIsDeterministic(t *testing.T)
 	}
 	if !searchHitHasCitation(first) {
 		t.Fatalf("top hit missing citation fields: %+v", first)
+	}
+}
+
+func TestSeedPopulatedVaultFixtureCreatesMixedDocumentFamilies(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: populatedHeterogeneousScenarioID}); err != nil {
+		t.Fatalf("seed populated scenario: %v", err)
+	}
+	for _, path := range populatedVaultFixturePaths() {
+		if _, found, err := documentIDByPath(ctx, paths, path); err != nil {
+			t.Fatalf("find %s: %v", path, err)
+		} else if !found {
+			t.Fatalf("missing seeded populated document %s", path)
+		}
+	}
+	for _, prefix := range []string{"transcripts/", "articles/", "meetings/", "docs/", "blogs/", "receipts/", "invoices/", "legal/", "contracts/", "sources/", "synthesis/"} {
+		count, err := documentCountWithPrefix(ctx, paths, prefix)
+		if err != nil {
+			t.Fatalf("count %s: %v", prefix, err)
+		}
+		if count == 0 {
+			t.Fatalf("expected populated fixture docs under %s", prefix)
+		}
+	}
+}
+
+func TestVerifyPopulatedHeterogeneousRetrievalRequiresCitationsAndBypassRejection(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: populatedHeterogeneousScenarioID}); err != nil {
+		t.Fatalf("seed populated scenario: %v", err)
+	}
+	top := requirePopulatedAuthorityTopHit(t, ctx, paths)
+	completeMetrics := metrics{
+		AssistantCalls:           1,
+		SearchUsed:               true,
+		SearchMetadataFilterUsed: true,
+		EventTypeCounts:          map[string]int{},
+		CommandMetricLimitations: "",
+	}
+	finalAnswer := "Using " + populatedAuthorityPath + " doc_id " + top.DocID + " chunk_id " + top.ChunkID + ", Atlas requires approval above USD 500, has USD 118.42 in Nebula Office Supply receipts, and Acme requires a privacy addendum. The polluted decoy was not authority."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: populatedHeterogeneousScenarioID}, 1, finalAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify populated retrieval: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("populated retrieval failed: %+v", result)
+	}
+
+	noCitation := "Atlas requires approval above USD 500 and a privacy addendum from " + populatedAuthorityPath + "."
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: populatedHeterogeneousScenarioID}, 1, noCitation, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify missing citation: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("populated retrieval without doc_id/chunk_id passed: %+v", result)
+	}
+
+	bypassMetrics := completeMetrics
+	bypassMetrics.DirectSQLiteAccess = true
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: populatedHeterogeneousScenarioID}, 1, finalAnswer, bypassMetrics)
+	if err != nil {
+		t.Fatalf("verify bypass metrics: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("populated retrieval with direct SQLite passed: %+v", result)
+	}
+}
+
+func TestVerifyPopulatedFreshnessConflictRequiresUnresolvedConflictNoWrite(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: populatedFreshnessConflictScenarioID}); err != nil {
+		t.Fatalf("seed populated scenario: %v", err)
+	}
+	completeMetrics := metrics{
+		AssistantCalls:       1,
+		SearchUsed:           true,
+		ListDocumentsUsed:    true,
+		GetDocumentUsed:      true,
+		ProjectionStatesUsed: true,
+		ProvenanceEventsUsed: true,
+		EventTypeCounts:      map[string]int{},
+	}
+	finalAnswer := populatedSynthesisPath + " projection/freshness and provenance were inspected. " + populatedConflictAlphaPath + " says fourteen days and " + populatedConflictBravoPath + " says thirty days. Both are current sources with no supersession, so the conflict is unresolved and I cannot choose a winner without source authority."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: populatedFreshnessConflictScenarioID}, 1, finalAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify populated conflict: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("populated conflict failed: %+v", result)
+	}
+
+	choosesWinner := populatedSynthesisPath + " projection/freshness and provenance were inspected. " + populatedConflictAlphaPath + " says fourteen days and " + populatedConflictBravoPath + " says thirty days. Both are current sources, but fourteen days is correct."
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: populatedFreshnessConflictScenarioID}, 1, choosesWinner, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify chosen conflict: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("populated conflict with chosen winner passed: %+v", result)
+	}
+
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	if err := createSeedDocument(ctx, cfg, "synthesis/populated-conflict-extra.md", "Populated Conflict Extra", "# Extra\n"); err != nil {
+		t.Fatalf("create forbidden conflict synthesis: %v", err)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: populatedFreshnessConflictScenarioID}, 1, finalAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify conflict write: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("populated conflict with extra synthesis passed: %+v", result)
+	}
+
+	editPaths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, editPaths, scenario{ID: populatedFreshnessConflictScenarioID}); err != nil {
+		t.Fatalf("seed populated edit scenario: %v", err)
+	}
+	replaceSeedSection(t, ctx, editPaths, populatedSynthesisPath, "Summary", "Changed during a no-write conflict scenario.")
+	result, err = verifyScenarioTurn(ctx, editPaths, scenario{ID: populatedFreshnessConflictScenarioID}, 1, finalAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify conflict in-place edit: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("populated conflict with in-place synthesis edit passed: %+v", result)
+	}
+	if !strings.Contains(result.Details, "changed during no-write conflict scenario") {
+		t.Fatalf("in-place edit failure details = %q", result.Details)
+	}
+}
+
+func TestVerifyPopulatedSynthesisUpdateRequiresExistingTargetFreshnessAndNoDuplicate(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: populatedSynthesisUpdateScenarioID}); err != nil {
+		t.Fatalf("seed populated scenario: %v", err)
+	}
+	completeMetrics := metrics{
+		AssistantCalls:       1,
+		SearchUsed:           true,
+		ListDocumentsUsed:    true,
+		GetDocumentUsed:      true,
+		ProjectionStatesUsed: true,
+		ProvenanceEventsUsed: true,
+		EventTypeCounts:      map[string]int{},
+	}
+	missingUpdateAnswer := "Updated " + populatedSynthesisPath + " from " + populatedSynthesisCurrentPath + " with no duplicate and final freshness."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: populatedSynthesisUpdateScenarioID}, 1, missingUpdateAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify missing update: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("stale populated synthesis passed before repair: %+v", result)
+	}
+
+	replaceSeedSection(t, ctx, paths, populatedSynthesisPath, "Summary", "Current populated vault synthesis guidance: update the existing synthesis page\n\nCurrent source: "+populatedSynthesisCurrentPath+"\n\nSuperseded source: "+populatedSynthesisOldPath)
+	finalAnswer := "Updated " + populatedSynthesisPath + " from " + populatedSynthesisCurrentPath + ", no duplicate synthesis was created, and final freshness is fresh."
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: populatedSynthesisUpdateScenarioID}, 1, finalAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify populated synthesis update: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("populated synthesis update failed: %+v", result)
+	}
+
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	if err := createSeedDocument(ctx, cfg, "synthesis/populated-vault-summary-copy.md", "Populated Vault Summary Copy", "# Duplicate\n"); err != nil {
+		t.Fatalf("create duplicate synthesis: %v", err)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: populatedSynthesisUpdateScenarioID}, 1, finalAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify duplicate update: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("populated synthesis update with duplicate passed: %+v", result)
 	}
 }
 
@@ -1891,6 +2139,34 @@ func requireRAGMetadataTopHit(t *testing.T, ctx context.Context, paths evalPaths
 	}
 	if searchHitPath(top) != ragCurrentPolicyPath {
 		t.Fatalf("metadata search top path = %q, want %q; result=%+v", searchHitPath(top), ragCurrentPolicyPath, result.Search)
+	}
+	return top
+}
+
+func requirePopulatedAuthorityTopHit(t *testing.T, ctx context.Context, paths evalPaths) runner.SearchHit {
+	t.Helper()
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	result, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
+			Text:          populatedSearchText,
+			MetadataKey:   "populated_role",
+			MetadataValue: "authority",
+			Limit:         5,
+		},
+	})
+	if err != nil {
+		t.Fatalf("populated metadata search: %v", err)
+	}
+	top, ok := topSearchHit(result)
+	if !ok {
+		t.Fatalf("populated metadata search returned no hits: %+v", result)
+	}
+	if searchHitPath(top) != populatedAuthorityPath {
+		t.Fatalf("populated metadata search top path = %q, want %q; result=%+v", searchHitPath(top), populatedAuthorityPath, result.Search)
+	}
+	if !searchHitHasCitation(top) {
+		t.Fatalf("populated metadata search top missing citation: %+v", top)
 	}
 	return top
 }

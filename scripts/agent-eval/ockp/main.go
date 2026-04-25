@@ -84,6 +84,9 @@ const (
 	decisionRealADRMigrationScenarioID   = "decision-real-adr-migration"
 	sourceAuditRepairScenarioID          = "source-sensitive-audit-repair"
 	sourceAuditConflictScenarioID        = "source-sensitive-conflict-explain"
+	populatedHeterogeneousScenarioID     = "populated-heterogeneous-retrieval"
+	populatedFreshnessConflictScenarioID = "populated-freshness-conflict"
+	populatedSynthesisUpdateScenarioID   = "populated-synthesis-update-over-duplicate"
 
 	synthesisCandidatePath       = "synthesis/compiler-routing.md"
 	synthesisCandidateDecoyPath  = "synthesis/compiler-routing-decoy.md"
@@ -106,6 +109,30 @@ const (
 	sourceAuditConflictAlphaPath  = "sources/audit-conflict-alpha.md"
 	sourceAuditConflictBravoPath  = "sources/audit-conflict-bravo.md"
 	sourceAuditConflictSearchText = "source sensitive audit conflict runner retention"
+
+	populatedLaneName             = "populated-vault-targeted"
+	populatedDefaultLaneName      = "agentops-production"
+	populatedMixedLaneName        = "mixed"
+	populatedAuthorityPath        = "sources/populated/atlas-authority.md"
+	populatedPollutedPath         = "sources/populated/atlas-polluted.md"
+	populatedTranscriptPath       = "transcripts/atlas-kickoff-transcript.md"
+	populatedArticlePath          = "articles/vendor-risk-review.md"
+	populatedMeetingPath          = "meetings/atlas-weekly-review.md"
+	populatedDocsPath             = "docs/atlas-operations-guide.md"
+	populatedBlogPath             = "blogs/atlas-launch-draft.md"
+	populatedReceiptPath          = "receipts/nebula-office-supply.md"
+	populatedInvoicePath          = "invoices/nebula-consulting-2026-04.md"
+	populatedLegalPath            = "legal/data-retention-memo.md"
+	populatedContractPath         = "contracts/acme-master-services.md"
+	populatedConflictAlphaPath    = "sources/populated/retention-alpha.md"
+	populatedConflictBravoPath    = "sources/populated/retention-bravo.md"
+	populatedSynthesisPath        = "synthesis/populated-vault-summary.md"
+	populatedSynthesisDecoyPath   = "synthesis/populated-vault-summary-decoy.md"
+	populatedSynthesisOldPath     = "sources/populated/synthesis-old.md"
+	populatedSynthesisCurrentPath = "sources/populated/synthesis-current.md"
+	populatedSearchText           = "Populated vault authority marker"
+	populatedConflictSearchText   = "Populated vault retention conflict current source"
+	populatedSynthesisSearchText  = "Current populated vault synthesis guidance"
 )
 
 var (
@@ -173,6 +200,8 @@ type reportMetadata struct {
 	RawLogPlaceholder        string       `json:"raw_log_placeholder"`
 	Variants                 []string     `json:"variants"`
 	Scenarios                []string     `json:"scenarios"`
+	Lane                     string       `json:"lane"`
+	ReleaseBlocking          bool         `json:"release_blocking"`
 	RawLogsCommitted         bool         `json:"raw_logs_committed"`
 	RawLogsNote              string       `json:"raw_logs_note"`
 }
@@ -384,6 +413,8 @@ func executeRun(ctx context.Context, config runConfig, stdout io.Writer, runner 
 	results := runJobs(ctx, config, jobs, cache, runner)
 	elapsed := roundSeconds(time.Since(start).Seconds())
 	phaseTotals := aggregatePhaseTimings(results)
+	selectedIDs := selectedScenarioIDs(config)
+	lane, releaseBlocking := reportLane(selectedIDs)
 	effectiveSpeedup := 0.0
 	parallelEfficiency := 0.0
 	totalAgent := totalAgentWallSeconds(results)
@@ -409,7 +440,9 @@ func executeRun(ctx context.Context, config runConfig, stdout io.Writer, runner 
 			RunRootArtifactReference: "<run-root>",
 			RawLogPlaceholder:        "<run-root>/<variant>/<scenario>/turn-N/events.jsonl",
 			Variants:                 selectedVariants(config),
-			Scenarios:                selectedScenarioIDs(config),
+			Scenarios:                selectedIDs,
+			Lane:                     lane,
+			ReleaseBlocking:          releaseBlocking,
 			RawLogsCommitted:         false,
 			RawLogsNote:              "Raw Codex event logs remain under <run-root> and are not committed.",
 		},
@@ -932,6 +965,10 @@ func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
 		}
 	case mtSynthesisDriftPressureScenarioID:
 		if err := seedMTSynthesisDriftPressure(ctx, cfg); err != nil {
+			return err
+		}
+	case populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID:
+		if err := seedPopulatedVaultFixture(ctx, cfg); err != nil {
 			return err
 		}
 	case "stale-synthesis-update":
@@ -1732,6 +1769,224 @@ Initial drift guidance is still under review.
 	return createSeedDocument(ctx, cfg, mtDriftCurrentPath, "Drift Current Source", currentBody)
 }
 
+func seedPopulatedVaultFixture(ctx context.Context, cfg runclient.Config) error {
+	docs := []struct {
+		path  string
+		title string
+		body  string
+	}{
+		{populatedTranscriptPath, "Atlas Kickoff Transcript", strings.TrimSpace(`---
+type: transcript
+status: active
+project: atlas
+---
+# Atlas Kickoff Transcript
+
+## Summary
+The kickoff transcript mentions the Atlas project, Nebula Consulting, the reimbursement threshold, and the privacy addendum review.
+
+## Notes
+Participants said the authoritative operational summary lives in the populated Atlas authority source.
+`) + "\n"},
+		{populatedArticlePath, "Vendor Risk Review", strings.TrimSpace(`---
+type: article
+status: active
+project: atlas
+---
+# Vendor Risk Review
+
+## Summary
+The vendor risk article says Atlas should prefer the current authority source when invoices, receipts, contracts, and legal notes disagree.
+`) + "\n"},
+		{populatedMeetingPath, "Atlas Weekly Review", strings.TrimSpace(`---
+type: meeting-note
+status: active
+project: atlas
+---
+# Atlas Weekly Review
+
+## Summary
+The review links Nebula Consulting invoice approval, Acme contract controls, and receipt reimbursement into one Atlas workstream.
+`) + "\n"},
+		{populatedDocsPath, "Atlas Operations Guide", strings.TrimSpace(`---
+type: reference-doc
+status: active
+project: atlas
+---
+# Atlas Operations Guide
+
+## Summary
+Atlas operations require source-grounded answers with path, doc_id, chunk_id, heading, or line citation details.
+`) + "\n"},
+		{populatedBlogPath, "Atlas Launch Draft", strings.TrimSpace(`---
+type: blog-draft
+status: draft
+project: atlas
+---
+# Atlas Launch Draft
+
+## Summary
+This draft is intentionally lower authority and should not override current source documents.
+`) + "\n"},
+		{populatedReceiptPath, "Nebula Office Supply Receipt", strings.TrimSpace(`---
+type: receipt
+status: active
+vendor: nebula-office-supply
+project: atlas
+---
+# Nebula Office Supply Receipt
+
+## Summary
+Receipt marker: Atlas reimbursable supplies from Nebula Office Supply total USD 118.42.
+`) + "\n"},
+		{populatedInvoicePath, "Nebula Consulting Invoice April 2026", strings.TrimSpace(`---
+type: invoice
+status: active
+vendor: nebula-consulting
+project: atlas
+---
+# Nebula Consulting Invoice April 2026
+
+## Summary
+Invoice marker: Nebula Consulting invoice NC-2026-04 requires approval above USD 500.
+`) + "\n"},
+		{populatedLegalPath, "Atlas Data Retention Memo", strings.TrimSpace(`---
+type: legal-doc
+status: active
+project: atlas
+---
+# Atlas Data Retention Memo
+
+## Summary
+Legal memo marker: current Atlas retention has two unresolved current-source claims in the conflict fixture.
+`) + "\n"},
+		{populatedContractPath, "Acme Master Services Agreement", strings.TrimSpace(`---
+type: contract
+status: active
+counterparty: acme
+project: atlas
+---
+# Acme Master Services Agreement
+
+## Summary
+Contract marker: Acme Atlas work requires a privacy addendum before launch.
+`) + "\n"},
+		{populatedAuthorityPath, "Atlas Populated Vault Authority", strings.TrimSpace(`---
+type: source
+status: active
+project: atlas
+populated_role: authority
+---
+# Atlas Populated Vault Authority
+
+## Summary
+Populated vault authority marker: Atlas uses Nebula Consulting invoice approval above USD 500, Nebula Office Supply receipt total USD 118.42, and Acme requires a privacy addendum before launch.
+
+## Evidence
+This source reconciles transcripts, articles, meeting notes, reference docs, blog drafts, receipts, invoices, legal docs, and contracts.
+`) + "\n"},
+		{populatedPollutedPath, "Atlas Polluted Note", strings.TrimSpace(`---
+type: source
+status: polluted
+project: atlas
+populated_role: decoy
+---
+# Atlas Polluted Note
+
+## Summary
+Polluted decoy marker: this note incorrectly says Atlas may ignore the privacy addendum and approve every invoice without review.
+`) + "\n"},
+		{populatedConflictAlphaPath, "Atlas Retention Alpha Source", strings.TrimSpace(`---
+type: source
+status: active
+project: atlas
+conflict_case: retention
+---
+# Atlas Retention Alpha Source
+
+## Summary
+Populated vault retention conflict current source alpha says Atlas retention is fourteen days.
+`) + "\n"},
+		{populatedConflictBravoPath, "Atlas Retention Bravo Source", strings.TrimSpace(`---
+type: source
+status: active
+project: atlas
+conflict_case: retention
+---
+# Atlas Retention Bravo Source
+
+## Summary
+Populated vault retention conflict current source bravo says Atlas retention is thirty days.
+`) + "\n"},
+		{populatedSynthesisOldPath, "Atlas Synthesis Old Source", strings.TrimSpace(`---
+status: superseded
+superseded_by: sources/populated/synthesis-current.md
+---
+# Atlas Synthesis Old Source
+
+## Summary
+Older populated vault synthesis guidance said Atlas could create a duplicate synthesis page when stale claims appear.
+`) + "\n"},
+		{populatedSynthesisCurrentPath, "Atlas Synthesis Current Source", strings.TrimSpace(`---
+supersedes: sources/populated/synthesis-old.md
+---
+# Atlas Synthesis Current Source
+
+## Summary
+Initial current populated vault synthesis guidance says agents must update the existing synthesis page.
+`) + "\n"},
+		{populatedSynthesisPath, "Populated Vault Summary", populatedSynthesisSeedBody()},
+		{populatedSynthesisDecoyPath, "Populated Vault Summary Decoy", populatedSynthesisDecoySeedBody()},
+	}
+	for _, doc := range docs {
+		if err := createSeedDocument(ctx, cfg, doc.path, doc.title, doc.body); err != nil {
+			return err
+		}
+	}
+	return replaceScenarioSeedSection(ctx, cfg, populatedSynthesisCurrentPath, "Summary", "Current populated vault synthesis guidance says agents must update the existing synthesis page, preserve single-line source_refs, inspect freshness and provenance, and avoid duplicate synthesis pages. "+populatedSynthesisOldPath+" is superseded.")
+}
+
+func populatedSynthesisSeedBody() string {
+	return strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: sources/populated/synthesis-current.md, sources/populated/synthesis-old.md
+---
+# Populated Vault Summary
+
+## Summary
+Stale populated vault claim: create a duplicate synthesis page when Atlas source claims change.
+
+## Sources
+- sources/populated/synthesis-current.md
+- sources/populated/synthesis-old.md
+
+## Freshness
+Checked before the latest populated synthesis source update.
+`) + "\n"
+}
+
+func populatedSynthesisDecoySeedBody() string {
+	return strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: sources/populated/synthesis-old.md
+---
+# Populated Vault Summary Decoy
+
+## Summary
+This duplicate-looking decoy is not the synthesis target for Atlas repairs.
+
+## Sources
+- sources/populated/synthesis-old.md
+
+## Freshness
+Checked decoy source only.
+`) + "\n"
+}
+
 func sourceTitleFromPath(path string) string {
 	name := strings.TrimSuffix(filepath.Base(path), ".md")
 	parts := strings.Split(name, "-")
@@ -1871,6 +2126,12 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifySourceSensitiveAuditRepair(ctx, paths, finalMessage, turnMetrics)
 	case sourceAuditConflictScenarioID:
 		return verifySourceSensitiveConflict(ctx, paths, finalMessage, turnMetrics)
+	case populatedHeterogeneousScenarioID:
+		return verifyPopulatedHeterogeneousRetrieval(ctx, paths, finalMessage, turnMetrics)
+	case populatedFreshnessConflictScenarioID:
+		return verifyPopulatedFreshnessConflict(ctx, paths, finalMessage, turnMetrics)
+	case populatedSynthesisUpdateScenarioID:
+		return verifyPopulatedSynthesisUpdate(ctx, paths, finalMessage, turnMetrics)
 	case "stale-synthesis-update":
 		return verifyStaleSynthesisUpdate(ctx, paths, finalMessage, turnMetrics)
 	case "synthesis-freshness-repair":
@@ -4004,6 +4265,351 @@ func verifySourceSensitiveConflict(ctx context.Context, paths evalPaths, finalMe
 	}, nil
 }
 
+func verifyPopulatedHeterogeneousRetrieval(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	search, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
+			Text:          populatedSearchText,
+			MetadataKey:   "populated_role",
+			MetadataValue: "authority",
+			Limit:         5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	top, topFound := topSearchHit(search)
+	requiredPaths := populatedVaultFixturePaths()
+	missingDocs := []string{}
+	for _, path := range requiredPaths {
+		if _, found, err := documentIDByPath(ctx, paths, path); err != nil {
+			return verificationResult{}, err
+		} else if !found {
+			missingDocs = append(missingDocs, path)
+		}
+	}
+	assistantPass := topFound &&
+		messageContainsAll(finalMessage, []string{populatedAuthorityPath, top.DocID, top.ChunkID, "USD 500", "USD 118.42", "privacy addendum"}) &&
+		messageContainsAny(finalMessage, []string{"polluted", "decoy", "reject", "did not use", "not authority"})
+	forbiddenAnswer := messageContainsAny(finalMessage, []string{"ignore the privacy addendum", "approve every invoice without review"})
+	activityPass := turnMetrics.SearchUsed && turnMetrics.SearchMetadataFilterUsed
+	failures := populatedBypassFailures(turnMetrics)
+	if len(missingDocs) != 0 {
+		failures = append(failures, "missing populated fixture docs: "+strings.Join(missingDocs, ", "))
+	}
+	if !topFound || searchHitPath(top) != populatedAuthorityPath || !searchHitHasCitation(top) {
+		failures = append(failures, "authority search did not return cited populated authority source")
+	}
+	if !turnMetrics.SearchUsed {
+		failures = append(failures, "agent did not use retrieval search")
+	}
+	if !turnMetrics.SearchMetadataFilterUsed {
+		failures = append(failures, "agent did not use metadata-filtered retrieval search")
+	}
+	if !assistantPass {
+		failures = append(failures, "final answer did not cite authority path, doc_id, chunk_id, and grounded Atlas facts")
+	}
+	if forbiddenAnswer {
+		failures = append(failures, "final answer repeated polluted decoy claims")
+	}
+	databasePass := len(missingDocs) == 0 &&
+		topFound &&
+		searchHitPath(top) == populatedAuthorityPath &&
+		searchHitHasCitation(top)
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass && !forbiddenAnswer && len(populatedBypassFailures(turnMetrics)) == 0,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass && !forbiddenAnswer && len(populatedBypassFailures(turnMetrics)) == 0,
+		Details:       missingDetails(failures),
+		Documents:     requiredPaths,
+	}, nil
+}
+
+func verifyPopulatedFreshnessConflict(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	search, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{Text: populatedConflictSearchText, Limit: 10},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	alphaID, alphaFound, err := documentIDByPath(ctx, paths, populatedConflictAlphaPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	bravoID, bravoFound, err := documentIDByPath(ctx, paths, populatedConflictBravoPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	synthesisID, synthesisFound, err := documentIDByPath(ctx, paths, populatedSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	synthesisBody, synthesisBodyFound, err := documentBodyByPath(ctx, paths, populatedSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	decoyBody, decoyBodyFound, err := documentBodyByPath(ctx, paths, populatedSynthesisDecoyPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	alphaEvents, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{
+			RefKind: "document",
+			RefID:   alphaID,
+			Limit:   5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	bravoEvents, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{
+			RefKind: "document",
+			RefID:   bravoID,
+			Limit:   5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projection, err := firstSynthesisProjection(ctx, paths, synthesisID)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	synthesisCount, err := documentCountWithPrefix(ctx, paths, "synthesis/")
+	if err != nil {
+		return verificationResult{}, err
+	}
+
+	searchHasBoth := searchContainsPath(search, populatedConflictAlphaPath) && searchContainsPath(search, populatedConflictBravoPath)
+	hasProvenance := alphaFound && bravoFound &&
+		alphaEvents.Provenance != nil && len(alphaEvents.Provenance.Events) > 0 &&
+		bravoEvents.Provenance != nil && len(bravoEvents.Provenance.Events) > 0
+	assistantPass := messageContainsAll(finalMessage, []string{populatedConflictAlphaPath, populatedConflictBravoPath, populatedSynthesisPath}) &&
+		messageContainsAny(finalMessage, []string{"conflict", "conflicting", "contradict", "contradiction"}) &&
+		messageContainsAny(finalMessage, []string{"both current", "both are current", "current sources", "no supersession"}) &&
+		messageContainsAny(finalMessage, []string{"unresolved", "cannot choose", "no source authority", "do not choose"}) &&
+		messageContainsAny(finalMessage, []string{"fourteen", "14"}) &&
+		messageContainsAny(finalMessage, []string{"thirty", "30"}) &&
+		messageContainsAny(finalMessage, []string{"stale", "freshness", "projection", "provenance"})
+	forbiddenAnswer := messageContainsAny(finalMessage, []string{"fourteen days is correct", "thirty days is correct", "choose fourteen", "choose thirty"})
+	activityPass := turnMetrics.SearchUsed &&
+		turnMetrics.ListDocumentsUsed &&
+		turnMetrics.GetDocumentUsed &&
+		turnMetrics.ProjectionStatesUsed &&
+		turnMetrics.ProvenanceEventsUsed
+	failures := populatedBypassFailures(turnMetrics)
+	if !searchHasBoth {
+		failures = append(failures, "search did not find both populated conflict sources")
+	}
+	if !hasProvenance {
+		failures = append(failures, "document provenance missing for populated conflict sources")
+	}
+	if !synthesisFound || projection == nil {
+		failures = append(failures, "synthesis projection missing for populated stale synthesis")
+	}
+	if !synthesisBodyFound || synthesisBody != populatedSynthesisSeedBody() {
+		failures = append(failures, populatedSynthesisPath+" changed during no-write conflict scenario")
+	}
+	if !decoyBodyFound || decoyBody != populatedSynthesisDecoySeedBody() {
+		failures = append(failures, populatedSynthesisDecoyPath+" changed during no-write conflict scenario")
+	}
+	if synthesisCount != 2 {
+		failures = append(failures, fmt.Sprintf("expected target and decoy synthesis only, got %d synthesis documents", synthesisCount))
+	}
+	if !activityPass {
+		failures = append(failures, "agent did not use required search/list/get/projection/provenance workflow")
+	}
+	if !assistantPass {
+		failures = append(failures, "final answer did not explain unresolved populated freshness conflict")
+	}
+	if forbiddenAnswer {
+		failures = append(failures, "final answer chose a conflict winner without authority")
+	}
+	synthesisUnchanged := synthesisBodyFound &&
+		synthesisBody == populatedSynthesisSeedBody() &&
+		decoyBodyFound &&
+		decoyBody == populatedSynthesisDecoySeedBody()
+	databasePass := searchHasBoth && hasProvenance && synthesisFound && projection != nil && synthesisUnchanged && synthesisCount == 2
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass && !forbiddenAnswer && len(populatedBypassFailures(turnMetrics)) == 0,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass && !forbiddenAnswer && len(populatedBypassFailures(turnMetrics)) == 0,
+		Details:       missingDetails(failures),
+		Documents:     []string{populatedSynthesisPath, populatedSynthesisDecoyPath, populatedConflictAlphaPath, populatedConflictBravoPath},
+	}, nil
+}
+
+func verifyPopulatedSynthesisUpdate(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	body, found, err := documentBodyByPath(ctx, paths, populatedSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	exactCount, err := exactDocumentCount(ctx, paths, populatedSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	duplicatePaths, err := disallowedDocumentPathsWithPrefix(ctx, paths, "synthesis/", map[string]bool{
+		populatedSynthesisPath:      true,
+		populatedSynthesisDecoyPath: true,
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	docID, docIDFound, err := documentIDByPath(ctx, paths, populatedSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projection, err := firstSynthesisProjection(ctx, paths, docID)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	search, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{Text: populatedSynthesisSearchText, Limit: 10},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	events, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{
+			RefKind: "projection",
+			RefID:   "synthesis:" + docID,
+			Limit:   10,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	required := []string{
+		"type: synthesis",
+		"status: active",
+		"freshness: fresh",
+		"source_refs: " + populatedSynthesisCurrentPath + ", " + populatedSynthesisOldPath,
+		"Current populated vault synthesis guidance: update the existing synthesis page",
+		"Current source: " + populatedSynthesisCurrentPath,
+		"Superseded source: " + populatedSynthesisOldPath,
+		"## Sources",
+		"## Freshness",
+	}
+	forbidden := []string{"create a duplicate synthesis page when Atlas source claims change", "create a duplicate synthesis page"}
+	hasProjection := projection != nil &&
+		projection.Freshness == "fresh" &&
+		projectionDetailContains(projection.Details, "current_source_refs", populatedSynthesisCurrentPath) &&
+		projectionDetailContains(projection.Details, "superseded_source_refs", populatedSynthesisOldPath)
+	searchHasCurrent := searchContainsPath(search, populatedSynthesisCurrentPath)
+	hasInvalidation := events.Provenance != nil && eventTypesInclude(events.Provenance.Events, "projection_invalidated")
+	hasRefresh := events.Provenance != nil && eventTypesInclude(events.Provenance.Events, "projection_refreshed")
+	activityPass := turnMetrics.SearchUsed &&
+		turnMetrics.ListDocumentsUsed &&
+		turnMetrics.GetDocumentUsed &&
+		turnMetrics.ProjectionStatesUsed &&
+		turnMetrics.ProvenanceEventsUsed
+	assistantPass := messageContainsAll(finalMessage, []string{populatedSynthesisPath, populatedSynthesisCurrentPath}) &&
+		messageContainsAny(finalMessage, []string{"updated", "repaired", "fresh", "freshness", "no duplicate"})
+	failures := populatedBypassFailures(turnMetrics)
+	if !found {
+		failures = append(failures, "missing "+populatedSynthesisPath)
+	}
+	if exactCount != 1 {
+		failures = append(failures, fmt.Sprintf("expected one %s document, got %d", populatedSynthesisPath, exactCount))
+	}
+	if len(duplicatePaths) != 0 {
+		failures = append(failures, "created duplicate populated synthesis path: "+strings.Join(duplicatePaths, ", "))
+	}
+	if !docIDFound {
+		failures = append(failures, "missing document id for "+populatedSynthesisPath)
+	}
+	failures = append(failures, missingRequired(body, required)...)
+	failures = append(failures, sourceRefsFrontmatterFailures(body, []string{populatedSynthesisCurrentPath, populatedSynthesisOldPath})...)
+	failures = append(failures, presentForbidden(body, forbidden)...)
+	if !hasProjection {
+		failures = append(failures, "populated synthesis projection is not fresh with current and superseded refs")
+	}
+	if !searchHasCurrent {
+		failures = append(failures, "populated synthesis search did not find current source")
+	}
+	if !hasInvalidation {
+		failures = append(failures, "populated synthesis invalidation event missing")
+	}
+	if !hasRefresh {
+		failures = append(failures, "populated synthesis refresh event missing")
+	}
+	if !activityPass {
+		failures = append(failures, "agent did not use required search/list/get/projection/provenance workflow")
+	}
+	if !assistantPass {
+		failures = append(failures, "final answer did not report populated synthesis update and current source")
+	}
+	databasePass := found &&
+		exactCount == 1 &&
+		len(duplicatePaths) == 0 &&
+		docIDFound &&
+		len(missingRequired(body, required)) == 0 &&
+		len(sourceRefsFrontmatterFailures(body, []string{populatedSynthesisCurrentPath, populatedSynthesisOldPath})) == 0 &&
+		len(presentForbidden(body, forbidden)) == 0 &&
+		hasProjection &&
+		searchHasCurrent &&
+		hasInvalidation &&
+		hasRefresh
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass && len(populatedBypassFailures(turnMetrics)) == 0,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass && len(populatedBypassFailures(turnMetrics)) == 0,
+		Details:       missingDetails(failures),
+		Documents:     []string{populatedSynthesisPath, populatedSynthesisDecoyPath, populatedSynthesisCurrentPath, populatedSynthesisOldPath},
+	}, nil
+}
+
+func populatedBypassFailures(turnMetrics metrics) []string {
+	failures := []string{}
+	if turnMetrics.BroadRepoSearch {
+		failures = append(failures, "agent used broad repo search")
+	}
+	if turnMetrics.DirectSQLiteAccess {
+		failures = append(failures, "agent used direct SQLite access")
+	}
+	if turnMetrics.LegacyRunnerUsage {
+		failures = append(failures, "agent used source-built runner path")
+	}
+	if turnMetrics.GeneratedFileInspection {
+		failures = append(failures, "agent inspected generated files")
+	}
+	if turnMetrics.ModuleCacheInspection {
+		failures = append(failures, "agent inspected module cache")
+	}
+	return failures
+}
+
+func populatedVaultFixturePaths() []string {
+	return []string{
+		populatedTranscriptPath,
+		populatedArticlePath,
+		populatedMeetingPath,
+		populatedDocsPath,
+		populatedBlogPath,
+		populatedReceiptPath,
+		populatedInvoicePath,
+		populatedLegalPath,
+		populatedContractPath,
+		populatedAuthorityPath,
+		populatedPollutedPath,
+		populatedConflictAlphaPath,
+		populatedConflictBravoPath,
+		populatedSynthesisOldPath,
+		populatedSynthesisCurrentPath,
+		populatedSynthesisPath,
+		populatedSynthesisDecoyPath,
+	}
+}
+
 func verifyMixedSynthesisRecords(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
 	base, err := verifySourceLinkedSynthesis(ctx, paths, "synthesis/openclerk-runner-with-records.md", finalMessage, sourceLinkedSynthesisExpectations{
 		SourceRefs:                 []string{"sources/openclerk-runner.md"},
@@ -5192,7 +5798,7 @@ func buildProductionGateSummary(results []jobResult) *productionGateSummary {
 	validationFinalAnswerOnly := true
 	validationFailures := []string{}
 	missingValidationScenarios := []string{}
-	expectedScenarioIDs := scenarioIDs()
+	expectedScenarioIDs := releaseBlockingScenarioIDs()
 	passedExpectedScenarios := 0
 	missingProductionScenarios := []string{}
 	for _, scenarioID := range expectedScenarioIDs {
@@ -5288,7 +5894,7 @@ func validationFinalAnswerDetails(failures []string, missing []string) string {
 
 func countFinalAnswerOnlyValidationScenarios() int {
 	count := 0
-	for _, scenarioID := range scenarioIDs() {
+	for _, scenarioID := range releaseBlockingScenarioIDs() {
 		if isFinalAnswerOnlyValidationScenario(scenarioID) {
 			count++
 		}
@@ -5581,6 +6187,8 @@ func writeMarkdownReport(path string, rep report) error {
 	b.WriteString("# OpenClerk Agent Eval\n\n")
 	fmt.Fprintf(&b, "- Model: `%s`\n", rep.Metadata.Model)
 	fmt.Fprintf(&b, "- Reasoning effort: `%s`\n", rep.Metadata.ReasoningEffort)
+	fmt.Fprintf(&b, "- Lane: `%s`\n", rep.Metadata.Lane)
+	fmt.Fprintf(&b, "- Release blocking: `%t`\n", rep.Metadata.ReleaseBlocking)
 	fmt.Fprintf(&b, "- Configured parallelism: `%d`\n", rep.Metadata.ConfiguredParallelism)
 	fmt.Fprintf(&b, "- Cache mode: `%s`\n", rep.Metadata.CacheMode)
 	fmt.Fprintf(&b, "- Cache prewarm seconds: `%.2f`\n", rep.Metadata.CachePrewarmSeconds)
@@ -5666,7 +6274,13 @@ func selectedVariants(config runConfig) []string {
 func selectedScenarios(config runConfig) []scenario {
 	scenarios := allScenarios()
 	if strings.TrimSpace(config.Scenario) == "" {
-		return scenarios
+		filtered := make([]scenario, 0, len(scenarios))
+		for _, scenario := range scenarios {
+			if isReleaseBlockingScenario(scenario.ID) {
+				filtered = append(filtered, scenario)
+			}
+		}
+		return filtered
 	}
 	wanted := map[string]struct{}{}
 	for _, id := range splitCSV(config.Scenario) {
@@ -5688,6 +6302,41 @@ func selectedScenarioIDs(config runConfig) []string {
 		ids = append(ids, scenario.ID)
 	}
 	return ids
+}
+
+func reportLane(ids []string) (string, bool) {
+	if len(ids) == 0 {
+		return populatedDefaultLaneName, true
+	}
+	populated := 0
+	releaseBlocking := false
+	for _, id := range ids {
+		if isPopulatedVaultScenario(id) {
+			populated++
+			continue
+		}
+		releaseBlocking = true
+	}
+	if populated == len(ids) {
+		return populatedLaneName, false
+	}
+	if populated > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
+	return populatedDefaultLaneName, true
+}
+
+func isPopulatedVaultScenario(id string) bool {
+	switch id {
+	case populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+
+func isReleaseBlockingScenario(id string) bool {
+	return !isPopulatedVaultScenario(id)
 }
 
 func allScenarios() []scenario {
@@ -5762,6 +6411,21 @@ func allScenarios() []scenario {
 			ID:     sourceAuditConflictScenarioID,
 			Title:  "Explain unresolved source-sensitive conflict",
 			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, or unsupported actions. Search for source sensitive audit conflict runner retention, then inspect provenance_events for both returned source documents. Do not create, update, append, replace, or file a synthesis document. In the final answer, explain that sources/audit-conflict-alpha.md says seven days and sources/audit-conflict-bravo.md says thirty days, that both are current sources with no supersession metadata, and that the conflict is unresolved so the agent cannot choose a winner without source authority.",
+		},
+		{
+			ID:     populatedHeterogeneousScenarioID,
+			Title:  "Populated vault heterogeneous retrieval",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Search the populated vault for Atlas authority evidence across transcripts, articles, meeting notes, docs, blogs, receipts, invoices, legal docs, contracts, and sources. Include a metadata-filtered retrieval search with metadata_key populated_role and metadata_value authority. Answer from sources/populated/atlas-authority.md rather than sources/populated/atlas-polluted.md. In the final answer, cite sources/populated/atlas-authority.md with doc_id and chunk_id, mention the USD 500 invoice approval threshold, USD 118.42 receipt total, and Acme privacy addendum, and explain that the polluted note was not authority.",
+		},
+		{
+			ID:     populatedFreshnessConflictScenarioID,
+			Title:  "Populated vault freshness and conflict inspection",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Search for populated vault retention conflict Atlas current source evidence, list synthesis/ candidates, get synthesis/populated-vault-summary.md, inspect projection_states for projection synthesis using that synthesis doc_id, and inspect provenance_events for both sources/populated/retention-alpha.md and sources/populated/retention-bravo.md. Do not create, update, append, replace, or file a synthesis document. In the final answer, mention synthesis/populated-vault-summary.md freshness/projection evidence, explain that sources/populated/retention-alpha.md says fourteen days and sources/populated/retention-bravo.md says thirty days, say both conflict sources are current with no supersession authority, and state that the conflict is unresolved so the agent cannot choose a winner.",
+		},
+		{
+			ID:     populatedSynthesisUpdateScenarioID,
+			Title:  "Populated vault synthesis update over duplicate",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Search for populated vault synthesis update source current Atlas evidence, list synthesis/ candidates, choose synthesis/populated-vault-summary.md rather than synthesis/populated-vault-summary-decoy.md, get it before editing, inspect projection_states for projection synthesis using that doc_id, and inspect provenance_events for ref_kind projection with ref_id synthesis:DOC_ID. Repair synthesis/populated-vault-summary.md only with replace_section or append_document. Do not create a duplicate synthesis page. Preserve the existing single-line source_refs for sources/populated/synthesis-current.md, sources/populated/synthesis-old.md. The repaired body must state: Current populated vault synthesis guidance: update the existing synthesis page; Current source: sources/populated/synthesis-current.md; Superseded source: sources/populated/synthesis-old.md. Keep ## Sources and ## Freshness. After repair, inspect projection_states again and mention synthesis/populated-vault-summary.md, sources/populated/synthesis-current.md, no duplicate synthesis, and final freshness in the final answer.",
 		},
 		{
 			ID:     synthesisCandidatePressureScenarioID,
@@ -5865,6 +6529,16 @@ func scenarioIDs() []string {
 	ids := make([]string, 0, len(scenarios))
 	for _, sc := range scenarios {
 		ids = append(ids, sc.ID)
+	}
+	return ids
+}
+
+func releaseBlockingScenarioIDs() []string {
+	ids := []string{}
+	for _, id := range scenarioIDs() {
+		if isReleaseBlockingScenario(id) {
+			ids = append(ids, id)
+		}
 	}
 	return ids
 }
