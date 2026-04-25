@@ -9,7 +9,8 @@ decision_owner: platform
 
 ## Status
 
-Deferred pending dogfooding and targeted AgentOps eval evidence.
+Deferred after targeted AgentOps eval evidence; kept as reference evidence for
+future document-lifecycle pressure.
 
 This ADR defines how OpenClerk will evaluate document history and review
 controls after v0.1.0. It does not add a public runner action, JSON schema,
@@ -94,6 +95,32 @@ note must show that existing `openclerk document` and `openclerk retrieval`
 workflows are structurally insufficient for reliable document lifecycle
 control while preserving the v1 invariants.
 
+### Post-POC Decision
+
+Decision: **defer**.
+
+The targeted POC report
+[`../evals/results/ockp-document-history-review-controls-poc.md`](../evals/results/ockp-document-history-review-controls-poc.md)
+keeps document history and review controls as non-release-blocking reference
+evidence. The scenarios showed that history inspection, restore and rollback
+pressure, pending-change review pressure, stale synthesis after revision, and
+final-answer-only validation pressure are expressible through existing runner
+behavior while preserving citations, source refs, provenance, and projection
+freshness evidence.
+
+The only original POC failure was `document-diff-review-pressure`, classified
+as skill guidance and eval coverage around vault-relative path use rather than
+a runner capability gap. The focused follow-up report
+[`../evals/results/ockp-document-diff-review-path-guidance.md`](../evals/results/ockp-document-diff-review-path-guidance.md)
+resolved that failure by hardening guidance and verifier coverage for logical
+vault-relative paths.
+
+No public runner action, request or response schema, storage migration, storage
+API, or public OpenClerk interface is promoted by this decision. Because the
+outcome is defer and the only discovered follow-up gap was resolved by
+`oc-d8w`, no implementation Bead or additional decision-created follow-up Bead
+is required before closing `oc-n9i`.
+
 ## Promotion Gates
 
 - **Promote** only if repeated targeted AgentOps eval failures show the current
@@ -122,4 +149,3 @@ control while preserving the v1 invariants.
   expose raw private document diffs.
 - New public runner actions require separate targeted evidence, compatibility
   review, and an implementation Bead.
-
