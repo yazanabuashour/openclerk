@@ -25,6 +25,14 @@ The runner honors `OPENCLERK_DATABASE_PATH`. The database stores the configured
 vault root, so routine agent work should use the configured environment and
 runner JSON results instead of maintaining separate filesystem roots.
 
+All runner path fields are vault-relative logical paths. Use paths such as
+`notes/projects/example.md`, `notes/`, `sources/example.md`, and `synthesis/`.
+This applies to `document.path`, `list.path_prefix`, `search.path_prefix`,
+citation paths, and `source_refs`. Do not put `.openclerk-eval/vault`,
+absolute filesystem paths, configured vault-root paths, or OS-specific
+backslash/drive paths in runner JSON; those are runtime storage details, not
+OpenClerk document paths.
+
 If the user explicitly asks to initialize OpenClerk for an existing vault, run
 `openclerk init --vault-root <vault-root>`. This is setup work, not a routine
 knowledge task.

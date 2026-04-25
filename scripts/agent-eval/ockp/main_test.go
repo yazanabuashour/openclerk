@@ -1776,6 +1776,7 @@ func TestVerifyDocumentHistoryReviewScenarios(t *testing.T) {
 		t.Fatalf("seed diff review: %v", err)
 	}
 	diffAnswer := "Semantic summary only: sources/history-review/diff-previous.md said review was optional, while notes/history-review/diff-current.md says review is required. Citations/source refs are preserved, and raw private diffs are not included."
+	commonMetrics.ListDocumentPathPrefixes = []string{"notes/history-review/"}
 	result, err = verifyScenarioTurn(ctx, diffPaths, scenario{ID: documentHistoryDiffScenarioID}, 1, diffAnswer, commonMetrics)
 	if err != nil {
 		t.Fatalf("verify diff review: %v", err)
@@ -1791,6 +1792,51 @@ func TestVerifyDocumentHistoryReviewScenarios(t *testing.T) {
 	}
 	if result.Passed {
 		t.Fatalf("diff review passed without list_documents: %+v", result)
+	}
+	missingPrefixMetrics := commonMetrics
+	missingPrefixMetrics.ListDocumentPathPrefixes = nil
+	result, err = verifyScenarioTurn(ctx, diffPaths, scenario{ID: documentHistoryDiffScenarioID}, 1, diffAnswer, missingPrefixMetrics)
+	if err != nil {
+		t.Fatalf("verify diff review without path prefix: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("diff review passed without required path_prefix: %+v", result)
+	}
+	extraPrefixMetrics := commonMetrics
+	extraPrefixMetrics.ListDocumentPathPrefixes = []string{"notes/history-review/", "sources/history-review/"}
+	result, err = verifyScenarioTurn(ctx, diffPaths, scenario{ID: documentHistoryDiffScenarioID}, 1, diffAnswer, extraPrefixMetrics)
+	if err != nil {
+		t.Fatalf("verify diff review with extra path prefix: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("diff review passed with extra path_prefix: %+v", result)
+	}
+	badPathMetrics := commonMetrics
+	badPathMetrics.ListDocumentPathPrefixes = []string{".openclerk-eval/vault/notes/history-review/"}
+	result, err = verifyScenarioTurn(ctx, diffPaths, scenario{ID: documentHistoryDiffScenarioID}, 1, diffAnswer, badPathMetrics)
+	if err != nil {
+		t.Fatalf("verify diff review with storage path: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("diff review passed with storage path prefix: %+v", result)
+	}
+	for _, badPath := range []string{"/tmp/vault/notes/history-review/", `C:\Users\me\vault\notes\history-review\`, `notes\history-review\`} {
+		badPathMetrics.ListDocumentPathPrefixes = []string{badPath}
+		result, err = verifyScenarioTurn(ctx, diffPaths, scenario{ID: documentHistoryDiffScenarioID}, 1, diffAnswer, badPathMetrics)
+		if err != nil {
+			t.Fatalf("verify diff review with bad path %q: %v", badPath, err)
+		}
+		if result.Passed {
+			t.Fatalf("diff review passed with bad path prefix %q: %+v", badPath, result)
+		}
+	}
+	leakyAnswer := diffAnswer + " Storage path: .openclerk-eval/vault/notes/history-review/diff-current.md."
+	result, err = verifyScenarioTurn(ctx, diffPaths, scenario{ID: documentHistoryDiffScenarioID}, 1, leakyAnswer, commonMetrics)
+	if err != nil {
+		t.Fatalf("verify diff review with leaked final path: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("diff review passed with leaked final path: %+v", result)
 	}
 
 	restorePaths := scenarioPaths(t.TempDir())
