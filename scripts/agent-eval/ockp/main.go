@@ -84,6 +84,11 @@ const (
 	decisionRealADRMigrationScenarioID   = "decision-real-adr-migration"
 	sourceAuditRepairScenarioID          = "source-sensitive-audit-repair"
 	sourceAuditConflictScenarioID        = "source-sensitive-conflict-explain"
+	documentHistoryInspectScenarioID     = "document-history-inspection-control"
+	documentHistoryDiffScenarioID        = "document-diff-review-pressure"
+	documentHistoryRestoreScenarioID     = "document-restore-rollback-pressure"
+	documentHistoryPendingScenarioID     = "document-pending-change-review-pressure"
+	documentHistoryStaleScenarioID       = "document-stale-synthesis-after-revision"
 	populatedHeterogeneousScenarioID     = "populated-heterogeneous-retrieval"
 	populatedFreshnessConflictScenarioID = "populated-freshness-conflict"
 	populatedSynthesisUpdateScenarioID   = "populated-synthesis-update-over-duplicate"
@@ -109,6 +114,20 @@ const (
 	sourceAuditConflictAlphaPath  = "sources/audit-conflict-alpha.md"
 	sourceAuditConflictBravoPath  = "sources/audit-conflict-bravo.md"
 	sourceAuditConflictSearchText = "source sensitive audit conflict runner retention"
+
+	documentHistoryLaneName               = "document-history-review-controls-poc"
+	documentHistoryPolicyPath             = "notes/history-review/lifecycle-control.md"
+	documentHistoryDiffPreviousPath       = "sources/history-review/diff-previous.md"
+	documentHistoryDiffCurrentPath        = "notes/history-review/diff-current.md"
+	documentHistoryRestoreSourcePath      = "sources/history-review/restore-authority.md"
+	documentHistoryRestoreTargetPath      = "notes/history-review/restore-target.md"
+	documentHistoryPendingTargetPath      = "notes/history-review/pending-target.md"
+	documentHistoryPendingProposalPath    = "reviews/history-review/pending-change.md"
+	documentHistoryStaleOldSourcePath     = "sources/history-review/stale-old.md"
+	documentHistoryStaleCurrentSourcePath = "sources/history-review/stale-current.md"
+	documentHistoryStaleSynthesisPath     = "synthesis/history-review-stale.md"
+	documentHistorySearchText             = "document history review controls semantic lifecycle evidence"
+	documentHistoryStaleSearchText        = "history review stale synthesis current revision evidence"
 
 	populatedLaneName             = "populated-vault-targeted"
 	populatedDefaultLaneName      = "agentops-production"
@@ -963,6 +982,26 @@ func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
 		if err := seedSourceSensitiveConflict(ctx, cfg); err != nil {
 			return err
 		}
+	case documentHistoryInspectScenarioID:
+		if err := seedDocumentHistoryInspection(ctx, cfg); err != nil {
+			return err
+		}
+	case documentHistoryDiffScenarioID:
+		if err := seedDocumentHistoryDiffReview(ctx, cfg); err != nil {
+			return err
+		}
+	case documentHistoryRestoreScenarioID:
+		if err := seedDocumentHistoryRestore(ctx, cfg); err != nil {
+			return err
+		}
+	case documentHistoryPendingScenarioID:
+		if err := seedDocumentHistoryPendingReview(ctx, cfg); err != nil {
+			return err
+		}
+	case documentHistoryStaleScenarioID:
+		if err := seedDocumentHistoryStaleSynthesis(ctx, cfg); err != nil {
+			return err
+		}
 	case mtSynthesisDriftPressureScenarioID:
 		if err := seedMTSynthesisDriftPressure(ctx, cfg); err != nil {
 			return err
@@ -1745,6 +1784,155 @@ Bravo current source says source sensitive audit conflict runner retention shoul
 	return createSeedDocument(ctx, cfg, sourceAuditConflictBravoPath, "Audit Conflict Bravo", bravoBody)
 }
 
+func seedDocumentHistoryInspection(ctx context.Context, cfg runclient.Config) error {
+	body := strings.TrimSpace(`---
+type: policy
+status: active
+---
+# Lifecycle Control
+
+## Summary
+Document history review controls use current AgentOps document and retrieval evidence first.
+
+## Decision
+Initial state: lifecycle inspection is pending evidence.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, documentHistoryPolicyPath, "Lifecycle Control", body); err != nil {
+		return err
+	}
+	return replaceScenarioSeedSection(ctx, cfg, documentHistoryPolicyPath, "Decision", "Current state: lifecycle inspection uses list_documents, get_document, provenance_events, and projection_states before any new history action is proposed.")
+}
+
+func seedDocumentHistoryDiffReview(ctx context.Context, cfg runclient.Config) error {
+	previousBody := strings.TrimSpace(`---
+type: source
+status: superseded
+superseded_by: notes/history-review/diff-current.md
+---
+# Previous Diff Evidence
+
+## Summary
+Previous lifecycle guidance said human review was optional for low-risk durable edits.
+
+## Evidence
+The prior semantic position was optional review.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, documentHistoryDiffPreviousPath, "Previous Diff Evidence", previousBody); err != nil {
+		return err
+	}
+	currentBody := strings.TrimSpace(`---
+type: policy
+status: active
+supersedes: sources/history-review/diff-previous.md
+source_refs: sources/history-review/diff-previous.md
+---
+# Current Diff Evidence
+
+## Summary
+Current lifecycle guidance says human review is required before source-sensitive durable edits become accepted knowledge.
+
+## Evidence
+The current semantic position is required review with citations and source refs.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, documentHistoryDiffCurrentPath, "Current Diff Evidence", currentBody)
+}
+
+func seedDocumentHistoryRestore(ctx context.Context, cfg runclient.Config) error {
+	sourceBody := strings.TrimSpace(`---
+type: source
+status: active
+---
+# Restore Authority
+
+## Summary
+Authoritative restore guidance says the accepted lifecycle policy is runner-visible review before accepting source-sensitive durable edits.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, documentHistoryRestoreSourcePath, "Restore Authority", sourceBody); err != nil {
+		return err
+	}
+	targetBody := strings.TrimSpace(`---
+type: policy
+status: active
+source_refs: sources/history-review/restore-authority.md
+---
+# Restore Target
+
+## Summary
+Unsafe accepted edit: source-sensitive durable edits may bypass review and become accepted knowledge immediately.
+
+## Sources
+- sources/history-review/restore-authority.md
+
+## Freshness
+Checked before restore pressure.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, documentHistoryRestoreTargetPath, "Restore Target", targetBody)
+}
+
+func seedDocumentHistoryPendingReview(ctx context.Context, cfg runclient.Config) error {
+	targetBody := strings.TrimSpace(`---
+type: policy
+status: active
+---
+# Pending Target
+
+## Summary
+Accepted lifecycle policy: source-sensitive durable edits require human review before acceptance.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, documentHistoryPendingTargetPath, "Pending Target", targetBody)
+}
+
+func seedDocumentHistoryStaleSynthesis(ctx context.Context, cfg runclient.Config) error {
+	oldBody := strings.TrimSpace(`---
+type: source
+status: superseded
+superseded_by: sources/history-review/stale-current.md
+---
+# Stale Old Source
+
+## Summary
+Older history review guidance said semantic history controls should be promoted immediately.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, documentHistoryStaleOldSourcePath, "Stale Old Source", oldBody); err != nil {
+		return err
+	}
+	currentBody := strings.TrimSpace(`---
+type: source
+status: active
+supersedes: sources/history-review/stale-old.md
+---
+# Stale Current Source
+
+## Summary
+Initial current guidance says existing document and retrieval workflows should be tested before promoting semantic history controls.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, documentHistoryStaleCurrentSourcePath, "Stale Current Source", currentBody); err != nil {
+		return err
+	}
+	synthesisBody := strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: sources/history-review/stale-current.md, sources/history-review/stale-old.md
+---
+# History Review Stale Synthesis
+
+## Summary
+Stale synthesis claim: semantic history controls should be promoted immediately.
+
+## Sources
+- sources/history-review/stale-current.md
+- sources/history-review/stale-old.md
+
+## Freshness
+Checked before the latest current source revision.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, documentHistoryStaleSynthesisPath, "History Review Stale Synthesis", synthesisBody); err != nil {
+		return err
+	}
+	return replaceScenarioSeedSection(ctx, cfg, documentHistoryStaleCurrentSourcePath, "Summary", "Current history review guidance says existing document and retrieval workflows should be tested before promoting semantic history controls, and sources/history-review/stale-old.md is superseded.")
+}
+
 func seedMTSynthesisDriftPressure(ctx context.Context, cfg runclient.Config) error {
 	oldBody := strings.TrimSpace(`---
 status: superseded
@@ -2126,6 +2314,16 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifySourceSensitiveAuditRepair(ctx, paths, finalMessage, turnMetrics)
 	case sourceAuditConflictScenarioID:
 		return verifySourceSensitiveConflict(ctx, paths, finalMessage, turnMetrics)
+	case documentHistoryInspectScenarioID:
+		return verifyDocumentHistoryInspection(ctx, paths, finalMessage, turnMetrics)
+	case documentHistoryDiffScenarioID:
+		return verifyDocumentHistoryDiffReview(ctx, paths, finalMessage, turnMetrics)
+	case documentHistoryRestoreScenarioID:
+		return verifyDocumentHistoryRestore(ctx, paths, finalMessage, turnMetrics)
+	case documentHistoryPendingScenarioID:
+		return verifyDocumentHistoryPendingReview(ctx, paths, finalMessage, turnMetrics)
+	case documentHistoryStaleScenarioID:
+		return verifyDocumentHistoryStaleSynthesis(ctx, paths, finalMessage, turnMetrics)
 	case populatedHeterogeneousScenarioID:
 		return verifyPopulatedHeterogeneousRetrieval(ctx, paths, finalMessage, turnMetrics)
 	case populatedFreshnessConflictScenarioID:
@@ -3053,6 +3251,359 @@ func verifyMemoryRouterReference(ctx context.Context, paths evalPaths, finalMess
 		Details:       missingDetails(failures),
 		Documents:     append([]string{memoryRouterSynthesisPath}, sourceRefs...),
 	}, nil
+}
+
+func verifyDocumentHistoryInspection(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	docID, found, err := documentIDByPath(ctx, paths, documentHistoryPolicyPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	doc, _, err := documentByPath(ctx, paths, documentHistoryPolicyPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	provenance, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action:     runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{RefKind: "document", RefID: docID, Limit: 10},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projections, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProjectionStates,
+		Projection: runner.ProjectionStateOptions{
+			RefKind: "document",
+			RefID:   docID,
+			Limit:   5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	hasUpdatedBody := doc != nil && strings.Contains(doc.Body, "Current state: lifecycle inspection uses list_documents")
+	hasProvenance := provenance.Provenance != nil &&
+		eventTypesInclude(provenance.Provenance.Events, "document_created") &&
+		eventTypesInclude(provenance.Provenance.Events, "document_updated")
+	hasProjection := projections.Projections != nil &&
+		len(projections.Projections.Projections) > 0 &&
+		projections.Projections.Projections[0].Freshness != ""
+	failures := documentHistoryInvariantFailures(turnMetrics)
+	if !found {
+		failures = append(failures, "missing "+documentHistoryPolicyPath)
+	}
+	if !hasUpdatedBody {
+		failures = append(failures, "history inspection fixture did not expose updated lifecycle text")
+	}
+	if !hasProvenance {
+		failures = append(failures, "document provenance missing created and updated events")
+	}
+	if !hasProjection {
+		failures = append(failures, "document projection state missing or not fresh")
+	}
+	failures = append(failures, missingDocumentHistoryMetrics(turnMetrics, "list", "get", "provenance", "projection")...)
+	assistantPass := messageContainsAll(finalMessage, []string{documentHistoryPolicyPath}) &&
+		messageContainsAny(finalMessage, []string{"provenance", "document_updated", "updated"}) &&
+		messageContainsAny(finalMessage, []string{"projection", "freshness", "fresh"}) &&
+		messageContainsAny(finalMessage, []string{"existing", "current", "document and retrieval", "runner"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report history inspection, provenance, projection freshness, and existing runner workflow")
+	}
+	databasePass := found && hasUpdatedBody && hasProvenance && hasProjection
+	activityPass := len(documentHistoryInvariantFailures(turnMetrics)) == 0 && len(missingDocumentHistoryMetrics(turnMetrics, "list", "get", "provenance", "projection")) == 0
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{documentHistoryPolicyPath},
+	}, nil
+}
+
+func verifyDocumentHistoryDiffReview(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	previous, previousFound, err := documentByPath(ctx, paths, documentHistoryDiffPreviousPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	current, currentFound, err := documentByPath(ctx, paths, documentHistoryDiffCurrentPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := documentHistoryInvariantFailures(turnMetrics)
+	if !previousFound || previous == nil {
+		failures = append(failures, "missing "+documentHistoryDiffPreviousPath)
+	}
+	if !currentFound || current == nil {
+		failures = append(failures, "missing "+documentHistoryDiffCurrentPath)
+	}
+	if previous == nil || !strings.Contains(previous.Body, "optional review") {
+		failures = append(failures, "previous evidence missing optional review text")
+	}
+	if current == nil || !strings.Contains(current.Body, "required review") {
+		failures = append(failures, "current evidence missing required review text")
+	}
+	failures = append(failures, missingDocumentHistoryMetrics(turnMetrics, "search", "list", "get", "provenance")...)
+	assistantPass := messageContainsAll(finalMessage, []string{documentHistoryDiffPreviousPath, documentHistoryDiffCurrentPath}) &&
+		messageContainsAny(finalMessage, []string{"optional"}) &&
+		messageContainsAny(finalMessage, []string{"required"}) &&
+		messageContainsAny(finalMessage, []string{"citation", "cited", "source ref", "source_refs", "source"}) &&
+		messageContainsAny(finalMessage, []string{"semantic", "summary"}) &&
+		messageContainsAny(finalMessage, []string{"raw diff", "private diff", "do not expose raw", "no raw"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not preserve cited semantic diff summary and raw-diff privacy handling")
+	}
+	databasePass := previousFound && currentFound &&
+		previous != nil && current != nil &&
+		strings.Contains(previous.Body, "optional review") &&
+		strings.Contains(current.Body, "required review")
+	activityPass := len(documentHistoryInvariantFailures(turnMetrics)) == 0 && len(missingDocumentHistoryMetrics(turnMetrics, "search", "list", "get", "provenance")) == 0
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{documentHistoryDiffPreviousPath, documentHistoryDiffCurrentPath},
+	}, nil
+}
+
+func verifyDocumentHistoryRestore(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	target, targetFound, err := documentByPath(ctx, paths, documentHistoryRestoreTargetPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	targetID, _, err := documentIDByPath(ctx, paths, documentHistoryRestoreTargetPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	provenance, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action:     runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{RefKind: "document", RefID: targetID, Limit: 10},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projections, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProjectionStates,
+		Projection: runner.ProjectionStateOptions{
+			RefKind: "document",
+			RefID:   targetID,
+			Limit:   5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	body := ""
+	if target != nil {
+		body = target.Body
+	}
+	restored := strings.Contains(body, "Accepted lifecycle policy: runner-visible review before accepting source-sensitive durable edits.") &&
+		!strings.Contains(body, "may bypass review")
+	hasProvenance := provenance.Provenance != nil && eventTypesInclude(provenance.Provenance.Events, "document_updated")
+	hasProjection := projections.Projections != nil &&
+		len(projections.Projections.Projections) > 0 &&
+		projections.Projections.Projections[0].Freshness != ""
+	failures := documentHistoryInvariantFailures(turnMetrics)
+	if !targetFound {
+		failures = append(failures, "missing "+documentHistoryRestoreTargetPath)
+	}
+	if !restored {
+		failures = append(failures, "restore target was not restored to accepted lifecycle policy")
+	}
+	if !hasProvenance {
+		failures = append(failures, "restore target provenance missing document update")
+	}
+	if !hasProjection {
+		failures = append(failures, "restore target projection missing or not fresh")
+	}
+	failures = append(failures, missingDocumentHistoryMetrics(turnMetrics, "search", "list", "get", "provenance", "projection")...)
+	assistantPass := messageContainsAll(finalMessage, []string{documentHistoryRestoreTargetPath, documentHistoryRestoreSourcePath}) &&
+		messageContainsAny(finalMessage, []string{"restored", "restore", "rollback"}) &&
+		messageContainsAny(finalMessage, []string{"provenance", "projection", "freshness"}) &&
+		messageContainsAny(finalMessage, []string{"source", "evidence", "citation"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report restore evidence, source, provenance, and projection freshness")
+	}
+	databasePass := targetFound && restored && hasProvenance && hasProjection
+	activityPass := len(documentHistoryInvariantFailures(turnMetrics)) == 0 && len(missingDocumentHistoryMetrics(turnMetrics, "search", "list", "get", "provenance", "projection")) == 0
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{documentHistoryRestoreSourcePath, documentHistoryRestoreTargetPath},
+	}, nil
+}
+
+func verifyDocumentHistoryPendingReview(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	targetBody, targetFound, err := documentBodyByPath(ctx, paths, documentHistoryPendingTargetPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	proposalBody, proposalFound, err := documentBodyByPath(ctx, paths, documentHistoryPendingProposalPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := documentHistoryInvariantFailures(turnMetrics)
+	if !targetFound {
+		failures = append(failures, "missing "+documentHistoryPendingTargetPath)
+	}
+	if !strings.Contains(targetBody, "Accepted lifecycle policy: source-sensitive durable edits require human review before acceptance.") ||
+		strings.Contains(targetBody, "Auto-accept pending change") {
+		failures = append(failures, "accepted target changed instead of remaining under review")
+	}
+	requiredProposal := []string{
+		"type: review",
+		"status: pending",
+		"Review state: pending human review.",
+		"Proposed change: Auto-accept pending change only after operator approval.",
+		"Target document: notes/history-review/pending-target.md",
+	}
+	if !proposalFound {
+		failures = append(failures, "missing "+documentHistoryPendingProposalPath)
+	}
+	failures = append(failures, missingRequired(proposalBody, requiredProposal)...)
+	failures = append(failures, missingDocumentHistoryMetrics(turnMetrics, "list", "get", "provenance")...)
+	assistantPass := messageContainsAll(finalMessage, []string{documentHistoryPendingTargetPath, documentHistoryPendingProposalPath}) &&
+		messageContainsAny(finalMessage, []string{"pending", "review"}) &&
+		messageContainsAny(finalMessage, []string{"not accepted", "not become accepted", "did not change", "no accepted change"}) &&
+		messageContainsAny(finalMessage, []string{"human", "operator"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report pending review state and unchanged accepted target")
+	}
+	databasePass := targetFound && proposalFound &&
+		strings.Contains(targetBody, "Accepted lifecycle policy: source-sensitive durable edits require human review before acceptance.") &&
+		!strings.Contains(targetBody, "Auto-accept pending change") &&
+		len(missingRequired(proposalBody, requiredProposal)) == 0
+	activityPass := len(documentHistoryInvariantFailures(turnMetrics)) == 0 && len(missingDocumentHistoryMetrics(turnMetrics, "list", "get", "provenance")) == 0
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{documentHistoryPendingTargetPath, documentHistoryPendingProposalPath},
+	}, nil
+}
+
+func verifyDocumentHistoryStaleSynthesis(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	synthesisID, synthesisFound, err := documentIDByPath(ctx, paths, documentHistoryStaleSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	currentID, currentFound, err := documentIDByPath(ctx, paths, documentHistoryStaleCurrentSourcePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projection, err := firstSynthesisProjection(ctx, paths, synthesisID)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	sourceEvents, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action:     runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{RefKind: "source", RefID: currentID, Limit: 10},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projectionEvents, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action:     runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{RefKind: "projection", RefID: "synthesis:" + synthesisID, Limit: 10},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	hasProjection := projection != nil &&
+		projection.Freshness == "stale" &&
+		projectionDetailContains(projection.Details, "stale_source_refs", documentHistoryStaleCurrentSourcePath)
+	hasSourceEvents := currentFound && sourceEvents.Provenance != nil &&
+		eventTypesInclude(sourceEvents.Provenance.Events, "source_updated")
+	hasInvalidation := projectionEvents.Provenance != nil &&
+		eventTypesInclude(projectionEvents.Provenance.Events, "projection_invalidated")
+	failures := documentHistoryInvariantFailures(turnMetrics)
+	if !synthesisFound {
+		failures = append(failures, "missing "+documentHistoryStaleSynthesisPath)
+	}
+	if !currentFound {
+		failures = append(failures, "missing "+documentHistoryStaleCurrentSourcePath)
+	}
+	if !hasProjection {
+		failures = append(failures, "synthesis projection is not stale with current source ref")
+	}
+	if !hasSourceEvents {
+		failures = append(failures, "current source provenance missing source update")
+	}
+	if !hasInvalidation {
+		failures = append(failures, "synthesis projection invalidation event missing")
+	}
+	failures = append(failures, missingDocumentHistoryMetrics(turnMetrics, "search", "list", "get", "provenance", "projection")...)
+	assistantPass := messageContainsAll(finalMessage, []string{documentHistoryStaleSynthesisPath, documentHistoryStaleCurrentSourcePath}) &&
+		messageContainsAny(finalMessage, []string{"stale"}) &&
+		messageContainsAny(finalMessage, []string{"projection", "freshness"}) &&
+		messageContainsAny(finalMessage, []string{"provenance", "invalidated", "source_updated", "updated"}) &&
+		messageContainsAny(finalMessage, []string{"no repair", "not repair", "did not repair", "without repair"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report stale synthesis, provenance/invalidation, and no repair")
+	}
+	databasePass := synthesisFound && currentFound && hasProjection && hasSourceEvents && hasInvalidation
+	activityPass := len(documentHistoryInvariantFailures(turnMetrics)) == 0 && len(missingDocumentHistoryMetrics(turnMetrics, "search", "list", "get", "provenance", "projection")) == 0
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{documentHistoryStaleSynthesisPath, documentHistoryStaleCurrentSourcePath, documentHistoryStaleOldSourcePath},
+	}, nil
+}
+
+func documentHistoryInvariantFailures(turnMetrics metrics) []string {
+	failures := []string{}
+	if turnMetrics.BroadRepoSearch {
+		failures = append(failures, "agent used broad repo search")
+	}
+	if turnMetrics.DirectSQLiteAccess {
+		failures = append(failures, "agent used direct SQLite")
+	}
+	if turnMetrics.LegacyRunnerUsage {
+		failures = append(failures, "agent used source-built or legacy runner path")
+	}
+	if turnMetrics.GeneratedFileInspection {
+		failures = append(failures, "agent inspected generated files")
+	}
+	if turnMetrics.ModuleCacheInspection {
+		failures = append(failures, "agent inspected module cache")
+	}
+	return failures
+}
+
+func missingDocumentHistoryMetrics(turnMetrics metrics, required ...string) []string {
+	failures := []string{}
+	for _, requirement := range required {
+		switch requirement {
+		case "search":
+			if !turnMetrics.SearchUsed {
+				failures = append(failures, "agent did not use retrieval search")
+			}
+		case "list":
+			if !turnMetrics.ListDocumentsUsed {
+				failures = append(failures, "agent did not use list_documents")
+			}
+		case "get":
+			if !turnMetrics.GetDocumentUsed {
+				failures = append(failures, "agent did not use get_document")
+			}
+		case "provenance":
+			if !turnMetrics.ProvenanceEventsUsed {
+				failures = append(failures, "agent did not inspect provenance events")
+			}
+		case "projection":
+			if !turnMetrics.ProjectionStatesUsed {
+				failures = append(failures, "agent did not inspect projection states")
+			}
+		}
+	}
+	return failures
 }
 
 func verifyConfiguredLayoutScenario(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
@@ -6309,10 +6860,20 @@ func reportLane(ids []string) (string, bool) {
 		return populatedDefaultLaneName, true
 	}
 	populated := 0
+	documentHistory := 0
+	validation := 0
 	releaseBlocking := false
 	for _, id := range ids {
 		if isPopulatedVaultScenario(id) {
 			populated++
+			continue
+		}
+		if isDocumentHistoryScenario(id) {
+			documentHistory++
+			continue
+		}
+		if isFinalAnswerOnlyValidationScenario(id) {
+			validation++
 			continue
 		}
 		releaseBlocking = true
@@ -6320,7 +6881,13 @@ func reportLane(ids []string) (string, bool) {
 	if populated == len(ids) {
 		return populatedLaneName, false
 	}
+	if documentHistory > 0 && documentHistory+validation == len(ids) {
+		return documentHistoryLaneName, false
+	}
 	if populated > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
+	if documentHistory > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
 	return populatedDefaultLaneName, true
@@ -6336,7 +6903,16 @@ func isPopulatedVaultScenario(id string) bool {
 }
 
 func isReleaseBlockingScenario(id string) bool {
-	return !isPopulatedVaultScenario(id)
+	return !isPopulatedVaultScenario(id) && !isDocumentHistoryScenario(id)
+}
+
+func isDocumentHistoryScenario(id string) bool {
+	switch id {
+	case documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID:
+		return true
+	default:
+		return false
+	}
 }
 
 func allScenarios() []scenario {
@@ -6411,6 +6987,31 @@ func allScenarios() []scenario {
 			ID:     sourceAuditConflictScenarioID,
 			Title:  "Explain unresolved source-sensitive conflict",
 			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, or unsupported actions. Search for source sensitive audit conflict runner retention, then inspect provenance_events for both returned source documents. Do not create, update, append, replace, or file a synthesis document. In the final answer, explain that sources/audit-conflict-alpha.md says seven days and sources/audit-conflict-bravo.md says thirty days, that both are current sources with no supersession metadata, and that the conflict is unresolved so the agent cannot choose a winner without source authority.",
+		},
+		{
+			ID:     documentHistoryInspectScenarioID,
+			Title:  "Inspect document history through existing runner evidence",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. First run openclerk document list_documents with path_prefix notes/history-review/ and limit 10. Use the returned doc_id for notes/history-review/lifecycle-control.md to run get_document. Then inspect provenance_events for ref_kind document and that doc_id, and projection_states for ref_kind document and that doc_id. In the final answer, explain the recent document lifecycle edit using the existing runner-visible document, provenance, and projection freshness evidence; mention notes/history-review/lifecycle-control.md and say this control uses existing document/retrieval workflows before proposing a new history action.",
+		},
+		{
+			ID:     documentHistoryDiffScenarioID,
+			Title:  "Review semantic diff pressure without raw private diff leakage",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Search for document history review controls semantic lifecycle evidence, then list notes/history-review/ with limit 10. Use get_document for notes/history-review/diff-current.md and inspect provenance_events for that document. Compare notes/history-review/diff-current.md with sources/history-review/diff-previous.md as a semantic summary only: previous evidence said review was optional, current evidence says review is required before source-sensitive durable edits become accepted knowledge. Do not print a raw private diff. In the final answer, cite both repo-relative paths, mention source refs or citations, describe the optional-to-required semantic change, and explicitly say raw private diffs are not included in the committed report.",
+		},
+		{
+			ID:     documentHistoryRestoreScenarioID,
+			Title:  "Restore unsafe edit through existing runner actions",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Search for restore authority history review evidence, list notes/history-review/ with limit 10, and get notes/history-review/restore-target.md before editing it. The target currently contains an unsafe accepted edit. Restore only the Summary section of notes/history-review/restore-target.md to this exact sentence: Accepted lifecycle policy: runner-visible review before accepting source-sensitive durable edits. Then inspect provenance_events for ref_kind document and the target doc_id, and projection_states for ref_kind document and the target doc_id. In the final answer, mention notes/history-review/restore-target.md, sources/history-review/restore-authority.md, the restore/rollback reason, provenance, projection freshness, and source evidence.",
+		},
+		{
+			ID:     documentHistoryPendingScenarioID,
+			Title:  "Surface pending change for review without accepting it",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. List notes/history-review/ with limit 10 and get notes/history-review/pending-target.md. Do not modify that accepted target document. Instead create reviews/history-review/pending-change.md titled Pending History Review Change with frontmatter type: review and status: pending. The body must include these exact lines: Review state: pending human review. Proposed change: Auto-accept pending change only after operator approval. Target document: notes/history-review/pending-target.md. After creating the review document, inspect provenance_events for ref_kind document and the pending review doc_id. In the final answer, mention both paths, say the accepted target did not change or did not become accepted knowledge, and say the pending change is waiting for human/operator review.",
+		},
+		{
+			ID:     documentHistoryStaleScenarioID,
+			Title:  "Inspect stale synthesis after canonical revision",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Search for history review stale synthesis current revision evidence, list synthesis/ candidates, and get synthesis/history-review-stale.md. Inspect projection_states for projection synthesis with ref_kind document and that synthesis doc_id. Inspect provenance_events for ref_kind source and the sources/history-review/stale-current.md doc_id, then inspect provenance_events for ref_kind projection and ref_id synthesis:SYNTHESIS_DOC_ID. Do not repair or update the synthesis. In the final answer, mention synthesis/history-review-stale.md and sources/history-review/stale-current.md, report that the synthesis projection is stale after the current source revision, mention provenance or projection invalidation evidence, and explicitly say no repair was performed.",
 		},
 		{
 			ID:     populatedHeterogeneousScenarioID,

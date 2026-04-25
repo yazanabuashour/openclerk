@@ -8,6 +8,11 @@ This document does not add a public runner action, schema, storage migration, or
 API. It defines the product direction for `openclerk document` after the first
 shipping release.
 
+The evidence-gated decision method for this capability is recorded in
+[`document-history-review-controls-adr.md`](document-history-review-controls-adr.md).
+The targeted POC/eval planning contract is recorded in
+[`../evals/document-history-review-controls-poc.md`](../evals/document-history-review-controls-poc.md).
+
 ## Position
 
 `openclerk document` should become the agent-first document lifecycle surface
@@ -33,6 +38,12 @@ The v0.1.0 document surface proves the first slice:
 The post-v0.1.0 direction is to turn that surface into a fuller document
 lifecycle system for agent-authored durable knowledge.
 
+This direction follows the v1 AgentOps pattern: keep the public runner surface
+small, test the existing `openclerk document` and `openclerk retrieval`
+workflows first, and promote a new capability only when targeted evidence shows
+the current workflow is structurally insufficient while preserving source refs,
+provenance, freshness, operator repairability, and bypass prevention.
+
 ## Why History Control Matters
 
 Version and history control are not holdovers from human-first file management.
@@ -50,6 +61,12 @@ An agent-facing knowledge system needs to answer:
 Git, sync providers, filesystem snapshots, and backups may provide storage-level
 recovery. OpenClerk still needs semantic document history so agents can inspect
 and reason about document lifecycle state through the runner contract.
+
+That distinction is deliberate. Storage-level history can restore bytes.
+OpenClerk semantic history should explain knowledge lifecycle state: which
+document or synthesis changed, why it changed, which evidence supported the
+change, what derived state became stale, and what review or rollback state an
+operator can inspect.
 
 ## Post-v0.1.0 History Model
 
@@ -74,6 +91,12 @@ The candidate model should cover:
 
 This is a semantic lifecycle layer, not a replacement for Git.
 
+Public eval reports and committed artifacts must use repo-relative paths or
+neutral placeholders, and must not expose raw private document diffs. Diff
+inspection should be represented by stable before/after references, content
+hashes, summaries, or sanitized evidence unless a private local workflow
+explicitly needs raw content.
+
 ## Candidate Future Workflows
 
 Post-v0.1.0 `openclerk document` workflows may include:
@@ -86,6 +109,12 @@ Post-v0.1.0 `openclerk document` workflows may include:
 - restore a previous accepted revision
 - annotate a rollback with the reason and source evidence
 - show which synthesis pages became stale after a document revision
+
+Before any workflow is promoted, targeted POC prompts should first attempt the
+same task through current document and retrieval actions, including provenance
+events and projection states where freshness or derivation matters. Failures
+must be classified as data hygiene, skill guidance, eval coverage, or a true
+runner capability gap.
 
 Each workflow must preserve the current v0.1.0 invariants:
 
@@ -159,13 +188,14 @@ Post-v0.1.0 document history control should not:
 - make review state invisible to the operator
 - accept broad rewrite or contradiction-engine behavior without source refs,
   provenance, and freshness
+- expose private raw diffs or document bodies in committed public artifacts
 
 ## Promotion Gate
 
 No history or review action should be implemented from this vision document
 alone.
 
-A future follow-up must first define:
+A future follow-up must first produce targeted AgentOps evidence that defines:
 
 - the exact workflow pressure that v0.1.0 cannot handle
 - the candidate request and response shape

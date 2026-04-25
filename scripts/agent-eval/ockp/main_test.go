@@ -779,7 +779,7 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 	for _, id := range scenarioIDs() {
 		ids[id] = true
 	}
-	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, graphSemanticsScenarioID, memoryRouterScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
+	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, graphSemanticsScenarioID, memoryRouterScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID, populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
 		if !ids[want] {
 			t.Fatalf("scenarioIDs missing %q in %v", want, scenarioIDs())
 		}
@@ -796,10 +796,20 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 			t.Fatalf("default selected scenarios included targeted populated scenario %q", id)
 		}
 	}
+	for _, id := range []string{documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID} {
+		if defaultIDs[id] {
+			t.Fatalf("default selected scenarios included targeted document history scenario %q", id)
+		}
+	}
 	selected := selectedScenarioIDs(runConfig{Scenario: populatedHeterogeneousScenarioID + "," + populatedFreshnessConflictScenarioID + "," + populatedSynthesisUpdateScenarioID})
 	lane, releaseBlocking := reportLane(selected)
 	if lane != populatedLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, populatedLaneName)
+	}
+	selected = selectedScenarioIDs(runConfig{Scenario: documentHistoryInspectScenarioID + "," + documentHistoryDiffScenarioID + "," + documentHistoryRestoreScenarioID + "," + documentHistoryPendingScenarioID + "," + documentHistoryStaleScenarioID + ",missing-document-path-reject,negative-limit-reject,unsupported-lower-level-reject,unsupported-transport-reject"})
+	lane, releaseBlocking = reportLane(selected)
+	if lane != documentHistoryLaneName || releaseBlocking {
+		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, documentHistoryLaneName)
 	}
 }
 
@@ -1731,6 +1741,128 @@ func TestVerifySourceSensitiveConflictRequiresUnresolvedExplanationAndNoSynthesi
 	}
 	if result.Passed {
 		t.Fatalf("source audit conflict passed after creating synthesis: %+v", result)
+	}
+}
+
+func TestVerifyDocumentHistoryReviewScenarios(t *testing.T) {
+	ctx := context.Background()
+	commonMetrics := metrics{
+		AssistantCalls:       1,
+		SearchUsed:           true,
+		ListDocumentsUsed:    true,
+		GetDocumentUsed:      true,
+		ProvenanceEventsUsed: true,
+		ProjectionStatesUsed: true,
+		CommandExecutions:    5,
+		ToolCalls:            5,
+		EventTypeCounts:      map[string]int{},
+	}
+
+	inspectionPaths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, inspectionPaths, scenario{ID: documentHistoryInspectScenarioID}); err != nil {
+		t.Fatalf("seed history inspection: %v", err)
+	}
+	inspectionAnswer := "Existing runner workflow inspected notes/history-review/lifecycle-control.md with document_updated provenance and fresh projection freshness before proposing any new history action."
+	result, err := verifyScenarioTurn(ctx, inspectionPaths, scenario{ID: documentHistoryInspectScenarioID}, 1, inspectionAnswer, commonMetrics)
+	if err != nil {
+		t.Fatalf("verify history inspection: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("history inspection failed: %+v", result)
+	}
+
+	diffPaths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, diffPaths, scenario{ID: documentHistoryDiffScenarioID}); err != nil {
+		t.Fatalf("seed diff review: %v", err)
+	}
+	diffAnswer := "Semantic summary only: sources/history-review/diff-previous.md said review was optional, while notes/history-review/diff-current.md says review is required. Citations/source refs are preserved, and raw private diffs are not included."
+	result, err = verifyScenarioTurn(ctx, diffPaths, scenario{ID: documentHistoryDiffScenarioID}, 1, diffAnswer, commonMetrics)
+	if err != nil {
+		t.Fatalf("verify diff review: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("diff review failed: %+v", result)
+	}
+	noListMetrics := commonMetrics
+	noListMetrics.ListDocumentsUsed = false
+	result, err = verifyScenarioTurn(ctx, diffPaths, scenario{ID: documentHistoryDiffScenarioID}, 1, diffAnswer, noListMetrics)
+	if err != nil {
+		t.Fatalf("verify diff review without list: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("diff review passed without list_documents: %+v", result)
+	}
+
+	restorePaths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, restorePaths, scenario{ID: documentHistoryRestoreScenarioID}); err != nil {
+		t.Fatalf("seed restore pressure: %v", err)
+	}
+	result, err = verifyScenarioTurn(ctx, restorePaths, scenario{ID: documentHistoryRestoreScenarioID}, 1, "No restore yet.", commonMetrics)
+	if err != nil {
+		t.Fatalf("verify restore before update: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("restore pressure passed before restore: %+v", result)
+	}
+	replaceSeedSection(t, ctx, restorePaths, documentHistoryRestoreTargetPath, "Summary", "Accepted lifecycle policy: runner-visible review before accepting source-sensitive durable edits.")
+	restoreAnswer := "Restored notes/history-review/restore-target.md from sources/history-review/restore-authority.md as a rollback with source evidence, provenance, projection freshness, and citations."
+	result, err = verifyScenarioTurn(ctx, restorePaths, scenario{ID: documentHistoryRestoreScenarioID}, 1, restoreAnswer, commonMetrics)
+	if err != nil {
+		t.Fatalf("verify restore pressure: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("restore pressure failed: %+v", result)
+	}
+	result, err = verifyScenarioTurn(ctx, restorePaths, scenario{ID: documentHistoryRestoreScenarioID}, 1, restoreAnswer, noListMetrics)
+	if err != nil {
+		t.Fatalf("verify restore pressure without list: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("restore pressure passed without list_documents: %+v", result)
+	}
+
+	pendingPaths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, pendingPaths, scenario{ID: documentHistoryPendingScenarioID}); err != nil {
+		t.Fatalf("seed pending review: %v", err)
+	}
+	cfg := runclient.Config{DatabasePath: pendingPaths.DatabasePath}
+	proposal := strings.TrimSpace(`---
+type: review
+status: pending
+---
+# Pending History Review Change
+
+## Summary
+Review state: pending human review.
+
+## Proposal
+Proposed change: Auto-accept pending change only after operator approval.
+
+Target document: notes/history-review/pending-target.md
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, documentHistoryPendingProposalPath, "Pending History Review Change", proposal); err != nil {
+		t.Fatalf("create pending proposal: %v", err)
+	}
+	pendingAnswer := "reviews/history-review/pending-change.md records pending human/operator review for notes/history-review/pending-target.md. The accepted target did not change and did not become accepted knowledge."
+	result, err = verifyScenarioTurn(ctx, pendingPaths, scenario{ID: documentHistoryPendingScenarioID}, 1, pendingAnswer, commonMetrics)
+	if err != nil {
+		t.Fatalf("verify pending review: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("pending review failed: %+v", result)
+	}
+
+	stalePaths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, stalePaths, scenario{ID: documentHistoryStaleScenarioID}); err != nil {
+		t.Fatalf("seed stale synthesis: %v", err)
+	}
+	staleAnswer := "synthesis/history-review-stale.md is stale after sources/history-review/stale-current.md was updated. Projection freshness and provenance invalidated evidence show the stale state; no repair was performed."
+	result, err = verifyScenarioTurn(ctx, stalePaths, scenario{ID: documentHistoryStaleScenarioID}, 1, staleAnswer, commonMetrics)
+	if err != nil {
+		t.Fatalf("verify stale synthesis: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("stale synthesis failed: %+v", result)
 	}
 }
 

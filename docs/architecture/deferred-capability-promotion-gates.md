@@ -16,6 +16,7 @@ These gates apply to:
 - autonomous router behavior
 - semantic graph layers as truth
 - broad contradiction engines
+- document history and review controls
 - new public runner actions
 
 The default decision is to keep each capability as reference or deferred.
@@ -105,6 +106,28 @@ unresolved and explainable rather than forced to a winner.
 Kill or defer the candidate if it makes arbitrary semantic contradiction
 claims, drops source paths, hides supersession/freshness evidence, or creates
 unrepairable conflict state.
+
+### Document History And Review Controls
+
+Promotion requires evidence that semantic document lifecycle control is needed
+for agent-authored durable edits beyond storage-level Git, sync, snapshots, or
+backups. The candidate must explain what changed, why it changed, which source
+refs or citations justified it, which before/after content hashes or references
+identify the change, which actor or source produced it, what review state
+applies, and what derived projections or synthesis pages became stale.
+
+Defer the candidate if existing document and retrieval workflows can express
+the scenario through registered documents, append or replace-section,
+provenance events, projection states, and operator review, even if the workflow
+is multi-step. Defer also when failures are missing skill guidance, data
+hygiene, thin dogfooding evidence, or eval coverage gaps.
+
+Kill the candidate if it duplicates Git as byte-level history, hides review
+state, enables hidden autonomous rewrites, drops source refs or citations,
+hides provenance or freshness, exposes private raw diffs in public artifacts,
+or requires routine direct SQLite, direct vault inspection, source-built runner
+paths, HTTP/MCP bypasses, backend variants, module-cache inspection, or ad hoc
+runtime programs.
 
 ### New Public Runner Actions
 
