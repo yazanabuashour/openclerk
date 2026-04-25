@@ -37,7 +37,7 @@ full release-gate replacements.
 | Graph semantics reference | `docs/evals/results/ockp-graph-semantics-reference-poc.md` | Graph semantic-label pressure scenario completed as reference evidence |
 | Memory/router reference | `docs/evals/results/ockp-memory-router-reference-poc.md` | Memory and router pressure scenario completed as reference evidence |
 | Real-vault dogfooding | `docs/evals/results/ockp-real-vault-agentops-trial.md` | Sanitized aggregate evidence only; raw logs, paths, titles, snippets, citations, document IDs, and raw JSON remain local-only |
-| Populated-vault synthetic pressure | `docs/evals/populated-vault-agentops-e2e.md` | Synthetic targeted lane for generalized dogfooding pressure before any public API promotion |
+| Populated-vault synthetic pressure | `docs/evals/populated-vault-agentops-e2e.md` | Harness-generated synthetic fixture covers mixed document families, polluted evidence, duplicate candidates, stale synthesis, supersession, and unresolved current-source conflict before any public API promotion |
 
 ## Interpretation
 

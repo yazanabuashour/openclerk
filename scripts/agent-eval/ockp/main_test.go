@@ -954,13 +954,13 @@ func TestSeedPopulatedVaultFixtureCreatesMixedDocumentFamilies(t *testing.T) {
 			t.Fatalf("missing seeded populated document %s", path)
 		}
 	}
-	for _, prefix := range []string{"transcripts/", "articles/", "meetings/", "docs/", "blogs/", "receipts/", "invoices/", "legal/", "contracts/", "sources/", "synthesis/"} {
+	for prefix, minimum := range populatedVaultFixtureMinimumPrefixCounts() {
 		count, err := documentCountWithPrefix(ctx, paths, prefix)
 		if err != nil {
 			t.Fatalf("count %s: %v", prefix, err)
 		}
-		if count == 0 {
-			t.Fatalf("expected populated fixture docs under %s", prefix)
+		if count < minimum {
+			t.Fatalf("expected at least %d populated fixture docs under %s, got %d", minimum, prefix, count)
 		}
 	}
 }

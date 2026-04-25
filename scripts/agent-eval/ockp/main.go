@@ -130,29 +130,41 @@ const (
 	documentHistorySearchText             = "document history review controls semantic lifecycle evidence"
 	documentHistoryStaleSearchText        = "history review stale synthesis current revision evidence"
 
-	populatedLaneName             = "populated-vault-targeted"
-	populatedDefaultLaneName      = "agentops-production"
-	populatedMixedLaneName        = "mixed"
-	populatedAuthorityPath        = "sources/populated/atlas-authority.md"
-	populatedPollutedPath         = "sources/populated/atlas-polluted.md"
-	populatedTranscriptPath       = "transcripts/atlas-kickoff-transcript.md"
-	populatedArticlePath          = "articles/vendor-risk-review.md"
-	populatedMeetingPath          = "meetings/atlas-weekly-review.md"
-	populatedDocsPath             = "docs/atlas-operations-guide.md"
-	populatedBlogPath             = "blogs/atlas-launch-draft.md"
-	populatedReceiptPath          = "receipts/nebula-office-supply.md"
-	populatedInvoicePath          = "invoices/nebula-consulting-2026-04.md"
-	populatedLegalPath            = "legal/data-retention-memo.md"
-	populatedContractPath         = "contracts/acme-master-services.md"
-	populatedConflictAlphaPath    = "sources/populated/retention-alpha.md"
-	populatedConflictBravoPath    = "sources/populated/retention-bravo.md"
-	populatedSynthesisPath        = "synthesis/populated-vault-summary.md"
-	populatedSynthesisDecoyPath   = "synthesis/populated-vault-summary-decoy.md"
-	populatedSynthesisOldPath     = "sources/populated/synthesis-old.md"
-	populatedSynthesisCurrentPath = "sources/populated/synthesis-current.md"
-	populatedSearchText           = "Populated vault authority marker"
-	populatedConflictSearchText   = "Populated vault retention conflict current source"
-	populatedSynthesisSearchText  = "Current populated vault synthesis guidance"
+	populatedLaneName               = "populated-vault-targeted"
+	populatedDefaultLaneName        = "agentops-production"
+	populatedMixedLaneName          = "mixed"
+	populatedAuthorityPath          = "sources/populated/atlas-authority.md"
+	populatedAuthorityCandidatePath = "sources/populated/atlas-authority-candidate.md"
+	populatedPollutedPath           = "sources/populated/atlas-polluted.md"
+	populatedTranscriptPath         = "transcripts/atlas-kickoff-transcript.md"
+	populatedTranscriptOpsPath      = "transcripts/atlas-ops-standup-transcript.md"
+	populatedArticlePath            = "articles/vendor-risk-review.md"
+	populatedArticleArchivePath     = "articles/vendor-risk-review-archive.md"
+	populatedMeetingPath            = "meetings/atlas-weekly-review.md"
+	populatedMeetingBudgetPath      = "meetings/atlas-budget-sync.md"
+	populatedDocsPath               = "docs/atlas-operations-guide.md"
+	populatedDocsRunbookPath        = "docs/atlas-vendor-runbook.md"
+	populatedBlogPath               = "blogs/atlas-launch-draft.md"
+	populatedBlogRumorPath          = "blogs/atlas-launch-rumor.md"
+	populatedReceiptPath            = "receipts/nebula-office-supply.md"
+	populatedReceiptDuplicatePath   = "receipts/nebula-office-supply-copy.md"
+	populatedInvoicePath            = "invoices/nebula-consulting-2026-04.md"
+	populatedInvoiceStalePath       = "invoices/nebula-consulting-2026-03.md"
+	populatedLegalPath              = "legal/data-retention-memo.md"
+	populatedLegalArchivePath       = "legal/data-retention-archive.md"
+	populatedContractPath           = "contracts/acme-master-services.md"
+	populatedContractDraftPath      = "contracts/acme-master-services-draft.md"
+	populatedConflictAlphaPath      = "sources/populated/retention-alpha.md"
+	populatedConflictBravoPath      = "sources/populated/retention-bravo.md"
+	populatedSynthesisPath          = "synthesis/populated-vault-summary.md"
+	populatedSynthesisDecoyPath     = "synthesis/populated-vault-summary-decoy.md"
+	populatedSynthesisOldPath       = "sources/populated/synthesis-old.md"
+	populatedSynthesisCurrentPath   = "sources/populated/synthesis-current.md"
+	populatedSearchText             = "Populated vault authority marker"
+	populatedConflictSearchText     = "Populated vault retention conflict current source"
+	populatedDuplicateSearchText    = "Populated vault duplicate candidate marker"
+	populatedStaleSearchText        = "Populated vault stale source marker"
+	populatedSynthesisSearchText    = "Current populated vault synthesis guidance"
 )
 
 var (
@@ -1979,6 +1991,19 @@ The kickoff transcript mentions the Atlas project, Nebula Consulting, the reimbu
 ## Notes
 Participants said the authoritative operational summary lives in the populated Atlas authority source.
 `) + "\n"},
+		{populatedTranscriptOpsPath, "Atlas Ops Standup Transcript", strings.TrimSpace(`---
+type: transcript
+status: active
+project: atlas
+---
+# Atlas Ops Standup Transcript
+
+## Summary
+The ops standup repeats that Atlas questions should reconcile receipt totals, invoice thresholds, legal retention notes, and Acme contract controls through runner-visible sources.
+
+## Notes
+Speakers mentioned Nebula Office Supply, Nebula Consulting, and Acme in the same agenda so retrieval has overlapping entities across document families.
+`) + "\n"},
 		{populatedArticlePath, "Vendor Risk Review", strings.TrimSpace(`---
 type: article
 status: active
@@ -1988,6 +2013,16 @@ project: atlas
 
 ## Summary
 The vendor risk article says Atlas should prefer the current authority source when invoices, receipts, contracts, and legal notes disagree.
+`) + "\n"},
+		{populatedArticleArchivePath, "Vendor Risk Review Archive", strings.TrimSpace(`---
+type: article
+status: archived
+project: atlas
+---
+# Vendor Risk Review Archive
+
+## Summary
+Populated vault stale source marker: the archived vendor risk review said Atlas could approve Nebula invoices without the current authority review.
 `) + "\n"},
 		{populatedMeetingPath, "Atlas Weekly Review", strings.TrimSpace(`---
 type: meeting-note
@@ -1999,6 +2034,16 @@ project: atlas
 ## Summary
 The review links Nebula Consulting invoice approval, Acme contract controls, and receipt reimbursement into one Atlas workstream.
 `) + "\n"},
+		{populatedMeetingBudgetPath, "Atlas Budget Sync", strings.TrimSpace(`---
+type: meeting-note
+status: active
+project: atlas
+---
+# Atlas Budget Sync
+
+## Summary
+The budget sync compares the Nebula Office Supply receipt with the Nebula Consulting invoice and asks agents to cite source paths before summarizing totals.
+`) + "\n"},
 		{populatedDocsPath, "Atlas Operations Guide", strings.TrimSpace(`---
 type: reference-doc
 status: active
@@ -2009,6 +2054,16 @@ project: atlas
 ## Summary
 Atlas operations require source-grounded answers with path, doc_id, chunk_id, heading, or line citation details.
 `) + "\n"},
+		{populatedDocsRunbookPath, "Atlas Vendor Runbook", strings.TrimSpace(`---
+type: reference-doc
+status: active
+project: atlas
+---
+# Atlas Vendor Runbook
+
+## Summary
+The vendor runbook says canonical markdown remains the source of truth for Atlas receipts, invoices, contracts, and legal notes until a future typed domain is promoted.
+`) + "\n"},
 		{populatedBlogPath, "Atlas Launch Draft", strings.TrimSpace(`---
 type: blog-draft
 status: draft
@@ -2018,6 +2073,16 @@ project: atlas
 
 ## Summary
 This draft is intentionally lower authority and should not override current source documents.
+`) + "\n"},
+		{populatedBlogRumorPath, "Atlas Launch Rumor", strings.TrimSpace(`---
+type: blog-draft
+status: polluted
+project: atlas
+---
+# Atlas Launch Rumor
+
+## Summary
+This polluted blog draft incorrectly claims the Acme privacy addendum can be skipped and should not be used as authority.
 `) + "\n"},
 		{populatedReceiptPath, "Nebula Office Supply Receipt", strings.TrimSpace(`---
 type: receipt
@@ -2030,6 +2095,18 @@ project: atlas
 ## Summary
 Receipt marker: Atlas reimbursable supplies from Nebula Office Supply total USD 118.42.
 `) + "\n"},
+		{populatedReceiptDuplicatePath, "Nebula Office Supply Receipt Copy", strings.TrimSpace(`---
+type: receipt
+status: duplicate
+vendor: nebula-office-supply
+project: atlas
+duplicates: receipts/nebula-office-supply.md
+---
+# Nebula Office Supply Receipt Copy
+
+## Summary
+Populated vault duplicate candidate marker: this duplicate-looking receipt repeats the USD 118.42 total but points back to the canonical Nebula Office Supply receipt.
+`) + "\n"},
 		{populatedInvoicePath, "Nebula Consulting Invoice April 2026", strings.TrimSpace(`---
 type: invoice
 status: active
@@ -2041,6 +2118,18 @@ project: atlas
 ## Summary
 Invoice marker: Nebula Consulting invoice NC-2026-04 requires approval above USD 500.
 `) + "\n"},
+		{populatedInvoiceStalePath, "Nebula Consulting Invoice March 2026", strings.TrimSpace(`---
+type: invoice
+status: superseded
+vendor: nebula-consulting
+project: atlas
+superseded_by: invoices/nebula-consulting-2026-04.md
+---
+# Nebula Consulting Invoice March 2026
+
+## Summary
+Populated vault stale source marker: the March invoice used an older USD 300 approval threshold and is superseded by the April invoice.
+`) + "\n"},
 		{populatedLegalPath, "Atlas Data Retention Memo", strings.TrimSpace(`---
 type: legal-doc
 status: active
@@ -2050,6 +2139,16 @@ project: atlas
 
 ## Summary
 Legal memo marker: current Atlas retention has two unresolved current-source claims in the conflict fixture.
+`) + "\n"},
+		{populatedLegalArchivePath, "Atlas Data Retention Archive", strings.TrimSpace(`---
+type: legal-doc
+status: archived
+project: atlas
+---
+# Atlas Data Retention Archive
+
+## Summary
+Populated vault stale source marker: the archived retention note says Atlas retention was seven days before the current alpha and bravo conflict sources were filed.
 `) + "\n"},
 		{populatedContractPath, "Acme Master Services Agreement", strings.TrimSpace(`---
 type: contract
@@ -2061,6 +2160,17 @@ project: atlas
 
 ## Summary
 Contract marker: Acme Atlas work requires a privacy addendum before launch.
+`) + "\n"},
+		{populatedContractDraftPath, "Acme Master Services Agreement Draft", strings.TrimSpace(`---
+type: contract
+status: draft
+counterparty: acme
+project: atlas
+---
+# Acme Master Services Agreement Draft
+
+## Summary
+The draft contract omits the privacy addendum requirement and must not override the active Acme master services agreement.
 `) + "\n"},
 		{populatedAuthorityPath, "Atlas Populated Vault Authority", strings.TrimSpace(`---
 type: source
@@ -2075,6 +2185,20 @@ Populated vault authority marker: Atlas uses Nebula Consulting invoice approval 
 
 ## Evidence
 This source reconciles transcripts, articles, meeting notes, reference docs, blog drafts, receipts, invoices, legal docs, and contracts.
+`) + "\n"},
+		{populatedAuthorityCandidatePath, "Atlas Populated Vault Authority Candidate", strings.TrimSpace(`---
+type: source
+status: candidate
+project: atlas
+populated_role: candidate
+---
+# Atlas Populated Vault Authority Candidate
+
+## Summary
+Populated vault duplicate candidate marker: this source looks like an authority summary but is only a candidate and must not beat populated_role authority metadata.
+
+## Evidence
+It repeats Atlas, Nebula Consulting, Nebula Office Supply, and Acme terms so retrieval has a duplicate-looking source pressure point.
 `) + "\n"},
 		{populatedPollutedPath, "Atlas Polluted Note", strings.TrimSpace(`---
 type: source
@@ -2116,7 +2240,7 @@ superseded_by: sources/populated/synthesis-current.md
 # Atlas Synthesis Old Source
 
 ## Summary
-Older populated vault synthesis guidance said Atlas could create a duplicate synthesis page when stale claims appear.
+Populated vault stale source marker: older populated vault synthesis guidance said Atlas could create a duplicate synthesis page when stale claims appear.
 `) + "\n"},
 		{populatedSynthesisCurrentPath, "Atlas Synthesis Current Source", strings.TrimSpace(`---
 supersedes: sources/populated/synthesis-old.md
@@ -4922,6 +5046,26 @@ func verifyPopulatedHeterogeneousRetrieval(ctx context.Context, paths evalPaths,
 	if err != nil {
 		return verificationResult{}, err
 	}
+	duplicateSearch, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
+			Text:  populatedDuplicateSearchText,
+			Limit: 10,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	staleSearch, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
+			Text:  populatedStaleSearchText,
+			Limit: 10,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
 	top, topFound := topSearchHit(search)
 	requiredPaths := populatedVaultFixturePaths()
 	missingDocs := []string{}
@@ -4932,6 +5076,11 @@ func verifyPopulatedHeterogeneousRetrieval(ctx context.Context, paths evalPaths,
 			missingDocs = append(missingDocs, path)
 		}
 	}
+	duplicateSourcesVisible := searchContainsPath(duplicateSearch, populatedAuthorityCandidatePath) &&
+		searchContainsPath(duplicateSearch, populatedReceiptDuplicatePath)
+	staleSourcesVisible := searchContainsPath(staleSearch, populatedInvoiceStalePath) &&
+		searchContainsPath(staleSearch, populatedLegalArchivePath) &&
+		searchContainsPath(staleSearch, populatedSynthesisOldPath)
 	assistantPass := topFound &&
 		messageContainsAll(finalMessage, []string{populatedAuthorityPath, top.DocID, top.ChunkID, "USD 500", "USD 118.42", "privacy addendum"}) &&
 		messageContainsAny(finalMessage, []string{"polluted", "decoy", "reject", "did not use", "not authority"})
@@ -4943,6 +5092,12 @@ func verifyPopulatedHeterogeneousRetrieval(ctx context.Context, paths evalPaths,
 	}
 	if !topFound || searchHitPath(top) != populatedAuthorityPath || !searchHitHasCitation(top) {
 		failures = append(failures, "authority search did not return cited populated authority source")
+	}
+	if !duplicateSourcesVisible {
+		failures = append(failures, "duplicate candidate search did not expose populated duplicate source and receipt pressure")
+	}
+	if !staleSourcesVisible {
+		failures = append(failures, "stale source search did not expose populated stale invoice, legal, and synthesis pressure")
 	}
 	if !turnMetrics.SearchUsed {
 		failures = append(failures, "agent did not use retrieval search")
@@ -4959,7 +5114,9 @@ func verifyPopulatedHeterogeneousRetrieval(ctx context.Context, paths evalPaths,
 	databasePass := len(missingDocs) == 0 &&
 		topFound &&
 		searchHitPath(top) == populatedAuthorityPath &&
-		searchHitHasCitation(top)
+		searchHitHasCitation(top) &&
+		duplicateSourcesVisible &&
+		staleSourcesVisible
 	return verificationResult{
 		Passed:        databasePass && assistantPass && activityPass && !forbiddenAnswer && len(populatedBypassFailures(turnMetrics)) == 0,
 		DatabasePass:  databasePass,
@@ -5234,15 +5391,25 @@ func populatedBypassFailures(turnMetrics metrics) []string {
 func populatedVaultFixturePaths() []string {
 	return []string{
 		populatedTranscriptPath,
+		populatedTranscriptOpsPath,
 		populatedArticlePath,
+		populatedArticleArchivePath,
 		populatedMeetingPath,
+		populatedMeetingBudgetPath,
 		populatedDocsPath,
+		populatedDocsRunbookPath,
 		populatedBlogPath,
+		populatedBlogRumorPath,
 		populatedReceiptPath,
+		populatedReceiptDuplicatePath,
 		populatedInvoicePath,
+		populatedInvoiceStalePath,
 		populatedLegalPath,
+		populatedLegalArchivePath,
 		populatedContractPath,
+		populatedContractDraftPath,
 		populatedAuthorityPath,
+		populatedAuthorityCandidatePath,
 		populatedPollutedPath,
 		populatedConflictAlphaPath,
 		populatedConflictBravoPath,
@@ -5250,6 +5417,22 @@ func populatedVaultFixturePaths() []string {
 		populatedSynthesisCurrentPath,
 		populatedSynthesisPath,
 		populatedSynthesisDecoyPath,
+	}
+}
+
+func populatedVaultFixtureMinimumPrefixCounts() map[string]int {
+	return map[string]int{
+		"transcripts/": 2,
+		"articles/":    2,
+		"meetings/":    2,
+		"docs/":        2,
+		"blogs/":       2,
+		"receipts/":    2,
+		"invoices/":    2,
+		"legal/":       2,
+		"contracts/":   2,
+		"sources/":     7,
+		"synthesis/":   2,
 	}
 }
 

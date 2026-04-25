@@ -45,6 +45,14 @@ markdown/source documents for:
 - contracts
 - source-linked synthesis
 
+The harness-generated fixture now seeds at least two documents in each primary
+family: transcripts, articles, meeting notes, project/reference docs, blog
+drafts, receipts, invoices, legal docs, contracts, and synthesis. It also seeds
+seven populated source documents: the Atlas authority source, a duplicate-looking
+authority candidate, a polluted source, two conflicting retention sources, and
+current/superseded synthesis sources. These documents are generated in each
+throwaway eval vault, not committed as a standalone vault artifact.
+
 The fixture should be mostly good data, with intentional pressure patterns:
 
 - stale source documents and stale synthesis that require freshness inspection
