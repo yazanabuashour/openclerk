@@ -107,6 +107,7 @@ run:
 ```bash
 mise exec -- ./scripts/validate-release-docs.sh <tag>
 mise exec -- ./scripts/validate-agent-skill.sh skills/openclerk
+mise exec -- ./scripts/validate-committed-artifacts.sh
 test -z "$(gofmt -l $(git ls-files '*.go'))"
 mise exec -- golangci-lint run
 mise exec -- go test ./...

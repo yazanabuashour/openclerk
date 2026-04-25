@@ -24,6 +24,9 @@ jobs:
       - name: Validate release notes and changelog
         run: ./scripts/validate-release-docs.sh "${GITHUB_REF_NAME}"
 
+      - name: Validate committed artifacts
+        run: ./scripts/validate-committed-artifacts.sh
+
       - name: Validate Agent Skill
         run: ./scripts/validate-agent-skill.sh skills/openclerk
 

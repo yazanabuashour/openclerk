@@ -18,6 +18,11 @@ SQLite, broad repo search, HTTP/MCP transports, source-built runner paths during
 workflow execution, direct vault inspection, copied vault files, screenshots, or
 raw logs as evidence.
 
+Raw logs and raw JSON remain local-only for real-vault trials. Committed
+reports must be sanitized aggregate evidence only: workflow labels, runner
+action classes, pass/fail state, failure classification, and whether existing
+runner actions were sufficient.
+
 ## Environment Preflight
 
 | Check | Result | Classification |

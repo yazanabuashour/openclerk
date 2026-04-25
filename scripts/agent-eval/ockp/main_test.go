@@ -549,7 +549,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		`{"type":"item.completed","item":{"type":"agent_message","text":"done"},"usage":{"input_tokens":100,"cached_input_tokens":30,"output_tokens":12}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"rg --files"}}`,
-		`{"type":"tool_call","item":{"type":"tool_call","command":"rg --files /Users/y/.codex"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"rg --files /Users/example/.codex"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"rg --files /home/runner/.codex"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"rg --files C:\\Users\\runner\\.codex"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"search\",\"search\":{\"text\":\"runner\"}}' | openclerk retrieval"}}`,
@@ -584,7 +584,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	if !parsed.metrics.BroadRepoSearch {
 		t.Fatalf("expected broad repo search metric")
 	}
-	forbiddenEvidencePaths := []string{"/Users/y", "/home/runner", `C:\Users\runner`}
+	forbiddenEvidencePaths := []string{"/Users/example", "/home/runner", `C:\Users\runner`}
 	for _, evidence := range parsed.metrics.BroadRepoSearchEvidence {
 		for _, forbidden := range forbiddenEvidencePaths {
 			if strings.Contains(evidence, forbidden) {

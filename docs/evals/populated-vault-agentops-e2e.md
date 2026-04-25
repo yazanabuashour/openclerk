@@ -2,11 +2,11 @@
 
 ## Status
 
-Planned targeted eval lane for post-v0.1.0 AgentOps evidence.
+Implemented targeted synthetic eval lane for post-v0.2.0 AgentOps evidence.
 
-This document is an eval planning contract only. It does not add fixture data,
-runner actions, schemas, ingestion behavior, typed domains, or release-blocking
-production gates.
+This document is an eval lane contract and harness coverage guide. It does not
+add runner actions, schemas, ingestion behavior, typed domains, or
+release-blocking production gates.
 
 ## Purpose
 
@@ -16,11 +16,17 @@ from heterogeneous, messy durable knowledge before deciding whether any future
 capability should be promoted beyond the current document and retrieval runner
 surface.
 
-This lane starts targeted rather than release-blocking because the current
+This lane is targeted rather than release-blocking because the current
 production gate already covers the v1 AgentOps contract for selected routine
-knowledge-plane workflows. A broader populated-vault lane should first produce
-reduced evidence that separates data hygiene, skill guidance, eval coverage,
-and runner capability gaps before it can justify any production-gate expansion.
+knowledge-plane workflows. Populated-vault evidence must separate data hygiene,
+skill guidance, eval coverage, and runner capability gaps before it can justify
+any production-gate expansion.
+
+The harness scenarios are:
+
+- `populated-heterogeneous-retrieval`
+- `populated-freshness-conflict`
+- `populated-synthesis-update-over-duplicate`
 
 ## Fixture Expectations
 
@@ -80,7 +86,7 @@ The lane must preserve the v1 evidence requirements:
 
 ## Scenario Families
 
-The first populated-vault lane should cover these targeted scenario families:
+The populated-vault lane covers these targeted scenario families:
 
 - **Heterogeneous retrieval:** answer source-grounded questions across
   transcripts, notes, articles, docs, receipts, invoices, legal docs, and

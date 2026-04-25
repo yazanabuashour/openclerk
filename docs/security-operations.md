@@ -32,7 +32,7 @@ This runbook defines recurring security work for OpenClerk maintainers. It compl
 - Runner document create, append, replace-section, layout inspection, retrieval, provenance, projection, and promoted-record behavior should have focused validation and idempotency tests before release.
 - Storage and projection changes should include tests for persisted data, source references, freshness, and invalid-input rejection.
 - Skill policy changes should run `./scripts/validate-agent-skill.sh skills/openclerk` and the relevant OpenClerk production agent eval gate before release.
-- Release-pipeline changes should run `./scripts/validate-release-docs.sh <tag>` for the target tag and verify the expected release asset, checksum, SBOM, version, installer, and attestation behavior.
+- Release-pipeline changes should run `./scripts/validate-release-docs.sh <tag>` and `./scripts/validate-committed-artifacts.sh` for the target tag and verify the expected release asset, checksum, SBOM, version, installer, and attestation behavior.
 - Add fuzzing or property-style tests when parsing, normalization, source-reference handling, graph/projection derivation, or import logic becomes complex enough that table tests no longer cover realistic malformed input.
 - Abuse-case tests should be added before introducing remote APIs, hosted services, secrets-backed integrations, self-hosted runners, broad automation write privileges, or new routine agent transports.
 

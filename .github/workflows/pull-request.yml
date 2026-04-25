@@ -39,26 +39,15 @@ jobs:
             .github/workflows/codeql.yml
             scripts/validate-agent-skill.sh
             scripts/validate-release-docs.sh
+            scripts/validate-committed-artifacts.sh
           )
 
           for file in "${required_files[@]}"; do
             test -f "${file}"
           done
 
-      - name: Reject machine-absolute paths in docs
-        run: |
-          if grep -RInE '/Users/|/home/|[A-Za-z]:\\\\' \
-            README.md \
-            CONTRIBUTING.md \
-            SECURITY.md \
-            CODE_OF_CONDUCT.md \
-            skills \
-            docs \
-            .github/ISSUE_TEMPLATE \
-            .github/PULL_REQUEST_TEMPLATE.md; then
-            echo "Remove machine-absolute filesystem paths from committed docs."
-            exit 1
-          fi
+      - name: Validate committed artifacts
+        run: ./scripts/validate-committed-artifacts.sh
 
       - name: Validate Agent Skill
         run: ./scripts/validate-agent-skill.sh skills/openclerk
