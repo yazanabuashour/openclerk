@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/yazanabuashour/openclerk/internal/runclient"
@@ -191,5 +192,53 @@ func validateDocumentInput(input DocumentInput) string {
 	if strings.TrimSpace(input.Body) == "" {
 		return "document.body is required"
 	}
+	if rejection := validateDocumentFrontmatter(input.Body); rejection != "" {
+		return rejection
+	}
 	return ""
+}
+
+func validateDocumentFrontmatter(body string) string {
+	frontmatter := parseDocumentFrontmatter(body)
+	modality := strings.TrimSpace(frontmatter["modality"])
+	if modality == "" || strings.EqualFold(modality, "markdown") {
+		return ""
+	}
+	return "document.body frontmatter modality must be markdown for runner-created Markdown documents"
+}
+
+func parseDocumentFrontmatter(body string) map[string]string {
+	lines := strings.Split(body, "\n")
+	if len(lines) < 3 || strings.TrimSpace(lines[0]) != "---" {
+		return map[string]string{}
+	}
+	frontmatter := map[string]string{}
+	for idx := 1; idx < len(lines); idx++ {
+		if strings.TrimSpace(lines[idx]) == "---" {
+			return frontmatter
+		}
+		key, value, ok := strings.Cut(lines[idx], ":")
+		if !ok {
+			continue
+		}
+		frontmatter[strings.TrimSpace(strings.ToLower(key))] = cleanDocumentFrontmatterValue(value)
+	}
+	return map[string]string{}
+}
+
+func cleanDocumentFrontmatterValue(value string) string {
+	trimmed := strings.TrimSpace(value)
+	if len(trimmed) < 2 {
+		return trimmed
+	}
+	if strings.HasPrefix(trimmed, `"`) && strings.HasSuffix(trimmed, `"`) {
+		unquoted, err := strconv.Unquote(trimmed)
+		if err == nil {
+			return strings.TrimSpace(unquoted)
+		}
+	}
+	if strings.HasPrefix(trimmed, "'") && strings.HasSuffix(trimmed, "'") {
+		return strings.TrimSpace(trimmed[1 : len(trimmed)-1])
+	}
+	return trimmed
 }

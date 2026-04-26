@@ -182,6 +182,24 @@ func TestRunnerValidationRejectionDoesNotCreateDatabase(t *testing.T) {
 	}
 }
 
+func TestRunnerRejectsInvalidCreateFrontmatter(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	request := `{"action":"create_document","document":{"path":"sources/uploaded-pdf.md","title":"Uploaded PDF","body":"---\ntype: source\nmodality: pdf\n---\n# Uploaded PDF\n\n## Summary\nExtracted note.\n"}}`
+	var result runner.DocumentTaskResult
+	code, stderr := runJSON(t, []string{"document", "--db", dbPath}, request, &result)
+	if code != 0 {
+		t.Fatalf("exit = %d stderr=%s", code, stderr)
+	}
+	if !result.Rejected || !strings.Contains(result.RejectionReason, "modality") || !strings.Contains(result.RejectionReason, "markdown") {
+		t.Fatalf("result = %+v, want modality rejection", result)
+	}
+	if _, err := os.Stat(filepath.Dir(dbPath)); !os.IsNotExist(err) {
+		t.Fatalf("data dir exists after rejected request: %v", err)
+	}
+}
+
 func TestRunnerErrors(t *testing.T) {
 	t.Parallel()
 

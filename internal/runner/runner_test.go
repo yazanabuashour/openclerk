@@ -102,6 +102,70 @@ func TestDocumentTaskCreateListGetAndUpdate(t *testing.T) {
 	}
 }
 
+func TestDocumentTaskRejectsInvalidCreateFrontmatterBeforeRuntimeFiles(t *testing.T) {
+	t.Parallel()
+
+	dataDir := filepath.Join(t.TempDir(), "data")
+	result, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(dataDir, "openclerk.sqlite")}, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionCreate,
+		Document: runner.DocumentInput{
+			Path:  "sources/uploaded-pdf.md",
+			Title: "Uploaded PDF",
+			Body: strings.TrimSpace(`---
+type: source
+modality: pdf
+---
+# Uploaded PDF
+
+## Summary
+Extracted note.
+`) + "\n",
+		},
+	})
+	if err != nil {
+		t.Fatalf("document task: %v", err)
+	}
+	if !result.Rejected || !strings.Contains(result.RejectionReason, "modality") || !strings.Contains(result.RejectionReason, "markdown") {
+		t.Fatalf("result = %+v, want modality rejection", result)
+	}
+	if _, err := os.Stat(dataDir); !os.IsNotExist(err) {
+		t.Fatalf("data dir exists after validation rejection: %v", err)
+	}
+}
+
+func TestDocumentTaskAllowsMarkdownSourceWithPDFSourceType(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionCreate,
+		Document: runner.DocumentInput{
+			Path:  "sources/uploaded-pdf.md",
+			Title: "Uploaded PDF",
+			Body: strings.TrimSpace(`---
+type: source
+source_type: pdf
+modality: markdown
+---
+# Uploaded PDF
+
+## Summary
+Markdown notes extracted from a PDF source.
+`) + "\n",
+		},
+	})
+	if err != nil {
+		t.Fatalf("document task: %v", err)
+	}
+	if result.Rejected || result.Document == nil {
+		t.Fatalf("result = %+v, want created source document", result)
+	}
+	if result.Document.Metadata["source_type"] != "pdf" || result.Document.Metadata["modality"] != "markdown" {
+		t.Fatalf("metadata = %+v", result.Document.Metadata)
+	}
+}
+
 func TestRetrievalTaskSynthesisFreshnessProjectionAndProvenance(t *testing.T) {
 	t.Parallel()
 
