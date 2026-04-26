@@ -49,6 +49,7 @@ type SourceURLInput struct {
 	PathHint      string `json:"path_hint"`
 	AssetPathHint string `json:"asset_path_hint"`
 	Title         string `json:"title,omitempty"`
+	Mode          string `json:"mode,omitempty"`
 }
 
 type SourcePDFMetadata struct {

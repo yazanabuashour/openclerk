@@ -109,6 +109,7 @@ type SourceURLInput struct {
 	PathHint      string
 	AssetPathHint string
 	Title         string
+	Mode          string
 }
 
 type SourcePDFMetadata struct {

@@ -213,6 +213,16 @@ func TestDocumentTaskRejectsInvalidSourceURLIngestBeforeRuntimeFiles(t *testing.
 			},
 			wantErr: "source.asset_path_hint",
 		},
+		{
+			name: "invalid mode",
+			source: runner.SourceURLInput{
+				URL:           "https://example.test/uploaded-pdf.pdf",
+				PathHint:      "sources/uploaded-pdf.md",
+				AssetPathHint: "assets/sources/uploaded-pdf.pdf",
+				Mode:          "replace",
+			},
+			wantErr: "source.mode",
+		},
 	}
 
 	for _, tt := range tests {
@@ -335,6 +345,24 @@ func TestDocumentTaskIngestSourceURLPDF(t *testing.T) {
 	}
 	if got := provenance.Provenance.Events[0].Details["source_url"]; got != server.URL+"/runner.pdf" {
 		t.Fatalf("source provenance details = %+v", provenance.Provenance.Events[0].Details)
+	}
+
+	sameUpdate, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestSourceURL,
+		Source: runner.SourceURLInput{
+			URL:  server.URL + "/runner.pdf",
+			Mode: "update",
+		},
+	})
+	if err != nil {
+		t.Fatalf("same source URL update: %v", err)
+	}
+	if sameUpdate.Rejected || sameUpdate.Ingestion == nil ||
+		sameUpdate.Ingestion.DocID != ingestion.DocID ||
+		sameUpdate.Ingestion.SourcePath != ingestion.SourcePath ||
+		sameUpdate.Ingestion.AssetPath != ingestion.AssetPath ||
+		sameUpdate.Ingestion.SHA256 != ingestion.SHA256 {
+		t.Fatalf("same source URL update = %+v, want existing ingestion", sameUpdate)
 	}
 
 	duplicate, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{

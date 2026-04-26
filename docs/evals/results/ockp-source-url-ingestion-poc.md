@@ -68,6 +68,6 @@ Quality gates for the implementation are `mise exec -- go test ./...` and
 
 ## Follow-Up
 
-Update/re-ingest behavior remains out of scope. If needed, file a separate
-issue for an explicit update mode with conflict, provenance, and stale derived
-state semantics.
+Update/re-ingest behavior was intentionally out of scope for `oc-jb0`. The
+explicit update-mode contract was accepted in `oc-n31` and implemented by
+`oc-6fr`.

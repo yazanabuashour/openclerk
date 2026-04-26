@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -96,6 +97,248 @@ func TestIngestSourceURLKeepsAssetWhenSourceNotePersistsBeforeError(t *testing.T
 	}
 	if _, err := os.Stat(filepath.Join(vaultRoot, "assets", "sources", "partial-ingest.pdf")); err != nil {
 		t.Fatalf("asset stat: %v", err)
+	}
+}
+
+func TestIngestSourceURLUpdateMode(t *testing.T) {
+	var (
+		mu         sync.Mutex
+		currentPDF = minimalStorePDF("Runner Intake PDF Title", "OpenClerk Test", "Initial PDF evidence")
+		updatedPDF = minimalStorePDF("Runner Intake PDF Title Updated", "OpenClerk Test", "Updated PDF evidence")
+	)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		body := append([]byte(nil), currentPDF...)
+		mu.Unlock()
+		w.Header().Set("Content-Type", "application/pdf")
+		_, _ = w.Write(body)
+	}))
+	t.Cleanup(server.Close)
+
+	ctx := context.Background()
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+
+	created, err := store.IngestSourceURL(ctx, domain.SourceURLInput{
+		URL:           server.URL + "/runner.pdf",
+		PathHint:      "sources/runner-ingest.md",
+		AssetPathHint: "assets/sources/runner-ingest.pdf",
+		Title:         "Runner Ingest Override",
+	})
+	if err != nil {
+		t.Fatalf("create source URL: %v", err)
+	}
+	if _, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+		Path:  "synthesis/runner.md",
+		Title: "Runner Synthesis",
+		Body:  synthesisBody("sources/runner-ingest.md", "Initial PDF evidence."),
+	}); err != nil {
+		t.Fatalf("create synthesis: %v", err)
+	}
+
+	_, err = store.IngestSourceURL(ctx, domain.SourceURLInput{
+		URL:  server.URL + "/missing.pdf",
+		Mode: "update",
+	})
+	var appErr *domain.Error
+	if !errors.As(err, &appErr) || appErr.Status != 404 {
+		t.Fatalf("missing update error = %v, want not found 404", err)
+	}
+
+	_, err = store.IngestSourceURL(ctx, domain.SourceURLInput{
+		URL:      server.URL + "/runner.pdf",
+		PathHint: "sources/other.md",
+		Mode:     "update",
+	})
+	if !errors.As(err, &appErr) || appErr.Status != 409 || appErr.Code != "conflict" {
+		t.Fatalf("mismatched path update error = %v, want conflict 409", err)
+	}
+	_, err = store.IngestSourceURL(ctx, domain.SourceURLInput{
+		URL:           server.URL + "/runner.pdf",
+		AssetPathHint: "assets/sources/other.pdf",
+		Mode:          "update",
+	})
+	if !errors.As(err, &appErr) || appErr.Status != 409 || appErr.Code != "conflict" {
+		t.Fatalf("mismatched asset update error = %v, want conflict 409", err)
+	}
+
+	beforeSourceEvents, err := store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{RefKind: "source", RefID: created.DocID, Limit: 20})
+	if err != nil {
+		t.Fatalf("source events before no-op: %v", err)
+	}
+	beforeProjectionEvents, err := store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{RefKind: "projection", Limit: 50})
+	if err != nil {
+		t.Fatalf("projection events before no-op: %v", err)
+	}
+	same, err := store.IngestSourceURL(ctx, domain.SourceURLInput{
+		URL:  server.URL + "/runner.pdf",
+		Mode: "update",
+	})
+	if err != nil {
+		t.Fatalf("same PDF update: %v", err)
+	}
+	if same.DocID != created.DocID || same.SourcePath != created.SourcePath || same.AssetPath != created.AssetPath || same.SHA256 != created.SHA256 || len(same.Citations) == 0 {
+		t.Fatalf("same PDF update result = %+v, want existing ingestion result", same)
+	}
+	afterSourceEvents, err := store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{RefKind: "source", RefID: created.DocID, Limit: 20})
+	if err != nil {
+		t.Fatalf("source events after no-op: %v", err)
+	}
+	afterProjectionEvents, err := store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{RefKind: "projection", Limit: 50})
+	if err != nil {
+		t.Fatalf("projection events after no-op: %v", err)
+	}
+	if countEventType(afterSourceEvents.Events, "source_updated") != countEventType(beforeSourceEvents.Events, "source_updated") ||
+		countEventType(afterProjectionEvents.Events, "projection_invalidated") != countEventType(beforeProjectionEvents.Events, "projection_invalidated") {
+		t.Fatalf("same PDF update created stale-state churn: source=%+v projection=%+v", afterSourceEvents.Events, afterProjectionEvents.Events)
+	}
+
+	mu.Lock()
+	currentPDF = updatedPDF
+	mu.Unlock()
+	changed, err := store.IngestSourceURL(ctx, domain.SourceURLInput{
+		URL:           server.URL + "/runner.pdf",
+		PathHint:      "sources/runner-ingest.md",
+		AssetPathHint: "assets/sources/runner-ingest.pdf",
+		Mode:          "update",
+	})
+	if err != nil {
+		t.Fatalf("changed PDF update: %v", err)
+	}
+	if changed.DocID != created.DocID || changed.SourcePath != created.SourcePath || changed.AssetPath != created.AssetPath || changed.SHA256 == created.SHA256 {
+		t.Fatalf("changed update = %+v, created = %+v", changed, created)
+	}
+	updatedDoc, err := store.GetDocument(ctx, created.DocID)
+	if err != nil {
+		t.Fatalf("get updated source: %v", err)
+	}
+	if updatedDoc.Metadata["sha256"] != changed.SHA256 || !strings.Contains(updatedDoc.Body, "UpdatedPDFevidence") {
+		t.Fatalf("updated source document = %+v", updatedDoc)
+	}
+	search, err := store.Search(ctx, domain.SearchQuery{Text: "UpdatedPDFevidence", PathPrefix: "sources/", Limit: 10})
+	if err != nil {
+		t.Fatalf("search updated source: %v", err)
+	}
+	if len(search.Hits) == 0 || search.Hits[0].Citations[0].DocID != created.DocID {
+		t.Fatalf("search updated source = %+v", search)
+	}
+	sourceEvents, err := store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{RefKind: "source", RefID: created.DocID, Limit: 20})
+	if err != nil {
+		t.Fatalf("source update events: %v", err)
+	}
+	var foundUpdate bool
+	for _, event := range sourceEvents.Events {
+		if event.EventType == "source_updated" &&
+			event.Details["previous_sha256"] == created.SHA256 &&
+			event.Details["new_sha256"] == changed.SHA256 &&
+			event.Details["asset_path"] == created.AssetPath &&
+			event.Details["source_url"] == server.URL+"/runner.pdf" {
+			foundUpdate = true
+		}
+	}
+	if !foundUpdate {
+		t.Fatalf("source update provenance = %+v", sourceEvents.Events)
+	}
+	projection := requireSynthesisProjection(t, ctx, store, docIDForPath("synthesis/runner.md"))
+	if projection.Freshness != "stale" || projection.Details["stale_source_refs"] != "sources/runner-ingest.md" {
+		t.Fatalf("synthesis projection after source update = %+v", projection)
+	}
+}
+
+func TestIngestSourceURLUpdateRollbackRestoresPreviousState(t *testing.T) {
+	var (
+		mu         sync.Mutex
+		currentPDF = minimalStorePDF("Rollback PDF", "OpenClerk Test", "Rollback old evidence")
+		newPDF     = minimalStorePDF("Rollback PDF New", "OpenClerk Test", "Rollback new evidence")
+	)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		body := append([]byte(nil), currentPDF...)
+		mu.Unlock()
+		w.Header().Set("Content-Type", "application/pdf")
+		_, _ = w.Write(body)
+	}))
+	t.Cleanup(server.Close)
+
+	ctx := context.Background()
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+	created, err := store.IngestSourceURL(ctx, domain.SourceURLInput{
+		URL:           server.URL + "/rollback.pdf",
+		PathHint:      "sources/rollback.md",
+		AssetPathHint: "assets/sources/rollback.pdf",
+	})
+	if err != nil {
+		t.Fatalf("create source URL: %v", err)
+	}
+	oldDoc, err := store.GetDocument(ctx, created.DocID)
+	if err != nil {
+		t.Fatalf("get old document: %v", err)
+	}
+	oldAsset, err := os.ReadFile(filepath.Join(vaultRoot, "assets", "sources", "rollback.pdf"))
+	if err != nil {
+		t.Fatalf("read old asset: %v", err)
+	}
+
+	oldWriteFile := osWriteFile
+	osWriteFile = func(name string, data string) error {
+		if strings.HasSuffix(name, filepath.Join("sources", "rollback.md")) {
+			if err := os.WriteFile(name, []byte(data), 0o644); err != nil {
+				return err
+			}
+			return errors.New("forced source update note failure")
+		}
+		return oldWriteFile(name, data)
+	}
+	t.Cleanup(func() {
+		osWriteFile = oldWriteFile
+	})
+
+	mu.Lock()
+	currentPDF = newPDF
+	mu.Unlock()
+	_, err = store.IngestSourceURL(ctx, domain.SourceURLInput{
+		URL:  server.URL + "/rollback.pdf",
+		Mode: "update",
+	})
+	if err == nil {
+		t.Fatalf("update error = nil, want forced failure")
+	}
+	gotDoc, err := store.GetDocument(ctx, created.DocID)
+	if err != nil {
+		t.Fatalf("get document after rollback: %v", err)
+	}
+	if gotDoc.Metadata["sha256"] != oldDoc.Metadata["sha256"] || gotDoc.Body != oldDoc.Body {
+		t.Fatalf("document after rollback = %+v, want old metadata/body", gotDoc)
+	}
+	gotAsset, err := os.ReadFile(filepath.Join(vaultRoot, "assets", "sources", "rollback.pdf"))
+	if err != nil {
+		t.Fatalf("read asset after rollback: %v", err)
+	}
+	if !bytes.Equal(gotAsset, oldAsset) {
+		t.Fatalf("asset after rollback changed")
+	}
+	search, err := store.Search(ctx, domain.SearchQuery{Text: "Rollbackoldevidence", PathPrefix: "sources/", Limit: 10})
+	if err != nil {
+		t.Fatalf("search old evidence after rollback: %v", err)
+	}
+	if len(search.Hits) == 0 {
+		t.Fatalf("old evidence missing after rollback")
+	}
+	search, err = store.Search(ctx, domain.SearchQuery{Text: "Rollbacknewevidence", PathPrefix: "sources/", Limit: 10})
+	if err != nil {
+		t.Fatalf("search new evidence after rollback: %v", err)
+	}
+	if len(search.Hits) != 0 {
+		t.Fatalf("new evidence indexed after rollback: %+v", search.Hits)
 	}
 }
 
@@ -1114,6 +1357,16 @@ func hasEventType(events []domain.ProvenanceEvent, eventType string) bool {
 		}
 	}
 	return false
+}
+
+func countEventType(events []domain.ProvenanceEvent, eventType string) int {
+	count := 0
+	for _, event := range events {
+		if event.EventType == eventType {
+			count++
+		}
+	}
+	return count
 }
 
 func minimalStorePDF(title string, author string, text string) []byte {

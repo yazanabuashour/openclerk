@@ -36,6 +36,8 @@ const (
 	defaultLayoutConventionVersion   = "root_v1"
 	rootSynthesisPathPrefix          = "synthesis/"
 	maxSourceDownloadBytes           = 50 << 20
+	sourceURLModeCreate              = "create"
+	sourceURLModeUpdate              = "update"
 )
 
 var (
@@ -399,6 +401,21 @@ func (s *Store) IngestSourceURL(ctx context.Context, input domain.SourceURLInput
 	if err != nil {
 		return domain.SourceIngestionResult{}, err
 	}
+	mode, err := normalizeSourceURLMode(input.Mode)
+	if err != nil {
+		return domain.SourceIngestionResult{}, err
+	}
+	switch mode {
+	case sourceURLModeCreate:
+		return s.createSourceURL(ctx, input, sourceURL)
+	case sourceURLModeUpdate:
+		return s.updateSourceURL(ctx, input, sourceURL)
+	default:
+		return domain.SourceIngestionResult{}, domain.ValidationError("source mode must be create or update", map[string]any{"mode": input.Mode})
+	}
+}
+
+func (s *Store) createSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string) (domain.SourceIngestionResult, error) {
 	sourcePath, err := normalizeSourceDocumentPath(input.PathHint)
 	if err != nil {
 		return domain.SourceIngestionResult{}, err
@@ -477,6 +494,102 @@ func (s *Store) IngestSourceURL(ctx context.Context, input domain.SourceURLInput
 	}
 	return domain.SourceIngestionResult{
 		DocID:       document.DocID,
+		SourcePath:  sourcePath,
+		AssetPath:   assetPath,
+		DerivedPath: sourcePath,
+		Citations:   citations,
+		SHA256:      shaHex,
+		SizeBytes:   int64(len(pdfBytes)),
+		MIMEType:    mimeType,
+		PageCount:   extracted.Pages,
+		CapturedAt:  capturedAt,
+		PDFMetadata: extracted.Metadata,
+	}, nil
+}
+
+func (s *Store) updateSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string) (domain.SourceIngestionResult, error) {
+	document, err := s.sourceDocumentByURL(ctx, sourceURL)
+	if err != nil {
+		return domain.SourceIngestionResult{}, err
+	}
+	sourcePath := document.Path
+	assetPath := strings.TrimSpace(document.Metadata["asset_path"])
+	if assetPath == "" {
+		return domain.SourceIngestionResult{}, domain.InternalError("source document is missing asset path", fmt.Errorf("source_url %q", sourceURL))
+	}
+	if strings.TrimSpace(input.PathHint) != "" {
+		requestPath, err := normalizeSourceDocumentPath(input.PathHint)
+		if err != nil {
+			return domain.SourceIngestionResult{}, err
+		}
+		if requestPath != sourcePath {
+			return domain.SourceIngestionResult{}, domain.ConflictError("source path hint does not match existing source", map[string]any{"source_url": sourceURL, "path_hint": requestPath, "existing_path": sourcePath})
+		}
+	}
+	if strings.TrimSpace(input.AssetPathHint) != "" {
+		requestAssetPath, err := normalizeSourceAssetPath(input.AssetPathHint)
+		if err != nil {
+			return domain.SourceIngestionResult{}, err
+		}
+		if requestAssetPath != assetPath {
+			return domain.SourceIngestionResult{}, domain.ConflictError("source asset path hint does not match existing source", map[string]any{"source_url": sourceURL, "asset_path_hint": requestAssetPath, "existing_asset_path": assetPath})
+		}
+	}
+	assetAbsPath := filepath.Join(s.vaultRoot, filepath.FromSlash(assetPath))
+	if _, err := osStat(assetAbsPath); err != nil {
+		return domain.SourceIngestionResult{}, domain.InternalError("validate existing source asset", err)
+	}
+
+	pdfBytes, mimeType, err := downloadSourcePDF(ctx, sourceURL)
+	if err != nil {
+		return domain.SourceIngestionResult{}, err
+	}
+	sha := sha256.Sum256(pdfBytes)
+	shaHex := hex.EncodeToString(sha[:])
+	if strings.TrimSpace(document.Metadata["sha256"]) == shaHex {
+		return s.sourceIngestionResultFromDocument(ctx, document)
+	}
+
+	tempAssetPath := assetAbsPath + ".openclerk-update-" + hashID("asset", sourceURL, shaHex)
+	if err := osWriteBytes(tempAssetPath, pdfBytes); err != nil {
+		return domain.SourceIngestionResult{}, domain.InternalError("write source asset staging file", err)
+	}
+	defer func() {
+		_ = osRemove(tempAssetPath)
+	}()
+	extracted, err := extractPDF(tempAssetPath)
+	if err != nil {
+		return domain.SourceIngestionResult{}, err
+	}
+
+	sourceAbsPath := filepath.Join(s.vaultRoot, filepath.FromSlash(sourcePath))
+	oldBody := document.Body
+	oldAssetBytes, err := osReadFile(assetAbsPath)
+	if err != nil {
+		return domain.SourceIngestionResult{}, domain.InternalError("read existing source asset", err)
+	}
+	capturedAt := s.now().UTC()
+	title := resolvedSourceTitle(input.Title, extracted.Metadata.Title, sourcePath)
+	body := buildSourceNoteBody(sourceURL, sourcePath, assetPath, title, shaHex, int64(len(pdfBytes)), mimeType, capturedAt, extracted)
+	if err := s.replaceSourceAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, pdfBytes, body, title); err != nil {
+		return domain.SourceIngestionResult{}, err
+	}
+	updated, err := s.GetDocument(ctx, document.DocID)
+	if err != nil {
+		return domain.SourceIngestionResult{}, s.restoreSourceAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, err)
+	}
+	citations, err := s.sourceDocumentCitations(ctx, updated)
+	if err != nil {
+		return domain.SourceIngestionResult{}, s.restoreSourceAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, err)
+	}
+	if len(citations) == 0 {
+		return domain.SourceIngestionResult{}, s.restoreSourceAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, domain.InternalError("validate source update citations", errors.New("updated source has no indexed citations")))
+	}
+	if err := validateIngestedSource(updated, sourceURL, sourcePath, assetPath, assetAbsPath); err != nil {
+		return domain.SourceIngestionResult{}, s.restoreSourceAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, err)
+	}
+	return domain.SourceIngestionResult{
+		DocID:       updated.DocID,
 		SourcePath:  sourcePath,
 		AssetPath:   assetPath,
 		DerivedPath: sourcePath,
@@ -1685,6 +1798,10 @@ WHERE doc_id = ?`, docID).Scan(
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		return domain.InternalError("query existing document timestamp", err)
 	}
+	previousFrontmatter := map[string]string{}
+	if eventType == "document_updated" {
+		_ = json.Unmarshal([]byte(existingMetadataJSON), &previousFrontmatter)
+	}
 
 	title := resolvedDocumentTitle(relPath, body, headings, frontmatter, preferredTitle, existingTitle)
 	contentChanged := eventType == "document_created" ||
@@ -1784,6 +1901,10 @@ VALUES (?, ?, ?, ?, ?)`,
 			if eventType == "document_updated" {
 				sourceEventType = "source_updated"
 			}
+			sourceDetails := sourceProvenanceDetails(relPath, frontmatter)
+			if sourceEventType == "source_updated" {
+				sourceDetails = sourceUpdateProvenanceDetails(relPath, frontmatter, previousFrontmatter)
+			}
 			if err := insertProvenanceEvent(ctx, tx, domain.ProvenanceEvent{
 				EventID:    hashID("event", sourceEventType, relPath, now.Format(time.RFC3339Nano)),
 				EventType:  sourceEventType,
@@ -1791,7 +1912,7 @@ VALUES (?, ?, ?, ?, ?)`,
 				RefID:      docID,
 				SourceRef:  "doc:" + docID,
 				OccurredAt: now,
-				Details:    sourceProvenanceDetails(relPath, frontmatter),
+				Details:    sourceDetails,
 			}); err != nil {
 				return domain.InternalError("record source provenance event", err)
 			}
@@ -2965,6 +3086,17 @@ func normalizeSourceURL(raw string) (string, error) {
 	return parsed.String(), nil
 }
 
+func normalizeSourceURLMode(raw string) (string, error) {
+	mode := strings.TrimSpace(raw)
+	if mode == "" {
+		return sourceURLModeCreate, nil
+	}
+	if mode != sourceURLModeCreate && mode != sourceURLModeUpdate {
+		return "", domain.ValidationError("source mode must be create or update", map[string]any{"mode": raw})
+	}
+	return mode, nil
+}
+
 func normalizeSourceDocumentPath(raw string) (string, error) {
 	clean, err := normalizeStrictVaultPath(raw)
 	if err != nil {
@@ -3001,6 +3133,23 @@ func normalizeStrictVaultPath(raw string) (string, error) {
 	return clean, nil
 }
 
+func (s *Store) sourceDocumentByURL(ctx context.Context, sourceURL string) (domain.Document, error) {
+	var docID string
+	err := s.db.QueryRowContext(ctx, `
+SELECT doc_id
+FROM document_metadata
+WHERE key_name = 'source_url' AND value_text = ?
+ORDER BY doc_id
+LIMIT 1`, sourceURL).Scan(&docID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return domain.Document{}, domain.NotFoundError("source URL", sourceURL)
+	}
+	if err != nil {
+		return domain.Document{}, domain.InternalError("query source URL document", err)
+	}
+	return s.GetDocument(ctx, docID)
+}
+
 func (s *Store) sourceURLExists(ctx context.Context, sourceURL string) (bool, error) {
 	var found string
 	err := s.db.QueryRowContext(ctx, `
@@ -3015,6 +3164,69 @@ LIMIT 1`, sourceURL).Scan(&found)
 		return false, domain.InternalError("query duplicate source URL", err)
 	}
 	return true, nil
+}
+
+func (s *Store) sourceIngestionResultFromDocument(ctx context.Context, document domain.Document) (domain.SourceIngestionResult, error) {
+	sourceURL := strings.TrimSpace(document.Metadata["source_url"])
+	assetPath := strings.TrimSpace(document.Metadata["asset_path"])
+	derivedPath := strings.TrimSpace(document.Metadata["derived_path"])
+	if derivedPath == "" {
+		derivedPath = document.Path
+	}
+	if sourceURL == "" || assetPath == "" {
+		return domain.SourceIngestionResult{}, domain.InternalError("source document is missing ingestion metadata", fmt.Errorf("path %q", document.Path))
+	}
+	assetAbsPath := filepath.Join(s.vaultRoot, filepath.FromSlash(assetPath))
+	if err := validateIngestedSource(document, sourceURL, document.Path, assetPath, assetAbsPath); err != nil {
+		return domain.SourceIngestionResult{}, err
+	}
+	citations, err := s.sourceDocumentCitations(ctx, document)
+	if err != nil {
+		return domain.SourceIngestionResult{}, err
+	}
+	return domain.SourceIngestionResult{
+		DocID:       document.DocID,
+		SourcePath:  document.Path,
+		AssetPath:   assetPath,
+		DerivedPath: derivedPath,
+		Citations:   citations,
+		SHA256:      strings.TrimSpace(document.Metadata["sha256"]),
+		SizeBytes:   parseInt64Metadata(document.Metadata["size_bytes"]),
+		MIMEType:    strings.TrimSpace(document.Metadata["mime_type"]),
+		PageCount:   parseIntMetadata(document.Metadata["page_count"]),
+		CapturedAt:  parseTimeMetadata(document.Metadata["captured_at"]),
+		PDFMetadata: domain.SourcePDFMetadata{
+			Title:         strings.TrimSpace(document.Metadata["pdf_title"]),
+			Author:        strings.TrimSpace(document.Metadata["pdf_author"]),
+			PublishedDate: strings.TrimSpace(document.Metadata["pdf_published_date"]),
+		},
+	}, nil
+}
+
+func (s *Store) replaceSourceAssetAndNote(ctx context.Context, sourcePath string, sourceAbsPath string, assetAbsPath string, oldBody string, oldAssetBytes []byte, newAssetBytes []byte, newBody string, title string) error {
+	if err := osWriteBytes(assetAbsPath, newAssetBytes); err != nil {
+		return domain.InternalError("write source asset", err)
+	}
+	if err := osWriteFile(sourceAbsPath, newBody); err != nil {
+		return s.restoreSourceAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, domain.InternalError("write source note", err))
+	}
+	if err := s.syncDocumentFromDisk(ctx, sourcePath, title); err != nil {
+		return s.restoreSourceAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, err)
+	}
+	return nil
+}
+
+func (s *Store) restoreSourceAssetAndNote(ctx context.Context, sourcePath string, sourceAbsPath string, assetAbsPath string, oldBody string, oldAssetBytes []byte, cause error) error {
+	if restoreErr := osWriteBytes(assetAbsPath, oldAssetBytes); restoreErr != nil {
+		return domain.InternalError("restore source asset after failed update", errors.Join(cause, restoreErr))
+	}
+	if restoreErr := osWriteFile(sourceAbsPath, oldBody); restoreErr != nil {
+		return domain.InternalError("restore source note after failed update", errors.Join(cause, restoreErr))
+	}
+	if restoreErr := s.syncDocumentFromDisk(ctx, sourcePath, ""); restoreErr != nil {
+		return domain.InternalError("restore indexed source after failed update", errors.Join(cause, restoreErr))
+	}
+	return cause
 }
 
 func downloadSourcePDF(ctx context.Context, sourceURL string) ([]byte, string, error) {
@@ -3130,6 +3342,30 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func parseInt64Metadata(value string) int64 {
+	parsed, err := strconv.ParseInt(strings.TrimSpace(value), 10, 64)
+	if err != nil {
+		return 0
+	}
+	return parsed
+}
+
+func parseIntMetadata(value string) int {
+	parsed, err := strconv.Atoi(strings.TrimSpace(value))
+	if err != nil {
+		return 0
+	}
+	return parsed
+}
+
+func parseTimeMetadata(value string) time.Time {
+	parsed, err := time.Parse(time.RFC3339Nano, strings.TrimSpace(value))
+	if err != nil {
+		return time.Time{}
+	}
+	return parsed
 }
 
 func resolvedSourceTitle(requestTitle string, pdfTitle string, sourcePath string) string {
@@ -3267,6 +3503,19 @@ func sourceProvenanceDetails(relPath string, frontmatter map[string]string) map[
 	} {
 		if value := strings.TrimSpace(frontmatter[key]); value != "" {
 			details[key] = value
+		}
+	}
+	return details
+}
+
+func sourceUpdateProvenanceDetails(relPath string, frontmatter map[string]string, previous map[string]string) map[string]string {
+	details := sourceProvenanceDetails(relPath, frontmatter)
+	for _, key := range []string{"sha256", "page_count", "captured_at"} {
+		if value := strings.TrimSpace(previous[key]); value != "" {
+			details["previous_"+key] = value
+		}
+		if value := strings.TrimSpace(frontmatter[key]); value != "" {
+			details["new_"+key] = value
 		}
 	}
 	return details

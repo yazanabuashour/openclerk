@@ -153,8 +153,8 @@ The v1 document runner actions are:
   prefixes, first-class document kinds, and pass/warn/fail validation checks.
 - `create_document` writes a new canonical markdown document and registers it.
 - `ingest_source_url` downloads a PDF source URL into a configured vault asset
-  path, creates the canonical markdown source note, and returns validated
-  retrieval/provenance metadata.
+  path, creates or explicitly updates the canonical markdown source note, and
+  returns validated retrieval/provenance metadata.
 - `list_documents` exposes document registry entries by path prefix or metadata.
 - `get_document` returns a canonical document by stable `doc_id`.
 - `append_document` appends durable markdown content to an existing document.
@@ -277,6 +277,45 @@ preserves canonical markdown authority, source provenance, duplicate handling,
 retrieval citations, and vault-relative paths. Update/re-ingest behavior stays
 out of scope until a separate issue defines its conflict and stale-state
 semantics.
+
+## `oc-n31` Contract Decision
+
+Decision: keep `ingest_source_url` create-only by default and support explicit
+update mode for re-ingesting an existing PDF source URL.
+
+The request shape includes optional `source.mode`. Missing mode means `create`,
+preserving the current duplicate `source_url` rejection. `update` targets the
+existing source document by normalized `source.url`; it must not create a new
+source document when the URL is unknown. Existing source and asset paths remain
+stable, and any supplied `source.path_hint` or `source.asset_path_hint` must
+match the stored source metadata or return a conflict without writing.
+
+Update mode compares the downloaded PDF SHA256 before mutating durable state.
+If the SHA256 matches the stored source metadata, the request is a no-op:
+return the existing source ingestion result, preserve citations, and avoid
+projection invalidation or extra stale-state churn. If the SHA256 changes, the
+runner atomically replaces the PDF asset and generated source note while
+preserving the source note `doc_id` and path so existing source refs and
+retrieval citations continue to resolve.
+
+Changed updates emit source provenance that records previous and new SHA256
+values, asset path, source URL, page count, and capture timestamp. Search chunks
+must be refreshed before success. Any synthesis that references the updated
+source must become visibly stale through projection state and provenance before
+the update returns success, so agents can inspect freshness before answering
+from derived text.
+
+Required implementation coverage:
+
+- duplicate URL in default `create` mode still rejects
+- `update` for a missing source URL returns not found and writes nothing
+- `update` with mismatched source or asset path returns conflict and writes
+  nothing
+- same-asset `update` returns unchanged/no-op and preserves citations
+- changed-asset `update` rewrites asset metadata, extracted text, citations,
+  provenance, and stale synthesis state
+- failed `update` leaves the previous source note, asset, and indexed state
+  intact
 
 ## `oc-za6.4` POC Decision
 

@@ -41,6 +41,15 @@ func AlreadyExistsError(resource string, id string) *Error {
 	}
 }
 
+func ConflictError(message string, details map[string]any) *Error {
+	return &Error{
+		Code:    "conflict",
+		Message: message,
+		Status:  409,
+		Details: details,
+	}
+}
+
 func UnsupportedError(feature string, backend BackendKind) *Error {
 	return &Error{
 		Code:    "unsupported",

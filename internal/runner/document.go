@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -207,6 +208,7 @@ func trimSourceURLInput(input SourceURLInput) SourceURLInput {
 		PathHint:      strings.TrimSpace(input.PathHint),
 		AssetPathHint: strings.TrimSpace(input.AssetPathHint),
 		Title:         strings.TrimSpace(input.Title),
+		Mode:          strings.TrimSpace(input.Mode),
 	}
 }
 
@@ -221,21 +223,35 @@ func validateSourceURLInput(input SourceURLInput) string {
 	if parsed.Scheme != "http" && parsed.Scheme != "https" {
 		return "source.url must use http or https"
 	}
-	if rejection := validateSourcePathHint(input.PathHint); rejection != "" {
-		return rejection
+	mode := input.Mode
+	if mode == "" {
+		mode = "create"
 	}
-	if rejection := validateAssetPathHint(input.AssetPathHint); rejection != "" {
-		return rejection
+	if mode != "create" && mode != "update" {
+		return "source.mode must be create or update"
+	}
+	if mode == "create" || input.PathHint != "" {
+		if rejection := validateSourcePathHint(input.PathHint); rejection != "" {
+			return rejection
+		}
+	}
+	if mode == "create" || input.AssetPathHint != "" {
+		if rejection := validateAssetPathHint(input.AssetPathHint); rejection != "" {
+			return rejection
+		}
 	}
 	return ""
 }
 
-func validateSourcePathHint(raw string) string {
-	if raw == "" {
+func validateSourcePathHint(pathHint string) string {
+	if strings.TrimSpace(pathHint) == "" {
 		return "source.path_hint is required"
 	}
-	clean := path.Clean(strings.ReplaceAll(raw, "\\", "/"))
-	if strings.HasPrefix(raw, "/") || clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
+	if filepath.IsAbs(pathHint) || strings.HasPrefix(strings.TrimSpace(pathHint), "/") {
+		return "source.path_hint must be relative to the vault root"
+	}
+	clean := path.Clean(filepath.ToSlash(strings.TrimSpace(pathHint)))
+	if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
 		return "source.path_hint must stay inside the vault root"
 	}
 	if !strings.HasPrefix(clean, "sources/") || path.Ext(clean) != ".md" {
@@ -244,12 +260,15 @@ func validateSourcePathHint(raw string) string {
 	return ""
 }
 
-func validateAssetPathHint(raw string) string {
-	if raw == "" {
+func validateAssetPathHint(pathHint string) string {
+	if strings.TrimSpace(pathHint) == "" {
 		return "source.asset_path_hint is required"
 	}
-	clean := path.Clean(strings.ReplaceAll(raw, "\\", "/"))
-	if strings.HasPrefix(raw, "/") || clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
+	if filepath.IsAbs(pathHint) || strings.HasPrefix(strings.TrimSpace(pathHint), "/") {
+		return "source.asset_path_hint must be relative to the vault root"
+	}
+	clean := path.Clean(filepath.ToSlash(strings.TrimSpace(pathHint)))
+	if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
 		return "source.asset_path_hint must stay inside the vault root"
 	}
 	if !strings.HasPrefix(clean, "assets/") || path.Ext(clean) != ".pdf" {
