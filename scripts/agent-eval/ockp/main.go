@@ -213,9 +213,10 @@ type scenarioTurn struct {
 }
 
 type report struct {
-	Metadata       reportMetadata         `json:"metadata"`
-	Results        []jobResult            `json:"results"`
-	ProductionGate *productionGateSummary `json:"production_gate,omitempty"`
+	Metadata            reportMetadata         `json:"metadata"`
+	Results             []jobResult            `json:"results"`
+	ProductionGate      *productionGateSummary `json:"production_gate,omitempty"`
+	TargetedLaneSummary *targetedLaneSummary   `json:"targeted_lane_summary,omitempty"`
 }
 
 type reportMetadata struct {
@@ -341,6 +342,23 @@ type productionGateCriterion struct {
 	Name    string `json:"name"`
 	Passed  bool   `json:"passed"`
 	Details string `json:"details"`
+}
+
+type targetedLaneSummary struct {
+	Lane                    string                           `json:"lane"`
+	Decision                string                           `json:"decision"`
+	PublicSurface           []string                         `json:"public_surface"`
+	Promotion               string                           `json:"promotion"`
+	ReleaseBlocking         bool                             `json:"release_blocking"`
+	ScenarioClassifications []targetedScenarioClassification `json:"scenario_classifications"`
+}
+
+type targetedScenarioClassification struct {
+	Variant               string `json:"variant"`
+	Scenario              string `json:"scenario"`
+	Status                string `json:"status"`
+	FailureClassification string `json:"failure_classification"`
+	EvidencePosture       string `json:"evidence_posture"`
 }
 
 type jobRunner func(context.Context, runConfig, evalJob, cacheConfig) jobResult
@@ -480,8 +498,9 @@ func executeRun(ctx context.Context, config runConfig, stdout io.Writer, runner 
 			RawLogsCommitted:         false,
 			RawLogsNote:              "Raw Codex event logs remain under <run-root> and are not committed.",
 		},
-		Results:        results,
-		ProductionGate: buildProductionGateSummary(results),
+		Results:             results,
+		ProductionGate:      buildProductionGateSummary(results),
+		TargetedLaneSummary: buildTargetedLaneSummary(lane, releaseBlocking, results),
 	}
 	if err := os.MkdirAll(config.ReportDir, 0o755); err != nil {
 		return fmt.Errorf("create report dir: %w", err)
@@ -6692,6 +6711,55 @@ func buildProductionGateSummary(results []jobResult) *productionGateSummary {
 	}
 }
 
+func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobResult) *targetedLaneSummary {
+	if lane != populatedLaneName || releaseBlocking {
+		return nil
+	}
+	summary := targetedLaneSummary{
+		Lane:            lane,
+		Decision:        "keep_as_reference",
+		PublicSurface:   []string{"openclerk document", "openclerk retrieval"},
+		Promotion:       "no promoted runner action, schema, migration, storage API, product behavior, or public OpenClerk interface",
+		ReleaseBlocking: releaseBlocking,
+	}
+	for _, result := range results {
+		if !isPopulatedVaultScenario(result.Scenario) {
+			continue
+		}
+		classification, posture := classifyTargetedPopulatedResult(result)
+		summary.ScenarioClassifications = append(summary.ScenarioClassifications, targetedScenarioClassification{
+			Variant:               result.Variant,
+			Scenario:              result.Scenario,
+			Status:                result.Status,
+			FailureClassification: classification,
+			EvidencePosture:       posture,
+		})
+	}
+	if len(summary.ScenarioClassifications) == 0 {
+		return nil
+	}
+	return &summary
+}
+
+func classifyTargetedPopulatedResult(result jobResult) (string, string) {
+	if result.Passed && result.Verification.Passed {
+		return "none", "existing document/retrieval runner evidence was sufficient"
+	}
+	if len(populatedBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Verification.Passed {
+		return "runner_execution_failure", "scenario verification passed, but the job did not complete successfully"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "fixture or database evidence did not satisfy the scenario contract"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible evidence existed, but the assistant answer did not satisfy the scenario"
+	}
+	return "runner_capability_gap", "manual review required before any public surface promotion"
+}
+
 func productionScenariosDetails(passed int, total int, missing []string) string {
 	details := fmt.Sprintf("%d/%d production scenarios passed", passed, total)
 	if len(missing) > 0 {
@@ -7058,6 +7126,23 @@ func writeMarkdownReport(path string, rep report) error {
 			result.WallSeconds,
 			result.RawLogArtifactReference,
 		)
+	}
+	if rep.TargetedLaneSummary != nil {
+		b.WriteString("\n## Targeted Lane Summary\n\n")
+		fmt.Fprintf(&b, "Decision: `%s`\n\n", rep.TargetedLaneSummary.Decision)
+		fmt.Fprintf(&b, "Public surface: `%s`\n\n", strings.Join(rep.TargetedLaneSummary.PublicSurface, "`, `"))
+		fmt.Fprintf(&b, "Promotion: %s.\n\n", rep.TargetedLaneSummary.Promotion)
+		b.WriteString("| Variant | Scenario | Status | Failure classification | Evidence posture |\n")
+		b.WriteString("| --- | --- | --- | --- | --- |\n")
+		for _, row := range rep.TargetedLaneSummary.ScenarioClassifications {
+			fmt.Fprintf(&b, "| `%s` | `%s` | `%s` | `%s` | %s |\n",
+				row.Variant,
+				row.Scenario,
+				row.Status,
+				row.FailureClassification,
+				markdownCell(row.EvidencePosture),
+			)
+		}
 	}
 	if err := os.WriteFile(path, []byte(b.String()), 0o644); err != nil {
 		return fmt.Errorf("write Markdown report: %w", err)

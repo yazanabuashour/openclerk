@@ -28,6 +28,20 @@ The harness scenarios are:
 - `populated-freshness-conflict`
 - `populated-synthesis-update-over-duplicate`
 
+Run the targeted lane from the repository root with pinned tools:
+
+```bash
+mise exec -- go run ./scripts/agent-eval/ockp run \
+  --parallel 1 \
+  --scenario populated-heterogeneous-retrieval,populated-freshness-conflict,populated-synthesis-update-over-duplicate \
+  --report-name ockp-populated-vault-targeted
+```
+
+The reduced reports are written under `docs/evals/results/` by default. This
+targeted lane is not a full production gate replacement; use the generated
+targeted-lane summary and scenario classifications as POC/reference evidence
+unless a separate release-gate run selects the release-blocking scenario set.
+
 ## Fixture Expectations
 
 The fixture should be synthetic and safe to commit or regenerate, but realistic

@@ -179,14 +179,32 @@ func TestExecuteRunLabelsPopulatedVaultLaneAsNonReleaseBlocking(t *testing.T) {
 	}
 	err := executeRun(context.Background(), config, &strings.Builder{}, func(_ context.Context, _ runConfig, job evalJob, _ cacheConfig) jobResult {
 		now := time.Now().UTC()
+		passed := true
+		status := "completed"
+		verification := verificationResult{Passed: true, DatabasePass: true, AssistantPass: true}
+		if job.Scenario.ID == populatedHeterogeneousScenarioID {
+			passed = false
+			status = "failed"
+			verification = verificationResult{
+				Passed:        false,
+				DatabasePass:  true,
+				AssistantPass: false,
+				Details:       "turn 1: final answer repeated polluted decoy claims",
+			}
+		}
+		if job.Scenario.ID == populatedSynthesisUpdateScenarioID {
+			passed = false
+			status = "failed"
+			verification = verificationResult{Passed: true, DatabasePass: true, AssistantPass: true}
+		}
 		return jobResult{
 			Variant:       job.Variant,
 			Scenario:      job.Scenario.ID,
 			ScenarioTitle: job.Scenario.Title,
-			Status:        "completed",
-			Passed:        true,
+			Status:        status,
+			Passed:        passed,
 			Metrics:       metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}},
-			Verification:  verificationResult{Passed: true, DatabasePass: true, AssistantPass: true},
+			Verification:  verification,
 			StartedAt:     now,
 			CompletedAt:   &now,
 		}
@@ -205,11 +223,42 @@ func TestExecuteRunLabelsPopulatedVaultLaneAsNonReleaseBlocking(t *testing.T) {
 	if report.Metadata.Lane != populatedLaneName || report.Metadata.ReleaseBlocking {
 		t.Fatalf("populated lane metadata = %q/%t, want %q/false", report.Metadata.Lane, report.Metadata.ReleaseBlocking, populatedLaneName)
 	}
+	if report.TargetedLaneSummary == nil {
+		t.Fatal("populated report missing targeted lane summary")
+	}
+	if report.TargetedLaneSummary.Decision != "keep_as_reference" {
+		t.Fatalf("decision = %q, want keep_as_reference", report.TargetedLaneSummary.Decision)
+	}
+	if !containsAllStrings(report.TargetedLaneSummary.PublicSurface, []string{"openclerk document", "openclerk retrieval"}) {
+		t.Fatalf("public surface = %+v", report.TargetedLaneSummary.PublicSurface)
+	}
+	classifications := map[string]string{}
+	for _, row := range report.TargetedLaneSummary.ScenarioClassifications {
+		classifications[row.Scenario] = row.FailureClassification
+	}
+	if classifications[populatedHeterogeneousScenarioID] != "skill_guidance_or_eval_coverage" {
+		t.Fatalf("heterogeneous classification = %q, want skill guidance", classifications[populatedHeterogeneousScenarioID])
+	}
+	if classifications[populatedFreshnessConflictScenarioID] != "none" {
+		t.Fatalf("passing classification = %q, want none", classifications[populatedFreshnessConflictScenarioID])
+	}
+	if classifications[populatedSynthesisUpdateScenarioID] != "runner_execution_failure" {
+		t.Fatalf("execution failure classification = %q, want runner_execution_failure", classifications[populatedSynthesisUpdateScenarioID])
+	}
 	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-populated-test.md"))
 	if err != nil {
 		t.Fatalf("read markdown report: %v", err)
 	}
-	for _, want := range []string{"Lane: `" + populatedLaneName + "`", "Release blocking: `false`"} {
+	for _, want := range []string{
+		"Lane: `" + populatedLaneName + "`",
+		"Release blocking: `false`",
+		"## Targeted Lane Summary",
+		"Decision: `keep_as_reference`",
+		"Public surface: `openclerk document`, `openclerk retrieval`",
+		"no promoted runner action, schema, migration, storage API, product behavior, or public OpenClerk interface",
+		"`skill_guidance_or_eval_coverage`",
+		"`runner_execution_failure`",
+	} {
 		if !strings.Contains(string(markdown), want) {
 			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
 		}
