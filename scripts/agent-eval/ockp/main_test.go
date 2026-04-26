@@ -910,7 +910,7 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 	for _, id := range scenarioIDs() {
 		ids[id] = true
 	}
-	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, graphSemanticsScenarioID, memoryRouterScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID, populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID, agentChosenPathProposalScenarioID, agentChosenAutonomousScenarioID, agentChosenSynthesisScenarioID, agentChosenAmbiguousScenarioID, agentChosenUserPathScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
+	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, graphSemanticsScenarioID, memoryRouterScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, sourceURLUpdateDuplicateScenarioID, sourceURLUpdateSameSHAScenarioID, sourceURLUpdateChangedScenarioID, sourceURLUpdateConflictScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID, populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID, agentChosenPathProposalScenarioID, agentChosenAutonomousScenarioID, agentChosenSynthesisScenarioID, agentChosenAmbiguousScenarioID, agentChosenUserPathScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
 		if !ids[want] {
 			t.Fatalf("scenarioIDs missing %q in %v", want, scenarioIDs())
 		}
@@ -937,6 +937,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 			t.Fatalf("default selected scenarios included targeted agent-chosen path scenario %q", id)
 		}
 	}
+	for _, id := range []string{sourceURLUpdateDuplicateScenarioID, sourceURLUpdateSameSHAScenarioID, sourceURLUpdateChangedScenarioID, sourceURLUpdateConflictScenarioID} {
+		if defaultIDs[id] {
+			t.Fatalf("default selected scenarios included targeted source URL update scenario %q", id)
+		}
+	}
 	selected := selectedScenarioIDs(runConfig{Scenario: populatedHeterogeneousScenarioID + "," + populatedFreshnessConflictScenarioID + "," + populatedSynthesisUpdateScenarioID})
 	lane, releaseBlocking := reportLane(selected)
 	if lane != populatedLaneName || releaseBlocking {
@@ -951,6 +956,27 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	lane, releaseBlocking = reportLane(selected)
 	if lane != agentChosenPathLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, agentChosenPathLaneName)
+	}
+	selected = selectedScenarioIDs(runConfig{Scenario: sourceURLUpdateDuplicateScenarioID + "," + sourceURLUpdateSameSHAScenarioID + "," + sourceURLUpdateChangedScenarioID + "," + sourceURLUpdateConflictScenarioID})
+	lane, releaseBlocking = reportLane(selected)
+	if lane != sourceURLUpdateLaneName || releaseBlocking {
+		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, sourceURLUpdateLaneName)
+	}
+}
+
+func TestSourceURLUpdateFixturePromptRendering(t *testing.T) {
+	fixtures := startSourceURLUpdateFixtures(sourceURLUpdateChangedScenarioID)
+	if fixtures == nil {
+		t.Fatal("fixture server not started")
+	}
+	defer fixtures.Close()
+
+	rendered := fixtures.renderPrompt(sourceURLUpdateStableURLToken + " " + sourceURLUpdateChangedURLToken)
+	if strings.Contains(rendered, sourceURLUpdateStableURLToken) || strings.Contains(rendered, sourceURLUpdateChangedURLToken) {
+		t.Fatalf("prompt still contains fixture token: %s", rendered)
+	}
+	if !strings.Contains(rendered, fixtures.stableURL()) || !strings.Contains(rendered, fixtures.changedURL()) {
+		t.Fatalf("prompt missing fixture URLs: %s", rendered)
 	}
 }
 
@@ -1545,6 +1571,169 @@ func TestVerifyConfiguredLayoutRequiresUnambiguousValidAnswer(t *testing.T) {
 	}
 	if !result.Passed {
 		t.Fatalf("configured layout answer with valid status failed: %+v", result)
+	}
+}
+
+func TestVerifySourceURLUpdateDuplicateCreate(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	fixtures := startSourceURLUpdateFixtures(sourceURLUpdateDuplicateScenarioID)
+	defer fixtures.Close()
+	if err := seedScenarioWithFixtures(ctx, paths, scenario{ID: sourceURLUpdateDuplicateScenarioID}, fixtures); err != nil {
+		t.Fatalf("seed source URL duplicate scenario: %v", err)
+	}
+	metrics := metrics{
+		AssistantCalls:      1,
+		IngestSourceURLUsed: true,
+		ListDocumentsUsed:   true,
+		EventTypeCounts:     map[string]int{},
+	}
+	answer := "Duplicate create was rejected for " + sourceURLUpdateSourcePath + "; " + sourceURLUpdateDuplicatePath + " was not created."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: sourceURLUpdateDuplicateScenarioID}, 1, answer, metrics)
+	if err != nil {
+		t.Fatalf("verify duplicate create: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("duplicate create verification failed: %+v", result)
+	}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	if err := createSeedDocument(ctx, cfg, sourceURLUpdateDuplicatePath, "Duplicate", "# Duplicate\n"); err != nil {
+		t.Fatalf("create duplicate doc: %v", err)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: sourceURLUpdateDuplicateScenarioID}, 1, answer, metrics)
+	if err != nil {
+		t.Fatalf("verify duplicate write: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("duplicate create passed after duplicate write: %+v", result)
+	}
+}
+
+func TestVerifySourceURLUpdateSameSHARejectsChurn(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	fixtures := startSourceURLUpdateFixtures(sourceURLUpdateSameSHAScenarioID)
+	defer fixtures.Close()
+	if err := seedScenarioWithFixtures(ctx, paths, scenario{ID: sourceURLUpdateSameSHAScenarioID}, fixtures); err != nil {
+		t.Fatalf("seed source URL same-SHA scenario: %v", err)
+	}
+	metrics := metrics{
+		AssistantCalls:            1,
+		IngestSourceURLUsed:       true,
+		IngestSourceURLUpdateUsed: true,
+		ListDocumentsUsed:         true,
+		GetDocumentUsed:           true,
+		SearchUsed:                true,
+		ProvenanceEventsUsed:      true,
+		ProjectionStatesUsed:      true,
+		EventTypeCounts:           map[string]int{},
+	}
+	answer := "Same-SHA no-op left " + sourceURLUpdateSourcePath + " unchanged with preserved citations, and " + sourceURLUpdateSynthesisPath + " stayed fresh with no changed-PDF refresh needed."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: sourceURLUpdateSameSHAScenarioID}, 1, answer, metrics)
+	if err != nil {
+		t.Fatalf("verify same-SHA no-op: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("same-SHA no-op verification failed: %+v", result)
+	}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	if err := replaceScenarioSeedSection(ctx, cfg, sourceURLUpdateSourcePath, "Extracted Text", sourceURLUpdateChangedText); err != nil {
+		t.Fatalf("force source churn: %v", err)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: sourceURLUpdateSameSHAScenarioID}, 1, answer, metrics)
+	if err != nil {
+		t.Fatalf("verify same-SHA churn: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("same-SHA verification passed after source churn: %+v", result)
+	}
+}
+
+func TestVerifySourceURLUpdateChangedPDFRequiresStaleProjection(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	fixtures := startSourceURLUpdateFixtures(sourceURLUpdateChangedScenarioID)
+	defer fixtures.Close()
+	if err := seedScenarioWithFixtures(ctx, paths, scenario{ID: sourceURLUpdateChangedScenarioID}, fixtures); err != nil {
+		t.Fatalf("seed source URL changed scenario: %v", err)
+	}
+	fixtures.prepareForAgent(sourceURLUpdateChangedScenarioID)
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	if _, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestSourceURL,
+		Source: runner.SourceURLInput{
+			URL:           fixtures.changedURL(),
+			PathHint:      sourceURLUpdateSourcePath,
+			AssetPathHint: sourceURLUpdateAssetPath,
+			Mode:          "update",
+		},
+	}); err != nil {
+		t.Fatalf("changed PDF update: %v", err)
+	}
+	metrics := metrics{
+		AssistantCalls:            1,
+		IngestSourceURLUsed:       true,
+		IngestSourceURLUpdateUsed: true,
+		ListDocumentsUsed:         true,
+		GetDocumentUsed:           true,
+		SearchUsed:                true,
+		ProvenanceEventsUsed:      true,
+		ProjectionStatesUsed:      true,
+		EventTypeCounts:           map[string]int{},
+	}
+	answer := "Changed PDF update refreshed citations and evidence in " + sourceURLUpdateSourcePath + "; " + sourceURLUpdateSynthesisPath + " now has a stale synthesis projection with source update provenance."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: sourceURLUpdateChangedScenarioID}, 1, answer, metrics)
+	if err != nil {
+		t.Fatalf("verify changed PDF: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("changed PDF verification failed: %+v", result)
+	}
+	if err := replaceScenarioSeedSection(ctx, cfg, sourceURLUpdateSynthesisPath, "Summary", "Repaired synthesis now depends on "+sourceURLUpdateChangedText+"."); err != nil {
+		t.Fatalf("repair synthesis: %v", err)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: sourceURLUpdateChangedScenarioID}, 1, answer, metrics)
+	if err != nil {
+		t.Fatalf("verify repaired changed PDF: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("changed PDF verification passed after synthesis repair: %+v", result)
+	}
+}
+
+func TestVerifySourceURLUpdatePathHintConflict(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	fixtures := startSourceURLUpdateFixtures(sourceURLUpdateConflictScenarioID)
+	defer fixtures.Close()
+	if err := seedScenarioWithFixtures(ctx, paths, scenario{ID: sourceURLUpdateConflictScenarioID}, fixtures); err != nil {
+		t.Fatalf("seed source URL conflict scenario: %v", err)
+	}
+	metrics := metrics{
+		AssistantCalls:            1,
+		IngestSourceURLUsed:       true,
+		IngestSourceURLUpdateUsed: true,
+		ListDocumentsUsed:         true,
+		EventTypeCounts:           map[string]int{},
+	}
+	answer := "The path-hint conflict kept existing path " + sourceURLUpdateSourcePath + "; " + sourceURLUpdateConflictPath + " was not created without writing."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: sourceURLUpdateConflictScenarioID}, 1, answer, metrics)
+	if err != nil {
+		t.Fatalf("verify conflict: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("conflict verification failed: %+v", result)
+	}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	if err := createSeedDocument(ctx, cfg, sourceURLUpdateConflictPath, "Conflict", "# Conflict\n"); err != nil {
+		t.Fatalf("create conflict doc: %v", err)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: sourceURLUpdateConflictScenarioID}, 1, answer, metrics)
+	if err != nil {
+		t.Fatalf("verify conflict write: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("conflict verification passed after conflict write: %+v", result)
 	}
 }
 

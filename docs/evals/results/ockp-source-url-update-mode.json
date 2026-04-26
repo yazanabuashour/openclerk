@@ -1,0 +1,755 @@
+{
+  "metadata": {
+    "generated_at": "2026-04-26T20:36:43.711742Z",
+    "model": "gpt-5.4-mini",
+    "reasoning_effort": "medium",
+    "harness": "codex exec --json --full-auto from throwaway run directories; single-turn scenarios use --ephemeral and multi-turn scenarios resume one persisted eval session",
+    "configured_parallelism": 1,
+    "cache_mode": "shared",
+    "cache_prewarm_seconds": 16.05,
+    "harness_elapsed_seconds": 371.77,
+    "effective_parallel_speedup": 0.92,
+    "parallel_efficiency": 0.92,
+    "phase_totals": {
+      "copy_repo_seconds": 0.05,
+      "install_variant_seconds": 12.89,
+      "seed_data_seconds": 0.1,
+      "agent_run_seconds": 342.36,
+      "parse_metrics_seconds": 0.01,
+      "verify_seconds": 0.26,
+      "total_seconds": 355.72
+    },
+    "run_root_artifact_reference": "\u003crun-root\u003e",
+    "raw_log_placeholder": "\u003crun-root\u003e/\u003cvariant\u003e/\u003cscenario\u003e/turn-N/events.jsonl",
+    "variants": [
+      "production"
+    ],
+    "scenarios": [
+      "source-url-update-duplicate-create",
+      "source-url-update-same-sha-noop",
+      "source-url-update-changed-pdf-stale",
+      "source-url-update-path-hint-conflict"
+    ],
+    "lane": "source-url-update",
+    "release_blocking": false,
+    "raw_logs_committed": false,
+    "raw_logs_note": "Raw Codex event logs remain under \u003crun-root\u003e and are not committed."
+  },
+  "results": [
+    {
+      "variant": "production",
+      "scenario": "source-url-update-duplicate-create",
+      "scenario_title": "Reject duplicate source URL create mode",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 18.16,
+      "phase_timings": {
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 3.47,
+        "seed_data_seconds": 0.02,
+        "agent_run_seconds": 18.16,
+        "verify_seconds": 0.03,
+        "total_seconds": 21.72
+      },
+      "metrics": {
+        "assistant_calls": 3,
+        "tool_calls": 6,
+        "command_executions": 6,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": false,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": false,
+        "search_metadata_filter_used": false,
+        "ingest_source_url_used": true,
+        "ingest_source_url_update_used": false,
+        "list_documents_used": true,
+        "list_document_path_prefixes": [
+          "sources/source-url-update-runner",
+          "sources/source-url-update-runner"
+        ],
+        "get_document_used": false,
+        "inspect_layout_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "decisions_lookup_used": false,
+        "decision_record_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": false,
+        "usage_exposed": true,
+        "input_tokens": 100124,
+        "cached_input_tokens": 95744,
+        "non_cached_input_tokens": 4380,
+        "output_tokens": 1548,
+        "event_type_counts": {
+          "item.completed": 6,
+          "item.started": 3,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "sources/source-url-update-runner.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 18.16,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 3,
+            "tool_calls": 6,
+            "command_executions": 6,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": false,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "ingest_source_url_used": true,
+            "ingest_source_url_update_used": false,
+            "list_documents_used": true,
+            "list_document_path_prefixes": [
+              "sources/source-url-update-runner",
+              "sources/source-url-update-runner"
+            ],
+            "get_document_used": false,
+            "inspect_layout_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "decisions_lookup_used": false,
+            "decision_record_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 100124,
+            "cached_input_tokens": 95744,
+            "non_cached_input_tokens": 4380,
+            "output_tokens": 1548,
+            "event_type_counts": {
+              "item.completed": 6,
+              "item.started": 3,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "sources/source-url-update-runner.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/source-url-update-duplicate-create/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or manual PDF downloads. First run openclerk document with exactly this request shape: {\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{SOURCE_URL_UPDATE_STABLE_URL}}\",\"path_hint\":\"sources/source-url-update-runner-copy.md\",\"asset_path_hint\":\"assets/sources/source-url-update-runner-copy.pdf\",\"title\":\"Source URL Update Duplicate\"}}. The duplicate source URL should be rejected. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"sources/source-url-update-runner\",\"limit\":10}} and confirm the original source remains at sources/source-url-update-runner.md and no copy source was created. In the final answer, mention duplicate create rejection, sources/source-url-update-runner.md, and that sources/source-url-update-runner-copy.md was not created.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/source-url-update-duplicate-create/turn-1/events.jsonl",
+      "started_at": "2026-04-26T20:30:47.995925Z",
+      "completed_at": "2026-04-26T20:31:09.715388Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "source-url-update-same-sha-noop",
+      "scenario_title": "Same-SHA source URL update is a no-op",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 52.3,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 3.65,
+        "seed_data_seconds": 0.03,
+        "agent_run_seconds": 52.3,
+        "verify_seconds": 0.1,
+        "total_seconds": 56.09
+      },
+      "metrics": {
+        "assistant_calls": 8,
+        "tool_calls": 26,
+        "command_executions": 26,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": true,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": true,
+        "search_metadata_filter_used": false,
+        "ingest_source_url_used": true,
+        "ingest_source_url_update_used": true,
+        "list_documents_used": true,
+        "list_document_path_prefixes": [
+          "sources/source-url-update-runner",
+          "sources/source-url-update-runner",
+          "synthesis/",
+          "synthesis/"
+        ],
+        "get_document_used": true,
+        "get_document_doc_ids": [
+          "3cbf819165d86ab6",
+          "3cbf819165d86ab6",
+          "3cbf819165d86ab6",
+          "3cbf819165d86ab6",
+          "d1cd31091c4790e8",
+          "d1cd31091c4790e8"
+        ],
+        "inspect_layout_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "decisions_lookup_used": false,
+        "decision_record_used": false,
+        "provenance_events_used": true,
+        "provenance_event_ref_ids": [
+          "3cbf819165d86ab6",
+          "3cbf819165d86ab6",
+          "3cbf819165d86ab6",
+          "3cbf819165d86ab6"
+        ],
+        "projection_states_used": true,
+        "usage_exposed": true,
+        "input_tokens": 295100,
+        "cached_input_tokens": 284928,
+        "non_cached_input_tokens": 10172,
+        "output_tokens": 5405,
+        "event_type_counts": {
+          "item.completed": 21,
+          "item.started": 13,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "sources/source-url-update-runner.md",
+          "synthesis/source-url-update-runner.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 52.3,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 8,
+            "tool_calls": 26,
+            "command_executions": 26,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": true,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": true,
+            "search_metadata_filter_used": false,
+            "ingest_source_url_used": true,
+            "ingest_source_url_update_used": true,
+            "list_documents_used": true,
+            "list_document_path_prefixes": [
+              "sources/source-url-update-runner",
+              "sources/source-url-update-runner",
+              "synthesis/",
+              "synthesis/"
+            ],
+            "get_document_used": true,
+            "get_document_doc_ids": [
+              "3cbf819165d86ab6",
+              "3cbf819165d86ab6",
+              "3cbf819165d86ab6",
+              "3cbf819165d86ab6",
+              "d1cd31091c4790e8",
+              "d1cd31091c4790e8"
+            ],
+            "inspect_layout_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "decisions_lookup_used": false,
+            "decision_record_used": false,
+            "provenance_events_used": true,
+            "provenance_event_ref_ids": [
+              "3cbf819165d86ab6",
+              "3cbf819165d86ab6",
+              "3cbf819165d86ab6",
+              "3cbf819165d86ab6"
+            ],
+            "projection_states_used": true,
+            "usage_exposed": true,
+            "input_tokens": 295100,
+            "cached_input_tokens": 284928,
+            "non_cached_input_tokens": 10172,
+            "output_tokens": 5405,
+            "event_type_counts": {
+              "item.completed": 21,
+              "item.started": 13,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "sources/source-url-update-runner.md",
+              "synthesis/source-url-update-runner.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/source-url-update-same-sha-noop/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or manual PDF downloads. First run openclerk document with exactly this request shape: {\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{SOURCE_URL_UPDATE_STABLE_URL}}\",\"mode\":\"update\"}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"sources/source-url-update-runner\",\"limit\":10}}. Use the returned doc_id for sources/source-url-update-runner.md to run get_document. Run openclerk retrieval search with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"SourceURLUpdateInitialEvidence\",\"path_prefix\":\"sources/\",\"limit\":10}}. Run openclerk document list_documents with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\",\"limit\":20}}. Use the returned doc_id for synthesis/source-url-update-runner.md to run get_document. Then run openclerk retrieval with exactly this request shape for the source doc: {\"action\":\"provenance_events\",\"provenance\":{\"ref_kind\":\"source\",\"ref_id\":\"SOURCE_DOC_ID\",\"limit\":20}} and exactly this request shape for the synthesis doc: {\"action\":\"projection_states\",\"projection\":{\"projection\":\"synthesis\",\"ref_kind\":\"document\",\"ref_id\":\"SYNTHESIS_DOC_ID\",\"limit\":5}}. In the final answer, mention same-SHA no-op update, the stable path sources/source-url-update-runner.md, preserved citations or source evidence, and that synthesis/source-url-update-runner.md stayed fresh with no changed-PDF refresh needed.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/source-url-update-same-sha-noop/turn-1/events.jsonl",
+      "started_at": "2026-04-26T20:31:09.716113Z",
+      "completed_at": "2026-04-26T20:32:05.806905Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "source-url-update-changed-pdf-stale",
+      "scenario_title": "Changed PDF update exposes stale synthesis",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 121.23,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 2.88,
+        "seed_data_seconds": 0.03,
+        "agent_run_seconds": 121.23,
+        "verify_seconds": 0.09,
+        "total_seconds": 124.26
+      },
+      "metrics": {
+        "assistant_calls": 12,
+        "tool_calls": 58,
+        "command_executions": 58,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": true,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": true,
+        "search_metadata_filter_used": false,
+        "ingest_source_url_used": false,
+        "ingest_source_url_update_used": false,
+        "list_documents_used": true,
+        "list_document_path_prefixes": [
+          "synthesis/",
+          "synthesis/",
+          "sources/source-url-update-runner",
+          "sources/source-url-update-runner",
+          "synthesis/",
+          "synthesis/"
+        ],
+        "get_document_used": true,
+        "get_document_doc_ids": [
+          "d1cd31091c4790e8",
+          "d1cd31091c4790e8",
+          "3cbf819165d86ab6",
+          "3cbf819165d86ab6",
+          "3cbf819165d86ab6",
+          "3cbf819165d86ab6",
+          "d1cd31091c4790e8",
+          "d1cd31091c4790e8"
+        ],
+        "inspect_layout_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "decisions_lookup_used": false,
+        "decision_record_used": false,
+        "provenance_events_used": true,
+        "provenance_event_ref_ids": [
+          "3cbf819165d86ab6",
+          "3cbf819165d86ab6",
+          "synthesis:d1cd31091c4790e8",
+          "synthesis:d1cd31091c4790e8",
+          "synthesis:d1cd31091c4790e8",
+          "synthesis:d1cd31091c4790e8"
+        ],
+        "projection_states_used": true,
+        "usage_exposed": true,
+        "input_tokens": 824702,
+        "cached_input_tokens": 790272,
+        "non_cached_input_tokens": 34430,
+        "output_tokens": 11332,
+        "event_type_counts": {
+          "item.completed": 41,
+          "item.started": 29,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "sources/source-url-update-runner.md",
+          "synthesis/source-url-update-runner.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 121.23,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 12,
+            "tool_calls": 58,
+            "command_executions": 58,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": true,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": true,
+            "search_metadata_filter_used": false,
+            "ingest_source_url_used": false,
+            "ingest_source_url_update_used": false,
+            "list_documents_used": true,
+            "list_document_path_prefixes": [
+              "synthesis/",
+              "synthesis/",
+              "sources/source-url-update-runner",
+              "sources/source-url-update-runner",
+              "synthesis/",
+              "synthesis/"
+            ],
+            "get_document_used": true,
+            "get_document_doc_ids": [
+              "d1cd31091c4790e8",
+              "d1cd31091c4790e8",
+              "3cbf819165d86ab6",
+              "3cbf819165d86ab6",
+              "3cbf819165d86ab6",
+              "3cbf819165d86ab6",
+              "d1cd31091c4790e8",
+              "d1cd31091c4790e8"
+            ],
+            "inspect_layout_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "decisions_lookup_used": false,
+            "decision_record_used": false,
+            "provenance_events_used": true,
+            "provenance_event_ref_ids": [
+              "3cbf819165d86ab6",
+              "3cbf819165d86ab6",
+              "synthesis:d1cd31091c4790e8",
+              "synthesis:d1cd31091c4790e8",
+              "synthesis:d1cd31091c4790e8",
+              "synthesis:d1cd31091c4790e8"
+            ],
+            "projection_states_used": true,
+            "usage_exposed": true,
+            "input_tokens": 824702,
+            "cached_input_tokens": 790272,
+            "non_cached_input_tokens": 34430,
+            "output_tokens": 11332,
+            "event_type_counts": {
+              "item.completed": 41,
+              "item.started": 29,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "sources/source-url-update-runner.md",
+              "synthesis/source-url-update-runner.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/source-url-update-changed-pdf-stale/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. A changed-PDF source URL update has just been applied by the runner fixture before this turn. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or manual PDF downloads. Run openclerk retrieval search with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"SourceURLUpdateChangedEvidence\",\"path_prefix\":\"sources/\",\"limit\":10}}. Run openclerk document list_documents with exactly these request shapes for source and synthesis candidates: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"sources/source-url-update-runner\",\"limit\":10}} and {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\",\"limit\":20}}. Use get_document for sources/source-url-update-runner.md and synthesis/source-url-update-runner.md. Then run openclerk retrieval with exactly this request shape for the source doc: {\"action\":\"provenance_events\",\"provenance\":{\"ref_kind\":\"source\",\"ref_id\":\"SOURCE_DOC_ID\",\"limit\":20}} and exactly this request shape for the synthesis doc: {\"action\":\"projection_states\",\"projection\":{\"projection\":\"synthesis\",\"ref_kind\":\"document\",\"ref_id\":\"SYNTHESIS_DOC_ID\",\"limit\":5}}. Also inspect provenance_events for ref_kind projection and ref_id synthesis:SYNTHESIS_DOC_ID. Do not repair the synthesis. In the final answer, mention changed-PDF update, sources/source-url-update-runner.md, refreshed citations or changed evidence, synthesis/source-url-update-runner.md, stale synthesis projection, and source update provenance.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/source-url-update-changed-pdf-stale/turn-1/events.jsonl",
+      "started_at": "2026-04-26T20:32:05.807196Z",
+      "completed_at": "2026-04-26T20:34:10.063717Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "source-url-update-path-hint-conflict",
+      "scenario_title": "Mismatched path hint update conflicts without writing",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 150.67,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 2.89,
+        "seed_data_seconds": 0.02,
+        "agent_run_seconds": 150.67,
+        "parse_metrics_seconds": 0.01,
+        "verify_seconds": 0.04,
+        "total_seconds": 153.65
+      },
+      "metrics": {
+        "assistant_calls": 8,
+        "tool_calls": 64,
+        "command_executions": 64,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": false,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": false,
+        "search_metadata_filter_used": false,
+        "ingest_source_url_used": true,
+        "ingest_source_url_update_used": true,
+        "list_documents_used": true,
+        "list_document_path_prefixes": [
+          "sources/source-url-update",
+          "sources/source-url-update",
+          "sources/source-url-update",
+          "sources/source-url-update"
+        ],
+        "get_document_used": true,
+        "get_document_doc_ids": [
+          "3cbf819165d86ab6",
+          "3cbf819165d86ab6"
+        ],
+        "inspect_layout_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "decisions_lookup_used": false,
+        "decision_record_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": false,
+        "usage_exposed": true,
+        "input_tokens": 1286617,
+        "cached_input_tokens": 1260928,
+        "non_cached_input_tokens": 25689,
+        "output_tokens": 13202,
+        "event_type_counts": {
+          "item.completed": 40,
+          "item.started": 32,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "sources/source-url-update-runner.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 150.67,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 8,
+            "tool_calls": 64,
+            "command_executions": 64,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": false,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "ingest_source_url_used": true,
+            "ingest_source_url_update_used": true,
+            "list_documents_used": true,
+            "list_document_path_prefixes": [
+              "sources/source-url-update",
+              "sources/source-url-update",
+              "sources/source-url-update",
+              "sources/source-url-update"
+            ],
+            "get_document_used": true,
+            "get_document_doc_ids": [
+              "3cbf819165d86ab6",
+              "3cbf819165d86ab6"
+            ],
+            "inspect_layout_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "decisions_lookup_used": false,
+            "decision_record_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 1286617,
+            "cached_input_tokens": 1260928,
+            "non_cached_input_tokens": 25689,
+            "output_tokens": 13202,
+            "event_type_counts": {
+              "item.completed": 40,
+              "item.started": 32,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "sources/source-url-update-runner.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/source-url-update-path-hint-conflict/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or manual PDF downloads. Run ingest_source_url with source.mode update for exactly this URL and a mismatched path hint: {\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{SOURCE_URL_UPDATE_STABLE_URL}}\",\"path_hint\":\"sources/source-url-update-conflict.md\",\"asset_path_hint\":\"assets/sources/source-url-update-runner.pdf\",\"mode\":\"update\"}}. The update should conflict because the path hint does not match the existing source. Then list documents with path_prefix sources/source-url-update and get the existing source document if needed. In the final answer, mention path-hint conflict, existing path sources/source-url-update-runner.md, and that sources/source-url-update-conflict.md was not created.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/source-url-update-path-hint-conflict/turn-1/events.jsonl",
+      "started_at": "2026-04-26T20:34:10.063942Z",
+      "completed_at": "2026-04-26T20:36:43.711505Z"
+    }
+  ],
+  "production_gate": {
+    "variant": "production",
+    "passes_gate": false,
+    "recommendation": "fix_production_agentops_before_release",
+    "criteria": [
+      {
+        "name": "production_passes_all_scenarios",
+        "passed": false,
+        "details": "0/30 production scenarios passed; missing: create-note, search-synthesis, answer-filing, rag-retrieval-baseline, canonical-docs-navigation-baseline, graph-semantics-reference-poc, memory-router-reference-poc, configured-layout-explain, invalid-layout-visible, stale-synthesis-update, synthesis-freshness-repair, source-sensitive-audit-repair, source-sensitive-conflict-explain, synthesis-candidate-pressure, synthesis-source-set-pressure, append-replace, records-provenance, promoted-record-vs-docs, decision-record-vs-docs, decision-supersession-freshness, decision-real-adr-migration, missing-document-path-reject, negative-limit-reject, unsupported-lower-level-reject, unsupported-transport-reject, duplicate-path-reject, mixed-synthesis-records, mt-source-then-synthesis, mt-synthesis-drift-pressure, mt-incomplete-then-create"
+      },
+      {
+        "name": "no_direct_generated_file_inspection",
+        "passed": true,
+        "details": "production must not inspect retired API files or generated server files"
+      },
+      {
+        "name": "no_module_cache_inspection",
+        "passed": true,
+        "details": "production must not inspect the Go module cache"
+      },
+      {
+        "name": "no_broad_repo_search",
+        "passed": true,
+        "details": "production must not use broad repo search in routine OpenClerk knowledge tasks"
+      },
+      {
+        "name": "no_legacy_source_runner_usage",
+        "passed": true,
+        "details": "production must not invoke source-built or legacy runner paths instead of installed openclerk"
+      },
+      {
+        "name": "no_direct_sqlite_access",
+        "passed": true,
+        "details": "production must not query SQLite directly"
+      },
+      {
+        "name": "validation_scenarios_are_final_answer_only",
+        "passed": false,
+        "details": "not evaluated; final-answer-only validation scenarios were not selected in this partial run"
+      }
+    ]
+  },
+  "targeted_lane_summary": {
+    "lane": "source-url-update",
+    "decision": "keep_existing_update_mode",
+    "public_surface": [
+      "openclerk document",
+      "openclerk retrieval"
+    ],
+    "promotion": "targeted AgentOps evidence for existing ingest_source_url source.mode update behavior; no new runner action, schema, storage API, or transport",
+    "release_blocking": false,
+    "scenario_classifications": [
+      {
+        "variant": "production",
+        "scenario": "source-url-update-duplicate-create",
+        "status": "completed",
+        "failure_classification": "none",
+        "evidence_posture": "installed document/retrieval runner evidence covered source URL update mode"
+      },
+      {
+        "variant": "production",
+        "scenario": "source-url-update-same-sha-noop",
+        "status": "completed",
+        "failure_classification": "none",
+        "evidence_posture": "installed document/retrieval runner evidence covered source URL update mode"
+      },
+      {
+        "variant": "production",
+        "scenario": "source-url-update-changed-pdf-stale",
+        "status": "completed",
+        "failure_classification": "none",
+        "evidence_posture": "installed document/retrieval runner evidence covered source URL update mode"
+      },
+      {
+        "variant": "production",
+        "scenario": "source-url-update-path-hint-conflict",
+        "status": "completed",
+        "failure_classification": "none",
+        "evidence_posture": "installed document/retrieval runner evidence covered source URL update mode"
+      }
+    ]
+  }
+}

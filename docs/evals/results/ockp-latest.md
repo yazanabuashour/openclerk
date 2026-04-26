@@ -32,6 +32,7 @@ full release-gate replacements.
 | Convention-first layout inspection | `docs/evals/results/ockp-layout-configuration.md` | `configured-layout-explain` and `invalid-layout-visible` completed |
 | Synthesis compiler pressure | `docs/evals/results/ockp-synthesis-compiler-pressure.md` | Selected synthesis pressure and contract scenarios completed |
 | Source URL ingestion POC | `docs/evals/results/ockp-source-url-ingestion-poc.md` | `ingest_source_url` promoted for PDF source URL ingestion |
+| Source URL update mode | `docs/evals/results/ockp-source-url-update-mode.md` | Targeted AgentOps coverage passed duplicate create rejection, same-SHA no-op, changed-PDF stale projection visibility, and path-hint conflict behavior |
 | Decision records POC | `docs/evals/results/ockp-decision-records-poc.md` | Selected decision lookup and supersession scenarios completed |
 | Decision records hardening | `docs/evals/results/ockp-decision-records-hardening.md` | Real ADR migration and decision projection hardening scenarios completed |
 | Source-sensitive audit | `docs/evals/results/ockp-source-sensitive-audit-poc.md` | Stale repair and unresolved conflict scenarios completed |

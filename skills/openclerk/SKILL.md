@@ -89,6 +89,7 @@ Common request shapes:
 {"action":"validate","document":{"path":"notes/projects/example.md","title":"Example","body":"# Example\n\n## Summary\nReusable knowledge.\n"}}
 {"action":"create_document","document":{"path":"notes/projects/example.md","title":"Example","body":"# Example\n\n## Summary\nReusable knowledge.\n"}}
 {"action":"ingest_source_url","source":{"url":"https://example.test/source.pdf","path_hint":"sources/example.md","asset_path_hint":"assets/sources/example.pdf","title":"Optional title"}}
+{"action":"ingest_source_url","source":{"url":"https://example.test/source.pdf","mode":"update"}}
 {"action":"list_documents","list":{"path_prefix":"notes/","limit":20}}
 {"action":"get_document","doc_id":"doc_id_from_json"}
 {"action":"append_document","doc_id":"doc_id_from_json","content":"## Decisions\nUse the OpenClerk runner."}
@@ -99,9 +100,10 @@ Common request shapes:
 
 Request fields are `action`, `document`, `source`, `doc_id`, `content`,
 `heading`, and `list`. A `document` has `path`, `title`, and `body`. A
-`source` has `url`, `path_hint`, `asset_path_hint`, and optional `title`. A
-`list` may include `path_prefix`, `metadata_key`, `metadata_value`, `limit`,
-and `cursor`.
+`source` has `url`, `path_hint`, `asset_path_hint`, optional `title`, and
+optional `mode`. Missing `source.mode` means `create`; supported values are
+`create` and `update`. A `list` may include `path_prefix`, `metadata_key`,
+`metadata_value`, `limit`, and `cursor`.
 
 Validation rejections are normal JSON results with `rejected: true` and
 `rejection_reason`. Runtime failures exit non-zero and write errors to stderr.
@@ -122,7 +124,18 @@ vault-relative `assets/**/*.pdf` path. The result returns `ingestion.doc_id`,
 page count, capture timestamp, and optional PDF metadata. Do not download the
 PDF, inspect the vault, write files directly, or create a separate markdown note
 outside the runner for routine source URL ingestion. Duplicate source URLs are
-rejected unless a future runner action explicitly supports update behavior.
+rejected in default `create` mode.
+
+Use `source.mode: "update"` only when the user asks to refresh or re-ingest an
+existing source URL. Update mode targets the existing normalized `source.url`;
+it does not create a new source when the URL is unknown. You may omit
+`path_hint` and `asset_path_hint` in update mode, or provide them to confirm the
+stored source paths. If provided hints do not match the existing source path or
+asset path, the runner returns a conflict without writing. A same-SHA update is
+a no-op that preserves the existing source path, asset path, citations,
+provenance, and synthesis freshness. A changed-PDF update preserves the source
+path and asset path while refreshing the source note, search citations,
+provenance, and dependent synthesis freshness/projection visibility.
 
 When writing source-linked synthesis, use this exact AgentOps workflow:
 

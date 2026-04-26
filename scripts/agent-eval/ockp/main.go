@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -75,6 +77,21 @@ const (
 
 	configuredLayoutScenarioID = "configured-layout-explain"
 	invalidLayoutScenarioID    = "invalid-layout-visible"
+
+	sourceURLUpdateLaneName            = "source-url-update"
+	sourceURLUpdateDuplicateScenarioID = "source-url-update-duplicate-create"
+	sourceURLUpdateSameSHAScenarioID   = "source-url-update-same-sha-noop"
+	sourceURLUpdateChangedScenarioID   = "source-url-update-changed-pdf-stale"
+	sourceURLUpdateConflictScenarioID  = "source-url-update-path-hint-conflict"
+	sourceURLUpdateSourcePath          = "sources/source-url-update-runner.md"
+	sourceURLUpdateAssetPath           = "assets/sources/source-url-update-runner.pdf"
+	sourceURLUpdateSynthesisPath       = "synthesis/source-url-update-runner.md"
+	sourceURLUpdateDuplicatePath       = "sources/source-url-update-runner-copy.md"
+	sourceURLUpdateConflictPath        = "sources/source-url-update-conflict.md"
+	sourceURLUpdateStableURLToken      = "{{SOURCE_URL_UPDATE_STABLE_URL}}"
+	sourceURLUpdateChangedURLToken     = "{{SOURCE_URL_UPDATE_CHANGED_URL}}"
+	sourceURLUpdateInitialText         = "SourceURLUpdateInitialEvidence"
+	sourceURLUpdateChangedText         = "SourceURLUpdateChangedEvidence"
 
 	synthesisCandidatePressureScenarioID = "synthesis-candidate-pressure"
 	synthesisSourceSetPressureScenarioID = "synthesis-source-set-pressure"
@@ -300,45 +317,47 @@ type turnResult struct {
 }
 
 type metrics struct {
-	AssistantCalls           int            `json:"assistant_calls"`
-	ToolCalls                int            `json:"tool_calls"`
-	CommandExecutions        int            `json:"command_executions"`
-	FileInspectionCommands   int            `json:"file_inspection_commands"`
-	GeneratedFileInspection  bool           `json:"generated_file_inspection"`
-	ModuleCacheInspection    bool           `json:"module_cache_inspection"`
-	BroadRepoSearch          bool           `json:"broad_repo_search"`
-	DirectSQLiteAccess       bool           `json:"direct_sqlite_access"`
-	LegacyRunnerUsage        bool           `json:"legacy_runner_usage"`
-	SearchUsed               bool           `json:"search_used"`
-	SearchUnfilteredUsed     bool           `json:"search_unfiltered_used"`
-	SearchPathFilterUsed     bool           `json:"search_path_filter_used"`
-	SearchMetadataFilterUsed bool           `json:"search_metadata_filter_used"`
-	ListDocumentsUsed        bool           `json:"list_documents_used"`
-	ListDocumentPathPrefixes []string       `json:"list_document_path_prefixes,omitempty"`
-	GetDocumentUsed          bool           `json:"get_document_used"`
-	GetDocumentDocIDs        []string       `json:"get_document_doc_ids,omitempty"`
-	InspectLayoutUsed        bool           `json:"inspect_layout_used"`
-	DocumentLinksUsed        bool           `json:"document_links_used"`
-	GraphNeighborhoodUsed    bool           `json:"graph_neighborhood_used"`
-	RecordsLookupUsed        bool           `json:"records_lookup_used"`
-	DecisionsLookupUsed      bool           `json:"decisions_lookup_used"`
-	DecisionRecordUsed       bool           `json:"decision_record_used"`
-	DecisionRecordIDs        []string       `json:"decision_record_ids,omitempty"`
-	ProvenanceEventsUsed     bool           `json:"provenance_events_used"`
-	ProvenanceEventRefIDs    []string       `json:"provenance_event_ref_ids,omitempty"`
-	ProjectionStatesUsed     bool           `json:"projection_states_used"`
-	GeneratedFileEvidence    []string       `json:"generated_file_evidence,omitempty"`
-	ModuleCacheEvidence      []string       `json:"module_cache_evidence,omitempty"`
-	BroadRepoSearchEvidence  []string       `json:"broad_repo_search_evidence,omitempty"`
-	DirectSQLiteEvidence     []string       `json:"direct_sqlite_evidence,omitempty"`
-	LegacyRunnerEvidence     []string       `json:"legacy_runner_evidence,omitempty"`
-	UsageExposed             bool           `json:"usage_exposed"`
-	InputTokens              *int           `json:"input_tokens,omitempty"`
-	CachedInputTokens        *int           `json:"cached_input_tokens,omitempty"`
-	NonCachedInputTokens     *int           `json:"non_cached_input_tokens,omitempty"`
-	OutputTokens             *int           `json:"output_tokens,omitempty"`
-	EventTypeCounts          map[string]int `json:"event_type_counts"`
-	CommandMetricLimitations string         `json:"command_metric_limitations"`
+	AssistantCalls            int            `json:"assistant_calls"`
+	ToolCalls                 int            `json:"tool_calls"`
+	CommandExecutions         int            `json:"command_executions"`
+	FileInspectionCommands    int            `json:"file_inspection_commands"`
+	GeneratedFileInspection   bool           `json:"generated_file_inspection"`
+	ModuleCacheInspection     bool           `json:"module_cache_inspection"`
+	BroadRepoSearch           bool           `json:"broad_repo_search"`
+	DirectSQLiteAccess        bool           `json:"direct_sqlite_access"`
+	LegacyRunnerUsage         bool           `json:"legacy_runner_usage"`
+	SearchUsed                bool           `json:"search_used"`
+	SearchUnfilteredUsed      bool           `json:"search_unfiltered_used"`
+	SearchPathFilterUsed      bool           `json:"search_path_filter_used"`
+	SearchMetadataFilterUsed  bool           `json:"search_metadata_filter_used"`
+	IngestSourceURLUsed       bool           `json:"ingest_source_url_used"`
+	IngestSourceURLUpdateUsed bool           `json:"ingest_source_url_update_used"`
+	ListDocumentsUsed         bool           `json:"list_documents_used"`
+	ListDocumentPathPrefixes  []string       `json:"list_document_path_prefixes,omitempty"`
+	GetDocumentUsed           bool           `json:"get_document_used"`
+	GetDocumentDocIDs         []string       `json:"get_document_doc_ids,omitempty"`
+	InspectLayoutUsed         bool           `json:"inspect_layout_used"`
+	DocumentLinksUsed         bool           `json:"document_links_used"`
+	GraphNeighborhoodUsed     bool           `json:"graph_neighborhood_used"`
+	RecordsLookupUsed         bool           `json:"records_lookup_used"`
+	DecisionsLookupUsed       bool           `json:"decisions_lookup_used"`
+	DecisionRecordUsed        bool           `json:"decision_record_used"`
+	DecisionRecordIDs         []string       `json:"decision_record_ids,omitempty"`
+	ProvenanceEventsUsed      bool           `json:"provenance_events_used"`
+	ProvenanceEventRefIDs     []string       `json:"provenance_event_ref_ids,omitempty"`
+	ProjectionStatesUsed      bool           `json:"projection_states_used"`
+	GeneratedFileEvidence     []string       `json:"generated_file_evidence,omitempty"`
+	ModuleCacheEvidence       []string       `json:"module_cache_evidence,omitempty"`
+	BroadRepoSearchEvidence   []string       `json:"broad_repo_search_evidence,omitempty"`
+	DirectSQLiteEvidence      []string       `json:"direct_sqlite_evidence,omitempty"`
+	LegacyRunnerEvidence      []string       `json:"legacy_runner_evidence,omitempty"`
+	UsageExposed              bool           `json:"usage_exposed"`
+	InputTokens               *int           `json:"input_tokens,omitempty"`
+	CachedInputTokens         *int           `json:"cached_input_tokens,omitempty"`
+	NonCachedInputTokens      *int           `json:"non_cached_input_tokens,omitempty"`
+	OutputTokens              *int           `json:"output_tokens,omitempty"`
+	EventTypeCounts           map[string]int `json:"event_type_counts"`
+	CommandMetricLimitations  string         `json:"command_metric_limitations"`
 }
 
 type verificationResult struct {
@@ -592,6 +611,10 @@ func codexJobRunner(ctx context.Context, config runConfig, job evalJob, cache ca
 	jobDir := filepath.Join(config.RunRoot, job.Variant, job.Scenario.ID)
 	repoDir := filepath.Join(jobDir, "repo")
 	paths := scenarioPaths(repoDir)
+	fixtures := startSourceURLUpdateFixtures(job.Scenario.ID)
+	if fixtures != nil {
+		defer fixtures.Close()
+	}
 	if err := timedPhase(&timings.PrepareRunDir, func() error { return prepareRunDir(jobDir, cache) }); err != nil {
 		result.Error = err.Error()
 		return result
@@ -618,9 +641,16 @@ func codexJobRunner(ctx context.Context, config runConfig, job evalJob, cache ca
 			return result
 		}
 	}
-	if err := timedPhase(&timings.SeedData, func() error { return seedScenario(ctx, paths, job.Scenario) }); err != nil {
+	if err := timedPhase(&timings.SeedData, func() error { return seedScenarioWithFixtures(ctx, paths, job.Scenario, fixtures) }); err != nil {
 		result.Error = fmt.Sprintf("seed scenario: %v", err)
 		return result
+	}
+	if fixtures != nil {
+		fixtures.prepareForAgent(job.Scenario.ID)
+		if err := prepareSourceURLUpdateAgentState(ctx, paths, job.Scenario, fixtures); err != nil {
+			result.Error = fmt.Sprintf("prepare source URL update state: %v", err)
+			return result
+		}
 	}
 
 	turns := scenarioTurns(job.Scenario)
@@ -629,7 +659,7 @@ func codexJobRunner(ctx context.Context, config runConfig, job evalJob, cache ca
 	var runErr error
 	for i, turn := range turns {
 		turnIndex := i + 1
-		turnResult, parsed, err := runScenarioTurn(ctx, config, repoDir, jobDir, paths, job, turn, turnIndex, sessionID, cache)
+		turnResult, parsed, err := runScenarioTurn(ctx, config, repoDir, jobDir, paths, job, turn, turnIndex, sessionID, cache, fixtures)
 		timings.AgentRun += turnResult.WallSeconds
 		timings.ParseMetrics += parsed.parseSeconds
 		if parsed.parseError != nil {
@@ -695,6 +725,105 @@ func scenarioPaths(repoDir string) evalPaths {
 	}
 }
 
+type sourceURLUpdateFixtures struct {
+	server          *httptest.Server
+	mu              sync.Mutex
+	initialPDF      []byte
+	changedPDF      []byte
+	serveChangedPDF bool
+}
+
+func startSourceURLUpdateFixtures(scenarioID string) *sourceURLUpdateFixtures {
+	if !isSourceURLUpdateScenario(scenarioID) {
+		return nil
+	}
+	fixtures := &sourceURLUpdateFixtures{
+		initialPDF: minimalEvalPDF("Source URL Update Stable", "OpenClerk Eval", sourceURLUpdateInitialText),
+		changedPDF: minimalEvalPDF("Source URL Update Changed", "OpenClerk Eval", sourceURLUpdateChangedText),
+	}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/stable.pdf", func(w http.ResponseWriter, _ *http.Request) {
+		fixtures.mu.Lock()
+		changed := fixtures.serveChangedPDF
+		fixtures.mu.Unlock()
+		body := fixtures.initialPDF
+		if changed {
+			body = fixtures.changedPDF
+		}
+		servePDF(w, body)
+	})
+	fixtures.server = httptest.NewServer(mux)
+	return fixtures
+}
+
+func (f *sourceURLUpdateFixtures) Close() {
+	if f != nil && f.server != nil {
+		f.server.Close()
+	}
+}
+
+func (f *sourceURLUpdateFixtures) stableURL() string {
+	return f.server.URL + "/stable.pdf"
+}
+
+func (f *sourceURLUpdateFixtures) changedURL() string {
+	return f.stableURL()
+}
+
+func (f *sourceURLUpdateFixtures) prepareForAgent(scenarioID string) {
+	if scenarioID != sourceURLUpdateChangedScenarioID {
+		return
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.serveChangedPDF = true
+}
+
+func (f *sourceURLUpdateFixtures) renderPrompt(prompt string) string {
+	if f == nil {
+		return prompt
+	}
+	prompt = strings.ReplaceAll(prompt, sourceURLUpdateStableURLToken, f.stableURL())
+	return strings.ReplaceAll(prompt, sourceURLUpdateChangedURLToken, f.changedURL())
+}
+
+func servePDF(w http.ResponseWriter, body []byte) {
+	w.Header().Set("Content-Type", "application/pdf")
+	_, _ = w.Write(body)
+}
+
+func minimalEvalPDF(title string, author string, text string) []byte {
+	var buf bytes.Buffer
+	buf.WriteString("%PDF-1.4\n")
+	offsets := make([]int, 0, 6)
+	writeObject := func(id int, body string) {
+		offsets = append(offsets, buf.Len())
+		_, _ = fmt.Fprintf(&buf, "%d 0 obj\n%s\nendobj\n", id, body)
+	}
+	writeObject(1, "<< /Type /Catalog /Pages 2 0 R >>")
+	writeObject(2, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>")
+	writeObject(3, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>")
+	writeObject(4, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
+	stream := fmt.Sprintf("BT /F1 24 Tf 72 720 Td (%s) Tj ET", pdfEscape(text))
+	writeObject(5, fmt.Sprintf("<< /Length %d >>\nstream\n%s\nendstream", len(stream), stream))
+	writeObject(6, fmt.Sprintf("<< /Title (%s) /Author (%s) /CreationDate (D:20260426000000Z) >>", pdfEscape(title), pdfEscape(author)))
+	xrefStart := buf.Len()
+	buf.WriteString("xref\n0 7\n")
+	buf.WriteString("0000000000 65535 f \n")
+	for _, offset := range offsets {
+		_, _ = fmt.Fprintf(&buf, "%010d 00000 n \n", offset)
+	}
+	_, _ = fmt.Fprintf(&buf, "trailer\n<< /Size 7 /Root 1 0 R /Info 6 0 R >>\nstartxref\n%d\n%%%%EOF\n", xrefStart)
+	return buf.Bytes()
+}
+
+func pdfEscape(value string) string {
+	value = strings.ReplaceAll(value, `\`, `\\`)
+	value = strings.ReplaceAll(value, "(", `\(`)
+	value = strings.ReplaceAll(value, ")", `\)`)
+	return value
+}
+
 func evalPathsFor(runDir string, paths evalPaths, cache cacheConfig) evalPaths {
 	out := paths
 	out.CodexHome = filepath.Join(runDir, "codex-home")
@@ -710,7 +839,7 @@ func evalPathsFor(runDir string, paths evalPaths, cache cacheConfig) evalPaths {
 	return out
 }
 
-func runScenarioTurn(ctx context.Context, config runConfig, repoDir string, runDir string, paths evalPaths, job evalJob, turn scenarioTurn, turnIndex int, sessionID string, cache cacheConfig) (turnResult, parsedTurn, error) {
+func runScenarioTurn(ctx context.Context, config runConfig, repoDir string, runDir string, paths evalPaths, job evalJob, turn scenarioTurn, turnIndex int, sessionID string, cache cacheConfig, fixtures *sourceURLUpdateFixtures) (turnResult, parsedTurn, error) {
 	turnDir := filepath.Join(runDir, fmt.Sprintf("turn-%d", turnIndex))
 	if err := os.MkdirAll(turnDir, 0o755); err != nil {
 		return turnResult{}, parsedTurn{}, err
@@ -728,6 +857,9 @@ func runScenarioTurn(ctx context.Context, config runConfig, repoDir string, runD
 	}
 	defer func() { _ = stderrFile.Close() }()
 
+	if fixtures != nil {
+		turn.Prompt = fixtures.renderPrompt(turn.Prompt)
+	}
 	args := codexArgsForTurn(config.CodexBin, repoDir, runDir, job.Scenario, turn, turnIndex, sessionID, cache)
 	cmdCtx, cancel := context.WithTimeout(ctx, 7*time.Minute)
 	defer cancel()
@@ -970,6 +1102,10 @@ func buildOpenClerkRunner(repoDir string, runDir string, paths evalPaths, cache 
 }
 
 func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
+	return seedScenarioWithFixtures(ctx, paths, sc, nil)
+}
+
+func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario, fixtures *sourceURLUpdateFixtures) error {
 	cfg := runclient.Config{
 		DatabasePath: paths.DatabasePath,
 	}
@@ -1004,6 +1140,33 @@ func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
 		}
 	case invalidLayoutScenarioID:
 		if err := seedInvalidLayoutScenario(ctx, cfg); err != nil {
+			return err
+		}
+	case sourceURLUpdateDuplicateScenarioID, sourceURLUpdateConflictScenarioID:
+		if fixtures == nil {
+			return errors.New("source URL update fixture server is required")
+		}
+		if err := seedSourceURLUpdateSource(ctx, cfg, fixtures.stableURL()); err != nil {
+			return err
+		}
+	case sourceURLUpdateSameSHAScenarioID:
+		if fixtures == nil {
+			return errors.New("source URL update fixture server is required")
+		}
+		if err := seedSourceURLUpdateSource(ctx, cfg, fixtures.stableURL()); err != nil {
+			return err
+		}
+		if err := seedSourceURLUpdateSynthesis(ctx, cfg); err != nil {
+			return err
+		}
+	case sourceURLUpdateChangedScenarioID:
+		if fixtures == nil {
+			return errors.New("source URL update fixture server is required")
+		}
+		if err := seedSourceURLUpdateSource(ctx, cfg, fixtures.changedURL()); err != nil {
+			return err
+		}
+		if err := seedSourceURLUpdateSynthesis(ctx, cfg); err != nil {
 			return err
 		}
 	case synthesisCandidatePressureScenarioID:
@@ -2417,6 +2580,70 @@ func createSeedDocument(ctx context.Context, cfg runclient.Config, path, title, 
 	return nil
 }
 
+func seedSourceURLUpdateSource(ctx context.Context, cfg runclient.Config, sourceURL string) error {
+	result, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestSourceURL,
+		Source: runner.SourceURLInput{
+			URL:           sourceURL,
+			PathHint:      sourceURLUpdateSourcePath,
+			AssetPathHint: sourceURLUpdateAssetPath,
+			Title:         "Source URL Update Runner",
+		},
+	})
+	if err != nil {
+		return err
+	}
+	if result.Ingestion == nil || result.Ingestion.SourcePath != sourceURLUpdateSourcePath {
+		return fmt.Errorf("source URL update seed ingestion = %+v", result.Ingestion)
+	}
+	return nil
+}
+
+func seedSourceURLUpdateSynthesis(ctx context.Context, cfg runclient.Config) error {
+	body := strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: sources/source-url-update-runner.md
+---
+
+# Source URL Update Runner
+
+## Summary
+Initial synthesis depends on SourceURLUpdateInitialEvidence.
+
+## Sources
+- sources/source-url-update-runner.md
+
+## Freshness
+Checked source URL update source before PDF refresh.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, sourceURLUpdateSynthesisPath, "Source URL Update Runner", body)
+}
+
+func prepareSourceURLUpdateAgentState(ctx context.Context, paths evalPaths, sc scenario, fixtures *sourceURLUpdateFixtures) error {
+	if sc.ID != sourceURLUpdateChangedScenarioID {
+		return nil
+	}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	result, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestSourceURL,
+		Source: runner.SourceURLInput{
+			URL:           fixtures.changedURL(),
+			PathHint:      sourceURLUpdateSourcePath,
+			AssetPathHint: sourceURLUpdateAssetPath,
+			Mode:          "update",
+		},
+	})
+	if err != nil {
+		return err
+	}
+	if result.Ingestion == nil || result.Ingestion.SourcePath != sourceURLUpdateSourcePath {
+		return fmt.Errorf("source URL update preparation = %+v", result.Ingestion)
+	}
+	return nil
+}
+
 func replaceScenarioSeedSection(ctx context.Context, cfg runclient.Config, docPath, heading, content string) error {
 	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionList,
@@ -2509,6 +2736,14 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyConfiguredLayoutScenario(ctx, paths, finalMessage, turnMetrics)
 	case invalidLayoutScenarioID:
 		return verifyInvalidLayoutScenario(ctx, paths, finalMessage, turnMetrics)
+	case sourceURLUpdateDuplicateScenarioID:
+		return verifySourceURLUpdateDuplicateCreate(ctx, paths, finalMessage, turnMetrics)
+	case sourceURLUpdateSameSHAScenarioID:
+		return verifySourceURLUpdateSameSHA(ctx, paths, finalMessage, turnMetrics)
+	case sourceURLUpdateChangedScenarioID:
+		return verifySourceURLUpdateChangedPDF(ctx, paths, finalMessage, turnMetrics)
+	case sourceURLUpdateConflictScenarioID:
+		return verifySourceURLUpdateConflict(ctx, paths, finalMessage, turnMetrics)
 	case synthesisCandidatePressureScenarioID:
 		return verifySynthesisCandidatePressure(ctx, paths, finalMessage, turnMetrics)
 	case synthesisSourceSetPressureScenarioID:
@@ -3969,6 +4204,370 @@ func verifyInvalidLayoutScenario(ctx context.Context, paths evalPaths, finalMess
 		failures = append(failures, "answer did not report runner-visible invalid layout failures")
 	}
 	return verificationFromFailures(failures, "invalid layout inspection passed", []string{"synthesis/broken-layout.md", "records/services/broken-layout-service.md"})
+}
+
+func verifySourceURLUpdateDuplicateCreate(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	doc, found, err := documentByPath(ctx, paths, sourceURLUpdateSourcePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	sourceCount, err := exactDocumentCount(ctx, paths, sourceURLUpdateSourcePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	duplicateCount, err := exactDocumentCount(ctx, paths, sourceURLUpdateDuplicatePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := sourceURLUpdateBypassFailures(turnMetrics)
+	if !found || doc == nil {
+		failures = append(failures, "missing original source URL document")
+	} else {
+		failures = append(failures, missingRequired(doc.Body, []string{sourceURLUpdateInitialText, "source_url:", "asset_path:", sourceURLUpdateAssetPath})...)
+	}
+	if sourceCount != 1 {
+		failures = append(failures, fmt.Sprintf("expected one original source document, got %d", sourceCount))
+	}
+	if duplicateCount != 0 {
+		failures = append(failures, "duplicate create wrote "+sourceURLUpdateDuplicatePath)
+	}
+	if !turnMetrics.IngestSourceURLUsed || turnMetrics.IngestSourceURLUpdateUsed {
+		failures = append(failures, "agent did not attempt default create-mode source URL ingestion")
+	}
+	if !turnMetrics.ListDocumentsUsed {
+		failures = append(failures, "agent did not list source documents after duplicate rejection")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{sourceURLUpdateSourcePath, sourceURLUpdateDuplicatePath}) &&
+		messageContainsAny(finalMessage, []string{"duplicate", "already exists", "rejected"}) &&
+		messageContainsAny(finalMessage, []string{"not created", "was not created", "no copy"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report duplicate rejection and no-write outcome")
+	}
+	databasePass := found && sourceCount == 1 && duplicateCount == 0 && doc != nil &&
+		len(missingRequired(doc.Body, []string{sourceURLUpdateInitialText, "source_url:", "asset_path:", sourceURLUpdateAssetPath})) == 0
+	activityPass := len(sourceURLUpdateBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.IngestSourceURLUsed && !turnMetrics.IngestSourceURLUpdateUsed && turnMetrics.ListDocumentsUsed
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{sourceURLUpdateSourcePath},
+	}, nil
+}
+
+func verifySourceURLUpdateSameSHA(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	doc, found, err := documentByPath(ctx, paths, sourceURLUpdateSourcePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	sourceCount, err := exactDocumentCount(ctx, paths, sourceURLUpdateSourcePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	sourceEvents, err := sourceURLUpdateSourceEvents(ctx, paths, docIDOrEmpty(doc))
+	if err != nil {
+		return verificationResult{}, err
+	}
+	synthesisDoc, synthesisFound, err := documentByPath(ctx, paths, sourceURLUpdateSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projection, err := firstSynthesisProjection(ctx, paths, docIDOrEmpty(synthesisDoc))
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projectionEvents, err := sourceURLUpdateProjectionEvents(ctx, paths, docIDOrEmpty(synthesisDoc))
+	if err != nil {
+		return verificationResult{}, err
+	}
+	search, err := sourceURLUpdateSearch(ctx, paths, sourceURLUpdateInitialText)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := sourceURLUpdateBypassFailures(turnMetrics)
+	if !found || doc == nil {
+		failures = append(failures, "missing source URL document")
+	} else {
+		failures = append(failures, missingRequired(doc.Body, []string{sourceURLUpdateInitialText, "asset_path:", sourceURLUpdateAssetPath})...)
+	}
+	if sourceCount != 1 {
+		failures = append(failures, fmt.Sprintf("expected one source document, got %d", sourceCount))
+	}
+	if eventTypesInclude(sourceEvents, "source_updated") {
+		failures = append(failures, "same-SHA update emitted source_updated provenance")
+	}
+	if !synthesisFound || projection == nil || projection.Freshness != "fresh" {
+		failures = append(failures, "same-SHA update did not leave dependent synthesis fresh")
+	}
+	if eventTypesInclude(projectionEvents, "projection_invalidated") {
+		failures = append(failures, "same-SHA update invalidated dependent synthesis")
+	}
+	if !searchContainsPath(search, sourceURLUpdateSourcePath) || !searchResultHasCitations(search) {
+		failures = append(failures, "same-SHA source evidence was not searchable with citations")
+	}
+	if !turnMetrics.IngestSourceURLUpdateUsed {
+		failures = append(failures, "agent did not use source.mode update")
+	}
+	if !turnMetrics.ListDocumentsUsed || !turnMetrics.GetDocumentUsed || !turnMetrics.ProvenanceEventsUsed || !turnMetrics.SearchUsed || !turnMetrics.ProjectionStatesUsed {
+		failures = append(failures, "agent did not inspect source document, provenance, search evidence, and synthesis projection")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{sourceURLUpdateSourcePath, sourceURLUpdateSynthesisPath}) &&
+		messageContainsAny(finalMessage, []string{"same-sha", "same sha", "no-op", "unchanged"}) &&
+		messageContainsAny(finalMessage, []string{"citation", "source evidence", "preserved"}) &&
+		messageContainsAny(finalMessage, []string{"fresh"}) &&
+		messageContainsAny(finalMessage, []string{"no changed", "not changed", "no refresh", "not needed"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report same-SHA no-op with preserved evidence")
+	}
+	databasePass := found && doc != nil && sourceCount == 1 &&
+		len(missingRequired(doc.Body, []string{sourceURLUpdateInitialText, "asset_path:", sourceURLUpdateAssetPath})) == 0 &&
+		!eventTypesInclude(sourceEvents, "source_updated") &&
+		synthesisFound &&
+		projection != nil &&
+		projection.Freshness == "fresh" &&
+		!eventTypesInclude(projectionEvents, "projection_invalidated") &&
+		searchContainsPath(search, sourceURLUpdateSourcePath) &&
+		searchResultHasCitations(search)
+	activityPass := len(sourceURLUpdateBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.IngestSourceURLUpdateUsed &&
+		turnMetrics.ListDocumentsUsed &&
+		turnMetrics.GetDocumentUsed &&
+		turnMetrics.ProvenanceEventsUsed &&
+		turnMetrics.SearchUsed &&
+		turnMetrics.ProjectionStatesUsed
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{sourceURLUpdateSourcePath, sourceURLUpdateSynthesisPath},
+	}, nil
+}
+
+func verifySourceURLUpdateChangedPDF(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	doc, found, err := documentByPath(ctx, paths, sourceURLUpdateSourcePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	synthesisDoc, synthesisFound, err := documentByPath(ctx, paths, sourceURLUpdateSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	sourceEvents, err := sourceURLUpdateSourceEvents(ctx, paths, docIDOrEmpty(doc))
+	if err != nil {
+		return verificationResult{}, err
+	}
+	changedSearch, err := sourceURLUpdateSearch(ctx, paths, sourceURLUpdateChangedText)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	oldSearch, err := sourceURLUpdateSearch(ctx, paths, sourceURLUpdateInitialText)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projection, err := firstSynthesisProjection(ctx, paths, docIDOrEmpty(synthesisDoc))
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projectionEvents, err := sourceURLUpdateProjectionEvents(ctx, paths, docIDOrEmpty(synthesisDoc))
+	if err != nil {
+		return verificationResult{}, err
+	}
+	updateEventOK := sourceURLUpdateEventHasSHAChange(sourceEvents)
+	hasStaleProjection := projection != nil &&
+		projection.Freshness == "stale" &&
+		projectionDetailContains(projection.Details, "stale_source_refs", sourceURLUpdateSourcePath)
+	failures := sourceURLUpdateBypassFailures(turnMetrics)
+	if !found || doc == nil {
+		failures = append(failures, "missing updated source URL document")
+	} else {
+		failures = append(failures, missingRequired(doc.Body, []string{sourceURLUpdateChangedText, "asset_path:", sourceURLUpdateAssetPath})...)
+		failures = append(failures, presentForbidden(doc.Body, []string{sourceURLUpdateInitialText})...)
+	}
+	if !synthesisFound || synthesisDoc == nil {
+		failures = append(failures, "missing dependent synthesis")
+	} else if !strings.Contains(synthesisDoc.Body, sourceURLUpdateInitialText) {
+		failures = append(failures, "dependent synthesis was repaired or no longer contains initial stale claim")
+	}
+	if !searchContainsPath(changedSearch, sourceURLUpdateSourcePath) || !searchResultHasCitations(changedSearch) {
+		failures = append(failures, "changed source evidence was not searchable with citations")
+	}
+	if searchContainsPath(oldSearch, sourceURLUpdateSourcePath) {
+		failures = append(failures, "old source evidence remained indexed for the source path")
+	}
+	if !updateEventOK {
+		failures = append(failures, "source update provenance missing previous/new SHA details")
+	}
+	if !hasStaleProjection {
+		failures = append(failures, "dependent synthesis projection is not visibly stale")
+	}
+	if !eventTypesInclude(projectionEvents, "projection_invalidated") {
+		failures = append(failures, "synthesis projection invalidation event missing")
+	}
+	if !turnMetrics.SearchUsed || !turnMetrics.ListDocumentsUsed || !turnMetrics.GetDocumentUsed || !turnMetrics.ProjectionStatesUsed || !turnMetrics.ProvenanceEventsUsed {
+		failures = append(failures, "agent did not use search, source/synthesis listing/get, projection, and provenance workflow")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{sourceURLUpdateSourcePath, sourceURLUpdateSynthesisPath}) &&
+		messageContainsAny(finalMessage, []string{"changed-pdf", "changed pdf", "updated pdf", "changed"}) &&
+		messageContainsAny(finalMessage, []string{"stale"}) &&
+		messageContainsAny(finalMessage, []string{"projection", "freshness"}) &&
+		messageContainsAny(finalMessage, []string{"provenance", "source_updated", "source update"}) &&
+		messageContainsAny(finalMessage, []string{"citation", "evidence"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report changed update, stale projection, provenance, and citations")
+	}
+	databasePass := found && doc != nil && synthesisFound && synthesisDoc != nil &&
+		len(missingRequired(doc.Body, []string{sourceURLUpdateChangedText, "asset_path:", sourceURLUpdateAssetPath})) == 0 &&
+		len(presentForbidden(doc.Body, []string{sourceURLUpdateInitialText})) == 0 &&
+		strings.Contains(synthesisDoc.Body, sourceURLUpdateInitialText) &&
+		searchContainsPath(changedSearch, sourceURLUpdateSourcePath) &&
+		searchResultHasCitations(changedSearch) &&
+		!searchContainsPath(oldSearch, sourceURLUpdateSourcePath) &&
+		updateEventOK &&
+		hasStaleProjection &&
+		eventTypesInclude(projectionEvents, "projection_invalidated")
+	activityPass := len(sourceURLUpdateBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.SearchUsed &&
+		turnMetrics.ListDocumentsUsed &&
+		turnMetrics.GetDocumentUsed &&
+		turnMetrics.ProjectionStatesUsed &&
+		turnMetrics.ProvenanceEventsUsed
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{sourceURLUpdateSourcePath, sourceURLUpdateSynthesisPath},
+	}, nil
+}
+
+func verifySourceURLUpdateConflict(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	doc, found, err := documentByPath(ctx, paths, sourceURLUpdateSourcePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	sourceCount, err := exactDocumentCount(ctx, paths, sourceURLUpdateSourcePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	conflictCount, err := exactDocumentCount(ctx, paths, sourceURLUpdateConflictPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	sourceEvents, err := sourceURLUpdateSourceEvents(ctx, paths, docIDOrEmpty(doc))
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := sourceURLUpdateBypassFailures(turnMetrics)
+	if !found || doc == nil {
+		failures = append(failures, "missing original source URL document")
+	} else {
+		failures = append(failures, missingRequired(doc.Body, []string{sourceURLUpdateInitialText, "asset_path:", sourceURLUpdateAssetPath})...)
+	}
+	if sourceCount != 1 {
+		failures = append(failures, fmt.Sprintf("expected one original source document, got %d", sourceCount))
+	}
+	if conflictCount != 0 {
+		failures = append(failures, "conflict update wrote "+sourceURLUpdateConflictPath)
+	}
+	if eventTypesInclude(sourceEvents, "source_updated") {
+		failures = append(failures, "conflict update emitted source_updated provenance")
+	}
+	if !turnMetrics.IngestSourceURLUpdateUsed {
+		failures = append(failures, "agent did not use source.mode update")
+	}
+	if !turnMetrics.ListDocumentsUsed {
+		failures = append(failures, "agent did not list source documents after conflict")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{sourceURLUpdateSourcePath}) &&
+		messageContainsAny(finalMessage, []string{sourceURLUpdateConflictPath, "source-url-update-conflict.md"}) &&
+		messageContainsAny(finalMessage, []string{"conflict", "mismatch", "path hint", "path-hint"}) &&
+		messageContainsAny(finalMessage, []string{"not created", "was not created", "no write", "without writing"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report path-hint conflict and no-write outcome")
+	}
+	databasePass := found && doc != nil && sourceCount == 1 && conflictCount == 0 &&
+		len(missingRequired(doc.Body, []string{sourceURLUpdateInitialText, "asset_path:", sourceURLUpdateAssetPath})) == 0 &&
+		!eventTypesInclude(sourceEvents, "source_updated")
+	activityPass := len(sourceURLUpdateBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.IngestSourceURLUpdateUsed &&
+		turnMetrics.ListDocumentsUsed
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{sourceURLUpdateSourcePath},
+	}, nil
+}
+
+func sourceURLUpdateBypassFailures(turnMetrics metrics) []string {
+	return populatedBypassFailures(turnMetrics)
+}
+
+func docIDOrEmpty(doc *runner.Document) string {
+	if doc == nil {
+		return ""
+	}
+	return doc.DocID
+}
+
+func sourceURLUpdateSourceEvents(ctx context.Context, paths evalPaths, docID string) ([]runner.ProvenanceEvent, error) {
+	if strings.TrimSpace(docID) == "" {
+		return nil, nil
+	}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	result, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action:     runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{RefKind: "source", RefID: docID, Limit: 20},
+	})
+	if err != nil || result.Provenance == nil {
+		return nil, err
+	}
+	return result.Provenance.Events, nil
+}
+
+func sourceURLUpdateProjectionEvents(ctx context.Context, paths evalPaths, synthesisDocID string) ([]runner.ProvenanceEvent, error) {
+	if strings.TrimSpace(synthesisDocID) == "" {
+		return nil, nil
+	}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	result, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action:     runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{RefKind: "projection", RefID: "synthesis:" + synthesisDocID, Limit: 20},
+	})
+	if err != nil || result.Provenance == nil {
+		return nil, err
+	}
+	return result.Provenance.Events, nil
+}
+
+func sourceURLUpdateSearch(ctx context.Context, paths evalPaths, text string) (runner.RetrievalTaskResult, error) {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	return runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
+			Text:       text,
+			PathPrefix: "sources/",
+			Limit:      10,
+		},
+	})
+}
+
+func sourceURLUpdateEventHasSHAChange(events []runner.ProvenanceEvent) bool {
+	for _, event := range events {
+		if event.EventType != "source_updated" {
+			continue
+		}
+		previous := strings.TrimSpace(event.Details["previous_sha256"])
+		next := strings.TrimSpace(event.Details["new_sha256"])
+		if previous != "" && next != "" && previous != next &&
+			event.Details["asset_path"] == sourceURLUpdateAssetPath {
+			return true
+		}
+	}
+	return false
 }
 
 func verifyStaleSynthesisUpdate(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
@@ -6730,6 +7329,12 @@ func classifyCommand(command string, m *metrics) {
 		addEvidence(&m.LegacyRunnerEvidence)
 	}
 	classifySearchCommand(actionText, m)
+	if commandContainsAction(actionText, "ingest_source_url") {
+		m.IngestSourceURLUsed = true
+		if actionHasFieldValue(actionText, "ingest_source_url", "mode", "update") {
+			m.IngestSourceURLUpdateUsed = true
+		}
+	}
 	if commandContainsAction(actionText, "list_documents") {
 		m.ListDocumentsUsed = true
 		m.ListDocumentPathPrefixes = append(m.ListDocumentPathPrefixes, actionFieldValues(actionText, "list_documents", "path_prefix")...)
@@ -6799,6 +7404,15 @@ func actionFieldValues(actionText string, action string, field string) []string 
 		}
 	}
 	return values
+}
+
+func actionHasFieldValue(actionText string, action string, field string, value string) bool {
+	for _, got := range actionFieldValues(actionText, action, field) {
+		if got == value {
+			return true
+		}
+	}
+	return false
 }
 
 func classifySearchCommand(actionText string, m *metrics) {
@@ -6888,6 +7502,8 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.SearchUnfilteredUsed = out.SearchUnfilteredUsed || current.SearchUnfilteredUsed
 		out.SearchPathFilterUsed = out.SearchPathFilterUsed || current.SearchPathFilterUsed
 		out.SearchMetadataFilterUsed = out.SearchMetadataFilterUsed || current.SearchMetadataFilterUsed
+		out.IngestSourceURLUsed = out.IngestSourceURLUsed || current.IngestSourceURLUsed
+		out.IngestSourceURLUpdateUsed = out.IngestSourceURLUpdateUsed || current.IngestSourceURLUpdateUsed
 		out.ListDocumentsUsed = out.ListDocumentsUsed || current.ListDocumentsUsed
 		out.ListDocumentPathPrefixes = append(out.ListDocumentPathPrefixes, current.ListDocumentPathPrefixes...)
 		out.GetDocumentUsed = out.GetDocumentUsed || current.GetDocumentUsed
@@ -7057,7 +7673,7 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	if releaseBlocking {
 		return nil
 	}
-	if lane != populatedLaneName && lane != agentChosenPathLaneName {
+	if lane != populatedLaneName && lane != agentChosenPathLaneName && lane != sourceURLUpdateLaneName {
 		return nil
 	}
 	summary := targetedLaneSummary{
@@ -7075,6 +7691,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		case agentChosenPathLaneName:
 			include = isAgentChosenPathScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
 			classification, posture = classifyTargetedAgentChosenPathResult(result)
+		case sourceURLUpdateLaneName:
+			include = isSourceURLUpdateScenario(result.Scenario)
+			classification, posture = classifyTargetedSourceURLUpdateResult(result)
 		}
 		if !include {
 			continue
@@ -7097,8 +7716,30 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	case agentChosenPathLaneName:
 		summary.Decision = agentChosenPathDecision(summary.ScenarioClassifications)
 		summary.Promotion = "no promoted runner action, schema, migration, storage API, product behavior, public OpenClerk interface, or change to missing-path clarification"
+	case sourceURLUpdateLaneName:
+		summary.Decision = "keep_existing_update_mode"
+		summary.Promotion = "targeted AgentOps evidence for existing ingest_source_url source.mode update behavior; no new runner action, schema, storage API, or transport"
 	}
 	return &summary
+}
+
+func classifyTargetedSourceURLUpdateResult(result jobResult) (string, string) {
+	if result.Passed && result.Verification.Passed {
+		return "none", "installed document/retrieval runner evidence covered source URL update mode"
+	}
+	if len(populatedBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Verification.Passed {
+		return "runner_execution_failure", "scenario verification passed, but the job did not complete successfully"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "fixture or database evidence did not satisfy the source URL update contract"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible evidence existed, but the assistant answer did not satisfy the scenario"
+	}
+	return "runner_capability_gap", "manual review required before any public surface change"
 }
 
 func classifyTargetedPopulatedResult(result jobResult) (string, string) {
@@ -7614,6 +8255,7 @@ func reportLane(ids []string) (string, bool) {
 	populated := 0
 	documentHistory := 0
 	agentChosenPath := 0
+	sourceURLUpdate := 0
 	validation := 0
 	releaseBlocking := false
 	for _, id := range ids {
@@ -7627,6 +8269,10 @@ func reportLane(ids []string) (string, bool) {
 		}
 		if isAgentChosenPathScenario(id) {
 			agentChosenPath++
+			continue
+		}
+		if isSourceURLUpdateScenario(id) {
+			sourceURLUpdate++
 			continue
 		}
 		if isFinalAnswerOnlyValidationScenario(id) {
@@ -7644,6 +8290,9 @@ func reportLane(ids []string) (string, bool) {
 	if agentChosenPath > 0 && agentChosenPath+validation == len(ids) {
 		return agentChosenPathLaneName, false
 	}
+	if sourceURLUpdate > 0 && sourceURLUpdate+validation == len(ids) {
+		return sourceURLUpdateLaneName, false
+	}
 	if populated > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
@@ -7651,6 +8300,9 @@ func reportLane(ids []string) (string, bool) {
 		return populatedMixedLaneName, releaseBlocking
 	}
 	if agentChosenPath > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
+	if sourceURLUpdate > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
 	return populatedDefaultLaneName, true
@@ -7666,7 +8318,7 @@ func isPopulatedVaultScenario(id string) bool {
 }
 
 func isReleaseBlockingScenario(id string) bool {
-	return !isPopulatedVaultScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id)
+	return !isPopulatedVaultScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isSourceURLUpdateScenario(id)
 }
 
 func isDocumentHistoryScenario(id string) bool {
@@ -7681,6 +8333,15 @@ func isDocumentHistoryScenario(id string) bool {
 func isAgentChosenPathScenario(id string) bool {
 	switch id {
 	case agentChosenPathProposalScenarioID, agentChosenAutonomousScenarioID, agentChosenSynthesisScenarioID, agentChosenAmbiguousScenarioID, agentChosenUserPathScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+
+func isSourceURLUpdateScenario(id string) bool {
+	switch id {
+	case sourceURLUpdateDuplicateScenarioID, sourceURLUpdateSameSHAScenarioID, sourceURLUpdateChangedScenarioID, sourceURLUpdateConflictScenarioID:
 		return true
 	default:
 		return false
@@ -7739,6 +8400,26 @@ func allScenarios() []scenario {
 			ID:     invalidLayoutScenarioID,
 			Title:  "Report invalid layout through runner-visible checks",
 			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, or source-built command paths. Run openclerk document inspect_layout. In the final answer, report the invalid runner-visible layout checks for synthesis/broken-layout.md and records/services/broken-layout-service.md, including the missing source ref, missing Freshness section, and missing service identity metadata.",
+		},
+		{
+			ID:     sourceURLUpdateDuplicateScenarioID,
+			Title:  "Reject duplicate source URL create mode",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or manual PDF downloads. First run openclerk document with exactly this request shape: {\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{SOURCE_URL_UPDATE_STABLE_URL}}\",\"path_hint\":\"sources/source-url-update-runner-copy.md\",\"asset_path_hint\":\"assets/sources/source-url-update-runner-copy.pdf\",\"title\":\"Source URL Update Duplicate\"}}. The duplicate source URL should be rejected. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"sources/source-url-update-runner\",\"limit\":10}} and confirm the original source remains at sources/source-url-update-runner.md and no copy source was created. In the final answer, mention duplicate create rejection, sources/source-url-update-runner.md, and that sources/source-url-update-runner-copy.md was not created.",
+		},
+		{
+			ID:     sourceURLUpdateSameSHAScenarioID,
+			Title:  "Same-SHA source URL update is a no-op",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or manual PDF downloads. First run openclerk document with exactly this request shape: {\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{SOURCE_URL_UPDATE_STABLE_URL}}\",\"mode\":\"update\"}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"sources/source-url-update-runner\",\"limit\":10}}. Use the returned doc_id for sources/source-url-update-runner.md to run get_document. Run openclerk retrieval search with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"SourceURLUpdateInitialEvidence\",\"path_prefix\":\"sources/\",\"limit\":10}}. Run openclerk document list_documents with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\",\"limit\":20}}. Use the returned doc_id for synthesis/source-url-update-runner.md to run get_document. Then run openclerk retrieval with exactly this request shape for the source doc: {\"action\":\"provenance_events\",\"provenance\":{\"ref_kind\":\"source\",\"ref_id\":\"SOURCE_DOC_ID\",\"limit\":20}} and exactly this request shape for the synthesis doc: {\"action\":\"projection_states\",\"projection\":{\"projection\":\"synthesis\",\"ref_kind\":\"document\",\"ref_id\":\"SYNTHESIS_DOC_ID\",\"limit\":5}}. In the final answer, mention same-SHA no-op update, the stable path sources/source-url-update-runner.md, preserved citations or source evidence, and that synthesis/source-url-update-runner.md stayed fresh with no changed-PDF refresh needed.",
+		},
+		{
+			ID:     sourceURLUpdateChangedScenarioID,
+			Title:  "Changed PDF update exposes stale synthesis",
+			Prompt: "Use the configured local OpenClerk data path. A changed-PDF source URL update has just been applied by the runner fixture before this turn. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or manual PDF downloads. Run openclerk retrieval search with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"SourceURLUpdateChangedEvidence\",\"path_prefix\":\"sources/\",\"limit\":10}}. Run openclerk document list_documents with exactly these request shapes for source and synthesis candidates: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"sources/source-url-update-runner\",\"limit\":10}} and {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\",\"limit\":20}}. Use get_document for sources/source-url-update-runner.md and synthesis/source-url-update-runner.md. Then run openclerk retrieval with exactly this request shape for the source doc: {\"action\":\"provenance_events\",\"provenance\":{\"ref_kind\":\"source\",\"ref_id\":\"SOURCE_DOC_ID\",\"limit\":20}} and exactly this request shape for the synthesis doc: {\"action\":\"projection_states\",\"projection\":{\"projection\":\"synthesis\",\"ref_kind\":\"document\",\"ref_id\":\"SYNTHESIS_DOC_ID\",\"limit\":5}}. Also inspect provenance_events for ref_kind projection and ref_id synthesis:SYNTHESIS_DOC_ID. Do not repair the synthesis. In the final answer, mention changed-PDF update, sources/source-url-update-runner.md, refreshed citations or changed evidence, synthesis/source-url-update-runner.md, stale synthesis projection, and source update provenance.",
+		},
+		{
+			ID:     sourceURLUpdateConflictScenarioID,
+			Title:  "Mismatched path hint update conflicts without writing",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or manual PDF downloads. Run ingest_source_url with source.mode update for exactly this URL and a mismatched path hint: {\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{SOURCE_URL_UPDATE_STABLE_URL}}\",\"path_hint\":\"sources/source-url-update-conflict.md\",\"asset_path_hint\":\"assets/sources/source-url-update-runner.pdf\",\"mode\":\"update\"}}. The update should conflict because the path hint does not match the existing source. Then list documents with path_prefix sources/source-url-update and get the existing source document if needed. In the final answer, mention path-hint conflict, existing path sources/source-url-update-runner.md, and that sources/source-url-update-conflict.md was not created.",
 		},
 		{
 			ID:     "stale-synthesis-update",
