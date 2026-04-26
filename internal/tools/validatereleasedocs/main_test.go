@@ -157,6 +157,72 @@ They are not release prose.
 	}
 }
 
+func TestValidateReleaseNotesAcceptsV020SourceURLUpdateCoverage(t *testing.T) {
+	t.Parallel()
+
+	if err := validateReleaseNotes("docs/release-notes/v0.2.0.md", validV020ReleaseNotes(), "v0.2.0"); err != nil {
+		t.Fatalf("validateReleaseNotes: %v", err)
+	}
+}
+
+func TestValidateReleaseNotesRejectsIncompleteV020SourceURLUpdateCoverage(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		replace string
+		with    string
+		wantErr string
+	}{
+		{
+			name:    "missing update mode semantics",
+			replace: "`source.mode: \"update\"` re-ingests an existing `source.url`",
+			with:    "`source.mode` supports updates",
+			wantErr: "source URL update mode defaults",
+		},
+		{
+			name:    "missing conflict no-write behavior",
+			replace: "conflict without writing extra docs or assets",
+			with:    "conflict cleanly",
+			wantErr: "duplicate and path-hint conflicts",
+		},
+		{
+			name:    "missing same SHA no-op behavior",
+			replace: "same-SHA updates are no-ops",
+			with:    "same-SHA updates are detected",
+			wantErr: "same-SHA no-op behavior",
+		},
+		{
+			name:    "missing stale synthesis visibility",
+			replace: "`projection_states`",
+			with:    "projection state output",
+			wantErr: "changed-PDF stale synthesis visibility",
+		},
+		{
+			name:    "missing targeted evidence pointer",
+			replace: "docs/evals/results/ockp-source-url-update-mode.md",
+			with:    "docs/evals/results/ockp-latest.md",
+			wantErr: "targeted source URL update evidence",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			notes := strings.Replace(validV020ReleaseNotes(), tt.replace, tt.with, 1)
+			if notes == validV020ReleaseNotes() {
+				t.Fatalf("test replacement %q did not change fixture", tt.replace)
+			}
+			err := validateReleaseNotes("docs/release-notes/v0.2.0.md", notes, "v0.2.0")
+			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("validateReleaseNotes error = %v, want containing %q", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func validReleaseNotes(tag string) string {
 	return "# OpenClerk " + tag + `
 
@@ -169,6 +235,22 @@ This release adds the local-first runner and keeps release prose on one source l
 ## Verification
 
 - Production eval passed all selected scenarios.
+`
+}
+
+func validV020ReleaseNotes() string {
+	return `# OpenClerk v0.2.0
+
+This release tightens the installed OpenClerk runner and skill contract after the first public release, with clearer routine knowledge-task policy, database-anchored vault configuration, and release-gate evidence for the current AgentOps workflow.
+
+## Changed
+
+- Documented ` + "`ingest_source_url`" + ` update mode: missing ` + "`source.mode`" + ` defaults to ` + "`create`" + `, duplicate creates reject, ` + "`source.mode: \"update\"`" + ` re-ingests an existing ` + "`source.url`" + `, and mismatched ` + "`path_hint`" + ` or ` + "`asset_path_hint`" + ` values conflict without writing extra docs or assets.
+- Verified source URL update freshness behavior: same-SHA updates are no-ops without ` + "`source_updated`" + ` provenance or projection invalidation churn, while changed-PDF updates preserve source and asset paths, refresh searchable extracted text and citations, emit previous/new SHA provenance, and expose stale dependent synthesis through ` + "`projection_states`" + `.
+
+## Verification
+
+- Targeted source URL update evidence is committed at ` + "`docs/evals/results/ockp-source-url-update-mode.md`" + `, covering duplicate create rejection, same-SHA no-op behavior, changed-PDF stale synthesis visibility, and path-hint conflict no-write behavior for the shipped runner and skill.
 `
 }
 

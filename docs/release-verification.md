@@ -12,6 +12,8 @@ Tagged OpenClerk releases publish:
 The platform archives contain the `openclerk` runner. The skill archive
 contains `skills/openclerk/SKILL.md`. Checksums and GitHub attestations verify
 that release assets were produced by this repository's workflow.
+Release assets are intended to be immutable once published. If an artifact is
+wrong, ship a new patch release instead of mutating the existing release.
 
 ## Verify a Release
 
@@ -33,10 +35,6 @@ tag:
 gh release view --repo yazanabuashour/openclerk --json tagName --jq .tagName
 ```
 
-Published release assets are intended to be immutable going forward. If an
-artifact is wrong, ship a new patch release instead of mutating the existing
-release.
-
 ## Smoke-Test an Install
 
 Install into a temporary directory, then verify the runner version and commands:
@@ -56,6 +54,30 @@ printf '%s\n' '{"action":"resolve_paths"}' | openclerk document
 
 The valid runner domains are `document` and `retrieval`. A complete install
 also registers the matching `skills/openclerk/SKILL.md` with the user's agent.
+Release verification should confirm installed runner and skill alignment: the
+agent-facing examples must use the installed `openclerk document` and
+`openclerk retrieval` commands, not source-tree binaries, direct SQLite access,
+HTTP/MCP bypasses, or retired APIs.
+
+For v0.2.x source URL update behavior, the release notes and skill examples
+should match this runner request shape:
+
+```bash
+printf '%s\n' '{"action":"ingest_source_url","source":{"url":"https://example.test/source.pdf","mode":"update"}}' | openclerk document
+```
+
+The current full production OpenClerk AgentOps gate remains
+`docs/evals/results/ockp-agentops-production.md`. Source URL update mode is
+covered by targeted AgentOps evidence at
+`docs/evals/results/ockp-source-url-update-mode.md`; that targeted lane proves
+duplicate create rejection, same-SHA no-op updates, changed-PDF stale synthesis
+visibility, and path-hint conflict no-write behavior, but does not replace the
+release-blocking production gate.
+
+Committed reports and docs must use repo-relative artifact paths. Raw eval log
+references, when included in reduced reports, must use neutral placeholders
+such as `<run-root>/<variant>/<scenario>/turn-N/events.jsonl` rather than
+machine-absolute paths. Raw logs are not committed.
 
 ## SBOM
 

@@ -81,6 +81,48 @@ func validateReleaseNotes(notesPath string, content string, tag string) error {
 	if err := validateNoHardWrappedProse(notesPath, lines); err != nil {
 		return err
 	}
+	if tag == "v0.2.0" {
+		if err := validateV020ReleaseNotes(notesPath, content); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateV020ReleaseNotes(notesPath string, content string) error {
+	normalized := strings.Join(strings.Fields(content), " ")
+	required := []struct {
+		name  string
+		terms []string
+	}{
+		{
+			name:  "source URL update mode defaults",
+			terms: []string{"`ingest_source_url` update mode", "missing `source.mode` defaults to `create`", "`source.mode: \"update\"` re-ingests an existing `source.url`"},
+		},
+		{
+			name:  "duplicate and path-hint conflicts",
+			terms: []string{"duplicate creates reject", "`path_hint`", "`asset_path_hint`", "conflict without writing extra docs or assets"},
+		},
+		{
+			name:  "same-SHA no-op behavior",
+			terms: []string{"same-SHA updates are no-ops", "`source_updated` provenance", "projection invalidation churn"},
+		},
+		{
+			name:  "changed-PDF stale synthesis visibility",
+			terms: []string{"changed-PDF updates preserve source and asset paths", "refresh searchable extracted text and citations", "previous/new SHA provenance", "`projection_states`"},
+		},
+		{
+			name:  "targeted source URL update evidence",
+			terms: []string{"docs/evals/results/ockp-source-url-update-mode.md", "path-hint conflict no-write behavior"},
+		},
+	}
+	for _, requirement := range required {
+		for _, term := range requirement.terms {
+			if !strings.Contains(normalized, term) {
+				return fmt.Errorf("%s must document v0.2.0 %s: missing %q", notesPath, requirement.name, term)
+			}
+		}
+	}
 	return nil
 }
 
