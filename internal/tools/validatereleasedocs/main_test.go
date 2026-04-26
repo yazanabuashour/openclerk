@@ -157,15 +157,22 @@ They are not release prose.
 	}
 }
 
-func TestValidateReleaseNotesAcceptsV020SourceURLUpdateCoverage(t *testing.T) {
+func TestValidateReleaseNotesAcceptsV02SourceURLUpdateCoverage(t *testing.T) {
 	t.Parallel()
 
-	if err := validateReleaseNotes("docs/release-notes/v0.2.0.md", validV020ReleaseNotes(), "v0.2.0"); err != nil {
-		t.Fatalf("validateReleaseNotes: %v", err)
+	for _, tag := range []string{"v0.2.0", "v0.2.1"} {
+		tag := tag
+		t.Run(tag, func(t *testing.T) {
+			t.Parallel()
+
+			if err := validateReleaseNotes("docs/release-notes/"+tag+".md", validV02ReleaseNotes(tag), tag); err != nil {
+				t.Fatalf("validateReleaseNotes: %v", err)
+			}
+		})
 	}
 }
 
-func TestValidateReleaseNotesRejectsIncompleteV020SourceURLUpdateCoverage(t *testing.T) {
+func TestValidateReleaseNotesRejectsIncompleteV02SourceURLUpdateCoverage(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -211,11 +218,11 @@ func TestValidateReleaseNotesRejectsIncompleteV020SourceURLUpdateCoverage(t *tes
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			notes := strings.Replace(validV020ReleaseNotes(), tt.replace, tt.with, 1)
-			if notes == validV020ReleaseNotes() {
+			notes := strings.Replace(validV02ReleaseNotes("v0.2.1"), tt.replace, tt.with, 1)
+			if notes == validV02ReleaseNotes("v0.2.1") {
 				t.Fatalf("test replacement %q did not change fixture", tt.replace)
 			}
-			err := validateReleaseNotes("docs/release-notes/v0.2.0.md", notes, "v0.2.0")
+			err := validateReleaseNotes("docs/release-notes/v0.2.1.md", notes, "v0.2.1")
 			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
 				t.Fatalf("validateReleaseNotes error = %v, want containing %q", err, tt.wantErr)
 			}
@@ -238,8 +245,8 @@ This release adds the local-first runner and keeps release prose on one source l
 `
 }
 
-func validV020ReleaseNotes() string {
-	return `# OpenClerk v0.2.0
+func validV02ReleaseNotes(tag string) string {
+	return `# OpenClerk ` + tag + `
 
 This release tightens the installed OpenClerk runner and skill contract after the first public release, with clearer routine knowledge-task policy, database-anchored vault configuration, and release-gate evidence for the current AgentOps workflow.
 

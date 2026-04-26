@@ -81,15 +81,19 @@ func validateReleaseNotes(notesPath string, content string, tag string) error {
 	if err := validateNoHardWrappedProse(notesPath, lines); err != nil {
 		return err
 	}
-	if tag == "v0.2.0" {
-		if err := validateV020ReleaseNotes(notesPath, content); err != nil {
+	if isV02ReleaseTag(tag) {
+		if err := validateV02ReleaseNotes(notesPath, content); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func validateV020ReleaseNotes(notesPath string, content string) error {
+func isV02ReleaseTag(tag string) bool {
+	return strings.HasPrefix(tag, "v0.2.")
+}
+
+func validateV02ReleaseNotes(notesPath string, content string) error {
 	normalized := strings.Join(strings.Fields(content), " ")
 	required := []struct {
 		name  string
