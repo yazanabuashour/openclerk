@@ -9,16 +9,19 @@ decision_owner: platform
 
 ## Status
 
-Deferred after v1 and kept as reference after the targeted POC and post-`oc-6fr`
-source URL update work. This ADR records the naming/path/title policy
-OpenClerk should evaluate for agent-chosen vault-relative paths, filenames, and
-titles, but it does not add a public runner action, JSON schema, storage
-migration, or implementation commitment.
+Deferred after v1 and kept as reference after the targeted POC, post-`oc-6fr`
+source URL update work, and the `oc-iat` path/title autonomy decision. This ADR
+records the naming/path/title policy OpenClerk evaluated for agent-chosen
+vault-relative paths, filenames, and titles, but it does not add a public runner
+action, JSON schema, storage migration, skill behavior, public interface, or
+implementation commitment.
 
 The targeted POC/eval contract is recorded in
 [`../evals/agent-chosen-path-selection-poc.md`](../evals/agent-chosen-path-selection-poc.md).
 The current reduced report is
 [`../evals/results/ockp-agent-chosen-path-selection-poc.md`](../evals/results/ockp-agent-chosen-path-selection-poc.md).
+The follow-up pressure report for `oc-iat` is
+[`../evals/results/ockp-path-title-autonomy-pressure.md`](../evals/results/ockp-path-title-autonomy-pressure.md).
 
 ## Context
 
@@ -62,9 +65,9 @@ metadata or conflict without writing.
 
 ## Decision
 
-Keep agent-chosen vault path selection deferred/reference. The targeted POC did
-not prove that explicit-path workflows or existing document/retrieval runner
-actions are structurally insufficient.
+Keep agent-chosen vault path selection deferred/reference. The targeted POC and
+the follow-up `oc-iat` pressure lane did not prove that explicit-path workflows
+or existing document/retrieval runner actions are structurally insufficient.
 
 The candidate naming/path/title policy to evaluate is:
 
@@ -78,6 +81,15 @@ The candidate naming/path/title policy to evaluate is:
 - metadata, not filename, remains authoritative for document type and identity
 - source URL create/update semantics keep source and asset paths explicit or
   storage-backed; title/path autonomy must not invent a second source identity
+
+`oc-iat` confirms no promotion of this policy into product behavior. The
+current production contract still requires explicit `document.path`,
+`document.title`, and `document.body` for document creation, and explicit
+`source.path_hint` and `source.asset_path_hint` for source URL create mode. A
+URL-only, artifact-only, or ambiguous path/title request remains a no-tools
+clarification when required fields are missing, unless the request can be
+completed through an already valid existing `openclerk document` or
+`openclerk retrieval` workflow.
 
 The policy must preserve the v1 model that canonical markdown and promoted
 records are source authority. A path such as `sources/openai-harness-engineering.md`
@@ -156,6 +168,12 @@ multi-source synthesis, or ambiguous document-type placement while preserving
 citations, source refs, provenance, freshness, metadata authority, and
 operator-visible repairability.
 
+The `oc-iat` pressure lane found no `runner_capability_gap` failures. All six
+selected scenarios in
+[`../evals/results/ockp-path-title-autonomy-pressure.md`](../evals/results/ockp-path-title-autonomy-pressure.md)
+completed with failure classification `none`, so no implementation bead should
+start from that evidence.
+
 If promoted later, a separate implementation Bead must name the exact public
 surface, request and response shape if any, backward compatibility
 expectations, failure modes, and targeted eval gate. That follow-up must also
@@ -181,3 +199,17 @@ authority, and invalid-limit rejection while preserving the existing public
 surface. No path-selection runner capability gap was exposed. Missing-field
 clarification remains the default until separate evidence proves a product
 change is needed.
+
+## `oc-iat` Decision
+
+Decision: keep explicit/no-tools behavior and keep path/title autonomy as
+reference evidence only. Do not promote a constrained autonomy policy, runner
+action, schema, storage migration, skill behavior, public OpenClerk interface,
+or missing-field policy change from the path/title pressure lane.
+
+The follow-up lane exercised URL-only source documentation, artifact ingestion
+without hints, multi-source duplicate pressure, explicit overrides, duplicate
+risk, and metadata-authority pressure. Current `openclerk document` and
+`openclerk retrieval` workflows handled the pressure without a classified
+capability gap. Metadata and frontmatter remain authoritative over filename and
+path conventions, and explicit user naming instructions still win when present.

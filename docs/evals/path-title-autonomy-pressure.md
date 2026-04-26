@@ -10,6 +10,12 @@ This document does not add runner actions, schemas, storage migrations, skill
 behavior, public API, or release-blocking production gates. The lane provides
 evidence for the follow-up policy decision tracked by `oc-iat`.
 
+`oc-iat` decided to keep current explicit/no-tools behavior and keep this lane
+as reference evidence only. The reduced report found no `runner_capability_gap`
+failures across the selected path/title pressure scenarios, so no constrained
+autonomy policy, runner action, schema, skill behavior, storage migration, or
+public interface is promoted from this evidence.
+
 ## Purpose
 
 This eval pressure-tests whether current explicit/no-tools behavior remains
@@ -76,7 +82,7 @@ that current document/retrieval workflows cannot express safe constrained
 path/title autonomy while preserving explicit instructions, duplicate
 avoidance, metadata authority, provenance, freshness, and no-tools validation.
 
-This lane itself does not promote product behavior. `oc-iat` must decide
-whether to keep explicit/no-tools behavior, defer/kill autonomy, keep it as
-reference evidence, or promote a constrained policy with exact implementation
-gates.
+This lane itself does not promote product behavior. The completed `oc-iat`
+decision keeps explicit/no-tools behavior, keeps path/title autonomy as
+reference evidence, and does not create implementation gates for product or
+skill behavior changes.
