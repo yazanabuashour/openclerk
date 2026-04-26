@@ -185,6 +185,9 @@ in
 The promotion/defer/kill gate for memory, routing, semantic graph, broad
 contradiction detection, and new public runner actions is recorded in
 [`deferred-capability-promotion-gates.md`](deferred-capability-promotion-gates.md).
+The `oc-jsg` decision to keep memory and routing as reference/deferred pressure
+is recorded in
+[`memory-routing-reference-decision.md`](memory-routing-reference-decision.md).
 The post-v0.1.0 document lifecycle vision is recorded in
 [`openclerk-document-post-v0.1.0.md`](openclerk-document-post-v0.1.0.md).
 The deferred post-v1 design/eval spike for agent-chosen vault path selection is
