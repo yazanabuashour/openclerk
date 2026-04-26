@@ -119,7 +119,7 @@ No public runner action, request or response schema, storage migration, storage
 API, or public OpenClerk interface is promoted by this decision. Because the
 outcome is defer and the only discovered follow-up gap was resolved by
 `oc-d8w`, no implementation Bead or additional decision-created follow-up Bead
-is required before closing `oc-n9i`.
+is required before closing `oc-da8`.
 
 ## Promotion Gates
 
