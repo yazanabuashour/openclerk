@@ -144,6 +144,15 @@ other source authority is visible, explain the unresolved conflict with both
 source paths instead of choosing a winner. Do not claim broad semantic
 contradiction detection.
 
+For messy populated-vault retrieval, use runner-visible authority signals before
+writing the answer. Metadata-filtered authority results, active canonical
+sources, cited source paths, `doc_id`, and `chunk_id` are the evidence to answer
+from. Treat documents marked `status: polluted`, `populated_role: decoy`,
+stale, draft, archived, duplicate, or candidate as context and pressure only
+unless runner-visible source authority says otherwise. If a polluted or decoy
+hit contradicts the selected authority source, explicitly reject that hit as
+not authority, but do not repeat its false claim text as a valid answer.
+
 If a synthesis maintenance task feels too repetitive for the documented
 document and retrieval actions, still complete it through AgentOps. Do not
 switch to another routine agent interface. A future improvement should be a

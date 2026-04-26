@@ -168,6 +168,36 @@ func TestOpenClerkSkillDescriptionContainsBootstrapNoToolsGuard(t *testing.T) {
 	}
 }
 
+func TestOpenClerkSkillRejectsPollutedPopulatedVaultEvidence(t *testing.T) {
+	t.Parallel()
+
+	content, err := os.ReadFile(openClerkSkillPath(t))
+	if err != nil {
+		t.Fatalf("read skill: %v", err)
+	}
+	text := string(content)
+	normalized := strings.Join(strings.Fields(text), " ")
+	for _, want := range []string{
+		"messy populated-vault retrieval",
+		"Metadata-filtered authority results",
+		"stale, draft, archived, duplicate, or candidate",
+		"explicitly reject that hit as not authority",
+		"do not repeat its false claim text as a valid answer",
+	} {
+		if !strings.Contains(normalized, want) {
+			t.Fatalf("SKILL.md missing polluted-evidence guidance %q", want)
+		}
+	}
+	for _, want := range []string{"`status: polluted`", "`populated_role: decoy`"} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("SKILL.md missing polluted-evidence guidance %q", want)
+		}
+	}
+	if !strings.Contains(normalized, "active canonical sources") {
+		t.Fatal("SKILL.md missing polluted-evidence guidance for active canonical sources")
+	}
+}
+
 func openClerkSkillPath(t *testing.T) string {
 	t.Helper()
 	return filepath.Join(openClerkSkillDir(t), "SKILL.md")
