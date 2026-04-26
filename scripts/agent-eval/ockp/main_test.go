@@ -270,7 +270,7 @@ func TestExecuteRunLabelsAgentChosenPathLaneAsNonReleaseBlocking(t *testing.T) {
 	config := runConfig{
 		Parallel:   1,
 		Variant:    productionVariant,
-		Scenario:   agentChosenPathProposalScenarioID + "," + agentChosenAutonomousScenarioID,
+		Scenario:   agentChosenExplicitScenarioID + "," + agentChosenMissingFieldsScenarioID + "," + agentChosenPathProposalScenarioID + "," + agentChosenAutonomousScenarioID,
 		RunRoot:    filepath.Join(t.TempDir(), "run"),
 		ReportDir:  reportDir,
 		ReportName: "ockp-agent-chosen-test",
@@ -327,6 +327,12 @@ func TestExecuteRunLabelsAgentChosenPathLaneAsNonReleaseBlocking(t *testing.T) {
 	if classifications[agentChosenPathProposalScenarioID] != "none" {
 		t.Fatalf("proposal classification = %q, want none", classifications[agentChosenPathProposalScenarioID])
 	}
+	if classifications[agentChosenExplicitScenarioID] != "none" {
+		t.Fatalf("explicit-fields classification = %q, want none", classifications[agentChosenExplicitScenarioID])
+	}
+	if classifications[agentChosenMissingFieldsScenarioID] != "none" {
+		t.Fatalf("missing-fields classification = %q, want none", classifications[agentChosenMissingFieldsScenarioID])
+	}
 	if classifications[agentChosenAutonomousScenarioID] != "skill_guidance_or_eval_coverage" {
 		t.Fatalf("autonomous classification = %q, want skill guidance", classifications[agentChosenAutonomousScenarioID])
 	}
@@ -344,6 +350,161 @@ func TestExecuteRunLabelsAgentChosenPathLaneAsNonReleaseBlocking(t *testing.T) {
 		if !strings.Contains(string(markdown), want) {
 			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
 		}
+	}
+}
+
+func TestExecuteRunLabelsPathTitleAutonomyPressureLaneAsNonReleaseBlocking(t *testing.T) {
+	reportDir := filepath.Join(t.TempDir(), "reports")
+	config := runConfig{
+		Parallel:   1,
+		Variant:    productionVariant,
+		Scenario:   pathTitleURLOnlyScenarioID + "," + pathTitleArtifactMissingHintsScenarioID + "," + pathTitleDuplicateRiskScenarioID,
+		RunRoot:    filepath.Join(t.TempDir(), "run"),
+		ReportDir:  reportDir,
+		ReportName: "ockp-path-title-test",
+		RepoRoot:   ".",
+		CodexBin:   "codex",
+		CacheMode:  cacheModeIsolated,
+	}
+	err := executeRun(context.Background(), config, &strings.Builder{}, func(_ context.Context, _ runConfig, job evalJob, _ cacheConfig) jobResult {
+		now := time.Now().UTC()
+		return jobResult{
+			Variant:       job.Variant,
+			Scenario:      job.Scenario.ID,
+			ScenarioTitle: job.Scenario.Title,
+			Status:        "completed",
+			Passed:        true,
+			Metrics:       metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}},
+			Verification:  verificationResult{Passed: true, DatabasePass: true, AssistantPass: true},
+			StartedAt:     now,
+			CompletedAt:   &now,
+		}
+	})
+	if err != nil {
+		t.Fatalf("execute path-title run: %v", err)
+	}
+	content, err := os.ReadFile(filepath.Join(reportDir, "ockp-path-title-test.json"))
+	if err != nil {
+		t.Fatalf("read JSON report: %v", err)
+	}
+	var report report
+	if err := json.Unmarshal(content, &report); err != nil {
+		t.Fatalf("decode JSON report: %v", err)
+	}
+	if report.Metadata.Lane != pathTitleAutonomyLaneName || report.Metadata.ReleaseBlocking {
+		t.Fatalf("path-title lane metadata = %q/%t, want %q/false", report.Metadata.Lane, report.Metadata.ReleaseBlocking, pathTitleAutonomyLaneName)
+	}
+	if report.TargetedLaneSummary == nil {
+		t.Fatal("path-title report missing targeted lane summary")
+	}
+	if report.TargetedLaneSummary.Decision != "evaluate_for_oc_iat" {
+		t.Fatalf("decision = %q, want evaluate_for_oc_iat", report.TargetedLaneSummary.Decision)
+	}
+	if len(report.TargetedLaneSummary.ScenarioClassifications) != 3 {
+		t.Fatalf("classifications = %d, want 3", len(report.TargetedLaneSummary.ScenarioClassifications))
+	}
+	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-path-title-test.md"))
+	if err != nil {
+		t.Fatalf("read markdown report: %v", err)
+	}
+	for _, want := range []string{
+		"Lane: `" + pathTitleAutonomyLaneName + "`",
+		"Release blocking: `false`",
+		"Decision: `evaluate_for_oc_iat`",
+		"no promoted runner action, schema, migration, skill behavior, storage API, product behavior, or public OpenClerk interface from this eval",
+	} {
+		if !strings.Contains(string(markdown), want) {
+			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
+		}
+	}
+}
+
+func TestVerifyPathTitleURLOnlyRequiresStoredTitle(t *testing.T) {
+	ctx := context.Background()
+	metrics := metrics{
+		AssistantCalls:    1,
+		ToolCalls:         1,
+		CommandExecutions: 1,
+		EventTypeCounts:   map[string]int{},
+	}
+	wrongTitleBody := strings.TrimSpace(`---
+type: source
+---
+# Wrong Stored Title
+
+Path/title policy: autonomy pressure create then report.
+
+Sources:
+- https://openai.com/index/harness-engineering/
+- https://developers.openai.com/api/docs/guides/prompt-guidance
+`) + "\n"
+	body := strings.Replace(wrongTitleBody, "# Wrong Stored Title", "# OpenAI Harness and Prompt Guidance", 1)
+	finalAnswer := "Created " + pathTitleURLOnlyPath + " titled " + pathTitleURLOnlyTitle + "."
+
+	wrongTitlePaths := scenarioPaths(t.TempDir())
+	wrongTitleCfg := runclient.Config{DatabasePath: wrongTitlePaths.DatabasePath}
+	if err := createSeedDocument(ctx, wrongTitleCfg, pathTitleURLOnlyPath, "Wrong Stored Title", wrongTitleBody); err != nil {
+		t.Fatalf("create wrong-title path/title source: %v", err)
+	}
+	result, err := verifyScenarioTurn(ctx, wrongTitlePaths, scenario{ID: pathTitleURLOnlyScenarioID}, 1, finalAnswer, metrics)
+	if err != nil {
+		t.Fatalf("verify wrong-title path/title source: %v", err)
+	}
+	if result.Passed || result.DatabasePass {
+		t.Fatalf("path/title source with wrong stored title passed: %+v", result)
+	}
+	if !strings.Contains(result.Details, "expected stored title") {
+		t.Fatalf("wrong-title failure details = %q", result.Details)
+	}
+
+	correctTitlePaths := scenarioPaths(t.TempDir())
+	correctTitleCfg := runclient.Config{DatabasePath: correctTitlePaths.DatabasePath}
+	if err := createSeedDocument(ctx, correctTitleCfg, pathTitleURLOnlyPath, pathTitleURLOnlyTitle, body); err != nil {
+		t.Fatalf("create correct-title path/title source: %v", err)
+	}
+	result, err = verifyScenarioTurn(ctx, correctTitlePaths, scenario{ID: pathTitleURLOnlyScenarioID}, 1, finalAnswer, metrics)
+	if err != nil {
+		t.Fatalf("verify correct-title path/title source: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("path/title source with correct stored title failed: %+v", result)
+	}
+}
+
+func TestVerifyPathTitleDuplicateRiskRejectsAnyExtraPathTitleSource(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: pathTitleDuplicateRiskScenarioID}); err != nil {
+		t.Fatalf("seed duplicate-risk scenario: %v", err)
+	}
+	metrics := metrics{
+		AssistantCalls:    1,
+		SearchUsed:        true,
+		ListDocumentsUsed: true,
+		EventTypeCounts:   map[string]int{},
+	}
+	finalAnswer := "Duplicate risk found at " + pathTitleDuplicateExistingPath + "; no new duplicate source was created."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: pathTitleDuplicateRiskScenarioID}, 1, finalAnswer, metrics)
+	if err != nil {
+		t.Fatalf("verify duplicate-risk baseline: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("duplicate-risk baseline failed: %+v", result)
+	}
+
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	if err := createSeedDocument(ctx, cfg, "sources/path-title/alternate-openai-harness.md", "Alternate OpenAI Harness", "# Alternate\n"); err != nil {
+		t.Fatalf("create alternate duplicate source: %v", err)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: pathTitleDuplicateRiskScenarioID}, 1, finalAnswer, metrics)
+	if err != nil {
+		t.Fatalf("verify duplicate-risk alternate duplicate: %v", err)
+	}
+	if result.Passed || result.DatabasePass {
+		t.Fatalf("duplicate-risk passed with alternate duplicate source: %+v", result)
+	}
+	if !strings.Contains(result.Details, "expected only the seeded path-title source document") {
+		t.Fatalf("alternate duplicate failure details = %q", result.Details)
 	}
 }
 
@@ -862,6 +1023,18 @@ func TestVerifyFinalAnswerOnlyRequiresRejectionAndNoTools(t *testing.T) {
 	if result := verifyFinalAnswerOnly(missingPath, message, noTools); !result.Passed {
 		t.Fatalf("requires path rejection failed: %+v", result)
 	}
+
+	missingPolicyFields := scenario{ID: agentChosenMissingFieldsScenarioID}
+	message = "I can't create the document yet because path, title, and type are missing. Provide the missing path, title, and document type and I can continue."
+	if result := verifyFinalAnswerOnly(missingPolicyFields, message, noTools); !result.Passed {
+		t.Fatalf("path/title/type clarification failed: %+v", result)
+	}
+
+	missingArtifactHints := scenario{ID: pathTitleArtifactMissingHintsScenarioID}
+	message = "I can't ingest the source yet because source.path_hint and source.asset_path_hint are missing. Provide source.path_hint and source.asset_path_hint and I can continue."
+	if result := verifyFinalAnswerOnly(missingArtifactHints, message, noTools); !result.Passed {
+		t.Fatalf("artifact hint clarification failed: %+v", result)
+	}
 }
 
 func TestVerifyMissingFieldClarificationRequiresNoToolsAndFieldNames(t *testing.T) {
@@ -910,7 +1083,7 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 	for _, id := range scenarioIDs() {
 		ids[id] = true
 	}
-	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, graphSemanticsScenarioID, memoryRouterScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, sourceURLUpdateDuplicateScenarioID, sourceURLUpdateSameSHAScenarioID, sourceURLUpdateChangedScenarioID, sourceURLUpdateConflictScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID, populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID, agentChosenPathProposalScenarioID, agentChosenAutonomousScenarioID, agentChosenSynthesisScenarioID, agentChosenAmbiguousScenarioID, agentChosenUserPathScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
+	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, graphSemanticsScenarioID, memoryRouterScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, sourceURLUpdateDuplicateScenarioID, sourceURLUpdateSameSHAScenarioID, sourceURLUpdateChangedScenarioID, sourceURLUpdateConflictScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID, populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID, agentChosenExplicitScenarioID, agentChosenMissingFieldsScenarioID, agentChosenPathProposalScenarioID, agentChosenAutonomousScenarioID, agentChosenSynthesisScenarioID, agentChosenAmbiguousScenarioID, agentChosenUserPathScenarioID, pathTitleURLOnlyScenarioID, pathTitleArtifactMissingHintsScenarioID, pathTitleMultiSourceDuplicateScenarioID, pathTitleExplicitOverridesScenarioID, pathTitleDuplicateRiskScenarioID, pathTitleMetadataAuthorityScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
 		if !ids[want] {
 			t.Fatalf("scenarioIDs missing %q in %v", want, scenarioIDs())
 		}
@@ -932,9 +1105,14 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 			t.Fatalf("default selected scenarios included targeted document history scenario %q", id)
 		}
 	}
-	for _, id := range []string{agentChosenPathProposalScenarioID, agentChosenAutonomousScenarioID, agentChosenSynthesisScenarioID, agentChosenAmbiguousScenarioID, agentChosenUserPathScenarioID} {
+	for _, id := range []string{agentChosenExplicitScenarioID, agentChosenMissingFieldsScenarioID, agentChosenPathProposalScenarioID, agentChosenAutonomousScenarioID, agentChosenSynthesisScenarioID, agentChosenAmbiguousScenarioID, agentChosenUserPathScenarioID} {
 		if defaultIDs[id] {
 			t.Fatalf("default selected scenarios included targeted agent-chosen path scenario %q", id)
+		}
+	}
+	for _, id := range []string{pathTitleURLOnlyScenarioID, pathTitleArtifactMissingHintsScenarioID, pathTitleMultiSourceDuplicateScenarioID, pathTitleExplicitOverridesScenarioID, pathTitleDuplicateRiskScenarioID, pathTitleMetadataAuthorityScenarioID} {
+		if defaultIDs[id] {
+			t.Fatalf("default selected scenarios included targeted path-title scenario %q", id)
 		}
 	}
 	for _, id := range []string{sourceURLUpdateDuplicateScenarioID, sourceURLUpdateSameSHAScenarioID, sourceURLUpdateChangedScenarioID, sourceURLUpdateConflictScenarioID} {
@@ -952,10 +1130,15 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	if lane != documentHistoryLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, documentHistoryLaneName)
 	}
-	selected = selectedScenarioIDs(runConfig{Scenario: agentChosenPathProposalScenarioID + "," + agentChosenAutonomousScenarioID + "," + agentChosenSynthesisScenarioID + "," + agentChosenAmbiguousScenarioID + "," + agentChosenUserPathScenarioID + ",missing-document-path-reject,negative-limit-reject,unsupported-lower-level-reject,unsupported-transport-reject"})
+	selected = selectedScenarioIDs(runConfig{Scenario: agentChosenExplicitScenarioID + "," + agentChosenMissingFieldsScenarioID + "," + agentChosenPathProposalScenarioID + "," + agentChosenAutonomousScenarioID + "," + agentChosenSynthesisScenarioID + "," + agentChosenAmbiguousScenarioID + "," + agentChosenUserPathScenarioID + ",missing-document-path-reject,negative-limit-reject,unsupported-lower-level-reject,unsupported-transport-reject"})
 	lane, releaseBlocking = reportLane(selected)
 	if lane != agentChosenPathLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, agentChosenPathLaneName)
+	}
+	selected = selectedScenarioIDs(runConfig{Scenario: pathTitleURLOnlyScenarioID + "," + pathTitleArtifactMissingHintsScenarioID + "," + pathTitleMultiSourceDuplicateScenarioID + "," + pathTitleExplicitOverridesScenarioID + "," + pathTitleDuplicateRiskScenarioID + "," + pathTitleMetadataAuthorityScenarioID})
+	lane, releaseBlocking = reportLane(selected)
+	if lane != pathTitleAutonomyLaneName || releaseBlocking {
+		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, pathTitleAutonomyLaneName)
 	}
 	selected = selectedScenarioIDs(runConfig{Scenario: sourceURLUpdateDuplicateScenarioID + "," + sourceURLUpdateSameSHAScenarioID + "," + sourceURLUpdateChangedScenarioID + "," + sourceURLUpdateConflictScenarioID})
 	lane, releaseBlocking = reportLane(selected)

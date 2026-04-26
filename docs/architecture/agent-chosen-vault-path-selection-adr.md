@@ -9,10 +9,11 @@ decision_owner: platform
 
 ## Status
 
-Deferred after v1 and kept as reference after the targeted POC. This ADR
-records the naming/path policy OpenClerk should evaluate for agent-chosen
-vault-relative paths, but it does not add a public runner action, JSON schema,
-storage migration, or implementation commitment.
+Deferred after v1 and kept as reference after the targeted POC and post-`oc-6fr`
+source URL update work. This ADR records the naming/path/title policy
+OpenClerk should evaluate for agent-chosen vault-relative paths, filenames, and
+titles, but it does not add a public runner action, JSON schema, storage
+migration, or implementation commitment.
 
 The targeted POC/eval contract is recorded in
 [`../evals/agent-chosen-path-selection-poc.md`](../evals/agent-chosen-path-selection-poc.md).
@@ -24,9 +25,11 @@ The current reduced report is
 OpenClerk v1 keeps AgentOps as the production agent surface: routine agents use
 the installed `openclerk` JSON runner plus `skills/openclerk/SKILL.md`. The v1
 document runner requires create requests to name an explicit vault-relative
-document path. That constraint is intentionally conservative because path
-selection affects durable knowledge organization, duplicate risk, later
-retrieval, and operator repairability.
+document path, title, and body. Source URL ingestion in default `create` mode
+requires explicit `source.path_hint` and `source.asset_path_hint`. Those
+constraints are intentionally conservative because path and title selection
+affect durable knowledge organization, duplicate risk, later retrieval, and
+operator repairability.
 
 Routine knowledge requests are not always path-shaped. A user may ask an agent
 to document URLs, synthesize several sources, or capture an ambiguous note
@@ -45,10 +48,17 @@ https://openai.com/index/harness-engineering/
 https://developers.openai.com/api/docs/guides/prompt-guidance
 ```
 
-This prompt supplies source material but no target path, title, document type,
-or synthesis policy. A future capability must prove whether the current
-explicit-path workflow is enough, whether skill guidance is enough, or whether
-a promoted product behavior is justified.
+This prompt supplies source material but no target path, filename, title,
+document type, artifact path, or synthesis policy. A future capability must
+prove whether the current explicit-field workflow is enough, whether skill
+guidance is enough, or whether a promoted product behavior is justified.
+
+The `oc-6fr` source URL update mode does not weaken that default. Missing
+`source.mode` means `create`, and create requests still require explicit source
+and asset path hints. `source.mode: "update"` targets an existing source by
+normalized `source.url`; it does not create a missing source, it preserves the
+stored source and asset paths, and any supplied path hints must match existing
+metadata or conflict without writing.
 
 ## Decision
 
@@ -56,14 +66,18 @@ Keep agent-chosen vault path selection deferred/reference. The targeted POC did
 not prove that explicit-path workflows or existing document/retrieval runner
 actions are structurally insufficient.
 
-The candidate naming/path policy to evaluate is:
+The candidate naming/path/title policy to evaluate is:
 
 - user-provided paths or naming instructions always win
 - otherwise the agent chooses a clear, stable, vault-relative slug under the
   best conventional home
-- the agent reports the chosen path to the user
+- the agent chooses a title from user instructions, source metadata, or concise
+  human-readable subject text
+- the agent reports the chosen path and title to the user
 - filenames and directories are conventions only
 - metadata, not filename, remains authoritative for document type and identity
+- source URL create/update semantics keep source and asset paths explicit or
+  storage-backed; title/path autonomy must not invent a second source identity
 
 The policy must preserve the v1 model that canonical markdown and promoted
 records are source authority. A path such as `sources/openai-harness-engineering.md`
@@ -74,22 +88,38 @@ provenance, and projection freshness remain the authoritative signals.
 
 ## Interaction Shapes
 
-Two interaction shapes should be compared before any promotion decision.
+Four interaction shapes should be compared before any promotion decision.
+
+**Explicit fields required:** the agent asks the user for required document
+path, title, body, source path hint, asset path hint, or other artifact fields
+before using the runner. This is the current conservative default for document
+creation and source URL create mode. It preserves no-tools validation and
+avoids guessed durable placement, but it can block otherwise clear capture or
+documentation requests on naming decisions the user may not care about.
+
+**Ask for missing fields:** the agent treats missing path/title/artifact fields
+as a clarification turn, names the missing fields, and waits for user-supplied
+values. This keeps explicit user intent authoritative and works with the
+existing no-tools rule for required fields. It improves clarity over a generic
+rejection, but it still adds user friction and does not test whether
+OpenClerk-controlled conventions would be safe for low-risk captures.
 
 **Propose before create:** the agent derives a candidate path, title, document
-kind, and source/synthesis intent, then asks for confirmation before writing.
-This shape is safer for ambiguous placement and high-value durable knowledge,
-but it adds a turn and may make simple capture workflows feel unnecessarily
-ceremonial.
+kind, artifact path if relevant, and source/synthesis intent, then asks for
+confirmation before writing. This shape is safer for ambiguous placement,
+high-value durable knowledge, and source-sensitive artifacts, but it adds a
+turn and may make simple capture workflows feel unnecessarily ceremonial.
 
-**Create then report:** the agent chooses the best conventional path, writes
-the document through the existing runner workflow, and reports the chosen path.
-This shape fits low-risk routine capture, but it can create duplicate or
-misfiled durable knowledge if the agent guesses the home, document kind, or
-source set incorrectly.
+**Create then report:** the agent chooses the best conventional path and title,
+writes the document through the existing runner workflow, and reports the chosen
+path and title. This shape fits low-risk routine capture, but it can create
+duplicate or misfiled durable knowledge if the agent guesses the home, document
+kind, source set, title, or artifact path incorrectly.
 
-Both shapes must honor explicit user naming instructions. Neither shape implies
-that OpenClerk should add an autonomous placement runner action in v1.
+All shapes must honor explicit user naming instructions. None imply that
+OpenClerk should add an autonomous placement runner action in v1. The
+`create then report` shape remains reference-only unless targeted follow-up
+evidence, tracked by `oc-940`, proves a runner capability gap.
 
 ## Invariants
 
@@ -107,6 +137,9 @@ Any future path-autonomy capability must preserve these invariants:
   synthesis, promoted records, services, decisions, or stale derived outputs.
 - Metadata, not filename, determines promoted records, services, decisions, and
   synthesis identity.
+- Source URL `create` keeps requiring explicit source and asset path hints.
+  Source URL `update` keeps targeting existing normalized `source.url`, with
+  stable stored paths and conflict-on-mismatched-hint behavior.
 - Missing required fields, invalid limits, and lower-level bypass requests keep
   the existing no-tools and final-answer-only validation behavior.
 
@@ -125,8 +158,10 @@ operator-visible repairability.
 
 If promoted later, a separate implementation Bead must name the exact public
 surface, request and response shape if any, backward compatibility
-expectations, failure modes, and targeted eval gate. This ADR alone must not be
-used to add a runner action or product capability.
+expectations, failure modes, and targeted eval gate. That follow-up must also
+state how explicit instructions, metadata authority, provenance/freshness,
+duplicate avoidance, and no-tools validation are preserved. This ADR alone must
+not be used to add a runner action or product capability.
 
 ## POC Result
 
@@ -136,10 +171,13 @@ metadata-authority placement, explicit user path precedence, and validation
 pressure. Autonomous placement, synthesis path selection, explicit user path
 precedence, missing-path clarification, and bypass rejection completed through
 the existing `openclerk document` and `openclerk retrieval` public surface.
+The later source URL update-mode work preserved explicit create-mode path hints,
+stable update-mode source and asset paths, and conflict-on-mismatched-hint
+behavior instead of promoting path autonomy.
 
 The lane did not justify promotion. The refreshed guidance/eval hardening run
 resolved the prior answer-wording failures for path proposal, metadata
 authority, and invalid-limit rejection while preserving the existing public
-surface. No path-selection runner capability gap was exposed. Missing-path
+surface. No path-selection runner capability gap was exposed. Missing-field
 clarification remains the default until separate evidence proves a product
 change is needed.

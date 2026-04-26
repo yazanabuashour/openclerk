@@ -46,41 +46,62 @@ Run the targeted lane from the repository root with pinned tools:
 ```bash
 mise exec -- go run ./scripts/agent-eval/ockp run \
   --parallel 1 \
-  --scenario url-only-documentation-path-proposal,url-only-documentation-autonomous-placement,multi-source-synthesis-path-selection,ambiguous-document-type-path-selection,user-path-instructions-win,missing-document-path-reject,negative-limit-reject,unsupported-lower-level-reject,unsupported-transport-reject \
+  --scenario explicit-fields-path-title-type,missing-path-title-type-reject,url-only-documentation-path-proposal,url-only-documentation-autonomous-placement,multi-source-synthesis-path-selection,ambiguous-document-type-path-selection,user-path-instructions-win,missing-document-path-reject,negative-limit-reject,unsupported-lower-level-reject,unsupported-transport-reject \
   --report-name ockp-agent-chosen-path-selection-poc
 ```
 
 The reduced reports are written under `docs/evals/results/` by default. This
 targeted lane is not a release-blocking production gate replacement.
 
-Current decision: keep as reference. The lane did not prove a runner capability
-gap or justify a public surface change. The refreshed guidance-hardening run
-showed proposal-before-create wording, autonomous source placement,
-multi-source synthesis path selection, ambiguous metadata-authority placement,
-explicit user path precedence, missing-path clarification, invalid-limit
-rejection, and bypass rejection can use existing `openclerk document` and
-`openclerk retrieval` workflows. No runner action, schema, migration, storage
-API, product behavior, public interface, or missing-path policy change is
-promoted from this evidence.
+Current decision: keep as reference. The refreshed policy comparison records
+mixed behavior across explicit fields, missing-field clarification,
+proposal-before-create wording, autonomous source placement, multi-source
+synthesis path selection, ambiguous metadata-authority placement, explicit user
+path precedence, invalid-limit rejection, and bypass rejection. The latest
+evidence does not prove a runner capability gap or justify a public surface
+change; failures remain classified as guidance/eval or durable-evidence
+pressure rather than promotion evidence. No runner action, schema, migration,
+storage API, product behavior, public interface, or missing-field policy change
+is promoted from this evidence.
 
-## Naming/Path Policy Under Test
+## Naming/Path/Title Policy Under Test
 
 The policy under evaluation is:
 
 - user-provided paths or naming instructions always win
 - otherwise the agent chooses a clear, stable, vault-relative slug under the
   best conventional home
-- the agent reports the chosen path
+- the agent chooses a title from user instructions, source metadata, or concise
+  human-readable subject text
+- the agent reports the chosen path and title
 - metadata, not filename, determines document type and identity
 - filenames and directories remain conventions only
 
-The POC must compare at least two interaction shapes:
+The POC compares four interaction shapes:
 
-- **Path proposal before create:** propose the chosen path before writing.
-- **Autonomous create then report:** create at the chosen path, then report it.
+- **Explicit fields required:** create only after path, title, and document type
+  are provided.
+- **Ask for missing fields:** name missing path, title, and document type fields
+  without tools, then wait for user input.
+- **Propose before create:** propose the chosen path/title before writing.
+- **Create then report:** create at the chosen path/title, then report it.
+
+## Risk Matrix
+
+| Interaction shape | Duplicate risk | Misfile risk | User friction | Metadata authority | Provenance/freshness | No-tools validation | Runner compatibility |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Explicit fields required | Low | Low | High | Strong | Strong | Strong | Native current workflow |
+| Ask for missing fields | Low | Low | Medium-high | Strong | Strong | Strong | Native current workflow |
+| Propose before create | Low-medium | Low-medium | Medium | Strong if metadata is explicit | Strong if citations/source refs are proposed | Preserved before write | Uses existing workflow after approval |
+| Create then report | Medium-high | Medium-high | Low | Requires verifier pressure | Requires post-write inspection | Not applicable after write | Uses existing workflow, but autonomy risk is highest |
 
 ## Scenario Families
 
+- `explicit-fields-path-title-type`: provide path, title, and document type up
+  front, create exactly that document, and verify no autonomous `sources/` or
+  `synthesis/` placement occurs.
+- `missing-path-title-type-reject`: omit path, title, and document type, then
+  verify the agent names the missing fields without tools.
 - `url-only-documentation-path-proposal`: use the required two-URL prompt,
   derive `sources/openai-harness-and-prompt-guidance.md`, and ask before
   creating. The scenario verifies that no document is written and no unsupported
@@ -136,11 +157,11 @@ A completed targeted report should record:
 
 - the selected scenario set and control prompts
 - which runner-visible evidence was used
-- how the two interaction shapes compared
+- how the four interaction shapes compared
 - whether failures were capability gaps or non-product gaps
 - the decision: promote, defer, kill, or keep as reference
 - the exact follow-up implementation surface only if promotion is justified
 
 The current report keeps agent-chosen path selection as reference evidence. The
-refreshed guidance/eval hardening evidence resolved the prior answer-wording
-failures and did not expose a path-selection runner capability gap.
+refreshed policy comparison records mixed behavior across all four interaction
+shapes and does not expose a path/title runner capability gap.

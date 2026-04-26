@@ -4,12 +4,12 @@
 - Reasoning effort: `medium`
 - Lane: `agent-chosen-path-selection-poc`
 - Release blocking: `false`
-- Configured parallelism: `4`
+- Configured parallelism: `1`
 - Cache mode: `shared`
-- Cache prewarm seconds: `18.64`
-- Harness elapsed seconds: `115.74`
-- Effective parallel speedup: `1.50x`
-- Parallel efficiency: `0.38`
+- Cache prewarm seconds: `17.35`
+- Harness elapsed seconds: `195.65`
+- Effective parallel speedup: `0.74x`
+- Parallel efficiency: `0.74`
 - Raw logs: `<run-root>/<variant>/<scenario>/turn-N/events.jsonl`
 
 ## Production Gate
@@ -35,28 +35,30 @@ Recommendation: `fix_production_agentops_before_release`
 | Phase | Seconds |
 | --- | ---: |
 | prepare_run_dir | 0.00 |
-| copy_repo | 0.32 |
-| install_variant | 29.02 |
+| copy_repo | 0.18 |
+| install_variant | 32.70 |
 | warm_cache | 0.00 |
-| seed_data | 0.05 |
-| agent_run | 173.53 |
+| seed_data | 0.03 |
+| agent_run | 145.16 |
 | parse_metrics | 0.00 |
-| verify | 0.15 |
-| total | 203.12 |
+| verify | 0.19 |
+| total | 178.29 |
 
 ## Results
 
 | Variant | Scenario | Status | Tools | Commands | Assistant Calls | Non-Cached Input | Wall Seconds | Raw Log |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `production` | `url-only-documentation-path-proposal` | `completed` | 0 | 0 | 1 | 2710 | 5.22 | `<run-root>/production/url-only-documentation-path-proposal/turn-1/events.jsonl` |
-| `production` | `url-only-documentation-autonomous-placement` | `completed` | 4 | 4 | 3 | 25059 | 13.62 | `<run-root>/production/url-only-documentation-autonomous-placement/turn-1/events.jsonl` |
-| `production` | `multi-source-synthesis-path-selection` | `completed` | 46 | 46 | 14 | 16161 | 93.22 | `<run-root>/production/multi-source-synthesis-path-selection/turn-1/events.jsonl` |
-| `production` | `ambiguous-document-type-path-selection` | `completed` | 8 | 8 | 3 | 35672 | 20.18 | `<run-root>/production/ambiguous-document-type-path-selection/turn-1/events.jsonl` |
-| `production` | `user-path-instructions-win` | `completed` | 4 | 4 | 3 | 6099 | 12.41 | `<run-root>/production/user-path-instructions-win/turn-1/events.jsonl` |
-| `production` | `missing-document-path-reject` | `completed` | 0 | 0 | 1 | 16401 | 6.59 | `<run-root>/production/missing-document-path-reject/turn-1/events.jsonl` |
-| `production` | `negative-limit-reject` | `completed` | 0 | 0 | 1 | 2559 | 5.03 | `<run-root>/production/negative-limit-reject/turn-1/events.jsonl` |
-| `production` | `unsupported-lower-level-reject` | `completed` | 0 | 0 | 1 | 2423 | 6.25 | `<run-root>/production/unsupported-lower-level-reject/turn-1/events.jsonl` |
-| `production` | `unsupported-transport-reject` | `completed` | 0 | 0 | 1 | 21366 | 11.01 | `<run-root>/production/unsupported-transport-reject/turn-1/events.jsonl` |
+| `production` | `explicit-fields-path-title-type` | `completed` | 6 | 6 | 4 | 3583 | 22.50 | `<run-root>/production/explicit-fields-path-title-type/turn-1/events.jsonl` |
+| `production` | `missing-path-title-type-reject` | `failed` | 0 | 0 | 1 | 2437 | 6.57 | `<run-root>/production/missing-path-title-type-reject/turn-1/events.jsonl` |
+| `production` | `url-only-documentation-path-proposal` | `completed` | 0 | 0 | 1 | 2550 | 6.97 | `<run-root>/production/url-only-documentation-path-proposal/turn-1/events.jsonl` |
+| `production` | `url-only-documentation-autonomous-placement` | `failed` | 0 | 0 | 2 | 2596 | 31.26 | `<run-root>/production/url-only-documentation-autonomous-placement/turn-1/events.jsonl` |
+| `production` | `multi-source-synthesis-path-selection` | `completed` | 10 | 10 | 4 | 8364 | 27.18 | `<run-root>/production/multi-source-synthesis-path-selection/turn-1/events.jsonl` |
+| `production` | `ambiguous-document-type-path-selection` | `failed` | 0 | 0 | 2 | 2688 | 14.98 | `<run-root>/production/ambiguous-document-type-path-selection/turn-1/events.jsonl` |
+| `production` | `user-path-instructions-win` | `completed` | 4 | 4 | 3 | 3488 | 13.07 | `<run-root>/production/user-path-instructions-win/turn-1/events.jsonl` |
+| `production` | `missing-document-path-reject` | `completed` | 0 | 0 | 1 | 8215 | 4.65 | `<run-root>/production/missing-document-path-reject/turn-1/events.jsonl` |
+| `production` | `negative-limit-reject` | `completed` | 0 | 0 | 1 | 8197 | 6.13 | `<run-root>/production/negative-limit-reject/turn-1/events.jsonl` |
+| `production` | `unsupported-lower-level-reject` | `completed` | 0 | 0 | 1 | 2429 | 6.99 | `<run-root>/production/unsupported-lower-level-reject/turn-1/events.jsonl` |
+| `production` | `unsupported-transport-reject` | `completed` | 0 | 0 | 1 | 2428 | 4.86 | `<run-root>/production/unsupported-transport-reject/turn-1/events.jsonl` |
 
 ## Targeted Lane Summary
 
@@ -68,10 +70,12 @@ Promotion: no promoted runner action, schema, migration, storage API, product be
 
 | Variant | Scenario | Status | Failure classification | Evidence posture |
 | --- | --- | --- | --- | --- |
+| `production` | `explicit-fields-path-title-type` | `completed` | `none` | current runner/skill behavior preserved path-selection invariants |
+| `production` | `missing-path-title-type-reject` | `failed` | `skill_guidance_or_eval_coverage` | runner-visible evidence existed, but the assistant answer did not satisfy the path-selection scenario |
 | `production` | `url-only-documentation-path-proposal` | `completed` | `none` | current runner/skill behavior preserved path-selection invariants |
-| `production` | `url-only-documentation-autonomous-placement` | `completed` | `none` | current runner/skill behavior preserved path-selection invariants |
+| `production` | `url-only-documentation-autonomous-placement` | `failed` | `data_hygiene_or_fixture_gap` | fixture or durable document evidence did not satisfy the path-selection contract |
 | `production` | `multi-source-synthesis-path-selection` | `completed` | `none` | current runner/skill behavior preserved path-selection invariants |
-| `production` | `ambiguous-document-type-path-selection` | `completed` | `none` | current runner/skill behavior preserved path-selection invariants |
+| `production` | `ambiguous-document-type-path-selection` | `failed` | `data_hygiene_or_fixture_gap` | fixture or durable document evidence did not satisfy the path-selection contract |
 | `production` | `user-path-instructions-win` | `completed` | `none` | current runner/skill behavior preserved path-selection invariants |
 | `production` | `missing-document-path-reject` | `completed` | `none` | current runner/skill behavior preserved path-selection invariants |
 | `production` | `negative-limit-reject` | `completed` | `none` | current runner/skill behavior preserved path-selection invariants |
