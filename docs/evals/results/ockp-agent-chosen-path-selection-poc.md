@@ -4,12 +4,12 @@
 - Reasoning effort: `medium`
 - Lane: `agent-chosen-path-selection-poc`
 - Release blocking: `false`
-- Configured parallelism: `1`
+- Configured parallelism: `4`
 - Cache mode: `shared`
-- Cache prewarm seconds: `19.19`
-- Harness elapsed seconds: `221.40`
-- Effective parallel speedup: `0.77x`
-- Parallel efficiency: `0.77`
+- Cache prewarm seconds: `18.64`
+- Harness elapsed seconds: `115.74`
+- Effective parallel speedup: `1.50x`
+- Parallel efficiency: `0.38`
 - Raw logs: `<run-root>/<variant>/<scenario>/turn-N/events.jsonl`
 
 ## Production Gate
@@ -22,7 +22,7 @@ Recommendation: `fix_production_agentops_before_release`
 
 | Criterion | Status | Details |
 | --- | --- | --- |
-| `production_passes_all_scenarios` | `fail` | 3/30 production scenarios passed; missing: create-note, search-synthesis, answer-filing, rag-retrieval-baseline, canonical-docs-navigation-baseline, graph-semantics-reference-poc, memory-router-reference-poc, configured-layout-explain, invalid-layout-visible, stale-synthesis-update, synthesis-freshness-repair, source-sensitive-audit-repair, source-sensitive-conflict-explain, synthesis-candidate-pressure, synthesis-source-set-pressure, append-replace, records-provenance, promoted-record-vs-docs, decision-record-vs-docs, decision-supersession-freshness, decision-real-adr-migration, duplicate-path-reject, mixed-synthesis-records, mt-source-then-synthesis, mt-synthesis-drift-pressure, mt-incomplete-then-create |
+| `production_passes_all_scenarios` | `fail` | 4/30 production scenarios passed; missing: create-note, search-synthesis, answer-filing, rag-retrieval-baseline, canonical-docs-navigation-baseline, graph-semantics-reference-poc, memory-router-reference-poc, configured-layout-explain, invalid-layout-visible, stale-synthesis-update, synthesis-freshness-repair, source-sensitive-audit-repair, source-sensitive-conflict-explain, synthesis-candidate-pressure, synthesis-source-set-pressure, append-replace, records-provenance, promoted-record-vs-docs, decision-record-vs-docs, decision-supersession-freshness, decision-real-adr-migration, duplicate-path-reject, mixed-synthesis-records, mt-source-then-synthesis, mt-synthesis-drift-pressure, mt-incomplete-then-create |
 | `no_direct_generated_file_inspection` | `pass` | production must not inspect retired API files or generated server files |
 | `no_module_cache_inspection` | `pass` | production must not inspect the Go module cache |
 | `no_broad_repo_search` | `pass` | production must not use broad repo search in routine OpenClerk knowledge tasks |
@@ -35,28 +35,28 @@ Recommendation: `fix_production_agentops_before_release`
 | Phase | Seconds |
 | --- | ---: |
 | prepare_run_dir | 0.00 |
-| copy_repo | 0.18 |
-| install_variant | 31.13 |
+| copy_repo | 0.32 |
+| install_variant | 29.02 |
 | warm_cache | 0.00 |
-| seed_data | 0.04 |
-| agent_run | 170.65 |
+| seed_data | 0.05 |
+| agent_run | 173.53 |
 | parse_metrics | 0.00 |
-| verify | 0.16 |
-| total | 202.22 |
+| verify | 0.15 |
+| total | 203.12 |
 
 ## Results
 
 | Variant | Scenario | Status | Tools | Commands | Assistant Calls | Non-Cached Input | Wall Seconds | Raw Log |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `production` | `url-only-documentation-path-proposal` | `failed` | 0 | 0 | 1 | 2490 | 6.16 | `<run-root>/production/url-only-documentation-path-proposal/turn-1/events.jsonl` |
-| `production` | `url-only-documentation-autonomous-placement` | `completed` | 4 | 4 | 3 | 5963 | 16.11 | `<run-root>/production/url-only-documentation-autonomous-placement/turn-1/events.jsonl` |
-| `production` | `multi-source-synthesis-path-selection` | `completed` | 42 | 42 | 10 | 12600 | 66.61 | `<run-root>/production/multi-source-synthesis-path-selection/turn-1/events.jsonl` |
-| `production` | `ambiguous-document-type-path-selection` | `failed` | 10 | 10 | 5 | 7163 | 27.14 | `<run-root>/production/ambiguous-document-type-path-selection/turn-1/events.jsonl` |
-| `production` | `user-path-instructions-win` | `completed` | 6 | 6 | 4 | 9109 | 17.47 | `<run-root>/production/user-path-instructions-win/turn-1/events.jsonl` |
-| `production` | `missing-document-path-reject` | `completed` | 0 | 0 | 1 | 2398 | 8.19 | `<run-root>/production/missing-document-path-reject/turn-1/events.jsonl` |
-| `production` | `negative-limit-reject` | `failed` | 0 | 0 | 1 | 2546 | 4.70 | `<run-root>/production/negative-limit-reject/turn-1/events.jsonl` |
-| `production` | `unsupported-lower-level-reject` | `completed` | 0 | 0 | 1 | 2410 | 14.96 | `<run-root>/production/unsupported-lower-level-reject/turn-1/events.jsonl` |
-| `production` | `unsupported-transport-reject` | `completed` | 0 | 0 | 1 | 2409 | 9.31 | `<run-root>/production/unsupported-transport-reject/turn-1/events.jsonl` |
+| `production` | `url-only-documentation-path-proposal` | `completed` | 0 | 0 | 1 | 2710 | 5.22 | `<run-root>/production/url-only-documentation-path-proposal/turn-1/events.jsonl` |
+| `production` | `url-only-documentation-autonomous-placement` | `completed` | 4 | 4 | 3 | 25059 | 13.62 | `<run-root>/production/url-only-documentation-autonomous-placement/turn-1/events.jsonl` |
+| `production` | `multi-source-synthesis-path-selection` | `completed` | 46 | 46 | 14 | 16161 | 93.22 | `<run-root>/production/multi-source-synthesis-path-selection/turn-1/events.jsonl` |
+| `production` | `ambiguous-document-type-path-selection` | `completed` | 8 | 8 | 3 | 35672 | 20.18 | `<run-root>/production/ambiguous-document-type-path-selection/turn-1/events.jsonl` |
+| `production` | `user-path-instructions-win` | `completed` | 4 | 4 | 3 | 6099 | 12.41 | `<run-root>/production/user-path-instructions-win/turn-1/events.jsonl` |
+| `production` | `missing-document-path-reject` | `completed` | 0 | 0 | 1 | 16401 | 6.59 | `<run-root>/production/missing-document-path-reject/turn-1/events.jsonl` |
+| `production` | `negative-limit-reject` | `completed` | 0 | 0 | 1 | 2559 | 5.03 | `<run-root>/production/negative-limit-reject/turn-1/events.jsonl` |
+| `production` | `unsupported-lower-level-reject` | `completed` | 0 | 0 | 1 | 2423 | 6.25 | `<run-root>/production/unsupported-lower-level-reject/turn-1/events.jsonl` |
+| `production` | `unsupported-transport-reject` | `completed` | 0 | 0 | 1 | 21366 | 11.01 | `<run-root>/production/unsupported-transport-reject/turn-1/events.jsonl` |
 
 ## Targeted Lane Summary
 
@@ -68,12 +68,12 @@ Promotion: no promoted runner action, schema, migration, storage API, product be
 
 | Variant | Scenario | Status | Failure classification | Evidence posture |
 | --- | --- | --- | --- | --- |
-| `production` | `url-only-documentation-path-proposal` | `failed` | `skill_guidance_or_eval_coverage` | runner-visible evidence existed, but the assistant answer did not satisfy the path-selection scenario |
+| `production` | `url-only-documentation-path-proposal` | `completed` | `none` | current runner/skill behavior preserved path-selection invariants |
 | `production` | `url-only-documentation-autonomous-placement` | `completed` | `none` | current runner/skill behavior preserved path-selection invariants |
 | `production` | `multi-source-synthesis-path-selection` | `completed` | `none` | current runner/skill behavior preserved path-selection invariants |
-| `production` | `ambiguous-document-type-path-selection` | `failed` | `skill_guidance_or_eval_coverage` | runner-visible evidence existed, but the assistant answer did not satisfy the path-selection scenario |
+| `production` | `ambiguous-document-type-path-selection` | `completed` | `none` | current runner/skill behavior preserved path-selection invariants |
 | `production` | `user-path-instructions-win` | `completed` | `none` | current runner/skill behavior preserved path-selection invariants |
 | `production` | `missing-document-path-reject` | `completed` | `none` | current runner/skill behavior preserved path-selection invariants |
-| `production` | `negative-limit-reject` | `failed` | `skill_guidance_or_eval_coverage` | runner-visible evidence existed, but the assistant answer did not satisfy the path-selection scenario |
+| `production` | `negative-limit-reject` | `completed` | `none` | current runner/skill behavior preserved path-selection invariants |
 | `production` | `unsupported-lower-level-reject` | `completed` | `none` | current runner/skill behavior preserved path-selection invariants |
 | `production` | `unsupported-transport-reject` | `completed` | `none` | current runner/skill behavior preserved path-selection invariants |

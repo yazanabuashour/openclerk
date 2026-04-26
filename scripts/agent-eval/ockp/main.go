@@ -5473,7 +5473,9 @@ func verifyAgentChosenPathProposal(ctx context.Context, paths evalPaths, finalMe
 		failures = append(failures, fmt.Sprintf("path proposal should ask before writing without tools, got tools=%d commands=%d", turnMetrics.ToolCalls, turnMetrics.CommandExecutions))
 	}
 	assistantPass := messageContainsAll(finalMessage, []string{agentChosenProposalPath, agentChosenURLHarness, agentChosenURLPromptGuidance}) &&
-		messageContainsAny(finalMessage, []string{"confirm", "approve", "proceed", "before creating", "before i create"})
+		messageContainsAny(finalMessage, []string{"confirm", "confirmation", "approve", "proceed", "before creating", "before i create"}) &&
+		messageContainsAny(finalMessage, []string{"no document was created", "did not create", "not create", "nothing was created"}) &&
+		messageContainsAny(finalMessage, []string{"no unsupported runner action", "unsupported runner action is implied", "no unsupported action"})
 	if !assistantPass {
 		failures = append(failures, "final answer did not propose the stable path and ask for confirmation before creating")
 	}
@@ -5636,7 +5638,8 @@ func verifyAgentChosenAmbiguousDocumentType(ctx context.Context, paths evalPaths
 	}
 	assistantPass := messageContainsAll(finalMessage, []string{agentChosenAmbiguousDecisionID}) &&
 		messageContainsAny(finalMessage, []string{"metadata", "frontmatter"}) &&
-		messageContainsAny(finalMessage, []string{"not filename", "not the filename", "not path", "not the path"}) &&
+		messageContainsAny(finalMessage, []string{"not filename", "not the filename", "not path", "not the path", "not filename/path"}) &&
+		messageContainsAny(finalMessage, []string{"projection", "freshness", "fresh"}) &&
 		docPath != "" && messageContainsAll(finalMessage, []string{docPath})
 	if !assistantPass {
 		failures = append(failures, "final answer did not report chosen path and metadata authority")
@@ -7141,25 +7144,12 @@ func classifyTargetedAgentChosenPathResult(result jobResult) (string, string) {
 }
 
 func agentChosenPathDecision(rows []targetedScenarioClassification) string {
-	hasFailure := false
-	hasCapabilityGap := false
 	for _, row := range rows {
-		switch row.FailureClassification {
-		case "runner_capability_gap":
-			hasCapabilityGap = true
-			hasFailure = true
-		case "none":
-		default:
-			hasFailure = true
+		if row.FailureClassification == "runner_capability_gap" {
+			return "keep_as_reference"
 		}
 	}
-	if hasCapabilityGap {
-		return "keep_as_reference"
-	}
-	if hasFailure {
-		return "keep_as_reference"
-	}
-	return "defer"
+	return "keep_as_reference"
 }
 
 func productionScenariosDetails(passed int, total int, missing []string) string {
@@ -7798,7 +7788,7 @@ func allScenarios() []scenario {
 		{
 			ID:     agentChosenPathProposalScenarioID,
 			Title:  "Propose URL-only path before create",
-			Prompt: "For this OpenClerk knowledge request, do not create a document yet and do not run tools. The user said: let's document: https://openai.com/index/harness-engineering/ and https://developers.openai.com/api/docs/guides/prompt-guidance. Propose a stable vault-relative path sources/openai-harness-and-prompt-guidance.md, a title, and source-note intent, then ask for confirmation before creating. Mention both URL strings and say no unsupported runner action is implied.",
+			Prompt: "For this OpenClerk knowledge request, do not create a document yet and do not run tools. The user said: let's document: https://openai.com/index/harness-engineering/ and https://developers.openai.com/api/docs/guides/prompt-guidance. Propose a stable vault-relative path sources/openai-harness-and-prompt-guidance.md, a title, and source-note intent, then ask for confirmation before creating. The final answer must include the exact path sources/openai-harness-and-prompt-guidance.md, both URL strings, a sentence saying you are asking for confirmation before creating, a sentence saying no document was created, and a sentence saying no unsupported runner action is implied.",
 		},
 		{
 			ID:     agentChosenAutonomousScenarioID,
@@ -7813,7 +7803,7 @@ func allScenarios() []scenario {
 		{
 			ID:     agentChosenAmbiguousScenarioID,
 			Title:  "Preserve metadata authority under ambiguous placement",
-			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user intent could be read as a source note, generic note, service, or decision, and no path was provided. Choose a clear vault-relative path yourself and create one durable decision document titled Agent Chosen Path Metadata Authority. The document frontmatter must include decision_id: adr-agent-chosen-path-metadata-authority, decision_title: Agent Chosen Path Metadata Authority, decision_status: accepted, decision_scope: document-path-selection, decision_owner: platform, and decision_date: 2026-04-25. The body must include the exact line: Metadata authority: frontmatter decides document identity. After creating it, run decision_record for adr-agent-chosen-path-metadata-authority and inspect projection_states for projection decisions with ref_kind decision and that decision id. In the final answer, mention the chosen path, the decision id, and that metadata/frontmatter, not the filename or path, determines identity.",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user intent could be read as a source note, generic note, service, or decision, and no path was provided. Choose a clear vault-relative path yourself and create one durable decision document titled Agent Chosen Path Metadata Authority. The document frontmatter must include decision_id: adr-agent-chosen-path-metadata-authority, decision_title: Agent Chosen Path Metadata Authority, decision_status: accepted, decision_scope: document-path-selection, decision_owner: platform, and decision_date: 2026-04-25. The body must include the exact line: Metadata authority: frontmatter decides document identity. After creating it, run decision_record for adr-agent-chosen-path-metadata-authority and inspect projection_states for projection decisions with ref_kind decision and that decision id. In the final answer, include the exact created path from the create_document JSON result, adr-agent-chosen-path-metadata-authority, projection or freshness evidence from projection_states, and the sentence: Metadata/frontmatter, not filename/path, determines identity.",
 		},
 		{
 			ID:     agentChosenUserPathScenarioID,

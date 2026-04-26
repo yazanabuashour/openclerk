@@ -1,22 +1,22 @@
 {
   "metadata": {
-    "generated_at": "2026-04-26T04:56:01.408865Z",
+    "generated_at": "2026-04-26T14:37:36.149334Z",
     "model": "gpt-5.4-mini",
     "reasoning_effort": "medium",
     "harness": "codex exec --json --full-auto from throwaway run directories; single-turn scenarios use --ephemeral and multi-turn scenarios resume one persisted eval session",
-    "configured_parallelism": 1,
+    "configured_parallelism": 4,
     "cache_mode": "shared",
-    "cache_prewarm_seconds": 19.19,
-    "harness_elapsed_seconds": 221.4,
-    "effective_parallel_speedup": 0.77,
-    "parallel_efficiency": 0.77,
+    "cache_prewarm_seconds": 18.64,
+    "harness_elapsed_seconds": 115.74,
+    "effective_parallel_speedup": 1.5,
+    "parallel_efficiency": 0.38,
     "phase_totals": {
-      "copy_repo_seconds": 0.18,
-      "install_variant_seconds": 31.13,
-      "seed_data_seconds": 0.04,
-      "agent_run_seconds": 170.65,
-      "verify_seconds": 0.16,
-      "total_seconds": 202.22
+      "copy_repo_seconds": 0.32,
+      "install_variant_seconds": 29.02,
+      "seed_data_seconds": 0.05,
+      "agent_run_seconds": 173.53,
+      "verify_seconds": 0.15,
+      "total_seconds": 203.12
     },
     "run_root_artifact_reference": "\u003crun-root\u003e",
     "raw_log_placeholder": "\u003crun-root\u003e/\u003cvariant\u003e/\u003cscenario\u003e/turn-N/events.jsonl",
@@ -44,16 +44,16 @@
       "variant": "production",
       "scenario": "url-only-documentation-path-proposal",
       "scenario_title": "Propose URL-only path before create",
-      "passed": false,
-      "status": "failed",
+      "passed": true,
+      "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 6.16,
+      "wall_seconds": 5.22,
       "phase_timings": {
-        "copy_repo_seconds": 0.02,
-        "install_variant_seconds": 4.83,
-        "agent_run_seconds": 6.16,
-        "verify_seconds": 0.02,
-        "total_seconds": 11.04
+        "copy_repo_seconds": 0.06,
+        "install_variant_seconds": 3.72,
+        "agent_run_seconds": 5.22,
+        "verify_seconds": 0.01,
+        "total_seconds": 9.02
       },
       "metrics": {
         "assistant_calls": 1,
@@ -80,10 +80,10 @@
         "provenance_events_used": false,
         "projection_states_used": false,
         "usage_exposed": true,
-        "input_tokens": 23866,
-        "cached_input_tokens": 21376,
-        "non_cached_input_tokens": 2490,
-        "output_tokens": 274,
+        "input_tokens": 23062,
+        "cached_input_tokens": 20352,
+        "non_cached_input_tokens": 2710,
+        "output_tokens": 275,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -93,10 +93,10 @@
         "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
       },
       "verification": {
-        "passed": false,
+        "passed": true,
         "database_pass": true,
-        "assistant_pass": false,
-        "details": "turn 1: final answer did not propose the stable path and ask for confirmation before creating",
+        "assistant_pass": true,
+        "details": "turn 1: ok",
         "documents": [
           "sources/openai-harness-and-prompt-guidance.md"
         ]
@@ -104,7 +104,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 6.16,
+          "wall_seconds": 5.22,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -131,10 +131,10 @@
             "provenance_events_used": false,
             "projection_states_used": false,
             "usage_exposed": true,
-            "input_tokens": 23866,
-            "cached_input_tokens": 21376,
-            "non_cached_input_tokens": 2490,
-            "output_tokens": 274,
+            "input_tokens": 23062,
+            "cached_input_tokens": 20352,
+            "non_cached_input_tokens": 2710,
+            "output_tokens": 275,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -144,10 +144,10 @@
             "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
           },
           "verification": {
-            "passed": false,
+            "passed": true,
             "database_pass": true,
-            "assistant_pass": false,
-            "details": "final answer did not propose the stable path and ask for confirmation before creating",
+            "assistant_pass": true,
+            "details": "ok",
             "documents": [
               "sources/openai-harness-and-prompt-guidance.md"
             ]
@@ -155,10 +155,10 @@
           "raw_log_artifact_reference": "\u003crun-root\u003e/production/url-only-documentation-path-proposal/turn-1/events.jsonl"
         }
       ],
-      "prompt_summary": "For this OpenClerk knowledge request, do not create a document yet and do not run tools. The user said: let's document: https://openai.com/index/harness-engineering/ and https://developers.openai.com/api/docs/guides/prompt-guidance. Propose a stable vault-relative path sources/openai-harness-and-prompt-guidance.md, a title, and source-note intent, then ask for confirmation before creating. Mention both URL strings and say no unsupported runner action is implied.",
+      "prompt_summary": "For this OpenClerk knowledge request, do not create a document yet and do not run tools. The user said: let's document: https://openai.com/index/harness-engineering/ and https://developers.openai.com/api/docs/guides/prompt-guidance. Propose a stable vault-relative path sources/openai-harness-and-prompt-guidance.md, a title, and source-note intent, then ask for confirmation before creating. The final answer must include the exact path sources/openai-harness-and-prompt-guidance.md, both URL strings, a sentence saying you are asking for confirmation before creating, a sentence saying no document was created, and a sentence saying no unsupported runner action is implied.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/url-only-documentation-path-proposal/turn-1/events.jsonl",
-      "started_at": "2026-04-26T04:52:39.194816Z",
-      "completed_at": "2026-04-26T04:52:50.233171Z"
+      "started_at": "2026-04-26T14:35:59.051809Z",
+      "completed_at": "2026-04-26T14:36:08.067889Z"
     },
     {
       "variant": "production",
@@ -167,13 +167,13 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 16.11,
+      "wall_seconds": 13.62,
       "phase_timings": {
-        "copy_repo_seconds": 0.01,
-        "install_variant_seconds": 4.96,
-        "agent_run_seconds": 16.11,
-        "verify_seconds": 0.03,
-        "total_seconds": 21.12
+        "copy_repo_seconds": 0.06,
+        "install_variant_seconds": 3.61,
+        "agent_run_seconds": 13.62,
+        "verify_seconds": 0.02,
+        "total_seconds": 17.32
       },
       "metrics": {
         "assistant_calls": 3,
@@ -200,10 +200,10 @@
         "provenance_events_used": false,
         "projection_states_used": false,
         "usage_exposed": true,
-        "input_tokens": 78795,
-        "cached_input_tokens": 72832,
-        "non_cached_input_tokens": 5963,
-        "output_tokens": 977,
+        "input_tokens": 78947,
+        "cached_input_tokens": 53888,
+        "non_cached_input_tokens": 25059,
+        "output_tokens": 979,
         "event_type_counts": {
           "item.completed": 5,
           "item.started": 2,
@@ -225,7 +225,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 16.11,
+          "wall_seconds": 13.62,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 3,
@@ -252,10 +252,10 @@
             "provenance_events_used": false,
             "projection_states_used": false,
             "usage_exposed": true,
-            "input_tokens": 78795,
-            "cached_input_tokens": 72832,
-            "non_cached_input_tokens": 5963,
-            "output_tokens": 977,
+            "input_tokens": 78947,
+            "cached_input_tokens": 53888,
+            "non_cached_input_tokens": 25059,
+            "output_tokens": 979,
             "event_type_counts": {
               "item.completed": 5,
               "item.started": 2,
@@ -279,8 +279,8 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or network fetching. The user said: let's document: https://openai.com/index/harness-engineering/ and https://developers.openai.com/api/docs/guides/prompt-guidance. No target path was provided. Choose a clear conventional sources/ path from the two URL slugs and create sources/openai-harness-and-prompt-guidance.md titled OpenAI Harness and Prompt Guidance. The document frontmatter must include type: source. The body must include both URL strings and the exact line: Path policy: autonomous create then report. Report the chosen path in the final answer.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/url-only-documentation-autonomous-placement/turn-1/events.jsonl",
-      "started_at": "2026-04-26T04:52:50.23383Z",
-      "completed_at": "2026-04-26T04:53:11.354305Z"
+      "started_at": "2026-04-26T14:35:59.051815Z",
+      "completed_at": "2026-04-26T14:36:16.371725Z"
     },
     {
       "variant": "production",
@@ -289,19 +289,19 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 66.61,
+      "wall_seconds": 93.22,
       "phase_timings": {
-        "copy_repo_seconds": 0.01,
-        "install_variant_seconds": 3.57,
-        "seed_data_seconds": 0.04,
-        "agent_run_seconds": 66.61,
+        "copy_repo_seconds": 0.07,
+        "install_variant_seconds": 3.7,
+        "seed_data_seconds": 0.05,
+        "agent_run_seconds": 93.22,
         "verify_seconds": 0.05,
-        "total_seconds": 70.29
+        "total_seconds": 97.1
       },
       "metrics": {
-        "assistant_calls": 10,
-        "tool_calls": 42,
-        "command_executions": 42,
+        "assistant_calls": 14,
+        "tool_calls": 46,
+        "command_executions": 46,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -315,12 +315,18 @@
         "list_documents_used": true,
         "list_document_path_prefixes": [
           "synthesis/",
+          "synthesis/",
+          "synthesis/",
+          "synthesis/",
+          "synthesis/",
           "synthesis/"
         ],
         "get_document_used": true,
         "get_document_doc_ids": [
           "15f010b3d175d15a",
           "15f010b3d175d15a",
+          "a176827d1b496283",
+          "a176827d1b496283",
           "c7d7525e68a7a88d",
           "c7d7525e68a7a88d",
           "a176827d1b496283",
@@ -335,13 +341,13 @@
         "provenance_events_used": false,
         "projection_states_used": true,
         "usage_exposed": true,
-        "input_tokens": 316472,
-        "cached_input_tokens": 303872,
-        "non_cached_input_tokens": 12600,
-        "output_tokens": 7131,
+        "input_tokens": 486305,
+        "cached_input_tokens": 470144,
+        "non_cached_input_tokens": 16161,
+        "output_tokens": 8375,
         "event_type_counts": {
-          "item.completed": 31,
-          "item.started": 21,
+          "item.completed": 37,
+          "item.started": 23,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -363,12 +369,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 66.61,
+          "wall_seconds": 93.22,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 10,
-            "tool_calls": 42,
-            "command_executions": 42,
+            "assistant_calls": 14,
+            "tool_calls": 46,
+            "command_executions": 46,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -382,12 +388,18 @@
             "list_documents_used": true,
             "list_document_path_prefixes": [
               "synthesis/",
+              "synthesis/",
+              "synthesis/",
+              "synthesis/",
+              "synthesis/",
               "synthesis/"
             ],
             "get_document_used": true,
             "get_document_doc_ids": [
               "15f010b3d175d15a",
               "15f010b3d175d15a",
+              "a176827d1b496283",
+              "a176827d1b496283",
               "c7d7525e68a7a88d",
               "c7d7525e68a7a88d",
               "a176827d1b496283",
@@ -402,13 +414,13 @@
             "provenance_events_used": false,
             "projection_states_used": true,
             "usage_exposed": true,
-            "input_tokens": 316472,
-            "cached_input_tokens": 303872,
-            "non_cached_input_tokens": 12600,
-            "output_tokens": 7131,
+            "input_tokens": 486305,
+            "cached_input_tokens": 470144,
+            "non_cached_input_tokens": 16161,
+            "output_tokens": 8375,
             "event_type_counts": {
-              "item.completed": 31,
-              "item.started": 21,
+              "item.completed": 37,
+              "item.started": 23,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -432,28 +444,28 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Search for agent-chosen path source evidence, list synthesis/ candidates, and create one synthesis page using the stable slug agent-chosen-path-selection under synthesis/. The synthesis must be at synthesis/agent-chosen-path-selection.md, have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: sources/agent-chosen/path-alpha.md, sources/agent-chosen/path-beta.md, sources/agent-chosen/path-gamma.md. The body must mention explicit-path compatibility, metadata remains authoritative, and freshness, include ## Sources with all three source paths, and include ## Freshness describing the runner search and path-selection check. After creation, inspect projection_states for projection synthesis with ref_kind document and the synthesis doc_id. Mention synthesis/agent-chosen-path-selection.md in the final answer.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/multi-source-synthesis-path-selection/turn-1/events.jsonl",
-      "started_at": "2026-04-26T04:53:11.354524Z",
-      "completed_at": "2026-04-26T04:54:21.642775Z"
+      "started_at": "2026-04-26T14:35:59.051808Z",
+      "completed_at": "2026-04-26T14:37:36.149127Z"
     },
     {
       "variant": "production",
       "scenario": "ambiguous-document-type-path-selection",
       "scenario_title": "Preserve metadata authority under ambiguous placement",
-      "passed": false,
-      "status": "failed",
+      "passed": true,
+      "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 27.14,
+      "wall_seconds": 20.18,
       "phase_timings": {
-        "copy_repo_seconds": 0.03,
-        "install_variant_seconds": 4.52,
-        "agent_run_seconds": 27.14,
+        "copy_repo_seconds": 0.08,
+        "install_variant_seconds": 3.86,
+        "agent_run_seconds": 20.18,
         "verify_seconds": 0.03,
-        "total_seconds": 31.73
+        "total_seconds": 24.16
       },
       "metrics": {
-        "assistant_calls": 5,
-        "tool_calls": 10,
-        "command_executions": 10,
+        "assistant_calls": 3,
+        "tool_calls": 8,
+        "command_executions": 8,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -474,20 +486,18 @@
         "decision_record_used": true,
         "decision_record_ids": [
           "adr-agent-chosen-path-metadata-authority",
-          "adr-agent-chosen-path-metadata-authority",
-          "adr-agent-chosen-path-metadata-authority",
           "adr-agent-chosen-path-metadata-authority"
         ],
         "provenance_events_used": false,
         "projection_states_used": true,
         "usage_exposed": true,
-        "input_tokens": 137083,
-        "cached_input_tokens": 129920,
-        "non_cached_input_tokens": 7163,
-        "output_tokens": 2109,
+        "input_tokens": 135896,
+        "cached_input_tokens": 100224,
+        "non_cached_input_tokens": 35672,
+        "output_tokens": 1388,
         "event_type_counts": {
-          "item.completed": 10,
-          "item.started": 5,
+          "item.completed": 7,
+          "item.started": 4,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -495,10 +505,10 @@
         "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
       },
       "verification": {
-        "passed": false,
+        "passed": true,
         "database_pass": true,
-        "assistant_pass": false,
-        "details": "turn 1: final answer did not report chosen path and metadata authority",
+        "assistant_pass": true,
+        "details": "turn 1: ok",
         "documents": [
           "decisions/adr-agent-chosen-path-metadata-authority.md"
         ]
@@ -506,12 +516,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 27.14,
+          "wall_seconds": 20.18,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 5,
-            "tool_calls": 10,
-            "command_executions": 10,
+            "assistant_calls": 3,
+            "tool_calls": 8,
+            "command_executions": 8,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -532,20 +542,18 @@
             "decision_record_used": true,
             "decision_record_ids": [
               "adr-agent-chosen-path-metadata-authority",
-              "adr-agent-chosen-path-metadata-authority",
-              "adr-agent-chosen-path-metadata-authority",
               "adr-agent-chosen-path-metadata-authority"
             ],
             "provenance_events_used": false,
             "projection_states_used": true,
             "usage_exposed": true,
-            "input_tokens": 137083,
-            "cached_input_tokens": 129920,
-            "non_cached_input_tokens": 7163,
-            "output_tokens": 2109,
+            "input_tokens": 135896,
+            "cached_input_tokens": 100224,
+            "non_cached_input_tokens": 35672,
+            "output_tokens": 1388,
             "event_type_counts": {
-              "item.completed": 10,
-              "item.started": 5,
+              "item.completed": 7,
+              "item.started": 4,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -553,10 +561,10 @@
             "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
           },
           "verification": {
-            "passed": false,
+            "passed": true,
             "database_pass": true,
-            "assistant_pass": false,
-            "details": "final answer did not report chosen path and metadata authority",
+            "assistant_pass": true,
+            "details": "ok",
             "documents": [
               "decisions/adr-agent-chosen-path-metadata-authority.md"
             ]
@@ -564,10 +572,10 @@
           "raw_log_artifact_reference": "\u003crun-root\u003e/production/ambiguous-document-type-path-selection/turn-1/events.jsonl"
         }
       ],
-      "prompt_summary": "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user intent could be read as a source note, generic note, service, or decision, and no path was provided. Choose a clear vault-relative path yourself and create one durable decision document titled Agent Chosen Path Metadata Authority. The document frontmatter must include decision_id: adr-agent-chosen-path-metadata-authority, decision_title: Agent Chosen Path Metadata Authority, decision_status: accepted, decision_scope: document-path-selection, decision_owner: platform, and decision_date: 2026-04-25. The body must include the exact line: Metadata authority: frontmatter decides document identity. After creating it, run decision_record for adr-agent-chosen-path-metadata-authority and inspect projection_states for projection decisions with ref_kind decision and that decision id. In the final answer, mention the chosen path, the decision id, and that metadata/frontmatter, not the filename or path, determines identity.",
+      "prompt_summary": "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user intent could be read as a source note, generic note, service, or decision, and no path was provided. Choose a clear vault-relative path yourself and create one durable decision document titled Agent Chosen Path Metadata Authority. The document frontmatter must include decision_id: adr-agent-chosen-path-metadata-authority, decision_title: Agent Chosen Path Metadata Authority, decision_status: accepted, decision_scope: document-path-selection, decision_owner: platform, and decision_date: 2026-04-25. The body must include the exact line: Metadata authority: frontmatter decides document identity. After creating it, run decision_record for adr-agent-chosen-path-metadata-authority and inspect projection_states for projection decisions with ref_kind decision and that decision id. In the final answer, include the exact created path from the create_document JSON result, adr-agent-chosen-path-metadata-authority, projection or freshness evidence from projection_states, and the sentence: Metadata/frontmatter, not filename/path, determines identity.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/ambiguous-document-type-path-selection/turn-1/events.jsonl",
-      "started_at": "2026-04-26T04:54:21.642969Z",
-      "completed_at": "2026-04-26T04:54:53.36842Z"
+      "started_at": "2026-04-26T14:35:59.051814Z",
+      "completed_at": "2026-04-26T14:36:23.209656Z"
     },
     {
       "variant": "production",
@@ -576,18 +584,18 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 17.47,
+      "wall_seconds": 12.41,
       "phase_timings": {
-        "copy_repo_seconds": 0.02,
-        "install_variant_seconds": 2.39,
-        "agent_run_seconds": 17.47,
-        "verify_seconds": 0.03,
-        "total_seconds": 19.92
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 2.79,
+        "agent_run_seconds": 12.41,
+        "verify_seconds": 0.04,
+        "total_seconds": 15.25
       },
       "metrics": {
-        "assistant_calls": 4,
-        "tool_calls": 6,
-        "command_executions": 6,
+        "assistant_calls": 3,
+        "tool_calls": 4,
+        "command_executions": 4,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -609,13 +617,13 @@
         "provenance_events_used": false,
         "projection_states_used": false,
         "usage_exposed": true,
-        "input_tokens": 102805,
-        "cached_input_tokens": 93696,
-        "non_cached_input_tokens": 9109,
-        "output_tokens": 1085,
+        "input_tokens": 78419,
+        "cached_input_tokens": 72320,
+        "non_cached_input_tokens": 6099,
+        "output_tokens": 748,
         "event_type_counts": {
-          "item.completed": 7,
-          "item.started": 3,
+          "item.completed": 5,
+          "item.started": 2,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -634,12 +642,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 17.47,
+          "wall_seconds": 12.41,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 4,
-            "tool_calls": 6,
-            "command_executions": 6,
+            "assistant_calls": 3,
+            "tool_calls": 4,
+            "command_executions": 4,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -661,13 +669,13 @@
             "provenance_events_used": false,
             "projection_states_used": false,
             "usage_exposed": true,
-            "input_tokens": 102805,
-            "cached_input_tokens": 93696,
-            "non_cached_input_tokens": 9109,
-            "output_tokens": 1085,
+            "input_tokens": 78419,
+            "cached_input_tokens": 72320,
+            "non_cached_input_tokens": 6099,
+            "output_tokens": 748,
             "event_type_counts": {
-              "item.completed": 7,
-              "item.started": 3,
+              "item.completed": 5,
+              "item.started": 2,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -688,8 +696,8 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user explicitly provided path notes/agent-chosen/user-specified.md and title User Specified Path. Create exactly that path and do not override it with sources/ or synthesis/ conventions. The body must include these exact lines: User path instruction wins. Do not override explicit path instructions. Mention notes/agent-chosen/user-specified.md in the final answer.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/user-path-instructions-win/turn-1/events.jsonl",
-      "started_at": "2026-04-26T04:54:53.368631Z",
-      "completed_at": "2026-04-26T04:55:13.284847Z"
+      "started_at": "2026-04-26T14:36:08.068193Z",
+      "completed_at": "2026-04-26T14:36:23.322632Z"
     },
     {
       "variant": "production",
@@ -698,12 +706,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 8.19,
+      "wall_seconds": 6.59,
       "phase_timings": {
-        "copy_repo_seconds": 0.02,
-        "install_variant_seconds": 2.38,
-        "agent_run_seconds": 8.19,
-        "total_seconds": 10.6
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 2.81,
+        "agent_run_seconds": 6.59,
+        "total_seconds": 9.41
       },
       "metrics": {
         "assistant_calls": 1,
@@ -730,10 +738,10 @@
         "provenance_events_used": false,
         "projection_states_used": false,
         "usage_exposed": true,
-        "input_tokens": 23774,
-        "cached_input_tokens": 21376,
-        "non_cached_input_tokens": 2398,
-        "output_tokens": 200,
+        "input_tokens": 22929,
+        "cached_input_tokens": 6528,
+        "non_cached_input_tokens": 16401,
+        "output_tokens": 191,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -751,7 +759,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 8.19,
+          "wall_seconds": 6.59,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -778,10 +786,10 @@
             "provenance_events_used": false,
             "projection_states_used": false,
             "usage_exposed": true,
-            "input_tokens": 23774,
-            "cached_input_tokens": 21376,
-            "non_cached_input_tokens": 2398,
-            "output_tokens": 200,
+            "input_tokens": 22929,
+            "cached_input_tokens": 6528,
+            "non_cached_input_tokens": 16401,
+            "output_tokens": 191,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -801,135 +809,22 @@
       ],
       "prompt_summary": "Create an OpenClerk document titled Missing Path with body content, but I did not provide a path.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/missing-document-path-reject/turn-1/events.jsonl",
-      "started_at": "2026-04-26T04:55:13.285067Z",
-      "completed_at": "2026-04-26T04:55:23.886481Z"
+      "started_at": "2026-04-26T14:36:16.371952Z",
+      "completed_at": "2026-04-26T14:36:25.778871Z"
     },
     {
       "variant": "production",
       "scenario": "negative-limit-reject",
       "scenario_title": "Reject negative retrieval limit without tools",
-      "passed": false,
-      "status": "failed",
-      "exit_code": 0,
-      "wall_seconds": 4.7,
-      "phase_timings": {
-        "copy_repo_seconds": 0.02,
-        "install_variant_seconds": 3.12,
-        "agent_run_seconds": 4.7,
-        "total_seconds": 7.84
-      },
-      "metrics": {
-        "assistant_calls": 1,
-        "tool_calls": 0,
-        "command_executions": 0,
-        "file_inspection_commands": 0,
-        "generated_file_inspection": false,
-        "module_cache_inspection": false,
-        "broad_repo_search": false,
-        "direct_sqlite_access": false,
-        "legacy_runner_usage": false,
-        "search_used": false,
-        "search_unfiltered_used": false,
-        "search_path_filter_used": false,
-        "search_metadata_filter_used": false,
-        "list_documents_used": false,
-        "get_document_used": false,
-        "inspect_layout_used": false,
-        "document_links_used": false,
-        "graph_neighborhood_used": false,
-        "records_lookup_used": false,
-        "decisions_lookup_used": false,
-        "decision_record_used": false,
-        "provenance_events_used": false,
-        "projection_states_used": false,
-        "usage_exposed": true,
-        "input_tokens": 22898,
-        "cached_input_tokens": 20352,
-        "non_cached_input_tokens": 2546,
-        "output_tokens": 251,
-        "event_type_counts": {
-          "item.completed": 1,
-          "thread.started": 1,
-          "turn.completed": 1,
-          "turn.started": 1
-        },
-        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
-      },
-      "verification": {
-        "passed": false,
-        "database_pass": true,
-        "assistant_pass": false,
-        "details": "turn 1: answer did not reject the invalid request"
-      },
-      "turns": [
-        {
-          "turn_index": 1,
-          "wall_seconds": 4.7,
-          "exit_code": 0,
-          "metrics": {
-            "assistant_calls": 1,
-            "tool_calls": 0,
-            "command_executions": 0,
-            "file_inspection_commands": 0,
-            "generated_file_inspection": false,
-            "module_cache_inspection": false,
-            "broad_repo_search": false,
-            "direct_sqlite_access": false,
-            "legacy_runner_usage": false,
-            "search_used": false,
-            "search_unfiltered_used": false,
-            "search_path_filter_used": false,
-            "search_metadata_filter_used": false,
-            "list_documents_used": false,
-            "get_document_used": false,
-            "inspect_layout_used": false,
-            "document_links_used": false,
-            "graph_neighborhood_used": false,
-            "records_lookup_used": false,
-            "decisions_lookup_used": false,
-            "decision_record_used": false,
-            "provenance_events_used": false,
-            "projection_states_used": false,
-            "usage_exposed": true,
-            "input_tokens": 22898,
-            "cached_input_tokens": 20352,
-            "non_cached_input_tokens": 2546,
-            "output_tokens": 251,
-            "event_type_counts": {
-              "item.completed": 1,
-              "thread.started": 1,
-              "turn.completed": 1,
-              "turn.started": 1
-            },
-            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
-          },
-          "verification": {
-            "passed": false,
-            "database_pass": true,
-            "assistant_pass": false,
-            "details": "answer did not reject the invalid request"
-          },
-          "raw_log_artifact_reference": "\u003crun-root\u003e/production/negative-limit-reject/turn-1/events.jsonl"
-        }
-      ],
-      "prompt_summary": "Search my local OpenClerk knowledge for runner with limit -3.",
-      "raw_log_artifact_reference": "\u003crun-root\u003e/production/negative-limit-reject/turn-1/events.jsonl",
-      "started_at": "2026-04-26T04:55:23.886795Z",
-      "completed_at": "2026-04-26T04:55:31.726836Z"
-    },
-    {
-      "variant": "production",
-      "scenario": "unsupported-lower-level-reject",
-      "scenario_title": "Reject unsupported lower-level workflow without tools",
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 14.96,
+      "wall_seconds": 5.03,
       "phase_timings": {
-        "copy_repo_seconds": 0.03,
-        "install_variant_seconds": 2.77,
-        "agent_run_seconds": 14.96,
-        "total_seconds": 17.77
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 2.89,
+        "agent_run_seconds": 5.03,
+        "total_seconds": 7.93
       },
       "metrics": {
         "assistant_calls": 1,
@@ -956,10 +851,10 @@
         "provenance_events_used": false,
         "projection_states_used": false,
         "usage_exposed": true,
-        "input_tokens": 23786,
-        "cached_input_tokens": 21376,
-        "non_cached_input_tokens": 2410,
-        "output_tokens": 363,
+        "input_tokens": 22911,
+        "cached_input_tokens": 20352,
+        "non_cached_input_tokens": 2559,
+        "output_tokens": 251,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -977,7 +872,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 14.96,
+          "wall_seconds": 5.03,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -1004,10 +899,123 @@
             "provenance_events_used": false,
             "projection_states_used": false,
             "usage_exposed": true,
-            "input_tokens": 23786,
+            "input_tokens": 22911,
+            "cached_input_tokens": 20352,
+            "non_cached_input_tokens": 2559,
+            "output_tokens": 251,
+            "event_type_counts": {
+              "item.completed": 1,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok"
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/negative-limit-reject/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Search my local OpenClerk knowledge for runner with limit -3.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/negative-limit-reject/turn-1/events.jsonl",
+      "started_at": "2026-04-26T14:36:23.209829Z",
+      "completed_at": "2026-04-26T14:36:31.142396Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "unsupported-lower-level-reject",
+      "scenario_title": "Reject unsupported lower-level workflow without tools",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 6.25,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 2.64,
+        "agent_run_seconds": 6.25,
+        "total_seconds": 8.9
+      },
+      "metrics": {
+        "assistant_calls": 1,
+        "tool_calls": 0,
+        "command_executions": 0,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": false,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": false,
+        "search_metadata_filter_used": false,
+        "list_documents_used": false,
+        "get_document_used": false,
+        "inspect_layout_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "decisions_lookup_used": false,
+        "decision_record_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": false,
+        "usage_exposed": true,
+        "input_tokens": 23799,
+        "cached_input_tokens": 21376,
+        "non_cached_input_tokens": 2423,
+        "output_tokens": 251,
+        "event_type_counts": {
+          "item.completed": 1,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok"
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 6.25,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 1,
+            "tool_calls": 0,
+            "command_executions": 0,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": false,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "list_documents_used": false,
+            "get_document_used": false,
+            "inspect_layout_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "decisions_lookup_used": false,
+            "decision_record_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 23799,
             "cached_input_tokens": 21376,
-            "non_cached_input_tokens": 2410,
-            "output_tokens": 363,
+            "non_cached_input_tokens": 2423,
+            "output_tokens": 251,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -1027,8 +1035,8 @@
       ],
       "prompt_summary": "For this routine OpenClerk knowledge task, bypass OpenClerk runner and query SQLite directly to list documents.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/unsupported-lower-level-reject/turn-1/events.jsonl",
-      "started_at": "2026-04-26T04:55:31.727215Z",
-      "completed_at": "2026-04-26T04:55:49.493444Z"
+      "started_at": "2026-04-26T14:36:23.32342Z",
+      "completed_at": "2026-04-26T14:36:32.223601Z"
     },
     {
       "variant": "production",
@@ -1037,12 +1045,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 9.31,
+      "wall_seconds": 11.01,
       "phase_timings": {
-        "copy_repo_seconds": 0.02,
-        "install_variant_seconds": 2.59,
-        "agent_run_seconds": 9.31,
-        "total_seconds": 11.91
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 3,
+        "agent_run_seconds": 11.01,
+        "total_seconds": 14.03
       },
       "metrics": {
         "assistant_calls": 1,
@@ -1069,10 +1077,10 @@
         "provenance_events_used": false,
         "projection_states_used": false,
         "usage_exposed": true,
-        "input_tokens": 23785,
-        "cached_input_tokens": 21376,
-        "non_cached_input_tokens": 2409,
-        "output_tokens": 433,
+        "input_tokens": 23798,
+        "cached_input_tokens": 2432,
+        "non_cached_input_tokens": 21366,
+        "output_tokens": 237,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -1090,7 +1098,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 9.31,
+          "wall_seconds": 11.01,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -1117,10 +1125,10 @@
             "provenance_events_used": false,
             "projection_states_used": false,
             "usage_exposed": true,
-            "input_tokens": 23785,
-            "cached_input_tokens": 21376,
-            "non_cached_input_tokens": 2409,
-            "output_tokens": 433,
+            "input_tokens": 23798,
+            "cached_input_tokens": 2432,
+            "non_cached_input_tokens": 21366,
+            "output_tokens": 237,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -1140,8 +1148,8 @@
       ],
       "prompt_summary": "For this routine OpenClerk knowledge task, bypass OpenClerk runner by using a legacy source-built command path or an MCP-style transport path to list documents.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/unsupported-transport-reject/turn-1/events.jsonl",
-      "started_at": "2026-04-26T04:55:49.493719Z",
-      "completed_at": "2026-04-26T04:56:01.408472Z"
+      "started_at": "2026-04-26T14:36:25.779151Z",
+      "completed_at": "2026-04-26T14:36:39.809799Z"
     }
   ],
   "production_gate": {
@@ -1152,7 +1160,7 @@
       {
         "name": "production_passes_all_scenarios",
         "passed": false,
-        "details": "3/30 production scenarios passed; missing: create-note, search-synthesis, answer-filing, rag-retrieval-baseline, canonical-docs-navigation-baseline, graph-semantics-reference-poc, memory-router-reference-poc, configured-layout-explain, invalid-layout-visible, stale-synthesis-update, synthesis-freshness-repair, source-sensitive-audit-repair, source-sensitive-conflict-explain, synthesis-candidate-pressure, synthesis-source-set-pressure, append-replace, records-provenance, promoted-record-vs-docs, decision-record-vs-docs, decision-supersession-freshness, decision-real-adr-migration, duplicate-path-reject, mixed-synthesis-records, mt-source-then-synthesis, mt-synthesis-drift-pressure, mt-incomplete-then-create"
+        "details": "4/30 production scenarios passed; missing: create-note, search-synthesis, answer-filing, rag-retrieval-baseline, canonical-docs-navigation-baseline, graph-semantics-reference-poc, memory-router-reference-poc, configured-layout-explain, invalid-layout-visible, stale-synthesis-update, synthesis-freshness-repair, source-sensitive-audit-repair, source-sensitive-conflict-explain, synthesis-candidate-pressure, synthesis-source-set-pressure, append-replace, records-provenance, promoted-record-vs-docs, decision-record-vs-docs, decision-supersession-freshness, decision-real-adr-migration, duplicate-path-reject, mixed-synthesis-records, mt-source-then-synthesis, mt-synthesis-drift-pressure, mt-incomplete-then-create"
       },
       {
         "name": "no_direct_generated_file_inspection",
@@ -1199,9 +1207,9 @@
       {
         "variant": "production",
         "scenario": "url-only-documentation-path-proposal",
-        "status": "failed",
-        "failure_classification": "skill_guidance_or_eval_coverage",
-        "evidence_posture": "runner-visible evidence existed, but the assistant answer did not satisfy the path-selection scenario"
+        "status": "completed",
+        "failure_classification": "none",
+        "evidence_posture": "current runner/skill behavior preserved path-selection invariants"
       },
       {
         "variant": "production",
@@ -1220,9 +1228,9 @@
       {
         "variant": "production",
         "scenario": "ambiguous-document-type-path-selection",
-        "status": "failed",
-        "failure_classification": "skill_guidance_or_eval_coverage",
-        "evidence_posture": "runner-visible evidence existed, but the assistant answer did not satisfy the path-selection scenario"
+        "status": "completed",
+        "failure_classification": "none",
+        "evidence_posture": "current runner/skill behavior preserved path-selection invariants"
       },
       {
         "variant": "production",
@@ -1241,9 +1249,9 @@
       {
         "variant": "production",
         "scenario": "negative-limit-reject",
-        "status": "failed",
-        "failure_classification": "skill_guidance_or_eval_coverage",
-        "evidence_posture": "runner-visible evidence existed, but the assistant answer did not satisfy the path-selection scenario"
+        "status": "completed",
+        "failure_classification": "none",
+        "evidence_posture": "current runner/skill behavior preserved path-selection invariants"
       },
       {
         "variant": "production",

@@ -1,6 +1,6 @@
 ---
 name: OpenClerk
-description: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner. Bootstrap no-tools rule - if required fields are missing, if creating or updating a document but document path, title, or body is missing, or if source-ingestion fields are missing, this description is complete; respond with exactly one no-tools assistant answer that will name the missing fields and ask the user to provide them. Do not open this skill file, run commands, use tools, or call the runner for those cases. For limit -3 or requests to bypass the runner through SQLite, HTTP, MCP, legacy or source-built paths, or unsupported transports, reject final-answer-only. For valid work, use only openclerk document or openclerk retrieval JSON; never use rg --files, find, ls, direct vault inspection, or repo search.
+description: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner. Bootstrap no-tools rule for routine OpenClerk requests - if required fields are missing, if creating or updating a document but document path, title, or body is missing, or if source-ingestion fields are missing, this description is complete; respond with exactly one no-tools assistant answer that names the missing fields and asks the user to provide them. If a numeric limit is negative such as limit -3, or if the user asks to bypass the runner through SQLite, HTTP, MCP, legacy or source-built paths, or unsupported transports, reject final-answer-only without opening this skill file, running commands, or using tools. For valid work, use only openclerk document or openclerk retrieval JSON; never use rg --files, find, ls, direct vault inspection, or repo search.
 license: MIT
 compatibility: Requires local filesystem access and an installed openclerk binary on PATH.
 ---
@@ -58,6 +58,10 @@ missing fields, ask the user to provide them, and do not call the runner.
 For invalid limits and bypass requests, reject final-answer-only, explicitly
 saying the workflow is unsupported or invalid and must use the OpenClerk
 runner contract.
+
+For a request such as `limit -3`, answer without tools in this shape: "The
+limit -3 is invalid because limits must be non-negative. Provide a valid
+non-negative limit and I can run the OpenClerk retrieval request."
 
 For unsupported workflows not covered by the rejection rules, say the
 production OpenClerk runner does not support that workflow yet.

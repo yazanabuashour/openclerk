@@ -54,14 +54,14 @@ The reduced reports are written under `docs/evals/results/` by default. This
 targeted lane is not a release-blocking production gate replacement.
 
 Current decision: keep as reference. The lane did not prove a runner capability
-gap or justify a public surface change. Passing scenarios showed autonomous
-source placement, multi-source synthesis path selection, explicit user path
-precedence, missing-path clarification, and bypass rejection can use existing
-`openclerk document` and `openclerk retrieval` workflows. Remaining failures
-were classified as skill guidance or eval coverage because the assistant answer
-missed expected proposal, metadata-authority, or invalid-limit wording. No
-runner action, schema, migration, storage API, product behavior, public
-interface, or missing-path policy change is promoted from this evidence.
+gap or justify a public surface change. The refreshed guidance-hardening run
+showed proposal-before-create wording, autonomous source placement,
+multi-source synthesis path selection, ambiguous metadata-authority placement,
+explicit user path precedence, missing-path clarification, invalid-limit
+rejection, and bypass rejection can use existing `openclerk document` and
+`openclerk retrieval` workflows. No runner action, schema, migration, storage
+API, product behavior, public interface, or missing-path policy change is
+promoted from this evidence.
 
 ## Naming/Path Policy Under Test
 
@@ -141,6 +141,6 @@ A completed targeted report should record:
 - the decision: promote, defer, kill, or keep as reference
 - the exact follow-up implementation surface only if promotion is justified
 
-The current report keeps agent-chosen path selection as reference evidence. It
-also records follow-up pressure for answer guidance/eval hardening, not a
-path-selection runner capability gap.
+The current report keeps agent-chosen path selection as reference evidence. The
+refreshed guidance/eval hardening evidence resolved the prior answer-wording
+failures and did not expose a path-selection runner capability gap.

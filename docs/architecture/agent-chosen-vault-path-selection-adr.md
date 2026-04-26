@@ -137,8 +137,9 @@ pressure. Autonomous placement, synthesis path selection, explicit user path
 precedence, missing-path clarification, and bypass rejection completed through
 the existing `openclerk document` and `openclerk retrieval` public surface.
 
-The lane did not justify promotion. Remaining validation failures were
-classified as skill guidance or eval coverage around assistant answer wording
-and final-answer-only handling, not as path-selection runner capability gaps.
-Missing-path clarification remains the default until separate evidence proves a
-product change is needed.
+The lane did not justify promotion. The refreshed guidance/eval hardening run
+resolved the prior answer-wording failures for path proposal, metadata
+authority, and invalid-limit rejection while preserving the existing public
+surface. No path-selection runner capability gap was exposed. Missing-path
+clarification remains the default until separate evidence proves a product
+change is needed.
