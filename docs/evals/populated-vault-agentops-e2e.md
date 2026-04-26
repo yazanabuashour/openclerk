@@ -42,6 +42,24 @@ targeted lane is not a full production gate replacement; use the generated
 targeted-lane summary and scenario classifications as POC/reference evidence
 unless a separate release-gate run selects the release-blocking scenario set.
 
+## Milestone Outcome
+
+The `oc-rzi` generalization milestone is complete as an evidence and gating
+milestone, not a runner/API expansion. The synthetic populated-vault fixture
+coverage is public and sanitized, targeted evidence is recorded in
+`docs/evals/results/ockp-populated-vault-targeted.md`, and the focused guidance
+rerun in `docs/evals/results/ockp-populated-vault-guidance-hardening.md`
+resolved the polluted-evidence failure without adding runner actions.
+
+The current public AgentOps surface remains `openclerk document` and
+`openclerk retrieval`. Downstream feature paths are gated, deferred, or kept as
+reference pressure in
+`docs/evals/results/ockp-synthesis-maintenance-ergonomics.md`,
+`docs/architecture/agent-chosen-vault-path-selection-adr.md`,
+`docs/architecture/document-history-review-controls-adr.md`, and
+`docs/architecture/memory-routing-reference-decision.md`; none of this evidence
+promotes a new public runner surface.
+
 ## Fixture Expectations
 
 The fixture should be synthetic and safe to commit or regenerate, but realistic
