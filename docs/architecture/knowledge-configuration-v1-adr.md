@@ -152,6 +152,9 @@ The v1 document runner actions are:
 - `inspect_layout` exposes the convention-first layout contract, conventional
   prefixes, first-class document kinds, and pass/warn/fail validation checks.
 - `create_document` writes a new canonical markdown document and registers it.
+- `ingest_source_url` downloads a PDF source URL into a configured vault asset
+  path, creates the canonical markdown source note, and returns validated
+  retrieval/provenance metadata.
 - `list_documents` exposes document registry entries by path prefix or metadata.
 - `get_document` returns a canonical document by stable `doc_id`.
 - `append_document` appends durable markdown content to an existing document.
@@ -245,6 +248,35 @@ Future work should revisit that shape only if repeated eval failures show the
 document/retrieval workflow is structurally too many steps and directly causes
 missed candidate discovery, missed freshness inspection, duplicate synthesis,
 or dropped source refs.
+
+## `oc-jb0` POC Decision
+
+Decision: promote `openclerk document` action `ingest_source_url` for PDF source
+URL ingestion.
+
+The current document and retrieval actions can create markdown source notes,
+index retrieval text, and expose provenance, but they cannot download a PDF,
+register the binary asset, compute hash/size/page count, extract PDF
+metadata/text, reject duplicate source URLs, and return a single validated
+source-note/asset/provenance result. Requiring routine agents to orchestrate
+those steps outside the runner would create brittle HTTP, filesystem, PDF, and
+duplicate-detection bypass work.
+
+The promoted action accepts `source.url`, `source.path_hint`,
+`source.asset_path_hint`, and optional `source.title`. It stores the PDF under
+the configured vault asset path, creates a canonical `sources/*.md` source note
+with `modality: markdown` and `source_type: pdf`, indexes extracted or
+metadata-derived retrieval text through the existing markdown chunk path, and
+returns the created document id, source path, asset path, derived path,
+citations, hash, size, MIME type, page count, capture timestamp, and optional
+PDF metadata.
+
+Targeted evidence is recorded in
+`docs/evals/results/ockp-source-url-ingestion-poc.md`. The promoted surface
+preserves canonical markdown authority, source provenance, duplicate handling,
+retrieval citations, and vault-relative paths. Update/re-ingest behavior stays
+out of scope until a separate issue defines its conflict and stale-state
+semantics.
 
 ## `oc-za6.4` POC Decision
 

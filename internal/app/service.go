@@ -34,6 +34,10 @@ func (s *Service) CreateDocument(ctx context.Context, input domain.CreateDocumen
 	return s.store.CreateDocument(ctx, input)
 }
 
+func (s *Service) IngestSourceURL(ctx context.Context, input domain.SourceURLInput) (domain.SourceIngestionResult, error) {
+	return s.store.IngestSourceURL(ctx, input)
+}
+
 func (s *Service) GetDocument(ctx context.Context, docID string) (domain.Document, error) {
 	return s.store.GetDocument(ctx, docID)
 }

@@ -3,6 +3,8 @@ package runner
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"path"
 	"strconv"
 	"strings"
 
@@ -53,6 +55,16 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 		return DocumentTaskResult{
 			Document: &converted,
 			Summary:  fmt.Sprintf("created document %s", converted.DocID),
+		}, nil
+	case DocumentTaskActionIngestSourceURL:
+		ingestion, err := client.IngestSourceURL(ctx, runclient.SourceURLInput(normalized.Source))
+		if err != nil {
+			return DocumentTaskResult{}, err
+		}
+		converted := toSourceIngestionResult(ingestion)
+		return DocumentTaskResult{
+			Ingestion: &converted,
+			Summary:   fmt.Sprintf("ingested source URL into %s", converted.SourcePath),
 		}, nil
 	case DocumentTaskActionList:
 		documents, err := client.ListDocuments(ctx, runclient.DocumentListOptions(normalized.List))
@@ -115,6 +127,7 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 type normalizedDocumentTaskRequest struct {
 	Action   string
 	Document DocumentInput
+	Source   SourceURLInput
 	DocID    string
 	Content  string
 	Heading  string
@@ -129,6 +142,7 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 	normalized := normalizedDocumentTaskRequest{
 		Action:   action,
 		Document: request.Document,
+		Source:   trimSourceURLInput(request.Source),
 		DocID:    strings.TrimSpace(request.DocID),
 		Content:  request.Content,
 		Heading:  strings.TrimSpace(request.Heading),
@@ -147,6 +161,11 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		return normalized, ""
 	case DocumentTaskActionCreate:
 		if rejection := validateDocumentInput(request.Document); rejection != "" {
+			return normalizedDocumentTaskRequest{}, rejection
+		}
+		return normalized, ""
+	case DocumentTaskActionIngestSourceURL:
+		if rejection := validateSourceURLInput(normalized.Source); rejection != "" {
 			return normalizedDocumentTaskRequest{}, rejection
 		}
 		return normalized, ""
@@ -180,6 +199,63 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 	default:
 		return normalizedDocumentTaskRequest{}, fmt.Sprintf("unsupported document task action %q", action)
 	}
+}
+
+func trimSourceURLInput(input SourceURLInput) SourceURLInput {
+	return SourceURLInput{
+		URL:           strings.TrimSpace(input.URL),
+		PathHint:      strings.TrimSpace(input.PathHint),
+		AssetPathHint: strings.TrimSpace(input.AssetPathHint),
+		Title:         strings.TrimSpace(input.Title),
+	}
+}
+
+func validateSourceURLInput(input SourceURLInput) string {
+	if input.URL == "" {
+		return "source.url is required"
+	}
+	parsed, err := url.Parse(input.URL)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return "source.url must be a valid http or https URL"
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return "source.url must use http or https"
+	}
+	if rejection := validateSourcePathHint(input.PathHint); rejection != "" {
+		return rejection
+	}
+	if rejection := validateAssetPathHint(input.AssetPathHint); rejection != "" {
+		return rejection
+	}
+	return ""
+}
+
+func validateSourcePathHint(raw string) string {
+	if raw == "" {
+		return "source.path_hint is required"
+	}
+	clean := path.Clean(strings.ReplaceAll(raw, "\\", "/"))
+	if strings.HasPrefix(raw, "/") || clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
+		return "source.path_hint must stay inside the vault root"
+	}
+	if !strings.HasPrefix(clean, "sources/") || path.Ext(clean) != ".md" {
+		return "source.path_hint must be a vault-relative sources/*.md path"
+	}
+	return ""
+}
+
+func validateAssetPathHint(raw string) string {
+	if raw == "" {
+		return "source.asset_path_hint is required"
+	}
+	clean := path.Clean(strings.ReplaceAll(raw, "\\", "/"))
+	if strings.HasPrefix(raw, "/") || clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
+		return "source.asset_path_hint must stay inside the vault root"
+	}
+	if !strings.HasPrefix(clean, "assets/") || path.Ext(clean) != ".pdf" {
+		return "source.asset_path_hint must be a vault-relative assets/**/*.pdf path"
+	}
+	return ""
 }
 
 func validateDocumentInput(input DocumentInput) string {

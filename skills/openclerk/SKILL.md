@@ -1,6 +1,6 @@
 ---
 name: OpenClerk
-description: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner. Bootstrap no-tools rule for routine OpenClerk requests - if required fields are missing, if creating a document but the document path, title, or body is missing, this description is complete; respond with exactly one no-tools assistant answer that will name the missing fields and ask the user to provide them. Do not open this skill file, run commands, use tools, call the runner, or inspect files for those validation cases. If a numeric limit is negative such as limit -3, or if the user asks to bypass the runner through SQLite, HTTP, MCP, legacy or source-built paths, or unsupported transports, reject final-answer-only without opening this skill file, running commands, or using tools. For valid create or update requests, use only openclerk document or openclerk retrieval JSON results; never use rg --files, find, ls, direct vault inspection, direct file edits, or repo search to verify routine work.
+description: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner. Bootstrap no-tools rule for routine OpenClerk requests - if required fields are missing, if creating a document but the document path, title, or body is missing, or if ingesting a source URL but source.url, source.path_hint, or source.asset_path_hint is missing, this description is complete; respond with exactly one no-tools assistant answer that will name the missing fields and ask the user to provide them. Do not open this skill file, run commands, use tools, call the runner, or inspect files for those validation cases. If a numeric limit is negative such as limit -3, or if the user asks to bypass the runner through SQLite, HTTP, MCP, legacy or source-built paths, or unsupported transports, reject final-answer-only without opening this skill file, running commands, or using tools. For valid create, source ingestion, or update requests, use only openclerk document or openclerk retrieval JSON results; never use rg --files, find, ls, direct vault inspection, direct file edits, or repo search to verify routine work.
 license: MIT
 compatibility: Requires local filesystem access and an installed openclerk binary on PATH.
 ---
@@ -46,6 +46,8 @@ tools when the request:
 - is missing required document or retrieval fields
 - asks to create or validate a document but the document path, title, or body
   is missing
+- asks to ingest a source URL but `source.url`, `source.path_hint`, or
+  `source.asset_path_hint` is missing
 - asks for an obviously invalid limit, such as a negative number or `limit -3`
 - asks to bypass the runner for routine lower-level runtime, HTTP, SQLite, MCP,
   legacy or source-built command paths, or unsupported transport work
@@ -82,6 +84,7 @@ Common request shapes:
 ```json
 {"action":"validate","document":{"path":"notes/projects/example.md","title":"Example","body":"# Example\n\n## Summary\nReusable knowledge.\n"}}
 {"action":"create_document","document":{"path":"notes/projects/example.md","title":"Example","body":"# Example\n\n## Summary\nReusable knowledge.\n"}}
+{"action":"ingest_source_url","source":{"url":"https://example.test/source.pdf","path_hint":"sources/example.md","asset_path_hint":"assets/sources/example.pdf","title":"Optional title"}}
 {"action":"list_documents","list":{"path_prefix":"notes/","limit":20}}
 {"action":"get_document","doc_id":"doc_id_from_json"}
 {"action":"append_document","doc_id":"doc_id_from_json","content":"## Decisions\nUse the OpenClerk runner."}
@@ -90,9 +93,11 @@ Common request shapes:
 {"action":"inspect_layout"}
 ```
 
-Request fields are `action`, `document`, `doc_id`, `content`, `heading`, and
-`list`. A `document` has `path`, `title`, and `body`. A `list` may include
-`path_prefix`, `metadata_key`, `metadata_value`, `limit`, and `cursor`.
+Request fields are `action`, `document`, `source`, `doc_id`, `content`,
+`heading`, and `list`. A `document` has `path`, `title`, and `body`. A
+`source` has `url`, `path_hint`, `asset_path_hint`, and optional `title`. A
+`list` may include `path_prefix`, `metadata_key`, `metadata_value`, `limit`,
+and `cursor`.
 
 Validation rejections are normal JSON results with `rejected: true` and
 `rejection_reason`. Runtime failures exit non-zero and write errors to stderr.
@@ -104,6 +109,16 @@ OpenClerk knowledge layout. Answer from its `layout` JSON: `mode`,
 manifest. Failing layout checks are runner-visible results; do not inspect the
 vault, SQLite, source files, or lower-level runtime state to diagnose routine
 layout problems.
+
+Use `ingest_source_url` when asked to ingest a PDF source URL into local
+OpenClerk knowledge. The URL must be HTTP/HTTPS, `path_hint` must be a
+vault-relative `sources/*.md` path, and `asset_path_hint` must be a
+vault-relative `assets/**/*.pdf` path. The result returns `ingestion.doc_id`,
+`source_path`, `asset_path`, `derived_path`, citations, hash, size, MIME type,
+page count, capture timestamp, and optional PDF metadata. Do not download the
+PDF, inspect the vault, write files directly, or create a separate markdown note
+outside the runner for routine source URL ingestion. Duplicate source URLs are
+rejected unless a future runner action explicitly supports update behavior.
 
 When writing source-linked synthesis, use this exact AgentOps workflow:
 

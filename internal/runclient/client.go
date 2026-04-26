@@ -43,6 +43,33 @@ type DocumentInput struct {
 	Body  string
 }
 
+type SourceURLInput struct {
+	URL           string
+	PathHint      string
+	AssetPathHint string
+	Title         string
+}
+
+type SourcePDFMetadata struct {
+	Title         string
+	Author        string
+	PublishedDate string
+}
+
+type SourceIngestionResult struct {
+	DocID       string
+	SourcePath  string
+	AssetPath   string
+	DerivedPath string
+	Citations   []Citation
+	SHA256      string
+	SizeBytes   int64
+	MIMEType    string
+	PageCount   int
+	CapturedAt  time.Time
+	PDFMetadata SourcePDFMetadata
+}
+
 type DocumentListOptions struct {
 	PathPrefix    string
 	MetadataKey   string
@@ -343,6 +370,18 @@ func (c *Client) CreateDocument(ctx context.Context, input DocumentInput) (Docum
 	return toDocument(document), nil
 }
 
+func (c *Client) IngestSourceURL(ctx context.Context, input SourceURLInput) (SourceIngestionResult, error) {
+	service, err := c.service()
+	if err != nil {
+		return SourceIngestionResult{}, err
+	}
+	ingestion, err := service.IngestSourceURL(ctx, domain.SourceURLInput(input))
+	if err != nil {
+		return SourceIngestionResult{}, wrapError(err)
+	}
+	return toSourceIngestionResult(ingestion), nil
+}
+
 func (c *Client) GetDocument(ctx context.Context, docID string) (Document, error) {
 	service, err := c.service()
 	if err != nil {
@@ -612,6 +651,22 @@ func toSearchResult(result domain.SearchResult) SearchResult {
 	return SearchResult{
 		Hits:     hits,
 		PageInfo: toPageInfo(result.PageInfo),
+	}
+}
+
+func toSourceIngestionResult(result domain.SourceIngestionResult) SourceIngestionResult {
+	return SourceIngestionResult{
+		DocID:       result.DocID,
+		SourcePath:  result.SourcePath,
+		AssetPath:   result.AssetPath,
+		DerivedPath: result.DerivedPath,
+		Citations:   toCitations(result.Citations),
+		SHA256:      result.SHA256,
+		SizeBytes:   result.SizeBytes,
+		MIMEType:    result.MIMEType,
+		PageCount:   result.PageCount,
+		CapturedAt:  result.CapturedAt,
+		PDFMetadata: SourcePDFMetadata(result.PDFMetadata),
 	}
 }
 

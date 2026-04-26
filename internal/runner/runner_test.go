@@ -1,8 +1,12 @@
 package runner_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -163,6 +167,211 @@ Markdown notes extracted from a PDF source.
 	}
 	if result.Document.Metadata["source_type"] != "pdf" || result.Document.Metadata["modality"] != "markdown" {
 		t.Fatalf("metadata = %+v", result.Document.Metadata)
+	}
+}
+
+func TestDocumentTaskRejectsInvalidSourceURLIngestBeforeRuntimeFiles(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		source  runner.SourceURLInput
+		wantErr string
+	}{
+		{
+			name: "missing url",
+			source: runner.SourceURLInput{
+				PathHint:      "sources/uploaded-pdf.md",
+				AssetPathHint: "assets/sources/uploaded-pdf.pdf",
+			},
+			wantErr: "source.url is required",
+		},
+		{
+			name: "invalid scheme",
+			source: runner.SourceURLInput{
+				URL:           "file:///tmp/uploaded-pdf.pdf",
+				PathHint:      "sources/uploaded-pdf.md",
+				AssetPathHint: "assets/sources/uploaded-pdf.pdf",
+			},
+			wantErr: "http or https",
+		},
+		{
+			name: "unsafe source path",
+			source: runner.SourceURLInput{
+				URL:           "https://example.test/uploaded-pdf.pdf",
+				PathHint:      "../uploaded-pdf.md",
+				AssetPathHint: "assets/sources/uploaded-pdf.pdf",
+			},
+			wantErr: "source.path_hint",
+		},
+		{
+			name: "unsafe asset path",
+			source: runner.SourceURLInput{
+				URL:           "https://example.test/uploaded-pdf.pdf",
+				PathHint:      "sources/uploaded-pdf.md",
+				AssetPathHint: "../uploaded-pdf.pdf",
+			},
+			wantErr: "source.asset_path_hint",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			dataDir := filepath.Join(t.TempDir(), "data")
+			result, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(dataDir, "openclerk.sqlite")}, runner.DocumentTaskRequest{
+				Action: runner.DocumentTaskActionIngestSourceURL,
+				Source: tt.source,
+			})
+			if err != nil {
+				t.Fatalf("document task: %v", err)
+			}
+			if !result.Rejected || !strings.Contains(result.RejectionReason, tt.wantErr) {
+				t.Fatalf("result = %+v, want rejection containing %q", result, tt.wantErr)
+			}
+			if _, err := os.Stat(dataDir); !os.IsNotExist(err) {
+				t.Fatalf("data dir exists after validation rejection: %v", err)
+			}
+		})
+	}
+}
+
+func TestDocumentTaskIngestSourceURLPDF(t *testing.T) {
+	t.Parallel()
+
+	pdfBytes := minimalPDF("Runner Intake PDF Title", "OpenClerk Test", "Runner intake unique text")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		_, _ = w.Write(pdfBytes)
+	}))
+	t.Cleanup(server.Close)
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	config := runclient.Config{DatabasePath: dbPath}
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestSourceURL,
+		Source: runner.SourceURLInput{
+			URL:           server.URL + "/runner.pdf",
+			PathHint:      "sources/runner-ingest.md",
+			AssetPathHint: "assets/sources/runner-ingest.pdf",
+			Title:         "Runner Ingest Override",
+		},
+	})
+	if err != nil {
+		t.Fatalf("ingest source URL: %v", err)
+	}
+	if result.Rejected || result.Ingestion == nil {
+		t.Fatalf("ingest result = %+v", result)
+	}
+	ingestion := result.Ingestion
+	if ingestion.DocID == "" ||
+		ingestion.SourcePath != "sources/runner-ingest.md" ||
+		ingestion.AssetPath != "assets/sources/runner-ingest.pdf" ||
+		ingestion.DerivedPath != "sources/runner-ingest.md" ||
+		ingestion.PageCount != 1 ||
+		ingestion.SizeBytes != int64(len(pdfBytes)) ||
+		ingestion.MIMEType != "application/pdf" ||
+		len(ingestion.Citations) == 0 ||
+		len(ingestion.SHA256) != 64 {
+		t.Fatalf("ingestion = %+v", ingestion)
+	}
+	if ingestion.PDFMetadata.Title != "Runner Intake PDF Title" || ingestion.PDFMetadata.Author != "OpenClerk Test" {
+		t.Fatalf("pdf metadata = %+v", ingestion.PDFMetadata)
+	}
+	assetPath := filepath.Join(filepath.Dir(dbPath), "vault", "assets", "sources", "runner-ingest.pdf")
+	if _, err := os.Stat(assetPath); err != nil {
+		t.Fatalf("asset stat: %v", err)
+	}
+
+	get, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGet,
+		DocID:  ingestion.DocID,
+	})
+	if err != nil {
+		t.Fatalf("get ingested document: %v", err)
+	}
+	if get.Document == nil ||
+		get.Document.Metadata["source_url"] != server.URL+"/runner.pdf" ||
+		get.Document.Metadata["asset_path"] != "assets/sources/runner-ingest.pdf" ||
+		get.Document.Metadata["source_type"] != "pdf" ||
+		get.Document.Metadata["mime_type"] != "application/pdf" ||
+		!strings.Contains(get.Document.Body, "Runner Ingest Override") ||
+		!strings.Contains(get.Document.Body, "Runner Intake PDF Title") ||
+		!strings.Contains(get.Document.Body, "Runnerintakeuniquetext") {
+		t.Fatalf("ingested document = %+v", get.Document)
+	}
+
+	search, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
+			Text:       "Runner Intake PDF Title",
+			PathPrefix: "sources/",
+			Limit:      10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("search ingested text: %v", err)
+	}
+	if search.Search == nil || len(search.Search.Hits) == 0 || search.Search.Hits[0].Citations[0].Path != "sources/runner-ingest.md" {
+		t.Fatalf("search = %+v", search.Search)
+	}
+
+	provenance, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{
+			RefKind: "source",
+			RefID:   ingestion.DocID,
+			Limit:   10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("source provenance: %v", err)
+	}
+	if provenance.Provenance == nil || len(provenance.Provenance.Events) == 0 {
+		t.Fatalf("provenance = %+v", provenance.Provenance)
+	}
+	if got := provenance.Provenance.Events[0].Details["source_url"]; got != server.URL+"/runner.pdf" {
+		t.Fatalf("source provenance details = %+v", provenance.Provenance.Events[0].Details)
+	}
+
+	duplicate, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestSourceURL,
+		Source: runner.SourceURLInput{
+			URL:           server.URL + "/runner.pdf",
+			PathHint:      "sources/runner-duplicate.md",
+			AssetPathHint: "assets/sources/runner-duplicate.pdf",
+		},
+	})
+	if err == nil {
+		t.Fatalf("duplicate result = %+v, want error", duplicate)
+	}
+	if !strings.Contains(err.Error(), "source URL") {
+		t.Fatalf("duplicate error = %v", err)
+	}
+}
+
+func TestDocumentTaskRejectsNonPDFSourceURL(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		_, _ = w.Write([]byte("not a PDF"))
+	}))
+	t.Cleanup(server.Close)
+
+	_, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestSourceURL,
+		Source: runner.SourceURLInput{
+			URL:           server.URL + "/not-pdf.txt",
+			PathHint:      "sources/not-pdf.md",
+			AssetPathHint: "assets/sources/not-pdf.pdf",
+		},
+	})
+	if err == nil || !strings.Contains(err.Error(), "PDF") {
+		t.Fatalf("err = %v, want non-PDF rejection", err)
 	}
 }
 
@@ -826,6 +1035,38 @@ func runnerEventTypesInclude(events []runner.ProvenanceEvent, eventType string) 
 		}
 	}
 	return false
+}
+
+func minimalPDF(title string, author string, text string) []byte {
+	var buf bytes.Buffer
+	buf.WriteString("%PDF-1.4\n")
+	offsets := make([]int, 0, 6)
+	writeObject := func(id int, body string) {
+		offsets = append(offsets, buf.Len())
+		_, _ = fmt.Fprintf(&buf, "%d 0 obj\n%s\nendobj\n", id, body)
+	}
+	writeObject(1, "<< /Type /Catalog /Pages 2 0 R >>")
+	writeObject(2, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>")
+	writeObject(3, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>")
+	writeObject(4, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
+	stream := fmt.Sprintf("BT /F1 24 Tf 72 720 Td (%s) Tj ET", pdfEscape(text))
+	writeObject(5, fmt.Sprintf("<< /Length %d >>\nstream\n%s\nendstream", len(stream), stream))
+	writeObject(6, fmt.Sprintf("<< /Title (%s) /Author (%s) /CreationDate (D:20260426000000Z) >>", pdfEscape(title), pdfEscape(author)))
+	xrefStart := buf.Len()
+	buf.WriteString("xref\n0 7\n")
+	buf.WriteString("0000000000 65535 f \n")
+	for _, offset := range offsets {
+		_, _ = fmt.Fprintf(&buf, "%010d 00000 n \n", offset)
+	}
+	_, _ = fmt.Fprintf(&buf, "trailer\n<< /Size 7 /Root 1 0 R /Info 6 0 R >>\nstartxref\n%d\n%%%%EOF\n", xrefStart)
+	return buf.Bytes()
+}
+
+func pdfEscape(value string) string {
+	value = strings.ReplaceAll(value, `\`, `\\`)
+	value = strings.ReplaceAll(value, "(", `\(`)
+	value = strings.ReplaceAll(value, ")", `\)`)
+	return value
 }
 
 func layoutChecksInclude(checks []runner.KnowledgeLayoutCheck, id string, status string) bool {

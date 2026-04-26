@@ -62,6 +62,22 @@ func toSearchResult(result runclient.SearchResult) SearchResult {
 	}
 }
 
+func toSourceIngestionResult(result runclient.SourceIngestionResult) SourceIngestionResult {
+	return SourceIngestionResult{
+		DocID:       result.DocID,
+		SourcePath:  result.SourcePath,
+		AssetPath:   result.AssetPath,
+		DerivedPath: result.DerivedPath,
+		Citations:   toCitations(result.Citations),
+		SHA256:      result.SHA256,
+		SizeBytes:   result.SizeBytes,
+		MIMEType:    result.MIMEType,
+		PageCount:   result.PageCount,
+		CapturedAt:  result.CapturedAt,
+		PDFMetadata: SourcePDFMetadata(result.PDFMetadata),
+	}
+}
+
 func toCitations(citations []runclient.Citation) []Citation {
 	result := make([]Citation, 0, len(citations))
 	for _, citation := range citations {

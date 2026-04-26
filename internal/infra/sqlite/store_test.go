@@ -1,8 +1,12 @@
 package sqlite
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -47,6 +51,51 @@ func TestCreateDocumentRejectsDuplicatePath(t *testing.T) {
 	}
 	if got.Title != "Widget One" || !strings.Contains(got.Body, "first body") {
 		t.Fatalf("original document was overwritten: %+v", got)
+	}
+}
+
+func TestIngestSourceURLKeepsAssetWhenSourceNotePersistsBeforeError(t *testing.T) {
+	pdfBytes := minimalStorePDF("Partial ingest PDF", "OpenClerk Test", "Partial ingest text")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/pdf")
+		_, _ = w.Write(pdfBytes)
+	}))
+	t.Cleanup(server.Close)
+
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+
+	oldWriteFile := osWriteFile
+	osWriteFile = func(name string, data string) error {
+		if strings.HasSuffix(name, filepath.Join("sources", "partial-ingest.md")) {
+			if err := os.WriteFile(name, []byte(data), 0o644); err != nil {
+				return err
+			}
+			return errors.New("forced source note sync failure")
+		}
+		return oldWriteFile(name, data)
+	}
+	t.Cleanup(func() {
+		osWriteFile = oldWriteFile
+	})
+
+	_, err := store.IngestSourceURL(context.Background(), domain.SourceURLInput{
+		URL:           server.URL + "/partial.pdf",
+		PathHint:      "sources/partial-ingest.md",
+		AssetPathHint: "assets/sources/partial-ingest.pdf",
+	})
+	if err == nil {
+		t.Fatalf("ingest error = nil, want forced source note failure")
+	}
+	if _, err := os.Stat(filepath.Join(vaultRoot, "sources", "partial-ingest.md")); err != nil {
+		t.Fatalf("source note stat: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(vaultRoot, "assets", "sources", "partial-ingest.pdf")); err != nil {
+		t.Fatalf("asset stat: %v", err)
 	}
 }
 
@@ -1065,4 +1114,36 @@ func hasEventType(events []domain.ProvenanceEvent, eventType string) bool {
 		}
 	}
 	return false
+}
+
+func minimalStorePDF(title string, author string, text string) []byte {
+	var buf bytes.Buffer
+	buf.WriteString("%PDF-1.4\n")
+	offsets := make([]int, 0, 6)
+	writeObject := func(id int, body string) {
+		offsets = append(offsets, buf.Len())
+		_, _ = fmt.Fprintf(&buf, "%d 0 obj\n%s\nendobj\n", id, body)
+	}
+	writeObject(1, "<< /Type /Catalog /Pages 2 0 R >>")
+	writeObject(2, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>")
+	writeObject(3, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>")
+	writeObject(4, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
+	stream := fmt.Sprintf("BT /F1 24 Tf 72 720 Td (%s) Tj ET", pdfEscape(text))
+	writeObject(5, fmt.Sprintf("<< /Length %d >>\nstream\n%s\nendstream", len(stream), stream))
+	writeObject(6, fmt.Sprintf("<< /Title (%s) /Author (%s) /CreationDate (D:20260426000000Z) >>", pdfEscape(title), pdfEscape(author)))
+	xrefStart := buf.Len()
+	buf.WriteString("xref\n0 7\n")
+	buf.WriteString("0000000000 65535 f \n")
+	for _, offset := range offsets {
+		_, _ = fmt.Fprintf(&buf, "%010d 00000 n \n", offset)
+	}
+	_, _ = fmt.Fprintf(&buf, "trailer\n<< /Size 7 /Root 1 0 R /Info 6 0 R >>\nstartxref\n%d\n%%%%EOF\n", xrefStart)
+	return buf.Bytes()
+}
+
+func pdfEscape(value string) string {
+	value = strings.ReplaceAll(value, `\`, `\\`)
+	value = strings.ReplaceAll(value, "(", `\(`)
+	value = strings.ReplaceAll(value, ")", `\)`)
+	return value
 }

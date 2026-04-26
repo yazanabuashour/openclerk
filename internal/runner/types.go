@@ -4,14 +4,15 @@ package runner
 import "time"
 
 const (
-	DocumentTaskActionValidate       = "validate"
-	DocumentTaskActionCreate         = "create_document"
-	DocumentTaskActionList           = "list_documents"
-	DocumentTaskActionGet            = "get_document"
-	DocumentTaskActionAppend         = "append_document"
-	DocumentTaskActionReplaceSection = "replace_section"
-	DocumentTaskActionResolvePaths   = "resolve_paths"
-	DocumentTaskActionInspectLayout  = "inspect_layout"
+	DocumentTaskActionValidate        = "validate"
+	DocumentTaskActionCreate          = "create_document"
+	DocumentTaskActionIngestSourceURL = "ingest_source_url"
+	DocumentTaskActionList            = "list_documents"
+	DocumentTaskActionGet             = "get_document"
+	DocumentTaskActionAppend          = "append_document"
+	DocumentTaskActionReplaceSection  = "replace_section"
+	DocumentTaskActionResolvePaths    = "resolve_paths"
+	DocumentTaskActionInspectLayout   = "inspect_layout"
 
 	RetrievalTaskActionValidate         = "validate"
 	RetrievalTaskActionSearch           = "search"
@@ -30,6 +31,7 @@ const (
 type DocumentTaskRequest struct {
 	Action   string              `json:"action"`
 	Document DocumentInput       `json:"document,omitempty"`
+	Source   SourceURLInput      `json:"source,omitempty"`
 	DocID    string              `json:"doc_id,omitempty"`
 	Content  string              `json:"content,omitempty"`
 	Heading  string              `json:"heading,omitempty"`
@@ -42,6 +44,33 @@ type DocumentInput struct {
 	Body  string `json:"body"`
 }
 
+type SourceURLInput struct {
+	URL           string `json:"url"`
+	PathHint      string `json:"path_hint"`
+	AssetPathHint string `json:"asset_path_hint"`
+	Title         string `json:"title,omitempty"`
+}
+
+type SourcePDFMetadata struct {
+	Title         string `json:"title,omitempty"`
+	Author        string `json:"author,omitempty"`
+	PublishedDate string `json:"published_date,omitempty"`
+}
+
+type SourceIngestionResult struct {
+	DocID       string            `json:"doc_id"`
+	SourcePath  string            `json:"source_path"`
+	AssetPath   string            `json:"asset_path"`
+	DerivedPath string            `json:"derived_path"`
+	Citations   []Citation        `json:"citations,omitempty"`
+	SHA256      string            `json:"sha256"`
+	SizeBytes   int64             `json:"size_bytes"`
+	MIMEType    string            `json:"mime_type"`
+	PageCount   int               `json:"page_count"`
+	CapturedAt  time.Time         `json:"captured_at"`
+	PDFMetadata SourcePDFMetadata `json:"pdf_metadata,omitempty"`
+}
+
 type DocumentListOptions struct {
 	PathPrefix    string `json:"path_prefix,omitempty"`
 	MetadataKey   string `json:"metadata_key,omitempty"`
@@ -51,14 +80,15 @@ type DocumentListOptions struct {
 }
 
 type DocumentTaskResult struct {
-	Rejected        bool              `json:"rejected"`
-	RejectionReason string            `json:"rejection_reason,omitempty"`
-	Document        *Document         `json:"document,omitempty"`
-	Documents       []DocumentSummary `json:"documents,omitempty"`
-	Paths           *Paths            `json:"paths,omitempty"`
-	Layout          *KnowledgeLayout  `json:"layout,omitempty"`
-	PageInfo        PageInfo          `json:"page_info,omitempty"`
-	Summary         string            `json:"summary"`
+	Rejected        bool                   `json:"rejected"`
+	RejectionReason string                 `json:"rejection_reason,omitempty"`
+	Document        *Document              `json:"document,omitempty"`
+	Ingestion       *SourceIngestionResult `json:"ingestion,omitempty"`
+	Documents       []DocumentSummary      `json:"documents,omitempty"`
+	Paths           *Paths                 `json:"paths,omitempty"`
+	Layout          *KnowledgeLayout       `json:"layout,omitempty"`
+	PageInfo        PageInfo               `json:"page_info,omitempty"`
+	Summary         string                 `json:"summary"`
 }
 
 type RetrievalTaskRequest struct {

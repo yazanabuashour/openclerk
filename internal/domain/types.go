@@ -104,6 +104,33 @@ type CreateDocumentInput struct {
 	Body  string
 }
 
+type SourceURLInput struct {
+	URL           string
+	PathHint      string
+	AssetPathHint string
+	Title         string
+}
+
+type SourcePDFMetadata struct {
+	Title         string
+	Author        string
+	PublishedDate string
+}
+
+type SourceIngestionResult struct {
+	DocID       string
+	SourcePath  string
+	AssetPath   string
+	DerivedPath string
+	Citations   []Citation
+	SHA256      string
+	SizeBytes   int64
+	MIMEType    string
+	PageCount   int
+	CapturedAt  time.Time
+	PDFMetadata SourcePDFMetadata
+}
+
 type AppendDocumentInput struct {
 	Content string
 }
@@ -294,6 +321,7 @@ type Store interface {
 	Search(context.Context, SearchQuery) (SearchResult, error)
 	ListDocuments(context.Context, DocumentListQuery) (DocumentListResult, error)
 	CreateDocument(context.Context, CreateDocumentInput) (Document, error)
+	IngestSourceURL(context.Context, SourceURLInput) (SourceIngestionResult, error)
 	GetDocument(context.Context, string) (Document, error)
 	GetDocumentLinks(context.Context, string) (DocumentLinks, error)
 	AppendDocument(context.Context, string, AppendDocumentInput) (Document, error)
