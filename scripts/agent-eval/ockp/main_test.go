@@ -265,6 +265,88 @@ func TestExecuteRunLabelsPopulatedVaultLaneAsNonReleaseBlocking(t *testing.T) {
 	}
 }
 
+func TestExecuteRunLabelsAgentChosenPathLaneAsNonReleaseBlocking(t *testing.T) {
+	reportDir := filepath.Join(t.TempDir(), "reports")
+	config := runConfig{
+		Parallel:   1,
+		Variant:    productionVariant,
+		Scenario:   agentChosenPathProposalScenarioID + "," + agentChosenAutonomousScenarioID,
+		RunRoot:    filepath.Join(t.TempDir(), "run"),
+		ReportDir:  reportDir,
+		ReportName: "ockp-agent-chosen-test",
+		RepoRoot:   ".",
+		CodexBin:   "codex",
+		CacheMode:  cacheModeIsolated,
+	}
+	err := executeRun(context.Background(), config, &strings.Builder{}, func(_ context.Context, _ runConfig, job evalJob, _ cacheConfig) jobResult {
+		now := time.Now().UTC()
+		verification := verificationResult{Passed: true, DatabasePass: true, AssistantPass: true}
+		passed := true
+		status := "completed"
+		if job.Scenario.ID == agentChosenAutonomousScenarioID {
+			passed = false
+			status = "failed"
+			verification = verificationResult{Passed: false, DatabasePass: true, AssistantPass: false, Details: "turn 1: final answer omitted chosen path"}
+		}
+		return jobResult{
+			Variant:       job.Variant,
+			Scenario:      job.Scenario.ID,
+			ScenarioTitle: job.Scenario.Title,
+			Status:        status,
+			Passed:        passed,
+			Metrics:       metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}},
+			Verification:  verification,
+			StartedAt:     now,
+			CompletedAt:   &now,
+		}
+	})
+	if err != nil {
+		t.Fatalf("execute agent-chosen run: %v", err)
+	}
+	content, err := os.ReadFile(filepath.Join(reportDir, "ockp-agent-chosen-test.json"))
+	if err != nil {
+		t.Fatalf("read JSON report: %v", err)
+	}
+	var report report
+	if err := json.Unmarshal(content, &report); err != nil {
+		t.Fatalf("decode JSON report: %v", err)
+	}
+	if report.Metadata.Lane != agentChosenPathLaneName || report.Metadata.ReleaseBlocking {
+		t.Fatalf("agent-chosen lane metadata = %q/%t, want %q/false", report.Metadata.Lane, report.Metadata.ReleaseBlocking, agentChosenPathLaneName)
+	}
+	if report.TargetedLaneSummary == nil {
+		t.Fatal("agent-chosen report missing targeted lane summary")
+	}
+	if report.TargetedLaneSummary.Decision != "keep_as_reference" {
+		t.Fatalf("decision = %q, want keep_as_reference", report.TargetedLaneSummary.Decision)
+	}
+	classifications := map[string]string{}
+	for _, row := range report.TargetedLaneSummary.ScenarioClassifications {
+		classifications[row.Scenario] = row.FailureClassification
+	}
+	if classifications[agentChosenPathProposalScenarioID] != "none" {
+		t.Fatalf("proposal classification = %q, want none", classifications[agentChosenPathProposalScenarioID])
+	}
+	if classifications[agentChosenAutonomousScenarioID] != "skill_guidance_or_eval_coverage" {
+		t.Fatalf("autonomous classification = %q, want skill guidance", classifications[agentChosenAutonomousScenarioID])
+	}
+	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-agent-chosen-test.md"))
+	if err != nil {
+		t.Fatalf("read markdown report: %v", err)
+	}
+	for _, want := range []string{
+		"Lane: `" + agentChosenPathLaneName + "`",
+		"Release blocking: `false`",
+		"Decision: `keep_as_reference`",
+		"no promoted runner action, schema, migration, storage API, product behavior, public OpenClerk interface, or change to missing-path clarification",
+		"`skill_guidance_or_eval_coverage`",
+	} {
+		if !strings.Contains(string(markdown), want) {
+			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
+		}
+	}
+}
+
 func TestCodexArgsForSingleAndResumedTurns(t *testing.T) {
 	cache := cacheConfig{Mode: cacheModeShared, RunRoot: "run-root"}
 	single := scenario{ID: "single", Prompt: "single prompt"}
@@ -444,7 +526,7 @@ func TestEvalEnvOverridesHostOpenClerkPaths(t *testing.T) {
 }
 
 func TestPromptInputPreflightFlagsOpenClerkAgentsInstructions(t *testing.T) {
-	clean := "### Project Skills\n- OpenClerk: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner. Bootstrap no-tools rule for routine OpenClerk requests - if required fields are missing, if creating a document but the document path, title, or body is missing, this description is complete; respond with exactly one no-tools assistant answer that names the missing fields and asks the user to provide them. Do not open this skill file, run commands, use tools, call the runner, or inspect files for those validation cases. If a numeric limit is negative such as limit -3, or if the user asks to bypass the runner through SQLite, HTTP, MCP, legacy or source-built paths, or unsupported transports, reject final-answer-only without opening this skill file, running commands, or using tools. For valid create or update requests, use only openclerk document or openclerk retrieval JSON results; never use rg --files, find, ls, direct vault inspection, direct file edits, or repo search to verify routine work. (file: /tmp/repo/.agents/skills/openclerk/SKILL.md)\n"
+	clean := "### Project Skills\n- OpenClerk: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner. Bootstrap no-tools rule for routine OpenClerk requests - if required fields are missing, if creating or updating a document but document path, title, or body is missing, this description is complete; respond with exactly one no-tools assistant answer that names the missing fields and asks the user to provide them. Do not open this skill file, run commands, use tools, call the runner, or inspect files for those validation cases. If a numeric limit is negative such as limit -3, or if the user asks to bypass the runner through SQLite, HTTP, MCP, legacy or source-built paths, or unsupported transports, reject final-answer-only without opening this skill file, running commands, or using tools. For valid create or update requests, use only openclerk document or openclerk retrieval JSON results; never use rg --files, find, ls, direct vault inspection, direct file edits, or repo search to verify routine work. (file: /tmp/repo/.agents/skills/openclerk/SKILL.md)\n"
 	if !containsOpenClerkSkillDiscovery(clean) {
 		t.Fatalf("clean skill discovery is missing the OpenClerk skill marker: %s", clean)
 	}
@@ -828,7 +910,7 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 	for _, id := range scenarioIDs() {
 		ids[id] = true
 	}
-	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, graphSemanticsScenarioID, memoryRouterScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID, populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
+	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, graphSemanticsScenarioID, memoryRouterScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID, populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID, agentChosenPathProposalScenarioID, agentChosenAutonomousScenarioID, agentChosenSynthesisScenarioID, agentChosenAmbiguousScenarioID, agentChosenUserPathScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
 		if !ids[want] {
 			t.Fatalf("scenarioIDs missing %q in %v", want, scenarioIDs())
 		}
@@ -850,6 +932,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 			t.Fatalf("default selected scenarios included targeted document history scenario %q", id)
 		}
 	}
+	for _, id := range []string{agentChosenPathProposalScenarioID, agentChosenAutonomousScenarioID, agentChosenSynthesisScenarioID, agentChosenAmbiguousScenarioID, agentChosenUserPathScenarioID} {
+		if defaultIDs[id] {
+			t.Fatalf("default selected scenarios included targeted agent-chosen path scenario %q", id)
+		}
+	}
 	selected := selectedScenarioIDs(runConfig{Scenario: populatedHeterogeneousScenarioID + "," + populatedFreshnessConflictScenarioID + "," + populatedSynthesisUpdateScenarioID})
 	lane, releaseBlocking := reportLane(selected)
 	if lane != populatedLaneName || releaseBlocking {
@@ -859,6 +946,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	lane, releaseBlocking = reportLane(selected)
 	if lane != documentHistoryLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, documentHistoryLaneName)
+	}
+	selected = selectedScenarioIDs(runConfig{Scenario: agentChosenPathProposalScenarioID + "," + agentChosenAutonomousScenarioID + "," + agentChosenSynthesisScenarioID + "," + agentChosenAmbiguousScenarioID + "," + agentChosenUserPathScenarioID + ",missing-document-path-reject,negative-limit-reject,unsupported-lower-level-reject,unsupported-transport-reject"})
+	lane, releaseBlocking = reportLane(selected)
+	if lane != agentChosenPathLaneName || releaseBlocking {
+		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, agentChosenPathLaneName)
 	}
 }
 

@@ -9,12 +9,15 @@ decision_owner: platform
 
 ## Status
 
-Deferred after v1. This ADR records the naming/path policy OpenClerk should
-evaluate for agent-chosen vault-relative paths, but it does not add a public
-runner action, JSON schema, storage migration, or implementation commitment.
+Deferred after v1 and kept as reference after the targeted POC. This ADR
+records the naming/path policy OpenClerk should evaluate for agent-chosen
+vault-relative paths, but it does not add a public runner action, JSON schema,
+storage migration, or implementation commitment.
 
 The targeted POC/eval contract is recorded in
 [`../evals/agent-chosen-path-selection-poc.md`](../evals/agent-chosen-path-selection-poc.md).
+The current reduced report is
+[`../evals/results/ockp-agent-chosen-path-selection-poc.md`](../evals/results/ockp-agent-chosen-path-selection-poc.md).
 
 ## Context
 
@@ -49,7 +52,9 @@ a promoted product behavior is justified.
 
 ## Decision
 
-Keep agent-chosen vault path selection deferred from v1.
+Keep agent-chosen vault path selection deferred/reference. The targeted POC did
+not prove that explicit-path workflows or existing document/retrieval runner
+actions are structurally insufficient.
 
 The candidate naming/path policy to evaluate is:
 
@@ -122,3 +127,18 @@ If promoted later, a separate implementation Bead must name the exact public
 surface, request and response shape if any, backward compatibility
 expectations, failure modes, and targeted eval gate. This ADR alone must not be
 used to add a runner action or product capability.
+
+## POC Result
+
+The `agent-chosen-path-selection-poc` lane exercised proposal-before-create,
+autonomous placement, multi-source synthesis path selection, ambiguous
+metadata-authority placement, explicit user path precedence, and validation
+pressure. Autonomous placement, synthesis path selection, explicit user path
+precedence, missing-path clarification, and bypass rejection completed through
+the existing `openclerk document` and `openclerk retrieval` public surface.
+
+The lane did not justify promotion. Remaining validation failures were
+classified as skill guidance or eval coverage around assistant answer wording
+and final-answer-only handling, not as path-selection runner capability gaps.
+Missing-path clarification remains the default until separate evidence proves a
+product change is needed.

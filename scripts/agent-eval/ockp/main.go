@@ -165,6 +165,24 @@ const (
 	populatedDuplicateSearchText    = "Populated vault duplicate candidate marker"
 	populatedStaleSearchText        = "Populated vault stale source marker"
 	populatedSynthesisSearchText    = "Current populated vault synthesis guidance"
+
+	agentChosenPathLaneName           = "agent-chosen-path-selection-poc"
+	agentChosenPathProposalScenarioID = "url-only-documentation-path-proposal"
+	agentChosenAutonomousScenarioID   = "url-only-documentation-autonomous-placement"
+	agentChosenSynthesisScenarioID    = "multi-source-synthesis-path-selection"
+	agentChosenAmbiguousScenarioID    = "ambiguous-document-type-path-selection"
+	agentChosenUserPathScenarioID     = "user-path-instructions-win"
+	agentChosenProposalPath           = "sources/openai-harness-and-prompt-guidance.md"
+	agentChosenAutonomousPath         = "sources/openai-harness-and-prompt-guidance.md"
+	agentChosenUserSpecifiedPath      = "notes/agent-chosen/user-specified.md"
+	agentChosenSynthesisPath          = "synthesis/agent-chosen-path-selection.md"
+	agentChosenSynthesisAlphaPath     = "sources/agent-chosen/path-alpha.md"
+	agentChosenSynthesisBetaPath      = "sources/agent-chosen/path-beta.md"
+	agentChosenSynthesisGammaPath     = "sources/agent-chosen/path-gamma.md"
+	agentChosenAmbiguousDecisionID    = "adr-agent-chosen-path-metadata-authority"
+	agentChosenAmbiguousSearchText    = "metadata authority decides agent chosen path placement"
+	agentChosenURLHarness             = "https://openai.com/index/harness-engineering/"
+	agentChosenURLPromptGuidance      = "https://developers.openai.com/api/docs/guides/prompt-guidance"
 )
 
 var (
@@ -1044,6 +1062,10 @@ func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
 		if err := seedPopulatedVaultFixture(ctx, cfg); err != nil {
 			return err
 		}
+	case agentChosenSynthesisScenarioID:
+		if err := seedAgentChosenSynthesisPathSelection(ctx, cfg); err != nil {
+			return err
+		}
 	case "stale-synthesis-update":
 		if err := createSeedDocument(ctx, cfg, "sources/runner-old-workaround.md", "Old OpenClerk runner Routing Source", "Older guidance said routine agents may bypass OpenClerk runner through a temporary command-path workaround."); err != nil {
 			return err
@@ -1596,6 +1618,47 @@ Gamma source says synthesis compiler pressure requires preserving freshness and 
 `) + "\n",
 	}
 	for _, path := range []string{sourceSetAlphaPath, sourceSetBetaPath, sourceSetGammaPath} {
+		if err := createSeedDocument(ctx, cfg, path, sourceTitleFromPath(path), sourceBodies[path]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func seedAgentChosenSynthesisPathSelection(ctx context.Context, cfg runclient.Config) error {
+	sourceBodies := map[string]string{
+		agentChosenSynthesisAlphaPath: strings.TrimSpace(`---
+type: source
+status: active
+path_pressure: agent-chosen
+---
+# Path Alpha
+
+## Summary
+Alpha source says agent-chosen path selection must preserve explicit-path compatibility.
+`) + "\n",
+		agentChosenSynthesisBetaPath: strings.TrimSpace(`---
+type: source
+status: active
+path_pressure: agent-chosen
+---
+# Path Beta
+
+## Summary
+Beta source says metadata remains authoritative for document type and identity.
+`) + "\n",
+		agentChosenSynthesisGammaPath: strings.TrimSpace(`---
+type: source
+status: active
+path_pressure: agent-chosen
+---
+# Path Gamma
+
+## Summary
+Gamma source says freshness, source refs, and citations must remain inspectable.
+`) + "\n",
+	}
+	for _, path := range []string{agentChosenSynthesisAlphaPath, agentChosenSynthesisBetaPath, agentChosenSynthesisGammaPath} {
 		if err := createSeedDocument(ctx, cfg, path, sourceTitleFromPath(path), sourceBodies[path]); err != nil {
 			return err
 		}
@@ -2476,6 +2539,16 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyPopulatedFreshnessConflict(ctx, paths, finalMessage, turnMetrics)
 	case populatedSynthesisUpdateScenarioID:
 		return verifyPopulatedSynthesisUpdate(ctx, paths, finalMessage, turnMetrics)
+	case agentChosenPathProposalScenarioID:
+		return verifyAgentChosenPathProposal(ctx, paths, finalMessage, turnMetrics)
+	case agentChosenAutonomousScenarioID:
+		return verifyAgentChosenAutonomousPlacement(ctx, paths, finalMessage, turnMetrics)
+	case agentChosenSynthesisScenarioID:
+		return verifyAgentChosenSynthesisPathSelection(ctx, paths, finalMessage, turnMetrics)
+	case agentChosenAmbiguousScenarioID:
+		return verifyAgentChosenAmbiguousDocumentType(ctx, paths, finalMessage, turnMetrics)
+	case agentChosenUserPathScenarioID:
+		return verifyAgentChosenUserPathInstructions(ctx, paths, finalMessage, turnMetrics)
 	case "stale-synthesis-update":
 		return verifyStaleSynthesisUpdate(ctx, paths, finalMessage, turnMetrics)
 	case "synthesis-freshness-repair":
@@ -5387,6 +5460,248 @@ func verifyPopulatedSynthesisUpdate(ctx context.Context, paths evalPaths, finalM
 	}, nil
 }
 
+func verifyAgentChosenPathProposal(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	count, err := exactDocumentCount(ctx, paths, agentChosenProposalPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := agentChosenBypassFailures(turnMetrics)
+	if count != 0 {
+		failures = append(failures, "path proposal scenario created "+agentChosenProposalPath)
+	}
+	if turnMetrics.ToolCalls != 0 || turnMetrics.CommandExecutions != 0 {
+		failures = append(failures, fmt.Sprintf("path proposal should ask before writing without tools, got tools=%d commands=%d", turnMetrics.ToolCalls, turnMetrics.CommandExecutions))
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{agentChosenProposalPath, agentChosenURLHarness, agentChosenURLPromptGuidance}) &&
+		messageContainsAny(finalMessage, []string{"confirm", "approve", "proceed", "before creating", "before i create"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not propose the stable path and ask for confirmation before creating")
+	}
+	databasePass := count == 0
+	activityPass := len(agentChosenBypassFailures(turnMetrics)) == 0 && turnMetrics.ToolCalls == 0 && turnMetrics.CommandExecutions == 0
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{agentChosenProposalPath},
+	}, nil
+}
+
+func verifyAgentChosenAutonomousPlacement(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	body, found, err := documentBodyByPath(ctx, paths, agentChosenAutonomousPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	exactCount, err := exactDocumentCount(ctx, paths, agentChosenAutonomousPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	sourceCount, err := documentCountWithPrefix(ctx, paths, "sources/")
+	if err != nil {
+		return verificationResult{}, err
+	}
+	required := []string{
+		"type: source",
+		agentChosenURLHarness,
+		agentChosenURLPromptGuidance,
+		"Path policy: autonomous create then report",
+	}
+	failures := agentChosenBypassFailures(turnMetrics)
+	if !found {
+		failures = append(failures, "missing "+agentChosenAutonomousPath)
+	}
+	if exactCount != 1 {
+		failures = append(failures, fmt.Sprintf("expected one %s document, got %d", agentChosenAutonomousPath, exactCount))
+	}
+	if sourceCount != 1 {
+		failures = append(failures, fmt.Sprintf("expected one autonomous source document, got %d", sourceCount))
+	}
+	failures = append(failures, missingRequired(body, required)...)
+	if turnMetrics.ToolCalls == 0 || turnMetrics.CommandExecutions == 0 {
+		failures = append(failures, "agent did not create through installed runner commands")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{agentChosenAutonomousPath}) &&
+		messageContainsAny(finalMessage, []string{"created", "wrote", "filed"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report the chosen autonomous path")
+	}
+	databasePass := found && exactCount == 1 && sourceCount == 1 && len(missingRequired(body, required)) == 0
+	activityPass := len(agentChosenBypassFailures(turnMetrics)) == 0 && turnMetrics.ToolCalls > 0 && turnMetrics.CommandExecutions > 0
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{agentChosenAutonomousPath},
+	}, nil
+}
+
+func verifyAgentChosenSynthesisPathSelection(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	base, err := verifySourceLinkedSynthesis(ctx, paths, agentChosenSynthesisPath, finalMessage, sourceLinkedSynthesisExpectations{
+		SourceRefs:              []string{agentChosenSynthesisAlphaPath, agentChosenSynthesisBetaPath, agentChosenSynthesisGammaPath},
+		RequireSearch:           true,
+		RequireList:             true,
+		RequireProjectionStates: true,
+		Metrics:                 turnMetrics,
+		FinalAnswerPath:         true,
+		AdditionalDocs:          []string{agentChosenSynthesisAlphaPath, agentChosenSynthesisBetaPath, agentChosenSynthesisGammaPath},
+		AdditionalBodyRequirements: []string{
+			"explicit-path compatibility",
+			"metadata",
+			"freshness",
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	synthesisCount, err := documentCountWithPrefix(ctx, paths, "synthesis/")
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := agentChosenBypassFailures(turnMetrics)
+	if !base.Passed {
+		failures = append(failures, base.Details)
+	}
+	if synthesisCount != 1 {
+		failures = append(failures, fmt.Sprintf("expected one chosen synthesis document, got %d", synthesisCount))
+	}
+	databasePass := base.DatabasePass && synthesisCount == 1
+	assistantPass := base.AssistantPass && len(agentChosenBypassFailures(turnMetrics)) == 0
+	return verificationResult{
+		Passed:        databasePass && assistantPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass,
+		Details:       missingDetails(failures),
+		Documents:     base.Documents,
+	}, nil
+}
+
+func verifyAgentChosenAmbiguousDocumentType(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	docPath, body, found, err := documentContaining(ctx, paths, "decision_id: "+agentChosenAmbiguousDecisionID)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	decision, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action:     runner.RetrievalTaskActionDecisionRecord,
+		DecisionID: agentChosenAmbiguousDecisionID,
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projection, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProjectionStates,
+		Projection: runner.ProjectionStateOptions{
+			Projection: "decisions",
+			RefKind:    "decision",
+			RefID:      agentChosenAmbiguousDecisionID,
+			Limit:      5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	required := []string{
+		"decision_id: " + agentChosenAmbiguousDecisionID,
+		"decision_status: accepted",
+		"decision_scope: document-path-selection",
+		"Metadata authority: frontmatter decides document identity.",
+	}
+	failures := agentChosenBypassFailures(turnMetrics)
+	if !found {
+		failures = append(failures, "missing ambiguous decision document")
+	}
+	failures = append(failures, missingRequired(body, required)...)
+	hasDecision := decision.Decision != nil &&
+		decision.Decision.DecisionID == agentChosenAmbiguousDecisionID &&
+		decision.Decision.Status == "accepted" &&
+		decision.Decision.Scope == "document-path-selection" &&
+		len(decision.Decision.Citations) > 0
+	if !hasDecision {
+		failures = append(failures, "decision_record did not expose metadata-derived decision identity")
+	}
+	hasProjection := projection.Projections != nil &&
+		len(projection.Projections.Projections) == 1 &&
+		projection.Projections.Projections[0].Freshness == "fresh"
+	if !hasProjection {
+		failures = append(failures, "decision projection is not fresh")
+	}
+	inspectedDecision := decisionRecordIDsInclude(turnMetrics.DecisionRecordIDs, agentChosenAmbiguousDecisionID)
+	if !inspectedDecision {
+		failures = append(failures, "agent did not inspect decision_record for metadata-derived identity")
+	}
+	if !turnMetrics.ProjectionStatesUsed {
+		failures = append(failures, "agent did not inspect decision projection freshness")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{agentChosenAmbiguousDecisionID}) &&
+		messageContainsAny(finalMessage, []string{"metadata", "frontmatter"}) &&
+		messageContainsAny(finalMessage, []string{"not filename", "not the filename", "not path", "not the path"}) &&
+		docPath != "" && messageContainsAll(finalMessage, []string{docPath})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report chosen path and metadata authority")
+	}
+	databasePass := found && len(missingRequired(body, required)) == 0 && hasDecision && hasProjection
+	activityPass := len(agentChosenBypassFailures(turnMetrics)) == 0 && inspectedDecision && turnMetrics.ProjectionStatesUsed
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{docPath},
+	}, nil
+}
+
+func verifyAgentChosenUserPathInstructions(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	body, found, err := documentBodyByPath(ctx, paths, agentChosenUserSpecifiedPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	sourcesCount, err := documentCountWithPrefix(ctx, paths, "sources/")
+	if err != nil {
+		return verificationResult{}, err
+	}
+	synthesisCount, err := documentCountWithPrefix(ctx, paths, "synthesis/")
+	if err != nil {
+		return verificationResult{}, err
+	}
+	required := []string{
+		"User path instruction wins.",
+		"Do not override explicit path instructions.",
+	}
+	failures := agentChosenBypassFailures(turnMetrics)
+	if !found {
+		failures = append(failures, "missing "+agentChosenUserSpecifiedPath)
+	}
+	failures = append(failures, missingRequired(body, required)...)
+	if sourcesCount != 0 {
+		failures = append(failures, fmt.Sprintf("expected no autonomous sources when user path wins, got %d", sourcesCount))
+	}
+	if synthesisCount != 0 {
+		failures = append(failures, fmt.Sprintf("expected no autonomous synthesis when user path wins, got %d", synthesisCount))
+	}
+	if turnMetrics.ToolCalls == 0 || turnMetrics.CommandExecutions == 0 {
+		failures = append(failures, "agent did not create explicit-path document through installed runner commands")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{agentChosenUserSpecifiedPath})
+	if !assistantPass {
+		failures = append(failures, "final answer did not mention explicit user path")
+	}
+	databasePass := found && len(missingRequired(body, required)) == 0 && sourcesCount == 0 && synthesisCount == 0
+	activityPass := len(agentChosenBypassFailures(turnMetrics)) == 0 && turnMetrics.ToolCalls > 0 && turnMetrics.CommandExecutions > 0
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{agentChosenUserSpecifiedPath},
+	}, nil
+}
+
+func agentChosenBypassFailures(turnMetrics metrics) []string {
+	return populatedBypassFailures(turnMetrics)
+}
+
 func populatedBypassFailures(turnMetrics metrics) []string {
 	failures := []string{}
 	if turnMetrics.BroadRepoSearch {
@@ -5561,6 +5876,30 @@ func documentBodyByPath(ctx context.Context, paths evalPaths, docPath string) (s
 		return doc.Body, true, nil
 	}
 	return "", false, nil
+}
+
+func documentContaining(ctx context.Context, paths evalPaths, needle string) (string, string, bool, error) {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{Limit: 100},
+	})
+	if err != nil {
+		return "", "", false, err
+	}
+	for _, entry := range list.Documents {
+		doc, found, err := documentByPath(ctx, paths, entry.Path)
+		if err != nil {
+			return "", "", false, err
+		}
+		if !found || doc == nil {
+			continue
+		}
+		if strings.Contains(doc.Body, needle) {
+			return entry.Path, doc.Body, true, nil
+		}
+	}
+	return "", "", false, nil
 }
 
 func documentIDByPath(ctx context.Context, paths evalPaths, docPath string) (string, bool, error) {
@@ -6712,21 +7051,31 @@ func buildProductionGateSummary(results []jobResult) *productionGateSummary {
 }
 
 func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobResult) *targetedLaneSummary {
-	if lane != populatedLaneName || releaseBlocking {
+	if releaseBlocking {
+		return nil
+	}
+	if lane != populatedLaneName && lane != agentChosenPathLaneName {
 		return nil
 	}
 	summary := targetedLaneSummary{
 		Lane:            lane,
-		Decision:        "keep_as_reference",
 		PublicSurface:   []string{"openclerk document", "openclerk retrieval"},
-		Promotion:       "no promoted runner action, schema, migration, storage API, product behavior, or public OpenClerk interface",
 		ReleaseBlocking: releaseBlocking,
 	}
 	for _, result := range results {
-		if !isPopulatedVaultScenario(result.Scenario) {
+		include := false
+		classification, posture := "", ""
+		switch lane {
+		case populatedLaneName:
+			include = isPopulatedVaultScenario(result.Scenario)
+			classification, posture = classifyTargetedPopulatedResult(result)
+		case agentChosenPathLaneName:
+			include = isAgentChosenPathScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
+			classification, posture = classifyTargetedAgentChosenPathResult(result)
+		}
+		if !include {
 			continue
 		}
-		classification, posture := classifyTargetedPopulatedResult(result)
 		summary.ScenarioClassifications = append(summary.ScenarioClassifications, targetedScenarioClassification{
 			Variant:               result.Variant,
 			Scenario:              result.Scenario,
@@ -6737,6 +7086,14 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	}
 	if len(summary.ScenarioClassifications) == 0 {
 		return nil
+	}
+	switch lane {
+	case populatedLaneName:
+		summary.Decision = "keep_as_reference"
+		summary.Promotion = "no promoted runner action, schema, migration, storage API, product behavior, or public OpenClerk interface"
+	case agentChosenPathLaneName:
+		summary.Decision = agentChosenPathDecision(summary.ScenarioClassifications)
+		summary.Promotion = "no promoted runner action, schema, migration, storage API, product behavior, public OpenClerk interface, or change to missing-path clarification"
 	}
 	return &summary
 }
@@ -6758,6 +7115,51 @@ func classifyTargetedPopulatedResult(result jobResult) (string, string) {
 		return "skill_guidance_or_eval_coverage", "runner-visible evidence existed, but the assistant answer did not satisfy the scenario"
 	}
 	return "runner_capability_gap", "manual review required before any public surface promotion"
+}
+
+func classifyTargetedAgentChosenPathResult(result jobResult) (string, string) {
+	if result.Passed && result.Verification.Passed {
+		return "none", "current runner/skill behavior preserved path-selection invariants"
+	}
+	if len(agentChosenBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if isFinalAnswerOnlyValidationScenario(result.Scenario) &&
+		(result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1) {
+		return "skill_guidance_or_eval_coverage", "validation scenario did not stay final-answer-only"
+	}
+	if result.Verification.Passed {
+		return "runner_execution_failure", "scenario verification passed, but the job did not complete successfully"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "fixture or durable document evidence did not satisfy the path-selection contract"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible evidence existed, but the assistant answer did not satisfy the path-selection scenario"
+	}
+	return "runner_capability_gap", "manual review required before any agent-chosen path surface promotion"
+}
+
+func agentChosenPathDecision(rows []targetedScenarioClassification) string {
+	hasFailure := false
+	hasCapabilityGap := false
+	for _, row := range rows {
+		switch row.FailureClassification {
+		case "runner_capability_gap":
+			hasCapabilityGap = true
+			hasFailure = true
+		case "none":
+		default:
+			hasFailure = true
+		}
+	}
+	if hasCapabilityGap {
+		return "keep_as_reference"
+	}
+	if hasFailure {
+		return "keep_as_reference"
+	}
+	return "defer"
 }
 
 func productionScenariosDetails(passed int, total int, missing []string) string {
@@ -6991,7 +7393,7 @@ func containsOpenClerkSkillDiscovery(rendered string) bool {
 func containsOpenClerkBootstrapRejectionGuidance(rendered string) bool {
 	return strings.Contains(rendered, openClerkBootstrapRejectionText) &&
 		strings.Contains(rendered, "required fields are missing") &&
-		strings.Contains(rendered, "document path, title, or body is missing") &&
+		strings.Contains(rendered, "creating or updating a document but document path, title, or body is missing") &&
 		strings.Contains(rendered, "limit -3") &&
 		strings.Contains(rendered, "bypass the runner")
 }
@@ -7221,6 +7623,7 @@ func reportLane(ids []string) (string, bool) {
 	}
 	populated := 0
 	documentHistory := 0
+	agentChosenPath := 0
 	validation := 0
 	releaseBlocking := false
 	for _, id := range ids {
@@ -7230,6 +7633,10 @@ func reportLane(ids []string) (string, bool) {
 		}
 		if isDocumentHistoryScenario(id) {
 			documentHistory++
+			continue
+		}
+		if isAgentChosenPathScenario(id) {
+			agentChosenPath++
 			continue
 		}
 		if isFinalAnswerOnlyValidationScenario(id) {
@@ -7244,10 +7651,16 @@ func reportLane(ids []string) (string, bool) {
 	if documentHistory > 0 && documentHistory+validation == len(ids) {
 		return documentHistoryLaneName, false
 	}
+	if agentChosenPath > 0 && agentChosenPath+validation == len(ids) {
+		return agentChosenPathLaneName, false
+	}
 	if populated > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
 	if documentHistory > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
+	if agentChosenPath > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
 	return populatedDefaultLaneName, true
@@ -7263,12 +7676,21 @@ func isPopulatedVaultScenario(id string) bool {
 }
 
 func isReleaseBlockingScenario(id string) bool {
-	return !isPopulatedVaultScenario(id) && !isDocumentHistoryScenario(id)
+	return !isPopulatedVaultScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id)
 }
 
 func isDocumentHistoryScenario(id string) bool {
 	switch id {
 	case documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+
+func isAgentChosenPathScenario(id string) bool {
+	switch id {
+	case agentChosenPathProposalScenarioID, agentChosenAutonomousScenarioID, agentChosenSynthesisScenarioID, agentChosenAmbiguousScenarioID, agentChosenUserPathScenarioID:
 		return true
 	default:
 		return false
@@ -7372,6 +7794,31 @@ func allScenarios() []scenario {
 			ID:     documentHistoryStaleScenarioID,
 			Title:  "Inspect stale synthesis after canonical revision",
 			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Search for history review stale synthesis current revision evidence, list synthesis/ candidates, and get synthesis/history-review-stale.md. Inspect projection_states for projection synthesis with ref_kind document and that synthesis doc_id. Inspect provenance_events for ref_kind source and the sources/history-review/stale-current.md doc_id, then inspect provenance_events for ref_kind projection and ref_id synthesis:SYNTHESIS_DOC_ID. Do not repair or update the synthesis. In the final answer, mention synthesis/history-review-stale.md and sources/history-review/stale-current.md, report that the synthesis projection is stale after the current source revision, mention provenance or projection invalidation evidence, and explicitly say no repair was performed.",
+		},
+		{
+			ID:     agentChosenPathProposalScenarioID,
+			Title:  "Propose URL-only path before create",
+			Prompt: "For this OpenClerk knowledge request, do not create a document yet and do not run tools. The user said: let's document: https://openai.com/index/harness-engineering/ and https://developers.openai.com/api/docs/guides/prompt-guidance. Propose a stable vault-relative path sources/openai-harness-and-prompt-guidance.md, a title, and source-note intent, then ask for confirmation before creating. Mention both URL strings and say no unsupported runner action is implied.",
+		},
+		{
+			ID:     agentChosenAutonomousScenarioID,
+			Title:  "Autonomously place URL-only source note",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or network fetching. The user said: let's document: https://openai.com/index/harness-engineering/ and https://developers.openai.com/api/docs/guides/prompt-guidance. No target path was provided. Choose a clear conventional sources/ path from the two URL slugs and create sources/openai-harness-and-prompt-guidance.md titled OpenAI Harness and Prompt Guidance. The document frontmatter must include type: source. The body must include both URL strings and the exact line: Path policy: autonomous create then report. Report the chosen path in the final answer.",
+		},
+		{
+			ID:     agentChosenSynthesisScenarioID,
+			Title:  "Select path for multi-source synthesis",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Search for agent-chosen path source evidence, list synthesis/ candidates, and create one synthesis page using the stable slug agent-chosen-path-selection under synthesis/. The synthesis must be at synthesis/agent-chosen-path-selection.md, have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: sources/agent-chosen/path-alpha.md, sources/agent-chosen/path-beta.md, sources/agent-chosen/path-gamma.md. The body must mention explicit-path compatibility, metadata remains authoritative, and freshness, include ## Sources with all three source paths, and include ## Freshness describing the runner search and path-selection check. After creation, inspect projection_states for projection synthesis with ref_kind document and the synthesis doc_id. Mention synthesis/agent-chosen-path-selection.md in the final answer.",
+		},
+		{
+			ID:     agentChosenAmbiguousScenarioID,
+			Title:  "Preserve metadata authority under ambiguous placement",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user intent could be read as a source note, generic note, service, or decision, and no path was provided. Choose a clear vault-relative path yourself and create one durable decision document titled Agent Chosen Path Metadata Authority. The document frontmatter must include decision_id: adr-agent-chosen-path-metadata-authority, decision_title: Agent Chosen Path Metadata Authority, decision_status: accepted, decision_scope: document-path-selection, decision_owner: platform, and decision_date: 2026-04-25. The body must include the exact line: Metadata authority: frontmatter decides document identity. After creating it, run decision_record for adr-agent-chosen-path-metadata-authority and inspect projection_states for projection decisions with ref_kind decision and that decision id. In the final answer, mention the chosen path, the decision id, and that metadata/frontmatter, not the filename or path, determines identity.",
+		},
+		{
+			ID:     agentChosenUserPathScenarioID,
+			Title:  "Honor explicit user path instructions",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user explicitly provided path notes/agent-chosen/user-specified.md and title User Specified Path. Create exactly that path and do not override it with sources/ or synthesis/ conventions. The body must include these exact lines: User path instruction wins. Do not override explicit path instructions. Mention notes/agent-chosen/user-specified.md in the final answer.",
 		},
 		{
 			ID:     populatedHeterogeneousScenarioID,
