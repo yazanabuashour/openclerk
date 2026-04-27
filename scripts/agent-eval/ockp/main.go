@@ -288,6 +288,8 @@ const (
 	artifactPDFNaturalSourcePath         = "sources/artifacts/vendor-security-paper-natural.md"
 	artifactPDFNaturalAssetPath          = "assets/sources/artifacts/vendor-security-paper-natural.pdf"
 	artifactPDFSourceURLToken            = "{{ARTIFACT_PDF_SOURCE_URL}}"
+	artifactPDFEvalSourceURL             = "http://openclerk-eval.local/artifacts/vendor-security-paper.pdf"
+	evalSourceFixtureRootEnv             = "OPENCLERK_EVAL_SOURCE_FIXTURE_ROOT"
 	artifactPDFEvidenceText              = "ArtifactPDFIngestionEvidence"
 	artifactTranscriptPath               = "transcripts/artifacts/vendor-demo-transcript.md"
 	artifactInvoicePath                  = "invoices/artifacts/atlas-platform-2026-04.md"
@@ -746,6 +748,12 @@ func codexJobRunner(ctx context.Context, config runConfig, job evalJob, cache ca
 		result.Error = err.Error()
 		return result
 	}
+	if fixtures != nil {
+		if err := fixtures.prepareFiles(jobDir); err != nil {
+			result.Error = fmt.Sprintf("prepare fixture files: %v", err)
+			return result
+		}
+	}
 	if err := timedPhase(&timings.CopyRepo, func() error { return copyRepo(config.RepoRoot, repoDir) }); err != nil {
 		result.Error = fmt.Sprintf("copy repo: %v", err)
 		return result
@@ -862,6 +870,7 @@ type sourceURLUpdateFixtures struct {
 	initialPDF      []byte
 	changedPDF      []byte
 	serveChangedPDF bool
+	artifactPDF     bool
 }
 
 func startSourceURLUpdateFixtures(scenarioID string) *sourceURLUpdateFixtures {
@@ -874,6 +883,8 @@ func startSourceURLUpdateFixtures(scenarioID string) *sourceURLUpdateFixtures {
 	}
 	if isArtifactPDFScenario(scenarioID) {
 		fixtures.initialPDF = minimalEvalPDF("Artifact PDF Source", "OpenClerk Eval", artifactPDFEvidenceText)
+		fixtures.artifactPDF = true
+		return fixtures
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/stable.pdf", func(w http.ResponseWriter, _ *http.Request) {
@@ -897,6 +908,9 @@ func (f *sourceURLUpdateFixtures) Close() {
 }
 
 func (f *sourceURLUpdateFixtures) stableURL() string {
+	if f.artifactPDF {
+		return artifactPDFEvalSourceURL
+	}
 	return f.server.URL + "/stable.pdf"
 }
 
@@ -920,6 +934,21 @@ func (f *sourceURLUpdateFixtures) renderPrompt(prompt string) string {
 	prompt = strings.ReplaceAll(prompt, sourceURLUpdateStableURLToken, f.stableURL())
 	prompt = strings.ReplaceAll(prompt, sourceURLUpdateChangedURLToken, f.changedURL())
 	return strings.ReplaceAll(prompt, artifactPDFSourceURLToken, f.stableURL())
+}
+
+func (f *sourceURLUpdateFixtures) prepareFiles(runDir string) error {
+	if f == nil || !f.artifactPDF {
+		return nil
+	}
+	target := filepath.Join(evalSourceFixtureRoot(runDir), "artifacts", "vendor-security-paper.pdf")
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(target, f.initialPDF, 0o644)
+}
+
+func evalSourceFixtureRoot(runDir string) string {
+	return filepath.Join(runDir, "source-fixtures")
 }
 
 func runArtifactPDFFixturePreflight(ctx context.Context, runDir string, paths evalPaths, cache cacheConfig, fixtures *sourceURLUpdateFixtures) fixturePreflight {
@@ -1152,6 +1181,7 @@ func evalEnv(runDir string, paths evalPaths, cache cacheConfig) []string {
 		"CODEX_HOME",
 		"OPENCLERK_DATA_DIR",
 		"OPENCLERK_DATABASE_PATH",
+		evalSourceFixtureRootEnv,
 		"OPENCLERK_VAULT_ROOT",
 		"GOCACHE",
 		"GOMODCACHE",
@@ -1167,6 +1197,7 @@ func evalEnv(runDir string, paths evalPaths, cache cacheConfig) []string {
 		"CODEX_HOME="+effective.CodexHome,
 		"ZDOTDIR="+effective.ZDotDir,
 		"OPENCLERK_DATABASE_PATH="+effective.DatabasePath,
+		evalSourceFixtureRootEnv+"="+evalSourceFixtureRoot(runDir),
 		"GOCACHE="+effective.GoCache,
 		"GOMODCACHE="+effective.GoModCache,
 		"TMPDIR="+effective.Temp,

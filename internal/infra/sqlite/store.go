@@ -16,6 +16,7 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -38,6 +39,8 @@ const (
 	maxSourceDownloadBytes           = 50 << 20
 	sourceURLModeCreate              = "create"
 	sourceURLModeUpdate              = "update"
+	evalSourceFixtureRootEnv         = "OPENCLERK_EVAL_SOURCE_FIXTURE_ROOT"
+	evalSourceFixtureHost            = "openclerk-eval.local"
 )
 
 var (
@@ -3230,6 +3233,21 @@ func (s *Store) restoreSourceAssetAndNote(ctx context.Context, sourcePath string
 }
 
 func downloadSourcePDF(ctx context.Context, sourceURL string) ([]byte, string, error) {
+	if fixturePath, ok, err := resolveEvalSourceFixturePath(sourceURL); err != nil {
+		return nil, "", err
+	} else if ok {
+		body, err := osReadFile(fixturePath)
+		if err != nil {
+			return nil, "", domain.InternalError("read eval source PDF fixture", err)
+		}
+		if len(body) > maxSourceDownloadBytes {
+			return nil, "", domain.ValidationError("source PDF exceeds maximum supported size", map[string]any{"max_bytes": maxSourceDownloadBytes})
+		}
+		if !looksLikePDF(body) {
+			return nil, "", domain.ValidationError("source URL did not return a PDF", nil)
+		}
+		return body, "application/pdf", nil
+	}
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, sourceURL, nil)
 	if err != nil {
 		return nil, "", domain.ValidationError("source url must be fetchable", map[string]any{"url": sourceURL})
@@ -3265,6 +3283,35 @@ func downloadSourcePDF(ctx context.Context, sourceURL string) ([]byte, string, e
 		mimeType = "application/pdf"
 	}
 	return body, mimeType, nil
+}
+
+func resolveEvalSourceFixturePath(sourceURL string) (string, bool, error) {
+	root := strings.TrimSpace(os.Getenv(evalSourceFixtureRootEnv))
+	if root == "" {
+		return "", false, nil
+	}
+	parsed, err := url.Parse(sourceURL)
+	if err != nil || parsed.Hostname() != evalSourceFixtureHost {
+		return "", false, nil
+	}
+	clean := path.Clean("/" + strings.TrimPrefix(parsed.EscapedPath(), "/"))
+	if clean == "/" || strings.Contains(clean, "%2f") || strings.Contains(clean, "%2F") {
+		return "", false, domain.ValidationError("eval source fixture path is invalid", map[string]any{"path": parsed.Path})
+	}
+	rel := strings.TrimPrefix(clean, "/")
+	target := filepath.Join(root, filepath.FromSlash(rel))
+	rootClean, err := filepath.Abs(root)
+	if err != nil {
+		return "", false, domain.InternalError("resolve eval source fixture root", err)
+	}
+	targetClean, err := filepath.Abs(target)
+	if err != nil {
+		return "", false, domain.InternalError("resolve eval source fixture path", err)
+	}
+	if targetClean != rootClean && !strings.HasPrefix(targetClean, rootClean+string(os.PathSeparator)) {
+		return "", false, domain.ValidationError("eval source fixture path escapes root", map[string]any{"path": parsed.Path})
+	}
+	return targetClean, true, nil
 }
 
 func looksLikePDF(body []byte) bool {

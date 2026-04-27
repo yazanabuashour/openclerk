@@ -79,7 +79,10 @@ Failures are classified as:
 
 PDF source URL scenarios run a fixture preflight through the built
 `openclerk document` binary against the generated HTTP PDF before agent
-verification. `data_hygiene` is reserved for a failing preflight or fixture
+verification. The eval harness uses an internal env-gated
+`openclerk-eval.local` fixture URL so Codex-launched agent commands do not
+depend on parent-process loopback networking; this is not a public source
+transport. `data_hygiene` is reserved for a failing preflight or fixture
 problem; if the fixture works but the scripted control cannot produce durable
 source evidence, the lane treats that as runner capability evidence. If the
 scripted control works but the natural-intent prompt fails, the lane reports an

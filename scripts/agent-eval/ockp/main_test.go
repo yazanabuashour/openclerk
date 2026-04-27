@@ -1532,6 +1532,29 @@ func TestSourceURLUpdateFixturePromptRendering(t *testing.T) {
 	}
 }
 
+func TestArtifactPDFFixturePromptRenderingUsesEvalURL(t *testing.T) {
+	fixtures := startSourceURLUpdateFixtures(artifactPDFSourceURLScenarioID)
+	if fixtures == nil {
+		t.Fatal("artifact PDF fixture not started")
+	}
+	defer fixtures.Close()
+
+	runDir := t.TempDir()
+	if err := fixtures.prepareFiles(runDir); err != nil {
+		t.Fatalf("prepare artifact PDF fixture: %v", err)
+	}
+	rendered := fixtures.renderPrompt(artifactPDFSourceURLToken)
+	if rendered != artifactPDFEvalSourceURL {
+		t.Fatalf("artifact PDF URL = %q, want %q", rendered, artifactPDFEvalSourceURL)
+	}
+	if strings.Contains(rendered, "127.0.0.1") || strings.Contains(rendered, "localhost") {
+		t.Fatalf("artifact PDF URL still uses loopback: %s", rendered)
+	}
+	if _, err := os.Stat(filepath.Join(evalSourceFixtureRoot(runDir), "artifacts", "vendor-security-paper.pdf")); err != nil {
+		t.Fatalf("artifact PDF fixture file stat: %v", err)
+	}
+}
+
 func TestVerifyAnswerFilingRequiresFiledSourceLinkedDocument(t *testing.T) {
 	ctx := context.Background()
 	paths := scenarioPaths(t.TempDir())

@@ -100,6 +100,61 @@ func TestIngestSourceURLKeepsAssetWhenSourceNotePersistsBeforeError(t *testing.T
 	}
 }
 
+func TestIngestSourceURLEvalFixtureURL(t *testing.T) {
+	fixtureRoot := t.TempDir()
+	fixturePath := filepath.Join(fixtureRoot, "artifacts", "vendor-security-paper.pdf")
+	if err := os.MkdirAll(filepath.Dir(fixturePath), 0o755); err != nil {
+		t.Fatalf("mkdir fixture: %v", err)
+	}
+	if err := os.WriteFile(fixturePath, minimalStorePDF("Eval fixture PDF", "OpenClerk Test", "Eval fixture evidence"), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+	t.Setenv(evalSourceFixtureRootEnv, fixtureRoot)
+
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+
+	const sourceURL = "http://openclerk-eval.local/artifacts/vendor-security-paper.pdf"
+	ingestion, err := store.IngestSourceURL(context.Background(), domain.SourceURLInput{
+		URL:           sourceURL,
+		PathHint:      "sources/eval-fixture.md",
+		AssetPathHint: "assets/sources/eval-fixture.pdf",
+		Title:         "Eval Fixture",
+	})
+	if err != nil {
+		t.Fatalf("ingest eval fixture: %v", err)
+	}
+	if ingestion.SourcePath != "sources/eval-fixture.md" || ingestion.AssetPath != "assets/sources/eval-fixture.pdf" || len(ingestion.Citations) == 0 {
+		t.Fatalf("ingestion = %+v", ingestion)
+	}
+	doc, err := store.GetDocument(context.Background(), ingestion.DocID)
+	if err != nil {
+		t.Fatalf("get ingested eval fixture source: %v", err)
+	}
+	if doc.Metadata["source_url"] != sourceURL || doc.Metadata["source_type"] != "pdf" {
+		t.Fatalf("metadata = %+v", doc.Metadata)
+	}
+	if _, err := os.Stat(filepath.Join(vaultRoot, "assets", "sources", "eval-fixture.pdf")); err != nil {
+		t.Fatalf("asset stat: %v", err)
+	}
+}
+
+func TestEvalFixtureURLNotInterceptedWithoutEnv(t *testing.T) {
+	t.Setenv(evalSourceFixtureRootEnv, "")
+
+	_, ok, err := resolveEvalSourceFixturePath("http://openclerk-eval.local/artifacts/vendor-security-paper.pdf")
+	if err != nil {
+		t.Fatalf("resolve eval fixture without env: %v", err)
+	}
+	if ok {
+		t.Fatal("eval fixture URL was intercepted without fixture env")
+	}
+}
+
 func TestIngestSourceURLUpdateMode(t *testing.T) {
 	var (
 		mu         sync.Mutex
