@@ -179,3 +179,46 @@ validation, duplicate avoidance, metadata authority, citations or source refs,
 provenance, projection freshness, and operator-visible repairability. If a
 candidate cannot preserve those invariants, it remains deferred or reference
 only.
+
+## `oc-99z` Decision
+
+Decision: keep the strict agent-side intake policy as current behavior and
+reference evidence. Do not promote autonomous autofiling, path/title/body
+inference, a runner action, a JSON schema change, a storage change, public API
+behavior, or `skills/openclerk/SKILL.md` behavior from this intake lane.
+
+The targeted `oc-u9l` eval report
+[`../evals/results/ockp-document-this-intake-pressure.md`](../evals/results/ockp-document-this-intake-pressure.md)
+completed the selected document-this scenarios with classification `none`.
+Those scenarios covered missing-field clarification, explicit creation, source
+URL missing hints, explicit overrides, duplicate candidates, existing-document
+updates, and synthesis freshness. The evidence shows existing
+`openclerk document` and `openclerk retrieval` workflows can express the
+pressure-tested behavior without a runner capability gap.
+
+Supported behavior remains unchanged:
+
+- ask once with no tools when required `document.path`, `document.title`,
+  `document.body`, source hints, retrieval fields, or update targets are
+  missing
+- use runner JSON only when strict required fields and targets are explicit or
+  directly derivable from explicit user-provided content
+- let explicit user path, title, body, source hints, and update targets
+  override defaults unless they conflict with runner-visible authority
+- perform duplicate, freshness, and provenance checks through existing
+  runner-visible list/search/get, `projection_states`, and
+  `provenance_events` actions where the workflow is already valid
+- keep metadata, frontmatter, canonical markdown, promoted records, and
+  runner-visible registry state authoritative over inferred filenames or
+  placement
+
+Because no `runner_capability_gap` was found, the blocked implementation task
+`oc-umk` is not authorized. Any future promotion requires a new decision with
+targeted eval evidence and exact implementation gates.
+
+The later corrected candidate-generation track is recorded in
+[`agent-chosen-document-artifact-candidate-generation-adr.md`](agent-chosen-document-artifact-candidate-generation-adr.md).
+It narrows this `oc-99z` outcome to runner, schema, storage, public API, direct
+create, and strict-runner behavior. It evaluates the separate product question
+of propose-before-create agent-side path/title/body candidates using a quality
+rubric instead of a runner capability-gap rubric.

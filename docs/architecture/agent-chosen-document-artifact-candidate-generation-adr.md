@@ -1,0 +1,115 @@
+---
+decision_id: adr-agent-chosen-document-artifact-candidate-generation
+decision_title: Agent-Chosen Document Artifact Candidate Generation
+decision_status: deferred
+decision_scope: agent-interaction-policy
+decision_owner: platform
+---
+# ADR: Agent-Chosen Document Artifact Candidate Generation
+
+## Status
+
+Deferred as a promotion decision for agent-side propose-before-create skill
+policy.
+
+This ADR supersedes the `oc-99z` framing only for the product question of
+whether an agent may choose a candidate `document.path`, `document.title`, and
+`document.body` from explicit user-provided content. The `oc-99z` decision
+remains valid for runner, schema, storage, migration, public API, and direct
+create behavior: none are promoted or changed by this ADR.
+
+Supporting evidence:
+
+- [`../evals/document-artifact-candidate-generation-poc.md`](../evals/document-artifact-candidate-generation-poc.md)
+- [`../evals/document-artifact-candidate-generation.md`](../evals/document-artifact-candidate-generation.md)
+- [`../evals/results/ockp-document-artifact-candidate-generation.md`](../evals/results/ockp-document-artifact-candidate-generation.md)
+
+## Context
+
+The prior `oc-a8r`, `oc-tw5`, `oc-u9l`, and `oc-99z` track asked whether
+existing `openclerk document` and `openclerk retrieval` runner workflows could
+handle document-this intake pressure while keeping runner validation strict.
+That track correctly found no runner capability gap, but it did not decide the
+more useful product question: whether the agent may propose a high-quality
+artifact candidate when the user supplied enough content but did not supply
+the durable path, title, and final body.
+
+This ADR evaluates that convenience behavior directly. The promotion target is
+not autonomous write. It is candidate generation before write: the agent chooses
+a candidate path, title, and body; validates or checks it through existing
+runner actions when appropriate; reports the candidate; and asks for approval
+before creating durable knowledge.
+
+## Decision
+
+Do not promote propose-before-create candidate generation yet. Keep the
+corrected track as targeted evidence and require candidate quality repair before
+any `skills/openclerk/SKILL.md` behavior change.
+
+The candidate policy under evaluation remains: agents may propose candidate
+`document.path`, `document.title`, and `document.body` from explicit
+user-provided content when the candidate can be made strict-runner-compatible
+and the final answer asks for confirmation before creation.
+
+The agent must not call `create_document`, `append_document`, or
+`replace_section` before user approval. It may use existing runner actions such
+as `validate`, `search`, `list_documents`, and `get_document` to check strict
+JSON compatibility or duplicate risk. The final answer must show the proposed
+path, title, and body preview clearly enough for the user to approve, revise,
+or reject.
+
+Promotion must be justified by candidate quality evidence, not by
+`runner_capability_gap` evidence. A passing lane must show stable conventional
+paths, useful titles, faithful bodies, duplicate-aware placement, explicit
+override precedence, and confidence-to-ask behavior. The targeted lane found
+`candidate_quality_gap` failures for title/path from heading, mixed-source
+summary, explicit override, and body-faithfulness scenarios, plus a
+`skill_guidance_or_eval_coverage` failure for low-confidence clarification. No
+skill policy promotion is authorized from this run.
+
+## Policy
+
+Supported candidate inputs:
+
+- pasted notes or excerpts with enough body content to preserve faithfully
+- content with a clear heading that can become a title and slug
+- user-supplied URL summaries where the user supplied the claims to preserve
+- mixed-source snippets where no network fetching is required
+- transcript excerpts or operational notes with clear durable note intent
+
+No-tools clarification remains required when there is no supplied body content,
+only a bare URL needing source ingestion hints, unclear durable artifact type,
+invalid limits, bypass requests, or insufficient confidence to produce a
+faithful candidate.
+
+Explicit user instructions override candidate conventions. If the user supplies
+a path, title, or body, the proposal must preserve those values unless they
+conflict with runner validation or runner-visible authority.
+
+Duplicate risk must be checked through existing runner-visible actions when the
+workflow is already valid. If a likely duplicate is visible, the agent asks
+whether to update the existing document or create a new one at a confirmed path.
+
+## Non-Goals
+
+This ADR does not:
+
+- change `openclerk document` or `openclerk retrieval` schemas
+- add an autofiling or proposal runner action
+- relax runner validation
+- authorize direct create-then-report behavior
+- update `skills/openclerk/SKILL.md` in this change
+- add storage migrations, indexes, background placement, or public API changes
+- permit direct vault inspection, direct SQLite, broad repo search, HTTP/MCP
+  bypasses, source-built runner paths, backend variants, module-cache
+  inspection, or unsupported transports
+
+## Follow-Up Gate
+
+A separate repair task may harden candidate quality guidance and eval coverage.
+Only after a refreshed targeted lane classifies all selected scenarios as
+`none` may a later implementation task update `skills/openclerk/SKILL.md` to
+allow propose-before-create candidate generation. That implementation must
+preserve the no-create-before-approval boundary, explicit override precedence,
+low-confidence clarification, duplicate checks through existing runner actions,
+and strict runner JSON compatibility.

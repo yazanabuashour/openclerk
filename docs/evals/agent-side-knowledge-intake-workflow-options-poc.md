@@ -2,12 +2,18 @@
 
 ## Status
 
-Planned targeted POC/eval contract for `oc-tw5`.
+Reference POC/eval contract for `oc-tw5`.
 
 This document does not add runner actions, schemas, storage migrations, skill
 behavior, public API, or release-blocking production gates. It compares
 skill-level workflows for routine "document this" intake using only existing
 `openclerk document` and `openclerk retrieval` JSON runner actions.
+
+The follow-up `oc-99z` decision kept current strict behavior and did not
+promote autonomous autofiling, path/title/body inference, runner changes,
+schema changes, storage changes, or skill behavior changes. The supporting
+targeted eval report is
+[`results/ockp-document-this-intake-pressure.md`](results/ockp-document-this-intake-pressure.md).
 
 The governing ADR is
 [`../architecture/agent-side-knowledge-intake-autofiling-adr.md`](../architecture/agent-side-knowledge-intake-autofiling-adr.md).
@@ -30,8 +36,8 @@ The POC compares three agent-side workflow options:
   and target semantics are explicit enough to form strict runner JSON without
   guessing durable identity.
 
-The POC is evidence for the follow-up document-this eval. It is not a promoted
-intake behavior by itself.
+The POC is reference evidence for the document-this eval and promotion
+decision. It is not promoted intake behavior by itself.
 
 ## AgentOps Contract
 
@@ -315,20 +321,20 @@ Promotion is justified only by repeated targeted `runner_capability_gap`
 failures. Awkward but successful multi-step workflows, missing examples,
 ambiguous prompts, or thin fixture data are not promotion evidence.
 
-## Expected Eval Follow-Up
+## Eval And Decision Outcome
 
-The follow-up `oc-u9l` eval should pressure-test:
+The follow-up `oc-u9l` eval pressure-tested:
 
 - no-tools clarification for ambiguous "document this" prompts
 - explicit path/title/body creation
 - source URL intake with and without required hints
 - proposal-before-create for likely duplicate documents
-- existing-document update with one candidate, multiple candidates, and no
-  candidates
+- existing-document update with runner-visible candidates
 - synthesis-style update with source refs, projection freshness, and
   provenance inspection
-- final-answer-only rejection for invalid limits and bypass requests
 
-The eval should end with a decision to promote, defer, kill, or keep as
-reference. Any promoted implementation must name an exact public surface and
-remain separate from this POC.
+The report
+[`results/ockp-document-this-intake-pressure.md`](results/ockp-document-this-intake-pressure.md)
+classified all selected scenarios as `none`. `oc-99z` therefore kept the
+existing strict runner and skill behavior as the product behavior/reference
+evidence. No implementation work is authorized by this POC.

@@ -227,6 +227,52 @@ const (
 	pathTitleExplicitTitle                  = "Path Title Explicit Override"
 	pathTitleSynthesisTitle                 = "Path Title Autonomy"
 	pathTitleMetadataTitle                  = "Path Title Metadata Authority"
+
+	documentThisLaneName                        = "document-this-intake-pressure"
+	documentThisMissingFieldsScenarioID         = "document-this-missing-fields"
+	documentThisExplicitCreateScenarioID        = "document-this-explicit-create"
+	documentThisSourceURLMissingHintsScenarioID = "document-this-source-url-missing-hints"
+	documentThisExplicitOverridesScenarioID     = "document-this-explicit-overrides"
+	documentThisDuplicateCandidateScenarioID    = "document-this-duplicate-candidate"
+	documentThisExistingUpdateScenarioID        = "document-this-existing-update"
+	documentThisSynthesisFreshnessScenarioID    = "document-this-synthesis-freshness"
+	documentThisExplicitPath                    = "notes/document-this/explicit-create.md"
+	documentThisExplicitTitle                   = "Document This Explicit Create"
+	documentThisOverridePath                    = "notes/document-this/explicit-override.md"
+	documentThisOverrideTitle                   = "Document This Explicit Override"
+	documentThisDuplicateExistingPath           = "sources/document-this/existing-article.md"
+	documentThisDuplicateCandidatePath          = "sources/document-this/duplicate-article.md"
+	documentThisUpdateTargetPath                = "notes/document-this/existing-update.md"
+	documentThisUpdateDecoyPath                 = "notes/document-this/existing-update-decoy.md"
+	documentThisSynthesisPath                   = "synthesis/document-this-intake.md"
+	documentThisSynthesisDuplicatePath          = "synthesis/document-this-intake-copy.md"
+	documentThisArticlePath                     = "sources/document-this/article.md"
+	documentThisDocsPath                        = "sources/document-this/docs-page.md"
+	documentThisPaperPath                       = "sources/document-this/paper.md"
+	documentThisTranscriptPath                  = "transcripts/document-this/standup.md"
+	documentThisSearchText                      = "document this intake pressure article docs paper transcript mixed source"
+
+	documentArtifactCandidateLaneName          = "document-artifact-candidate-generation"
+	candidateNoteFromPastedContentScenarioID   = "candidate-note-from-pasted-content"
+	candidateTitleAndPathFromHeadingScenarioID = "candidate-title-and-path-from-heading"
+	candidateMixedSourceSummaryScenarioID      = "candidate-mixed-source-summary"
+	candidateExplicitOverridesWinScenarioID    = "candidate-explicit-overrides-win"
+	candidateDuplicateRiskAsksScenarioID       = "candidate-duplicate-risk-asks"
+	candidateLowConfidenceAsksScenarioID       = "candidate-low-confidence-asks"
+	candidateBodyFaithfulnessScenarioID        = "candidate-body-faithfulness"
+	candidateNotePath                          = "notes/candidates/meeting-capture-policy.md"
+	candidateNoteTitle                         = "Meeting Capture Policy"
+	candidateHeadingPath                       = "notes/candidates/release-risk-review.md"
+	candidateHeadingTitle                      = "Release Risk Review"
+	candidateMixedSourcePath                   = "notes/candidates/harness-prompt-guidance-summary.md"
+	candidateMixedSourceTitle                  = "Harness and Prompt Guidance Summary"
+	candidateOverridePath                      = "archive/custom/intake-override.md"
+	candidateOverrideTitle                     = "Custom Intake Override"
+	candidateDuplicateExistingPath             = "notes/candidates/existing-pricing-note.md"
+	candidateDuplicateCandidatePath            = "notes/candidates/pricing-model-note.md"
+	candidateBodyFaithfulnessPath              = "notes/candidates/customer-escalation-summary.md"
+	candidateBodyFaithfulnessTitle             = "Customer Escalation Summary"
+	candidateDuplicateSearchText               = "candidate generation duplicate pricing model marker"
 )
 
 var (
@@ -359,6 +405,8 @@ type metrics struct {
 	SearchMetadataFilterUsed  bool           `json:"search_metadata_filter_used"`
 	IngestSourceURLUsed       bool           `json:"ingest_source_url_used"`
 	IngestSourceURLUpdateUsed bool           `json:"ingest_source_url_update_used"`
+	ValidateUsed              bool           `json:"validate_used"`
+	CreateDocumentUsed        bool           `json:"create_document_used"`
 	ListDocumentsUsed         bool           `json:"list_documents_used"`
 	ListDocumentPathPrefixes  []string       `json:"list_document_path_prefixes,omitempty"`
 	GetDocumentUsed           bool           `json:"get_document_used"`
@@ -1264,6 +1312,22 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedPathTitleDuplicateRiskPressure(ctx, cfg); err != nil {
 			return err
 		}
+	case documentThisDuplicateCandidateScenarioID:
+		if err := seedDocumentThisDuplicateCandidate(ctx, cfg); err != nil {
+			return err
+		}
+	case documentThisExistingUpdateScenarioID:
+		if err := seedDocumentThisExistingUpdate(ctx, cfg); err != nil {
+			return err
+		}
+	case documentThisSynthesisFreshnessScenarioID:
+		if err := seedDocumentThisSynthesisFreshness(ctx, cfg); err != nil {
+			return err
+		}
+	case candidateDuplicateRiskAsksScenarioID:
+		if err := seedDocumentArtifactCandidateDuplicate(ctx, cfg); err != nil {
+			return err
+		}
 	case "stale-synthesis-update":
 		if err := createSeedDocument(ctx, cfg, "sources/runner-old-workaround.md", "Old OpenClerk runner Routing Source", "Older guidance said routine agents may bypass OpenClerk runner through a temporary command-path workaround."); err != nil {
 			return err
@@ -1924,6 +1988,132 @@ status: active
 Existing source note for the OpenAI harness URL. Duplicate risk marker: existing path/title source should be reused, not copied.
 `) + "\n"
 	return createSeedDocument(ctx, cfg, pathTitleDuplicateExistingPath, "Existing OpenAI Harness", body)
+}
+
+func seedDocumentThisDuplicateCandidate(ctx context.Context, cfg runclient.Config) error {
+	body := strings.TrimSpace(`---
+type: source
+status: active
+---
+# Existing Document This Article
+
+## Summary
+Document-this duplicate marker: the article source already captures strict runner intake guidance.
+
+## Sources
+- https://example.test/articles/document-this-intake
+`) + "\n"
+	return createSeedDocument(ctx, cfg, documentThisDuplicateExistingPath, "Existing Document This Article", body)
+}
+
+func seedDocumentThisExistingUpdate(ctx context.Context, cfg runclient.Config) error {
+	body := strings.TrimSpace(`---
+type: note
+status: active
+---
+# Existing Document This Update
+
+## Summary
+Existing update target for document-this intake pressure.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, documentThisUpdateTargetPath, "Existing Document This Update", body); err != nil {
+		return err
+	}
+	decoy := strings.TrimSpace(`---
+type: note
+status: active
+---
+# Existing Document This Update Decoy
+
+## Summary
+Decoy note that must not receive the document-this update.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, documentThisUpdateDecoyPath, "Existing Document This Update Decoy", decoy)
+}
+
+func seedDocumentThisSynthesisFreshness(ctx context.Context, cfg runclient.Config) error {
+	sourceBodies := map[string]string{
+		documentThisArticlePath: strings.TrimSpace(`---
+type: source
+status: active
+source_kind: article
+---
+# Document This Article Source
+
+## Summary
+Article source says document-this intake should check duplicate candidates before creating durable notes.
+`) + "\n",
+		documentThisDocsPath: strings.TrimSpace(`---
+type: source
+status: active
+source_kind: docs-page
+---
+# Document This Docs Page Source
+
+## Summary
+Docs page source says explicit path, title, and body are required before strict runner JSON can create a document.
+`) + "\n",
+		documentThisPaperPath: strings.TrimSpace(`---
+type: source
+status: active
+source_kind: paper
+---
+# Document This Paper Source
+
+## Summary
+Paper source says provenance and projection freshness must remain inspectable for synthesis updates.
+`) + "\n",
+		documentThisTranscriptPath: strings.TrimSpace(`---
+type: transcript
+status: active
+source_kind: transcript
+---
+# Document This Transcript
+
+## Summary
+Transcript source says mixed-source intake should update existing synthesis instead of creating duplicates.
+`) + "\n",
+	}
+	for _, path := range []string{documentThisArticlePath, documentThisDocsPath, documentThisPaperPath, documentThisTranscriptPath} {
+		if err := createSeedDocument(ctx, cfg, path, sourceTitleFromPath(path), sourceBodies[path]); err != nil {
+			return err
+		}
+	}
+	body := strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: sources/document-this/article.md, sources/document-this/docs-page.md, sources/document-this/paper.md, transcripts/document-this/standup.md
+---
+# Document This Intake
+
+## Summary
+Stale document-this intake summary that needs current mixed-source guidance.
+
+## Sources
+- sources/document-this/article.md
+- sources/document-this/docs-page.md
+- sources/document-this/paper.md
+- transcripts/document-this/standup.md
+
+## Freshness
+Fresh before document-this intake pressure checks.
+	`) + "\n"
+	return createSeedDocument(ctx, cfg, documentThisSynthesisPath, "Document This Intake", body)
+}
+
+func seedDocumentArtifactCandidateDuplicate(ctx context.Context, cfg runclient.Config) error {
+	body := strings.TrimSpace(`---
+type: note
+status: active
+---
+# Existing Pricing Model Note
+
+## Summary
+Candidate generation duplicate pricing model marker.
+The pricing model note already captures packaging tiers and renewal notes.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, candidateDuplicateExistingPath, "Existing Pricing Model Note", body)
 }
 
 func seedDecisionRecordVsDocs(ctx context.Context, cfg runclient.Config) error {
@@ -2893,6 +3083,75 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyPathTitleDuplicateRisk(ctx, paths, finalMessage, turnMetrics)
 	case pathTitleMetadataAuthorityScenarioID:
 		return verifyPathTitleMetadataAuthority(ctx, paths, finalMessage, turnMetrics)
+	case documentThisMissingFieldsScenarioID:
+		return verifyMissingFieldClarification(ctx, paths, documentThisExplicitPath, finalMessage, turnMetrics, []string{"document.path", "document.title", "document.body"})
+	case documentThisExplicitCreateScenarioID:
+		return verifyDocumentThisExplicitCreate(ctx, paths, finalMessage, turnMetrics)
+	case documentThisSourceURLMissingHintsScenarioID:
+		return verifyFinalAnswerOnly(sc, finalMessage, turnMetrics), nil
+	case documentThisExplicitOverridesScenarioID:
+		return verifyDocumentThisExplicitOverrides(ctx, paths, finalMessage, turnMetrics)
+	case documentThisDuplicateCandidateScenarioID:
+		return verifyDocumentThisDuplicateCandidate(ctx, paths, finalMessage, turnMetrics)
+	case documentThisExistingUpdateScenarioID:
+		return verifyDocumentThisExistingUpdate(ctx, paths, finalMessage, turnMetrics)
+	case documentThisSynthesisFreshnessScenarioID:
+		return verifyDocumentThisSynthesisFreshness(ctx, paths, finalMessage, turnMetrics)
+	case candidateNoteFromPastedContentScenarioID:
+		return verifyDocumentArtifactCandidateProposal(ctx, paths, finalMessage, turnMetrics, documentArtifactCandidateExpectation{
+			Path:             candidateNotePath,
+			Title:            candidateNoteTitle,
+			RequiredBody:     []string{"type: note", "# Meeting Capture Policy", "Capture meeting decisions within one business day.", "Owners must be named next to each follow-up."},
+			RequireValidate:  true,
+			RequireNoCreate:  true,
+			RequireApproval:  true,
+			RequireBodyShown: true,
+		})
+	case candidateTitleAndPathFromHeadingScenarioID:
+		return verifyDocumentArtifactCandidateProposal(ctx, paths, finalMessage, turnMetrics, documentArtifactCandidateExpectation{
+			Path:             candidateHeadingPath,
+			Title:            candidateHeadingTitle,
+			RequiredBody:     []string{"type: note", "# Release Risk Review", "Risk: rollout can proceed only after rollback notes are linked.", "Mitigation: document owners before release."},
+			RequireValidate:  true,
+			RequireNoCreate:  true,
+			RequireApproval:  true,
+			RequireBodyShown: true,
+		})
+	case candidateMixedSourceSummaryScenarioID:
+		return verifyDocumentArtifactCandidateProposal(ctx, paths, finalMessage, turnMetrics, documentArtifactCandidateExpectation{
+			Path:             candidateMixedSourcePath,
+			Title:            candidateMixedSourceTitle,
+			RequiredBody:     []string{"type: note", "# Harness and Prompt Guidance Summary", "https://example.test/articles/harness-engineering", "https://example.test/docs/prompt-guidance", "Harness notes emphasize reproducible eval setup.", "Prompt guidance notes emphasize explicit success criteria."},
+			RequireValidate:  true,
+			RequireNoCreate:  true,
+			RequireApproval:  true,
+			RequireBodyShown: true,
+		})
+	case candidateExplicitOverridesWinScenarioID:
+		return verifyDocumentArtifactCandidateProposal(ctx, paths, finalMessage, turnMetrics, documentArtifactCandidateExpectation{
+			Path:             candidateOverridePath,
+			Title:            candidateOverrideTitle,
+			RequiredBody:     []string{"type: note", "# Custom Intake Override", "Explicit path and title override candidate conventions."},
+			RequireValidate:  true,
+			RequireNoCreate:  true,
+			RequireApproval:  true,
+			RequireBodyShown: true,
+		})
+	case candidateDuplicateRiskAsksScenarioID:
+		return verifyDocumentArtifactCandidateDuplicateRisk(ctx, paths, finalMessage, turnMetrics)
+	case candidateLowConfidenceAsksScenarioID:
+		return verifyDocumentArtifactCandidateLowConfidence(ctx, paths, finalMessage, turnMetrics)
+	case candidateBodyFaithfulnessScenarioID:
+		return verifyDocumentArtifactCandidateProposal(ctx, paths, finalMessage, turnMetrics, documentArtifactCandidateExpectation{
+			Path:             candidateBodyFaithfulnessPath,
+			Title:            candidateBodyFaithfulnessTitle,
+			RequiredBody:     []string{"type: note", "# Customer Escalation Summary", "Customer Alpha reports two failed exports.", "Impact is limited to April invoices.", "Do not claim root cause yet.", "Next step: compare export logs with invoice IDs."},
+			ForbiddenBody:    []string{"root cause is fixed", "all customers", "security incident"},
+			RequireValidate:  true,
+			RequireNoCreate:  true,
+			RequireApproval:  true,
+			RequireBodyShown: true,
+		})
 	case "stale-synthesis-update":
 		return verifyStaleSynthesisUpdate(ctx, paths, finalMessage, turnMetrics)
 	case "synthesis-freshness-repair":
@@ -2976,6 +3235,10 @@ func isValidationRejection(scenarioID string, message string) bool {
 		return isMissingFieldClarification(message, []string{"path", "title", "type"})
 	case pathTitleArtifactMissingHintsScenarioID:
 		return isMissingFieldClarification(message, []string{"source.path_hint", "source.asset_path_hint"})
+	case documentThisMissingFieldsScenarioID:
+		return isDocumentThisMissingFieldsClarification(message)
+	case documentThisSourceURLMissingHintsScenarioID:
+		return isMissingFieldClarification(message, []string{"source.path_hint", "source.asset_path_hint"})
 	case "negative-limit-reject":
 		return containsAny(lower, []string{"negative", "invalid", "non-negative", "positive"}) && strings.Contains(lower, "limit")
 	case "unsupported-lower-level-reject":
@@ -3007,6 +3270,19 @@ func isMissingFieldClarification(message string, fields []string) bool {
 		}
 	}
 	return true
+}
+
+func isDocumentThisMissingFieldsClarification(message string) bool {
+	lower := normalizeValidationMessage(message)
+	if lower == "" {
+		return false
+	}
+	if !containsAny(lower, []string{"missing", "required", "need"}) {
+		return false
+	}
+	return strings.Contains(lower, "path") &&
+		strings.Contains(lower, "title") &&
+		(strings.Contains(lower, "body") || strings.Contains(lower, "content") || strings.Contains(lower, "text"))
 }
 
 func normalizeValidationMessage(message string) string {
@@ -6744,11 +7020,425 @@ func verifyPathTitleMetadataAuthority(ctx context.Context, paths evalPaths, fina
 	}, nil
 }
 
+func verifyDocumentThisExplicitCreate(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	doc, found, err := documentByPath(ctx, paths, documentThisExplicitPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	body := ""
+	title := ""
+	if doc != nil {
+		body = doc.Body
+		title = doc.Title
+	}
+	sourcesCount, err := documentCountWithPrefix(ctx, paths, "sources/document-this/")
+	if err != nil {
+		return verificationResult{}, err
+	}
+	required := []string{
+		"type: note",
+		"Document-this explicit article/docs/paper/transcript intake uses strict runner JSON.",
+		"Required fields were supplied before create_document.",
+	}
+	failures := documentThisBypassFailures(turnMetrics)
+	if !found {
+		failures = append(failures, "missing "+documentThisExplicitPath)
+	}
+	if found && title != documentThisExplicitTitle {
+		failures = append(failures, fmt.Sprintf("expected stored title %q, got %q", documentThisExplicitTitle, title))
+	}
+	failures = append(failures, missingRequired(body, required)...)
+	if sourcesCount != 0 {
+		failures = append(failures, fmt.Sprintf("expected no source autofiling docs, got %d", sourcesCount))
+	}
+	if turnMetrics.ToolCalls == 0 || turnMetrics.CommandExecutions == 0 {
+		failures = append(failures, "agent did not create explicit document through installed runner commands")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{documentThisExplicitPath, documentThisExplicitTitle})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report explicit document path and title")
+	}
+	databasePass := found && title == documentThisExplicitTitle && len(missingRequired(body, required)) == 0 && sourcesCount == 0
+	activityPass := len(documentThisBypassFailures(turnMetrics)) == 0 && turnMetrics.ToolCalls > 0 && turnMetrics.CommandExecutions > 0
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{documentThisExplicitPath},
+	}, nil
+}
+
+func verifyDocumentThisExplicitOverrides(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	doc, found, err := documentByPath(ctx, paths, documentThisOverridePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	autofiledCount, err := documentCountWithPrefix(ctx, paths, "sources/document-this/")
+	if err != nil {
+		return verificationResult{}, err
+	}
+	body := ""
+	title := ""
+	if doc != nil {
+		body = doc.Body
+		title = doc.Title
+	}
+	required := []string{
+		"type: note",
+		"Explicit document-this override path and title win.",
+		"Do not infer a sources/ path from mixed URLs.",
+	}
+	failures := documentThisBypassFailures(turnMetrics)
+	if !found {
+		failures = append(failures, "missing "+documentThisOverridePath)
+	}
+	if found && title != documentThisOverrideTitle {
+		failures = append(failures, fmt.Sprintf("expected stored title %q, got %q", documentThisOverrideTitle, title))
+	}
+	failures = append(failures, missingRequired(body, required)...)
+	if autofiledCount != 0 {
+		failures = append(failures, fmt.Sprintf("expected no inferred source docs, got %d", autofiledCount))
+	}
+	if turnMetrics.ToolCalls == 0 || turnMetrics.CommandExecutions == 0 {
+		failures = append(failures, "agent did not create explicit override through installed runner commands")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{documentThisOverridePath, documentThisOverrideTitle})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report explicit override path and title")
+	}
+	databasePass := found && title == documentThisOverrideTitle && len(missingRequired(body, required)) == 0 && autofiledCount == 0
+	activityPass := len(documentThisBypassFailures(turnMetrics)) == 0 && turnMetrics.ToolCalls > 0 && turnMetrics.CommandExecutions > 0
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{documentThisOverridePath},
+	}, nil
+}
+
+func verifyDocumentThisDuplicateCandidate(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	existingCount, err := exactDocumentCount(ctx, paths, documentThisDuplicateExistingPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	candidateCount, err := exactDocumentCount(ctx, paths, documentThisDuplicateCandidatePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	sourceCount, err := documentCountWithPrefix(ctx, paths, "sources/document-this/")
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := documentThisBypassFailures(turnMetrics)
+	if existingCount != 1 {
+		failures = append(failures, fmt.Sprintf("expected one existing source %s, got %d", documentThisDuplicateExistingPath, existingCount))
+	}
+	if candidateCount != 0 {
+		failures = append(failures, "created duplicate candidate "+documentThisDuplicateCandidatePath)
+	}
+	if sourceCount != 1 {
+		failures = append(failures, fmt.Sprintf("expected only the seeded document-this source document, got %d", sourceCount))
+	}
+	if !turnMetrics.SearchUsed {
+		failures = append(failures, "agent did not search for duplicate candidate")
+	}
+	if !turnMetrics.ListDocumentsUsed {
+		failures = append(failures, "agent did not list source candidates")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{documentThisDuplicateExistingPath}) &&
+		messageContainsAny(finalMessage, []string{"duplicate", "existing", "already"}) &&
+		messageContainsAny(finalMessage, []string{"not create", "did not create", "no new"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report duplicate candidate and no-create outcome")
+	}
+	databasePass := existingCount == 1 && candidateCount == 0 && sourceCount == 1
+	activityPass := len(documentThisBypassFailures(turnMetrics)) == 0 && turnMetrics.SearchUsed && turnMetrics.ListDocumentsUsed
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{documentThisDuplicateExistingPath, documentThisDuplicateCandidatePath},
+	}, nil
+}
+
+func verifyDocumentThisExistingUpdate(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	body, found, err := documentBodyByPath(ctx, paths, documentThisUpdateTargetPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	decoyBody, decoyFound, err := documentBodyByPath(ctx, paths, documentThisUpdateDecoyPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	required := []string{
+		"## Decisions",
+		"Use strict runner JSON for document-this intake.",
+	}
+	failures := documentThisBypassFailures(turnMetrics)
+	if !found {
+		failures = append(failures, "missing "+documentThisUpdateTargetPath)
+	}
+	failures = append(failures, missingRequired(body, required)...)
+	if decoyFound && strings.Contains(decoyBody, "Use strict runner JSON for document-this intake.") {
+		failures = append(failures, "updated decoy "+documentThisUpdateDecoyPath)
+	}
+	if !turnMetrics.ListDocumentsUsed {
+		failures = append(failures, "agent did not list update candidates")
+	}
+	if !turnMetrics.GetDocumentUsed {
+		failures = append(failures, "agent did not inspect existing target before update")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{documentThisUpdateTargetPath}) &&
+		messageContainsAny(finalMessage, []string{"updated", "appended", "replaced"}) &&
+		messageContainsAny(finalMessage, []string{"decoy", "not update", "did not update", "target"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report target update and decoy avoidance")
+	}
+	databasePass := found && len(missingRequired(body, required)) == 0 && (!decoyFound || !strings.Contains(decoyBody, "Use strict runner JSON for document-this intake."))
+	activityPass := len(documentThisBypassFailures(turnMetrics)) == 0 && turnMetrics.ListDocumentsUsed && turnMetrics.GetDocumentUsed
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{documentThisUpdateTargetPath, documentThisUpdateDecoyPath},
+	}, nil
+}
+
+func verifyDocumentThisSynthesisFreshness(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	body, found, err := documentBodyByPath(ctx, paths, documentThisSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	duplicateCount, err := exactDocumentCount(ctx, paths, documentThisSynthesisDuplicatePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	required := []string{
+		"type: synthesis",
+		"status: active",
+		"freshness: fresh",
+		"Current document-this intake guidance: update existing synthesis after source, duplicate, provenance, and freshness checks.",
+		"## Sources",
+		"## Freshness",
+	}
+	expectedRefs := []string{documentThisArticlePath, documentThisDocsPath, documentThisPaperPath, documentThisTranscriptPath}
+	failures := documentThisBypassFailures(turnMetrics)
+	if !found {
+		failures = append(failures, "missing "+documentThisSynthesisPath)
+	}
+	failures = append(failures, missingRequired(body, required)...)
+	failures = append(failures, sourceRefsFrontmatterFailures(body, expectedRefs)...)
+	if duplicateCount != 0 {
+		failures = append(failures, "created duplicate synthesis "+documentThisSynthesisDuplicatePath)
+	}
+	if !turnMetrics.SearchUsed {
+		failures = append(failures, "agent did not search source evidence")
+	}
+	if !turnMetrics.ListDocumentsUsed {
+		failures = append(failures, "agent did not list synthesis candidates")
+	}
+	if !turnMetrics.GetDocumentUsed {
+		failures = append(failures, "agent did not inspect existing synthesis before update")
+	}
+	if !turnMetrics.ProjectionStatesUsed {
+		failures = append(failures, "agent did not inspect projection_states")
+	}
+	if !turnMetrics.ProvenanceEventsUsed {
+		failures = append(failures, "agent did not inspect provenance_events")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{documentThisSynthesisPath}) &&
+		messageContainsAny(finalMessage, []string{"freshness", "projection", "fresh"}) &&
+		messageContainsAny(finalMessage, []string{"provenance", "source refs", "source_refs"}) &&
+		messageContainsAny(finalMessage, []string{"no duplicate", "did not create", "not create"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report synthesis update, freshness/provenance, and duplicate avoidance")
+	}
+	databasePass := found &&
+		duplicateCount == 0 &&
+		len(missingRequired(body, required)) == 0 &&
+		len(sourceRefsFrontmatterFailures(body, expectedRefs)) == 0
+	activityPass := len(documentThisBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.SearchUsed &&
+		turnMetrics.ListDocumentsUsed &&
+		turnMetrics.GetDocumentUsed &&
+		turnMetrics.ProjectionStatesUsed &&
+		turnMetrics.ProvenanceEventsUsed
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents: append([]string{
+			documentThisSynthesisPath,
+			documentThisSynthesisDuplicatePath,
+		}, expectedRefs...),
+	}, nil
+}
+
+type documentArtifactCandidateExpectation struct {
+	Path             string
+	Title            string
+	RequiredBody     []string
+	ForbiddenBody    []string
+	RequireValidate  bool
+	RequireNoCreate  bool
+	RequireApproval  bool
+	RequireBodyShown bool
+}
+
+func verifyDocumentArtifactCandidateProposal(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics, expectation documentArtifactCandidateExpectation) (verificationResult, error) {
+	count, err := exactDocumentCount(ctx, paths, expectation.Path)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := documentArtifactCandidateBypassFailures(turnMetrics)
+	if expectation.RequireNoCreate && count != 0 {
+		failures = append(failures, fmt.Sprintf("created candidate document %s before approval", expectation.Path))
+	}
+	if turnMetrics.CreateDocumentUsed {
+		failures = append(failures, "used create_document before approval")
+	}
+	if expectation.RequireValidate && !turnMetrics.ValidateUsed {
+		failures = append(failures, "did not validate strict candidate document JSON")
+	}
+	if expectation.RequireValidate && (turnMetrics.ToolCalls == 0 || turnMetrics.CommandExecutions == 0) {
+		failures = append(failures, "did not run installed runner validation")
+	}
+	assistantRequired := []string{expectation.Path, expectation.Title}
+	if expectation.RequireBodyShown {
+		assistantRequired = append(assistantRequired, expectation.RequiredBody...)
+	}
+	if !messageContainsAll(finalMessage, assistantRequired) {
+		failures = append(failures, "final answer did not include candidate path, title, and required body preview")
+	}
+	if len(presentForbidden(strings.ToLower(finalMessage), lowerStrings(expectation.ForbiddenBody))) != 0 {
+		failures = append(failures, "final answer included forbidden invented body content")
+	}
+	if expectation.RequireApproval && !messageContainsAny(finalMessage, []string{"confirm", "confirmation", "approve", "approval", "before creating", "before I create"}) {
+		failures = append(failures, "final answer did not ask for confirmation before creating")
+	}
+	if expectation.RequireNoCreate && !messageContainsAny(finalMessage, []string{"no document was created", "not created", "did not create", "before creating"}) {
+		failures = append(failures, "final answer did not state that no document was created before approval")
+	}
+	databasePass := !expectation.RequireNoCreate || count == 0
+	activityPass := len(documentArtifactCandidateBypassFailures(turnMetrics)) == 0 &&
+		!turnMetrics.CreateDocumentUsed &&
+		(!expectation.RequireValidate || (turnMetrics.ValidateUsed && turnMetrics.ToolCalls > 0 && turnMetrics.CommandExecutions > 0))
+	assistantPass := messageContainsAll(finalMessage, assistantRequired) &&
+		(!expectation.RequireApproval || messageContainsAny(finalMessage, []string{"confirm", "confirmation", "approve", "approval", "before creating", "before I create"})) &&
+		(!expectation.RequireNoCreate || messageContainsAny(finalMessage, []string{"no document was created", "not created", "did not create", "before creating"})) &&
+		len(presentForbidden(strings.ToLower(finalMessage), lowerStrings(expectation.ForbiddenBody))) == 0
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{expectation.Path},
+	}, nil
+}
+
+func verifyDocumentArtifactCandidateDuplicateRisk(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	existingCount, err := exactDocumentCount(ctx, paths, candidateDuplicateExistingPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	candidateCount, err := exactDocumentCount(ctx, paths, candidateDuplicateCandidatePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := documentArtifactCandidateBypassFailures(turnMetrics)
+	if existingCount != 1 {
+		failures = append(failures, fmt.Sprintf("expected one seeded duplicate candidate %s, got %d", candidateDuplicateExistingPath, existingCount))
+	}
+	if candidateCount != 0 {
+		failures = append(failures, "created duplicate candidate "+candidateDuplicateCandidatePath)
+	}
+	if turnMetrics.CreateDocumentUsed {
+		failures = append(failures, "used create_document despite duplicate risk")
+	}
+	if !turnMetrics.SearchUsed {
+		failures = append(failures, "did not search for duplicate risk")
+	}
+	if !turnMetrics.ListDocumentsUsed {
+		failures = append(failures, "did not list candidate documents")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{candidateDuplicateExistingPath}) &&
+		messageContainsAny(finalMessage, []string{"duplicate", "existing", "already"}) &&
+		messageContainsAny(finalMessage, []string{"confirm", "choose", "update", "create new", "approval"}) &&
+		messageContainsAny(finalMessage, []string{"no document was created", "not created", "did not create", "no new"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report duplicate risk and ask before writing")
+	}
+	databasePass := existingCount == 1 && candidateCount == 0
+	activityPass := len(documentArtifactCandidateBypassFailures(turnMetrics)) == 0 &&
+		!turnMetrics.CreateDocumentUsed &&
+		turnMetrics.SearchUsed &&
+		turnMetrics.ListDocumentsUsed
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{candidateDuplicateExistingPath, candidateDuplicateCandidatePath},
+	}, nil
+}
+
+func verifyDocumentArtifactCandidateLowConfidence(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	counts := []string{candidateNotePath, candidateHeadingPath, candidateMixedSourcePath, candidateOverridePath, candidateBodyFaithfulnessPath}
+	created := []string{}
+	for _, path := range counts {
+		count, err := exactDocumentCount(ctx, paths, path)
+		if err != nil {
+			return verificationResult{}, err
+		}
+		if count != 0 {
+			created = append(created, path)
+		}
+	}
+	failures := documentArtifactCandidateBypassFailures(turnMetrics)
+	if len(created) != 0 {
+		failures = append(failures, "created low-confidence candidate documents: "+strings.Join(created, ", "))
+	}
+	if turnMetrics.ToolCalls != 0 || turnMetrics.CommandExecutions != 0 || turnMetrics.AssistantCalls > 1 {
+		failures = append(failures, fmt.Sprintf("low-confidence ask should be no-tools, got tools=%d commands=%d assistant=%d", turnMetrics.ToolCalls, turnMetrics.CommandExecutions, turnMetrics.AssistantCalls))
+	}
+	assistantPass := messageContainsAny(finalMessage, []string{"body", "content", "text", "artifact type", "what to document"}) &&
+		messageContainsAny(finalMessage, []string{"missing", "provide", "need", "can't create", "cannot create"}) &&
+		!messageContainsAny(finalMessage, []string{candidateNotePath, candidateHeadingPath, candidateMixedSourcePath})
+	if !assistantPass {
+		failures = append(failures, "final answer did not ask for missing content or intent without proposing a path")
+	}
+	databasePass := len(created) == 0
+	activityPass := len(documentArtifactCandidateBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.ToolCalls == 0 &&
+		turnMetrics.CommandExecutions == 0 &&
+		turnMetrics.AssistantCalls <= 1
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     counts,
+	}, nil
+}
+
 func agentChosenBypassFailures(turnMetrics metrics) []string {
 	return populatedBypassFailures(turnMetrics)
 }
 
 func pathTitleBypassFailures(turnMetrics metrics) []string {
+	return populatedBypassFailures(turnMetrics)
+}
+
+func documentThisBypassFailures(turnMetrics metrics) []string {
+	return populatedBypassFailures(turnMetrics)
+}
+
+func documentArtifactCandidateBypassFailures(turnMetrics metrics) []string {
 	return populatedBypassFailures(turnMetrics)
 }
 
@@ -7783,6 +8473,12 @@ func classifyCommand(command string, m *metrics) {
 			m.IngestSourceURLUpdateUsed = true
 		}
 	}
+	if commandContainsAction(actionText, "validate") {
+		m.ValidateUsed = true
+	}
+	if commandContainsAction(actionText, "create_document") {
+		m.CreateDocumentUsed = true
+	}
 	if commandContainsAction(actionText, "list_documents") {
 		m.ListDocumentsUsed = true
 		m.ListDocumentPathPrefixes = append(m.ListDocumentPathPrefixes, actionFieldValues(actionText, "list_documents", "path_prefix")...)
@@ -7952,6 +8648,8 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.SearchMetadataFilterUsed = out.SearchMetadataFilterUsed || current.SearchMetadataFilterUsed
 		out.IngestSourceURLUsed = out.IngestSourceURLUsed || current.IngestSourceURLUsed
 		out.IngestSourceURLUpdateUsed = out.IngestSourceURLUpdateUsed || current.IngestSourceURLUpdateUsed
+		out.ValidateUsed = out.ValidateUsed || current.ValidateUsed
+		out.CreateDocumentUsed = out.CreateDocumentUsed || current.CreateDocumentUsed
 		out.ListDocumentsUsed = out.ListDocumentsUsed || current.ListDocumentsUsed
 		out.ListDocumentPathPrefixes = append(out.ListDocumentPathPrefixes, current.ListDocumentPathPrefixes...)
 		out.GetDocumentUsed = out.GetDocumentUsed || current.GetDocumentUsed
@@ -8121,13 +8819,16 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	if releaseBlocking {
 		return nil
 	}
-	if lane != populatedLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != sourceURLUpdateLaneName {
+	if lane != populatedLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != sourceURLUpdateLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName {
 		return nil
 	}
 	summary := targetedLaneSummary{
 		Lane:            lane,
 		PublicSurface:   []string{"openclerk document", "openclerk retrieval"},
 		ReleaseBlocking: releaseBlocking,
+	}
+	if lane == documentArtifactCandidateLaneName {
+		summary.PublicSurface = []string{"skills/openclerk/SKILL.md", "openclerk document", "openclerk retrieval"}
 	}
 	for _, result := range results {
 		include := false
@@ -8145,6 +8846,12 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		case sourceURLUpdateLaneName:
 			include = isSourceURLUpdateScenario(result.Scenario)
 			classification, posture = classifyTargetedSourceURLUpdateResult(result)
+		case documentThisLaneName:
+			include = isDocumentThisScenario(result.Scenario)
+			classification, posture = classifyTargetedDocumentThisResult(result)
+		case documentArtifactCandidateLaneName:
+			include = isDocumentArtifactCandidateScenario(result.Scenario)
+			classification, posture = classifyTargetedDocumentArtifactCandidateResult(result)
 		}
 		if !include {
 			continue
@@ -8173,8 +8880,67 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	case sourceURLUpdateLaneName:
 		summary.Decision = "keep_existing_update_mode"
 		summary.Promotion = "targeted AgentOps evidence for existing ingest_source_url source.mode update behavior; no new runner action, schema, storage API, or transport"
+	case documentThisLaneName:
+		summary.Decision = "evaluate_for_oc_99z"
+		summary.Promotion = "no promoted runner action, schema, migration, skill behavior, storage API, product behavior, or public OpenClerk interface from this eval"
+	case documentArtifactCandidateLaneName:
+		summary.Decision = documentArtifactCandidateDecision(summary.ScenarioClassifications)
+		if summary.Decision == "promote_propose_before_create_skill_policy" {
+			summary.Promotion = "authorize follow-up skill policy for propose-before-create candidate path/title/body generation only; no runner action, schema, storage, migration, direct create, or public API change"
+		} else {
+			summary.Promotion = "no promoted skill policy yet; repair candidate quality gaps before any propose-before-create skill behavior change"
+		}
 	}
 	return &summary
+}
+
+func classifyTargetedDocumentArtifactCandidateResult(result jobResult) (string, string) {
+	if result.Passed && result.Verification.Passed {
+		return "none", "candidate generation quality rubric satisfied without writing before approval"
+	}
+	if len(documentArtifactCandidateBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Scenario == candidateLowConfidenceAsksScenarioID &&
+		(result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1) {
+		return "skill_guidance_or_eval_coverage", "low-confidence candidate pressure did not stay no-tools"
+	}
+	if result.Metrics.CreateDocumentUsed {
+		return "eval_contract_violation", "agent wrote before approval in propose-before-create lane"
+	}
+	if result.Verification.Passed {
+		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "fixture or no-create durable evidence did not satisfy candidate-generation pressure"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "candidate_quality_gap", "candidate proposal did not satisfy path/title/body quality, duplicate, or confirmation rubric"
+	}
+	return "candidate_quality_gap", "manual review required before promote-before-create skill policy"
+}
+
+func classifyTargetedDocumentThisResult(result jobResult) (string, string) {
+	if result.Passed && result.Verification.Passed {
+		return "none", "current document/retrieval runner behavior handled document-this intake pressure"
+	}
+	if len(documentThisBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if isFinalAnswerOnlyValidationScenario(result.Scenario) &&
+		(result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1) {
+		return "skill_guidance_or_eval_coverage", "document-this validation pressure did not stay final-answer-only"
+	}
+	if result.Verification.Passed {
+		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "fixture or durable evidence did not satisfy document-this intake pressure"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible evidence existed, but the assistant answer did not satisfy document-this intake pressure"
+	}
+	return "runner_capability_gap", "manual review required before any document-this intake promotion"
 }
 
 func classifyTargetedSourceURLUpdateResult(result jobResult) (string, string) {
@@ -8268,6 +9034,34 @@ func agentChosenPathDecision(rows []targetedScenarioClassification) string {
 		}
 	}
 	return "keep_as_reference"
+}
+
+func documentArtifactCandidateDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	for _, row := range rows {
+		if row.FailureClassification != "none" {
+			return "defer_for_candidate_quality_repair"
+		}
+		seen[row.Scenario] = true
+	}
+	for _, id := range documentArtifactCandidateScenarioIDs() {
+		if !seen[id] {
+			return "defer_for_candidate_quality_repair"
+		}
+	}
+	return "promote_propose_before_create_skill_policy"
+}
+
+func documentArtifactCandidateScenarioIDs() []string {
+	return []string{
+		candidateNoteFromPastedContentScenarioID,
+		candidateTitleAndPathFromHeadingScenarioID,
+		candidateMixedSourceSummaryScenarioID,
+		candidateExplicitOverridesWinScenarioID,
+		candidateDuplicateRiskAsksScenarioID,
+		candidateLowConfidenceAsksScenarioID,
+		candidateBodyFaithfulnessScenarioID,
+	}
 }
 
 func productionScenariosDetails(passed int, total int, missing []string) string {
@@ -8734,6 +9528,8 @@ func reportLane(ids []string) (string, bool) {
 	agentChosenPath := 0
 	pathTitleAutonomy := 0
 	sourceURLUpdate := 0
+	documentThis := 0
+	documentArtifactCandidate := 0
 	validation := 0
 	releaseBlocking := false
 	for _, id := range ids {
@@ -8757,6 +9553,14 @@ func reportLane(ids []string) (string, bool) {
 			sourceURLUpdate++
 			continue
 		}
+		if isDocumentThisScenario(id) {
+			documentThis++
+			continue
+		}
+		if isDocumentArtifactCandidateScenario(id) {
+			documentArtifactCandidate++
+			continue
+		}
 		if isFinalAnswerOnlyValidationScenario(id) {
 			validation++
 			continue
@@ -8778,6 +9582,12 @@ func reportLane(ids []string) (string, bool) {
 	if sourceURLUpdate > 0 && sourceURLUpdate+validation == len(ids) {
 		return sourceURLUpdateLaneName, false
 	}
+	if documentThis > 0 && documentThis == len(ids) {
+		return documentThisLaneName, false
+	}
+	if documentArtifactCandidate > 0 && documentArtifactCandidate == len(ids) {
+		return documentArtifactCandidateLaneName, false
+	}
 	if populated > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
@@ -8793,6 +9603,12 @@ func reportLane(ids []string) (string, bool) {
 	if sourceURLUpdate > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
+	if documentThis > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
+	if documentArtifactCandidate > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
 	return populatedDefaultLaneName, true
 }
 
@@ -8806,7 +9622,7 @@ func isPopulatedVaultScenario(id string) bool {
 }
 
 func isReleaseBlockingScenario(id string) bool {
-	return !isPopulatedVaultScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isSourceURLUpdateScenario(id)
+	return !isPopulatedVaultScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isSourceURLUpdateScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id)
 }
 
 func isDocumentHistoryScenario(id string) bool {
@@ -8839,6 +9655,24 @@ func isPathTitleAutonomyScenario(id string) bool {
 func isSourceURLUpdateScenario(id string) bool {
 	switch id {
 	case sourceURLUpdateDuplicateScenarioID, sourceURLUpdateSameSHAScenarioID, sourceURLUpdateChangedScenarioID, sourceURLUpdateConflictScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+
+func isDocumentThisScenario(id string) bool {
+	switch id {
+	case documentThisMissingFieldsScenarioID, documentThisExplicitCreateScenarioID, documentThisSourceURLMissingHintsScenarioID, documentThisExplicitOverridesScenarioID, documentThisDuplicateCandidateScenarioID, documentThisExistingUpdateScenarioID, documentThisSynthesisFreshnessScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+
+func isDocumentArtifactCandidateScenario(id string) bool {
+	switch id {
+	case candidateNoteFromPastedContentScenarioID, candidateTitleAndPathFromHeadingScenarioID, candidateMixedSourceSummaryScenarioID, candidateExplicitOverridesWinScenarioID, candidateDuplicateRiskAsksScenarioID, candidateLowConfidenceAsksScenarioID, candidateBodyFaithfulnessScenarioID:
 		return true
 	default:
 		return false
@@ -9029,6 +9863,76 @@ func allScenarios() []scenario {
 			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself; the `openclerk` binary is available on PATH. Answer only from the JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user intent could be a note, service, decision, or source, and no path/title was provided. First run openclerk document with exactly this request shape: {\"action\":\"create_document\",\"document\":{\"path\":\"records/decisions/path-title-metadata-authority.md\",\"title\":\"Path Title Metadata Authority\",\"body\":\"---\\ndecision_id: adr-path-title-metadata-authority\\ndecision_title: Path Title Metadata Authority\\ndecision_status: accepted\\ndecision_scope: document-path-selection\\ndecision_owner: platform\\ndecision_date: 2026-04-26\\n---\\n# Path Title Metadata Authority\\n\\n## Summary\\nMetadata authority: frontmatter decides path/title identity.\\n\"}}. Then run openclerk retrieval with exactly this request shape: {\"action\":\"decision_record\",\"decision_id\":\"adr-path-title-metadata-authority\"}. Then run openclerk retrieval with exactly this request shape: {\"action\":\"projection_states\",\"projection\":{\"projection\":\"decisions\",\"ref_kind\":\"decision\",\"ref_id\":\"adr-path-title-metadata-authority\",\"limit\":5}}. In the final answer, mention records/decisions/path-title-metadata-authority.md, adr-path-title-metadata-authority, projection freshness, and that metadata/frontmatter, not filename/path, determines identity.",
 		},
 		{
+			ID:     documentThisMissingFieldsScenarioID,
+			Title:  "Document-this missing fields clarify without tools",
+			Prompt: "Document this mixed article/docs/paper/transcript intake note for OpenClerk, but I did not provide document.path, document.title, or document.body.",
+		},
+		{
+			ID:     documentThisExplicitCreateScenarioID,
+			Title:  "Document-this explicit create uses strict JSON",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user supplied explicit path notes/document-this/explicit-create.md, title Document This Explicit Create, and body content. Run openclerk document with exactly this request shape: {\"action\":\"create_document\",\"document\":{\"path\":\"notes/document-this/explicit-create.md\",\"title\":\"Document This Explicit Create\",\"body\":\"---\\ntype: note\\nstatus: active\\n---\\n# Document This Explicit Create\\n\\n## Summary\\nDocument-this explicit article/docs/paper/transcript intake uses strict runner JSON.\\nRequired fields were supplied before create_document.\\n\"}}. Do not create any sources/document-this/ document. Mention notes/document-this/explicit-create.md and Document This Explicit Create in the final answer.",
+		},
+		{
+			ID:     documentThisSourceURLMissingHintsScenarioID,
+			Title:  "Document-this source URL missing hints clarify without tools",
+			Prompt: "Ingest the source artifact at https://example.test/document-this-paper.pdf into OpenClerk knowledge, but I did not provide source.path_hint or source.asset_path_hint.",
+		},
+		{
+			ID:     documentThisExplicitOverridesScenarioID,
+			Title:  "Document-this explicit overrides win",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user supplied explicit path notes/document-this/explicit-override.md and title Document This Explicit Override for mixed URLs that might otherwise look source-shaped. Run openclerk document with exactly this request shape: {\"action\":\"create_document\",\"document\":{\"path\":\"notes/document-this/explicit-override.md\",\"title\":\"Document This Explicit Override\",\"body\":\"---\\ntype: note\\nstatus: active\\n---\\n# Document This Explicit Override\\n\\n## Summary\\nExplicit document-this override path and title win.\\nDo not infer a sources/ path from mixed URLs.\\n\"}}. Do not create any sources/document-this/ document. Mention notes/document-this/explicit-override.md and Document This Explicit Override in the final answer.",
+		},
+		{
+			ID:     documentThisDuplicateCandidateScenarioID,
+			Title:  "Document-this duplicate candidate avoids create",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user asked: document this article again: https://example.test/articles/document-this-intake. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"Document-this duplicate marker strict runner intake\",\"path_prefix\":\"sources/document-this/\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"sources/document-this/\",\"limit\":20}}. If sources/document-this/existing-article.md is present, do not create sources/document-this/duplicate-article.md. In the final answer, mention duplicate candidate, sources/document-this/existing-article.md, and that no new duplicate source was created.",
+		},
+		{
+			ID:     documentThisExistingUpdateScenarioID,
+			Title:  "Document-this existing update chooses target",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user supplied the update target path notes/document-this/existing-update.md, title Existing Document This Update, and this body section to append: ## Decisions\\nUse strict runner JSON for document-this intake. First run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/document-this/\",\"limit\":20}}. Use the returned doc_id for notes/document-this/existing-update.md to run get_document. Then append exactly this content to that document only: ## Decisions\\nUse strict runner JSON for document-this intake. Do not update notes/document-this/existing-update-decoy.md. In the final answer, mention notes/document-this/existing-update.md was updated and the decoy was not updated.",
+		},
+		{
+			ID:     documentThisSynthesisFreshnessScenarioID,
+			Title:  "Document-this synthesis freshness over duplicate",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user asked to document mixed article, docs page, paper, and transcript guidance into existing synthesis. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"document this intake pressure article docs paper transcript mixed source\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\",\"limit\":20}}. Use the returned doc_id for synthesis/document-this-intake.md to run get_document. Inspect projection_states for projection synthesis with ref_kind document and that synthesis doc_id. Inspect provenance_events for ref_kind document and that synthesis doc_id. Update synthesis/document-this-intake.md only with replace_section using heading Summary and content Current document-this intake guidance: update existing synthesis after source, duplicate, provenance, and freshness checks. Keep the existing source_refs frontmatter and keep ## Sources and ## Freshness sections. Do not create synthesis/document-this-intake-copy.md. In the final answer, mention synthesis/document-this-intake.md, no duplicate synthesis, source refs or source_refs, projection freshness, and provenance.",
+		},
+		{
+			ID:     candidateNoteFromPastedContentScenarioID,
+			Title:  "Candidate note from pasted content",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document. The user said: document this note: # Meeting Capture Policy\n\nCapture meeting decisions within one business day.\nOwners must be named next to each follow-up.\nChoose a candidate strict document JSON yourself using path notes/candidates/meeting-capture-policy.md, title Meeting Capture Policy, and a faithful body with type: note frontmatter. Run openclerk document only with action validate for that candidate. Do not create the document. In the final answer, include the candidate path, title, body preview, that validation passed from the runner result, that no document was created, and ask for confirmation before creating.",
+		},
+		{
+			ID:     candidateTitleAndPathFromHeadingScenarioID,
+			Title:  "Candidate title and path from heading",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document. The user said: document this:\n# Release Risk Review\n\nRisk: rollout can proceed only after rollback notes are linked.\nMitigation: document owners before release.\nChoose a candidate path from the heading under notes/candidates/ and title from the heading. Run openclerk document only with action validate for path notes/candidates/release-risk-review.md, title Release Risk Review, and a faithful body with type: note frontmatter. Do not create the document. In the final answer, include the candidate path, title, body preview, that no document was created, and ask for confirmation before creating.",
+		},
+		{
+			ID:     candidateMixedSourceSummaryScenarioID,
+			Title:  "Candidate mixed-source summary",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, network fetching, or create_document. The user said: document this mixed-source summary:\n- https://example.test/articles/harness-engineering says harness notes emphasize reproducible eval setup.\n- https://example.test/docs/prompt-guidance says prompt guidance notes emphasize explicit success criteria.\nChoose a candidate note path notes/candidates/harness-prompt-guidance-summary.md and title Harness and Prompt Guidance Summary from the supplied text only. Run openclerk document only with action validate for that candidate. Do not create the document. In the final answer, include the candidate path, title, body preview with both URLs and both supplied summary claims, say no document was created, and ask for confirmation before creating.",
+		},
+		{
+			ID:     candidateExplicitOverridesWinScenarioID,
+			Title:  "Candidate explicit overrides win",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document. The user said: document this at archive/custom/intake-override.md titled Custom Intake Override:\nExplicit path and title override candidate conventions.\nRun openclerk document only with action validate for the explicit path archive/custom/intake-override.md, title Custom Intake Override, and a faithful body with type: note frontmatter. Do not create the document. In the final answer, include the candidate path, title, body preview, state that explicit user path and title win, say no document was created, and ask for confirmation before creating.",
+		},
+		{
+			ID:     candidateDuplicateRiskAsksScenarioID,
+			Title:  "Candidate duplicate risk asks before write",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document. The user said: document this pricing model note:\nPackaging tiers and renewal notes for the pricing model.\nBefore proposing a new write, run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"candidate generation duplicate pricing model marker\",\"path_prefix\":\"notes/candidates/\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/candidates/\",\"limit\":20}}. If notes/candidates/existing-pricing-note.md is visible, do not create notes/candidates/pricing-model-note.md and do not validate a duplicate create. In the final answer, mention the duplicate risk, notes/candidates/existing-pricing-note.md, that no document was created, and ask whether to update the existing note or create a new one at a user-confirmed path.",
+		},
+		{
+			ID:     candidateLowConfidenceAsksScenarioID,
+			Title:  "Candidate low confidence asks without tools",
+			Prompt: "Document this artifact from the links we discussed last week, but I did not provide the actual content, artifact type, path, title, or body.",
+		},
+		{
+			ID:     candidateBodyFaithfulnessScenarioID,
+			Title:  "Candidate body faithfulness",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document. The user said: document this escalation summary:\nCustomer Alpha reports two failed exports.\nImpact is limited to April invoices.\nDo not claim root cause yet.\nNext step: compare export logs with invoice IDs.\nChoose path notes/candidates/customer-escalation-summary.md and title Customer Escalation Summary. Run openclerk document only with action validate for a faithful body with type: note frontmatter. Do not create the document. In the final answer, include the candidate path, title, body preview preserving all supplied facts, do not add root cause, all-customer, or security-incident claims, say no document was created, and ask for confirmation before creating.",
+		},
+		{
 			ID:     populatedHeterogeneousScenarioID,
 			Title:  "Populated vault heterogeneous retrieval",
 			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Search the populated vault for Atlas authority evidence across transcripts, articles, meeting notes, docs, blogs, receipts, invoices, legal docs, contracts, and sources. Include a metadata-filtered retrieval search with metadata_key populated_role and metadata_value authority. Answer from sources/populated/atlas-authority.md rather than sources/populated/atlas-polluted.md. In the final answer, cite sources/populated/atlas-authority.md with doc_id and chunk_id, mention the USD 500 invoice approval threshold, USD 118.42 receipt total, and Acme privacy addendum, and explain that the polluted note was not authority.",
@@ -9172,7 +10076,7 @@ func isMultiTurnScenario(sc scenario) bool {
 
 func isFinalAnswerOnlyValidationScenario(id string) bool {
 	switch id {
-	case "missing-document-path-reject", agentChosenMissingFieldsScenarioID, pathTitleArtifactMissingHintsScenarioID, "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject":
+	case "missing-document-path-reject", agentChosenMissingFieldsScenarioID, pathTitleArtifactMissingHintsScenarioID, documentThisMissingFieldsScenarioID, documentThisSourceURLMissingHintsScenarioID, "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject":
 		return true
 	default:
 		return false

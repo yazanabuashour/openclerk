@@ -40,6 +40,8 @@ full release-gate replacements.
 | Memory/router reference | `docs/evals/results/ockp-memory-router-reference-poc.md` | Memory and router pressure scenario completed as reference evidence |
 | Real-vault dogfooding | `docs/evals/results/ockp-real-vault-agentops-trial.md` | Sanitized aggregate evidence only; raw logs, paths, titles, snippets, citations, document IDs, and raw JSON remain local-only |
 | Populated-vault synthetic pressure | `docs/evals/results/ockp-populated-vault-targeted.md`; follow-up `docs/evals/results/ockp-populated-vault-guidance-hardening.md` | Targeted run completed freshness/conflict and synthesis-update pressure; focused follow-up resolved the heterogeneous polluted-evidence guidance failure, with no runner capability gap or product/API promotion |
+| Document-this intake pressure | `docs/evals/results/ockp-document-this-intake-pressure.md` | Targeted document-this intake lane covers missing-field clarification, explicit create/override, duplicate candidates, existing updates, and synthesis freshness |
+| Document artifact candidate generation | `docs/evals/results/ockp-document-artifact-candidate-generation.md` | Targeted propose-before-create lane defers promotion pending repair; title/path, mixed-source, explicit-override, and body-faithfulness scenarios exposed `candidate_quality_gap`, and low-confidence clarification exposed `skill_guidance_or_eval_coverage` |
 
 ## Interpretation
 
