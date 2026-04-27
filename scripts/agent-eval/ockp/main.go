@@ -276,6 +276,7 @@ const (
 
 	artifactIngestionLaneName            = "heterogeneous-artifact-ingestion-pressure"
 	artifactPDFSourceURLScenarioID       = "artifact-pdf-source-url-ingestion"
+	artifactPDFNaturalIntentScenarioID   = "artifact-pdf-source-url-natural-intent"
 	artifactTranscriptScenarioID         = "artifact-transcript-canonical-markdown"
 	artifactInvoiceReceiptScenarioID     = "artifact-invoice-receipt-authority"
 	artifactMixedSynthesisScenarioID     = "artifact-mixed-synthesis-freshness"
@@ -284,6 +285,8 @@ const (
 	artifactBypassScenarioID             = "artifact-ingestion-bypass-reject"
 	artifactPDFSourcePath                = "sources/artifacts/vendor-security-paper.md"
 	artifactPDFAssetPath                 = "assets/sources/artifacts/vendor-security-paper.pdf"
+	artifactPDFNaturalSourcePath         = "sources/artifacts/vendor-security-paper-natural.md"
+	artifactPDFNaturalAssetPath          = "assets/sources/artifacts/vendor-security-paper-natural.pdf"
 	artifactPDFSourceURLToken            = "{{ARTIFACT_PDF_SOURCE_URL}}"
 	artifactPDFEvidenceText              = "ArtifactPDFIngestionEvidence"
 	artifactTranscriptPath               = "transcripts/artifacts/vendor-demo-transcript.md"
@@ -367,6 +370,7 @@ type reportMetadata struct {
 	Scenarios                []string     `json:"scenarios"`
 	Lane                     string       `json:"lane"`
 	ReleaseBlocking          bool         `json:"release_blocking"`
+	TargetedAcceptanceNote   string       `json:"targeted_acceptance_note,omitempty"`
 	RawLogsCommitted         bool         `json:"raw_logs_committed"`
 	RawLogsNote              string       `json:"raw_logs_note"`
 }
@@ -394,6 +398,7 @@ type jobResult struct {
 	WallSeconds             float64            `json:"wall_seconds"`
 	PhaseTimings            phaseTimings       `json:"phase_timings"`
 	Metrics                 metrics            `json:"metrics"`
+	FixturePreflight        *fixturePreflight  `json:"fixture_preflight,omitempty"`
 	Verification            verificationResult `json:"verification"`
 	Turns                   []turnResult       `json:"turns,omitempty"`
 	PromptSummary           string             `json:"prompt_summary"`
@@ -429,6 +434,7 @@ type metrics struct {
 	SearchMetadataFilters     []string       `json:"search_metadata_filters,omitempty"`
 	IngestSourceURLUsed       bool           `json:"ingest_source_url_used"`
 	IngestSourceURLUpdateUsed bool           `json:"ingest_source_url_update_used"`
+	SourcePDFDownloadFailure  bool           `json:"source_pdf_download_failure"`
 	ValidateUsed              bool           `json:"validate_used"`
 	CreateDocumentUsed        bool           `json:"create_document_used"`
 	ListDocumentsUsed         bool           `json:"list_documents_used"`
@@ -467,6 +473,15 @@ type verificationResult struct {
 	Documents     []string `json:"documents,omitempty"`
 }
 
+type fixturePreflight struct {
+	Name       string   `json:"name"`
+	Passed     bool     `json:"passed"`
+	Details    string   `json:"details,omitempty"`
+	Documents  []string `json:"documents,omitempty"`
+	SourcePath string   `json:"source_path,omitempty"`
+	AssetPath  string   `json:"asset_path,omitempty"`
+}
+
 type productionGateSummary struct {
 	Variant        string                    `json:"variant"`
 	PassesGate     bool                      `json:"passes_gate"`
@@ -490,11 +505,23 @@ type targetedLaneSummary struct {
 }
 
 type targetedScenarioClassification struct {
-	Variant               string `json:"variant"`
-	Scenario              string `json:"scenario"`
-	Status                string `json:"status"`
-	FailureClassification string `json:"failure_classification"`
-	EvidencePosture       string `json:"evidence_posture"`
+	Variant               string  `json:"variant"`
+	Scenario              string  `json:"scenario"`
+	Status                string  `json:"status"`
+	FailureClassification string  `json:"failure_classification"`
+	EvidencePosture       string  `json:"evidence_posture"`
+	ToolCalls             int     `json:"tool_calls"`
+	CommandExecutions     int     `json:"command_executions"`
+	AssistantCalls        int     `json:"assistant_calls"`
+	WallSeconds           float64 `json:"wall_seconds"`
+	PromptSpecificity     string  `json:"prompt_specificity,omitempty"`
+	UX                    string  `json:"ux,omitempty"`
+	Brittleness           string  `json:"brittleness,omitempty"`
+	Retries               int     `json:"retries"`
+	StepCount             int     `json:"step_count"`
+	Latency               string  `json:"latency,omitempty"`
+	GuidanceDependence    string  `json:"guidance_dependence,omitempty"`
+	FixturePreflight      string  `json:"fixture_preflight,omitempty"`
 }
 
 type jobRunner func(context.Context, runConfig, evalJob, cacheConfig) jobResult
@@ -631,6 +658,7 @@ func executeRun(ctx context.Context, config runConfig, stdout io.Writer, runner 
 			Scenarios:                selectedIDs,
 			Lane:                     lane,
 			ReleaseBlocking:          releaseBlocking,
+			TargetedAcceptanceNote:   targetedAcceptanceNote(lane),
 			RawLogsCommitted:         false,
 			RawLogsNote:              "Raw Codex event logs remain under <run-root> and are not committed.",
 		},
@@ -734,6 +762,10 @@ func codexJobRunner(ctx context.Context, config runConfig, job evalJob, cache ca
 		result.Error = fmt.Sprintf("configure variant: %v", err)
 		return result
 	}
+	if fixtures != nil && isArtifactPDFScenario(job.Scenario.ID) {
+		preflight := runArtifactPDFFixturePreflight(ctx, jobDir, paths, cache, fixtures)
+		result.FixturePreflight = &preflight
+	}
 	if cache.Mode == cacheModeIsolated {
 		if err := timedPhase(&timings.WarmCache, func() error { return warmGoModules(repoDir, jobDir, paths, cache) }); err != nil {
 			result.Error = fmt.Sprintf("warm go modules: %v", err)
@@ -833,14 +865,14 @@ type sourceURLUpdateFixtures struct {
 }
 
 func startSourceURLUpdateFixtures(scenarioID string) *sourceURLUpdateFixtures {
-	if !isSourceURLUpdateScenario(scenarioID) && scenarioID != artifactPDFSourceURLScenarioID {
+	if !isSourceURLUpdateScenario(scenarioID) && !isArtifactPDFScenario(scenarioID) {
 		return nil
 	}
 	fixtures := &sourceURLUpdateFixtures{
 		initialPDF: minimalEvalPDF("Source URL Update Stable", "OpenClerk Eval", sourceURLUpdateInitialText),
 		changedPDF: minimalEvalPDF("Source URL Update Changed", "OpenClerk Eval", sourceURLUpdateChangedText),
 	}
-	if scenarioID == artifactPDFSourceURLScenarioID {
+	if isArtifactPDFScenario(scenarioID) {
 		fixtures.initialPDF = minimalEvalPDF("Artifact PDF Source", "OpenClerk Eval", artifactPDFEvidenceText)
 	}
 	mux := http.NewServeMux()
@@ -888,6 +920,77 @@ func (f *sourceURLUpdateFixtures) renderPrompt(prompt string) string {
 	prompt = strings.ReplaceAll(prompt, sourceURLUpdateStableURLToken, f.stableURL())
 	prompt = strings.ReplaceAll(prompt, sourceURLUpdateChangedURLToken, f.changedURL())
 	return strings.ReplaceAll(prompt, artifactPDFSourceURLToken, f.stableURL())
+}
+
+func runArtifactPDFFixturePreflight(ctx context.Context, runDir string, paths evalPaths, cache cacheConfig, fixtures *sourceURLUpdateFixtures) fixturePreflight {
+	const sourcePath = "sources/artifacts/preflight-vendor-security-paper.md"
+	const assetPath = "assets/sources/artifacts/preflight-vendor-security-paper.pdf"
+	result := fixturePreflight{
+		Name:       "artifact_pdf_source_url_fixture",
+		Documents:  []string{sourcePath},
+		SourcePath: sourcePath,
+		AssetPath:  assetPath,
+	}
+	if fixtures == nil {
+		result.Details = "missing PDF fixture server"
+		return result
+	}
+	preflightRunDir := filepath.Join(runDir, "fixture-preflight")
+	preflightPaths := paths
+	preflightPaths.DatabasePath = filepath.Join(preflightRunDir, "openclerk-preflight.db")
+	if err := os.MkdirAll(filepath.Join(preflightRunDir, "tmp"), 0o755); err != nil {
+		result.Details = err.Error()
+		return result
+	}
+	request := runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestSourceURL,
+		Source: runner.SourceURLInput{
+			URL:           fixtures.stableURL(),
+			PathHint:      sourcePath,
+			AssetPathHint: assetPath,
+			Title:         "Vendor Security Paper Preflight",
+		},
+	}
+	body, err := json.Marshal(request)
+	if err != nil {
+		result.Details = err.Error()
+		return result
+	}
+	cmdCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(cmdCtx, filepath.Join(runDir, "bin", "openclerk"), "document")
+	cmd.Dir = runDir
+	cmd.Env = evalEnv(runDir, preflightPaths, cache)
+	cmd.Stdin = bytes.NewReader(body)
+	output, err := cmd.CombinedOutput()
+	if cmdCtx.Err() == context.DeadlineExceeded {
+		result.Details = "preflight timed out"
+		return result
+	}
+	if err != nil {
+		result.Details = fmt.Sprintf("%v: %s", err, strings.TrimSpace(string(output)))
+		return result
+	}
+	var decoded runner.DocumentTaskResult
+	if err := json.Unmarshal(output, &decoded); err != nil {
+		result.Details = fmt.Sprintf("decode preflight result: %v", err)
+		return result
+	}
+	if decoded.Rejected {
+		result.Details = "preflight rejected: " + decoded.RejectionReason
+		return result
+	}
+	if decoded.Ingestion == nil {
+		result.Details = "preflight returned no ingestion result"
+		return result
+	}
+	if decoded.Ingestion.SourcePath != sourcePath || decoded.Ingestion.AssetPath != assetPath || len(decoded.Ingestion.Citations) == 0 {
+		result.Details = fmt.Sprintf("unexpected preflight ingestion source=%q asset=%q citations=%d", decoded.Ingestion.SourcePath, decoded.Ingestion.AssetPath, len(decoded.Ingestion.Citations))
+		return result
+	}
+	result.Passed = true
+	result.Details = "generated HTTP PDF ingested through built openclerk binary"
+	return result
 }
 
 func servePDF(w http.ResponseWriter, body []byte) {
@@ -3290,8 +3393,8 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 			RequireApproval:  true,
 			RequireBodyShown: true,
 		})
-	case artifactPDFSourceURLScenarioID:
-		return verifyArtifactPDFSourceURL(ctx, paths, finalMessage, turnMetrics)
+	case artifactPDFSourceURLScenarioID, artifactPDFNaturalIntentScenarioID:
+		return verifyArtifactPDFSourceURL(ctx, paths, sc.ID, finalMessage, turnMetrics)
 	case artifactTranscriptScenarioID:
 		return verifyArtifactTranscript(ctx, paths, finalMessage, turnMetrics)
 	case artifactInvoiceReceiptScenarioID:
@@ -7583,12 +7686,31 @@ func verifyDocumentArtifactCandidateLowConfidence(ctx context.Context, paths eva
 	}, nil
 }
 
-func verifyArtifactPDFSourceURL(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
-	doc, found, err := documentByPath(ctx, paths, artifactPDFSourcePath)
+type artifactPDFExpectation struct {
+	SourcePath string
+	AssetPath  string
+}
+
+func artifactPDFExpectedPaths(scenarioID string) artifactPDFExpectation {
+	if scenarioID == artifactPDFNaturalIntentScenarioID {
+		return artifactPDFExpectation{
+			SourcePath: artifactPDFNaturalSourcePath,
+			AssetPath:  artifactPDFNaturalAssetPath,
+		}
+	}
+	return artifactPDFExpectation{
+		SourcePath: artifactPDFSourcePath,
+		AssetPath:  artifactPDFAssetPath,
+	}
+}
+
+func verifyArtifactPDFSourceURL(ctx context.Context, paths evalPaths, scenarioID string, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	expectation := artifactPDFExpectedPaths(scenarioID)
+	doc, found, err := documentByPath(ctx, paths, expectation.SourcePath)
 	if err != nil {
 		return verificationResult{}, err
 	}
-	count, err := exactDocumentCount(ctx, paths, artifactPDFSourcePath)
+	count, err := exactDocumentCount(ctx, paths, expectation.SourcePath)
 	if err != nil {
 		return verificationResult{}, err
 	}
@@ -7596,7 +7718,13 @@ func verifyArtifactPDFSourceURL(ctx context.Context, paths evalPaths, finalMessa
 	if !found || doc == nil {
 		failures = append(failures, "missing PDF source document")
 	} else {
-		failures = append(failures, missingRequired(doc.Body, []string{artifactPDFEvidenceText, "source_url:", "asset_path:", artifactPDFAssetPath})...)
+		failures = append(failures, missingRequired(doc.Body, []string{artifactPDFEvidenceText, "source_url:", "asset_path:", expectation.AssetPath})...)
+		if doc.Metadata["asset_path"] != expectation.AssetPath {
+			failures = append(failures, fmt.Sprintf("expected asset_path metadata %q, got %q", expectation.AssetPath, doc.Metadata["asset_path"]))
+		}
+		if doc.Metadata["source_type"] != "pdf" {
+			failures = append(failures, fmt.Sprintf("expected source_type metadata pdf, got %q", doc.Metadata["source_type"]))
+		}
 	}
 	if count != 1 {
 		failures = append(failures, fmt.Sprintf("expected one PDF source document, got %d", count))
@@ -7604,14 +7732,16 @@ func verifyArtifactPDFSourceURL(ctx context.Context, paths evalPaths, finalMessa
 	if !turnMetrics.IngestSourceURLUsed || turnMetrics.IngestSourceURLUpdateUsed {
 		failures = append(failures, "agent did not use default create-mode ingest_source_url")
 	}
-	assistantPass := messageContainsAll(finalMessage, []string{artifactPDFSourcePath, artifactPDFAssetPath}) &&
+	assistantPass := messageContainsAll(finalMessage, []string{expectation.SourcePath, expectation.AssetPath}) &&
 		messageContainsAny(finalMessage, []string{"citation", "citations", "doc_id", "chunk_id"}) &&
 		messageContainsAny(finalMessage, []string{"ingested", "created", "source URL"})
 	if !assistantPass {
 		failures = append(failures, "final answer did not report PDF source ingestion with citation evidence")
 	}
 	databasePass := found && doc != nil && count == 1 &&
-		len(missingRequired(doc.Body, []string{artifactPDFEvidenceText, "source_url:", "asset_path:", artifactPDFAssetPath})) == 0
+		doc.Metadata["asset_path"] == expectation.AssetPath &&
+		doc.Metadata["source_type"] == "pdf" &&
+		len(missingRequired(doc.Body, []string{artifactPDFEvidenceText, "source_url:", "asset_path:", expectation.AssetPath})) == 0
 	activityPass := len(artifactIngestionBypassFailures(turnMetrics)) == 0 &&
 		turnMetrics.IngestSourceURLUsed && !turnMetrics.IngestSourceURLUpdateUsed
 	return verificationResult{
@@ -7619,7 +7749,7 @@ func verifyArtifactPDFSourceURL(ctx context.Context, paths evalPaths, finalMessa
 		DatabasePass:  databasePass,
 		AssistantPass: assistantPass && activityPass,
 		Details:       missingDetails(failures),
-		Documents:     []string{artifactPDFSourcePath},
+		Documents:     []string{expectation.SourcePath},
 	}, nil
 }
 
@@ -8677,6 +8807,10 @@ func parseMetrics(eventsPath string) (parsedTurn, error) {
 		if event.ThreadID != "" {
 			out.sessionID = event.ThreadID
 		}
+		itemText := string(event.Item)
+		if strings.Contains(itemText, "run document task: download source PDF") {
+			out.metrics.SourcePDFDownloadFailure = true
+		}
 		if event.Usage != nil {
 			usageExposed = true
 			input, cached, output := usageNumbers(*event.Usage)
@@ -8684,7 +8818,6 @@ func parseMetrics(eventsPath string) (parsedTurn, error) {
 			cachedTotal += cached
 			outputTotal += output
 		}
-		itemText := string(event.Item)
 		if event.Type == "message" || strings.Contains(itemText, `"type":"message"`) || strings.Contains(itemText, `"type":"agent_message"`) {
 			if strings.Contains(itemText, `"role":"assistant"`) || strings.Contains(itemText, `"type":"message"`) || strings.Contains(itemText, `"type":"agent_message"`) {
 				out.metrics.AssistantCalls++
@@ -9065,6 +9198,7 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.SearchMetadataFilters = append(out.SearchMetadataFilters, current.SearchMetadataFilters...)
 		out.IngestSourceURLUsed = out.IngestSourceURLUsed || current.IngestSourceURLUsed
 		out.IngestSourceURLUpdateUsed = out.IngestSourceURLUpdateUsed || current.IngestSourceURLUpdateUsed
+		out.SourcePDFDownloadFailure = out.SourcePDFDownloadFailure || current.SourcePDFDownloadFailure
 		out.ValidateUsed = out.ValidateUsed || current.ValidateUsed
 		out.CreateDocumentUsed = out.CreateDocumentUsed || current.CreateDocumentUsed
 		out.ListDocumentsUsed = out.ListDocumentsUsed || current.ListDocumentsUsed
@@ -9282,6 +9416,18 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 			Status:                result.Status,
 			FailureClassification: classification,
 			EvidencePosture:       posture,
+			ToolCalls:             result.Metrics.ToolCalls,
+			CommandExecutions:     result.Metrics.CommandExecutions,
+			AssistantCalls:        result.Metrics.AssistantCalls,
+			WallSeconds:           result.WallSeconds,
+			PromptSpecificity:     promptSpecificity(result.Scenario),
+			UX:                    scenarioUX(result),
+			Brittleness:           scenarioBrittleness(result),
+			Retries:               scenarioRetries(result),
+			StepCount:             scenarioStepCount(result),
+			Latency:               scenarioLatency(result),
+			GuidanceDependence:    scenarioGuidanceDependence(result),
+			FixturePreflight:      fixturePreflightStatus(result.FixturePreflight),
 		})
 	}
 	if len(summary.ScenarioClassifications) == 0 {
@@ -9321,6 +9467,9 @@ func classifyTargetedArtifactIngestionResult(result jobResult) (string, string) 
 	if result.Passed && result.Verification.Passed {
 		return "none", "current document/retrieval runner evidence preserved artifact authority, citations, provenance, freshness, and bypass boundaries"
 	}
+	if result.FixturePreflight != nil && !result.FixturePreflight.Passed {
+		return "data_hygiene", "PDF fixture preflight failed before agent behavior could be evaluated: " + result.FixturePreflight.Details
+	}
 	if len(artifactIngestionBypassFailures(result.Metrics)) != 0 {
 		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
 	}
@@ -9331,6 +9480,15 @@ func classifyTargetedArtifactIngestionResult(result jobResult) (string, string) 
 	if result.Verification.Passed {
 		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
 	}
+	if isArtifactPDFScenario(result.Scenario) && !result.Verification.DatabasePass && result.FixturePreflight != nil && result.FixturePreflight.Passed {
+		if result.Metrics.SourcePDFDownloadFailure {
+			return "eval_coverage", "PDF fixture preflight worked, but the agent-runner process could not reach the generated HTTP PDF URL"
+		}
+		if result.Scenario == artifactPDFNaturalIntentScenarioID {
+			return "ergonomics_gap", "scripted PDF fixture preflight worked, but natural user intent did not produce durable source evidence"
+		}
+		return "runner_capability_gap", "scripted PDF source URL control used the supported primitive but durable source evidence was missing"
+	}
 	if !result.Verification.DatabasePass {
 		return "data_hygiene", "fixture or durable artifact evidence did not satisfy heterogeneous artifact pressure"
 	}
@@ -9338,6 +9496,97 @@ func classifyTargetedArtifactIngestionResult(result jobResult) (string, string) 
 		return "skill_guidance", "runner-visible evidence existed, but the assistant answer did not satisfy heterogeneous artifact pressure"
 	}
 	return "runner_capability_gap", "manual review required before any generalized artifact ingestion surface promotion"
+}
+
+func promptSpecificity(scenarioID string) string {
+	switch scenarioID {
+	case artifactPDFSourceURLScenarioID:
+		return "scripted-control"
+	case artifactPDFNaturalIntentScenarioID:
+		return "natural-user-intent"
+	default:
+		return "scenario-specific"
+	}
+}
+
+func scenarioUX(result jobResult) string {
+	if result.Passed && result.Verification.Passed {
+		return "completed"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "answer_repair_needed"
+	}
+	if result.Metrics.SourcePDFDownloadFailure {
+		return "local_fixture_unreachable_from_agent_runner"
+	}
+	if isArtifactPDFScenario(result.Scenario) && result.FixturePreflight != nil && result.FixturePreflight.Passed {
+		return "durable_write_failed_after_working_fixture"
+	}
+	return "manual_review"
+}
+
+func scenarioBrittleness(result jobResult) string {
+	if result.FixturePreflight != nil && !result.FixturePreflight.Passed {
+		return "fixture_dependent"
+	}
+	if result.Metrics.SourcePDFDownloadFailure {
+		return "harness_transport_sensitive"
+	}
+	if result.Scenario == artifactPDFSourceURLScenarioID {
+		return "low_scripted_control"
+	}
+	if result.Scenario == artifactPDFNaturalIntentScenarioID && !result.Passed {
+		return "natural_prompt_sensitive"
+	}
+	return "normal"
+}
+
+func scenarioRetries(result jobResult) int {
+	if len(result.Turns) <= 1 {
+		return 0
+	}
+	return len(result.Turns) - 1
+}
+
+func scenarioStepCount(result jobResult) int {
+	return result.Metrics.CommandExecutions
+}
+
+func scenarioLatency(result jobResult) string {
+	switch {
+	case result.WallSeconds == 0:
+		return "not_measured"
+	case result.WallSeconds < 15:
+		return "low"
+	case result.WallSeconds < 60:
+		return "medium"
+	default:
+		return "high"
+	}
+}
+
+func scenarioGuidanceDependence(result jobResult) string {
+	switch result.Scenario {
+	case artifactPDFSourceURLScenarioID:
+		return "high_exact_request_shape"
+	case artifactPDFNaturalIntentScenarioID:
+		if result.Passed {
+			return "moderate_user_language_with_required_hints"
+		}
+		return "high_if_natural_prompt_failed"
+	default:
+		return "scenario_prompt"
+	}
+}
+
+func fixturePreflightStatus(preflight *fixturePreflight) string {
+	if preflight == nil {
+		return "not_applicable"
+	}
+	if preflight.Passed {
+		return "passed"
+	}
+	return "failed"
 }
 
 func classifyTargetedDocumentArtifactCandidateResult(result jobResult) (string, string) {
@@ -9532,6 +9781,7 @@ func documentArtifactCandidateScenarioIDs() []string {
 func artifactIngestionScenarioIDs() []string {
 	return []string{
 		artifactPDFSourceURLScenarioID,
+		artifactPDFNaturalIntentScenarioID,
 		artifactTranscriptScenarioID,
 		artifactInvoiceReceiptScenarioID,
 		artifactMixedSynthesisScenarioID,
@@ -9870,6 +10120,9 @@ func writeMarkdownReport(path string, rep report) error {
 	fmt.Fprintf(&b, "- Harness elapsed seconds: `%.2f`\n", rep.Metadata.HarnessElapsedSeconds)
 	fmt.Fprintf(&b, "- Effective parallel speedup: `%.2fx`\n", rep.Metadata.EffectiveParallelSpeedup)
 	fmt.Fprintf(&b, "- Parallel efficiency: `%.2f`\n", rep.Metadata.ParallelEfficiency)
+	if rep.Metadata.TargetedAcceptanceNote != "" {
+		fmt.Fprintf(&b, "- Targeted acceptance: %s\n", rep.Metadata.TargetedAcceptanceNote)
+	}
 	b.WriteString("- Raw logs: `<run-root>/<variant>/<scenario>/turn-N/events.jsonl`\n\n")
 	if rep.ProductionGate != nil {
 		fmt.Fprintf(&b, "## Production Gate\n\nVariant: `%s`\n\nPasses gate: `%t`\n\nRecommendation: `%s`\n\n", rep.ProductionGate.Variant, rep.ProductionGate.PassesGate, rep.ProductionGate.Recommendation)
@@ -9913,14 +10166,26 @@ func writeMarkdownReport(path string, rep report) error {
 		fmt.Fprintf(&b, "Decision: `%s`\n\n", rep.TargetedLaneSummary.Decision)
 		fmt.Fprintf(&b, "Public surface: `%s`\n\n", strings.Join(rep.TargetedLaneSummary.PublicSurface, "`, `"))
 		fmt.Fprintf(&b, "Promotion: %s.\n\n", rep.TargetedLaneSummary.Promotion)
-		b.WriteString("| Variant | Scenario | Status | Failure classification | Evidence posture |\n")
-		b.WriteString("| --- | --- | --- | --- | --- |\n")
+		b.WriteString("| Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Latency | Guidance dependence | Fixture preflight | Evidence posture |\n")
+		b.WriteString("| --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | --- | --- | --- | --- |\n")
 		for _, row := range rep.TargetedLaneSummary.ScenarioClassifications {
-			fmt.Fprintf(&b, "| `%s` | `%s` | `%s` | `%s` | %s |\n",
+			fmt.Fprintf(&b, "| `%s` | `%s` | `%s` | `%s` | %d | %d | %d | %.2f | `%s` | `%s` | `%s` | %d | %d | `%s` | `%s` | `%s` | %s |\n",
 				row.Variant,
 				row.Scenario,
 				row.Status,
 				row.FailureClassification,
+				row.ToolCalls,
+				row.CommandExecutions,
+				row.AssistantCalls,
+				row.WallSeconds,
+				row.PromptSpecificity,
+				row.UX,
+				row.Brittleness,
+				row.Retries,
+				row.StepCount,
+				row.Latency,
+				row.GuidanceDependence,
+				row.FixturePreflight,
 				markdownCell(row.EvidencePosture),
 			)
 		}
@@ -10100,6 +10365,13 @@ func reportLane(ids []string) (string, bool) {
 	return populatedDefaultLaneName, true
 }
 
+func targetedAcceptanceNote(lane string) string {
+	if lane == artifactIngestionLaneName {
+		return "artifact ingestion rows report tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, fixture preflight, and final classification"
+	}
+	return ""
+}
+
 func isPopulatedVaultScenario(id string) bool {
 	switch id {
 	case populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID:
@@ -10169,7 +10441,16 @@ func isDocumentArtifactCandidateScenario(id string) bool {
 
 func isArtifactIngestionScenario(id string) bool {
 	switch id {
-	case artifactPDFSourceURLScenarioID, artifactTranscriptScenarioID, artifactInvoiceReceiptScenarioID, artifactMixedSynthesisScenarioID, artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID:
+	case artifactPDFSourceURLScenarioID, artifactPDFNaturalIntentScenarioID, artifactTranscriptScenarioID, artifactInvoiceReceiptScenarioID, artifactMixedSynthesisScenarioID, artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+
+func isArtifactPDFScenario(id string) bool {
+	switch id {
+	case artifactPDFSourceURLScenarioID, artifactPDFNaturalIntentScenarioID:
 		return true
 	default:
 		return false
@@ -10557,6 +10838,15 @@ Final answer requirements:
 			ID:     artifactPDFSourceURLScenarioID,
 			Title:  "Artifact PDF source URL ingestion",
 			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or manual PDF downloads. Run openclerk document with exactly this request shape: {\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{ARTIFACT_PDF_SOURCE_URL}}\",\"path_hint\":\"sources/artifacts/vendor-security-paper.md\",\"asset_path_hint\":\"assets/sources/artifacts/vendor-security-paper.pdf\",\"title\":\"Vendor Security Paper\"}}. In the final answer, mention sources/artifacts/vendor-security-paper.md, assets/sources/artifacts/vendor-security-paper.pdf, citation evidence such as doc_id or chunk_id, and that the PDF source URL was ingested through ingest_source_url.",
+		},
+		{
+			ID:    artifactPDFNaturalIntentScenarioID,
+			Title: "Artifact PDF source URL natural intent",
+			Prompt: `Use the configured local OpenClerk data path. I need this vendor security paper PDF captured as an OpenClerk source from {{ARTIFACT_PDF_SOURCE_URL}}.
+
+Use the installed OpenClerk runner only. Do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or manual PDF downloads.
+
+Please store the source note at sources/artifacts/vendor-security-paper-natural.md, store the PDF asset at assets/sources/artifacts/vendor-security-paper-natural.pdf, title it Vendor Security Paper Natural, and answer from the runner JSON result. In your final answer, mention the source note path, asset path, citation evidence such as doc_id or chunk_id, and that the PDF source URL was ingested through ingest_source_url.`,
 		},
 		{
 			ID:     artifactTranscriptScenarioID,

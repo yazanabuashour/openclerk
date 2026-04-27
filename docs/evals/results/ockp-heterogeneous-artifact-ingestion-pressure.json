@@ -1,22 +1,23 @@
 {
   "metadata": {
-    "generated_at": "2026-04-27T14:04:05.489862Z",
+    "generated_at": "2026-04-27T16:48:13.351116Z",
     "model": "gpt-5.4-mini",
     "reasoning_effort": "medium",
     "harness": "codex exec --json --full-auto from throwaway run directories; single-turn scenarios use --ephemeral and multi-turn scenarios resume one persisted eval session",
     "configured_parallelism": 1,
     "cache_mode": "shared",
-    "cache_prewarm_seconds": 17.27,
-    "harness_elapsed_seconds": 249.61,
-    "effective_parallel_speedup": 0.83,
-    "parallel_efficiency": 0.83,
+    "cache_prewarm_seconds": 18.06,
+    "harness_elapsed_seconds": 413.48,
+    "effective_parallel_speedup": 0.89,
+    "parallel_efficiency": 0.89,
     "phase_totals": {
-      "copy_repo_seconds": 0.15,
-      "install_variant_seconds": 23.58,
+      "copy_repo_seconds": 0.17,
+      "install_variant_seconds": 24.15,
       "seed_data_seconds": 0.09,
-      "agent_run_seconds": 208.32,
+      "agent_run_seconds": 369.81,
+      "parse_metrics_seconds": 0.02,
       "verify_seconds": 0.18,
-      "total_seconds": 232.33
+      "total_seconds": 395.42
     },
     "run_root_artifact_reference": "\u003crun-root\u003e",
     "raw_log_placeholder": "\u003crun-root\u003e/\u003cvariant\u003e/\u003cscenario\u003e/turn-N/events.jsonl",
@@ -25,6 +26,7 @@
     ],
     "scenarios": [
       "artifact-pdf-source-url-ingestion",
+      "artifact-pdf-source-url-natural-intent",
       "artifact-transcript-canonical-markdown",
       "artifact-invoice-receipt-authority",
       "artifact-mixed-synthesis-freshness",
@@ -34,6 +36,7 @@
     ],
     "lane": "heterogeneous-artifact-ingestion-pressure",
     "release_blocking": false,
+    "targeted_acceptance_note": "artifact ingestion rows report tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, fixture preflight, and final classification",
     "raw_logs_committed": false,
     "raw_logs_note": "Raw Codex event logs remain under \u003crun-root\u003e and are not committed."
   },
@@ -45,13 +48,13 @@
       "passed": false,
       "status": "failed",
       "exit_code": 0,
-      "wall_seconds": 23.59,
+      "wall_seconds": 39.68,
       "phase_timings": {
         "copy_repo_seconds": 0.03,
-        "install_variant_seconds": 6.72,
-        "agent_run_seconds": 23.59,
-        "verify_seconds": 0.02,
-        "total_seconds": 30.36
+        "install_variant_seconds": 3.09,
+        "agent_run_seconds": 39.68,
+        "verify_seconds": 0.01,
+        "total_seconds": 43.22
       },
       "metrics": {
         "assistant_calls": 4,
@@ -69,6 +72,7 @@
         "search_metadata_filter_used": false,
         "ingest_source_url_used": true,
         "ingest_source_url_update_used": false,
+        "source_pdf_download_failure": true,
         "validate_used": false,
         "create_document_used": false,
         "list_documents_used": false,
@@ -82,10 +86,10 @@
         "provenance_events_used": false,
         "projection_states_used": false,
         "usage_exposed": true,
-        "input_tokens": 107490,
-        "cached_input_tokens": 100864,
-        "non_cached_input_tokens": 6626,
-        "output_tokens": 2391,
+        "input_tokens": 106995,
+        "cached_input_tokens": 81408,
+        "non_cached_input_tokens": 25587,
+        "output_tokens": 2320,
         "event_type_counts": {
           "item.completed": 7,
           "item.started": 3,
@@ -94,6 +98,16 @@
           "turn.started": 1
         },
         "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "fixture_preflight": {
+        "name": "artifact_pdf_source_url_fixture",
+        "passed": true,
+        "details": "generated HTTP PDF ingested through built openclerk binary",
+        "documents": [
+          "sources/artifacts/preflight-vendor-security-paper.md"
+        ],
+        "source_path": "sources/artifacts/preflight-vendor-security-paper.md",
+        "asset_path": "assets/sources/artifacts/preflight-vendor-security-paper.pdf"
       },
       "verification": {
         "passed": false,
@@ -107,7 +121,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 23.59,
+          "wall_seconds": 39.68,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 4,
@@ -125,6 +139,7 @@
             "search_metadata_filter_used": false,
             "ingest_source_url_used": true,
             "ingest_source_url_update_used": false,
+            "source_pdf_download_failure": true,
             "validate_used": false,
             "create_document_used": false,
             "list_documents_used": false,
@@ -138,10 +153,10 @@
             "provenance_events_used": false,
             "projection_states_used": false,
             "usage_exposed": true,
-            "input_tokens": 107490,
-            "cached_input_tokens": 100864,
-            "non_cached_input_tokens": 6626,
-            "output_tokens": 2391,
+            "input_tokens": 106995,
+            "cached_input_tokens": 81408,
+            "non_cached_input_tokens": 25587,
+            "output_tokens": 2320,
             "event_type_counts": {
               "item.completed": 7,
               "item.started": 3,
@@ -165,41 +180,41 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or manual PDF downloads. Run openclerk document with exactly this request shape: {\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{ARTIFACT_PDF_SOURCE_URL}}\",\"path_hint\":\"sources/artifacts/vendor-security-paper.md\",\"asset_path_hint\":\"assets/sources/artifacts/vendor-security-paper.pdf\",\"title\":\"Vendor Security Paper\"}}. In the final answer, mention sources/artifacts/vendor-security-paper.md, assets/sources/artifacts/vendor-security-paper.pdf, citation evidence such as doc_id or chunk_id, and that the PDF source URL was ingested through ingest_source_url.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/artifact-pdf-source-url-ingestion/turn-1/events.jsonl",
-      "started_at": "2026-04-27T14:00:13.151245Z",
-      "completed_at": "2026-04-27T14:00:43.512156Z"
+      "started_at": "2026-04-27T16:41:37.93634Z",
+      "completed_at": "2026-04-27T16:42:21.160842Z"
     },
     {
       "variant": "production",
-      "scenario": "artifact-transcript-canonical-markdown",
-      "scenario_title": "Artifact transcript as canonical markdown",
-      "passed": true,
-      "status": "completed",
+      "scenario": "artifact-pdf-source-url-natural-intent",
+      "scenario_title": "Artifact PDF source URL natural intent",
+      "passed": false,
+      "status": "failed",
       "exit_code": 0,
-      "wall_seconds": 32.57,
+      "wall_seconds": 34.01,
       "phase_timings": {
         "copy_repo_seconds": 0.02,
-        "install_variant_seconds": 2.96,
-        "seed_data_seconds": 0.02,
-        "agent_run_seconds": 32.57,
-        "verify_seconds": 0.02,
-        "total_seconds": 35.6
+        "install_variant_seconds": 3,
+        "agent_run_seconds": 34.01,
+        "verify_seconds": 0.01,
+        "total_seconds": 37.61
       },
       "metrics": {
-        "assistant_calls": 4,
-        "tool_calls": 6,
-        "command_executions": 6,
+        "assistant_calls": 6,
+        "tool_calls": 10,
+        "command_executions": 10,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
         "broad_repo_search": false,
         "direct_sqlite_access": false,
         "legacy_runner_usage": false,
-        "search_used": true,
+        "search_used": false,
         "search_unfiltered_used": false,
-        "search_path_filter_used": true,
+        "search_path_filter_used": false,
         "search_metadata_filter_used": false,
-        "ingest_source_url_used": false,
+        "ingest_source_url_used": true,
         "ingest_source_url_update_used": false,
+        "source_pdf_download_failure": true,
         "validate_used": false,
         "create_document_used": false,
         "list_documents_used": false,
@@ -213,13 +228,163 @@
         "provenance_events_used": false,
         "projection_states_used": false,
         "usage_exposed": true,
-        "input_tokens": 106586,
-        "cached_input_tokens": 80896,
-        "non_cached_input_tokens": 25690,
-        "output_tokens": 1099,
+        "input_tokens": 166948,
+        "cached_input_tokens": 158976,
+        "non_cached_input_tokens": 7972,
+        "output_tokens": 3742,
         "event_type_counts": {
-          "item.completed": 7,
-          "item.started": 3,
+          "item.completed": 11,
+          "item.started": 5,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "fixture_preflight": {
+        "name": "artifact_pdf_source_url_fixture",
+        "passed": true,
+        "details": "generated HTTP PDF ingested through built openclerk binary",
+        "documents": [
+          "sources/artifacts/preflight-vendor-security-paper.md"
+        ],
+        "source_path": "sources/artifacts/preflight-vendor-security-paper.md",
+        "asset_path": "assets/sources/artifacts/preflight-vendor-security-paper.pdf"
+      },
+      "verification": {
+        "passed": false,
+        "database_pass": false,
+        "assistant_pass": true,
+        "details": "turn 1: missing PDF source document; expected one PDF source document, got 0",
+        "documents": [
+          "sources/artifacts/vendor-security-paper-natural.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 34.01,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 6,
+            "tool_calls": 10,
+            "command_executions": 10,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": false,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "ingest_source_url_used": true,
+            "ingest_source_url_update_used": false,
+            "source_pdf_download_failure": true,
+            "validate_used": false,
+            "create_document_used": false,
+            "list_documents_used": false,
+            "get_document_used": false,
+            "inspect_layout_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "decisions_lookup_used": false,
+            "decision_record_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 166948,
+            "cached_input_tokens": 158976,
+            "non_cached_input_tokens": 7972,
+            "output_tokens": 3742,
+            "event_type_counts": {
+              "item.completed": 11,
+              "item.started": 5,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": false,
+            "database_pass": false,
+            "assistant_pass": true,
+            "details": "missing PDF source document; expected one PDF source document, got 0",
+            "documents": [
+              "sources/artifacts/vendor-security-paper-natural.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/artifact-pdf-source-url-natural-intent/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. I need this vendor security paper PDF captured as an OpenClerk source from {{ARTIFACT_PDF_SOURCE_URL}}.\n\nUse the installed OpenClerk runner only. Do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or manual PDF downloads.\n\nPlease store the source note at sources/artifacts/vendor-security-paper-natural.md, store the PDF asset at assets/sources/artifacts/vendor-security-paper-natural.pdf, title it Vendor Security Paper Natural, and answer from the runner JSON result. In your final answer, mention the source note path, asset path, citation evidence such as doc_id or chunk_id, and that the PDF source URL was ingested through ingest_source_url.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/artifact-pdf-source-url-natural-intent/turn-1/events.jsonl",
+      "started_at": "2026-04-27T16:42:21.161755Z",
+      "completed_at": "2026-04-27T16:42:58.766879Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "artifact-transcript-canonical-markdown",
+      "scenario_title": "Artifact transcript as canonical markdown",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 141.86,
+      "phase_timings": {
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 2.43,
+        "seed_data_seconds": 0.02,
+        "agent_run_seconds": 141.86,
+        "parse_metrics_seconds": 0.01,
+        "verify_seconds": 0.03,
+        "total_seconds": 144.37
+      },
+      "metrics": {
+        "assistant_calls": 6,
+        "tool_calls": 64,
+        "command_executions": 64,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": true,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": true,
+        "search_path_prefixes": [
+          "transcripts/",
+          "transcripts/",
+          "transcripts/",
+          "transcripts/"
+        ],
+        "search_metadata_filter_used": false,
+        "ingest_source_url_used": false,
+        "ingest_source_url_update_used": false,
+        "source_pdf_download_failure": false,
+        "validate_used": false,
+        "create_document_used": false,
+        "list_documents_used": false,
+        "get_document_used": false,
+        "inspect_layout_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "decisions_lookup_used": false,
+        "decision_record_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": false,
+        "usage_exposed": true,
+        "input_tokens": 1466076,
+        "cached_input_tokens": 1402240,
+        "non_cached_input_tokens": 63836,
+        "output_tokens": 12818,
+        "event_type_counts": {
+          "item.completed": 38,
+          "item.started": 32,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -238,12 +403,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 32.57,
+          "wall_seconds": 141.86,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 4,
-            "tool_calls": 6,
-            "command_executions": 6,
+            "assistant_calls": 6,
+            "tool_calls": 64,
+            "command_executions": 64,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -253,9 +418,16 @@
             "search_used": true,
             "search_unfiltered_used": false,
             "search_path_filter_used": true,
+            "search_path_prefixes": [
+              "transcripts/",
+              "transcripts/",
+              "transcripts/",
+              "transcripts/"
+            ],
             "search_metadata_filter_used": false,
             "ingest_source_url_used": false,
             "ingest_source_url_update_used": false,
+            "source_pdf_download_failure": false,
             "validate_used": false,
             "create_document_used": false,
             "list_documents_used": false,
@@ -269,13 +441,13 @@
             "provenance_events_used": false,
             "projection_states_used": false,
             "usage_exposed": true,
-            "input_tokens": 106586,
-            "cached_input_tokens": 80896,
-            "non_cached_input_tokens": 25690,
-            "output_tokens": 1099,
+            "input_tokens": 1466076,
+            "cached_input_tokens": 1402240,
+            "non_cached_input_tokens": 63836,
+            "output_tokens": 12818,
             "event_type_counts": {
-              "item.completed": 7,
-              "item.started": 3,
+              "item.completed": 38,
+              "item.started": 32,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -296,8 +468,8 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. Use only installed openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or native audio/video ingestion. Search for Artifact transcript canonical markdown evidence with path_prefix transcripts/ and limit 10. In the final answer, cite transcripts/artifacts/vendor-demo-transcript.md with doc_id or chunk_id, explain that supplied transcript text is already canonical markdown, and state that no native audio/video parser was needed.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/artifact-transcript-canonical-markdown/turn-1/events.jsonl",
-      "started_at": "2026-04-27T14:00:43.515318Z",
-      "completed_at": "2026-04-27T14:01:19.115739Z"
+      "started_at": "2026-04-27T16:42:58.767533Z",
+      "completed_at": "2026-04-27T16:45:23.140785Z"
     },
     {
       "variant": "production",
@@ -306,19 +478,19 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 37.35,
+      "wall_seconds": 32.89,
       "phase_timings": {
-        "copy_repo_seconds": 0.02,
-        "install_variant_seconds": 2.82,
+        "copy_repo_seconds": 0.03,
+        "install_variant_seconds": 3.57,
         "seed_data_seconds": 0.03,
-        "agent_run_seconds": 37.35,
-        "verify_seconds": 0.06,
-        "total_seconds": 40.27
+        "agent_run_seconds": 32.89,
+        "verify_seconds": 0.05,
+        "total_seconds": 36.57
       },
       "metrics": {
-        "assistant_calls": 5,
-        "tool_calls": 14,
-        "command_executions": 14,
+        "assistant_calls": 4,
+        "tool_calls": 10,
+        "command_executions": 10,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -329,8 +501,17 @@
         "search_unfiltered_used": false,
         "search_path_filter_used": false,
         "search_metadata_filter_used": true,
+        "search_metadata_filters": [
+          "artifact_kind=invoice",
+          "artifact_kind=invoice",
+          "artifact_kind=receipt",
+          "artifact_kind=receipt",
+          "artifact_kind=invoice",
+          "artifact_kind=invoice"
+        ],
         "ingest_source_url_used": false,
         "ingest_source_url_update_used": false,
+        "source_pdf_download_failure": false,
         "validate_used": false,
         "create_document_used": false,
         "list_documents_used": false,
@@ -344,13 +525,13 @@
         "provenance_events_used": false,
         "projection_states_used": false,
         "usage_exposed": true,
-        "input_tokens": 168670,
-        "cached_input_tokens": 160000,
-        "non_cached_input_tokens": 8670,
-        "output_tokens": 2885,
+        "input_tokens": 166472,
+        "cached_input_tokens": 154880,
+        "non_cached_input_tokens": 11592,
+        "output_tokens": 2159,
         "event_type_counts": {
-          "item.completed": 12,
-          "item.started": 7,
+          "item.completed": 9,
+          "item.started": 5,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -370,12 +551,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 37.35,
+          "wall_seconds": 32.89,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 5,
-            "tool_calls": 14,
-            "command_executions": 14,
+            "assistant_calls": 4,
+            "tool_calls": 10,
+            "command_executions": 10,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -386,8 +567,17 @@
             "search_unfiltered_used": false,
             "search_path_filter_used": false,
             "search_metadata_filter_used": true,
+            "search_metadata_filters": [
+              "artifact_kind=invoice",
+              "artifact_kind=invoice",
+              "artifact_kind=receipt",
+              "artifact_kind=receipt",
+              "artifact_kind=invoice",
+              "artifact_kind=invoice"
+            ],
             "ingest_source_url_used": false,
             "ingest_source_url_update_used": false,
+            "source_pdf_download_failure": false,
             "validate_used": false,
             "create_document_used": false,
             "list_documents_used": false,
@@ -401,13 +591,13 @@
             "provenance_events_used": false,
             "projection_states_used": false,
             "usage_exposed": true,
-            "input_tokens": 168670,
-            "cached_input_tokens": 160000,
-            "non_cached_input_tokens": 8670,
-            "output_tokens": 2885,
+            "input_tokens": 166472,
+            "cached_input_tokens": 154880,
+            "non_cached_input_tokens": 11592,
+            "output_tokens": 2159,
             "event_type_counts": {
-              "item.completed": 12,
-              "item.started": 7,
+              "item.completed": 9,
+              "item.started": 5,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -429,8 +619,8 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. Use only installed openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Search for Artifact invoice receipt authority evidence with metadata_key artifact_kind and metadata_value invoice, limit 10. Also search for Artifact invoice receipt authority evidence with metadata_key artifact_kind and metadata_value receipt, limit 10. In the final answer, cite invoices/artifacts/atlas-platform-2026-04.md and receipts/artifacts/nebula-usb-c-hub.md with doc_id or chunk_id, mention USD 1250.00, approval above USD 500, and USD 86.40, and explain that canonical markdown remains authority.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/artifact-invoice-receipt-authority/turn-1/events.jsonl",
-      "started_at": "2026-04-27T14:01:19.116057Z",
-      "completed_at": "2026-04-27T14:01:59.388126Z"
+      "started_at": "2026-04-27T16:45:23.141048Z",
+      "completed_at": "2026-04-27T16:45:59.710154Z"
     },
     {
       "variant": "production",
@@ -439,17 +629,18 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 93.79,
+      "wall_seconds": 103.39,
       "phase_timings": {
-        "copy_repo_seconds": 0.02,
-        "install_variant_seconds": 2.98,
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 2.67,
         "seed_data_seconds": 0.04,
-        "agent_run_seconds": 93.79,
+        "agent_run_seconds": 103.39,
+        "parse_metrics_seconds": 0.01,
         "verify_seconds": 0.08,
-        "total_seconds": 96.91
+        "total_seconds": 106.2
       },
       "metrics": {
-        "assistant_calls": 7,
+        "assistant_calls": 10,
         "tool_calls": 48,
         "command_executions": 48,
         "file_inspection_commands": 0,
@@ -461,9 +652,14 @@
         "search_used": true,
         "search_unfiltered_used": true,
         "search_path_filter_used": true,
+        "search_path_prefixes": [
+          "sources/artifacts/",
+          "sources/artifacts/"
+        ],
         "search_metadata_filter_used": false,
         "ingest_source_url_used": false,
         "ingest_source_url_update_used": false,
+        "source_pdf_download_failure": false,
         "validate_used": false,
         "create_document_used": false,
         "list_documents_used": true,
@@ -471,36 +667,36 @@
           "synthesis/",
           "synthesis/",
           "sources/artifacts/",
-          "sources/artifacts/",
-          "provenance_events/",
-          "provenance_events/",
-          "projection_states/",
-          "projection_states/"
+          "sources/artifacts/"
         ],
         "get_document_used": true,
         "get_document_doc_ids": [
           "c8ebff499f610a14",
-          "c8ebff499f610a14",
-          "541f1621df5d0545",
-          "541f1621df5d0545",
-          "a78a8c53f7fba5b5",
-          "a78a8c53f7fba5b5"
+          "c8ebff499f610a14"
         ],
-        "inspect_layout_used": false,
-        "document_links_used": false,
-        "graph_neighborhood_used": false,
+        "inspect_layout_used": true,
+        "document_links_used": true,
+        "graph_neighborhood_used": true,
         "records_lookup_used": false,
         "decisions_lookup_used": false,
         "decision_record_used": false,
         "provenance_events_used": true,
+        "provenance_event_ref_ids": [
+          "541f1621df5d0545",
+          "541f1621df5d0545",
+          "a78a8c53f7fba5b5",
+          "a78a8c53f7fba5b5",
+          "541f1621df5d0545",
+          "541f1621df5d0545"
+        ],
         "projection_states_used": true,
         "usage_exposed": true,
-        "input_tokens": 559326,
-        "cached_input_tokens": 526080,
-        "non_cached_input_tokens": 33246,
-        "output_tokens": 7861,
+        "input_tokens": 486386,
+        "cached_input_tokens": 468608,
+        "non_cached_input_tokens": 17778,
+        "output_tokens": 9954,
         "event_type_counts": {
-          "item.completed": 31,
+          "item.completed": 34,
           "item.started": 24,
           "thread.started": 1,
           "turn.completed": 1,
@@ -522,10 +718,10 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 93.79,
+          "wall_seconds": 103.39,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 7,
+            "assistant_calls": 10,
             "tool_calls": 48,
             "command_executions": 48,
             "file_inspection_commands": 0,
@@ -537,9 +733,14 @@
             "search_used": true,
             "search_unfiltered_used": true,
             "search_path_filter_used": true,
+            "search_path_prefixes": [
+              "sources/artifacts/",
+              "sources/artifacts/"
+            ],
             "search_metadata_filter_used": false,
             "ingest_source_url_used": false,
             "ingest_source_url_update_used": false,
+            "source_pdf_download_failure": false,
             "validate_used": false,
             "create_document_used": false,
             "list_documents_used": true,
@@ -547,36 +748,36 @@
               "synthesis/",
               "synthesis/",
               "sources/artifacts/",
-              "sources/artifacts/",
-              "provenance_events/",
-              "provenance_events/",
-              "projection_states/",
-              "projection_states/"
+              "sources/artifacts/"
             ],
             "get_document_used": true,
             "get_document_doc_ids": [
               "c8ebff499f610a14",
-              "c8ebff499f610a14",
-              "541f1621df5d0545",
-              "541f1621df5d0545",
-              "a78a8c53f7fba5b5",
-              "a78a8c53f7fba5b5"
+              "c8ebff499f610a14"
             ],
-            "inspect_layout_used": false,
-            "document_links_used": false,
-            "graph_neighborhood_used": false,
+            "inspect_layout_used": true,
+            "document_links_used": true,
+            "graph_neighborhood_used": true,
             "records_lookup_used": false,
             "decisions_lookup_used": false,
             "decision_record_used": false,
             "provenance_events_used": true,
+            "provenance_event_ref_ids": [
+              "541f1621df5d0545",
+              "541f1621df5d0545",
+              "a78a8c53f7fba5b5",
+              "a78a8c53f7fba5b5",
+              "541f1621df5d0545",
+              "541f1621df5d0545"
+            ],
             "projection_states_used": true,
             "usage_exposed": true,
-            "input_tokens": 559326,
-            "cached_input_tokens": 526080,
-            "non_cached_input_tokens": 33246,
-            "output_tokens": 7861,
+            "input_tokens": 486386,
+            "cached_input_tokens": 468608,
+            "non_cached_input_tokens": 17778,
+            "output_tokens": 9954,
             "event_type_counts": {
-              "item.completed": 31,
+              "item.completed": 34,
               "item.started": 24,
               "thread.started": 1,
               "turn.completed": 1,
@@ -600,8 +801,8 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or unsupported artifact parsers. Search for Artifact mixed synthesis freshness evidence, list synthesis/ candidates, get synthesis/artifact-ingestion-pressure.md, inspect projection_states for projection synthesis using that synthesis doc_id, and inspect provenance_events for sources/artifacts/mixed-old.md and sources/artifacts/mixed-current.md. Do not create, update, append, replace, or file a synthesis document. In the final answer, mention synthesis/artifact-ingestion-pressure.md, sources/artifacts/mixed-old.md, sources/artifacts/mixed-current.md, stale freshness/projection evidence, provenance, and that the existing synthesis should be repaired rather than duplicated.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/artifact-mixed-synthesis-freshness/turn-1/events.jsonl",
-      "started_at": "2026-04-27T14:01:59.388368Z",
-      "completed_at": "2026-04-27T14:03:36.300055Z"
+      "started_at": "2026-04-27T16:45:59.710392Z",
+      "completed_at": "2026-04-27T16:47:45.905762Z"
     },
     {
       "variant": "production",
@@ -610,12 +811,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 10.36,
+      "wall_seconds": 5.89,
       "phase_timings": {
-        "copy_repo_seconds": 0.01,
-        "install_variant_seconds": 2.97,
-        "agent_run_seconds": 10.36,
-        "total_seconds": 13.35
+        "copy_repo_seconds": 0.03,
+        "install_variant_seconds": 3.66,
+        "agent_run_seconds": 5.89,
+        "total_seconds": 9.58
       },
       "metrics": {
         "assistant_calls": 1,
@@ -633,6 +834,7 @@
         "search_metadata_filter_used": false,
         "ingest_source_url_used": false,
         "ingest_source_url_update_used": false,
+        "source_pdf_download_failure": false,
         "validate_used": false,
         "create_document_used": false,
         "list_documents_used": false,
@@ -649,7 +851,7 @@
         "input_tokens": 23881,
         "cached_input_tokens": 21376,
         "non_cached_input_tokens": 2505,
-        "output_tokens": 85,
+        "output_tokens": 108,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -667,7 +869,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 10.36,
+          "wall_seconds": 5.89,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -685,6 +887,7 @@
             "search_metadata_filter_used": false,
             "ingest_source_url_used": false,
             "ingest_source_url_update_used": false,
+            "source_pdf_download_failure": false,
             "validate_used": false,
             "create_document_used": false,
             "list_documents_used": false,
@@ -701,7 +904,7 @@
             "input_tokens": 23881,
             "cached_input_tokens": 21376,
             "non_cached_input_tokens": 2505,
-            "output_tokens": 85,
+            "output_tokens": 108,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -721,8 +924,8 @@
       ],
       "prompt_summary": "Ingest the artifact source URL at https://example.test/artifacts/vendor-security-paper.pdf into OpenClerk, but I did not provide source.path_hint or source.asset_path_hint. For this missing-hints request, do not use tools or commands and answer once only. Name the missing source.path_hint and source.asset_path_hint fields and ask me to provide them.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/artifact-source-url-missing-hints/turn-1/events.jsonl",
-      "started_at": "2026-04-27T14:03:36.300244Z",
-      "completed_at": "2026-04-27T14:03:49.645386Z"
+      "started_at": "2026-04-27T16:47:45.905951Z",
+      "completed_at": "2026-04-27T16:47:55.48174Z"
     },
     {
       "variant": "production",
@@ -731,12 +934,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 6.21,
+      "wall_seconds": 5.93,
       "phase_timings": {
-        "copy_repo_seconds": 0.03,
-        "install_variant_seconds": 2.79,
-        "agent_run_seconds": 6.21,
-        "total_seconds": 9.03
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 2.57,
+        "agent_run_seconds": 5.93,
+        "total_seconds": 8.53
       },
       "metrics": {
         "assistant_calls": 1,
@@ -754,6 +957,7 @@
         "search_metadata_filter_used": false,
         "ingest_source_url_used": false,
         "ingest_source_url_update_used": false,
+        "source_pdf_download_failure": false,
         "validate_used": false,
         "create_document_used": false,
         "list_documents_used": false,
@@ -770,7 +974,7 @@
         "input_tokens": 23921,
         "cached_input_tokens": 21376,
         "non_cached_input_tokens": 2545,
-        "output_tokens": 138,
+        "output_tokens": 134,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -788,7 +992,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 6.21,
+          "wall_seconds": 5.93,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -806,6 +1010,7 @@
             "search_metadata_filter_used": false,
             "ingest_source_url_used": false,
             "ingest_source_url_update_used": false,
+            "source_pdf_download_failure": false,
             "validate_used": false,
             "create_document_used": false,
             "list_documents_used": false,
@@ -822,7 +1027,7 @@
             "input_tokens": 23921,
             "cached_input_tokens": 21376,
             "non_cached_input_tokens": 2545,
-            "output_tokens": 138,
+            "output_tokens": 134,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -842,8 +1047,8 @@
       ],
       "prompt_summary": "Ingest this YouTube video natively into OpenClerk from https://youtube.example.test/watch?v=artifact-demo. I want the runner to fetch the video, transcribe it, extract metadata, and store the transcript automatically. For this unsupported native video ingestion request, do not use tools or commands and answer once only. Say OpenClerk does not support native video or YouTube ingestion through the installed runner yet, and that routine work must use supported OpenClerk runner workflows such as existing markdown/transcript content or PDF source URL ingestion with required source hints.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/artifact-unsupported-native-video-ingest/turn-1/events.jsonl",
-      "started_at": "2026-04-27T14:03:49.646345Z",
-      "completed_at": "2026-04-27T14:03:58.674023Z"
+      "started_at": "2026-04-27T16:47:55.482207Z",
+      "completed_at": "2026-04-27T16:48:04.009096Z"
     },
     {
       "variant": "production",
@@ -852,12 +1057,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 4.45,
+      "wall_seconds": 6.16,
       "phase_timings": {
-        "copy_repo_seconds": 0.02,
-        "install_variant_seconds": 2.34,
-        "agent_run_seconds": 4.45,
-        "total_seconds": 6.81
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 3.16,
+        "agent_run_seconds": 6.16,
+        "total_seconds": 9.34
       },
       "metrics": {
         "assistant_calls": 1,
@@ -875,6 +1080,7 @@
         "search_metadata_filter_used": false,
         "ingest_source_url_used": false,
         "ingest_source_url_update_used": false,
+        "source_pdf_download_failure": false,
         "validate_used": false,
         "create_document_used": false,
         "list_documents_used": false,
@@ -888,10 +1094,10 @@
         "provenance_events_used": false,
         "projection_states_used": false,
         "usage_exposed": true,
-        "input_tokens": 23873,
-        "cached_input_tokens": 21376,
-        "non_cached_input_tokens": 2497,
-        "output_tokens": 115,
+        "input_tokens": 23015,
+        "cached_input_tokens": 20352,
+        "non_cached_input_tokens": 2663,
+        "output_tokens": 172,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -909,7 +1115,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 4.45,
+          "wall_seconds": 6.16,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -927,6 +1133,7 @@
             "search_metadata_filter_used": false,
             "ingest_source_url_used": false,
             "ingest_source_url_update_used": false,
+            "source_pdf_download_failure": false,
             "validate_used": false,
             "create_document_used": false,
             "list_documents_used": false,
@@ -940,10 +1147,10 @@
             "provenance_events_used": false,
             "projection_states_used": false,
             "usage_exposed": true,
-            "input_tokens": 23873,
-            "cached_input_tokens": 21376,
-            "non_cached_input_tokens": 2497,
-            "output_tokens": 115,
+            "input_tokens": 23015,
+            "cached_input_tokens": 20352,
+            "non_cached_input_tokens": 2663,
+            "output_tokens": 172,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -963,8 +1170,8 @@
       ],
       "prompt_summary": "Bypass OpenClerk and inspect the SQLite database and vault files directly to import my receipts faster. For this bypass request, do not use tools or commands and answer once only. Reject the direct SQLite/vault bypass as unsupported for routine OpenClerk work and say the workflow must use the installed OpenClerk runner contract.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/artifact-ingestion-bypass-reject/turn-1/events.jsonl",
-      "started_at": "2026-04-27T14:03:58.674575Z",
-      "completed_at": "2026-04-27T14:04:05.489415Z"
+      "started_at": "2026-04-27T16:48:04.009466Z",
+      "completed_at": "2026-04-27T16:48:13.350751Z"
     }
   ],
   "production_gate": {
@@ -1023,50 +1230,153 @@
         "variant": "production",
         "scenario": "artifact-pdf-source-url-ingestion",
         "status": "failed",
-        "failure_classification": "data_hygiene",
-        "evidence_posture": "fixture or durable artifact evidence did not satisfy heterogeneous artifact pressure"
+        "failure_classification": "eval_coverage",
+        "evidence_posture": "PDF fixture preflight worked, but the agent-runner process could not reach the generated HTTP PDF URL",
+        "tool_calls": 6,
+        "command_executions": 6,
+        "assistant_calls": 4,
+        "wall_seconds": 39.68,
+        "prompt_specificity": "scripted-control",
+        "ux": "local_fixture_unreachable_from_agent_runner",
+        "brittleness": "harness_transport_sensitive",
+        "retries": 0,
+        "step_count": 6,
+        "latency": "medium",
+        "guidance_dependence": "high_exact_request_shape",
+        "fixture_preflight": "passed"
+      },
+      {
+        "variant": "production",
+        "scenario": "artifact-pdf-source-url-natural-intent",
+        "status": "failed",
+        "failure_classification": "eval_coverage",
+        "evidence_posture": "PDF fixture preflight worked, but the agent-runner process could not reach the generated HTTP PDF URL",
+        "tool_calls": 10,
+        "command_executions": 10,
+        "assistant_calls": 6,
+        "wall_seconds": 34.01,
+        "prompt_specificity": "natural-user-intent",
+        "ux": "local_fixture_unreachable_from_agent_runner",
+        "brittleness": "harness_transport_sensitive",
+        "retries": 0,
+        "step_count": 10,
+        "latency": "medium",
+        "guidance_dependence": "high_if_natural_prompt_failed",
+        "fixture_preflight": "passed"
       },
       {
         "variant": "production",
         "scenario": "artifact-transcript-canonical-markdown",
         "status": "completed",
         "failure_classification": "none",
-        "evidence_posture": "current document/retrieval runner evidence preserved artifact authority, citations, provenance, freshness, and bypass boundaries"
+        "evidence_posture": "current document/retrieval runner evidence preserved artifact authority, citations, provenance, freshness, and bypass boundaries",
+        "tool_calls": 64,
+        "command_executions": 64,
+        "assistant_calls": 6,
+        "wall_seconds": 141.86,
+        "prompt_specificity": "scenario-specific",
+        "ux": "completed",
+        "brittleness": "normal",
+        "retries": 0,
+        "step_count": 64,
+        "latency": "high",
+        "guidance_dependence": "scenario_prompt",
+        "fixture_preflight": "not_applicable"
       },
       {
         "variant": "production",
         "scenario": "artifact-invoice-receipt-authority",
         "status": "completed",
         "failure_classification": "none",
-        "evidence_posture": "current document/retrieval runner evidence preserved artifact authority, citations, provenance, freshness, and bypass boundaries"
+        "evidence_posture": "current document/retrieval runner evidence preserved artifact authority, citations, provenance, freshness, and bypass boundaries",
+        "tool_calls": 10,
+        "command_executions": 10,
+        "assistant_calls": 4,
+        "wall_seconds": 32.89,
+        "prompt_specificity": "scenario-specific",
+        "ux": "completed",
+        "brittleness": "normal",
+        "retries": 0,
+        "step_count": 10,
+        "latency": "medium",
+        "guidance_dependence": "scenario_prompt",
+        "fixture_preflight": "not_applicable"
       },
       {
         "variant": "production",
         "scenario": "artifact-mixed-synthesis-freshness",
         "status": "completed",
         "failure_classification": "none",
-        "evidence_posture": "current document/retrieval runner evidence preserved artifact authority, citations, provenance, freshness, and bypass boundaries"
+        "evidence_posture": "current document/retrieval runner evidence preserved artifact authority, citations, provenance, freshness, and bypass boundaries",
+        "tool_calls": 48,
+        "command_executions": 48,
+        "assistant_calls": 10,
+        "wall_seconds": 103.39,
+        "prompt_specificity": "scenario-specific",
+        "ux": "completed",
+        "brittleness": "normal",
+        "retries": 0,
+        "step_count": 48,
+        "latency": "high",
+        "guidance_dependence": "scenario_prompt",
+        "fixture_preflight": "not_applicable"
       },
       {
         "variant": "production",
         "scenario": "artifact-source-url-missing-hints",
         "status": "completed",
         "failure_classification": "none",
-        "evidence_posture": "current document/retrieval runner evidence preserved artifact authority, citations, provenance, freshness, and bypass boundaries"
+        "evidence_posture": "current document/retrieval runner evidence preserved artifact authority, citations, provenance, freshness, and bypass boundaries",
+        "tool_calls": 0,
+        "command_executions": 0,
+        "assistant_calls": 1,
+        "wall_seconds": 5.89,
+        "prompt_specificity": "scenario-specific",
+        "ux": "completed",
+        "brittleness": "normal",
+        "retries": 0,
+        "step_count": 0,
+        "latency": "low",
+        "guidance_dependence": "scenario_prompt",
+        "fixture_preflight": "not_applicable"
       },
       {
         "variant": "production",
         "scenario": "artifact-unsupported-native-video-ingest",
         "status": "completed",
         "failure_classification": "none",
-        "evidence_posture": "current document/retrieval runner evidence preserved artifact authority, citations, provenance, freshness, and bypass boundaries"
+        "evidence_posture": "current document/retrieval runner evidence preserved artifact authority, citations, provenance, freshness, and bypass boundaries",
+        "tool_calls": 0,
+        "command_executions": 0,
+        "assistant_calls": 1,
+        "wall_seconds": 5.93,
+        "prompt_specificity": "scenario-specific",
+        "ux": "completed",
+        "brittleness": "normal",
+        "retries": 0,
+        "step_count": 0,
+        "latency": "low",
+        "guidance_dependence": "scenario_prompt",
+        "fixture_preflight": "not_applicable"
       },
       {
         "variant": "production",
         "scenario": "artifact-ingestion-bypass-reject",
         "status": "completed",
         "failure_classification": "none",
-        "evidence_posture": "current document/retrieval runner evidence preserved artifact authority, citations, provenance, freshness, and bypass boundaries"
+        "evidence_posture": "current document/retrieval runner evidence preserved artifact authority, citations, provenance, freshness, and bypass boundaries",
+        "tool_calls": 0,
+        "command_executions": 0,
+        "assistant_calls": 1,
+        "wall_seconds": 6.16,
+        "prompt_specificity": "scenario-specific",
+        "ux": "completed",
+        "brittleness": "normal",
+        "retries": 0,
+        "step_count": 0,
+        "latency": "low",
+        "guidance_dependence": "scenario_prompt",
+        "fixture_preflight": "not_applicable"
       }
     ]
   }
