@@ -1,6 +1,6 @@
 ---
 name: OpenClerk
-description: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner. Bootstrap no-tools rule for routine OpenClerk requests - if required fields are missing, if creating or updating a document but document path, title, or body is missing and no faithful propose-before-create candidate can be formed from explicit user content, or if source-ingestion fields are missing, this description is complete; Do not open this skill file, run commands, use tools, or call the runner; respond with exactly one no-tools assistant answer to name the missing fields and ask the user to provide them. If a numeric limit is negative such as limit -3, or if the user asks to bypass the runner through SQLite, HTTP, MCP, legacy or source-built paths, or unsupported transports, reject final-answer-only. For valid work, use only openclerk document or openclerk retrieval JSON; never use rg --files, find, ls, direct vault inspection, or repo search.
+description: Use OpenClerk through the installed openclerk JSON runner. Bootstrap no-tools rule for routine requests - if required fields are missing, if creating or updating a document but document path, title, or body is missing and no faithful candidate can be formed from explicit user content, or if source-ingestion fields are missing, this description is complete; do not open this skill file, run commands, use tools, or call the runner; respond with exactly one no-tools assistant answer naming missing fields and asking the user to provide them. For "Document this artifact from the links we discussed last week", do not open this skill file or use tools because prior links are missing body content. Reject invalid limit -3 and bypass the runner requests. For valid work, use only openclerk document or openclerk retrieval JSON.
 license: MIT
 compatibility: Requires local filesystem access and an installed openclerk binary on PATH.
 ---
@@ -47,6 +47,11 @@ tools when the request:
 - asks to create or validate a document but the document path, title, or body
   is missing and the user did not provide enough explicit content to form a
   faithful propose-before-create candidate
+- refers to missing prior context, such as "the links we discussed", "the file
+  from earlier", or "that artifact", without including the actual content or
+  source text to preserve. A request like "Document this artifact from the
+  links we discussed last week" is missing actual body content and must be
+  answered without tools.
 - asks to ingest a source URL but `source.url`, `source.path_hint`, or
   `source.asset_path_hint` is missing
 - asks for an obviously invalid limit, such as a negative number or `limit -3`
@@ -90,18 +95,35 @@ For candidate proposals:
 
 1. Preserve explicit user path, title, body, type, and naming instructions.
 2. If a field is omitted, choose a candidate vault-relative path, title, and
-   body from the explicit supplied content only.
+   body from the explicit supplied content only. When no path is supplied for a
+   note-like candidate, use `notes/candidates/<slug-from-title>.md`.
 3. Keep the body faithful. Do not add unsupported facts, citations, source
    claims, root causes, all-customer claims, security claims, or network-fetched
-   content.
-4. You may run `openclerk document` with `action: "validate"` for the candidate
-   JSON because validation does not create durable knowledge.
-5. If duplicate risk is plausible and the workflow already has enough valid
-   runner fields, use runner-visible `search`, `list_documents`, or
-   `get_document` before proposing a new write.
-6. In the final answer, show the candidate path, title, and body preview, report
-   validation or duplicate-check results from JSON if used, explicitly state
-   that no document was created, and ask for confirmation before creating.
+   content. For note-like candidates, include `type: note` frontmatter. Copy
+   every supplied body fact into the preview using the user's wording unless the
+   user asked you to reformat it.
+4. Run `openclerk document` with `action: "validate"` for the candidate JSON
+   before presenting the proposal. Validation does not create durable
+   knowledge.
+5. If the prompt asks whether a similar or existing document exists, or if
+   duplicate risk is otherwise plausible, first derive the likely candidate
+   title/path/search terms from the supplied content, then use runner-visible
+   `search` and `list_documents` before proposing a new write. Use
+   `get_document` only when an existing `doc_id` needs inspection. A prompt
+   that says "check whether a similar note already exists" or similar wording
+   requires both `search` and `list_documents`. If a likely duplicate is
+   visible, do not validate or create a duplicate candidate; ask whether to
+   update the existing document or create a new one at a confirmed path.
+6. In the final answer, always show the candidate path, title, and body preview
+   for natural-language prompts as well as scripted prompts. The body preview
+   must include the proposed frontmatter or document type when used, the
+   heading, and all supplied body facts that would be written, copied in a form
+   close enough for exact review. Use a compact structure with explicit `Path:`,
+   `Title:`, and `Body preview:` labels so the user can approve or edit the
+   exact candidate. Report validation or
+   duplicate-check results from JSON if used, explicitly state that no document
+   was created, and ask for confirmation before creating. Use an explicit
+   confirmation phrase such as "Please confirm or approve before I create it."
 7. Do not call `create_document`, `append_document`, or `replace_section` until
    the user approves the target and write.
 

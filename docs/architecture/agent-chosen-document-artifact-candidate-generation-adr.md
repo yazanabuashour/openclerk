@@ -21,8 +21,9 @@ create behavior: none are promoted or changed by this ADR.
 For the amended `oc-99z` ergonomics path, this ADR identifies the only
 candidate surface reviewed: propose-before-create skill behavior, with no
 durable write before user approval. The candidate-generation evidence proves
-quality and safety boundaries, but the refreshed ergonomics scorecard deferred
-`oc-99z` promotion pending natural-intent repair.
+quality and safety boundaries. The refreshed `oc-9k3` ergonomics scorecard now
+passes the natural-intent, scripted-control, duplicate-risk, and low-confidence
+rows for this existing skill-policy surface.
 
 Supporting evidence:
 
@@ -66,9 +67,11 @@ The skill policy is justified by candidate quality evidence, not by
 conventional paths, useful titles, faithful bodies, duplicate-aware placement,
 explicit override precedence, and confidence-to-ask behavior. The refreshed
 targeted lane completed every selected quality scenario with classification
-`none`, so the skill-policy implementation was authorized. The broader `oc-99z`
-ergonomics promotion is deferred because the refreshed scorecard found
-candidate-quality gaps in natural-intent behavior.
+`none`, so the skill-policy implementation was authorized. The later `oc-9k3`
+repair also completed every selected ergonomics scorecard scenario with
+classification `none`; `oc-99z` remains a separate decision track and no
+runner, schema, storage, public API, or direct-create behavior is promoted by
+this ADR.
 
 ## Policy
 

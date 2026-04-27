@@ -8,11 +8,11 @@ Implemented targeted eval lane for `oc-uaq`. The reduced report is
 The lane provides evidence for a future skill policy update only:
 propose-before-create candidate generation for `document.path`,
 `document.title`, and `document.body`. The refreshed report satisfies the
-candidate quality gate because all selected quality scenarios classified as
-`none`. The `oc-99z` ergonomics scorecard report deferred promotion because
-natural-intent rows exposed candidate-quality gaps. The corresponding
-implementation is skill-policy-only and does not change runner actions,
-schemas, storage, public API, or direct create behavior.
+candidate quality and ergonomics gates because all selected scenarios
+classified as `none`. The `oc-9k3` repair refreshed the `oc-99z` ergonomics
+scorecard evidence for the existing propose-before-create skill policy. The
+corresponding implementation is skill-policy-only and does not change runner
+actions, schemas, storage, public API, or direct create behavior.
 
 ## Purpose
 
@@ -98,8 +98,8 @@ Failures are classified as:
 
 Promotion requires all selected quality and ergonomics scenarios to classify as
 `none` and the scorecard to support the natural-intent ergonomics path. The
-current ergonomics report decision is `defer_for_candidate_ergonomics_repair`
-because `candidate-ergonomics-natural-intent` and
-`candidate-ergonomics-duplicate-natural-intent` did not satisfy the rubric.
-Runner, schema, storage, public API, and direct-create changes remain out of
-scope regardless of the ergonomics outcome.
+current ergonomics report decision is
+`promote_propose_before_create_skill_policy`: natural-intent proposal,
+scripted-control, duplicate-risk, and low-confidence rows all classified as
+`none`. Runner, schema, storage, public API, and direct-create changes remain
+out of scope regardless of the ergonomics outcome.
