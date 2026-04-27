@@ -12,6 +12,11 @@ decision_owner: platform
 Accepted: defer generalized artifact ingestion promotion. Keep the targeted
 lane as evidence pressure while repairing data hygiene and eval coverage.
 
+`oc-no2` has been reopened for an ergonomics-gate refresh. The historical
+decision below remains the current recorded outcome until `oc-res` repairs the
+PDF fixture gap and a refreshed decision evaluates both capability-gap and
+ergonomics-gap evidence.
+
 Evidence:
 
 - [`generalized-artifact-ingestion-adr.md`](generalized-artifact-ingestion-adr.md)

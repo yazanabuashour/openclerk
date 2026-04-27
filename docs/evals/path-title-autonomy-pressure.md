@@ -16,6 +16,11 @@ failures across the selected path/title pressure scenarios, so no constrained
 autonomy policy, runner action, schema, skill behavior, storage migration, or
 public interface is promoted from this evidence.
 
+`oc-iat` has been reopened for an ergonomics-gate refresh. Future path/title
+pressure should measure both whether current primitives can express the
+workflow and whether the current UX is acceptable under natural prompts, step
+count, latency, prompt specificity, retry risk, and guidance dependence.
+
 ## Purpose
 
 This eval pressure-tests whether current explicit/no-tools behavior remains

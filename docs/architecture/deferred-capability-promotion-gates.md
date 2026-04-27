@@ -20,20 +20,33 @@ These gates apply to:
 - new public runner actions
 
 The default decision is to keep each capability as reference or deferred.
-Promotion requires targeted AgentOps evidence that the existing
-`openclerk document` and `openclerk retrieval` actions are structurally
-insufficient.
+Promotion requires targeted AgentOps evidence through one of two paths:
+
+- **Capability gap:** the existing `openclerk document` and
+  `openclerk retrieval` actions cannot safely express the workflow.
+- **Ergonomics gap:** the existing actions can technically express the
+  workflow, but repeated evidence shows the workflow is too slow, too many
+  steps, too scripted, too error-prone, or too guidance-dependent for routine
+  AgentOps use.
 
 ## Shared Rubric
 
 Use the same decision rubric for every deferred capability:
 
-- **Promote** only when repeated targeted AgentOps eval failures show the
-  existing document/retrieval workflow is structurally insufficient, not merely
-  awkward, underspecified, missing data, or missing skill guidance.
-- **Defer** when current runner actions pass, failures are data hygiene, skill
-  guidance, or eval coverage gaps, or the evidence is too narrow to justify a
-  production surface.
+- **Promote via capability gap** when repeated targeted AgentOps eval failures
+  show the existing document/retrieval workflow is structurally insufficient,
+  not merely underspecified, missing data, or missing eval coverage.
+- **Promote via ergonomics gap** when the current workflow is expressible but
+  repeated targeted evidence shows unacceptable step count, latency, prompt
+  brittleness, retry risk, or guidance dependence, and a proposed surface
+  reduces that cost without weakening authority, citations, provenance,
+  freshness, or local-first operation.
+- **Defer** when current runner actions pass with acceptable ergonomics,
+  failures are data hygiene, ordinary skill-guidance gaps, or eval coverage
+  gaps, or the evidence is too narrow to justify a production surface. Treat
+  skill guidance as ordinary only when clarifying existing runner usage is
+  enough; repeated need for workflow-specific prompt choreography or skill
+  intervention is ergonomics-gap evidence.
 - **Kill** when the capability mostly duplicates docs retrieval, weakens source
   authority, hides provenance or freshness, increases duplicate/conflicting
   truth, or encourages routine bypasses.
@@ -61,6 +74,28 @@ Every candidate must preserve the current AgentOps invariants:
   reject
 
 If a candidate cannot preserve these invariants, kill or defer it.
+
+## Ergonomics Evidence
+
+Every targeted POC and eval for a deferred capability should report both
+technical expressibility and UX acceptability. The minimum ergonomics scorecard
+is:
+
+- tool or command count for the current workflow and candidate surface
+- assistant calls and wall time
+- amount of prompt specificity required to make the workflow pass
+- whether a natural user-intent prompt passes without scripting every runner
+  step
+- retry or brittleness indicators, including duplicate creation, skipped
+  freshness inspection, dropped citations, or wrong target selection
+- failure classification separated into data hygiene, ordinary skill guidance,
+  eval coverage, capability gap, ergonomics gap, or contract violation
+- authority, provenance, freshness, privacy, and bypass risks introduced by
+  any proposed surface
+
+Ergonomics promotion is not a shortcut around safety. A smoother surface should
+be killed or deferred if it creates a second truth system, hides provenance,
+drops citations, hides freshness, or normalizes lower-level bypasses.
 
 ## Capability-Specific Proof Obligations
 
@@ -118,8 +153,8 @@ applies, and what derived projections or synthesis pages became stale.
 
 Defer the candidate if existing document and retrieval workflows can express
 the scenario through registered documents, append or replace-section,
-provenance events, projection states, and operator review, even if the workflow
-is multi-step. Defer also when failures are missing skill guidance, data
+provenance events, projection states, and operator review with acceptable
+ergonomics. Defer also when failures are ordinary missing skill guidance, data
 hygiene, thin dogfooding evidence, or eval coverage gaps.
 
 Kill the candidate if it duplicates Git as byte-level history, hides review
@@ -132,13 +167,15 @@ runtime programs.
 ### New Public Runner Actions
 
 Promotion requires repeated failures that show existing multi-step document and
-retrieval workflows are structurally too many steps or cannot express the
-needed behavior. Any proposed action must include an exact JSON request shape,
-backward compatibility expectations, failure modes, and targeted eval gates.
+retrieval workflows cannot express the needed behavior, or repeated ergonomics
+evidence that those workflows are too costly for routine use despite being
+technically expressible. Any proposed action must include an exact JSON request
+shape, backward compatibility expectations, failure modes, and targeted eval
+gates.
 
-Kill or defer the candidate if the existing actions pass, the pressure comes
-from missing skill guidance, or the proposed action would create a second
-authority surface.
+Kill or defer the candidate if the existing actions pass with acceptable
+ergonomics, the pressure comes from ordinary missing skill guidance, or the
+proposed action would create a second authority surface.
 
 ## Prompt And Eval Pattern
 
@@ -146,15 +183,19 @@ Future POCs for deferred capabilities must follow this pattern:
 
 1. Start with a control prompt that solves the workflow using only
    `openclerk document` and `openclerk retrieval`.
-2. Add pressure prompts only for the specific suspected failure mode.
+2. Add at least one natural user-intent prompt and one scripted-control prompt.
+   The natural prompt measures UX and brittleness; the scripted control proves
+   whether current primitives can still work with exact instructions.
 3. Require the agent to use runner JSON evidence and preserve citations,
    source refs, provenance, and freshness where relevant.
-4. Classify failures as data hygiene, skill guidance, eval coverage, or runner
-   capability gaps.
-5. Record targeted evidence under `docs/evals/results/` using repo-relative
+4. Record tool/command count, assistant calls, wall time, prompt specificity,
+   and retry or brittleness signals.
+5. Classify failures as data hygiene, ordinary skill guidance, eval coverage,
+   capability gap, ergonomics gap, or contract violation.
+6. Record targeted evidence under `docs/evals/results/` using repo-relative
    paths and `<run-root>` placeholders.
-6. End with an explicit decision: promote, defer, kill, or keep as reference.
-7. If promoted, file a separate implementation Bead that names the exact
+7. End with an explicit decision: promote, defer, kill, or keep as reference.
+8. If promoted, file a separate implementation Bead that names the exact
    surface and gates.
 
 This keeps capability pressure measurable without letting interesting reference

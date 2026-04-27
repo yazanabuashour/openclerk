@@ -14,6 +14,11 @@ autofiling, path/title/body inference, runner changes, schema changes, storage
 changes, or skill behavior changes. The selected scenarios in the reduced
 report are classified `none`.
 
+`oc-99z` has been reopened for an ergonomics-gate refresh. The refreshed
+decision should reconcile this strict-intake evidence with the later
+propose-before-create candidate-generation policy and should report both
+technical expressibility and routine UX acceptability.
+
 ## Purpose
 
 This eval pressure-tests user prompts like "document this" across article,

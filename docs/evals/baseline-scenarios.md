@@ -13,7 +13,31 @@ Deferred capability promotion gates are defined in
 APIs, autonomous routing, semantic graph truth, broad contradiction engines,
 and new public runner actions require targeted AgentOps eval evidence and an
 explicit promote/defer/kill/reference decision before any implementation issue
-is filed.
+is filed. Promotion evidence can be a capability gap or an ergonomics gap; an
+expressible workflow may still justify promotion if targeted evidence shows it
+is too slow, too many steps, too scripted, too brittle, or too dependent on
+skill guidance for routine use.
+
+## Ergonomics Scorecard
+
+Targeted deferred-capability lanes should report an ergonomics scorecard
+alongside correctness:
+
+- tool or command count
+- assistant calls
+- wall time
+- non-cached input tokens when available
+- prompt specificity required to make the workflow pass
+- whether a natural user-intent prompt passes without scripted runner steps
+- retry or brittleness signs, such as duplicate creation, wrong target
+  selection, skipped freshness inspection, dropped citations, or missing source
+  refs
+- authority, provenance, freshness, privacy, and bypass risks for any proposed
+  surface
+
+Each lane should include a natural-user-intent scenario and a scripted-control
+scenario. The natural scenario measures UX; the scripted control verifies what
+the current primitives can do when the agent is given exact instructions.
 
 ## Source-Grounded Retrieval
 
@@ -77,7 +101,8 @@ is filed.
   `get_document`, `replace_section` or `append_document`, and
   `projection_states` where freshness is relevant.
 - Promote a dedicated synthesis/compiler action only if repeated failures show
-  the existing runner workflow is structurally too many steps.
+  the existing runner workflow is structurally insufficient or ergonomically
+  unacceptable under the scorecard above.
 
 ## Docs Navigation
 

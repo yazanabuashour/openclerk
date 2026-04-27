@@ -42,6 +42,13 @@ variant:
 - records are an optional promoted-domain capability
 - provenance exposes truth-sync inspection
 
+New AgentOps runner actions can be promoted for two reasons: existing
+document/retrieval primitives cannot safely express a workflow, or existing
+primitives are repeatedly too slow, too many steps, too scripted, or too
+guidance-dependent for routine use. Either path must preserve canonical
+markdown authority, citations, provenance, projection freshness, local-first
+storage, and no-bypass operation.
+
 ## Canonical and derived layers
 
 ### Docs
@@ -173,7 +180,10 @@ Production evals are regression gates for the AgentOps contract and
 knowledge-model behavior. Reports track correctness, tool calls, assistant
 calls, wall time, token use, stale surface inspection, module-cache inspection,
 broad repo search, direct SQLite access, source-built runner usage, and raw log
-references using `<run-root>` placeholders.
+references using `<run-root>` placeholders. Deferred-capability evals also use
+these metrics as ergonomics evidence: an expressible workflow can still be a
+promotion candidate if natural prompts repeatedly require excessive steps,
+latency, prompt scripting, retries, or guidance dependence.
 
 The current architecture direction is recorded in
 [`eval-backed-knowledge-plane-adr.md`](eval-backed-knowledge-plane-adr.md).

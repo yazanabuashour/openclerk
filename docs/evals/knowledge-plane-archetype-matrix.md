@@ -33,6 +33,9 @@ The matrix compares archetypes on these axes:
   conflicting facts when updating existing knowledge.
 - **Operator repairability:** whether stale, wrong, or ambiguous results can be
   repaired by editing canonical docs or rerunning runner-backed workflows.
+- **Workflow ergonomics:** whether routine work completes with acceptable
+  tool/command count, assistant calls, wall time, prompt specificity, retry
+  risk, and guidance dependence.
 
 ## Archetype Matrix
 
@@ -56,6 +59,9 @@ axes it is expected to improve. A useful benchmark result should include:
 - The expected durable output, if any.
 - The required citations, source refs, provenance, or projection-state evidence.
 - The pass/fail gate and the failure mode it is intended to catch.
+- The ergonomics scorecard for current primitives and any candidate promoted
+  surface: tool/command count, assistant calls, wall time, prompt specificity,
+  natural-prompt pass/fail, retry risk, and guidance dependence.
 
 Archetypes are cumulative rather than interchangeable. Basic RAG should be
 measured against canonical docs, synthesis should be measured against both RAG
@@ -63,6 +69,13 @@ and canonical source authority, promoted records should be measured against
 plain docs retrieval, and memory-style behavior should be measured against all
 source, provenance, and repairability requirements before it is considered for
 implementation.
+
+Promotion decisions should separately answer two questions:
+
+- Can the existing AgentOps primitives express the workflow while preserving
+  authority, citations, provenance, and freshness?
+- Is that workflow ergonomic enough for routine use, or does repeated evidence
+  justify a promoted surface that reduces cost without weakening the model?
 
 ## Non-Goals
 
