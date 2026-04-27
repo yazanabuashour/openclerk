@@ -6,10 +6,10 @@
 - Release blocking: `false`
 - Configured parallelism: `1`
 - Cache mode: `shared`
-- Cache prewarm seconds: `17.36`
-- Harness elapsed seconds: `220.41`
-- Effective parallel speedup: `0.82x`
-- Parallel efficiency: `0.82`
+- Cache prewarm seconds: `16.42`
+- Harness elapsed seconds: `120.21`
+- Effective parallel speedup: `0.71x`
+- Parallel efficiency: `0.71`
 - Raw logs: `<run-root>/<variant>/<scenario>/turn-N/events.jsonl`
 
 ## Production Gate
@@ -35,26 +35,26 @@ Recommendation: `fix_production_agentops_before_release`
 | Phase | Seconds |
 | --- | ---: |
 | prepare_run_dir | 0.00 |
-| copy_repo | 0.12 |
-| install_variant | 22.71 |
+| copy_repo | 0.21 |
+| install_variant | 18.41 |
 | warm_cache | 0.00 |
-| seed_data | 0.01 |
-| agent_run | 180.07 |
+| seed_data | 0.02 |
+| agent_run | 84.98 |
 | parse_metrics | 0.00 |
-| verify | 0.12 |
-| total | 203.05 |
+| verify | 0.15 |
+| total | 103.79 |
 
 ## Results
 
 | Variant | Scenario | Status | Tools | Commands | Assistant Calls | Non-Cached Input | Wall Seconds | Raw Log |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `production` | `candidate-note-from-pasted-content` | `completed` | 6 | 6 | 3 | 7000 | 18.28 | `<run-root>/production/candidate-note-from-pasted-content/turn-1/events.jsonl` |
-| `production` | `candidate-title-and-path-from-heading` | `completed` | 10 | 10 | 4 | 4486 | 38.56 | `<run-root>/production/candidate-title-and-path-from-heading/turn-1/events.jsonl` |
-| `production` | `candidate-mixed-source-summary` | `completed` | 8 | 8 | 3 | 4505 | 23.54 | `<run-root>/production/candidate-mixed-source-summary/turn-1/events.jsonl` |
-| `production` | `candidate-explicit-overrides-win` | `completed` | 20 | 20 | 6 | 7329 | 60.61 | `<run-root>/production/candidate-explicit-overrides-win/turn-1/events.jsonl` |
-| `production` | `candidate-duplicate-risk-asks` | `completed` | 8 | 8 | 4 | 22854 | 21.47 | `<run-root>/production/candidate-duplicate-risk-asks/turn-1/events.jsonl` |
-| `production` | `candidate-low-confidence-asks` | `completed` | 0 | 0 | 1 | 2494 | 4.83 | `<run-root>/production/candidate-low-confidence-asks/turn-1/events.jsonl` |
-| `production` | `candidate-body-faithfulness` | `completed` | 4 | 4 | 3 | 6700 | 12.78 | `<run-root>/production/candidate-body-faithfulness/turn-1/events.jsonl` |
+| `production` | `candidate-note-from-pasted-content` | `completed` | 6 | 6 | 4 | 7259 | 14.10 | `<run-root>/production/candidate-note-from-pasted-content/turn-1/events.jsonl` |
+| `production` | `candidate-title-and-path-from-heading` | `completed` | 4 | 4 | 3 | 6336 | 13.12 | `<run-root>/production/candidate-title-and-path-from-heading/turn-1/events.jsonl` |
+| `production` | `candidate-mixed-source-summary` | `completed` | 4 | 4 | 3 | 6273 | 13.83 | `<run-root>/production/candidate-mixed-source-summary/turn-1/events.jsonl` |
+| `production` | `candidate-explicit-overrides-win` | `completed` | 4 | 4 | 3 | 25158 | 12.17 | `<run-root>/production/candidate-explicit-overrides-win/turn-1/events.jsonl` |
+| `production` | `candidate-duplicate-risk-asks` | `completed` | 6 | 6 | 3 | 6952 | 14.96 | `<run-root>/production/candidate-duplicate-risk-asks/turn-1/events.jsonl` |
+| `production` | `candidate-low-confidence-asks` | `completed` | 0 | 0 | 1 | 2490 | 5.68 | `<run-root>/production/candidate-low-confidence-asks/turn-1/events.jsonl` |
+| `production` | `candidate-body-faithfulness` | `completed` | 4 | 4 | 3 | 14683 | 11.12 | `<run-root>/production/candidate-body-faithfulness/turn-1/events.jsonl` |
 
 ## Targeted Lane Summary
 
@@ -62,7 +62,7 @@ Decision: `promote_propose_before_create_skill_policy`
 
 Public surface: `skills/openclerk/SKILL.md`, `openclerk document`, `openclerk retrieval`
 
-Promotion: authorize follow-up skill policy for propose-before-create candidate path/title/body generation only; no runner action, schema, storage, migration, direct create, or public API change.
+Promotion: skill policy supports propose-before-create candidate path/title/body generation only; no runner action, schema, storage, migration, direct create, or public API change.
 
 | Variant | Scenario | Status | Failure classification | Evidence posture |
 | --- | --- | --- | --- | --- |

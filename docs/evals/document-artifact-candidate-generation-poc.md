@@ -14,7 +14,7 @@ The targeted reduced report is
 This POC does not add runner actions, JSON schemas, storage migrations, public
 API, direct create behavior, or shipped skill behavior. The refreshed targeted
 report classifies all selected scenarios as `none`, satisfying the candidate
-quality gate for a separate skill-policy implementation task.
+quality gate for skill-policy implementation.
 
 ## Purpose
 
@@ -85,5 +85,5 @@ skill policy update. It does not authorize runner, storage, schema, public API,
 or direct-create work.
 
 The current report is `promote_propose_before_create_skill_policy`, so a
-separate skill policy implementation is authorized. This POC still does not
-change `skills/openclerk/SKILL.md`.
+skill policy implementation is authorized. The implementation is limited to
+`skills/openclerk/SKILL.md` and does not change the runner surface.

@@ -8886,7 +8886,7 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	case documentArtifactCandidateLaneName:
 		summary.Decision = documentArtifactCandidateDecision(summary.ScenarioClassifications)
 		if summary.Decision == "promote_propose_before_create_skill_policy" {
-			summary.Promotion = "authorize follow-up skill policy for propose-before-create candidate path/title/body generation only; no runner action, schema, storage, migration, direct create, or public API change"
+			summary.Promotion = "skill policy supports propose-before-create candidate path/title/body generation only; no runner action, schema, storage, migration, direct create, or public API change"
 		} else {
 			summary.Promotion = "no promoted skill policy yet; repair candidate quality gaps before any propose-before-create skill behavior change"
 		}

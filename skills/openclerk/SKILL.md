@@ -1,6 +1,6 @@
 ---
 name: OpenClerk
-description: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner. Bootstrap no-tools rule for routine OpenClerk requests - if required fields are missing, if creating or updating a document but document path, title, or body is missing, or if source-ingestion fields are missing, this description is complete; respond with exactly one no-tools assistant answer to name the missing fields and ask the user to provide them. If a numeric limit is negative such as limit -3, or if the user asks to bypass the runner through SQLite, HTTP, MCP, legacy or source-built paths, or unsupported transports, reject final-answer-only. Do not open this skill file, run commands, use tools, or call the runner. For valid work, use only openclerk document or openclerk retrieval JSON; never use rg --files, find, ls, direct vault inspection, or repo search.
+description: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner. Bootstrap no-tools rule for routine OpenClerk requests - if required fields are missing, if creating or updating a document but document path, title, or body is missing and no faithful propose-before-create candidate can be formed from explicit user content, or if source-ingestion fields are missing, this description is complete; respond with exactly one no-tools assistant answer to name the missing fields and ask the user to provide them. If a numeric limit is negative such as limit -3, or if the user asks to bypass the runner through SQLite, HTTP, MCP, legacy or source-built paths, or unsupported transports, reject final-answer-only. For valid work, use only openclerk document or openclerk retrieval JSON; never use rg --files, find, ls, direct vault inspection, or repo search.
 license: MIT
 compatibility: Requires local filesystem access and an installed openclerk binary on PATH.
 ---
@@ -45,15 +45,17 @@ tools when the request:
 
 - is missing required document or retrieval fields
 - asks to create or validate a document but the document path, title, or body
-  is missing
+  is missing and the user did not provide enough explicit content to form a
+  faithful propose-before-create candidate
 - asks to ingest a source URL but `source.url`, `source.path_hint`, or
   `source.asset_path_hint` is missing
 - asks for an obviously invalid limit, such as a negative number or `limit -3`
 - asks to bypass the runner for routine lower-level runtime, HTTP, SQLite, MCP,
   legacy or source-built command paths, or unsupported transport work
 
-For missing required document or retrieval fields, do not guess. Name the
-missing fields, ask the user to provide them, and do not call the runner.
+For missing required document or retrieval fields that cannot be handled by the
+propose-before-create policy below, do not guess. Name the missing fields, ask
+the user to provide them, and do not call the runner.
 
 For invalid limits and bypass requests, reject final-answer-only, explicitly
 saying the workflow is unsupported or invalid and must use the OpenClerk
@@ -74,6 +76,39 @@ Do not use broad file enumeration such as `rg --files`, `find`, or `ls` to find
 or verify routine runner work; use runner JSON results, `list_documents`,
 `search`, or `get_document` instead. Search the repository only if the runner
 fails in a way that requires debugging the checkout.
+
+## Propose-Before-Create Candidate Documents
+
+When the user asks to "document this", "save this note", or otherwise create a
+document but omits `document.path`, `document.title`, or `document.body`, you
+may propose a candidate document before writing only if the user supplied
+enough explicit content to preserve a faithful body. Supported inputs include
+pasted notes, excerpts, clear headings, transcript snippets, operational notes,
+or user-written URL summaries where the claims to preserve are in the prompt.
+
+For candidate proposals:
+
+1. Preserve explicit user path, title, body, type, and naming instructions.
+2. If a field is omitted, choose a candidate vault-relative path, title, and
+   body from the explicit supplied content only.
+3. Keep the body faithful. Do not add unsupported facts, citations, source
+   claims, root causes, all-customer claims, security claims, or network-fetched
+   content.
+4. You may run `openclerk document` with `action: "validate"` for the candidate
+   JSON because validation does not create durable knowledge.
+5. If duplicate risk is plausible and the workflow already has enough valid
+   runner fields, use runner-visible `search`, `list_documents`, or
+   `get_document` before proposing a new write.
+6. In the final answer, show the candidate path, title, and body preview, report
+   validation or duplicate-check results from JSON if used, explicitly state
+   that no document was created, and ask for confirmation before creating.
+7. Do not call `create_document`, `append_document`, or `replace_section` until
+   the user approves the target and write.
+
+Use no-tools clarification instead of proposing when actual body content is
+missing, the durable artifact type is unclear, the request is only a bare URL
+or source artifact without source-ingestion hints, the candidate would require
+network fetching, or confidence is too low to preserve a faithful body.
 
 ## Document Tasks
 

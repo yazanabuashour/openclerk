@@ -9,9 +9,8 @@ decision_owner: platform
 
 ## Status
 
-Accepted as an evidence-backed promotion gate for a follow-up agent-side
-propose-before-create skill policy implementation. This task does not update
-`skills/openclerk/SKILL.md`.
+Accepted as an evidence-backed agent-side propose-before-create skill policy.
+The policy is implemented in `skills/openclerk/SKILL.md`.
 
 This ADR supersedes the `oc-99z` framing only for the product question of
 whether an agent may choose a candidate `document.path`, `document.title`, and
@@ -43,12 +42,11 @@ before creating durable knowledge.
 
 ## Decision
 
-Promote propose-before-create candidate generation as a future skill policy,
-subject to a separate `skills/openclerk/SKILL.md` implementation task. Agents
-may propose candidate
-`document.path`, `document.title`, and `document.body` from explicit
-user-provided content when the candidate can be made strict-runner-compatible
-and the final answer asks for confirmation before creation.
+Promote propose-before-create candidate generation as skill policy. Agents may
+propose candidate `document.path`, `document.title`, and `document.body` from
+explicit user-provided content when the candidate can be made
+strict-runner-compatible and the final answer asks for confirmation before
+creation.
 
 The agent must not call `create_document`, `append_document`, or
 `replace_section` before user approval. It may use existing runner actions such
@@ -62,7 +60,7 @@ Promotion is justified by candidate quality evidence, not by
 paths, useful titles, faithful bodies, duplicate-aware placement, explicit
 override precedence, and confidence-to-ask behavior. The refreshed targeted
 lane completed every selected scenario with classification `none`, so a
-separate skill-policy implementation may proceed.
+skill-policy implementation is authorized.
 
 ## Policy
 
@@ -95,16 +93,15 @@ This ADR does not:
 - add an autofiling or proposal runner action
 - relax runner validation
 - authorize direct create-then-report behavior
-- update `skills/openclerk/SKILL.md` in this change
 - add storage migrations, indexes, background placement, or public API changes
 - permit direct vault inspection, direct SQLite, broad repo search, HTTP/MCP
   bypasses, source-built runner paths, backend variants, module-cache
   inspection, or unsupported transports
 
-## Follow-Up Gate
+## Skill Policy Gate
 
-A separate implementation task may update `skills/openclerk/SKILL.md` to allow
-propose-before-create candidate generation. That implementation must preserve
-the no-create-before-approval boundary, explicit override precedence,
+The `skills/openclerk/SKILL.md` policy must preserve the
+no-create-before-approval boundary, explicit override precedence,
 low-confidence clarification, duplicate checks through existing runner actions,
-and strict runner JSON compatibility.
+and strict runner JSON compatibility. Any future direct-create behavior still
+requires a separate decision and eval gate.
