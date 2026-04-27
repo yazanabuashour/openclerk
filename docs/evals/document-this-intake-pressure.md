@@ -9,15 +9,18 @@ This document does not add runner actions, schemas, storage migrations, skill
 behavior, public API, or release-blocking production gates. The lane provides
 evidence for the promotion decision tracked by `oc-99z`.
 
-`oc-99z` kept current strict behavior and did not promote autonomous
-autofiling, path/title/body inference, runner changes, schema changes, storage
-changes, or skill behavior changes. The selected scenarios in the reduced
-report are classified `none`.
+The refreshed `oc-99z` decision uses both promotion paths. On the capability
+path, this lane kept current strict behavior and did not promote autonomous
+autofiling, direct path/title/body writes, runner changes, schema changes,
+storage changes, public API changes, or direct-create behavior. The selected
+scenarios in the reduced report are classified `none`.
 
-`oc-99z` has been reopened for an ergonomics-gate refresh. The refreshed
-decision should reconcile this strict-intake evidence with the later
-propose-before-create candidate-generation policy and should report both
-technical expressibility and routine UX acceptability.
+On the ergonomics path, `oc-99z` relies on the later propose-before-create
+candidate-generation evidence. That path promotes only the
+`skills/openclerk/SKILL.md` policy for faithful candidate documents: propose a
+candidate path, title, and body from explicit user content, optionally validate
+or check duplicates with existing runner actions, show a preview, and ask for
+approval before any durable write.
 
 ## Purpose
 
@@ -86,11 +89,14 @@ Failures are classified as:
 - `eval_contract_violation`
 - `runner_capability_gap`
 
-Promotion evidence requires repeated `runner_capability_gap` failures showing
-that existing document/retrieval workflows cannot express document-this intake
-while preserving strict validation, duplicate avoidance, metadata authority,
-citations or source refs, provenance, and freshness.
+Capability promotion evidence requires repeated `runner_capability_gap`
+failures showing that existing document/retrieval workflows cannot express
+document-this intake while preserving strict validation, duplicate avoidance,
+metadata authority, citations or source refs, provenance, and freshness.
 
-This lane itself does not promote product behavior. `oc-99z` decided to keep
-the candidate behavior as current behavior and reference evidence, with no
-promoted runner or skill changes.
+This lane itself does not promote a runner or public product surface. The
+ergonomics/candidate-quality path is handled by
+[`document-artifact-candidate-generation.md`](document-artifact-candidate-generation.md)
+and its reduced report
+[`results/ockp-document-artifact-candidate-generation.md`](results/ockp-document-artifact-candidate-generation.md),
+which authorize only propose-before-create skill policy behavior.

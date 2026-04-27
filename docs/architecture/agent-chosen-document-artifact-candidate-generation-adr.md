@@ -18,6 +18,10 @@ whether an agent may choose a candidate `document.path`, `document.title`, and
 remains valid for runner, schema, storage, migration, public API, and direct
 create behavior: none are promoted or changed by this ADR.
 
+For the refreshed `oc-99z` ergonomics path, this ADR is the promoted surface:
+propose-before-create skill behavior only, with no durable write before user
+approval.
+
 Supporting evidence:
 
 - [`../evals/document-artifact-candidate-generation-poc.md`](../evals/document-artifact-candidate-generation-poc.md)

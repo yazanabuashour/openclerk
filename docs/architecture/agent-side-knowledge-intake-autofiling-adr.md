@@ -182,10 +182,11 @@ only.
 
 ## `oc-99z` Decision
 
-Decision: keep the strict agent-side intake policy as current behavior and
-reference evidence. Do not promote autonomous autofiling, path/title/body
-inference, a runner action, a JSON schema change, a storage change, public API
-behavior, or `skills/openclerk/SKILL.md` behavior from this intake lane.
+Refreshed decision: keep strict runner behavior and promote only the already
+accepted propose-before-create skill policy for faithful candidate documents.
+Do not promote autonomous autofiling, direct path/title/body inference into a
+durable write, a runner action, a JSON schema change, a storage change, public
+API behavior, or any direct-create behavior from this intake lane.
 
 The targeted `oc-u9l` eval report
 [`../evals/results/ockp-document-this-intake-pressure.md`](../evals/results/ockp-document-this-intake-pressure.md)
@@ -196,11 +197,24 @@ updates, and synthesis freshness. The evidence shows existing
 `openclerk document` and `openclerk retrieval` workflows can express the
 pressure-tested behavior without a runner capability gap.
 
+Capability path: no promotion. Current `openclerk document` and
+`openclerk retrieval` primitives safely express the tested workflows while
+preserving strict validation, duplicate checks, metadata authority, source refs
+or citations, provenance, and freshness.
+
+Ergonomics path: promote the narrow skill policy accepted in
+[`agent-chosen-document-artifact-candidate-generation-adr.md`](agent-chosen-document-artifact-candidate-generation-adr.md).
+For supported inputs, the agent may propose a candidate `document.path`,
+`document.title`, and `document.body` from explicit user-provided content,
+optionally validate the candidate or check duplicate risk through existing
+runner actions, show the candidate path, title, and body preview, state that no
+document was created, and ask for approval before any durable write.
+
 Supported behavior remains unchanged:
 
 - ask once with no tools when required `document.path`, `document.title`,
   `document.body`, source hints, retrieval fields, or update targets are
-  missing
+  missing and no faithful propose-before-create candidate can be formed
 - use runner JSON only when strict required fields and targets are explicit or
   directly derivable from explicit user-provided content
 - let explicit user path, title, body, source hints, and update targets
@@ -211,14 +225,19 @@ Supported behavior remains unchanged:
 - keep metadata, frontmatter, canonical markdown, promoted records, and
   runner-visible registry state authoritative over inferred filenames or
   placement
+- never call `create_document`, `append_document`, or `replace_section` for a
+  proposed candidate until the user approves the target and write
 
-Because no `runner_capability_gap` was found, the blocked implementation task
-`oc-umk` is not authorized. Any future promotion requires a new decision with
-targeted eval evidence and exact implementation gates.
+Because no `runner_capability_gap` was found, `oc-umk` is not authorized to add
+runner, schema, storage, migration, public API, or direct-create work. The only
+authorized implementation surface is the existing propose-before-create skill
+policy in `skills/openclerk/SKILL.md`. Any future direct-create, autofiling, or
+runner relaxation requires a new decision with targeted eval evidence and exact
+implementation gates.
 
 The later corrected candidate-generation track is recorded in
 [`agent-chosen-document-artifact-candidate-generation-adr.md`](agent-chosen-document-artifact-candidate-generation-adr.md).
 It narrows this `oc-99z` outcome to runner, schema, storage, public API, direct
-create, and strict-runner behavior. It evaluates the separate product question
-of propose-before-create agent-side path/title/body candidates using a quality
-rubric instead of a runner capability-gap rubric.
+create, and strict-runner behavior. It evaluates and satisfies the ergonomics
+question for propose-before-create agent-side path/title/body candidates using
+a quality rubric instead of a runner capability-gap rubric.
