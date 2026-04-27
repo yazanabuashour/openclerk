@@ -273,6 +273,28 @@ const (
 	candidateBodyFaithfulnessPath              = "notes/candidates/customer-escalation-summary.md"
 	candidateBodyFaithfulnessTitle             = "Customer Escalation Summary"
 	candidateDuplicateSearchText               = "candidate generation duplicate pricing model marker"
+
+	artifactIngestionLaneName            = "heterogeneous-artifact-ingestion-pressure"
+	artifactPDFSourceURLScenarioID       = "artifact-pdf-source-url-ingestion"
+	artifactTranscriptScenarioID         = "artifact-transcript-canonical-markdown"
+	artifactInvoiceReceiptScenarioID     = "artifact-invoice-receipt-authority"
+	artifactMixedSynthesisScenarioID     = "artifact-mixed-synthesis-freshness"
+	artifactSourceMissingHintsScenarioID = "artifact-source-url-missing-hints"
+	artifactUnsupportedVideoScenarioID   = "artifact-unsupported-native-video-ingest"
+	artifactBypassScenarioID             = "artifact-ingestion-bypass-reject"
+	artifactPDFSourcePath                = "sources/artifacts/vendor-security-paper.md"
+	artifactPDFAssetPath                 = "assets/sources/artifacts/vendor-security-paper.pdf"
+	artifactPDFSourceURLToken            = "{{ARTIFACT_PDF_SOURCE_URL}}"
+	artifactPDFEvidenceText              = "ArtifactPDFIngestionEvidence"
+	artifactTranscriptPath               = "transcripts/artifacts/vendor-demo-transcript.md"
+	artifactInvoicePath                  = "invoices/artifacts/atlas-platform-2026-04.md"
+	artifactReceiptPath                  = "receipts/artifacts/nebula-usb-c-hub.md"
+	artifactMixedSynthesisPath           = "synthesis/artifact-ingestion-pressure.md"
+	artifactMixedSynthesisOldPath        = "sources/artifacts/mixed-old.md"
+	artifactMixedSynthesisCurrentPath    = "sources/artifacts/mixed-current.md"
+	artifactTranscriptEvidenceText       = "Artifact transcript canonical markdown evidence"
+	artifactInvoiceReceiptEvidenceText   = "Artifact invoice receipt authority evidence"
+	artifactMixedSynthesisEvidenceText   = "Artifact mixed synthesis freshness evidence"
 )
 
 var (
@@ -402,7 +424,9 @@ type metrics struct {
 	SearchUsed                bool           `json:"search_used"`
 	SearchUnfilteredUsed      bool           `json:"search_unfiltered_used"`
 	SearchPathFilterUsed      bool           `json:"search_path_filter_used"`
+	SearchPathPrefixes        []string       `json:"search_path_prefixes,omitempty"`
 	SearchMetadataFilterUsed  bool           `json:"search_metadata_filter_used"`
+	SearchMetadataFilters     []string       `json:"search_metadata_filters,omitempty"`
 	IngestSourceURLUsed       bool           `json:"ingest_source_url_used"`
 	IngestSourceURLUpdateUsed bool           `json:"ingest_source_url_update_used"`
 	ValidateUsed              bool           `json:"validate_used"`
@@ -809,12 +833,15 @@ type sourceURLUpdateFixtures struct {
 }
 
 func startSourceURLUpdateFixtures(scenarioID string) *sourceURLUpdateFixtures {
-	if !isSourceURLUpdateScenario(scenarioID) {
+	if !isSourceURLUpdateScenario(scenarioID) && scenarioID != artifactPDFSourceURLScenarioID {
 		return nil
 	}
 	fixtures := &sourceURLUpdateFixtures{
 		initialPDF: minimalEvalPDF("Source URL Update Stable", "OpenClerk Eval", sourceURLUpdateInitialText),
 		changedPDF: minimalEvalPDF("Source URL Update Changed", "OpenClerk Eval", sourceURLUpdateChangedText),
+	}
+	if scenarioID == artifactPDFSourceURLScenarioID {
+		fixtures.initialPDF = minimalEvalPDF("Artifact PDF Source", "OpenClerk Eval", artifactPDFEvidenceText)
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/stable.pdf", func(w http.ResponseWriter, _ *http.Request) {
@@ -859,7 +886,8 @@ func (f *sourceURLUpdateFixtures) renderPrompt(prompt string) string {
 		return prompt
 	}
 	prompt = strings.ReplaceAll(prompt, sourceURLUpdateStableURLToken, f.stableURL())
-	return strings.ReplaceAll(prompt, sourceURLUpdateChangedURLToken, f.changedURL())
+	prompt = strings.ReplaceAll(prompt, sourceURLUpdateChangedURLToken, f.changedURL())
+	return strings.ReplaceAll(prompt, artifactPDFSourceURLToken, f.stableURL())
 }
 
 func servePDF(w http.ResponseWriter, body []byte) {
@@ -1326,6 +1354,18 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		}
 	case candidateDuplicateRiskAsksScenarioID:
 		if err := seedDocumentArtifactCandidateDuplicate(ctx, cfg); err != nil {
+			return err
+		}
+	case artifactTranscriptScenarioID:
+		if err := seedArtifactTranscript(ctx, cfg); err != nil {
+			return err
+		}
+	case artifactInvoiceReceiptScenarioID:
+		if err := seedArtifactInvoiceReceipt(ctx, cfg); err != nil {
+			return err
+		}
+	case artifactMixedSynthesisScenarioID:
+		if err := seedArtifactMixedSynthesis(ctx, cfg); err != nil {
 			return err
 		}
 	case "stale-synthesis-update":
@@ -2114,6 +2154,104 @@ Candidate generation duplicate pricing model marker.
 The pricing model note already captures packaging tiers and renewal notes.
 `) + "\n"
 	return createSeedDocument(ctx, cfg, candidateDuplicateExistingPath, "Existing Pricing Model Note", body)
+}
+
+func seedArtifactTranscript(ctx context.Context, cfg runclient.Config) error {
+	body := strings.TrimSpace(`---
+type: transcript
+status: active
+artifact_kind: transcript
+---
+# Vendor Demo Transcript
+
+## Summary
+Artifact transcript canonical markdown evidence: vendor demo transcript says agents may store transcripts as canonical markdown when the transcript text is already supplied.
+
+## Excerpt
+Speaker A: Keep transcript artifacts citeable through document search.
+Speaker B: Do not require native audio or video ingestion for pasted transcript text.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, artifactTranscriptPath, "Vendor Demo Transcript", body)
+}
+
+func seedArtifactInvoiceReceipt(ctx context.Context, cfg runclient.Config) error {
+	invoiceBody := strings.TrimSpace(`---
+type: invoice
+status: active
+artifact_kind: invoice
+vendor: Atlas Platform
+total_usd: "1250.00"
+---
+# Atlas Platform April Invoice
+
+## Summary
+Artifact invoice receipt authority evidence: Atlas Platform invoice total is USD 1250.00 and requires approval above USD 500.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, artifactInvoicePath, "Atlas Platform April Invoice", invoiceBody); err != nil {
+		return err
+	}
+	receiptBody := strings.TrimSpace(`---
+type: receipt
+status: active
+artifact_kind: receipt
+vendor: Nebula Office
+total_usd: "86.40"
+---
+# Nebula USB-C Hub Receipt
+
+## Summary
+Artifact invoice receipt authority evidence: Nebula USB-C Hub receipt total is USD 86.40.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, artifactReceiptPath, "Nebula USB-C Hub Receipt", receiptBody)
+}
+
+func seedArtifactMixedSynthesis(ctx context.Context, cfg runclient.Config) error {
+	oldBody := strings.TrimSpace(`---
+type: source
+status: superseded
+superseded_by: sources/artifacts/mixed-current.md
+artifact_kind: mixed
+---
+# Mixed Artifact Old Source
+
+## Summary
+Older mixed artifact source said artifact ingestion should prefer duplicate synthesis pages.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, artifactMixedSynthesisOldPath, "Mixed Artifact Old Source", oldBody); err != nil {
+		return err
+	}
+	currentBody := strings.TrimSpace(`---
+type: source
+status: active
+supersedes: sources/artifacts/mixed-old.md
+artifact_kind: mixed
+---
+# Mixed Artifact Current Source
+
+## Summary
+Artifact mixed synthesis freshness evidence: current mixed artifacts should update existing source-linked synthesis and preserve citations, provenance, and freshness.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, artifactMixedSynthesisCurrentPath, "Mixed Artifact Current Source", currentBody); err != nil {
+		return err
+	}
+	synthesisBody := strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: sources/artifacts/mixed-old.md
+---
+# Artifact Ingestion Pressure
+
+## Summary
+Stale mixed artifact synthesis says duplicate synthesis pages are acceptable.
+
+## Sources
+- sources/artifacts/mixed-old.md
+
+## Freshness
+Fresh before heterogeneous artifact ingestion pressure checks.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, artifactMixedSynthesisPath, "Artifact Ingestion Pressure", synthesisBody)
 }
 
 func seedDecisionRecordVsDocs(ctx context.Context, cfg runclient.Config) error {
@@ -3152,6 +3290,16 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 			RequireApproval:  true,
 			RequireBodyShown: true,
 		})
+	case artifactPDFSourceURLScenarioID:
+		return verifyArtifactPDFSourceURL(ctx, paths, finalMessage, turnMetrics)
+	case artifactTranscriptScenarioID:
+		return verifyArtifactTranscript(ctx, paths, finalMessage, turnMetrics)
+	case artifactInvoiceReceiptScenarioID:
+		return verifyArtifactInvoiceReceipt(ctx, paths, finalMessage, turnMetrics)
+	case artifactMixedSynthesisScenarioID:
+		return verifyArtifactMixedSynthesis(ctx, paths, finalMessage, turnMetrics)
+	case artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID:
+		return verifyFinalAnswerOnly(sc, finalMessage, turnMetrics), nil
 	case "stale-synthesis-update":
 		return verifyStaleSynthesisUpdate(ctx, paths, finalMessage, turnMetrics)
 	case "synthesis-freshness-repair":
@@ -3239,6 +3387,15 @@ func isValidationRejection(scenarioID string, message string) bool {
 		return isDocumentThisMissingFieldsClarification(message)
 	case documentThisSourceURLMissingHintsScenarioID:
 		return isMissingFieldClarification(message, []string{"source.path_hint", "source.asset_path_hint"})
+	case artifactSourceMissingHintsScenarioID:
+		return isMissingFieldClarification(message, []string{"source.path_hint", "source.asset_path_hint"})
+	case artifactUnsupportedVideoScenarioID:
+		return containsAny(lower, []string{"unsupported", "does not support", "not support", "cannot", "can't"}) &&
+			containsAny(lower, []string{"video", "youtube", "native"}) &&
+			containsAny(lower, []string{"runner", "ingest_source_url", "openclerk"})
+	case artifactBypassScenarioID:
+		return containsAny(lower, []string{"unsupported", "cannot bypass", "can't bypass", "must use runner", "use runner", "do not bypass"}) &&
+			containsAny(lower, []string{"sqlite", "direct", "bypass"})
 	case "negative-limit-reject":
 		return containsAny(lower, []string{"negative", "invalid", "non-negative", "positive"}) && strings.Contains(lower, "limit")
 	case "unsupported-lower-level-reject":
@@ -7426,6 +7583,240 @@ func verifyDocumentArtifactCandidateLowConfidence(ctx context.Context, paths eva
 	}, nil
 }
 
+func verifyArtifactPDFSourceURL(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	doc, found, err := documentByPath(ctx, paths, artifactPDFSourcePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	count, err := exactDocumentCount(ctx, paths, artifactPDFSourcePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := artifactIngestionBypassFailures(turnMetrics)
+	if !found || doc == nil {
+		failures = append(failures, "missing PDF source document")
+	} else {
+		failures = append(failures, missingRequired(doc.Body, []string{artifactPDFEvidenceText, "source_url:", "asset_path:", artifactPDFAssetPath})...)
+	}
+	if count != 1 {
+		failures = append(failures, fmt.Sprintf("expected one PDF source document, got %d", count))
+	}
+	if !turnMetrics.IngestSourceURLUsed || turnMetrics.IngestSourceURLUpdateUsed {
+		failures = append(failures, "agent did not use default create-mode ingest_source_url")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{artifactPDFSourcePath, artifactPDFAssetPath}) &&
+		messageContainsAny(finalMessage, []string{"citation", "citations", "doc_id", "chunk_id"}) &&
+		messageContainsAny(finalMessage, []string{"ingested", "created", "source URL"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report PDF source ingestion with citation evidence")
+	}
+	databasePass := found && doc != nil && count == 1 &&
+		len(missingRequired(doc.Body, []string{artifactPDFEvidenceText, "source_url:", "asset_path:", artifactPDFAssetPath})) == 0
+	activityPass := len(artifactIngestionBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.IngestSourceURLUsed && !turnMetrics.IngestSourceURLUpdateUsed
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{artifactPDFSourcePath},
+	}, nil
+}
+
+func verifyArtifactTranscript(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	doc, found, err := documentByPath(ctx, paths, artifactTranscriptPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	search, err := artifactSearch(ctx, paths, artifactTranscriptEvidenceText)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := artifactIngestionBypassFailures(turnMetrics)
+	if !found || doc == nil {
+		failures = append(failures, "missing transcript fixture")
+	} else {
+		failures = append(failures, missingRequired(doc.Body, []string{artifactTranscriptEvidenceText, "artifact_kind: transcript"})...)
+	}
+	if !searchContainsPath(search, artifactTranscriptPath) || !searchResultHasCitations(search) {
+		failures = append(failures, "transcript search did not expose citation-bearing result")
+	}
+	if !turnMetrics.SearchUsed || !containsAllStrings(turnMetrics.SearchPathPrefixes, []string{"transcripts/"}) {
+		failures = append(failures, "agent did not search transcript artifact evidence with path_prefix transcripts/")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{artifactTranscriptPath}) &&
+		messageContainsAny(finalMessage, []string{"doc_id", "chunk_id", "citation"}) &&
+		messageContainsAny(finalMessage, []string{"canonical markdown", "transcript"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not cite transcript canonical markdown evidence")
+	}
+	databasePass := found && doc != nil &&
+		len(missingRequired(doc.Body, []string{artifactTranscriptEvidenceText, "artifact_kind: transcript"})) == 0 &&
+		searchContainsPath(search, artifactTranscriptPath) && searchResultHasCitations(search)
+	activityPass := len(artifactIngestionBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.SearchUsed &&
+		containsAllStrings(turnMetrics.SearchPathPrefixes, []string{"transcripts/"})
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{artifactTranscriptPath},
+	}, nil
+}
+
+func verifyArtifactInvoiceReceipt(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	invoice, invoiceFound, err := documentByPath(ctx, paths, artifactInvoicePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	receipt, receiptFound, err := documentByPath(ctx, paths, artifactReceiptPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	search, err := artifactSearch(ctx, paths, artifactInvoiceReceiptEvidenceText)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := artifactIngestionBypassFailures(turnMetrics)
+	if !invoiceFound || invoice == nil {
+		failures = append(failures, "missing invoice fixture")
+	} else {
+		failures = append(failures, missingRequired(invoice.Body, []string{"USD 1250.00", "approval above USD 500"})...)
+	}
+	if !receiptFound || receipt == nil {
+		failures = append(failures, "missing receipt fixture")
+	} else {
+		failures = append(failures, missingRequired(receipt.Body, []string{"USD 86.40"})...)
+	}
+	if !searchContainsPath(search, artifactInvoicePath) || !searchContainsPath(search, artifactReceiptPath) || !searchResultHasCitations(search) {
+		failures = append(failures, "invoice/receipt search did not expose citation-bearing authority results")
+	}
+	requiredMetadataFilters := []string{"artifact_kind=invoice", "artifact_kind=receipt"}
+	if !turnMetrics.SearchUsed || !containsAllStrings(turnMetrics.SearchMetadataFilters, requiredMetadataFilters) {
+		failures = append(failures, "agent did not run invoice and receipt artifact_kind metadata-filtered retrieval")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{artifactInvoicePath, artifactReceiptPath, "USD 1250.00", "USD 86.40"}) &&
+		messageContainsAny(finalMessage, []string{"doc_id", "chunk_id", "citation"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not cite invoice and receipt authority evidence")
+	}
+	databasePass := invoiceFound && invoice != nil && receiptFound && receipt != nil &&
+		len(missingRequired(invoice.Body, []string{"USD 1250.00", "approval above USD 500"})) == 0 &&
+		len(missingRequired(receipt.Body, []string{"USD 86.40"})) == 0 &&
+		searchContainsPath(search, artifactInvoicePath) && searchContainsPath(search, artifactReceiptPath) &&
+		searchResultHasCitations(search)
+	activityPass := len(artifactIngestionBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.SearchUsed &&
+		containsAllStrings(turnMetrics.SearchMetadataFilters, requiredMetadataFilters)
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{artifactInvoicePath, artifactReceiptPath},
+	}, nil
+}
+
+func verifyArtifactMixedSynthesis(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	synthesis, synthesisFound, err := documentByPath(ctx, paths, artifactMixedSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	current, currentFound, err := documentByPath(ctx, paths, artifactMixedSynthesisCurrentPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	search, err := artifactSearch(ctx, paths, artifactMixedSynthesisEvidenceText)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projections, err := artifactProjectionStates(ctx, paths, docIDOrEmpty(synthesis))
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := artifactIngestionBypassFailures(turnMetrics)
+	if !synthesisFound || synthesis == nil {
+		failures = append(failures, "missing mixed synthesis fixture")
+	} else {
+		failures = append(failures, missingRequired(synthesis.Body, []string{artifactMixedSynthesisOldPath, "source_refs:"})...)
+	}
+	if !currentFound || current == nil {
+		failures = append(failures, "missing current mixed artifact source")
+	}
+	if !searchContainsPath(search, artifactMixedSynthesisCurrentPath) || !searchResultHasCitations(search) {
+		failures = append(failures, "mixed artifact current source search did not expose citation-bearing result")
+	}
+	if !projectionListContainsStaleSource(projections, artifactMixedSynthesisCurrentPath) && !projectionListContainsStaleSource(projections, artifactMixedSynthesisOldPath) {
+		failures = append(failures, "synthesis projection did not expose stale or missing current mixed source")
+	}
+	if !turnMetrics.SearchUsed || !turnMetrics.ListDocumentsUsed || !turnMetrics.GetDocumentUsed || !turnMetrics.ProjectionStatesUsed || !turnMetrics.ProvenanceEventsUsed {
+		failures = append(failures, "agent did not inspect search/list/get/provenance/projection evidence for mixed synthesis")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{artifactMixedSynthesisPath, artifactMixedSynthesisOldPath, artifactMixedSynthesisCurrentPath}) &&
+		messageContainsAny(finalMessage, []string{"stale", "freshness", "projection"}) &&
+		messageContainsAny(finalMessage, []string{"provenance", "source refs", "source_refs"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not explain mixed artifact synthesis freshness and provenance")
+	}
+	databasePass := synthesisFound && synthesis != nil && currentFound && current != nil &&
+		searchContainsPath(search, artifactMixedSynthesisCurrentPath) && searchResultHasCitations(search) &&
+		(projectionListContainsStaleSource(projections, artifactMixedSynthesisCurrentPath) || projectionListContainsStaleSource(projections, artifactMixedSynthesisOldPath))
+	activityPass := len(artifactIngestionBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.SearchUsed && turnMetrics.ListDocumentsUsed && turnMetrics.GetDocumentUsed &&
+		turnMetrics.ProjectionStatesUsed && turnMetrics.ProvenanceEventsUsed
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{artifactMixedSynthesisPath, artifactMixedSynthesisOldPath, artifactMixedSynthesisCurrentPath},
+	}, nil
+}
+
+func artifactSearch(ctx context.Context, paths evalPaths, text string) (runner.RetrievalTaskResult, error) {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	return runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
+			Text:  text,
+			Limit: 10,
+		},
+	})
+}
+
+func artifactProjectionStates(ctx context.Context, paths evalPaths, synthesisDocID string) (runner.ProjectionStateList, error) {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	result, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProjectionStates,
+		Projection: runner.ProjectionStateOptions{
+			Projection: "synthesis",
+			RefKind:    "document",
+			RefID:      synthesisDocID,
+			Limit:      5,
+		},
+	})
+	if err != nil {
+		return runner.ProjectionStateList{}, err
+	}
+	if result.Projections == nil {
+		return runner.ProjectionStateList{}, nil
+	}
+	return *result.Projections, nil
+}
+
+func projectionListContainsStaleSource(list runner.ProjectionStateList, path string) bool {
+	for _, projection := range list.Projections {
+		if projection.Freshness == "stale" &&
+			(projectionDetailContains(projection.Details, "stale_source_refs", path) ||
+				projectionDetailContains(projection.Details, "current_source_refs", path) ||
+				projectionDetailContains(projection.Details, "missing_source_refs", path)) {
+			return true
+		}
+	}
+	return false
+}
+
 func agentChosenBypassFailures(turnMetrics metrics) []string {
 	return populatedBypassFailures(turnMetrics)
 }
@@ -7439,6 +7830,10 @@ func documentThisBypassFailures(turnMetrics metrics) []string {
 }
 
 func documentArtifactCandidateBypassFailures(turnMetrics metrics) []string {
+	return populatedBypassFailures(turnMetrics)
+}
+
+func artifactIngestionBypassFailures(turnMetrics metrics) []string {
 	return populatedBypassFailures(turnMetrics)
 }
 
@@ -8575,14 +8970,34 @@ func classifySearchCommand(actionText string, m *metrics) {
 		hasMetadataFilter := strings.Contains(part, `"metadata_key":`) || strings.Contains(part, `"metadata_value":`)
 		if hasPathFilter {
 			m.SearchPathFilterUsed = true
+			m.SearchPathPrefixes = append(m.SearchPathPrefixes, fieldValueFromCompactedAction(part, "path_prefix"))
 		}
 		if hasMetadataFilter {
 			m.SearchMetadataFilterUsed = true
+			key := fieldValueFromCompactedAction(part, "metadata_key")
+			value := fieldValueFromCompactedAction(part, "metadata_value")
+			if key != "" || value != "" {
+				m.SearchMetadataFilters = append(m.SearchMetadataFilters, key+"="+value)
+			}
 		}
 		if !hasPathFilter && !hasMetadataFilter {
 			m.SearchUnfilteredUsed = true
 		}
 	}
+}
+
+func fieldValueFromCompactedAction(part string, field string) string {
+	fieldMarker := `"` + field + `":"`
+	valueStart := strings.Index(part, fieldMarker)
+	if valueStart < 0 {
+		return ""
+	}
+	valueStart += len(fieldMarker)
+	valueEnd := strings.Index(part[valueStart:], `"`)
+	if valueEnd < 0 {
+		return ""
+	}
+	return strings.TrimSpace(part[valueStart : valueStart+valueEnd])
 }
 
 func sanitizeMetricEvidence(value string) string {
@@ -8645,7 +9060,9 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.SearchUsed = out.SearchUsed || current.SearchUsed
 		out.SearchUnfilteredUsed = out.SearchUnfilteredUsed || current.SearchUnfilteredUsed
 		out.SearchPathFilterUsed = out.SearchPathFilterUsed || current.SearchPathFilterUsed
+		out.SearchPathPrefixes = append(out.SearchPathPrefixes, current.SearchPathPrefixes...)
 		out.SearchMetadataFilterUsed = out.SearchMetadataFilterUsed || current.SearchMetadataFilterUsed
+		out.SearchMetadataFilters = append(out.SearchMetadataFilters, current.SearchMetadataFilters...)
 		out.IngestSourceURLUsed = out.IngestSourceURLUsed || current.IngestSourceURLUsed
 		out.IngestSourceURLUpdateUsed = out.IngestSourceURLUpdateUsed || current.IngestSourceURLUpdateUsed
 		out.ValidateUsed = out.ValidateUsed || current.ValidateUsed
@@ -8819,7 +9236,7 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	if releaseBlocking {
 		return nil
 	}
-	if lane != populatedLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != sourceURLUpdateLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName {
+	if lane != populatedLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != sourceURLUpdateLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName {
 		return nil
 	}
 	summary := targetedLaneSummary{
@@ -8852,6 +9269,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		case documentArtifactCandidateLaneName:
 			include = isDocumentArtifactCandidateScenario(result.Scenario)
 			classification, posture = classifyTargetedDocumentArtifactCandidateResult(result)
+		case artifactIngestionLaneName:
+			include = isArtifactIngestionScenario(result.Scenario)
+			classification, posture = classifyTargetedArtifactIngestionResult(result)
 		}
 		if !include {
 			continue
@@ -8890,8 +9310,34 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		} else {
 			summary.Promotion = "no promoted skill policy yet; repair candidate quality gaps before any propose-before-create skill behavior change"
 		}
+	case artifactIngestionLaneName:
+		summary.Decision = artifactIngestionDecision(summary.ScenarioClassifications)
+		summary.Promotion = "targeted evidence only; no promoted runner action, parser, schema, storage migration, direct create behavior, or public API change"
 	}
 	return &summary
+}
+
+func classifyTargetedArtifactIngestionResult(result jobResult) (string, string) {
+	if result.Passed && result.Verification.Passed {
+		return "none", "current document/retrieval runner evidence preserved artifact authority, citations, provenance, freshness, and bypass boundaries"
+	}
+	if len(artifactIngestionBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if isFinalAnswerOnlyValidationScenario(result.Scenario) &&
+		(result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1) {
+		return "skill_guidance", "unsupported or missing-field artifact pressure did not stay final-answer-only"
+	}
+	if result.Verification.Passed {
+		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene", "fixture or durable artifact evidence did not satisfy heterogeneous artifact pressure"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance", "runner-visible evidence existed, but the assistant answer did not satisfy heterogeneous artifact pressure"
+	}
+	return "runner_capability_gap", "manual review required before any generalized artifact ingestion surface promotion"
 }
 
 func classifyTargetedDocumentArtifactCandidateResult(result jobResult) (string, string) {
@@ -9052,6 +9498,25 @@ func documentArtifactCandidateDecision(rows []targetedScenarioClassification) st
 	return "promote_propose_before_create_skill_policy"
 }
 
+func artifactIngestionDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	for _, row := range rows {
+		if row.FailureClassification == "runner_capability_gap" {
+			return "defer_for_artifact_runner_surface_design"
+		}
+		if row.FailureClassification != "none" {
+			return "defer_for_guidance_or_eval_repair"
+		}
+		seen[row.Scenario] = true
+	}
+	for _, id := range artifactIngestionScenarioIDs() {
+		if !seen[id] {
+			return "defer_for_guidance_or_eval_repair"
+		}
+	}
+	return "keep_as_reference"
+}
+
 func documentArtifactCandidateScenarioIDs() []string {
 	return []string{
 		candidateNoteFromPastedContentScenarioID,
@@ -9061,6 +9526,18 @@ func documentArtifactCandidateScenarioIDs() []string {
 		candidateDuplicateRiskAsksScenarioID,
 		candidateLowConfidenceAsksScenarioID,
 		candidateBodyFaithfulnessScenarioID,
+	}
+}
+
+func artifactIngestionScenarioIDs() []string {
+	return []string{
+		artifactPDFSourceURLScenarioID,
+		artifactTranscriptScenarioID,
+		artifactInvoiceReceiptScenarioID,
+		artifactMixedSynthesisScenarioID,
+		artifactSourceMissingHintsScenarioID,
+		artifactUnsupportedVideoScenarioID,
+		artifactBypassScenarioID,
 	}
 }
 
@@ -9530,6 +10007,7 @@ func reportLane(ids []string) (string, bool) {
 	sourceURLUpdate := 0
 	documentThis := 0
 	documentArtifactCandidate := 0
+	artifactIngestion := 0
 	validation := 0
 	releaseBlocking := false
 	for _, id := range ids {
@@ -9561,6 +10039,10 @@ func reportLane(ids []string) (string, bool) {
 			documentArtifactCandidate++
 			continue
 		}
+		if isArtifactIngestionScenario(id) {
+			artifactIngestion++
+			continue
+		}
 		if isFinalAnswerOnlyValidationScenario(id) {
 			validation++
 			continue
@@ -9588,6 +10070,9 @@ func reportLane(ids []string) (string, bool) {
 	if documentArtifactCandidate > 0 && documentArtifactCandidate == len(ids) {
 		return documentArtifactCandidateLaneName, false
 	}
+	if artifactIngestion > 0 && artifactIngestion == len(ids) {
+		return artifactIngestionLaneName, false
+	}
 	if populated > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
@@ -9609,6 +10094,9 @@ func reportLane(ids []string) (string, bool) {
 	if documentArtifactCandidate > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
+	if artifactIngestion > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
 	return populatedDefaultLaneName, true
 }
 
@@ -9622,7 +10110,7 @@ func isPopulatedVaultScenario(id string) bool {
 }
 
 func isReleaseBlockingScenario(id string) bool {
-	return !isPopulatedVaultScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isSourceURLUpdateScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id)
+	return !isPopulatedVaultScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isSourceURLUpdateScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id)
 }
 
 func isDocumentHistoryScenario(id string) bool {
@@ -9673,6 +10161,15 @@ func isDocumentThisScenario(id string) bool {
 func isDocumentArtifactCandidateScenario(id string) bool {
 	switch id {
 	case candidateNoteFromPastedContentScenarioID, candidateTitleAndPathFromHeadingScenarioID, candidateMixedSourceSummaryScenarioID, candidateExplicitOverridesWinScenarioID, candidateDuplicateRiskAsksScenarioID, candidateLowConfidenceAsksScenarioID, candidateBodyFaithfulnessScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+
+func isArtifactIngestionScenario(id string) bool {
+	switch id {
+	case artifactPDFSourceURLScenarioID, artifactTranscriptScenarioID, artifactInvoiceReceiptScenarioID, artifactMixedSynthesisScenarioID, artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID:
 		return true
 	default:
 		return false
@@ -10057,6 +10554,41 @@ Final answer requirements:
 - ask for confirmation before creating`,
 		},
 		{
+			ID:     artifactPDFSourceURLScenarioID,
+			Title:  "Artifact PDF source URL ingestion",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or manual PDF downloads. Run openclerk document with exactly this request shape: {\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{ARTIFACT_PDF_SOURCE_URL}}\",\"path_hint\":\"sources/artifacts/vendor-security-paper.md\",\"asset_path_hint\":\"assets/sources/artifacts/vendor-security-paper.pdf\",\"title\":\"Vendor Security Paper\"}}. In the final answer, mention sources/artifacts/vendor-security-paper.md, assets/sources/artifacts/vendor-security-paper.pdf, citation evidence such as doc_id or chunk_id, and that the PDF source URL was ingested through ingest_source_url.",
+		},
+		{
+			ID:     artifactTranscriptScenarioID,
+			Title:  "Artifact transcript as canonical markdown",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or native audio/video ingestion. Search for Artifact transcript canonical markdown evidence with path_prefix transcripts/ and limit 10. In the final answer, cite transcripts/artifacts/vendor-demo-transcript.md with doc_id or chunk_id, explain that supplied transcript text is already canonical markdown, and state that no native audio/video parser was needed.",
+		},
+		{
+			ID:     artifactInvoiceReceiptScenarioID,
+			Title:  "Artifact invoice and receipt authority retrieval",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Search for Artifact invoice receipt authority evidence with metadata_key artifact_kind and metadata_value invoice, limit 10. Also search for Artifact invoice receipt authority evidence with metadata_key artifact_kind and metadata_value receipt, limit 10. In the final answer, cite invoices/artifacts/atlas-platform-2026-04.md and receipts/artifacts/nebula-usb-c-hub.md with doc_id or chunk_id, mention USD 1250.00, approval above USD 500, and USD 86.40, and explain that canonical markdown remains authority.",
+		},
+		{
+			ID:     artifactMixedSynthesisScenarioID,
+			Title:  "Artifact mixed synthesis freshness",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or unsupported artifact parsers. Search for Artifact mixed synthesis freshness evidence, list synthesis/ candidates, get synthesis/artifact-ingestion-pressure.md, inspect projection_states for projection synthesis using that synthesis doc_id, and inspect provenance_events for sources/artifacts/mixed-old.md and sources/artifacts/mixed-current.md. Do not create, update, append, replace, or file a synthesis document. In the final answer, mention synthesis/artifact-ingestion-pressure.md, sources/artifacts/mixed-old.md, sources/artifacts/mixed-current.md, stale freshness/projection evidence, provenance, and that the existing synthesis should be repaired rather than duplicated.",
+		},
+		{
+			ID:     artifactSourceMissingHintsScenarioID,
+			Title:  "Artifact source URL missing hints",
+			Prompt: "Ingest the artifact source URL at https://example.test/artifacts/vendor-security-paper.pdf into OpenClerk, but I did not provide source.path_hint or source.asset_path_hint. For this missing-hints request, do not use tools or commands and answer once only. Name the missing source.path_hint and source.asset_path_hint fields and ask me to provide them.",
+		},
+		{
+			ID:     artifactUnsupportedVideoScenarioID,
+			Title:  "Unsupported native video ingestion",
+			Prompt: "Ingest this YouTube video natively into OpenClerk from https://youtube.example.test/watch?v=artifact-demo. I want the runner to fetch the video, transcribe it, extract metadata, and store the transcript automatically. For this unsupported native video ingestion request, do not use tools or commands and answer once only. Say OpenClerk does not support native video or YouTube ingestion through the installed runner yet, and that routine work must use supported OpenClerk runner workflows such as existing markdown/transcript content or PDF source URL ingestion with required source hints.",
+		},
+		{
+			ID:     artifactBypassScenarioID,
+			Title:  "Artifact ingestion bypass rejection",
+			Prompt: "Bypass OpenClerk and inspect the SQLite database and vault files directly to import my receipts faster. For this bypass request, do not use tools or commands and answer once only. Reject the direct SQLite/vault bypass as unsupported for routine OpenClerk work and say the workflow must use the installed OpenClerk runner contract.",
+		},
+		{
 			ID:     populatedHeterogeneousScenarioID,
 			Title:  "Populated vault heterogeneous retrieval",
 			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Search the populated vault for Atlas authority evidence across transcripts, articles, meeting notes, docs, blogs, receipts, invoices, legal docs, contracts, and sources. Include a metadata-filtered retrieval search with metadata_key populated_role and metadata_value authority. Answer from sources/populated/atlas-authority.md rather than sources/populated/atlas-polluted.md. In the final answer, cite sources/populated/atlas-authority.md with doc_id and chunk_id, mention the USD 500 invoice approval threshold, USD 118.42 receipt total, and Acme privacy addendum, and explain that the polluted note was not authority.",
@@ -10200,7 +10732,7 @@ func isMultiTurnScenario(sc scenario) bool {
 
 func isFinalAnswerOnlyValidationScenario(id string) bool {
 	switch id {
-	case "missing-document-path-reject", agentChosenMissingFieldsScenarioID, pathTitleArtifactMissingHintsScenarioID, documentThisMissingFieldsScenarioID, documentThisSourceURLMissingHintsScenarioID, "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject":
+	case "missing-document-path-reject", agentChosenMissingFieldsScenarioID, pathTitleArtifactMissingHintsScenarioID, documentThisMissingFieldsScenarioID, documentThisSourceURLMissingHintsScenarioID, artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID, "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject":
 		return true
 	default:
 		return false

@@ -1,0 +1,1073 @@
+{
+  "metadata": {
+    "generated_at": "2026-04-27T14:04:05.489862Z",
+    "model": "gpt-5.4-mini",
+    "reasoning_effort": "medium",
+    "harness": "codex exec --json --full-auto from throwaway run directories; single-turn scenarios use --ephemeral and multi-turn scenarios resume one persisted eval session",
+    "configured_parallelism": 1,
+    "cache_mode": "shared",
+    "cache_prewarm_seconds": 17.27,
+    "harness_elapsed_seconds": 249.61,
+    "effective_parallel_speedup": 0.83,
+    "parallel_efficiency": 0.83,
+    "phase_totals": {
+      "copy_repo_seconds": 0.15,
+      "install_variant_seconds": 23.58,
+      "seed_data_seconds": 0.09,
+      "agent_run_seconds": 208.32,
+      "verify_seconds": 0.18,
+      "total_seconds": 232.33
+    },
+    "run_root_artifact_reference": "\u003crun-root\u003e",
+    "raw_log_placeholder": "\u003crun-root\u003e/\u003cvariant\u003e/\u003cscenario\u003e/turn-N/events.jsonl",
+    "variants": [
+      "production"
+    ],
+    "scenarios": [
+      "artifact-pdf-source-url-ingestion",
+      "artifact-transcript-canonical-markdown",
+      "artifact-invoice-receipt-authority",
+      "artifact-mixed-synthesis-freshness",
+      "artifact-source-url-missing-hints",
+      "artifact-unsupported-native-video-ingest",
+      "artifact-ingestion-bypass-reject"
+    ],
+    "lane": "heterogeneous-artifact-ingestion-pressure",
+    "release_blocking": false,
+    "raw_logs_committed": false,
+    "raw_logs_note": "Raw Codex event logs remain under \u003crun-root\u003e and are not committed."
+  },
+  "results": [
+    {
+      "variant": "production",
+      "scenario": "artifact-pdf-source-url-ingestion",
+      "scenario_title": "Artifact PDF source URL ingestion",
+      "passed": false,
+      "status": "failed",
+      "exit_code": 0,
+      "wall_seconds": 23.59,
+      "phase_timings": {
+        "copy_repo_seconds": 0.03,
+        "install_variant_seconds": 6.72,
+        "agent_run_seconds": 23.59,
+        "verify_seconds": 0.02,
+        "total_seconds": 30.36
+      },
+      "metrics": {
+        "assistant_calls": 4,
+        "tool_calls": 6,
+        "command_executions": 6,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": false,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": false,
+        "search_metadata_filter_used": false,
+        "ingest_source_url_used": true,
+        "ingest_source_url_update_used": false,
+        "validate_used": false,
+        "create_document_used": false,
+        "list_documents_used": false,
+        "get_document_used": false,
+        "inspect_layout_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "decisions_lookup_used": false,
+        "decision_record_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": false,
+        "usage_exposed": true,
+        "input_tokens": 107490,
+        "cached_input_tokens": 100864,
+        "non_cached_input_tokens": 6626,
+        "output_tokens": 2391,
+        "event_type_counts": {
+          "item.completed": 7,
+          "item.started": 3,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": false,
+        "database_pass": false,
+        "assistant_pass": true,
+        "details": "turn 1: missing PDF source document; expected one PDF source document, got 0",
+        "documents": [
+          "sources/artifacts/vendor-security-paper.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 23.59,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 4,
+            "tool_calls": 6,
+            "command_executions": 6,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": false,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "ingest_source_url_used": true,
+            "ingest_source_url_update_used": false,
+            "validate_used": false,
+            "create_document_used": false,
+            "list_documents_used": false,
+            "get_document_used": false,
+            "inspect_layout_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "decisions_lookup_used": false,
+            "decision_record_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 107490,
+            "cached_input_tokens": 100864,
+            "non_cached_input_tokens": 6626,
+            "output_tokens": 2391,
+            "event_type_counts": {
+              "item.completed": 7,
+              "item.started": 3,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": false,
+            "database_pass": false,
+            "assistant_pass": true,
+            "details": "missing PDF source document; expected one PDF source document, got 0",
+            "documents": [
+              "sources/artifacts/vendor-security-paper.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/artifact-pdf-source-url-ingestion/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or manual PDF downloads. Run openclerk document with exactly this request shape: {\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{ARTIFACT_PDF_SOURCE_URL}}\",\"path_hint\":\"sources/artifacts/vendor-security-paper.md\",\"asset_path_hint\":\"assets/sources/artifacts/vendor-security-paper.pdf\",\"title\":\"Vendor Security Paper\"}}. In the final answer, mention sources/artifacts/vendor-security-paper.md, assets/sources/artifacts/vendor-security-paper.pdf, citation evidence such as doc_id or chunk_id, and that the PDF source URL was ingested through ingest_source_url.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/artifact-pdf-source-url-ingestion/turn-1/events.jsonl",
+      "started_at": "2026-04-27T14:00:13.151245Z",
+      "completed_at": "2026-04-27T14:00:43.512156Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "artifact-transcript-canonical-markdown",
+      "scenario_title": "Artifact transcript as canonical markdown",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 32.57,
+      "phase_timings": {
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 2.96,
+        "seed_data_seconds": 0.02,
+        "agent_run_seconds": 32.57,
+        "verify_seconds": 0.02,
+        "total_seconds": 35.6
+      },
+      "metrics": {
+        "assistant_calls": 4,
+        "tool_calls": 6,
+        "command_executions": 6,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": true,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": true,
+        "search_metadata_filter_used": false,
+        "ingest_source_url_used": false,
+        "ingest_source_url_update_used": false,
+        "validate_used": false,
+        "create_document_used": false,
+        "list_documents_used": false,
+        "get_document_used": false,
+        "inspect_layout_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "decisions_lookup_used": false,
+        "decision_record_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": false,
+        "usage_exposed": true,
+        "input_tokens": 106586,
+        "cached_input_tokens": 80896,
+        "non_cached_input_tokens": 25690,
+        "output_tokens": 1099,
+        "event_type_counts": {
+          "item.completed": 7,
+          "item.started": 3,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "transcripts/artifacts/vendor-demo-transcript.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 32.57,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 4,
+            "tool_calls": 6,
+            "command_executions": 6,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": true,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": true,
+            "search_metadata_filter_used": false,
+            "ingest_source_url_used": false,
+            "ingest_source_url_update_used": false,
+            "validate_used": false,
+            "create_document_used": false,
+            "list_documents_used": false,
+            "get_document_used": false,
+            "inspect_layout_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "decisions_lookup_used": false,
+            "decision_record_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 106586,
+            "cached_input_tokens": 80896,
+            "non_cached_input_tokens": 25690,
+            "output_tokens": 1099,
+            "event_type_counts": {
+              "item.completed": 7,
+              "item.started": 3,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "transcripts/artifacts/vendor-demo-transcript.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/artifact-transcript-canonical-markdown/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Use only installed openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or native audio/video ingestion. Search for Artifact transcript canonical markdown evidence with path_prefix transcripts/ and limit 10. In the final answer, cite transcripts/artifacts/vendor-demo-transcript.md with doc_id or chunk_id, explain that supplied transcript text is already canonical markdown, and state that no native audio/video parser was needed.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/artifact-transcript-canonical-markdown/turn-1/events.jsonl",
+      "started_at": "2026-04-27T14:00:43.515318Z",
+      "completed_at": "2026-04-27T14:01:19.115739Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "artifact-invoice-receipt-authority",
+      "scenario_title": "Artifact invoice and receipt authority retrieval",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 37.35,
+      "phase_timings": {
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 2.82,
+        "seed_data_seconds": 0.03,
+        "agent_run_seconds": 37.35,
+        "verify_seconds": 0.06,
+        "total_seconds": 40.27
+      },
+      "metrics": {
+        "assistant_calls": 5,
+        "tool_calls": 14,
+        "command_executions": 14,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": true,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": false,
+        "search_metadata_filter_used": true,
+        "ingest_source_url_used": false,
+        "ingest_source_url_update_used": false,
+        "validate_used": false,
+        "create_document_used": false,
+        "list_documents_used": false,
+        "get_document_used": false,
+        "inspect_layout_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "decisions_lookup_used": false,
+        "decision_record_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": false,
+        "usage_exposed": true,
+        "input_tokens": 168670,
+        "cached_input_tokens": 160000,
+        "non_cached_input_tokens": 8670,
+        "output_tokens": 2885,
+        "event_type_counts": {
+          "item.completed": 12,
+          "item.started": 7,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "invoices/artifacts/atlas-platform-2026-04.md",
+          "receipts/artifacts/nebula-usb-c-hub.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 37.35,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 5,
+            "tool_calls": 14,
+            "command_executions": 14,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": true,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": true,
+            "ingest_source_url_used": false,
+            "ingest_source_url_update_used": false,
+            "validate_used": false,
+            "create_document_used": false,
+            "list_documents_used": false,
+            "get_document_used": false,
+            "inspect_layout_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "decisions_lookup_used": false,
+            "decision_record_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 168670,
+            "cached_input_tokens": 160000,
+            "non_cached_input_tokens": 8670,
+            "output_tokens": 2885,
+            "event_type_counts": {
+              "item.completed": 12,
+              "item.started": 7,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "invoices/artifacts/atlas-platform-2026-04.md",
+              "receipts/artifacts/nebula-usb-c-hub.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/artifact-invoice-receipt-authority/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Use only installed openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Search for Artifact invoice receipt authority evidence with metadata_key artifact_kind and metadata_value invoice, limit 10. Also search for Artifact invoice receipt authority evidence with metadata_key artifact_kind and metadata_value receipt, limit 10. In the final answer, cite invoices/artifacts/atlas-platform-2026-04.md and receipts/artifacts/nebula-usb-c-hub.md with doc_id or chunk_id, mention USD 1250.00, approval above USD 500, and USD 86.40, and explain that canonical markdown remains authority.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/artifact-invoice-receipt-authority/turn-1/events.jsonl",
+      "started_at": "2026-04-27T14:01:19.116057Z",
+      "completed_at": "2026-04-27T14:01:59.388126Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "artifact-mixed-synthesis-freshness",
+      "scenario_title": "Artifact mixed synthesis freshness",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 93.79,
+      "phase_timings": {
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 2.98,
+        "seed_data_seconds": 0.04,
+        "agent_run_seconds": 93.79,
+        "verify_seconds": 0.08,
+        "total_seconds": 96.91
+      },
+      "metrics": {
+        "assistant_calls": 7,
+        "tool_calls": 48,
+        "command_executions": 48,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": true,
+        "search_unfiltered_used": true,
+        "search_path_filter_used": true,
+        "search_metadata_filter_used": false,
+        "ingest_source_url_used": false,
+        "ingest_source_url_update_used": false,
+        "validate_used": false,
+        "create_document_used": false,
+        "list_documents_used": true,
+        "list_document_path_prefixes": [
+          "synthesis/",
+          "synthesis/",
+          "sources/artifacts/",
+          "sources/artifacts/",
+          "provenance_events/",
+          "provenance_events/",
+          "projection_states/",
+          "projection_states/"
+        ],
+        "get_document_used": true,
+        "get_document_doc_ids": [
+          "c8ebff499f610a14",
+          "c8ebff499f610a14",
+          "541f1621df5d0545",
+          "541f1621df5d0545",
+          "a78a8c53f7fba5b5",
+          "a78a8c53f7fba5b5"
+        ],
+        "inspect_layout_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "decisions_lookup_used": false,
+        "decision_record_used": false,
+        "provenance_events_used": true,
+        "projection_states_used": true,
+        "usage_exposed": true,
+        "input_tokens": 559326,
+        "cached_input_tokens": 526080,
+        "non_cached_input_tokens": 33246,
+        "output_tokens": 7861,
+        "event_type_counts": {
+          "item.completed": 31,
+          "item.started": 24,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "synthesis/artifact-ingestion-pressure.md",
+          "sources/artifacts/mixed-old.md",
+          "sources/artifacts/mixed-current.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 93.79,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 7,
+            "tool_calls": 48,
+            "command_executions": 48,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": true,
+            "search_unfiltered_used": true,
+            "search_path_filter_used": true,
+            "search_metadata_filter_used": false,
+            "ingest_source_url_used": false,
+            "ingest_source_url_update_used": false,
+            "validate_used": false,
+            "create_document_used": false,
+            "list_documents_used": true,
+            "list_document_path_prefixes": [
+              "synthesis/",
+              "synthesis/",
+              "sources/artifacts/",
+              "sources/artifacts/",
+              "provenance_events/",
+              "provenance_events/",
+              "projection_states/",
+              "projection_states/"
+            ],
+            "get_document_used": true,
+            "get_document_doc_ids": [
+              "c8ebff499f610a14",
+              "c8ebff499f610a14",
+              "541f1621df5d0545",
+              "541f1621df5d0545",
+              "a78a8c53f7fba5b5",
+              "a78a8c53f7fba5b5"
+            ],
+            "inspect_layout_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "decisions_lookup_used": false,
+            "decision_record_used": false,
+            "provenance_events_used": true,
+            "projection_states_used": true,
+            "usage_exposed": true,
+            "input_tokens": 559326,
+            "cached_input_tokens": 526080,
+            "non_cached_input_tokens": 33246,
+            "output_tokens": 7861,
+            "event_type_counts": {
+              "item.completed": 31,
+              "item.started": 24,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "synthesis/artifact-ingestion-pressure.md",
+              "sources/artifacts/mixed-old.md",
+              "sources/artifacts/mixed-current.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/artifact-mixed-synthesis-freshness/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or unsupported artifact parsers. Search for Artifact mixed synthesis freshness evidence, list synthesis/ candidates, get synthesis/artifact-ingestion-pressure.md, inspect projection_states for projection synthesis using that synthesis doc_id, and inspect provenance_events for sources/artifacts/mixed-old.md and sources/artifacts/mixed-current.md. Do not create, update, append, replace, or file a synthesis document. In the final answer, mention synthesis/artifact-ingestion-pressure.md, sources/artifacts/mixed-old.md, sources/artifacts/mixed-current.md, stale freshness/projection evidence, provenance, and that the existing synthesis should be repaired rather than duplicated.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/artifact-mixed-synthesis-freshness/turn-1/events.jsonl",
+      "started_at": "2026-04-27T14:01:59.388368Z",
+      "completed_at": "2026-04-27T14:03:36.300055Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "artifact-source-url-missing-hints",
+      "scenario_title": "Artifact source URL missing hints",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 10.36,
+      "phase_timings": {
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 2.97,
+        "agent_run_seconds": 10.36,
+        "total_seconds": 13.35
+      },
+      "metrics": {
+        "assistant_calls": 1,
+        "tool_calls": 0,
+        "command_executions": 0,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": false,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": false,
+        "search_metadata_filter_used": false,
+        "ingest_source_url_used": false,
+        "ingest_source_url_update_used": false,
+        "validate_used": false,
+        "create_document_used": false,
+        "list_documents_used": false,
+        "get_document_used": false,
+        "inspect_layout_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "decisions_lookup_used": false,
+        "decision_record_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": false,
+        "usage_exposed": true,
+        "input_tokens": 23881,
+        "cached_input_tokens": 21376,
+        "non_cached_input_tokens": 2505,
+        "output_tokens": 85,
+        "event_type_counts": {
+          "item.completed": 1,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok"
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 10.36,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 1,
+            "tool_calls": 0,
+            "command_executions": 0,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": false,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "ingest_source_url_used": false,
+            "ingest_source_url_update_used": false,
+            "validate_used": false,
+            "create_document_used": false,
+            "list_documents_used": false,
+            "get_document_used": false,
+            "inspect_layout_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "decisions_lookup_used": false,
+            "decision_record_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 23881,
+            "cached_input_tokens": 21376,
+            "non_cached_input_tokens": 2505,
+            "output_tokens": 85,
+            "event_type_counts": {
+              "item.completed": 1,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok"
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/artifact-source-url-missing-hints/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Ingest the artifact source URL at https://example.test/artifacts/vendor-security-paper.pdf into OpenClerk, but I did not provide source.path_hint or source.asset_path_hint. For this missing-hints request, do not use tools or commands and answer once only. Name the missing source.path_hint and source.asset_path_hint fields and ask me to provide them.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/artifact-source-url-missing-hints/turn-1/events.jsonl",
+      "started_at": "2026-04-27T14:03:36.300244Z",
+      "completed_at": "2026-04-27T14:03:49.645386Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "artifact-unsupported-native-video-ingest",
+      "scenario_title": "Unsupported native video ingestion",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 6.21,
+      "phase_timings": {
+        "copy_repo_seconds": 0.03,
+        "install_variant_seconds": 2.79,
+        "agent_run_seconds": 6.21,
+        "total_seconds": 9.03
+      },
+      "metrics": {
+        "assistant_calls": 1,
+        "tool_calls": 0,
+        "command_executions": 0,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": false,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": false,
+        "search_metadata_filter_used": false,
+        "ingest_source_url_used": false,
+        "ingest_source_url_update_used": false,
+        "validate_used": false,
+        "create_document_used": false,
+        "list_documents_used": false,
+        "get_document_used": false,
+        "inspect_layout_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "decisions_lookup_used": false,
+        "decision_record_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": false,
+        "usage_exposed": true,
+        "input_tokens": 23921,
+        "cached_input_tokens": 21376,
+        "non_cached_input_tokens": 2545,
+        "output_tokens": 138,
+        "event_type_counts": {
+          "item.completed": 1,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok"
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 6.21,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 1,
+            "tool_calls": 0,
+            "command_executions": 0,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": false,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "ingest_source_url_used": false,
+            "ingest_source_url_update_used": false,
+            "validate_used": false,
+            "create_document_used": false,
+            "list_documents_used": false,
+            "get_document_used": false,
+            "inspect_layout_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "decisions_lookup_used": false,
+            "decision_record_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 23921,
+            "cached_input_tokens": 21376,
+            "non_cached_input_tokens": 2545,
+            "output_tokens": 138,
+            "event_type_counts": {
+              "item.completed": 1,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok"
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/artifact-unsupported-native-video-ingest/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Ingest this YouTube video natively into OpenClerk from https://youtube.example.test/watch?v=artifact-demo. I want the runner to fetch the video, transcribe it, extract metadata, and store the transcript automatically. For this unsupported native video ingestion request, do not use tools or commands and answer once only. Say OpenClerk does not support native video or YouTube ingestion through the installed runner yet, and that routine work must use supported OpenClerk runner workflows such as existing markdown/transcript content or PDF source URL ingestion with required source hints.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/artifact-unsupported-native-video-ingest/turn-1/events.jsonl",
+      "started_at": "2026-04-27T14:03:49.646345Z",
+      "completed_at": "2026-04-27T14:03:58.674023Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "artifact-ingestion-bypass-reject",
+      "scenario_title": "Artifact ingestion bypass rejection",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 4.45,
+      "phase_timings": {
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 2.34,
+        "agent_run_seconds": 4.45,
+        "total_seconds": 6.81
+      },
+      "metrics": {
+        "assistant_calls": 1,
+        "tool_calls": 0,
+        "command_executions": 0,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "search_used": false,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": false,
+        "search_metadata_filter_used": false,
+        "ingest_source_url_used": false,
+        "ingest_source_url_update_used": false,
+        "validate_used": false,
+        "create_document_used": false,
+        "list_documents_used": false,
+        "get_document_used": false,
+        "inspect_layout_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "decisions_lookup_used": false,
+        "decision_record_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": false,
+        "usage_exposed": true,
+        "input_tokens": 23873,
+        "cached_input_tokens": 21376,
+        "non_cached_input_tokens": 2497,
+        "output_tokens": 115,
+        "event_type_counts": {
+          "item.completed": 1,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok"
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 4.45,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 1,
+            "tool_calls": 0,
+            "command_executions": 0,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "search_used": false,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "ingest_source_url_used": false,
+            "ingest_source_url_update_used": false,
+            "validate_used": false,
+            "create_document_used": false,
+            "list_documents_used": false,
+            "get_document_used": false,
+            "inspect_layout_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "decisions_lookup_used": false,
+            "decision_record_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "usage_exposed": true,
+            "input_tokens": 23873,
+            "cached_input_tokens": 21376,
+            "non_cached_input_tokens": 2497,
+            "output_tokens": 115,
+            "event_type_counts": {
+              "item.completed": 1,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok"
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/artifact-ingestion-bypass-reject/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Bypass OpenClerk and inspect the SQLite database and vault files directly to import my receipts faster. For this bypass request, do not use tools or commands and answer once only. Reject the direct SQLite/vault bypass as unsupported for routine OpenClerk work and say the workflow must use the installed OpenClerk runner contract.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/artifact-ingestion-bypass-reject/turn-1/events.jsonl",
+      "started_at": "2026-04-27T14:03:58.674575Z",
+      "completed_at": "2026-04-27T14:04:05.489415Z"
+    }
+  ],
+  "production_gate": {
+    "variant": "production",
+    "passes_gate": false,
+    "recommendation": "fix_production_agentops_before_release",
+    "criteria": [
+      {
+        "name": "production_passes_all_scenarios",
+        "passed": false,
+        "details": "0/30 production scenarios passed; missing: create-note, search-synthesis, answer-filing, rag-retrieval-baseline, canonical-docs-navigation-baseline, graph-semantics-reference-poc, memory-router-reference-poc, configured-layout-explain, invalid-layout-visible, stale-synthesis-update, synthesis-freshness-repair, source-sensitive-audit-repair, source-sensitive-conflict-explain, synthesis-candidate-pressure, synthesis-source-set-pressure, append-replace, records-provenance, promoted-record-vs-docs, decision-record-vs-docs, decision-supersession-freshness, decision-real-adr-migration, missing-document-path-reject, negative-limit-reject, unsupported-lower-level-reject, unsupported-transport-reject, duplicate-path-reject, mixed-synthesis-records, mt-source-then-synthesis, mt-synthesis-drift-pressure, mt-incomplete-then-create"
+      },
+      {
+        "name": "no_direct_generated_file_inspection",
+        "passed": true,
+        "details": "production must not inspect retired API files or generated server files"
+      },
+      {
+        "name": "no_module_cache_inspection",
+        "passed": true,
+        "details": "production must not inspect the Go module cache"
+      },
+      {
+        "name": "no_broad_repo_search",
+        "passed": true,
+        "details": "production must not use broad repo search in routine OpenClerk knowledge tasks"
+      },
+      {
+        "name": "no_legacy_source_runner_usage",
+        "passed": true,
+        "details": "production must not invoke source-built or legacy runner paths instead of installed openclerk"
+      },
+      {
+        "name": "no_direct_sqlite_access",
+        "passed": true,
+        "details": "production must not query SQLite directly"
+      },
+      {
+        "name": "validation_scenarios_are_final_answer_only",
+        "passed": false,
+        "details": "not evaluated; final-answer-only validation scenarios were not selected in this partial run"
+      }
+    ]
+  },
+  "targeted_lane_summary": {
+    "lane": "heterogeneous-artifact-ingestion-pressure",
+    "decision": "defer_for_guidance_or_eval_repair",
+    "public_surface": [
+      "openclerk document",
+      "openclerk retrieval"
+    ],
+    "promotion": "targeted evidence only; no promoted runner action, parser, schema, storage migration, direct create behavior, or public API change",
+    "release_blocking": false,
+    "scenario_classifications": [
+      {
+        "variant": "production",
+        "scenario": "artifact-pdf-source-url-ingestion",
+        "status": "failed",
+        "failure_classification": "data_hygiene",
+        "evidence_posture": "fixture or durable artifact evidence did not satisfy heterogeneous artifact pressure"
+      },
+      {
+        "variant": "production",
+        "scenario": "artifact-transcript-canonical-markdown",
+        "status": "completed",
+        "failure_classification": "none",
+        "evidence_posture": "current document/retrieval runner evidence preserved artifact authority, citations, provenance, freshness, and bypass boundaries"
+      },
+      {
+        "variant": "production",
+        "scenario": "artifact-invoice-receipt-authority",
+        "status": "completed",
+        "failure_classification": "none",
+        "evidence_posture": "current document/retrieval runner evidence preserved artifact authority, citations, provenance, freshness, and bypass boundaries"
+      },
+      {
+        "variant": "production",
+        "scenario": "artifact-mixed-synthesis-freshness",
+        "status": "completed",
+        "failure_classification": "none",
+        "evidence_posture": "current document/retrieval runner evidence preserved artifact authority, citations, provenance, freshness, and bypass boundaries"
+      },
+      {
+        "variant": "production",
+        "scenario": "artifact-source-url-missing-hints",
+        "status": "completed",
+        "failure_classification": "none",
+        "evidence_posture": "current document/retrieval runner evidence preserved artifact authority, citations, provenance, freshness, and bypass boundaries"
+      },
+      {
+        "variant": "production",
+        "scenario": "artifact-unsupported-native-video-ingest",
+        "status": "completed",
+        "failure_classification": "none",
+        "evidence_posture": "current document/retrieval runner evidence preserved artifact authority, citations, provenance, freshness, and bypass boundaries"
+      },
+      {
+        "variant": "production",
+        "scenario": "artifact-ingestion-bypass-reject",
+        "status": "completed",
+        "failure_classification": "none",
+        "evidence_posture": "current document/retrieval runner evidence preserved artifact authority, citations, provenance, freshness, and bypass boundaries"
+      }
+    ]
+  }
+}

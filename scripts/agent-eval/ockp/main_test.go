@@ -572,6 +572,163 @@ func TestDocumentArtifactCandidateDecisionRequiresCompleteScenarioCoverage(t *te
 	}
 }
 
+func TestExecuteRunLabelsArtifactIngestionLaneAsNonReleaseBlocking(t *testing.T) {
+	reportDir := filepath.Join(t.TempDir(), "reports")
+	config := runConfig{
+		Parallel:   1,
+		Variant:    productionVariant,
+		Scenario:   strings.Join(artifactIngestionScenarioIDs(), ","),
+		RunRoot:    filepath.Join(t.TempDir(), "run"),
+		ReportDir:  reportDir,
+		ReportName: "ockp-heterogeneous-artifact-ingestion-pressure-test",
+		RepoRoot:   ".",
+		CodexBin:   "codex",
+		CacheMode:  cacheModeIsolated,
+	}
+	err := executeRun(context.Background(), config, &strings.Builder{}, func(_ context.Context, _ runConfig, job evalJob, _ cacheConfig) jobResult {
+		now := time.Now().UTC()
+		return jobResult{
+			Variant:       job.Variant,
+			Scenario:      job.Scenario.ID,
+			ScenarioTitle: job.Scenario.Title,
+			Status:        "completed",
+			Passed:        true,
+			Metrics:       metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}},
+			Verification:  verificationResult{Passed: true, DatabasePass: true, AssistantPass: true},
+			StartedAt:     now,
+			CompletedAt:   &now,
+		}
+	})
+	if err != nil {
+		t.Fatalf("execute artifact ingestion run: %v", err)
+	}
+	content, err := os.ReadFile(filepath.Join(reportDir, "ockp-heterogeneous-artifact-ingestion-pressure-test.json"))
+	if err != nil {
+		t.Fatalf("read JSON report: %v", err)
+	}
+	var report report
+	if err := json.Unmarshal(content, &report); err != nil {
+		t.Fatalf("decode JSON report: %v", err)
+	}
+	if report.Metadata.Lane != artifactIngestionLaneName || report.Metadata.ReleaseBlocking {
+		t.Fatalf("artifact ingestion lane metadata = %q/%t, want %q/false", report.Metadata.Lane, report.Metadata.ReleaseBlocking, artifactIngestionLaneName)
+	}
+	if report.TargetedLaneSummary == nil {
+		t.Fatal("artifact ingestion report missing targeted lane summary")
+	}
+	if report.TargetedLaneSummary.Decision != "keep_as_reference" {
+		t.Fatalf("decision = %q, want keep_as_reference", report.TargetedLaneSummary.Decision)
+	}
+	if len(report.TargetedLaneSummary.ScenarioClassifications) != len(artifactIngestionScenarioIDs()) {
+		t.Fatalf("classifications = %d, want %d", len(report.TargetedLaneSummary.ScenarioClassifications), len(artifactIngestionScenarioIDs()))
+	}
+	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-heterogeneous-artifact-ingestion-pressure-test.md"))
+	if err != nil {
+		t.Fatalf("read markdown report: %v", err)
+	}
+	for _, want := range []string{
+		"Lane: `" + artifactIngestionLaneName + "`",
+		"Release blocking: `false`",
+		"Decision: `keep_as_reference`",
+		"no promoted runner action, parser, schema, storage migration, direct create behavior, or public API change",
+		"`none`",
+	} {
+		if !strings.Contains(string(markdown), want) {
+			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
+		}
+	}
+}
+
+func TestArtifactIngestionDecisionRequiresCompleteScenarioCoverage(t *testing.T) {
+	rows := make([]targetedScenarioClassification, 0, len(artifactIngestionScenarioIDs()))
+	for _, id := range artifactIngestionScenarioIDs() {
+		rows = append(rows, targetedScenarioClassification{
+			Scenario:              id,
+			FailureClassification: "none",
+		})
+	}
+	if decision := artifactIngestionDecision(rows[:len(rows)-1]); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("partial decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	if decision := artifactIngestionDecision(rows); decision != "keep_as_reference" {
+		t.Fatalf("complete decision = %q, want keep_as_reference", decision)
+	}
+	rows[0].FailureClassification = "runner_capability_gap"
+	if decision := artifactIngestionDecision(rows); decision != "defer_for_artifact_runner_surface_design" {
+		t.Fatalf("gap decision = %q, want defer_for_artifact_runner_surface_design", decision)
+	}
+	rows[0].FailureClassification = "skill_guidance"
+	if decision := artifactIngestionDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("guidance decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+}
+
+func TestVerifyArtifactTranscriptRequiresTranscriptPathFilter(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: artifactTranscriptScenarioID}); err != nil {
+		t.Fatalf("seed artifact transcript scenario: %v", err)
+	}
+	metrics := metrics{
+		AssistantCalls:       1,
+		SearchUsed:           true,
+		SearchPathFilterUsed: true,
+		SearchPathPrefixes:   []string{"transcripts/"},
+		EventTypeCounts:      map[string]int{},
+	}
+	answer := artifactTranscriptPath + " doc_id shows canonical markdown transcript evidence."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: artifactTranscriptScenarioID}, 1, answer, metrics)
+	if err != nil {
+		t.Fatalf("verify transcript: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("transcript verification failed: %+v", result)
+	}
+
+	missingPathFilter := metrics
+	missingPathFilter.SearchPathPrefixes = nil
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: artifactTranscriptScenarioID}, 1, answer, missingPathFilter)
+	if err != nil {
+		t.Fatalf("verify transcript without path filter: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("transcript verification passed without transcripts/ path filter: %+v", result)
+	}
+}
+
+func TestVerifyArtifactInvoiceReceiptRequiresBothMetadataFilters(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: artifactInvoiceReceiptScenarioID}); err != nil {
+		t.Fatalf("seed artifact invoice/receipt scenario: %v", err)
+	}
+	metrics := metrics{
+		AssistantCalls:           1,
+		SearchUsed:               true,
+		SearchMetadataFilterUsed: true,
+		SearchMetadataFilters:    []string{"artifact_kind=invoice", "artifact_kind=receipt"},
+		EventTypeCounts:          map[string]int{},
+	}
+	answer := artifactInvoicePath + " and " + artifactReceiptPath + " doc_id cite USD 1250.00, approval above USD 500, and USD 86.40."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: artifactInvoiceReceiptScenarioID}, 1, answer, metrics)
+	if err != nil {
+		t.Fatalf("verify invoice/receipt: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("invoice/receipt verification failed: %+v", result)
+	}
+
+	onlyInvoiceFilter := metrics
+	onlyInvoiceFilter.SearchMetadataFilters = []string{"artifact_kind=invoice"}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: artifactInvoiceReceiptScenarioID}, 1, answer, onlyInvoiceFilter)
+	if err != nil {
+		t.Fatalf("verify invoice/receipt without receipt filter: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("invoice/receipt verification passed without receipt metadata filter: %+v", result)
+	}
+}
+
 func TestCandidateHeadingScenarioDoesNotLeakExpectedPath(t *testing.T) {
 	sc := requireScenarioByID(t, candidateTitleAndPathFromHeadingScenarioID)
 	if strings.Contains(sc.Prompt, candidateHeadingPath) {
@@ -1066,6 +1223,12 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	if !containsAllStrings(parsed.metrics.ListDocumentPathPrefixes, []string{"synthesis/"}) {
 		t.Fatalf("expected list document path prefix in %+v", parsed.metrics)
 	}
+	if !containsAllStrings(parsed.metrics.SearchPathPrefixes, []string{"notes/rag/"}) {
+		t.Fatalf("expected search path prefix in %+v", parsed.metrics)
+	}
+	if !containsAllStrings(parsed.metrics.SearchMetadataFilters, []string{"rag_scope=active-policy"}) {
+		t.Fatalf("expected search metadata filter in %+v", parsed.metrics)
+	}
 	if !containsAllStrings(parsed.metrics.GetDocumentDocIDs, []string{"doc_1"}) {
 		t.Fatalf("expected get document doc id in %+v", parsed.metrics)
 	}
@@ -1259,7 +1422,7 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 	for _, id := range scenarioIDs() {
 		ids[id] = true
 	}
-	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, graphSemanticsScenarioID, memoryRouterScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, sourceURLUpdateDuplicateScenarioID, sourceURLUpdateSameSHAScenarioID, sourceURLUpdateChangedScenarioID, sourceURLUpdateConflictScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID, populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID, agentChosenExplicitScenarioID, agentChosenMissingFieldsScenarioID, agentChosenPathProposalScenarioID, agentChosenAutonomousScenarioID, agentChosenSynthesisScenarioID, agentChosenAmbiguousScenarioID, agentChosenUserPathScenarioID, pathTitleURLOnlyScenarioID, pathTitleArtifactMissingHintsScenarioID, pathTitleMultiSourceDuplicateScenarioID, pathTitleExplicitOverridesScenarioID, pathTitleDuplicateRiskScenarioID, pathTitleMetadataAuthorityScenarioID, documentThisMissingFieldsScenarioID, documentThisExplicitCreateScenarioID, documentThisSourceURLMissingHintsScenarioID, documentThisExplicitOverridesScenarioID, documentThisDuplicateCandidateScenarioID, documentThisExistingUpdateScenarioID, documentThisSynthesisFreshnessScenarioID, candidateNoteFromPastedContentScenarioID, candidateTitleAndPathFromHeadingScenarioID, candidateMixedSourceSummaryScenarioID, candidateExplicitOverridesWinScenarioID, candidateDuplicateRiskAsksScenarioID, candidateLowConfidenceAsksScenarioID, candidateBodyFaithfulnessScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
+	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, graphSemanticsScenarioID, memoryRouterScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, sourceURLUpdateDuplicateScenarioID, sourceURLUpdateSameSHAScenarioID, sourceURLUpdateChangedScenarioID, sourceURLUpdateConflictScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID, populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID, agentChosenExplicitScenarioID, agentChosenMissingFieldsScenarioID, agentChosenPathProposalScenarioID, agentChosenAutonomousScenarioID, agentChosenSynthesisScenarioID, agentChosenAmbiguousScenarioID, agentChosenUserPathScenarioID, pathTitleURLOnlyScenarioID, pathTitleArtifactMissingHintsScenarioID, pathTitleMultiSourceDuplicateScenarioID, pathTitleExplicitOverridesScenarioID, pathTitleDuplicateRiskScenarioID, pathTitleMetadataAuthorityScenarioID, documentThisMissingFieldsScenarioID, documentThisExplicitCreateScenarioID, documentThisSourceURLMissingHintsScenarioID, documentThisExplicitOverridesScenarioID, documentThisDuplicateCandidateScenarioID, documentThisExistingUpdateScenarioID, documentThisSynthesisFreshnessScenarioID, candidateNoteFromPastedContentScenarioID, candidateTitleAndPathFromHeadingScenarioID, candidateMixedSourceSummaryScenarioID, candidateExplicitOverridesWinScenarioID, candidateDuplicateRiskAsksScenarioID, candidateLowConfidenceAsksScenarioID, candidateBodyFaithfulnessScenarioID, artifactPDFSourceURLScenarioID, artifactTranscriptScenarioID, artifactInvoiceReceiptScenarioID, artifactMixedSynthesisScenarioID, artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
 		if !ids[want] {
 			t.Fatalf("scenarioIDs missing %q in %v", want, scenarioIDs())
 		}
@@ -1306,6 +1469,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 			t.Fatalf("default selected scenarios included targeted document artifact candidate scenario %q", id)
 		}
 	}
+	for _, id := range artifactIngestionScenarioIDs() {
+		if defaultIDs[id] {
+			t.Fatalf("default selected scenarios included targeted artifact ingestion scenario %q", id)
+		}
+	}
 	selected := selectedScenarioIDs(runConfig{Scenario: populatedHeterogeneousScenarioID + "," + populatedFreshnessConflictScenarioID + "," + populatedSynthesisUpdateScenarioID})
 	lane, releaseBlocking := reportLane(selected)
 	if lane != populatedLaneName || releaseBlocking {
@@ -1341,6 +1509,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	if lane != documentArtifactCandidateLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, documentArtifactCandidateLaneName)
 	}
+	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(artifactIngestionScenarioIDs(), ",")})
+	lane, releaseBlocking = reportLane(selected)
+	if lane != artifactIngestionLaneName || releaseBlocking {
+		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, artifactIngestionLaneName)
+	}
 }
 
 func TestSourceURLUpdateFixturePromptRendering(t *testing.T) {
@@ -1350,8 +1523,8 @@ func TestSourceURLUpdateFixturePromptRendering(t *testing.T) {
 	}
 	defer fixtures.Close()
 
-	rendered := fixtures.renderPrompt(sourceURLUpdateStableURLToken + " " + sourceURLUpdateChangedURLToken)
-	if strings.Contains(rendered, sourceURLUpdateStableURLToken) || strings.Contains(rendered, sourceURLUpdateChangedURLToken) {
+	rendered := fixtures.renderPrompt(sourceURLUpdateStableURLToken + " " + sourceURLUpdateChangedURLToken + " " + artifactPDFSourceURLToken)
+	if strings.Contains(rendered, sourceURLUpdateStableURLToken) || strings.Contains(rendered, sourceURLUpdateChangedURLToken) || strings.Contains(rendered, artifactPDFSourceURLToken) {
 		t.Fatalf("prompt still contains fixture token: %s", rendered)
 	}
 	if !strings.Contains(rendered, fixtures.stableURL()) || !strings.Contains(rendered, fixtures.changedURL()) {
