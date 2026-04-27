@@ -18,9 +18,11 @@ whether an agent may choose a candidate `document.path`, `document.title`, and
 remains valid for runner, schema, storage, migration, public API, and direct
 create behavior: none are promoted or changed by this ADR.
 
-For the refreshed `oc-99z` ergonomics path, this ADR is the promoted surface:
-propose-before-create skill behavior only, with no durable write before user
-approval.
+For the amended `oc-99z` ergonomics path, this ADR identifies the only
+candidate surface reviewed: propose-before-create skill behavior, with no
+durable write before user approval. The candidate-generation evidence proves
+quality and safety boundaries, but the refreshed ergonomics scorecard deferred
+`oc-99z` promotion pending natural-intent repair.
 
 Supporting evidence:
 
@@ -59,12 +61,14 @@ JSON compatibility or duplicate risk. The final answer must show the proposed
 path, title, and body preview clearly enough for the user to approve, revise,
 or reject.
 
-Promotion is justified by candidate quality evidence, not by
-`runner_capability_gap` evidence. A passing lane must show stable conventional
-paths, useful titles, faithful bodies, duplicate-aware placement, explicit
-override precedence, and confidence-to-ask behavior. The refreshed targeted
-lane completed every selected scenario with classification `none`, so a
-skill-policy implementation is authorized.
+The skill policy is justified by candidate quality evidence, not by
+`runner_capability_gap` evidence. A passing quality lane must show stable
+conventional paths, useful titles, faithful bodies, duplicate-aware placement,
+explicit override precedence, and confidence-to-ask behavior. The refreshed
+targeted lane completed every selected quality scenario with classification
+`none`, so the skill-policy implementation was authorized. The broader `oc-99z`
+ergonomics promotion is deferred because the refreshed scorecard found
+candidate-quality gaps in natural-intent behavior.
 
 ## Policy
 

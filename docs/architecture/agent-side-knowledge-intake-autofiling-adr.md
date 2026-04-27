@@ -182,11 +182,14 @@ only.
 
 ## `oc-99z` Decision
 
-Refreshed decision: keep strict runner behavior and promote only the already
-accepted propose-before-create skill policy for faithful candidate documents.
-Do not promote autonomous autofiling, direct path/title/body inference into a
-durable write, a runner action, a JSON schema change, a storage change, public
-API behavior, or any direct-create behavior from this intake lane.
+Final amended decision: keep strict runner behavior. The capability path remains
+accepted with no runner, schema, storage, migration, public API, autofiling, or
+direct-create promotion. The ergonomics path is deferred after the refreshed
+scorecard failed natural-intent coverage for the already implemented
+propose-before-create skill policy. Do not promote autonomous autofiling,
+direct path/title/body inference into a durable write, a runner action, a JSON
+schema change, a storage change, public API behavior, or any direct-create
+behavior from this intake lane.
 
 The targeted `oc-u9l` eval report
 [`../evals/results/ockp-document-this-intake-pressure.md`](../evals/results/ockp-document-this-intake-pressure.md)
@@ -202,13 +205,21 @@ Capability path: no promotion. Current `openclerk document` and
 preserving strict validation, duplicate checks, metadata authority, source refs
 or citations, provenance, and freshness.
 
-Ergonomics path: promote the narrow skill policy accepted in
+Ergonomics path: deferred. The only candidate surface reviewed was the narrow
+skill policy accepted in
 [`agent-chosen-document-artifact-candidate-generation-adr.md`](agent-chosen-document-artifact-candidate-generation-adr.md).
 For supported inputs, the agent may propose a candidate `document.path`,
 `document.title`, and `document.body` from explicit user-provided content,
 optionally validate the candidate or check duplicate risk through existing
 runner actions, show the candidate path, title, and body preview, state that no
-document was created, and ask for approval before any durable write.
+document was created, and ask for approval before any durable write. The
+existing candidate-generation lane proves candidate quality and safety
+boundaries, but the refreshed ergonomics scorecard
+[`../evals/results/ockp-document-artifact-candidate-ergonomics.md`](../evals/results/ockp-document-artifact-candidate-ergonomics.md)
+failed `candidate-ergonomics-natural-intent` and
+`candidate-ergonomics-duplicate-natural-intent` with `candidate_quality_gap`.
+That evidence is not enough to promote the ergonomics path under the newer
+rubric.
 
 Supported behavior remains unchanged:
 
@@ -229,15 +240,17 @@ Supported behavior remains unchanged:
   proposed candidate until the user approves the target and write
 
 Because no `runner_capability_gap` was found, `oc-umk` is not authorized to add
-runner, schema, storage, migration, public API, or direct-create work. The only
-authorized implementation surface is the existing propose-before-create skill
-policy in `skills/openclerk/SKILL.md`. Any future direct-create, autofiling, or
-runner relaxation requires a new decision with targeted eval evidence and exact
+runner, schema, storage, migration, public API, or direct-create work. The
+existing propose-before-create skill policy in `skills/openclerk/SKILL.md`
+remains flagged for natural-intent repair or narrowing before a future
+ergonomics promotion. Any future direct-create, autofiling, or runner
+relaxation requires a new decision with targeted eval evidence and exact
 implementation gates.
 
 The later corrected candidate-generation track is recorded in
 [`agent-chosen-document-artifact-candidate-generation-adr.md`](agent-chosen-document-artifact-candidate-generation-adr.md).
 It narrows this `oc-99z` outcome to runner, schema, storage, public API, direct
-create, and strict-runner behavior. It evaluates and satisfies the ergonomics
-question for propose-before-create agent-side path/title/body candidates using
-a quality rubric instead of a runner capability-gap rubric.
+create, and strict-runner behavior. It evaluates candidate quality and
+no-write-before-approval behavior using a quality rubric instead of a runner
+capability-gap rubric. The refreshed ergonomics scorecard deferred the `oc-99z`
+ergonomics path pending natural-intent repair.

@@ -544,6 +544,9 @@ func TestExecuteRunDefersPartialDocumentArtifactCandidateLane(t *testing.T) {
 		"Release blocking: `false`",
 		"Decision: `defer_for_candidate_quality_repair`",
 		"no promoted skill policy yet; repair candidate quality gaps before any propose-before-create skill behavior change",
+		"Prompt specificity",
+		"Guidance dependence",
+		"Safety risks",
 		"`none`",
 	} {
 		if !strings.Contains(string(markdown), want) {
@@ -553,8 +556,8 @@ func TestExecuteRunDefersPartialDocumentArtifactCandidateLane(t *testing.T) {
 }
 
 func TestDocumentArtifactCandidateDecisionRequiresCompleteScenarioCoverage(t *testing.T) {
-	rows := make([]targetedScenarioClassification, 0, len(documentArtifactCandidateScenarioIDs()))
-	for _, id := range documentArtifactCandidateScenarioIDs() {
+	rows := make([]targetedScenarioClassification, 0, len(documentArtifactCandidateQualityScenarioIDs()))
+	for _, id := range documentArtifactCandidateQualityScenarioIDs() {
 		rows = append(rows, targetedScenarioClassification{
 			Scenario:              id,
 			FailureClassification: "none",
@@ -564,11 +567,29 @@ func TestDocumentArtifactCandidateDecisionRequiresCompleteScenarioCoverage(t *te
 		t.Fatalf("partial decision = %q, want defer_for_candidate_quality_repair", decision)
 	}
 	if decision := documentArtifactCandidateDecision(rows); decision != "promote_propose_before_create_skill_policy" {
-		t.Fatalf("complete decision = %q, want promote_propose_before_create_skill_policy", decision)
+		t.Fatalf("quality-only decision = %q, want promote_propose_before_create_skill_policy", decision)
 	}
 	rows[0].FailureClassification = "candidate_quality_gap"
 	if decision := documentArtifactCandidateDecision(rows); decision != "defer_for_candidate_quality_repair" {
 		t.Fatalf("failing decision = %q, want defer_for_candidate_quality_repair", decision)
+	}
+	rows[0].FailureClassification = "none"
+	ergonomicsRows := append([]targetedScenarioClassification{}, rows...)
+	for _, id := range documentArtifactCandidateErgonomicsScenarioIDs() {
+		ergonomicsRows = append(ergonomicsRows, targetedScenarioClassification{
+			Scenario:              id,
+			FailureClassification: "none",
+		})
+	}
+	if decision := documentArtifactCandidateDecision(ergonomicsRows[:len(ergonomicsRows)-1]); decision != "defer_for_candidate_ergonomics_repair" {
+		t.Fatalf("partial ergonomics decision = %q, want defer_for_candidate_ergonomics_repair", decision)
+	}
+	if decision := documentArtifactCandidateDecision(ergonomicsRows); decision != "promote_propose_before_create_skill_policy" {
+		t.Fatalf("complete ergonomics decision = %q, want promote_propose_before_create_skill_policy", decision)
+	}
+	ergonomicsRows[len(ergonomicsRows)-1].FailureClassification = "candidate_quality_gap"
+	if decision := documentArtifactCandidateDecision(ergonomicsRows); decision != "defer_for_candidate_ergonomics_repair" {
+		t.Fatalf("ergonomics decision = %q, want defer_for_candidate_ergonomics_repair", decision)
 	}
 }
 
@@ -742,6 +763,23 @@ func TestCandidateHeadingScenarioDoesNotLeakExpectedPath(t *testing.T) {
 	} {
 		if !strings.Contains(sc.Prompt, want) {
 			t.Fatalf("heading-derived candidate scenario missing %q:\n%s", want, sc.Prompt)
+		}
+	}
+}
+
+func TestCandidateErgonomicsNaturalIntentDoesNotLeakExpectedPath(t *testing.T) {
+	sc := requireScenarioByID(t, candidateErgonomicsNaturalIntentScenarioID)
+	if strings.Contains(sc.Prompt, candidateErgonomicsNaturalPath) {
+		t.Fatalf("natural ergonomics scenario leaked expected path %q:\n%s", candidateErgonomicsNaturalPath, sc.Prompt)
+	}
+	for _, want := range []string{
+		"Document this:",
+		"I did not choose a path or title.",
+		"validate the candidate",
+		"wait for my approval before creating anything",
+	} {
+		if !strings.Contains(sc.Prompt, want) {
+			t.Fatalf("natural ergonomics scenario missing %q:\n%s", want, sc.Prompt)
 		}
 	}
 }
@@ -1504,7 +1542,7 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	if lane != documentThisLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, documentThisLaneName)
 	}
-	selected = selectedScenarioIDs(runConfig{Scenario: candidateNoteFromPastedContentScenarioID + "," + candidateTitleAndPathFromHeadingScenarioID + "," + candidateMixedSourceSummaryScenarioID + "," + candidateExplicitOverridesWinScenarioID + "," + candidateDuplicateRiskAsksScenarioID + "," + candidateLowConfidenceAsksScenarioID + "," + candidateBodyFaithfulnessScenarioID})
+	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(documentArtifactCandidateScenarioIDs(), ",")})
 	lane, releaseBlocking = reportLane(selected)
 	if lane != documentArtifactCandidateLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, documentArtifactCandidateLaneName)

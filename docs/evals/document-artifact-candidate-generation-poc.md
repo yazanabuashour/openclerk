@@ -13,8 +13,10 @@ The targeted reduced report is
 
 This POC does not add runner actions, JSON schemas, storage migrations, public
 API, direct create behavior, or shipped skill behavior. The refreshed targeted
-report classifies all selected scenarios as `none`, satisfying the candidate
-quality gate for skill-policy implementation.
+report classifies all selected quality scenarios as `none`, satisfying the
+candidate quality gate for skill-policy implementation. The refreshed `oc-99z`
+ergonomics scorecard deferred promotion after natural-intent rows exposed
+candidate-quality gaps.
 
 ## Purpose
 
@@ -84,6 +86,9 @@ The targeted eval ends with either
 skill policy update. It does not authorize runner, storage, schema, public API,
 or direct-create work.
 
-The current report is `promote_propose_before_create_skill_policy`, so a
-skill policy implementation is authorized. The implementation is limited to
-`skills/openclerk/SKILL.md` and does not change the runner surface.
+The quality report is `promote_propose_before_create_skill_policy`, so a skill
+policy implementation is authorized. The implementation is limited to
+`skills/openclerk/SKILL.md` and does not change the runner surface. The
+ergonomics scorecard report is `defer_for_candidate_ergonomics_repair`, so
+future `oc-99z` ergonomics promotion requires natural-intent repair or a
+narrower shipped policy.

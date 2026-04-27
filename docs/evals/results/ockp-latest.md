@@ -41,7 +41,7 @@ full release-gate replacements.
 | Real-vault dogfooding | `docs/evals/results/ockp-real-vault-agentops-trial.md` | Sanitized aggregate evidence only; raw logs, paths, titles, snippets, citations, document IDs, and raw JSON remain local-only |
 | Populated-vault synthetic pressure | `docs/evals/results/ockp-populated-vault-targeted.md`; follow-up `docs/evals/results/ockp-populated-vault-guidance-hardening.md` | Targeted run completed freshness/conflict and synthesis-update pressure; focused follow-up resolved the heterogeneous polluted-evidence guidance failure, with no runner capability gap or product/API promotion |
 | Document-this intake pressure | `docs/evals/results/ockp-document-this-intake-pressure.md` | Targeted document-this intake lane covers missing-field clarification, explicit create/override, duplicate candidates, existing updates, and synthesis freshness |
-| Document artifact candidate generation | `docs/evals/results/ockp-document-artifact-candidate-generation.md` | Refreshed propose-before-create lane classified all selected candidate-generation scenarios as `none` and supports the skill-policy implementation |
+| Document artifact candidate generation | `docs/evals/results/ockp-document-artifact-candidate-generation.md`; follow-up `docs/evals/results/ockp-document-artifact-candidate-ergonomics.md` | Quality lane supports the skill-policy implementation; ergonomics scorecard deferred `oc-99z` promotion pending natural-intent repair |
 
 ## Interpretation
 
