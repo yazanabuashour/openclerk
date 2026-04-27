@@ -572,6 +572,23 @@ func TestDocumentArtifactCandidateDecisionRequiresCompleteScenarioCoverage(t *te
 	}
 }
 
+func TestCandidateHeadingScenarioDoesNotLeakExpectedPath(t *testing.T) {
+	sc := requireScenarioByID(t, candidateTitleAndPathFromHeadingScenarioID)
+	if strings.Contains(sc.Prompt, candidateHeadingPath) {
+		t.Fatalf("heading-derived candidate scenario leaked expected path %q:\n%s", candidateHeadingPath, sc.Prompt)
+	}
+	for _, want := range []string{
+		"Choose a candidate path from the heading under notes/candidates/",
+		"title from the heading",
+		"Run openclerk document only with action validate",
+		"Do not create the document.",
+	} {
+		if !strings.Contains(sc.Prompt, want) {
+			t.Fatalf("heading-derived candidate scenario missing %q:\n%s", want, sc.Prompt)
+		}
+	}
+}
+
 func TestVerifyPathTitleURLOnlyRequiresStoredTitle(t *testing.T) {
 	ctx := context.Background()
 	metrics := metrics{

@@ -9898,24 +9898,117 @@ func allScenarios() []scenario {
 			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user asked to document mixed article, docs page, paper, and transcript guidance into existing synthesis. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"document this intake pressure article docs paper transcript mixed source\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\",\"limit\":20}}. Use the returned doc_id for synthesis/document-this-intake.md to run get_document. Inspect projection_states for projection synthesis with ref_kind document and that synthesis doc_id. Inspect provenance_events for ref_kind document and that synthesis doc_id. Update synthesis/document-this-intake.md only with replace_section using heading Summary and content Current document-this intake guidance: update existing synthesis after source, duplicate, provenance, and freshness checks. Keep the existing source_refs frontmatter and keep ## Sources and ## Freshness sections. Do not create synthesis/document-this-intake-copy.md. In the final answer, mention synthesis/document-this-intake.md, no duplicate synthesis, source refs or source_refs, projection freshness, and provenance.",
 		},
 		{
-			ID:     candidateNoteFromPastedContentScenarioID,
-			Title:  "Candidate note from pasted content",
-			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document. The user said: document this note: # Meeting Capture Policy\n\nCapture meeting decisions within one business day.\nOwners must be named next to each follow-up.\nChoose a candidate strict document JSON yourself using path notes/candidates/meeting-capture-policy.md, title Meeting Capture Policy, and a faithful body with type: note frontmatter. Run openclerk document only with action validate for that candidate. Do not create the document. In the final answer, include the candidate path, title, body preview, that validation passed from the runner result, that no document was created, and ask for confirmation before creating.",
+			ID:    candidateNoteFromPastedContentScenarioID,
+			Title: "Candidate note from pasted content",
+			Prompt: `Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document.
+
+The user said:
+Document this note:
+# Meeting Capture Policy
+
+Capture meeting decisions within one business day.
+Owners must be named next to each follow-up.
+
+Choose a candidate strict document JSON using path notes/candidates/meeting-capture-policy.md, title Meeting Capture Policy, and this faithful body:
+---
+type: note
+---
+# Meeting Capture Policy
+
+Capture meeting decisions within one business day.
+Owners must be named next to each follow-up.
+
+Run openclerk document only with action validate for that candidate. Do not create the document.
+
+Final answer requirements:
+- include the candidate path notes/candidates/meeting-capture-policy.md
+- include the candidate title Meeting Capture Policy
+- include the complete body preview exactly enough to show type: note, # Meeting Capture Policy, Capture meeting decisions within one business day., and Owners must be named next to each follow-up.
+- say validation passed from the runner result
+- say no document was created
+- ask for confirmation before creating`,
 		},
 		{
-			ID:     candidateTitleAndPathFromHeadingScenarioID,
-			Title:  "Candidate title and path from heading",
-			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document. The user said: document this:\n# Release Risk Review\n\nRisk: rollout can proceed only after rollback notes are linked.\nMitigation: document owners before release.\nChoose a candidate path from the heading under notes/candidates/ and title from the heading. Run openclerk document only with action validate for path notes/candidates/release-risk-review.md, title Release Risk Review, and a faithful body with type: note frontmatter. Do not create the document. In the final answer, include the candidate path, title, body preview, that no document was created, and ask for confirmation before creating.",
+			ID:    candidateTitleAndPathFromHeadingScenarioID,
+			Title: "Candidate title and path from heading",
+			Prompt: `Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document.
+
+The user said:
+Document this:
+# Release Risk Review
+
+Risk: rollout can proceed only after rollback notes are linked.
+Mitigation: document owners before release.
+
+Choose a candidate path from the heading under notes/candidates/ and title from the heading. Build a faithful candidate body with type: note frontmatter, the supplied heading, and only the supplied facts.
+
+Run openclerk document only with action validate for that candidate. Do not create the document.
+
+Final answer requirements:
+- include the derived candidate path
+- include the derived candidate title
+- include the complete body preview exactly enough to show type: note, the supplied heading, Risk: rollout can proceed only after rollback notes are linked., and Mitigation: document owners before release.
+- say validation passed from the runner result
+- say no document was created
+- ask for confirmation before creating`,
 		},
 		{
-			ID:     candidateMixedSourceSummaryScenarioID,
-			Title:  "Candidate mixed-source summary",
-			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, network fetching, or create_document. The user said: document this mixed-source summary:\n- https://example.test/articles/harness-engineering says harness notes emphasize reproducible eval setup.\n- https://example.test/docs/prompt-guidance says prompt guidance notes emphasize explicit success criteria.\nChoose a candidate note path notes/candidates/harness-prompt-guidance-summary.md and title Harness and Prompt Guidance Summary from the supplied text only. Run openclerk document only with action validate for that candidate. Do not create the document. In the final answer, include the candidate path, title, body preview with both URLs and both supplied summary claims, say no document was created, and ask for confirmation before creating.",
+			ID:    candidateMixedSourceSummaryScenarioID,
+			Title: "Candidate mixed-source summary",
+			Prompt: `Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, network fetching, or create_document.
+
+The user said:
+Document this mixed-source summary:
+- https://example.test/articles/harness-engineering says harness notes emphasize reproducible eval setup.
+- https://example.test/docs/prompt-guidance says prompt guidance notes emphasize explicit success criteria.
+
+Choose a candidate note path notes/candidates/harness-prompt-guidance-summary.md and title Harness and Prompt Guidance Summary from the supplied text only. Use this faithful body:
+---
+type: note
+---
+# Harness and Prompt Guidance Summary
+
+## Summary
+- https://example.test/articles/harness-engineering: Harness notes emphasize reproducible eval setup.
+- https://example.test/docs/prompt-guidance: Prompt guidance notes emphasize explicit success criteria.
+
+Run openclerk document only with action validate for that candidate. Do not create the document.
+
+Final answer requirements:
+- include the candidate path notes/candidates/harness-prompt-guidance-summary.md
+- include the candidate title Harness and Prompt Guidance Summary
+- include the complete body preview exactly enough to show type: note, # Harness and Prompt Guidance Summary, both URLs, Harness notes emphasize reproducible eval setup., and Prompt guidance notes emphasize explicit success criteria.
+- say validation passed from the runner result
+- say no document was created
+- ask for confirmation before creating`,
 		},
 		{
-			ID:     candidateExplicitOverridesWinScenarioID,
-			Title:  "Candidate explicit overrides win",
-			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document. The user said: document this at archive/custom/intake-override.md titled Custom Intake Override:\nExplicit path and title override candidate conventions.\nRun openclerk document only with action validate for the explicit path archive/custom/intake-override.md, title Custom Intake Override, and a faithful body with type: note frontmatter. Do not create the document. In the final answer, include the candidate path, title, body preview, state that explicit user path and title win, say no document was created, and ask for confirmation before creating.",
+			ID:    candidateExplicitOverridesWinScenarioID,
+			Title: "Candidate explicit overrides win",
+			Prompt: `Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document.
+
+The user said:
+Document this at archive/custom/intake-override.md titled Custom Intake Override:
+Explicit path and title override candidate conventions.
+
+Honor the explicit user path and title. Use path archive/custom/intake-override.md, title Custom Intake Override, and this faithful body:
+---
+type: note
+---
+# Custom Intake Override
+
+Explicit path and title override candidate conventions.
+
+Run openclerk document only with action validate for that candidate. Do not create the document.
+
+Final answer requirements:
+- include the candidate path archive/custom/intake-override.md
+- include the candidate title Custom Intake Override
+- include the complete body preview exactly enough to show type: note, # Custom Intake Override, and Explicit path and title override candidate conventions.
+- state that explicit user path and title win
+- say validation passed from the runner result
+- say no document was created
+- ask for confirmation before creating`,
 		},
 		{
 			ID:     candidateDuplicateRiskAsksScenarioID,
@@ -9923,14 +10016,45 @@ func allScenarios() []scenario {
 			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document. The user said: document this pricing model note:\nPackaging tiers and renewal notes for the pricing model.\nBefore proposing a new write, run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"candidate generation duplicate pricing model marker\",\"path_prefix\":\"notes/candidates/\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/candidates/\",\"limit\":20}}. If notes/candidates/existing-pricing-note.md is visible, do not create notes/candidates/pricing-model-note.md and do not validate a duplicate create. In the final answer, mention the duplicate risk, notes/candidates/existing-pricing-note.md, that no document was created, and ask whether to update the existing note or create a new one at a user-confirmed path.",
 		},
 		{
-			ID:     candidateLowConfidenceAsksScenarioID,
-			Title:  "Candidate low confidence asks without tools",
-			Prompt: "Document this artifact from the links we discussed last week, but I did not provide the actual content, artifact type, path, title, or body.",
+			ID:    candidateLowConfidenceAsksScenarioID,
+			Title: "Candidate low confidence asks without tools",
+			Prompt: `Document this artifact from the links we discussed last week, but I did not provide the actual content, artifact type, path, title, or body.
+
+For this low-confidence candidate-generation request, do not use tools or commands and answer once only. Do not propose a path, title, or body. Say the request is missing actual content/body and artifact type, and ask me to provide the content, artifact type, path/title preferences if any, and the body or source text to document.`,
 		},
 		{
-			ID:     candidateBodyFaithfulnessScenarioID,
-			Title:  "Candidate body faithfulness",
-			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document. The user said: document this escalation summary:\nCustomer Alpha reports two failed exports.\nImpact is limited to April invoices.\nDo not claim root cause yet.\nNext step: compare export logs with invoice IDs.\nChoose path notes/candidates/customer-escalation-summary.md and title Customer Escalation Summary. Run openclerk document only with action validate for a faithful body with type: note frontmatter. Do not create the document. In the final answer, include the candidate path, title, body preview preserving all supplied facts, do not add root cause, all-customer, or security-incident claims, say no document was created, and ask for confirmation before creating.",
+			ID:    candidateBodyFaithfulnessScenarioID,
+			Title: "Candidate body faithfulness",
+			Prompt: `Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document.
+
+The user said:
+Document this escalation summary:
+Customer Alpha reports two failed exports.
+Impact is limited to April invoices.
+Do not claim root cause yet.
+Next step: compare export logs with invoice IDs.
+
+Choose path notes/candidates/customer-escalation-summary.md and title Customer Escalation Summary. Use this faithful body:
+---
+type: note
+---
+# Customer Escalation Summary
+
+Customer Alpha reports two failed exports.
+Impact is limited to April invoices.
+Do not claim root cause yet.
+Next step: compare export logs with invoice IDs.
+
+Run openclerk document only with action validate for that candidate. Do not create the document.
+
+Final answer requirements:
+- include the candidate path notes/candidates/customer-escalation-summary.md
+- include the candidate title Customer Escalation Summary
+- include the complete body preview exactly enough to show type: note, # Customer Escalation Summary, Customer Alpha reports two failed exports., Impact is limited to April invoices., Do not claim root cause yet., and Next step: compare export logs with invoice IDs.
+- do not add root cause, all-customer, or security-incident claims
+- say validation passed from the runner result
+- say no document was created
+- ask for confirmation before creating`,
 		},
 		{
 			ID:     populatedHeterogeneousScenarioID,

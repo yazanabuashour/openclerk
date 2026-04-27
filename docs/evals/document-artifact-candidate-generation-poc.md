@@ -12,11 +12,9 @@ The targeted reduced report is
 [`results/ockp-document-artifact-candidate-generation.md`](results/ockp-document-artifact-candidate-generation.md).
 
 This POC does not add runner actions, JSON schemas, storage migrations, public
-API, direct create behavior, or shipped skill behavior. The current targeted
-report defers promotion because title/path from heading, mixed-source,
-explicit-override, and body-faithfulness scenarios produced
-`candidate_quality_gap` classifications, and low-confidence clarification
-produced `skill_guidance_or_eval_coverage`.
+API, direct create behavior, or shipped skill behavior. The refreshed targeted
+report classifies all selected scenarios as `none`, satisfying the candidate
+quality gate for a separate skill-policy implementation task.
 
 ## Purpose
 
@@ -86,5 +84,6 @@ The targeted eval ends with either
 skill policy update. It does not authorize runner, storage, schema, public API,
 or direct-create work.
 
-The current report is `defer_for_candidate_quality_repair`, so no skill policy
-implementation is authorized yet.
+The current report is `promote_propose_before_create_skill_policy`, so a
+separate skill policy implementation is authorized. This POC still does not
+change `skills/openclerk/SKILL.md`.

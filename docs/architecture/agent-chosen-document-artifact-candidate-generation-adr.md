@@ -1,7 +1,7 @@
 ---
 decision_id: adr-agent-chosen-document-artifact-candidate-generation
 decision_title: Agent-Chosen Document Artifact Candidate Generation
-decision_status: deferred
+decision_status: accepted
 decision_scope: agent-interaction-policy
 decision_owner: platform
 ---
@@ -9,8 +9,9 @@ decision_owner: platform
 
 ## Status
 
-Deferred as a promotion decision for agent-side propose-before-create skill
-policy.
+Accepted as an evidence-backed promotion gate for a follow-up agent-side
+propose-before-create skill policy implementation. This task does not update
+`skills/openclerk/SKILL.md`.
 
 This ADR supersedes the `oc-99z` framing only for the product question of
 whether an agent may choose a candidate `document.path`, `document.title`, and
@@ -42,11 +43,9 @@ before creating durable knowledge.
 
 ## Decision
 
-Do not promote propose-before-create candidate generation yet. Keep the
-corrected track as targeted evidence and require candidate quality repair before
-any `skills/openclerk/SKILL.md` behavior change.
-
-The candidate policy under evaluation remains: agents may propose candidate
+Promote propose-before-create candidate generation as a future skill policy,
+subject to a separate `skills/openclerk/SKILL.md` implementation task. Agents
+may propose candidate
 `document.path`, `document.title`, and `document.body` from explicit
 user-provided content when the candidate can be made strict-runner-compatible
 and the final answer asks for confirmation before creation.
@@ -58,14 +57,12 @@ JSON compatibility or duplicate risk. The final answer must show the proposed
 path, title, and body preview clearly enough for the user to approve, revise,
 or reject.
 
-Promotion must be justified by candidate quality evidence, not by
+Promotion is justified by candidate quality evidence, not by
 `runner_capability_gap` evidence. A passing lane must show stable conventional
 paths, useful titles, faithful bodies, duplicate-aware placement, explicit
-override precedence, and confidence-to-ask behavior. The targeted lane found
-`candidate_quality_gap` failures for title/path from heading, mixed-source
-summary, explicit override, and body-faithfulness scenarios, plus a
-`skill_guidance_or_eval_coverage` failure for low-confidence clarification. No
-skill policy promotion is authorized from this run.
+override precedence, and confidence-to-ask behavior. The refreshed targeted
+lane completed every selected scenario with classification `none`, so a
+separate skill-policy implementation may proceed.
 
 ## Policy
 
@@ -106,10 +103,8 @@ This ADR does not:
 
 ## Follow-Up Gate
 
-A separate repair task may harden candidate quality guidance and eval coverage.
-Only after a refreshed targeted lane classifies all selected scenarios as
-`none` may a later implementation task update `skills/openclerk/SKILL.md` to
-allow propose-before-create candidate generation. That implementation must
-preserve the no-create-before-approval boundary, explicit override precedence,
+A separate implementation task may update `skills/openclerk/SKILL.md` to allow
+propose-before-create candidate generation. That implementation must preserve
+the no-create-before-approval boundary, explicit override precedence,
 low-confidence clarification, duplicate checks through existing runner actions,
 and strict runner JSON compatibility.

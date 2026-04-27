@@ -7,10 +7,10 @@ Implemented targeted eval lane for `oc-uaq`. The reduced report is
 
 The lane provides evidence for a future skill policy update only:
 propose-before-create candidate generation for `document.path`,
-`document.title`, and `document.body`. The current report defers promotion
-because not all selected scenarios satisfied the candidate quality rubric. It
-does not change runner actions, schemas, storage, public API, direct create
-behavior, or `skills/openclerk/SKILL.md`.
+`document.title`, and `document.body`. The refreshed report satisfies the
+promotion gate because all selected scenarios classified as `none`. It does not
+change runner actions, schemas, storage, public API, direct create behavior, or
+`skills/openclerk/SKILL.md`.
 
 ## Purpose
 
@@ -73,6 +73,6 @@ Failures are classified as:
 - `eval_contract_violation`
 
 Promotion requires all selected scenarios to classify as `none`. The current
-report decision is `defer_for_candidate_quality_repair`; no skill policy update
-is authorized yet. Runner, schema, storage, public API, and direct-create
-changes remain out of scope.
+report decision is `promote_propose_before_create_skill_policy`; a separate
+skill policy update is authorized, but this task does not implement it. Runner,
+schema, storage, public API, and direct-create changes remain out of scope.
