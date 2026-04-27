@@ -2,41 +2,6 @@
 - Do work on the current branch. Do not create or switch to another branch unless explicitly instructed.
 - For repo-pinned developer tools declared in `mise.toml`, run commands through `mise exec -- ...` so agents use the same tool versions as local docs and CI.
 
-## OpenClerk Knowledge Requests
-
-When the prompt is a direct user request to create, list, update, search, or
-inspect local OpenClerk knowledge, treat it as a product data task rather than a
-repository maintenance task. Do not run `bd prime`, inspect implementation
-files, inspect backend-variant packages, inspect the Go module cache, query
-SQLite directly, or run repo-wide searches before acting.
-
-Before using any runner, respond with exactly one assistant answer and no tools
-when the request is missing required document or retrieval fields. Name the
-missing fields, ask the user to provide them, and do not guess. For obviously
-invalid limits such as a negative number, or requests to bypass the OpenClerk
-runner for routine lower-level runtime, HTTP, SQLite, MCP, or retired API
-work, reject final-answer-only. Do not first announce skill use or process for
-these direct no-tools responses.
-
-Use the installed OpenClerk JSON runner:
-
-```bash
-openclerk document
-openclerk retrieval
-```
-
-Pass one JSON request on stdin and answer only from the JSON result. The runner
-honors `OPENCLERK_DATABASE_PATH` as the routine storage anchor; the SQLite
-database stores the configured vault root and conventions. Optional `--db` is
-for explicit datasets, tests, or manual debugging only. For routine requests,
-do not pass that flag; rely on the
-configured database path so data, database, and vault paths stay together. Use
-`openclerk init --vault-root <path>` only when explicitly binding an existing
-vault. Do not inspect the repo to rediscover runner schemas; use the documented
-request shapes directly. For unsupported workflows not covered by the direct
-rejection rule above, say the production OpenClerk runner does not support that
-workflow yet.
-
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker
 
