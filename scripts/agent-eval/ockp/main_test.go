@@ -883,13 +883,16 @@ func TestExecuteRunLabelsSynthesisCompileLaneAsNonReleaseBlocking(t *testing.T) 
 		verification := verificationResult{Passed: true, DatabasePass: true, AssistantPass: true}
 		resultMetrics := metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}}
 		if job.Scenario.ID == synthesisCompileNaturalScenarioID {
-			passed = false
-			status = "failed"
-			resultMetrics = metrics{AssistantCalls: 9, ToolCalls: 16, CommandExecutions: 16, EventTypeCounts: map[string]int{}}
-			verification = verificationResult{Passed: false, DatabasePass: false, AssistantPass: true, Details: "missing source status lines"}
+			resultMetrics = metrics{AssistantCalls: 6, ToolCalls: 18, CommandExecutions: 18, EventTypeCounts: map[string]int{}}
 		}
 		if job.Scenario.ID == synthesisCompileScriptedScenarioID {
 			resultMetrics = metrics{AssistantCalls: 8, ToolCalls: 48, CommandExecutions: 48, EventTypeCounts: map[string]int{}}
+		}
+		if job.Scenario.ID == "negative-limit-reject" {
+			passed = false
+			status = "failed"
+			resultMetrics = metrics{AssistantCalls: 2, ToolCalls: 2, CommandExecutions: 2, EventTypeCounts: map[string]int{}}
+			verification = verificationResult{Passed: false, DatabasePass: false, AssistantPass: true, Details: "expected no tools and at most one assistant answer"}
 		}
 		return jobResult{
 			Variant:       job.Variant,
@@ -927,14 +930,17 @@ func TestExecuteRunLabelsSynthesisCompileLaneAsNonReleaseBlocking(t *testing.T) 
 	for _, row := range report.TargetedLaneSummary.ScenarioClassifications {
 		classifications[row.Scenario] = row
 	}
-	if classifications[synthesisCompileNaturalScenarioID].FailureClassification != "ergonomics_gap" {
-		t.Fatalf("natural classification = %q, want ergonomics_gap", classifications[synthesisCompileNaturalScenarioID].FailureClassification)
+	if classifications[synthesisCompileNaturalScenarioID].FailureClassification != "none" {
+		t.Fatalf("natural classification = %q, want none", classifications[synthesisCompileNaturalScenarioID].FailureClassification)
 	}
 	if classifications[synthesisCompileScriptedScenarioID].FailureClassification != "none" {
 		t.Fatalf("scripted classification = %q, want none", classifications[synthesisCompileScriptedScenarioID].FailureClassification)
 	}
 	if classifications["missing-document-path-reject"].EvidencePosture != "validation control stayed final-answer-only" {
 		t.Fatalf("validation evidence posture = %q, want validation posture", classifications["missing-document-path-reject"].EvidencePosture)
+	}
+	if classifications["negative-limit-reject"].FailureClassification != "skill_guidance_or_eval_coverage" {
+		t.Fatalf("negative-limit classification = %q, want skill_guidance_or_eval_coverage", classifications["negative-limit-reject"].FailureClassification)
 	}
 	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-synthesis-compile-revisit-pressure-test.md"))
 	if err != nil {
@@ -945,6 +951,7 @@ func TestExecuteRunLabelsSynthesisCompileLaneAsNonReleaseBlocking(t *testing.T) 
 		"Release blocking: `false`",
 		"Decision: `defer_for_guidance_or_eval_repair`",
 		"validation control stayed final-answer-only",
+		"validation pressure did not stay final-answer-only",
 	} {
 		if !strings.Contains(string(markdown), want) {
 			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))

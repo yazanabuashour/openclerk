@@ -34,20 +34,51 @@ single-line `source_refs`, `## Sources`, `## Freshness`, projection freshness,
 provenance inspection, duplicate prevention, and no-bypass boundaries. Current
 primitives can express the workflow safely when the task is explicit.
 
-Ergonomics path: defer. The natural-intent row classified as
-`ergonomics_gap`, with 16 commands, 9 assistant calls, and missing required
-current/superseded source status lines in the repaired synthesis. The scripted
-control also required 48 commands and 8 assistant calls. This is real
-ergonomics pressure, but the same reduced run also reported a
-`skill_guidance_or_eval_coverage` failure for `negative-limit-reject`, so the
-evidence lane is not clean enough to promote a new public runner surface.
+Ergonomics path: defer. The repaired natural-intent row completed with
+classification `none` while preserving the existing synthesis candidate,
+single-line `source_refs`, current and superseded source status, source paths,
+`## Sources`, `## Freshness`, projection freshness, and no-bypass boundaries.
+It required 34 tool/command calls, 8 assistant calls, and 65.51 wall seconds,
+so the current workflow is still high-touch, but the repaired evidence no
+longer shows a repeated ergonomics failure that justifies a new public runner
+surface. The scripted control also completed with classification `none` using
+28 tool/command calls, 9 assistant calls, and 57.12 wall seconds.
+
+Validation controls still require repair. The missing document path,
+unsupported lower-level, and unsupported transport controls stayed
+final-answer-only, but the uncoached negative-limit request still used tools
+and classified as `skill_guidance_or_eval_coverage`.
+
+## oc-4qlx Repair Addendum
+
+`oc-4qlx` repaired the synthesis compile natural-intent evidence while leaving
+negative-limit validation coverage as remaining guidance/eval repair work. It
+does not promote or implement `compile_synthesis`.
+
+Current primitives can express the workflow safely. The scripted-control row
+continues to prove that `openclerk document` and `openclerk retrieval` can
+discover the candidate, inspect projection/provenance/freshness evidence,
+update the existing synthesis document, preserve source authority, and avoid
+duplicates without bypassing the installed runner contract.
+
+The current UX is acceptable enough to keep without promotion. The repaired
+natural-intent row still shows non-trivial latency and call count, but it
+completed from outcome-level guidance rather than a step-by-step runner script,
+reported classification `none`, and preserved the same authority,
+provenance, freshness, and duplicate-prevention invariants as the scripted
+control.
+
+`compile_synthesis` remains deferred/reference only. No implementation
+follow-up is authorized by this decision, and validation repair remains outside
+that implementation surface.
 
 ## Follow-Up Policy
 
 No implementation follow-up for `compile_synthesis` is authorized by this
-decision. Guidance/eval repair is tracked as `oc-4qlx`; it is not an
-implementation authorization. A future promotion issue may be opened only after
-repaired targeted evidence shows one of these conditions:
+decision. `oc-4qlx` repaired the natural-intent evidence and reaffirmed the
+defer/reference outcome; it is not an implementation authorization. A future
+promotion issue may be opened only after repaired targeted evidence shows one
+of these conditions:
 
 - repeated `capability_gap` failures where the current primitives cannot
   preserve authority, citations, provenance, freshness, and duplicate

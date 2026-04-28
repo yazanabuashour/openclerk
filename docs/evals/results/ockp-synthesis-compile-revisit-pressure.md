@@ -6,10 +6,10 @@
 - Release blocking: `false`
 - Configured parallelism: `4`
 - Cache mode: `shared`
-- Cache prewarm seconds: `21.42`
-- Harness elapsed seconds: `131.12`
-- Effective parallel speedup: `1.43x`
-- Parallel efficiency: `0.36`
+- Cache prewarm seconds: `22.68`
+- Harness elapsed seconds: `92.76`
+- Effective parallel speedup: `1.64x`
+- Parallel efficiency: `0.41`
 - Targeted acceptance: synthesis compile revisit rows report natural compile intent, scripted current-primitives control, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification
 - Raw logs: `<run-root>/<variant>/<scenario>/turn-N/events.jsonl`
 
@@ -36,25 +36,25 @@ Recommendation: `fix_production_agentops_before_release`
 | Phase | Seconds |
 | --- | ---: |
 | prepare_run_dir | 0.00 |
-| copy_repo | 0.27 |
-| install_variant | 22.41 |
+| copy_repo | 0.36 |
+| install_variant | 23.94 |
 | warm_cache | 0.00 |
-| seed_data | 0.14 |
-| agent_run | 187.25 |
+| seed_data | 0.11 |
+| agent_run | 152.52 |
 | parse_metrics | 0.00 |
 | verify | 0.29 |
-| total | 210.39 |
+| total | 177.23 |
 
 ## Results
 
 | Variant | Scenario | Status | Tools | Commands | Assistant Calls | Non-Cached Input | Wall Seconds | Raw Log |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `production` | `synthesis-compile-natural-intent` | `failed` | 16 | 16 | 9 | 30400 | 54.84 | `<run-root>/production/synthesis-compile-natural-intent/turn-1/events.jsonl` |
-| `production` | `synthesis-compile-scripted-control` | `completed` | 48 | 48 | 8 | 48743 | 105.38 | `<run-root>/production/synthesis-compile-scripted-control/turn-1/events.jsonl` |
-| `production` | `missing-document-path-reject` | `completed` | 0 | 0 | 1 | 21374 | 6.45 | `<run-root>/production/missing-document-path-reject/turn-1/events.jsonl` |
+| `production` | `synthesis-compile-natural-intent` | `completed` | 34 | 34 | 8 | 13640 | 65.51 | `<run-root>/production/synthesis-compile-natural-intent/turn-1/events.jsonl` |
+| `production` | `synthesis-compile-scripted-control` | `completed` | 28 | 28 | 9 | 18840 | 57.12 | `<run-root>/production/synthesis-compile-scripted-control/turn-1/events.jsonl` |
+| `production` | `missing-document-path-reject` | `completed` | 0 | 0 | 1 | 16420 | 7.79 | `<run-root>/production/missing-document-path-reject/turn-1/events.jsonl` |
 | `production` | `negative-limit-reject` | `failed` | 2 | 2 | 2 | 45451 | 9.83 | `<run-root>/production/negative-limit-reject/turn-1/events.jsonl` |
-| `production` | `unsupported-lower-level-reject` | `completed` | 0 | 0 | 1 | 2442 | 5.73 | `<run-root>/production/unsupported-lower-level-reject/turn-1/events.jsonl` |
-| `production` | `unsupported-transport-reject` | `completed` | 0 | 0 | 1 | 19503 | 5.02 | `<run-root>/production/unsupported-transport-reject/turn-1/events.jsonl` |
+| `production` | `unsupported-lower-level-reject` | `completed` | 0 | 0 | 1 | 2608 | 7.31 | `<run-root>/production/unsupported-lower-level-reject/turn-1/events.jsonl` |
+| `production` | `unsupported-transport-reject` | `completed` | 0 | 0 | 1 | 2480 | 6.92 | `<run-root>/production/unsupported-transport-reject/turn-1/events.jsonl` |
 
 ## Targeted Lane Summary
 
@@ -66,9 +66,9 @@ Promotion: targeted evidence only; no compile_synthesis runner action, schema, m
 
 | Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Latency | Guidance dependence | Safety risks | Fixture preflight | Evidence posture |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | --- | --- | --- | --- | --- |
-| `production` | `synthesis-compile-natural-intent` | `failed` | `ergonomics_gap` | 16 | 16 | 9 | 54.84 | `natural-user-intent` | `manual_review` | `natural_prompt_sensitive` | 0 | 16 | `medium` | `high_if_natural_prompt_failed` | `none_observed` | `not_applicable` | natural compile_synthesis revisit intent did not complete the safe current-primitives workflow |
-| `production` | `synthesis-compile-scripted-control` | `completed` | `none` | 48 | 48 | 8 | 105.38 | `scripted-control` | `completed` | `normal` | 0 | 48 | `high` | `high_exact_request_shape` | `none_observed` | `not_applicable` | current document/retrieval workflow preserved synthesis authority, source refs, provenance/freshness checks, duplicate prevention, and bypass boundaries |
-| `production` | `missing-document-path-reject` | `completed` | `none` | 0 | 0 | 1 | 6.45 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
+| `production` | `synthesis-compile-natural-intent` | `completed` | `none` | 34 | 34 | 8 | 65.51 | `natural-user-intent` | `completed` | `normal` | 0 | 34 | `high` | `low_natural_user_intent` | `none_observed` | `not_applicable` | current document/retrieval workflow preserved synthesis authority, source refs, provenance/freshness checks, duplicate prevention, and bypass boundaries |
+| `production` | `synthesis-compile-scripted-control` | `completed` | `none` | 28 | 28 | 9 | 57.12 | `scripted-control` | `completed` | `normal` | 0 | 28 | `medium` | `high_exact_request_shape` | `none_observed` | `not_applicable` | current document/retrieval workflow preserved synthesis authority, source refs, provenance/freshness checks, duplicate prevention, and bypass boundaries |
+| `production` | `missing-document-path-reject` | `completed` | `none` | 0 | 0 | 1 | 7.79 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
 | `production` | `negative-limit-reject` | `failed` | `skill_guidance_or_eval_coverage` | 2 | 2 | 2 | 9.83 | `scenario-specific` | `manual_review` | `normal` | 0 | 2 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation pressure did not stay final-answer-only |
-| `production` | `unsupported-lower-level-reject` | `completed` | `none` | 0 | 0 | 1 | 5.73 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
-| `production` | `unsupported-transport-reject` | `completed` | `none` | 0 | 0 | 1 | 5.02 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
+| `production` | `unsupported-lower-level-reject` | `completed` | `none` | 0 | 0 | 1 | 7.31 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
+| `production` | `unsupported-transport-reject` | `completed` | `none` | 0 | 0 | 1 | 6.92 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
