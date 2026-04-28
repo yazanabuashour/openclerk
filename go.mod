@@ -2,7 +2,10 @@ module github.com/yazanabuashour/openclerk
 
 go 1.26.2
 
-require modernc.org/sqlite v1.49.1
+require (
+	modernc.org/sqlite v1.50.0
+	rsc.io/pdf v0.1.1
+)
 
 require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
@@ -14,5 +17,4 @@ require (
 	modernc.org/libc v1.72.0 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
-	rsc.io/pdf v0.1.1 // indirect
 )
