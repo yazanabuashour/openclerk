@@ -16,8 +16,8 @@ API, direct create behavior, or shipped skill behavior. The refreshed targeted
 report classifies all selected quality scenarios as `none`, satisfying the
 candidate quality gate for skill-policy implementation. The refreshed `oc-9k3`
 ergonomics scorecard classifies all selected natural-intent and control
-scenarios as `none`, providing repaired evidence for future `oc-99z`
-ergonomics decision work.
+scenarios as `none`, providing the evidence used by the amended `oc-99z`
+ergonomics decision.
 
 ## Purpose
 
@@ -91,6 +91,6 @@ The quality report is `promote_propose_before_create_skill_policy`, so a skill
 policy implementation is authorized. The implementation is limited to
 `skills/openclerk/SKILL.md` and does not change the runner surface. The
 refreshed `oc-9k3` ergonomics scorecard report is also
-`promote_propose_before_create_skill_policy`, so future `oc-99z` ergonomics
-decision work can cite repaired natural-intent evidence without adding runner,
+`promote_propose_before_create_skill_policy`, so the amended `oc-99z`
+ergonomics path promotes only the existing skill policy and adds no runner,
 schema, storage, public API, or direct-create behavior.

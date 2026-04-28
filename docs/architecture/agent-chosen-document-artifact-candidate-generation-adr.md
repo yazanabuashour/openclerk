@@ -69,9 +69,9 @@ explicit override precedence, and confidence-to-ask behavior. The refreshed
 targeted lane completed every selected quality scenario with classification
 `none`, so the skill-policy implementation was authorized. The later `oc-9k3`
 repair also completed every selected ergonomics scorecard scenario with
-classification `none`; `oc-99z` remains a separate decision track and no
-runner, schema, storage, public API, or direct-create behavior is promoted by
-this ADR.
+classification `none`; the amended `oc-99z` ergonomics path promotes only this
+existing skill-policy surface and no runner, schema, storage, public API, or
+direct-create behavior is promoted by this ADR.
 
 ## Policy
 
