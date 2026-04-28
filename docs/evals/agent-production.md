@@ -29,6 +29,12 @@ The populated-vault e2e lane is defined in
 implemented targeted eval lane for heterogeneous synthetic vault pressure, not
 part of the current release-blocking production gate.
 
+The repo-docs dogfood lane is defined in
+[`repo-docs-dogfood.md`](repo-docs-dogfood.md). It imports this repository's
+committed public markdown into an isolated eval vault and provides recurring
+non-release-blocking pressure on retrieval, synthesis maintenance, and
+decision-record explainability without private vault evidence.
+
 ## Harness
 
 Use `scripts/agent-eval/ockp`:

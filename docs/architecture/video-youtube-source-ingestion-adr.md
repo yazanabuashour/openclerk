@@ -57,17 +57,19 @@ Current public surface remains:
 - `openclerk document`
 - `openclerk retrieval`
 - existing `ingest_source_url` for PDF source URLs
+- `ingest_video_url` for supplied transcript text only
 
-Until a later promotion decision adds a native video surface, routine agents
-must not fetch video media, run `yt-dlp`, run `ffmpeg`, call transcript APIs,
-invoke Gemini extraction, use source-built runners, inspect SQLite directly,
-or inspect vault files directly for video ingestion. They may use existing
-document and retrieval actions for transcript text already supplied by the user
-or already present as canonical markdown.
+Routine agents must not fetch video media, run `yt-dlp`, run `ffmpeg`, call
+transcript APIs, invoke Gemini extraction, use source-built runners, inspect
+SQLite directly, or inspect vault files directly for video ingestion. They may
+use `ingest_video_url` only when transcript text is already supplied by the
+user, or existing document and retrieval actions for transcript text already
+present as canonical markdown.
 
 ## Required Source Model
 
-Any future video ingestion surface must preserve these properties:
+The supplied-transcript video ingestion surface and any future acquisition
+surface must preserve these properties:
 
 - **Authority:** canonical markdown source notes outrank raw transcript assets,
   tool output, media metadata, and synthesis pages.
@@ -93,7 +95,8 @@ Any future video ingestion surface must preserve these properties:
 
 This ADR does not:
 
-- promote `ingest_video_url`, `ingest_transcript`, or `ingest_artifact`
+- promote `ingest_transcript`, `ingest_artifact`, or native acquisition beyond
+  supplied-transcript `ingest_video_url`
 - add media downloads, audio extraction, OCR, STT, transcript API calls, Gemini
   extraction, background workers, queues, or asset registries
 - define production dependency installation for `yt-dlp`, `ffmpeg`, Whisper,

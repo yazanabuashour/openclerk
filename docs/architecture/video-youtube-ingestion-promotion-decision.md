@@ -9,10 +9,13 @@ decision_owner: platform
 
 ## Status
 
-Accepted: promote follow-up surface design for native video and YouTube source
-ingestion through `ingest_video_url`. This decision does not implement the
-runner action, parser, downloader, transcriber, dependency installation,
-schema, storage migration, or public API behavior.
+Accepted and partially implemented: promote `openclerk document`
+`ingest_video_url` for v1 supplied-transcript video and YouTube source
+ingestion. The implemented v1 runner action creates and updates canonical
+source notes only when transcript text is explicitly supplied. It does not
+implement media download, platform caption retrieval, local STT, transcript
+APIs, Gemini extraction, parser pipelines, dependency installation, storage
+migrations, or native video acquisition.
 
 Evidence:
 
@@ -23,8 +26,8 @@ Evidence:
 
 ## Decision
 
-Promote a follow-up implementation design for a narrow `openclerk document`
-action named `ingest_video_url`.
+Promote and implement a narrow `openclerk document` action named
+`ingest_video_url` for supplied transcript text.
 
 Capability path: current primitives can safely express canonical video source
 notes only when transcript text and provenance are already supplied. The
@@ -32,19 +35,15 @@ scripted transcript control passed by creating a canonical markdown source note
 and retrieving citation-bearing evidence through existing runners, so the
 current document/retrieval model remains the authority baseline.
 
-Ergonomics path: promote follow-up design. The natural URL-only scenario
-correctly rejected native video ingestion with no tools, but the targeted lane
-classified that safe rejection as `ergonomics_gap`: a user dropping a YouTube
-URL still cannot get the expected canonical source note without manually
-orchestrating transcript acquisition, provenance capture, citation mapping, and
-freshness checks. The scripted and freshness controls show the desired
-authority and freshness model, but they are too procedural for routine URL-only
-source ingestion.
+Ergonomics path: promote only the supplied-transcript runner surface for now.
+The refreshed natural scenario can create a canonical source note through
+`ingest_video_url` when transcript text is supplied. URL-only transcript
+acquisition remains deferred because it still requires explicit downloader,
+caption, STT, remote API, privacy, and provenance design.
 
-The promoted implementation follow-up is unblocked only for the exact surface
-below. Do not promote generalized `ingest_artifact`, arbitrary media import,
-hidden transcript APIs, Gemini extraction as authority, OCR, local file import,
-or any direct-vault/SQLite bypass from this decision.
+Do not promote generalized `ingest_artifact`, arbitrary media import, hidden
+transcript APIs, Gemini extraction as authority, OCR, local file import, or any
+direct-vault/SQLite bypass from this decision.
 
 ## Promoted Surface Contract
 
@@ -59,24 +58,25 @@ Candidate request shape:
     "title": "Demo Video Transcript",
     "mode": "create",
     "transcript": {
-      "policy": "local_first",
-      "origin": "platform_caption_or_local_transcription",
-      "language": "en"
+      "text": "Supplied transcript text.",
+      "policy": "supplied",
+      "origin": "user_supplied_transcript",
+      "language": "en",
+      "captured_at": "2026-04-27T00:00:00Z"
     },
     "asset_path_hint": "assets/video-youtube/demo.json"
   }
 }
 ```
 
-Candidate response shape must include:
+Response shape includes:
 
 - `doc_id`, `source_path`, `source_url`, `citations`, and captured transcript
   hash
 - transcript provenance: origin, capture method, captured timestamp, language,
   tool or model identity, and whether transcript text was user-supplied,
   platform-supplied, or locally transcribed
-- optional supporting asset path and asset hash for metadata, sidecar
-  transcript, or media-derived evidence
+- optional supporting metadata sidecar path for provenance metadata
 - update result fields equivalent to source URL update behavior: previous hash,
   new hash, no-op same-hash status, and freshness/provenance effects
 
@@ -87,40 +87,34 @@ Compatibility rules:
 - Missing `video.mode` defaults to `create`; duplicate creates reject; update
   mode targets the normalized `video.url`; mismatched path or asset hints
   conflict without writing extra documents or assets.
-- Canonical markdown source notes remain authority. Raw media, transcript API
-  responses, model output, metadata JSON, and downloaded assets are supporting
-  evidence only.
-- Citation mapping must expose stable `doc_id`, `chunk_id`, source path,
-  heading, line range, timestamp range, or an equivalent stable span.
+- Canonical markdown source notes remain authority. Metadata JSON sidecars are
+  supporting evidence only.
+- Citation mapping exposes stable `doc_id`, `chunk_id`, source path, heading,
+  and line range through the indexed canonical markdown note.
 
 ## Dependency And Privacy Policy
 
-The implementation must be local-first by default. Any dependency on `yt-dlp`,
-`ffmpeg`, local STT models, transcript APIs, or Gemini-style extraction must be
-explicitly configured and reported in provenance. No default path may send
-private URLs, media, transcript text, or metadata to a third-party service.
+The v1 implementation is local-first by construction because transcript text is
+supplied by the caller and no acquisition dependencies are invoked. Any future
+dependency on `yt-dlp`, `ffmpeg`, local STT models, transcript APIs, or
+Gemini-style extraction must be explicitly configured and reported in
+provenance. No default path may send private URLs, media, transcript text, or
+metadata to a third-party service.
 
 Remote transcript APIs or LLM extraction may be considered only as explicit
 future policy options with visible egress, credentials, provider identity,
 failure modes, and user approval. They must never become hidden routine
 fallbacks.
 
-## Implementation Gates
+## Deferred Gates
 
-The follow-up implementation must add:
+The following gates remain deferred for later acquisition work:
 
-- runner request/response types and validation for `ingest_video_url`
-- transcript acquisition policy that rejects unsupported dependency modes
-  clearly
-- canonical markdown source-note creation with transcript provenance fields
-- duplicate, update, same-hash, changed-transcript, missing transcript,
-  unsupported URL, dependency failure, parser failure, and partial-success
-  behavior
-- citation mapping from transcript spans to indexed chunks
-- provenance events and projection invalidation for changed transcripts
-- targeted tests and eval scenarios proving natural URL-only ingestion,
-  scripted controls, update/freshness behavior, privacy rejection, and bypass
-  rejection
+- local downloader and caption retrieval policy
+- local STT dependency and model policy
+- remote transcript API and remote extraction policy
+- richer timestamp-span citation mapping
+- raw media storage policy, if ever needed
 
 If these gates cannot preserve authority, citations, provenance, freshness,
 privacy, local-first operation, and the no-bypass contract, defer or kill the

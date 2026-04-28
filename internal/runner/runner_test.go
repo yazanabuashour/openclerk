@@ -248,6 +248,116 @@ func TestDocumentTaskRejectsInvalidSourceURLIngestBeforeRuntimeFiles(t *testing.
 	}
 }
 
+func TestDocumentTaskRejectsInvalidVideoURLIngestBeforeRuntimeFiles(t *testing.T) {
+	t.Parallel()
+
+	validTranscript := runner.VideoTranscriptInput{Text: "Supplied transcript evidence.", Policy: "supplied"}
+	tests := []struct {
+		name    string
+		video   runner.VideoURLInput
+		wantErr string
+	}{
+		{
+			name: "missing url",
+			video: runner.VideoURLInput{
+				PathHint:   "sources/video-youtube/uploaded.md",
+				Transcript: validTranscript,
+			},
+			wantErr: "video.url is required",
+		},
+		{
+			name: "unsafe source path",
+			video: runner.VideoURLInput{
+				URL:        "https://www.youtube.com/watch?v=openclerk",
+				PathHint:   "../uploaded.md",
+				Transcript: validTranscript,
+			},
+			wantErr: "video.path_hint",
+		},
+		{
+			name: "non source markdown path",
+			video: runner.VideoURLInput{
+				URL:        "https://www.youtube.com/watch?v=openclerk",
+				PathHint:   "notes/uploaded.md",
+				Transcript: validTranscript,
+			},
+			wantErr: "sources/*.md",
+		},
+		{
+			name: "invalid mode",
+			video: runner.VideoURLInput{
+				URL:        "https://www.youtube.com/watch?v=openclerk",
+				PathHint:   "sources/video-youtube/uploaded.md",
+				Mode:       "replace",
+				Transcript: validTranscript,
+			},
+			wantErr: "video.mode",
+		},
+		{
+			name: "missing transcript",
+			video: runner.VideoURLInput{
+				URL:      "https://www.youtube.com/watch?v=openclerk",
+				PathHint: "sources/video-youtube/uploaded.md",
+			},
+			wantErr: "video.transcript.text",
+		},
+		{
+			name: "unsupported policy",
+			video: runner.VideoURLInput{
+				URL:      "https://www.youtube.com/watch?v=openclerk",
+				PathHint: "sources/video-youtube/uploaded.md",
+				Transcript: runner.VideoTranscriptInput{
+					Text:   "Supplied transcript evidence.",
+					Policy: "platform_caption",
+				},
+			},
+			wantErr: "video.transcript.policy",
+		},
+		{
+			name: "unsafe asset path",
+			video: runner.VideoURLInput{
+				URL:           "https://www.youtube.com/watch?v=openclerk",
+				PathHint:      "sources/video-youtube/uploaded.md",
+				AssetPathHint: "../uploaded.json",
+				Transcript:    validTranscript,
+			},
+			wantErr: "video.asset_path_hint",
+		},
+		{
+			name: "non json asset path",
+			video: runner.VideoURLInput{
+				URL:           "https://www.youtube.com/watch?v=openclerk",
+				PathHint:      "sources/video-youtube/uploaded.md",
+				AssetPathHint: "assets/video-youtube/uploaded.txt",
+				Transcript:    validTranscript,
+			},
+			wantErr: "assets/**/*.json",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			dataDir := filepath.Join(t.TempDir(), "data")
+			result, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(dataDir, "openclerk.sqlite")}, runner.DocumentTaskRequest{
+				Action: runner.DocumentTaskActionIngestVideoURL,
+				Video:  tt.video,
+			})
+			if err != nil {
+				t.Fatalf("document task: %v", err)
+			}
+			if !result.Rejected || !strings.Contains(result.RejectionReason, tt.wantErr) {
+				t.Fatalf("result = %+v, want rejection containing %q", result, tt.wantErr)
+			}
+			if _, err := os.Stat(dataDir); !os.IsNotExist(err) {
+				t.Fatalf("data dir exists after validation rejection: %v", err)
+			}
+		})
+	}
+}
+
 func TestDocumentTaskIngestSourceURLPDF(t *testing.T) {
 	t.Parallel()
 
@@ -378,6 +488,113 @@ func TestDocumentTaskIngestSourceURLPDF(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "source URL") {
 		t.Fatalf("duplicate error = %v", err)
+	}
+}
+
+func TestDocumentTaskIngestVideoURLSuppliedTranscript(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	config := runclient.Config{DatabasePath: dbPath}
+	videoURL := "https://www.youtube.com/watch?v=openclerk-demo"
+	transcript := "OpenClerk video canonical transcript unique evidence."
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestVideoURL,
+		Video: runner.VideoURLInput{
+			URL:           videoURL,
+			PathHint:      "sources/video-youtube/runner-demo.md",
+			AssetPathHint: "assets/video-youtube/runner-demo.json",
+			Title:         "Runner Video Demo",
+			Transcript: runner.VideoTranscriptInput{
+				Text:       transcript,
+				Policy:     "supplied",
+				Origin:     "user_fixture",
+				Language:   "en",
+				CapturedAt: "2026-04-27T10:00:00Z",
+				Tool:       "manual",
+				Model:      "none",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("ingest video URL: %v", err)
+	}
+	if result.Rejected || result.VideoIngestion == nil {
+		t.Fatalf("ingest result = %+v", result)
+	}
+	ingestion := result.VideoIngestion
+	if ingestion.DocID == "" ||
+		ingestion.SourcePath != "sources/video-youtube/runner-demo.md" ||
+		ingestion.SourceURL != videoURL ||
+		ingestion.AssetPath != "assets/video-youtube/runner-demo.json" ||
+		ingestion.TranscriptPolicy != "supplied" ||
+		ingestion.TranscriptOrigin != "user_fixture" ||
+		ingestion.Language != "en" ||
+		ingestion.Tool != "manual" ||
+		ingestion.Model != "none" ||
+		len(ingestion.TranscriptSHA256) != 64 ||
+		len(ingestion.Citations) == 0 {
+		t.Fatalf("ingestion = %+v", ingestion)
+	}
+	assetPath := filepath.Join(filepath.Dir(dbPath), "vault", "assets", "video-youtube", "runner-demo.json")
+	assetBytes, err := os.ReadFile(assetPath)
+	if err != nil {
+		t.Fatalf("asset read: %v", err)
+	}
+	if strings.Contains(string(assetBytes), transcript) || !strings.Contains(string(assetBytes), ingestion.TranscriptSHA256) {
+		t.Fatalf("metadata asset = %s", string(assetBytes))
+	}
+
+	get, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGet,
+		DocID:  ingestion.DocID,
+	})
+	if err != nil {
+		t.Fatalf("get ingested video document: %v", err)
+	}
+	if get.Document == nil ||
+		get.Document.Metadata["source_type"] != "video_transcript" ||
+		get.Document.Metadata["source_url"] != videoURL ||
+		get.Document.Metadata["transcript_sha256"] != ingestion.TranscriptSHA256 ||
+		get.Document.Metadata["asset_path"] != "assets/video-youtube/runner-demo.json" ||
+		!strings.Contains(get.Document.Body, "Runner Video Demo") ||
+		!strings.Contains(get.Document.Body, transcript) {
+		t.Fatalf("ingested document = %+v", get.Document)
+	}
+
+	search, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
+			Text:       "canonical transcript unique evidence",
+			PathPrefix: "sources/",
+			Limit:      10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("search ingested transcript: %v", err)
+	}
+	if search.Search == nil || len(search.Search.Hits) == 0 || search.Search.Hits[0].Citations[0].Path != "sources/video-youtube/runner-demo.md" {
+		t.Fatalf("search = %+v", search.Search)
+	}
+
+	provenance, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{
+			RefKind: "source",
+			RefID:   ingestion.DocID,
+			Limit:   10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("source provenance: %v", err)
+	}
+	if provenance.Provenance == nil || len(provenance.Provenance.Events) == 0 {
+		t.Fatalf("provenance = %+v", provenance.Provenance)
+	}
+	details := provenance.Provenance.Events[0].Details
+	if details["source_url"] != videoURL || details["transcript_sha256"] != ingestion.TranscriptSHA256 {
+		t.Fatalf("source provenance details = %+v", details)
 	}
 }
 

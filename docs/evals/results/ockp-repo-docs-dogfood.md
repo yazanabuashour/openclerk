@@ -2,15 +2,15 @@
 
 - Model: `gpt-5.4-mini`
 - Reasoning effort: `medium`
-- Lane: `video-youtube-canonical-source-note`
+- Lane: `repo-docs-dogfood`
 - Release blocking: `false`
 - Configured parallelism: `1`
 - Cache mode: `shared`
-- Cache prewarm seconds: `21.12`
-- Harness elapsed seconds: `118.25`
-- Effective parallel speedup: `0.73x`
-- Parallel efficiency: `0.73`
-- Targeted acceptance: video/YouTube rows report natural supplied-transcript intent, scripted transcript control, synthesis freshness, bypass rejection, ergonomics scorecard fields, and final capability classification
+- Cache prewarm seconds: `17.88`
+- Harness elapsed seconds: `264.61`
+- Effective parallel speedup: `0.61x`
+- Parallel efficiency: `0.61`
+- Targeted acceptance: repo-docs dogfood rows import committed public markdown into an isolated eval vault and report retrieval, synthesis, and decision-record behavior without private vault evidence
 - Raw logs: `<run-root>/<variant>/<scenario>/turn-N/events.jsonl`
 
 ## Production Gate
@@ -36,35 +36,33 @@ Recommendation: `fix_production_agentops_before_release`
 | Phase | Seconds |
 | --- | ---: |
 | prepare_run_dir | 0.00 |
-| copy_repo | 0.07 |
-| install_variant | 10.73 |
+| copy_repo | 0.10 |
+| install_variant | 16.72 |
 | warm_cache | 0.00 |
-| seed_data | 0.02 |
-| agent_run | 86.17 |
+| seed_data | 57.01 |
+| agent_run | 160.27 |
 | parse_metrics | 0.00 |
-| verify | 0.12 |
-| total | 97.13 |
+| verify | 12.63 |
+| total | 246.73 |
 
 ## Results
 
 | Variant | Scenario | Status | Tools | Commands | Assistant Calls | Non-Cached Input | Wall Seconds | Raw Log |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `production` | `video-youtube-natural-intent` | `completed` | 8 | 8 | 4 | 12716 | 24.26 | `<run-root>/production/video-youtube-natural-intent/turn-1/events.jsonl` |
-| `production` | `video-youtube-scripted-transcript-control` | `completed` | 8 | 8 | 3 | 20138 | 21.89 | `<run-root>/production/video-youtube-scripted-transcript-control/turn-1/events.jsonl` |
-| `production` | `video-youtube-synthesis-freshness` | `completed` | 16 | 16 | 4 | 9469 | 30.07 | `<run-root>/production/video-youtube-synthesis-freshness/turn-1/events.jsonl` |
-| `production` | `video-youtube-bypass-reject` | `completed` | 0 | 0 | 1 | 2502 | 9.95 | `<run-root>/production/video-youtube-bypass-reject/turn-1/events.jsonl` |
+| `production` | `repo-docs-agentops-retrieval` | `completed` | 10 | 10 | 5 | 13463 | 31.90 | `<run-root>/production/repo-docs-agentops-retrieval/turn-1/events.jsonl` |
+| `production` | `repo-docs-synthesis-maintenance` | `completed` | 14 | 14 | 6 | 10664 | 44.59 | `<run-root>/production/repo-docs-synthesis-maintenance/turn-1/events.jsonl` |
+| `production` | `repo-docs-decision-records` | `completed` | 40 | 40 | 5 | 17605 | 83.78 | `<run-root>/production/repo-docs-decision-records/turn-1/events.jsonl` |
 
 ## Targeted Lane Summary
 
-Decision: `keep_as_reference`
+Decision: `keep_as_public_dogfood_lane`
 
 Public surface: `openclerk document`, `openclerk retrieval`
 
-Promotion: keep supplied-transcript ingest_video_url as the promoted surface; native acquisition dependencies remain deferred.
+Promotion: targeted repo-docs dogfood evidence only; no promoted runner action, schema, migration, storage API, product behavior, or public OpenClerk interface.
 
 | Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Latency | Guidance dependence | Safety risks | Fixture preflight | Evidence posture |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | --- | --- | --- | --- | --- |
-| `production` | `video-youtube-natural-intent` | `completed` | `none` | 8 | 8 | 4 | 24.26 | `natural-user-intent` | `completed` | `normal` | 0 | 8 | `medium` | `scenario_prompt` | `none_observed` | `not_applicable` | ingest_video_url preserved supplied video transcript authority, citations, provenance, freshness, and bypass boundaries |
-| `production` | `video-youtube-scripted-transcript-control` | `completed` | `none` | 8 | 8 | 3 | 21.89 | `scripted-control` | `completed` | `normal` | 0 | 8 | `medium` | `scenario_prompt` | `none_observed` | `not_applicable` | ingest_video_url preserved supplied video transcript authority, citations, provenance, freshness, and bypass boundaries |
-| `production` | `video-youtube-synthesis-freshness` | `completed` | `none` | 16 | 16 | 4 | 30.07 | `scenario-specific` | `completed` | `normal` | 0 | 16 | `medium` | `scenario_prompt` | `none_observed` | `not_applicable` | ingest_video_url preserved supplied video transcript authority, citations, provenance, freshness, and bypass boundaries |
-| `production` | `video-youtube-bypass-reject` | `completed` | `none` | 0 | 0 | 1 | 9.95 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | ingest_video_url preserved supplied video transcript authority, citations, provenance, freshness, and bypass boundaries |
+| `production` | `repo-docs-agentops-retrieval` | `completed` | `none` | 10 | 10 | 5 | 31.90 | `scenario-specific` | `completed` | `normal` | 0 | 10 | `medium` | `scenario_prompt` | `none_observed` | `not_applicable` | repo markdown dogfood evidence stayed inside existing document/retrieval runner surfaces |
+| `production` | `repo-docs-synthesis-maintenance` | `completed` | `none` | 14 | 14 | 6 | 44.59 | `scenario-specific` | `completed` | `normal` | 0 | 14 | `medium` | `scenario_prompt` | `wrote_before_approval` | `not_applicable` | repo markdown dogfood evidence stayed inside existing document/retrieval runner surfaces |
+| `production` | `repo-docs-decision-records` | `completed` | `none` | 40 | 40 | 5 | 83.78 | `scenario-specific` | `completed` | `normal` | 0 | 40 | `high` | `scenario_prompt` | `none_observed` | `not_applicable` | repo markdown dogfood evidence stayed inside existing document/retrieval runner surfaces |

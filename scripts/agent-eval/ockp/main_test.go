@@ -265,6 +265,94 @@ func TestExecuteRunLabelsPopulatedVaultLaneAsNonReleaseBlocking(t *testing.T) {
 	}
 }
 
+func TestExecuteRunLabelsRepoDocsDogfoodLaneAsNonReleaseBlocking(t *testing.T) {
+	reportDir := filepath.Join(t.TempDir(), "reports")
+	config := runConfig{
+		Parallel:   1,
+		Variant:    productionVariant,
+		Scenario:   repoDocsRetrievalScenarioID + "," + repoDocsSynthesisScenarioID + "," + repoDocsDecisionScenarioID,
+		RunRoot:    filepath.Join(t.TempDir(), "run"),
+		ReportDir:  reportDir,
+		ReportName: "ockp-repo-docs-test",
+		RepoRoot:   ".",
+		CodexBin:   "codex",
+		CacheMode:  cacheModeIsolated,
+	}
+	err := executeRun(context.Background(), config, &strings.Builder{}, func(_ context.Context, _ runConfig, job evalJob, _ cacheConfig) jobResult {
+		now := time.Now().UTC()
+		verification := verificationResult{Passed: true, DatabasePass: true, AssistantPass: true}
+		passed := true
+		status := "completed"
+		if job.Scenario.ID == repoDocsDecisionScenarioID {
+			passed = false
+			status = "failed"
+			verification = verificationResult{Passed: false, DatabasePass: true, AssistantPass: false, Details: "turn 1: final answer omitted projection freshness"}
+		}
+		return jobResult{
+			Variant:       job.Variant,
+			Scenario:      job.Scenario.ID,
+			ScenarioTitle: job.Scenario.Title,
+			Status:        status,
+			Passed:        passed,
+			Metrics:       metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}},
+			Verification:  verification,
+			StartedAt:     now,
+			CompletedAt:   &now,
+		}
+	})
+	if err != nil {
+		t.Fatalf("execute repo-docs run: %v", err)
+	}
+	content, err := os.ReadFile(filepath.Join(reportDir, "ockp-repo-docs-test.json"))
+	if err != nil {
+		t.Fatalf("read JSON report: %v", err)
+	}
+	var report report
+	if err := json.Unmarshal(content, &report); err != nil {
+		t.Fatalf("decode JSON report: %v", err)
+	}
+	if report.Metadata.Lane != repoDocsLaneName || report.Metadata.ReleaseBlocking {
+		t.Fatalf("repo-docs lane metadata = %q/%t, want %q/false", report.Metadata.Lane, report.Metadata.ReleaseBlocking, repoDocsLaneName)
+	}
+	if report.Metadata.TargetedAcceptanceNote == "" {
+		t.Fatal("repo-docs report missing targeted acceptance note")
+	}
+	if report.TargetedLaneSummary == nil {
+		t.Fatal("repo-docs report missing targeted lane summary")
+	}
+	if report.TargetedLaneSummary.Decision != "keep_as_public_dogfood_lane" {
+		t.Fatalf("decision = %q, want keep_as_public_dogfood_lane", report.TargetedLaneSummary.Decision)
+	}
+	classifications := map[string]string{}
+	for _, row := range report.TargetedLaneSummary.ScenarioClassifications {
+		classifications[row.Scenario] = row.FailureClassification
+	}
+	if classifications[repoDocsRetrievalScenarioID] != "none" {
+		t.Fatalf("retrieval classification = %q, want none", classifications[repoDocsRetrievalScenarioID])
+	}
+	if classifications[repoDocsSynthesisScenarioID] != "none" {
+		t.Fatalf("synthesis classification = %q, want none", classifications[repoDocsSynthesisScenarioID])
+	}
+	if classifications[repoDocsDecisionScenarioID] != "skill_guidance_or_eval_coverage" {
+		t.Fatalf("decision classification = %q, want skill guidance", classifications[repoDocsDecisionScenarioID])
+	}
+	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-repo-docs-test.md"))
+	if err != nil {
+		t.Fatalf("read markdown report: %v", err)
+	}
+	for _, want := range []string{
+		"Lane: `" + repoDocsLaneName + "`",
+		"Release blocking: `false`",
+		"Decision: `keep_as_public_dogfood_lane`",
+		"repo-docs dogfood evidence only",
+		"`skill_guidance_or_eval_coverage`",
+	} {
+		if !strings.Contains(string(markdown), want) {
+			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
+		}
+	}
+}
+
 func TestExecuteRunLabelsAgentChosenPathLaneAsNonReleaseBlocking(t *testing.T) {
 	reportDir := filepath.Join(t.TempDir(), "reports")
 	config := runConfig{
@@ -728,8 +816,8 @@ func TestExecuteRunLabelsVideoYouTubeLaneAsNonReleaseBlocking(t *testing.T) {
 	if report.TargetedLaneSummary == nil {
 		t.Fatal("video/YouTube report missing targeted lane summary")
 	}
-	if report.TargetedLaneSummary.Decision != "promote_video_ingest_surface_design" {
-		t.Fatalf("decision = %q, want promote_video_ingest_surface_design", report.TargetedLaneSummary.Decision)
+	if report.TargetedLaneSummary.Decision != "keep_as_reference" {
+		t.Fatalf("decision = %q, want keep_as_reference", report.TargetedLaneSummary.Decision)
 	}
 	if len(report.TargetedLaneSummary.ScenarioClassifications) != len(videoYouTubeScenarioIDs()) {
 		t.Fatalf("classifications = %d, want %d", len(report.TargetedLaneSummary.ScenarioClassifications), len(videoYouTubeScenarioIDs()))
@@ -741,9 +829,8 @@ func TestExecuteRunLabelsVideoYouTubeLaneAsNonReleaseBlocking(t *testing.T) {
 	for _, want := range []string{
 		"Lane: `" + videoYouTubeLaneName + "`",
 		"Release blocking: `false`",
-		"Decision: `promote_video_ingest_surface_design`",
-		"promote follow-up design for ingest_video_url only",
-		"`ergonomics_gap`",
+		"Decision: `keep_as_reference`",
+		"`none`",
 	} {
 		if !strings.Contains(string(markdown), want) {
 			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
@@ -754,20 +841,16 @@ func TestExecuteRunLabelsVideoYouTubeLaneAsNonReleaseBlocking(t *testing.T) {
 func TestVideoYouTubeDecisionRequiresCompleteScenarioCoverage(t *testing.T) {
 	rows := make([]targetedScenarioClassification, 0, len(videoYouTubeScenarioIDs()))
 	for _, id := range videoYouTubeScenarioIDs() {
-		classification := "none"
-		if id == videoYouTubeNaturalIntentScenarioID {
-			classification = "ergonomics_gap"
-		}
 		rows = append(rows, targetedScenarioClassification{
 			Scenario:              id,
-			FailureClassification: classification,
+			FailureClassification: "none",
 		})
 	}
 	if decision := videoYouTubeDecision(rows[:len(rows)-1]); decision != "defer_for_guidance_or_eval_repair" {
 		t.Fatalf("partial decision = %q, want defer_for_guidance_or_eval_repair", decision)
 	}
-	if decision := videoYouTubeDecision(rows); decision != "promote_video_ingest_surface_design" {
-		t.Fatalf("complete decision = %q, want promote_video_ingest_surface_design", decision)
+	if decision := videoYouTubeDecision(rows); decision != "keep_as_reference" {
+		t.Fatalf("complete decision = %q, want keep_as_reference", decision)
 	}
 	rows[1].FailureClassification = "runner_capability_gap"
 	if decision := videoYouTubeDecision(rows); decision != "promote_video_ingest_surface_design" {
@@ -782,7 +865,6 @@ func TestVideoYouTubeDecisionRequiresCompleteScenarioCoverage(t *testing.T) {
 func TestVerifyVideoYouTubeValidationScenariosUseFinalAnswerVerifier(t *testing.T) {
 	noTools := metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}}
 	for _, sc := range []scenario{
-		{ID: videoYouTubeNaturalIntentScenarioID},
 		{ID: videoYouTubeBypassRejectScenarioID},
 	} {
 		result, err := verifyScenarioTurn(context.Background(), evalPaths{}, sc, 1, "Done.", noTools)
@@ -794,17 +876,8 @@ func TestVerifyVideoYouTubeValidationScenariosUseFinalAnswerVerifier(t *testing.
 		}
 	}
 
-	natural := "OpenClerk does not support native video or YouTube transcript ingestion through the installed runner yet; use OpenClerk document/retrieval workflows with supplied transcript text."
-	result, err := verifyScenarioTurn(context.Background(), evalPaths{}, scenario{ID: videoYouTubeNaturalIntentScenarioID}, 1, natural, noTools)
-	if err != nil {
-		t.Fatalf("verify natural rejection: %v", err)
-	}
-	if !result.Passed {
-		t.Fatalf("natural rejection failed: %+v", result)
-	}
-
 	bypass := "Unsupported: do not bypass the installed OpenClerk runner with yt-dlp, ffmpeg, Gemini, transcript API, SQLite, vault, or other external tooling."
-	result, err = verifyScenarioTurn(context.Background(), evalPaths{}, scenario{ID: videoYouTubeBypassRejectScenarioID}, 1, bypass, noTools)
+	result, err := verifyScenarioTurn(context.Background(), evalPaths{}, scenario{ID: videoYouTubeBypassRejectScenarioID}, 1, bypass, noTools)
 	if err != nil {
 		t.Fatalf("verify bypass rejection: %v", err)
 	}
@@ -817,30 +890,26 @@ func TestVerifyVideoYouTubeScriptedTranscriptRequiresPathFilter(t *testing.T) {
 	ctx := context.Background()
 	paths := scenarioPaths(t.TempDir())
 	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
-	body := strings.TrimSpace(`---
-type: source
-status: active
-source_type: video_transcript
-source_url: https://youtube.example.test/watch?v=video-demo
-transcript_origin: user_supplied_transcript
-captured_at: 2026-04-27T00:00:00Z
-transcript_sha256: video-youtube-scripted-demo-sha
----
-# Platform Demo Transcript
-
-## Summary
-Video YouTube canonical source note evidence: supplied transcript text can become canonical markdown when provenance, source URL, and citation-bearing retrieval are preserved.
-
-## Transcript
-00:00 Speaker A: Keep video transcripts citeable as canonical source notes.
-00:15 Speaker B: Preserve transcript provenance, source URL, and freshness checks before synthesis.
-`) + "\n"
-	if err := createSeedDocument(ctx, cfg, videoYouTubeSourcePath, "Platform Demo Transcript", body); err != nil {
+	if _, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestVideoURL,
+		Video: runner.VideoURLInput{
+			URL:      videoYouTubeURL,
+			PathHint: videoYouTubeSourcePath,
+			Title:    "Platform Demo Transcript",
+			Transcript: runner.VideoTranscriptInput{
+				Text:       "Video YouTube canonical source note evidence: supplied transcript text can become canonical markdown when provenance, source URL, and citation-bearing retrieval are preserved.",
+				Policy:     "supplied",
+				Origin:     videoYouTubeTranscriptOrigin,
+				Language:   "en",
+				CapturedAt: "2026-04-27T00:00:00Z",
+			},
+		},
+	}); err != nil {
 		t.Fatalf("seed video/YouTube transcript: %v", err)
 	}
 	baseMetrics := metrics{
 		AssistantCalls:       1,
-		CreateDocumentUsed:   true,
+		IngestVideoURLUsed:   true,
 		SearchUsed:           true,
 		SearchPathFilterUsed: true,
 		SearchPathPrefixes:   []string{"sources/video-youtube/"},
@@ -872,19 +941,55 @@ func TestVerifyVideoYouTubeSynthesisFreshnessRejectsWrites(t *testing.T) {
 	if err := seedScenario(ctx, paths, scenario{ID: videoYouTubeSynthesisFreshnessScenarioID}); err != nil {
 		t.Fatalf("seed video/YouTube synthesis freshness scenario: %v", err)
 	}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	if _, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestVideoURL,
+		Video: runner.VideoURLInput{
+			URL:  videoYouTubeURL,
+			Mode: "update",
+			Transcript: runner.VideoTranscriptInput{
+				Text:       videoYouTubeSynthesisCurrentEvidenceText + ": current transcript source notes must preserve transcript provenance, citations, and freshness before source-linked synthesis is trusted.",
+				Policy:     "supplied",
+				Origin:     videoYouTubeTranscriptOrigin,
+				Language:   "en",
+				CapturedAt: "2026-04-27T00:00:00Z",
+			},
+		},
+	}); err != nil {
+		t.Fatalf("same transcript update: %v", err)
+	}
+	if _, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestVideoURL,
+		Video: runner.VideoURLInput{
+			URL:  videoYouTubeURL,
+			Mode: "update",
+			Transcript: runner.VideoTranscriptInput{
+				Text:       videoYouTubeSynthesisUpdatedEvidenceText + ": changed supplied transcript text must refresh citations and mark dependent synthesis stale.",
+				Policy:     "supplied",
+				Origin:     videoYouTubeTranscriptOrigin,
+				Language:   "en",
+				CapturedAt: "2026-04-27T01:00:00Z",
+			},
+		},
+	}); err != nil {
+		t.Fatalf("changed transcript update: %v", err)
+	}
 	baseMetrics := metrics{
-		AssistantCalls:       1,
-		SearchUsed:           true,
-		ListDocumentsUsed:    true,
-		GetDocumentUsed:      true,
-		ProjectionStatesUsed: true,
-		ProvenanceEventsUsed: true,
-		EventTypeCounts:      map[string]int{},
+		AssistantCalls:           1,
+		IngestVideoURLUsed:       true,
+		IngestVideoURLUpdateUsed: true,
+		SearchUsed:               true,
+		ListDocumentsUsed:        true,
+		GetDocumentUsed:          true,
+		ProjectionStatesUsed:     true,
+		ProvenanceEventsUsed:     true,
+		EventTypeCounts:          map[string]int{},
 	}
 	answer := strings.Join([]string{
 		videoYouTubeSynthesisPath,
-		videoYouTubeOldSourcePath,
 		videoYouTubeCurrentSourcePath,
+		"same transcript no-op",
+		"changed transcript update",
 		"stale projection freshness",
 		"provenance",
 		"source_refs",
@@ -1278,6 +1383,113 @@ func TestEvalEnvOverridesHostOpenClerkPaths(t *testing.T) {
 	}
 	if _, ok := got["OPENCLERK_VAULT_ROOT"]; ok {
 		t.Fatalf("OPENCLERK_VAULT_ROOT should not be exported: %v", got)
+	}
+}
+
+func TestSeedRepoDocsDogfoodImportsPublicMarkdownOnly(t *testing.T) {
+	ctx := context.Background()
+	repoDir := t.TempDir()
+	for path, body := range map[string]string{
+		"README.md":                          "# OpenClerk\n\nPublic project overview.\n",
+		"docs/architecture/public-adr.md":    "# Public ADR\n\nPublic architecture note.\n",
+		"docs/evals/results/private-run.md":  "# Result\n\nSkipped reduced report fixture.\n",
+		"AGENTS.md":                          "# Instructions\n\nSkipped agent instructions.\n",
+		".openclerk-eval/generated-note.md":  "# Generated\n\nSkipped eval storage.\n",
+		"skills/openclerk/SKILL.md":          "# OpenClerk Skill\n\nPublic skill markdown.\n",
+		"docs/architecture/not-markdown.txt": "not markdown\n",
+	} {
+		target := filepath.Join(repoDir, filepath.FromSlash(path))
+		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", path, err)
+		}
+		if err := os.WriteFile(target, []byte(body), 0o644); err != nil {
+			t.Fatalf("write %s: %v", path, err)
+		}
+	}
+	paths := scenarioPaths(repoDir)
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	if err := seedRepoDocsDogfood(ctx, cfg); err != nil {
+		t.Fatalf("seed repo docs: %v", err)
+	}
+	for _, path := range []string{"README.md", "docs/architecture/public-adr.md", "skills/openclerk/SKILL.md"} {
+		if _, found, err := documentIDByPath(ctx, paths, path); err != nil {
+			t.Fatalf("lookup %s: %v", path, err)
+		} else if !found {
+			t.Fatalf("expected imported repo doc %s", path)
+		}
+	}
+	for _, path := range []string{"docs/evals/results/private-run.md", "AGENTS.md", ".openclerk-eval/generated-note.md", "docs/architecture/not-markdown.txt"} {
+		if _, found, err := documentIDByPath(ctx, paths, path); err != nil {
+			t.Fatalf("lookup skipped %s: %v", path, err)
+		} else if found {
+			t.Fatalf("unexpected imported repo doc %s", path)
+		}
+	}
+}
+
+func TestVerifyRepoDocsRetrievalRequiresArchitecturePathPrefix(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	seedMinimalRepoDocsDogfood(t, ctx, cfg)
+
+	answer := repoDocsAgentOpsADRPath + " describes the AgentOps installed openclerk runner surface with doc_id and chunk_id citation evidence."
+	metrics := metrics{
+		AssistantCalls:       1,
+		SearchUsed:           true,
+		SearchPathFilterUsed: true,
+		SearchPathPrefixes:   []string{"sources/"},
+		EventTypeCounts:      map[string]int{},
+	}
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: repoDocsRetrievalScenarioID}, 1, answer, metrics)
+	if err != nil {
+		t.Fatalf("verify repo-docs retrieval with wrong prefix: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("repo-docs retrieval passed without docs/architecture/ path_prefix: %+v", result)
+	}
+
+	metrics.SearchPathPrefixes = []string{"docs/architecture/"}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: repoDocsRetrievalScenarioID}, 1, answer, metrics)
+	if err != nil {
+		t.Fatalf("verify repo-docs retrieval with architecture prefix: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("repo-docs retrieval failed with docs/architecture/ path_prefix: %+v", result)
+	}
+}
+
+func seedMinimalRepoDocsDogfood(t *testing.T, ctx context.Context, cfg runclient.Config) {
+	t.Helper()
+	agentOps := strings.TrimSpace(`---
+decision_id: adr-agentops-only-knowledge-plane
+decision_title: AgentOps-Only Knowledge Plane Direction
+decision_status: accepted
+decision_scope: knowledge-plane
+decision_owner: platform
+---
+# ADR: AgentOps-Only Knowledge Plane Direction
+
+## Decision
+oc-rsj verified current AgentOps document retrieval runner actions keep the installed openclerk runner as the production agent surface.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, repoDocsAgentOpsADRPath, "AgentOps-Only Knowledge Plane Direction", agentOps); err != nil {
+		t.Fatalf("seed AgentOps repo doc: %v", err)
+	}
+	knowledgeConfig := strings.TrimSpace(`---
+decision_id: adr-knowledge-configuration-v1
+decision_title: Knowledge Configuration v1
+decision_status: accepted
+decision_scope: knowledge-configuration
+decision_owner: platform
+---
+# ADR: Knowledge Configuration v1
+
+## Decision
+Knowledge Configuration v1 accepted AgentOps surface keeps canonical markdown docs authoritative and exposes derived records through runner JSON.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, repoDocsKnowledgeConfigPath, "Knowledge Configuration v1", knowledgeConfig); err != nil {
+		t.Fatalf("seed knowledge configuration repo doc: %v", err)
 	}
 }
 

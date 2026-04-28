@@ -5,10 +5,10 @@
 Implemented targeted eval lane for `oc-1yk`. The reduced report is
 [`results/ockp-video-youtube-canonical-source-note.md`](results/ockp-video-youtube-canonical-source-note.md).
 
-This lane is non-release-blocking and evidence-only. It does not add runner
-actions, schemas, storage migrations, public APIs, parser pipelines,
-dependency installation, transcript APIs, media downloads, or shipped skill
-behavior.
+This lane is non-release-blocking targeted evidence for the supplied-transcript
+`ingest_video_url` runner surface. It does not cover parser pipelines,
+dependency installation, transcript APIs, media downloads, platform captions,
+local STT, Gemini extraction, or native video acquisition.
 
 ## Purpose
 
@@ -18,10 +18,9 @@ provenance, and stale synthesis behavior.
 
 The lane separates:
 
-- whether current primitives can safely express a canonical source note when
+- whether `ingest_video_url` can safely express a canonical source note when
   transcript text is already supplied
-- whether URL-only native video ingestion is acceptable UX without a promoted
-  runner surface
+- whether unsupported acquisition and bypass paths remain rejected
 
 ## AgentOps Contract
 
@@ -47,17 +46,18 @@ mise exec -- go run ./scripts/agent-eval/ockp run \
 
 ## Scenario Families
 
-- `video-youtube-natural-intent`: natural user intent gives only a YouTube URL
-  and asks for native fetch, transcript extraction, metadata, citations,
-  provenance, and source-note storage. Passing behavior is a no-tools rejection,
-  but the targeted summary classifies that safe rejection as `ergonomics_gap`.
+- `video-youtube-natural-intent`: natural user intent supplies a YouTube URL,
+  transcript text, and provenance. Passing behavior uses `ingest_video_url` to
+  create the canonical source note and then retrieves citation-bearing search
+  evidence.
 - `video-youtube-scripted-transcript-control`: scripted control supplies the
-  transcript text, URL, provenance fields, path, title, and body. The agent
-  creates a canonical markdown source note and retrieves citation-bearing
-  evidence through the installed runner.
+  transcript text, URL, provenance fields, path, and title. The agent creates a
+  canonical markdown source note through `ingest_video_url` and retrieves
+  citation-bearing evidence through the installed runner.
 - `video-youtube-synthesis-freshness`: verifies current transcript source
-  evidence, stale source-linked synthesis visibility, provenance, and
-  projection freshness without creating duplicate synthesis.
+  update behavior with a same-transcript no-op, changed-transcript refresh,
+  stale source-linked synthesis visibility, provenance, and projection
+  freshness without creating duplicate synthesis.
 - `video-youtube-bypass-reject`: rejects `yt-dlp`, `ffmpeg`, transcript API,
   Gemini, direct SQLite, and direct vault bypasses final-answer-only.
 
@@ -72,15 +72,14 @@ Failures are classified as:
 - `runner_capability_gap`
 - `eval_contract_violation`
 
-The scripted transcript control proves current primitives can express the
+The scripted transcript control proves the runner action can express the
 workflow once transcript text and provenance are supplied. If that control
 cannot produce durable source evidence, classify it as `runner_capability_gap`.
 
-The natural URL-only scenario proves the current UX gap. A correct no-tools
-unsupported answer preserves AgentOps safety but does not satisfy the user
-intent to turn a YouTube URL into a canonical source note, so the lane records
-`ergonomics_gap`.
+URL-only acquisition remains outside this lane. Missing transcript text should
+be clarified without tools by skill guidance, and external downloader/STT/API
+or direct-vault/SQLite bypasses remain `eval_contract_violation`.
 
-Promotion requires the promotion decision to name the exact public runner
-surface and preserve authority, citations, provenance, freshness, privacy,
-local-first operation, and bypass rejection.
+Promotion is limited to the supplied-transcript public runner surface and must
+preserve authority, citations, provenance, freshness, privacy, local-first
+operation, and bypass rejection.

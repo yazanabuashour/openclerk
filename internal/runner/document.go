@@ -67,6 +67,32 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 			Ingestion: &converted,
 			Summary:   fmt.Sprintf("ingested source URL into %s", converted.SourcePath),
 		}, nil
+	case DocumentTaskActionIngestVideoURL:
+		ingestion, err := client.IngestVideoURL(ctx, runclient.VideoURLInput{
+			URL:           normalized.Video.URL,
+			PathHint:      normalized.Video.PathHint,
+			AssetPathHint: normalized.Video.AssetPathHint,
+			Title:         normalized.Video.Title,
+			Mode:          normalized.Video.Mode,
+			Transcript: runclient.VideoTranscriptInput{
+				Text:       normalized.Video.Transcript.Text,
+				Policy:     normalized.Video.Transcript.Policy,
+				Origin:     normalized.Video.Transcript.Origin,
+				Language:   normalized.Video.Transcript.Language,
+				CapturedAt: normalized.Video.Transcript.CapturedAt,
+				Tool:       normalized.Video.Transcript.Tool,
+				Model:      normalized.Video.Transcript.Model,
+				SHA256:     normalized.Video.Transcript.SHA256,
+			},
+		})
+		if err != nil {
+			return DocumentTaskResult{}, err
+		}
+		converted := toVideoIngestionResult(ingestion)
+		return DocumentTaskResult{
+			VideoIngestion: &converted,
+			Summary:        fmt.Sprintf("ingested video URL into %s", converted.SourcePath),
+		}, nil
 	case DocumentTaskActionList:
 		documents, err := client.ListDocuments(ctx, runclient.DocumentListOptions(normalized.List))
 		if err != nil {
@@ -129,6 +155,7 @@ type normalizedDocumentTaskRequest struct {
 	Action   string
 	Document DocumentInput
 	Source   SourceURLInput
+	Video    VideoURLInput
 	DocID    string
 	Content  string
 	Heading  string
@@ -144,6 +171,7 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		Action:   action,
 		Document: request.Document,
 		Source:   trimSourceURLInput(request.Source),
+		Video:    trimVideoURLInput(request.Video),
 		DocID:    strings.TrimSpace(request.DocID),
 		Content:  request.Content,
 		Heading:  strings.TrimSpace(request.Heading),
@@ -167,6 +195,11 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		return normalized, ""
 	case DocumentTaskActionIngestSourceURL:
 		if rejection := validateSourceURLInput(normalized.Source); rejection != "" {
+			return normalizedDocumentTaskRequest{}, rejection
+		}
+		return normalized, ""
+	case DocumentTaskActionIngestVideoURL:
+		if rejection := validateVideoURLInput(normalized.Video); rejection != "" {
 			return normalizedDocumentTaskRequest{}, rejection
 		}
 		return normalized, ""
@@ -212,6 +245,26 @@ func trimSourceURLInput(input SourceURLInput) SourceURLInput {
 	}
 }
 
+func trimVideoURLInput(input VideoURLInput) VideoURLInput {
+	return VideoURLInput{
+		URL:           strings.TrimSpace(input.URL),
+		PathHint:      strings.TrimSpace(input.PathHint),
+		AssetPathHint: strings.TrimSpace(input.AssetPathHint),
+		Title:         strings.TrimSpace(input.Title),
+		Mode:          strings.TrimSpace(input.Mode),
+		Transcript: VideoTranscriptInput{
+			Text:       input.Transcript.Text,
+			Policy:     strings.TrimSpace(input.Transcript.Policy),
+			Origin:     strings.TrimSpace(input.Transcript.Origin),
+			Language:   strings.TrimSpace(input.Transcript.Language),
+			CapturedAt: strings.TrimSpace(input.Transcript.CapturedAt),
+			Tool:       strings.TrimSpace(input.Transcript.Tool),
+			Model:      strings.TrimSpace(input.Transcript.Model),
+			SHA256:     strings.TrimSpace(input.Transcript.SHA256),
+		},
+	}
+}
+
 func validateSourceURLInput(input SourceURLInput) string {
 	if input.URL == "" {
 		return "source.url is required"
@@ -243,6 +296,47 @@ func validateSourceURLInput(input SourceURLInput) string {
 	return ""
 }
 
+func validateVideoURLInput(input VideoURLInput) string {
+	if input.URL == "" {
+		return "video.url is required"
+	}
+	parsed, err := url.Parse(input.URL)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return "video.url must be a valid http or https URL"
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return "video.url must use http or https"
+	}
+	mode := input.Mode
+	if mode == "" {
+		mode = "create"
+	}
+	if mode != "create" && mode != "update" {
+		return "video.mode must be create or update"
+	}
+	if mode == "create" || input.PathHint != "" {
+		if rejection := validateVideoPathHint(input.PathHint); rejection != "" {
+			return rejection
+		}
+	}
+	if input.AssetPathHint != "" {
+		if rejection := validateVideoAssetPathHint(input.AssetPathHint); rejection != "" {
+			return rejection
+		}
+	}
+	if strings.TrimSpace(input.Transcript.Text) == "" {
+		return "video.transcript.text is required; native video download, platform captions, local transcription, transcript APIs, and Gemini extraction are not supported by ingest_video_url v1"
+	}
+	policy := input.Transcript.Policy
+	if policy == "" {
+		policy = "supplied"
+	}
+	if policy != "supplied" && policy != "local_first" {
+		return "video.transcript.policy must be supplied or local_first when transcript.text is provided"
+	}
+	return ""
+}
+
 func validateSourcePathHint(pathHint string) string {
 	if strings.TrimSpace(pathHint) == "" {
 		return "source.path_hint is required"
@@ -260,6 +354,23 @@ func validateSourcePathHint(pathHint string) string {
 	return ""
 }
 
+func validateVideoPathHint(pathHint string) string {
+	if strings.TrimSpace(pathHint) == "" {
+		return "video.path_hint is required"
+	}
+	if filepath.IsAbs(pathHint) || strings.HasPrefix(strings.TrimSpace(pathHint), "/") {
+		return "video.path_hint must be relative to the vault root"
+	}
+	clean := path.Clean(filepath.ToSlash(strings.TrimSpace(pathHint)))
+	if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
+		return "video.path_hint must stay inside the vault root"
+	}
+	if !strings.HasPrefix(clean, "sources/") || path.Ext(clean) != ".md" {
+		return "video.path_hint must be a vault-relative sources/*.md path"
+	}
+	return ""
+}
+
 func validateAssetPathHint(pathHint string) string {
 	if strings.TrimSpace(pathHint) == "" {
 		return "source.asset_path_hint is required"
@@ -273,6 +384,20 @@ func validateAssetPathHint(pathHint string) string {
 	}
 	if !strings.HasPrefix(clean, "assets/") || path.Ext(clean) != ".pdf" {
 		return "source.asset_path_hint must be a vault-relative assets/**/*.pdf path"
+	}
+	return ""
+}
+
+func validateVideoAssetPathHint(pathHint string) string {
+	if filepath.IsAbs(pathHint) || strings.HasPrefix(strings.TrimSpace(pathHint), "/") {
+		return "video.asset_path_hint must be relative to the vault root"
+	}
+	clean := path.Clean(filepath.ToSlash(strings.TrimSpace(pathHint)))
+	if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
+		return "video.asset_path_hint must stay inside the vault root"
+	}
+	if !strings.HasPrefix(clean, "assets/") || path.Ext(clean) != ".json" {
+		return "video.asset_path_hint must be a vault-relative assets/**/*.json path"
 	}
 	return ""
 }

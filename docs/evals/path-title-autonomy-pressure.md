@@ -16,10 +16,13 @@ failures across the selected path/title pressure scenarios, so no constrained
 autonomy policy, runner action, schema, skill behavior, storage migration, or
 public interface is promoted from this evidence.
 
-`oc-iat` has been reopened for an ergonomics-gate refresh. Future path/title
-pressure should measure both whether current primitives can express the
-workflow and whether the current UX is acceptable under natural prompts, step
-count, latency, prompt specificity, retry risk, and guidance dependence.
+The refreshed `oc-iat` decision completed both promotion paths. On the
+capability path, this lane remains reference evidence with no product surface
+promotion. On the ergonomics path, the accepted outcome is the existing
+propose-before-create skill policy documented in
+[`../architecture/agent-chosen-document-artifact-candidate-generation-adr.md`](../architecture/agent-chosen-document-artifact-candidate-generation-adr.md)
+and supported by
+[`results/ockp-document-artifact-candidate-generation.md`](results/ockp-document-artifact-candidate-generation.md).
 
 ## Purpose
 

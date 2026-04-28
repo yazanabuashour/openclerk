@@ -51,6 +51,26 @@ type SourceURLInput struct {
 	Mode          string
 }
 
+type VideoURLInput struct {
+	URL           string
+	PathHint      string
+	AssetPathHint string
+	Title         string
+	Mode          string
+	Transcript    VideoTranscriptInput
+}
+
+type VideoTranscriptInput struct {
+	Text       string
+	Policy     string
+	Origin     string
+	Language   string
+	CapturedAt string
+	Tool       string
+	Model      string
+	SHA256     string
+}
+
 type SourcePDFMetadata struct {
 	Title         string
 	Author        string
@@ -69,6 +89,23 @@ type SourceIngestionResult struct {
 	PageCount   int
 	CapturedAt  time.Time
 	PDFMetadata SourcePDFMetadata
+}
+
+type VideoIngestionResult struct {
+	DocID                    string
+	SourcePath               string
+	SourceURL                string
+	AssetPath                string
+	Citations                []Citation
+	TranscriptSHA256         string
+	PreviousTranscriptSHA256 string
+	NewTranscriptSHA256      string
+	CapturedAt               time.Time
+	TranscriptPolicy         string
+	TranscriptOrigin         string
+	Language                 string
+	Tool                     string
+	Model                    string
 }
 
 type DocumentListOptions struct {
@@ -383,6 +420,34 @@ func (c *Client) IngestSourceURL(ctx context.Context, input SourceURLInput) (Sou
 	return toSourceIngestionResult(ingestion), nil
 }
 
+func (c *Client) IngestVideoURL(ctx context.Context, input VideoURLInput) (VideoIngestionResult, error) {
+	service, err := c.service()
+	if err != nil {
+		return VideoIngestionResult{}, err
+	}
+	ingestion, err := service.IngestVideoURL(ctx, domain.VideoURLInput{
+		URL:           input.URL,
+		PathHint:      input.PathHint,
+		AssetPathHint: input.AssetPathHint,
+		Title:         input.Title,
+		Mode:          input.Mode,
+		Transcript: domain.VideoTranscriptInput{
+			Text:       input.Transcript.Text,
+			Policy:     input.Transcript.Policy,
+			Origin:     input.Transcript.Origin,
+			Language:   input.Transcript.Language,
+			CapturedAt: input.Transcript.CapturedAt,
+			Tool:       input.Transcript.Tool,
+			Model:      input.Transcript.Model,
+			SHA256:     input.Transcript.SHA256,
+		},
+	})
+	if err != nil {
+		return VideoIngestionResult{}, wrapError(err)
+	}
+	return toVideoIngestionResult(ingestion), nil
+}
+
 func (c *Client) GetDocument(ctx context.Context, docID string) (Document, error) {
 	service, err := c.service()
 	if err != nil {
@@ -668,6 +733,25 @@ func toSourceIngestionResult(result domain.SourceIngestionResult) SourceIngestio
 		PageCount:   result.PageCount,
 		CapturedAt:  result.CapturedAt,
 		PDFMetadata: SourcePDFMetadata(result.PDFMetadata),
+	}
+}
+
+func toVideoIngestionResult(result domain.VideoIngestionResult) VideoIngestionResult {
+	return VideoIngestionResult{
+		DocID:                    result.DocID,
+		SourcePath:               result.SourcePath,
+		SourceURL:                result.SourceURL,
+		AssetPath:                result.AssetPath,
+		Citations:                toCitations(result.Citations),
+		TranscriptSHA256:         result.TranscriptSHA256,
+		PreviousTranscriptSHA256: result.PreviousTranscriptSHA256,
+		NewTranscriptSHA256:      result.NewTranscriptSHA256,
+		CapturedAt:               result.CapturedAt,
+		TranscriptPolicy:         result.TranscriptPolicy,
+		TranscriptOrigin:         result.TranscriptOrigin,
+		Language:                 result.Language,
+		Tool:                     result.Tool,
+		Model:                    result.Model,
 	}
 }
 

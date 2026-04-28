@@ -78,6 +78,25 @@ func toSourceIngestionResult(result runclient.SourceIngestionResult) SourceInges
 	}
 }
 
+func toVideoIngestionResult(result runclient.VideoIngestionResult) VideoIngestionResult {
+	return VideoIngestionResult{
+		DocID:                    result.DocID,
+		SourcePath:               result.SourcePath,
+		SourceURL:                result.SourceURL,
+		AssetPath:                result.AssetPath,
+		Citations:                toCitations(result.Citations),
+		TranscriptSHA256:         result.TranscriptSHA256,
+		PreviousTranscriptSHA256: result.PreviousTranscriptSHA256,
+		NewTranscriptSHA256:      result.NewTranscriptSHA256,
+		CapturedAt:               result.CapturedAt,
+		TranscriptPolicy:         result.TranscriptPolicy,
+		TranscriptOrigin:         result.TranscriptOrigin,
+		Language:                 result.Language,
+		Tool:                     result.Tool,
+		Model:                    result.Model,
+	}
+}
+
 func toCitations(citations []runclient.Citation) []Citation {
 	result := make([]Citation, 0, len(citations))
 	for _, citation := range citations {

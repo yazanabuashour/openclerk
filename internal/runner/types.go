@@ -7,6 +7,7 @@ const (
 	DocumentTaskActionValidate        = "validate"
 	DocumentTaskActionCreate          = "create_document"
 	DocumentTaskActionIngestSourceURL = "ingest_source_url"
+	DocumentTaskActionIngestVideoURL  = "ingest_video_url"
 	DocumentTaskActionList            = "list_documents"
 	DocumentTaskActionGet             = "get_document"
 	DocumentTaskActionAppend          = "append_document"
@@ -32,6 +33,7 @@ type DocumentTaskRequest struct {
 	Action   string              `json:"action"`
 	Document DocumentInput       `json:"document,omitempty"`
 	Source   SourceURLInput      `json:"source,omitempty"`
+	Video    VideoURLInput       `json:"video,omitempty"`
 	DocID    string              `json:"doc_id,omitempty"`
 	Content  string              `json:"content,omitempty"`
 	Heading  string              `json:"heading,omitempty"`
@@ -50,6 +52,26 @@ type SourceURLInput struct {
 	AssetPathHint string `json:"asset_path_hint"`
 	Title         string `json:"title,omitempty"`
 	Mode          string `json:"mode,omitempty"`
+}
+
+type VideoURLInput struct {
+	URL           string               `json:"url"`
+	PathHint      string               `json:"path_hint"`
+	AssetPathHint string               `json:"asset_path_hint,omitempty"`
+	Title         string               `json:"title,omitempty"`
+	Mode          string               `json:"mode,omitempty"`
+	Transcript    VideoTranscriptInput `json:"transcript,omitempty"`
+}
+
+type VideoTranscriptInput struct {
+	Text       string `json:"text,omitempty"`
+	Policy     string `json:"policy,omitempty"`
+	Origin     string `json:"origin,omitempty"`
+	Language   string `json:"language,omitempty"`
+	CapturedAt string `json:"captured_at,omitempty"`
+	Tool       string `json:"tool,omitempty"`
+	Model      string `json:"model,omitempty"`
+	SHA256     string `json:"sha256,omitempty"`
 }
 
 type SourcePDFMetadata struct {
@@ -72,6 +94,23 @@ type SourceIngestionResult struct {
 	PDFMetadata SourcePDFMetadata `json:"pdf_metadata,omitempty"`
 }
 
+type VideoIngestionResult struct {
+	DocID                    string     `json:"doc_id"`
+	SourcePath               string     `json:"source_path"`
+	SourceURL                string     `json:"source_url"`
+	AssetPath                string     `json:"asset_path,omitempty"`
+	Citations                []Citation `json:"citations,omitempty"`
+	TranscriptSHA256         string     `json:"transcript_sha256"`
+	PreviousTranscriptSHA256 string     `json:"previous_transcript_sha256,omitempty"`
+	NewTranscriptSHA256      string     `json:"new_transcript_sha256,omitempty"`
+	CapturedAt               time.Time  `json:"captured_at"`
+	TranscriptPolicy         string     `json:"transcript_policy"`
+	TranscriptOrigin         string     `json:"transcript_origin"`
+	Language                 string     `json:"language,omitempty"`
+	Tool                     string     `json:"tool,omitempty"`
+	Model                    string     `json:"model,omitempty"`
+}
+
 type DocumentListOptions struct {
 	PathPrefix    string `json:"path_prefix,omitempty"`
 	MetadataKey   string `json:"metadata_key,omitempty"`
@@ -85,6 +124,7 @@ type DocumentTaskResult struct {
 	RejectionReason string                 `json:"rejection_reason,omitempty"`
 	Document        *Document              `json:"document,omitempty"`
 	Ingestion       *SourceIngestionResult `json:"ingestion,omitempty"`
+	VideoIngestion  *VideoIngestionResult  `json:"video_ingestion,omitempty"`
 	Documents       []DocumentSummary      `json:"documents,omitempty"`
 	Paths           *Paths                 `json:"paths,omitempty"`
 	Layout          *KnowledgeLayout       `json:"layout,omitempty"`

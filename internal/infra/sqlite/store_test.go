@@ -304,6 +304,207 @@ func TestIngestSourceURLUpdateMode(t *testing.T) {
 	}
 }
 
+func TestIngestVideoURLSuppliedTranscriptUpdateMode(t *testing.T) {
+	ctx := context.Background()
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+
+	videoURL := "https://www.youtube.com/watch?v=openclerk-demo"
+	created, err := store.IngestVideoURL(ctx, domain.VideoURLInput{
+		URL:           videoURL,
+		PathHint:      "sources/video-youtube/runner-demo.md",
+		AssetPathHint: "assets/video-youtube/runner-demo.json",
+		Title:         "Runner Video Demo",
+		Transcript: domain.VideoTranscriptInput{
+			Text:       "Initial video transcript evidence.",
+			Policy:     "supplied",
+			Origin:     "manual_fixture",
+			Language:   "en",
+			CapturedAt: "2026-04-27T10:00:00Z",
+			Tool:       "manual",
+			Model:      "none",
+		},
+	})
+	if err != nil {
+		t.Fatalf("create video URL: %v", err)
+	}
+	if created.SourcePath != "sources/video-youtube/runner-demo.md" ||
+		created.SourceURL != videoURL ||
+		created.AssetPath != "assets/video-youtube/runner-demo.json" ||
+		created.TranscriptPolicy != "supplied" ||
+		created.TranscriptOrigin != "manual_fixture" ||
+		len(created.TranscriptSHA256) != 64 ||
+		len(created.Citations) == 0 {
+		t.Fatalf("created video ingestion = %+v", created)
+	}
+	assetBytes, err := os.ReadFile(filepath.Join(vaultRoot, "assets", "video-youtube", "runner-demo.json"))
+	if err != nil {
+		t.Fatalf("read metadata asset: %v", err)
+	}
+	if strings.Contains(string(assetBytes), "Initial video transcript evidence.") ||
+		!strings.Contains(string(assetBytes), created.TranscriptSHA256) {
+		t.Fatalf("metadata asset = %s", string(assetBytes))
+	}
+	if _, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+		Path:  "synthesis/video-runner.md",
+		Title: "Video Runner Synthesis",
+		Body:  synthesisBody("sources/video-youtube/runner-demo.md", "Initial video transcript evidence."),
+	}); err != nil {
+		t.Fatalf("create synthesis: %v", err)
+	}
+
+	_, err = store.IngestVideoURL(ctx, domain.VideoURLInput{
+		URL:        "https://www.youtube.com/watch?v=missing",
+		Mode:       "update",
+		Transcript: domain.VideoTranscriptInput{Text: "Missing update transcript."},
+	})
+	var appErr *domain.Error
+	if !errors.As(err, &appErr) || appErr.Status != 404 {
+		t.Fatalf("missing update error = %v, want not found 404", err)
+	}
+	_, err = store.IngestVideoURL(ctx, domain.VideoURLInput{
+		URL:      videoURL,
+		PathHint: "sources/video-youtube/other.md",
+		Mode:     "update",
+		Transcript: domain.VideoTranscriptInput{
+			Text: "Changed transcript evidence.",
+		},
+	})
+	if !errors.As(err, &appErr) || appErr.Status != 409 || appErr.Code != "conflict" {
+		t.Fatalf("mismatched path update error = %v, want conflict 409", err)
+	}
+	_, err = store.IngestVideoURL(ctx, domain.VideoURLInput{
+		URL:           videoURL,
+		AssetPathHint: "assets/video-youtube/other.json",
+		Mode:          "update",
+		Transcript: domain.VideoTranscriptInput{
+			Text: "Changed transcript evidence.",
+		},
+	})
+	if !errors.As(err, &appErr) || appErr.Status != 409 || appErr.Code != "conflict" {
+		t.Fatalf("mismatched asset update error = %v, want conflict 409", err)
+	}
+	_, err = store.IngestVideoURL(ctx, domain.VideoURLInput{
+		URL:      videoURL,
+		PathHint: "sources/video-youtube/duplicate.md",
+		Transcript: domain.VideoTranscriptInput{
+			Text: "Duplicate transcript.",
+		},
+	})
+	if !errors.As(err, &appErr) || appErr.Status != 409 || appErr.Code != "already_exists" {
+		t.Fatalf("duplicate create error = %v, want already exists 409", err)
+	}
+
+	beforeSourceEvents, err := store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{RefKind: "source", RefID: created.DocID, Limit: 20})
+	if err != nil {
+		t.Fatalf("source events before no-op: %v", err)
+	}
+	beforeProjectionEvents, err := store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{RefKind: "projection", Limit: 50})
+	if err != nil {
+		t.Fatalf("projection events before no-op: %v", err)
+	}
+	same, err := store.IngestVideoURL(ctx, domain.VideoURLInput{
+		URL:  videoURL,
+		Mode: "update",
+		Transcript: domain.VideoTranscriptInput{
+			Text: "Initial video transcript evidence.",
+		},
+	})
+	if err != nil {
+		t.Fatalf("same transcript update: %v", err)
+	}
+	if same.DocID != created.DocID ||
+		same.SourcePath != created.SourcePath ||
+		same.AssetPath != created.AssetPath ||
+		same.TranscriptSHA256 != created.TranscriptSHA256 ||
+		same.PreviousTranscriptSHA256 != "" ||
+		same.NewTranscriptSHA256 != "" ||
+		len(same.Citations) == 0 {
+		t.Fatalf("same transcript update result = %+v, want existing ingestion result", same)
+	}
+	afterSourceEvents, err := store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{RefKind: "source", RefID: created.DocID, Limit: 20})
+	if err != nil {
+		t.Fatalf("source events after no-op: %v", err)
+	}
+	afterProjectionEvents, err := store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{RefKind: "projection", Limit: 50})
+	if err != nil {
+		t.Fatalf("projection events after no-op: %v", err)
+	}
+	if countEventType(afterSourceEvents.Events, "source_updated") != countEventType(beforeSourceEvents.Events, "source_updated") ||
+		countEventType(afterProjectionEvents.Events, "projection_invalidated") != countEventType(beforeProjectionEvents.Events, "projection_invalidated") {
+		t.Fatalf("same transcript update created stale-state churn: source=%+v projection=%+v", afterSourceEvents.Events, afterProjectionEvents.Events)
+	}
+
+	time.Sleep(time.Millisecond)
+	changed, err := store.IngestVideoURL(ctx, domain.VideoURLInput{
+		URL:           videoURL,
+		PathHint:      "sources/video-youtube/runner-demo.md",
+		AssetPathHint: "assets/video-youtube/runner-demo.json",
+		Mode:          "update",
+		Transcript: domain.VideoTranscriptInput{
+			Text:       "Updated video transcript evidence.",
+			Policy:     "local_first",
+			Origin:     "reviewed_local_fixture",
+			Language:   "en",
+			CapturedAt: "2026-04-27T11:00:00Z",
+		},
+	})
+	if err != nil {
+		t.Fatalf("changed transcript update: %v", err)
+	}
+	if changed.DocID != created.DocID ||
+		changed.SourcePath != created.SourcePath ||
+		changed.AssetPath != created.AssetPath ||
+		changed.TranscriptSHA256 == created.TranscriptSHA256 ||
+		changed.PreviousTranscriptSHA256 != created.TranscriptSHA256 ||
+		changed.NewTranscriptSHA256 != changed.TranscriptSHA256 ||
+		changed.TranscriptPolicy != "local_first" ||
+		changed.TranscriptOrigin != "reviewed_local_fixture" {
+		t.Fatalf("changed update = %+v, created = %+v", changed, created)
+	}
+	updatedDoc, err := store.GetDocument(ctx, created.DocID)
+	if err != nil {
+		t.Fatalf("get updated video source: %v", err)
+	}
+	if updatedDoc.Metadata["transcript_sha256"] != changed.TranscriptSHA256 ||
+		updatedDoc.Metadata["transcript_policy"] != "local_first" ||
+		!strings.Contains(updatedDoc.Body, "Updated video transcript evidence.") {
+		t.Fatalf("updated video source document = %+v", updatedDoc)
+	}
+	search, err := store.Search(ctx, domain.SearchQuery{Text: "Updated video transcript evidence", PathPrefix: "sources/", Limit: 10})
+	if err != nil {
+		t.Fatalf("search updated transcript: %v", err)
+	}
+	if len(search.Hits) == 0 || search.Hits[0].Citations[0].DocID != created.DocID {
+		t.Fatalf("search updated video source = %+v", search)
+	}
+	sourceEvents, err := store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{RefKind: "source", RefID: created.DocID, Limit: 20})
+	if err != nil {
+		t.Fatalf("source update events: %v", err)
+	}
+	var foundUpdate bool
+	for _, event := range sourceEvents.Events {
+		if event.EventType == "source_updated" &&
+			event.Details["previous_transcript_sha256"] == created.TranscriptSHA256 &&
+			event.Details["new_transcript_sha256"] == changed.TranscriptSHA256 &&
+			event.Details["asset_path"] == created.AssetPath &&
+			event.Details["source_url"] == videoURL {
+			foundUpdate = true
+		}
+	}
+	if !foundUpdate {
+		t.Fatalf("source update provenance = %+v", sourceEvents.Events)
+	}
+	projection := requireSynthesisProjection(t, ctx, store, docIDForPath("synthesis/video-runner.md"))
+	if projection.Freshness != "stale" || projection.Details["stale_source_refs"] != "sources/video-youtube/runner-demo.md" {
+		t.Fatalf("synthesis projection after video source update = %+v", projection)
+	}
+}
+
 func TestIngestSourceURLUpdateRollbackRestoresPreviousState(t *testing.T) {
 	var (
 		mu         sync.Mutex
@@ -1328,6 +1529,79 @@ See the [reference](reference.md) for details.
 	}
 	if !foundNode || !foundEdge {
 		t.Fatalf("chunk neighborhood missing outgoing link: nodes=%v edges=%v", neighborhood.Nodes, neighborhood.Edges)
+	}
+}
+
+func TestGraphProjectionIgnoresDuplicateMarkdownLinks(t *testing.T) {
+	t.Parallel()
+
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+
+	if _, err := store.CreateDocument(context.Background(), domain.CreateDocumentInput{
+		Path:  "docs/reference.md",
+		Title: "Reference",
+		Body:  "# Reference\n\nCanonical supporting note.\n",
+	}); err != nil {
+		t.Fatalf("create target document: %v", err)
+	}
+	if _, err := store.CreateDocument(context.Background(), domain.CreateDocumentInput{
+		Path:  "docs/guide.md",
+		Title: "Guide",
+		Body: strings.TrimSpace(`
+# Guide
+
+## Overview
+See the [reference](reference.md) for details.
+See the [reference](reference.md) again before writing synthesis.
+`),
+	}); err != nil {
+		t.Fatalf("create source document with duplicate links: %v", err)
+	}
+}
+
+func TestCreateDocumentAllowsRepeatedIdenticalSections(t *testing.T) {
+	t.Parallel()
+
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+
+	created, err := store.CreateDocument(context.Background(), domain.CreateDocumentInput{
+		Path:  "docs/repeated-sections.md",
+		Title: "Repeated Sections",
+		Body: strings.TrimSpace(`
+# Repeated Sections
+
+## Example
+Same example body.
+
+## Example
+Same example body.
+`),
+	})
+	if err != nil {
+		t.Fatalf("create document with repeated sections: %v", err)
+	}
+	search, err := store.Search(context.Background(), domain.SearchQuery{Text: "Same example body", Limit: 10})
+	if err != nil {
+		t.Fatalf("search repeated sections: %v", err)
+	}
+	matches := 0
+	for _, hit := range search.Hits {
+		if hit.DocID == created.DocID && len(hit.Citations) > 0 && hit.Citations[0].Heading == "Example" {
+			matches++
+		}
+	}
+	if matches != 2 {
+		t.Fatalf("repeated section hits = %d, want 2; hits=%+v", matches, search.Hits)
 	}
 }
 

@@ -112,6 +112,26 @@ type SourceURLInput struct {
 	Mode          string
 }
 
+type VideoURLInput struct {
+	URL           string
+	PathHint      string
+	AssetPathHint string
+	Title         string
+	Mode          string
+	Transcript    VideoTranscriptInput
+}
+
+type VideoTranscriptInput struct {
+	Text       string
+	Policy     string
+	Origin     string
+	Language   string
+	CapturedAt string
+	Tool       string
+	Model      string
+	SHA256     string
+}
+
 type SourcePDFMetadata struct {
 	Title         string
 	Author        string
@@ -130,6 +150,23 @@ type SourceIngestionResult struct {
 	PageCount   int
 	CapturedAt  time.Time
 	PDFMetadata SourcePDFMetadata
+}
+
+type VideoIngestionResult struct {
+	DocID                    string
+	SourcePath               string
+	SourceURL                string
+	AssetPath                string
+	Citations                []Citation
+	TranscriptSHA256         string
+	PreviousTranscriptSHA256 string
+	NewTranscriptSHA256      string
+	CapturedAt               time.Time
+	TranscriptPolicy         string
+	TranscriptOrigin         string
+	Language                 string
+	Tool                     string
+	Model                    string
 }
 
 type AppendDocumentInput struct {
@@ -323,6 +360,7 @@ type Store interface {
 	ListDocuments(context.Context, DocumentListQuery) (DocumentListResult, error)
 	CreateDocument(context.Context, CreateDocumentInput) (Document, error)
 	IngestSourceURL(context.Context, SourceURLInput) (SourceIngestionResult, error)
+	IngestVideoURL(context.Context, VideoURLInput) (VideoIngestionResult, error)
 	GetDocument(context.Context, string) (Document, error)
 	GetDocumentLinks(context.Context, string) (DocumentLinks, error)
 	AppendDocument(context.Context, string, AppendDocumentInput) (Document, error)

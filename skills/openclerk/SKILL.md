@@ -54,6 +54,11 @@ tools when the request:
   answered without tools.
 - asks to ingest a source URL but `source.url`, `source.path_hint`, or
   `source.asset_path_hint` is missing
+- asks to ingest a video or YouTube URL but `video.url` or
+  `video.transcript.text` is missing, or is creating a new video source and
+  `video.path_hint` is missing. The v1 runner surface requires supplied
+  transcript text; update mode can target an existing source by URL and does
+  not acquire transcripts from URLs.
 - asks for an obviously invalid limit, such as a negative number or `limit -3`
 - asks to bypass the runner for routine lower-level runtime, HTTP, SQLite, MCP,
   legacy or source-built command paths, or unsupported transport work
@@ -147,6 +152,8 @@ Common request shapes:
 {"action":"create_document","document":{"path":"notes/projects/example.md","title":"Example","body":"# Example\n\n## Summary\nReusable knowledge.\n"}}
 {"action":"ingest_source_url","source":{"url":"https://example.test/source.pdf","path_hint":"sources/example.md","asset_path_hint":"assets/sources/example.pdf","title":"Optional title"}}
 {"action":"ingest_source_url","source":{"url":"https://example.test/source.pdf","mode":"update"}}
+{"action":"ingest_video_url","video":{"url":"https://youtube.example.test/watch?v=demo","path_hint":"sources/video-youtube/demo.md","title":"Demo Video Transcript","transcript":{"text":"Supplied transcript text.","policy":"supplied","origin":"user_supplied_transcript","language":"en","captured_at":"2026-04-27T00:00:00Z"}}}
+{"action":"ingest_video_url","video":{"url":"https://youtube.example.test/watch?v=demo","mode":"update","transcript":{"text":"Updated supplied transcript text.","policy":"supplied","origin":"user_supplied_transcript"}}}
 {"action":"list_documents","list":{"path_prefix":"notes/","limit":20}}
 {"action":"get_document","doc_id":"doc_id_from_json"}
 {"action":"append_document","doc_id":"doc_id_from_json","content":"## Decisions\nUse the OpenClerk runner."}
@@ -155,11 +162,14 @@ Common request shapes:
 {"action":"inspect_layout"}
 ```
 
-Request fields are `action`, `document`, `source`, `doc_id`, `content`,
-`heading`, and `list`. A `document` has `path`, `title`, and `body`. A
+Request fields are `action`, `document`, `source`, `video`, `doc_id`,
+`content`, `heading`, and `list`. A `document` has `path`, `title`, and `body`. A
 `source` has `url`, `path_hint`, `asset_path_hint`, optional `title`, and
 optional `mode`. Missing `source.mode` means `create`; supported values are
-`create` and `update`. A `list` may include `path_prefix`, `metadata_key`,
+`create` and `update`. A `video` has `url`, `path_hint`, optional
+`asset_path_hint`, optional `title`, optional `mode`, and `transcript`.
+Missing `video.mode` means `create`; supported values are `create` and
+`update`. A `list` may include `path_prefix`, `metadata_key`,
 `metadata_value`, `limit`, and `cursor`.
 
 Validation rejections are normal JSON results with `rejected: true` and
@@ -193,6 +203,27 @@ a no-op that preserves the existing source path, asset path, citations,
 provenance, and synthesis freshness. A changed-PDF update preserves the source
 path and asset path while refreshing the source note, search citations,
 provenance, and dependent synthesis freshness/projection visibility.
+
+Use `ingest_video_url` when asked to ingest a video or YouTube source only if
+the user supplies transcript text and provenance. The v1 surface creates or
+updates canonical markdown source notes under `sources/**/*.md` with
+`source_type: video_transcript`, `source_url`, `transcript_origin`,
+`transcript_policy`, `language`, `captured_at`, and `transcript_sha256`.
+Allowed transcript policies are empty, `supplied`, and `local_first`; empty
+means `supplied`. Do not use `yt-dlp`, `ffmpeg`, local STT, transcript APIs,
+Gemini extraction, native media downloads, direct vault inspection, direct file
+edits, or SQLite as substitutes for runner JSON. Missing
+`video.transcript.text` must be clarified without tools for routine requests.
+
+Optional `video.asset_path_hint` writes a metadata sidecar only; it must be a
+vault-relative `assets/**/*.json` path. The sidecar is supporting metadata, not
+authority, and must not be treated as raw media storage. Duplicate video URLs
+are rejected in default `create` mode. Update mode targets the normalized
+`video.url`; path or asset hint mismatches conflict without writing. A same
+transcript hash is a no-op that preserves existing citations, provenance, and
+synthesis freshness. A changed transcript refreshes the canonical source note,
+search citations, provenance, and dependent synthesis freshness/projection
+visibility.
 
 When writing source-linked synthesis, use this exact AgentOps workflow:
 

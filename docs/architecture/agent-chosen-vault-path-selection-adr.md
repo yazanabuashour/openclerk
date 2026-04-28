@@ -207,10 +207,13 @@ reference evidence only. Do not promote a constrained autonomy policy, runner
 action, schema, storage migration, skill behavior, public OpenClerk interface,
 or missing-field policy change from the path/title pressure lane.
 
-`oc-iat` has been reopened for an ergonomics-gate refresh. The refreshed
-decision must separately evaluate whether existing primitives can express the
-workflow and whether the current no-tools/explicit-field UX is acceptable under
-natural user-intent pressure.
+The refreshed `oc-iat` decision evaluated both promotion paths. On the
+capability path, existing primitives expressed the selected workflows safely,
+so no runner, schema, storage, migration, public API, direct-create behavior,
+or autonomous path/title policy is promoted. On the ergonomics path, the only
+promoted surface is the already implemented propose-before-create skill policy
+recorded in
+[`agent-chosen-document-artifact-candidate-generation-adr.md`](agent-chosen-document-artifact-candidate-generation-adr.md).
 
 The follow-up lane exercised URL-only source documentation, artifact ingestion
 without hints, multi-source duplicate pressure, explicit overrides, duplicate

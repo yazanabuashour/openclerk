@@ -9,13 +9,15 @@ decision_owner: platform
 
 ## Status
 
-Accepted: defer generalized artifact ingestion promotion. Keep the targeted
-lane as evidence pressure while repairing data hygiene and eval coverage.
+Accepted: keep generalized artifact ingestion as reference pressure and defer
+promotion of a broader production surface.
 
-`oc-no2` has been reopened for an ergonomics-gate refresh. The historical
-decision below remains the current recorded outcome until `oc-res` repairs the
-PDF fixture gap and a refreshed decision evaluates both capability-gap and
-ergonomics-gap evidence.
+`oc-res` and `oc-04h` repaired the PDF fixture and transport gaps, so the
+refreshed heterogeneous artifact lane can now evaluate agent behavior instead
+of fixture reachability. The final `oc-no2` decision evaluates both promotion
+paths from the deferred-capability gates: current primitives can safely express
+the targeted workflows, and the observed ergonomics are not strong enough to
+justify a new public runner surface.
 
 Evidence:
 
@@ -26,7 +28,8 @@ Evidence:
 ## Decision
 
 Do not promote `ingest_artifact`, artifact-specific ingestion actions, parser
-pipelines, storage migrations, or new public APIs from this evidence.
+pipelines, storage migrations, local file ingestion, OCR receipt ingestion,
+native video/YouTube ingestion, or new public APIs from this evidence.
 
 The current promoted public surface remains:
 
@@ -34,17 +37,25 @@ The current promoted public surface remains:
 - `openclerk retrieval`
 - existing `ingest_source_url` for PDF source URLs
 
-The targeted evidence does not show repeated `runner_capability_gap` failures.
-It shows passing coverage for markdown-transcribed transcripts, invoice/receipt
-authority retrieval, mixed-artifact synthesis freshness, missing source hints,
-unsupported native video rejection, and bypass rejection, plus one
-data-hygiene/eval-coverage failure in PDF source URL pressure that needs repair
-before any stronger claim.
+Capability path: no promotion. The refreshed targeted evidence reports
+`fixture_preflight: passed` for both PDF rows and no remaining
+`runner_capability_gap` classification. It shows passing coverage for scripted
+PDF source URL ingestion, natural PDF source URL intent,
+markdown-transcribed transcripts, invoice/receipt authority retrieval,
+mixed-artifact synthesis freshness, missing source hints, unsupported native
+video rejection, and bypass rejection.
+
+Ergonomics path: no promotion. The natural-intent PDF and mixed-artifact rows
+are tool-heavy and high latency, but they completed without retries or contract
+violations. The evidence remains useful pressure for future guidance and design,
+not enough proof that a generalized artifact ingestion action would reduce
+routine AgentOps cost while preserving authority, citations, provenance,
+freshness, and local-first operation.
 
 Native video/YouTube ingestion, OCR-heavy receipts, local file import, and
 other parser-backed artifact workflows remain deferred. They require a later
-promotion decision with repeated `runner_capability_gap` evidence and an exact
-request/response surface.
+promotion decision with repeated capability-gap or ergonomics-gap evidence and
+an exact request/response surface.
 
 ## Promotion Rubric
 
@@ -55,7 +66,8 @@ request/response surface.
 | Kill | The capability creates a second truth surface, weakens provenance/freshness, hides citations, increases duplicate authority, or requires routine bypasses. |
 | Keep as reference | Existing document/retrieval workflows are sufficient, but the lane remains useful pressure for guidance and future design. |
 
-The current decision is **defer** generalized artifact ingestion promotion and
+The current decision is **keep as reference** for the targeted heterogeneous
+artifact lane, **defer** generalized artifact ingestion promotion, and
 **defer** native parser-backed ingestion surfaces.
 
 ## Required Gates For Future Promotion

@@ -66,13 +66,27 @@ should match this runner request shape:
 printf '%s\n' '{"action":"ingest_source_url","source":{"url":"https://example.test/source.pdf","mode":"update"}}' | openclerk document
 ```
 
+For supplied-transcript video/YouTube source ingestion, the release notes and
+skill examples should match this runner request shape and must not imply native
+video download, platform caption retrieval, local STT, transcript APIs, or
+Gemini extraction:
+
+```bash
+printf '%s\n' '{"action":"ingest_video_url","video":{"url":"https://youtube.example.test/watch?v=demo","path_hint":"sources/video-youtube/demo.md","transcript":{"text":"Supplied transcript text.","policy":"supplied","origin":"user_supplied_transcript"}}}' | openclerk document
+```
+
 The current full production OpenClerk AgentOps gate remains
 `docs/evals/results/ockp-agentops-production.md`. Source URL update mode is
 covered by targeted AgentOps evidence at
 `docs/evals/results/ockp-source-url-update-mode.md`; that targeted lane proves
 duplicate create rejection, same-SHA no-op updates, changed-PDF stale synthesis
 visibility, and path-hint conflict no-write behavior, but does not replace the
-release-blocking production gate.
+release-blocking production gate. Supplied-transcript video/YouTube ingestion
+is covered by targeted AgentOps evidence at
+`docs/evals/results/ockp-video-youtube-canonical-source-note.md`; that lane
+proves `ingest_video_url` create/update behavior, transcript provenance,
+citation-bearing search, same-hash no-op behavior, changed-transcript stale
+synthesis visibility, and external-tool bypass rejection.
 
 Committed reports and docs must use repo-relative artifact paths. Raw eval log
 references, when included in reduced reports, must use neutral placeholders

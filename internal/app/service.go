@@ -38,6 +38,10 @@ func (s *Service) IngestSourceURL(ctx context.Context, input domain.SourceURLInp
 	return s.store.IngestSourceURL(ctx, input)
 }
 
+func (s *Service) IngestVideoURL(ctx context.Context, input domain.VideoURLInput) (domain.VideoIngestionResult, error) {
+	return s.store.IngestVideoURL(ctx, input)
+}
+
 func (s *Service) GetDocument(ctx context.Context, docID string) (domain.Document, error) {
 	return s.store.GetDocument(ctx, docID)
 }
