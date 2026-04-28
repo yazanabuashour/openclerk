@@ -684,6 +684,236 @@ func TestArtifactIngestionDecisionRequiresCompleteScenarioCoverage(t *testing.T)
 	}
 }
 
+func TestExecuteRunLabelsVideoYouTubeLaneAsNonReleaseBlocking(t *testing.T) {
+	reportDir := filepath.Join(t.TempDir(), "reports")
+	config := runConfig{
+		Parallel:   1,
+		Variant:    productionVariant,
+		Scenario:   strings.Join(videoYouTubeScenarioIDs(), ","),
+		RunRoot:    filepath.Join(t.TempDir(), "run"),
+		ReportDir:  reportDir,
+		ReportName: "ockp-video-youtube-canonical-source-note-test",
+		RepoRoot:   ".",
+		CodexBin:   "codex",
+		CacheMode:  cacheModeIsolated,
+	}
+	err := executeRun(context.Background(), config, &strings.Builder{}, func(_ context.Context, _ runConfig, job evalJob, _ cacheConfig) jobResult {
+		now := time.Now().UTC()
+		return jobResult{
+			Variant:       job.Variant,
+			Scenario:      job.Scenario.ID,
+			ScenarioTitle: job.Scenario.Title,
+			Status:        "completed",
+			Passed:        true,
+			Metrics:       metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}},
+			Verification:  verificationResult{Passed: true, DatabasePass: true, AssistantPass: true},
+			StartedAt:     now,
+			CompletedAt:   &now,
+		}
+	})
+	if err != nil {
+		t.Fatalf("execute video/YouTube run: %v", err)
+	}
+	content, err := os.ReadFile(filepath.Join(reportDir, "ockp-video-youtube-canonical-source-note-test.json"))
+	if err != nil {
+		t.Fatalf("read JSON report: %v", err)
+	}
+	var report report
+	if err := json.Unmarshal(content, &report); err != nil {
+		t.Fatalf("decode JSON report: %v", err)
+	}
+	if report.Metadata.Lane != videoYouTubeLaneName || report.Metadata.ReleaseBlocking {
+		t.Fatalf("video/YouTube lane metadata = %q/%t, want %q/false", report.Metadata.Lane, report.Metadata.ReleaseBlocking, videoYouTubeLaneName)
+	}
+	if report.TargetedLaneSummary == nil {
+		t.Fatal("video/YouTube report missing targeted lane summary")
+	}
+	if report.TargetedLaneSummary.Decision != "promote_video_ingest_surface_design" {
+		t.Fatalf("decision = %q, want promote_video_ingest_surface_design", report.TargetedLaneSummary.Decision)
+	}
+	if len(report.TargetedLaneSummary.ScenarioClassifications) != len(videoYouTubeScenarioIDs()) {
+		t.Fatalf("classifications = %d, want %d", len(report.TargetedLaneSummary.ScenarioClassifications), len(videoYouTubeScenarioIDs()))
+	}
+	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-video-youtube-canonical-source-note-test.md"))
+	if err != nil {
+		t.Fatalf("read markdown report: %v", err)
+	}
+	for _, want := range []string{
+		"Lane: `" + videoYouTubeLaneName + "`",
+		"Release blocking: `false`",
+		"Decision: `promote_video_ingest_surface_design`",
+		"promote follow-up design for ingest_video_url only",
+		"`ergonomics_gap`",
+	} {
+		if !strings.Contains(string(markdown), want) {
+			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
+		}
+	}
+}
+
+func TestVideoYouTubeDecisionRequiresCompleteScenarioCoverage(t *testing.T) {
+	rows := make([]targetedScenarioClassification, 0, len(videoYouTubeScenarioIDs()))
+	for _, id := range videoYouTubeScenarioIDs() {
+		classification := "none"
+		if id == videoYouTubeNaturalIntentScenarioID {
+			classification = "ergonomics_gap"
+		}
+		rows = append(rows, targetedScenarioClassification{
+			Scenario:              id,
+			FailureClassification: classification,
+		})
+	}
+	if decision := videoYouTubeDecision(rows[:len(rows)-1]); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("partial decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	if decision := videoYouTubeDecision(rows); decision != "promote_video_ingest_surface_design" {
+		t.Fatalf("complete decision = %q, want promote_video_ingest_surface_design", decision)
+	}
+	rows[1].FailureClassification = "runner_capability_gap"
+	if decision := videoYouTubeDecision(rows); decision != "promote_video_ingest_surface_design" {
+		t.Fatalf("capability decision = %q, want promote_video_ingest_surface_design", decision)
+	}
+	rows[1].FailureClassification = "skill_guidance"
+	if decision := videoYouTubeDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("guidance decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+}
+
+func TestVerifyVideoYouTubeValidationScenariosUseFinalAnswerVerifier(t *testing.T) {
+	noTools := metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}}
+	for _, sc := range []scenario{
+		{ID: videoYouTubeNaturalIntentScenarioID},
+		{ID: videoYouTubeBypassRejectScenarioID},
+	} {
+		result, err := verifyScenarioTurn(context.Background(), evalPaths{}, sc, 1, "Done.", noTools)
+		if err != nil {
+			t.Fatalf("verify %s: %v", sc.ID, err)
+		}
+		if result.Passed {
+			t.Fatalf("%s passed without a rejection answer: %+v", sc.ID, result)
+		}
+	}
+
+	natural := "OpenClerk does not support native video or YouTube transcript ingestion through the installed runner yet; use OpenClerk document/retrieval workflows with supplied transcript text."
+	result, err := verifyScenarioTurn(context.Background(), evalPaths{}, scenario{ID: videoYouTubeNaturalIntentScenarioID}, 1, natural, noTools)
+	if err != nil {
+		t.Fatalf("verify natural rejection: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("natural rejection failed: %+v", result)
+	}
+
+	bypass := "Unsupported: do not bypass the installed OpenClerk runner with yt-dlp, ffmpeg, Gemini, transcript API, SQLite, vault, or other external tooling."
+	result, err = verifyScenarioTurn(context.Background(), evalPaths{}, scenario{ID: videoYouTubeBypassRejectScenarioID}, 1, bypass, noTools)
+	if err != nil {
+		t.Fatalf("verify bypass rejection: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("bypass rejection failed: %+v", result)
+	}
+}
+
+func TestVerifyVideoYouTubeScriptedTranscriptRequiresPathFilter(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	body := strings.TrimSpace(`---
+type: source
+status: active
+source_type: video_transcript
+source_url: https://youtube.example.test/watch?v=video-demo
+transcript_origin: user_supplied_transcript
+captured_at: 2026-04-27T00:00:00Z
+transcript_sha256: video-youtube-scripted-demo-sha
+---
+# Platform Demo Transcript
+
+## Summary
+Video YouTube canonical source note evidence: supplied transcript text can become canonical markdown when provenance, source URL, and citation-bearing retrieval are preserved.
+
+## Transcript
+00:00 Speaker A: Keep video transcripts citeable as canonical source notes.
+00:15 Speaker B: Preserve transcript provenance, source URL, and freshness checks before synthesis.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, videoYouTubeSourcePath, "Platform Demo Transcript", body); err != nil {
+		t.Fatalf("seed video/YouTube transcript: %v", err)
+	}
+	baseMetrics := metrics{
+		AssistantCalls:       1,
+		CreateDocumentUsed:   true,
+		SearchUsed:           true,
+		SearchPathFilterUsed: true,
+		SearchPathPrefixes:   []string{"sources/video-youtube/"},
+		EventTypeCounts:      map[string]int{},
+	}
+	answer := videoYouTubeSourcePath + " " + videoYouTubeURL + " doc_id citation preserves transcript provenance."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: videoYouTubeScriptedTranscriptControlID}, 1, answer, baseMetrics)
+	if err != nil {
+		t.Fatalf("verify video/YouTube transcript: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("video/YouTube transcript verification failed: %+v", result)
+	}
+
+	missingPathFilter := baseMetrics
+	missingPathFilter.SearchPathPrefixes = nil
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: videoYouTubeScriptedTranscriptControlID}, 1, answer, missingPathFilter)
+	if err != nil {
+		t.Fatalf("verify video/YouTube transcript without path filter: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("video/YouTube transcript verification passed without sources/video-youtube/ path filter: %+v", result)
+	}
+}
+
+func TestVerifyVideoYouTubeSynthesisFreshnessRejectsWrites(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: videoYouTubeSynthesisFreshnessScenarioID}); err != nil {
+		t.Fatalf("seed video/YouTube synthesis freshness scenario: %v", err)
+	}
+	baseMetrics := metrics{
+		AssistantCalls:       1,
+		SearchUsed:           true,
+		ListDocumentsUsed:    true,
+		GetDocumentUsed:      true,
+		ProjectionStatesUsed: true,
+		ProvenanceEventsUsed: true,
+		EventTypeCounts:      map[string]int{},
+	}
+	answer := strings.Join([]string{
+		videoYouTubeSynthesisPath,
+		videoYouTubeOldSourcePath,
+		videoYouTubeCurrentSourcePath,
+		"stale projection freshness",
+		"provenance",
+		"source_refs",
+	}, " ")
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: videoYouTubeSynthesisFreshnessScenarioID}, 1, answer, baseMetrics)
+	if err != nil {
+		t.Fatalf("verify video/YouTube synthesis freshness: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("video/YouTube synthesis freshness verification failed: %+v", result)
+	}
+
+	for name, mutate := range map[string]func(*metrics){
+		"create_document": func(m *metrics) { m.CreateDocumentUsed = true },
+		"replace_section": func(m *metrics) { m.ReplaceSectionUsed = true },
+		"append_document": func(m *metrics) { m.AppendDocumentUsed = true },
+	} {
+		mutatingMetrics := baseMetrics
+		mutate(&mutatingMetrics)
+		result, err = verifyScenarioTurn(ctx, paths, scenario{ID: videoYouTubeSynthesisFreshnessScenarioID}, 1, answer, mutatingMetrics)
+		if err != nil {
+			t.Fatalf("verify video/YouTube synthesis freshness with %s: %v", name, err)
+		}
+		if result.Passed {
+			t.Fatalf("video/YouTube synthesis freshness passed despite %s: %+v", name, result)
+		}
+	}
+}
+
 func TestVerifyArtifactTranscriptRequiresTranscriptPathFilter(t *testing.T) {
 	ctx := context.Background()
 	paths := scenarioPaths(t.TempDir())
@@ -1214,6 +1444,8 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"search\",\"search\":{\"text\":\"runner\",\"metadata_key\":\"rag_scope\",\"metadata_value\":\"active-policy\"}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\"}}' | openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"get_document\",\"doc_id\":\"doc_1\"}' | openclerk document"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"replace_section\",\"doc_id\":\"doc_1\",\"heading\":\"Summary\",\"content\":\"updated\"}' | openclerk document"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"append_document\",\"doc_id\":\"doc_1\",\"content\":\"updated\"}' | openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"inspect_layout\"}' | openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\n  \"document_links\",\"doc_id\":\"doc_1\"}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\n  \"graph_neighborhood\",\"doc_id\":\"doc_1\"}' | openclerk retrieval"}}`,
@@ -1235,7 +1467,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	if parsed.sessionID != "session-123" || parsed.finalMessage != "done" {
 		t.Fatalf("parsed = %+v", parsed)
 	}
-	if parsed.metrics.ToolCalls != 19 || parsed.metrics.CommandExecutions != 19 || parsed.metrics.AssistantCalls != 1 {
+	if parsed.metrics.ToolCalls != 21 || parsed.metrics.CommandExecutions != 21 || parsed.metrics.AssistantCalls != 1 {
 		t.Fatalf("metrics = %+v", parsed.metrics)
 	}
 	if !parsed.metrics.BroadRepoSearch {
@@ -1277,6 +1509,8 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		"search_metadata_filter": parsed.metrics.SearchMetadataFilterUsed,
 		"list_documents":         parsed.metrics.ListDocumentsUsed,
 		"get_document":           parsed.metrics.GetDocumentUsed,
+		"replace_section":        parsed.metrics.ReplaceSectionUsed,
+		"append_document":        parsed.metrics.AppendDocumentUsed,
 		"inspect_layout":         parsed.metrics.InspectLayoutUsed,
 		"document_links":         parsed.metrics.DocumentLinksUsed,
 		"graph_neighborhood":     parsed.metrics.GraphNeighborhoodUsed,
@@ -1460,7 +1694,7 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 	for _, id := range scenarioIDs() {
 		ids[id] = true
 	}
-	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, graphSemanticsScenarioID, memoryRouterScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, sourceURLUpdateDuplicateScenarioID, sourceURLUpdateSameSHAScenarioID, sourceURLUpdateChangedScenarioID, sourceURLUpdateConflictScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID, populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID, agentChosenExplicitScenarioID, agentChosenMissingFieldsScenarioID, agentChosenPathProposalScenarioID, agentChosenAutonomousScenarioID, agentChosenSynthesisScenarioID, agentChosenAmbiguousScenarioID, agentChosenUserPathScenarioID, pathTitleURLOnlyScenarioID, pathTitleArtifactMissingHintsScenarioID, pathTitleMultiSourceDuplicateScenarioID, pathTitleExplicitOverridesScenarioID, pathTitleDuplicateRiskScenarioID, pathTitleMetadataAuthorityScenarioID, documentThisMissingFieldsScenarioID, documentThisExplicitCreateScenarioID, documentThisSourceURLMissingHintsScenarioID, documentThisExplicitOverridesScenarioID, documentThisDuplicateCandidateScenarioID, documentThisExistingUpdateScenarioID, documentThisSynthesisFreshnessScenarioID, candidateNoteFromPastedContentScenarioID, candidateTitleAndPathFromHeadingScenarioID, candidateMixedSourceSummaryScenarioID, candidateExplicitOverridesWinScenarioID, candidateDuplicateRiskAsksScenarioID, candidateLowConfidenceAsksScenarioID, candidateBodyFaithfulnessScenarioID, artifactPDFSourceURLScenarioID, artifactPDFNaturalIntentScenarioID, artifactTranscriptScenarioID, artifactInvoiceReceiptScenarioID, artifactMixedSynthesisScenarioID, artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
+	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, graphSemanticsScenarioID, memoryRouterScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, sourceURLUpdateDuplicateScenarioID, sourceURLUpdateSameSHAScenarioID, sourceURLUpdateChangedScenarioID, sourceURLUpdateConflictScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID, populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID, agentChosenExplicitScenarioID, agentChosenMissingFieldsScenarioID, agentChosenPathProposalScenarioID, agentChosenAutonomousScenarioID, agentChosenSynthesisScenarioID, agentChosenAmbiguousScenarioID, agentChosenUserPathScenarioID, pathTitleURLOnlyScenarioID, pathTitleArtifactMissingHintsScenarioID, pathTitleMultiSourceDuplicateScenarioID, pathTitleExplicitOverridesScenarioID, pathTitleDuplicateRiskScenarioID, pathTitleMetadataAuthorityScenarioID, documentThisMissingFieldsScenarioID, documentThisExplicitCreateScenarioID, documentThisSourceURLMissingHintsScenarioID, documentThisExplicitOverridesScenarioID, documentThisDuplicateCandidateScenarioID, documentThisExistingUpdateScenarioID, documentThisSynthesisFreshnessScenarioID, candidateNoteFromPastedContentScenarioID, candidateTitleAndPathFromHeadingScenarioID, candidateMixedSourceSummaryScenarioID, candidateExplicitOverridesWinScenarioID, candidateDuplicateRiskAsksScenarioID, candidateLowConfidenceAsksScenarioID, candidateBodyFaithfulnessScenarioID, artifactPDFSourceURLScenarioID, artifactPDFNaturalIntentScenarioID, artifactTranscriptScenarioID, artifactInvoiceReceiptScenarioID, artifactMixedSynthesisScenarioID, artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID, videoYouTubeNaturalIntentScenarioID, videoYouTubeScriptedTranscriptControlID, videoYouTubeSynthesisFreshnessScenarioID, videoYouTubeBypassRejectScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
 		if !ids[want] {
 			t.Fatalf("scenarioIDs missing %q in %v", want, scenarioIDs())
 		}
@@ -1512,6 +1746,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 			t.Fatalf("default selected scenarios included targeted artifact ingestion scenario %q", id)
 		}
 	}
+	for _, id := range videoYouTubeScenarioIDs() {
+		if defaultIDs[id] {
+			t.Fatalf("default selected scenarios included targeted video/YouTube scenario %q", id)
+		}
+	}
 	selected := selectedScenarioIDs(runConfig{Scenario: populatedHeterogeneousScenarioID + "," + populatedFreshnessConflictScenarioID + "," + populatedSynthesisUpdateScenarioID})
 	lane, releaseBlocking := reportLane(selected)
 	if lane != populatedLaneName || releaseBlocking {
@@ -1551,6 +1790,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	lane, releaseBlocking = reportLane(selected)
 	if lane != artifactIngestionLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, artifactIngestionLaneName)
+	}
+	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(videoYouTubeScenarioIDs(), ",")})
+	lane, releaseBlocking = reportLane(selected)
+	if lane != videoYouTubeLaneName || releaseBlocking {
+		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, videoYouTubeLaneName)
 	}
 }
 

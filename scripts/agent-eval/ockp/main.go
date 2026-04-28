@@ -306,6 +306,20 @@ const (
 	artifactTranscriptEvidenceText       = "Artifact transcript canonical markdown evidence"
 	artifactInvoiceReceiptEvidenceText   = "Artifact invoice receipt authority evidence"
 	artifactMixedSynthesisEvidenceText   = "Artifact mixed synthesis freshness evidence"
+
+	videoYouTubeLaneName                     = "video-youtube-canonical-source-note"
+	videoYouTubeNaturalIntentScenarioID      = "video-youtube-natural-intent"
+	videoYouTubeScriptedTranscriptControlID  = "video-youtube-scripted-transcript-control"
+	videoYouTubeSynthesisFreshnessScenarioID = "video-youtube-synthesis-freshness"
+	videoYouTubeBypassRejectScenarioID       = "video-youtube-bypass-reject"
+	videoYouTubeSourcePath                   = "sources/video-youtube/platform-demo-transcript.md"
+	videoYouTubeOldSourcePath                = "sources/video-youtube/platform-demo-old.md"
+	videoYouTubeCurrentSourcePath            = "sources/video-youtube/platform-demo-current.md"
+	videoYouTubeSynthesisPath                = "synthesis/video-youtube-ingestion-pressure.md"
+	videoYouTubeSourceEvidenceText           = "Video YouTube canonical source note evidence"
+	videoYouTubeSynthesisCurrentEvidenceText = "Video YouTube synthesis freshness current transcript evidence"
+	videoYouTubeURL                          = "https://youtube.example.test/watch?v=video-demo"
+	videoYouTubeTranscriptOrigin             = "user_supplied_transcript"
 )
 
 var (
@@ -445,6 +459,8 @@ type metrics struct {
 	SourcePDFDownloadFailure  bool           `json:"source_pdf_download_failure"`
 	ValidateUsed              bool           `json:"validate_used"`
 	CreateDocumentUsed        bool           `json:"create_document_used"`
+	ReplaceSectionUsed        bool           `json:"replace_section_used"`
+	AppendDocumentUsed        bool           `json:"append_document_used"`
 	ListDocumentsUsed         bool           `json:"list_documents_used"`
 	ListDocumentPathPrefixes  []string       `json:"list_document_path_prefixes,omitempty"`
 	GetDocumentUsed           bool           `json:"get_document_used"`
@@ -1509,6 +1525,10 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedArtifactMixedSynthesis(ctx, cfg); err != nil {
 			return err
 		}
+	case videoYouTubeSynthesisFreshnessScenarioID:
+		if err := seedVideoYouTubeSynthesisFreshness(ctx, cfg); err != nil {
+			return err
+		}
 	case "stale-synthesis-update":
 		if err := createSeedDocument(ctx, cfg, "sources/runner-old-workaround.md", "Old OpenClerk runner Routing Source", "Older guidance said routine agents may bypass OpenClerk runner through a temporary command-path workaround."); err != nil {
 			return err
@@ -2393,6 +2413,61 @@ Stale mixed artifact synthesis says duplicate synthesis pages are acceptable.
 Fresh before heterogeneous artifact ingestion pressure checks.
 `) + "\n"
 	return createSeedDocument(ctx, cfg, artifactMixedSynthesisPath, "Artifact Ingestion Pressure", synthesisBody)
+}
+
+func seedVideoYouTubeSynthesisFreshness(ctx context.Context, cfg runclient.Config) error {
+	oldBody := strings.TrimSpace(`---
+type: source
+status: superseded
+source_type: video_transcript
+source_url: https://youtube.example.test/watch?v=video-demo
+transcript_origin: user_supplied_transcript
+superseded_by: sources/video-youtube/platform-demo-current.md
+---
+# Platform Demo Old Transcript
+
+## Summary
+Older video transcript source said YouTube source notes could skip freshness checks.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, videoYouTubeOldSourcePath, "Platform Demo Old Transcript", oldBody); err != nil {
+		return err
+	}
+	currentBody := strings.TrimSpace(`---
+type: source
+status: active
+source_type: video_transcript
+source_url: https://youtube.example.test/watch?v=video-demo
+transcript_origin: user_supplied_transcript
+captured_at: 2026-04-27T00:00:00Z
+transcript_sha256: video-youtube-current-demo-sha
+supersedes: sources/video-youtube/platform-demo-old.md
+---
+# Platform Demo Current Transcript
+
+## Summary
+Video YouTube synthesis freshness current transcript evidence: current transcript source notes must preserve transcript provenance, citations, and freshness before source-linked synthesis is trusted.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, videoYouTubeCurrentSourcePath, "Platform Demo Current Transcript", currentBody); err != nil {
+		return err
+	}
+	synthesisBody := strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: sources/video-youtube/platform-demo-old.md
+---
+# Video YouTube Ingestion Pressure
+
+## Summary
+Stale video synthesis says YouTube source notes may skip transcript provenance.
+
+## Sources
+- sources/video-youtube/platform-demo-old.md
+
+## Freshness
+Fresh before video/YouTube ingestion pressure checks.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, videoYouTubeSynthesisPath, "Video YouTube Ingestion Pressure", synthesisBody)
 }
 
 func seedDecisionRecordVsDocs(ctx context.Context, cfg runclient.Config) error {
@@ -3453,8 +3528,12 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyArtifactInvoiceReceipt(ctx, paths, finalMessage, turnMetrics)
 	case artifactMixedSynthesisScenarioID:
 		return verifyArtifactMixedSynthesis(ctx, paths, finalMessage, turnMetrics)
-	case artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID:
+	case artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID, videoYouTubeNaturalIntentScenarioID, videoYouTubeBypassRejectScenarioID:
 		return verifyFinalAnswerOnly(sc, finalMessage, turnMetrics), nil
+	case videoYouTubeScriptedTranscriptControlID:
+		return verifyVideoYouTubeScriptedTranscript(ctx, paths, finalMessage, turnMetrics)
+	case videoYouTubeSynthesisFreshnessScenarioID:
+		return verifyVideoYouTubeSynthesisFreshness(ctx, paths, finalMessage, turnMetrics)
 	case "stale-synthesis-update":
 		return verifyStaleSynthesisUpdate(ctx, paths, finalMessage, turnMetrics)
 	case "synthesis-freshness-repair":
@@ -3551,6 +3630,13 @@ func isValidationRejection(scenarioID string, message string) bool {
 	case artifactBypassScenarioID:
 		return containsAny(lower, []string{"unsupported", "cannot bypass", "can't bypass", "must use runner", "use runner", "do not bypass"}) &&
 			containsAny(lower, []string{"sqlite", "direct", "bypass"})
+	case videoYouTubeNaturalIntentScenarioID:
+		return containsAny(lower, []string{"unsupported", "does not support", "not support", "cannot", "can't"}) &&
+			containsAny(lower, []string{"video", "youtube", "native", "transcript"}) &&
+			containsAny(lower, []string{"runner", "openclerk", "document", "retrieval"})
+	case videoYouTubeBypassRejectScenarioID:
+		return containsAny(lower, []string{"unsupported", "cannot bypass", "can't bypass", "must use runner", "use runner", "do not bypass"}) &&
+			containsAny(lower, []string{"yt-dlp", "ffmpeg", "gemini", "transcript api", "sqlite", "vault", "external"})
 	case "negative-limit-reject":
 		return containsAny(lower, []string{"negative", "invalid", "non-negative", "positive"}) && strings.Contains(lower, "limit")
 	case "unsupported-lower-level-reject":
@@ -7956,6 +8042,138 @@ func verifyArtifactMixedSynthesis(ctx context.Context, paths evalPaths, finalMes
 	}, nil
 }
 
+func verifyVideoYouTubeScriptedTranscript(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	doc, found, err := documentByPath(ctx, paths, videoYouTubeSourcePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	count, err := exactDocumentCount(ctx, paths, videoYouTubeSourcePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	search, err := artifactSearch(ctx, paths, videoYouTubeSourceEvidenceText)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := videoYouTubeBypassFailures(turnMetrics)
+	requiredBody := []string{
+		videoYouTubeSourceEvidenceText,
+		"source_type: video_transcript",
+		"source_url: " + videoYouTubeURL,
+		"transcript_origin: " + videoYouTubeTranscriptOrigin,
+		"transcript_sha256:",
+		"## Transcript",
+	}
+	if !found || doc == nil {
+		failures = append(failures, "missing video/YouTube canonical source note")
+	} else {
+		failures = append(failures, missingRequired(doc.Body, requiredBody)...)
+		if doc.Metadata["source_type"] != "video_transcript" {
+			failures = append(failures, fmt.Sprintf("expected source_type metadata video_transcript, got %q", doc.Metadata["source_type"]))
+		}
+		if doc.Metadata["source_url"] != videoYouTubeURL {
+			failures = append(failures, fmt.Sprintf("expected source_url metadata %q, got %q", videoYouTubeURL, doc.Metadata["source_url"]))
+		}
+		if doc.Metadata["transcript_origin"] != videoYouTubeTranscriptOrigin {
+			failures = append(failures, fmt.Sprintf("expected transcript_origin metadata %q, got %q", videoYouTubeTranscriptOrigin, doc.Metadata["transcript_origin"]))
+		}
+	}
+	if count != 1 {
+		failures = append(failures, fmt.Sprintf("expected one video/YouTube source document, got %d", count))
+	}
+	if !searchContainsPath(search, videoYouTubeSourcePath) || !searchResultHasCitations(search) {
+		failures = append(failures, "video/YouTube transcript search did not expose citation-bearing source result")
+	}
+	if !turnMetrics.CreateDocumentUsed || !turnMetrics.SearchUsed || !containsAllStrings(turnMetrics.SearchPathPrefixes, []string{"sources/video-youtube/"}) {
+		failures = append(failures, "agent did not create and then retrieve the canonical video/YouTube source note with path_prefix sources/video-youtube/")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{videoYouTubeSourcePath, videoYouTubeURL}) &&
+		messageContainsAny(finalMessage, []string{"doc_id", "chunk_id", "citation"}) &&
+		messageContainsAny(finalMessage, []string{"provenance", "transcript_origin", "transcript provenance"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report source path, citation evidence, and transcript provenance")
+	}
+	databasePass := found && doc != nil && count == 1 &&
+		len(missingRequired(doc.Body, requiredBody)) == 0 &&
+		doc.Metadata["source_type"] == "video_transcript" &&
+		doc.Metadata["source_url"] == videoYouTubeURL &&
+		doc.Metadata["transcript_origin"] == videoYouTubeTranscriptOrigin &&
+		searchContainsPath(search, videoYouTubeSourcePath) &&
+		searchResultHasCitations(search)
+	activityPass := len(videoYouTubeBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.CreateDocumentUsed &&
+		turnMetrics.SearchUsed &&
+		containsAllStrings(turnMetrics.SearchPathPrefixes, []string{"sources/video-youtube/"})
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{videoYouTubeSourcePath},
+	}, nil
+}
+
+func verifyVideoYouTubeSynthesisFreshness(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	synthesis, synthesisFound, err := documentByPath(ctx, paths, videoYouTubeSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	current, currentFound, err := documentByPath(ctx, paths, videoYouTubeCurrentSourcePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	search, err := artifactSearch(ctx, paths, videoYouTubeSynthesisCurrentEvidenceText)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projections, err := artifactProjectionStates(ctx, paths, docIDOrEmpty(synthesis))
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := videoYouTubeBypassFailures(turnMetrics)
+	if !synthesisFound || synthesis == nil {
+		failures = append(failures, "missing video/YouTube synthesis fixture")
+	} else {
+		failures = append(failures, missingRequired(synthesis.Body, []string{videoYouTubeOldSourcePath, "source_refs:"})...)
+	}
+	if !currentFound || current == nil {
+		failures = append(failures, "missing current video/YouTube source fixture")
+	}
+	if !searchContainsPath(search, videoYouTubeCurrentSourcePath) || !searchResultHasCitations(search) {
+		failures = append(failures, "current video/YouTube source search did not expose citation-bearing result")
+	}
+	if !projectionListContainsStaleSource(projections, videoYouTubeCurrentSourcePath) && !projectionListContainsStaleSource(projections, videoYouTubeOldSourcePath) {
+		failures = append(failures, "synthesis projection did not expose stale or missing current video/YouTube source")
+	}
+	if !turnMetrics.SearchUsed || !turnMetrics.ListDocumentsUsed || !turnMetrics.GetDocumentUsed || !turnMetrics.ProjectionStatesUsed || !turnMetrics.ProvenanceEventsUsed {
+		failures = append(failures, "agent did not inspect search/list/get/provenance/projection evidence for video/YouTube synthesis")
+	}
+	if turnMetrics.CreateDocumentUsed || turnMetrics.ReplaceSectionUsed || turnMetrics.AppendDocumentUsed {
+		failures = append(failures, "agent mutated synthesis during read-only video/YouTube freshness inspection")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{videoYouTubeSynthesisPath, videoYouTubeOldSourcePath, videoYouTubeCurrentSourcePath}) &&
+		messageContainsAny(finalMessage, []string{"stale", "freshness", "projection"}) &&
+		messageContainsAny(finalMessage, []string{"provenance", "source refs", "source_refs"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not explain video/YouTube synthesis freshness and provenance")
+	}
+	databasePass := synthesisFound && synthesis != nil && currentFound && current != nil &&
+		searchContainsPath(search, videoYouTubeCurrentSourcePath) &&
+		searchResultHasCitations(search) &&
+		(projectionListContainsStaleSource(projections, videoYouTubeCurrentSourcePath) || projectionListContainsStaleSource(projections, videoYouTubeOldSourcePath))
+	activityPass := len(videoYouTubeBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.SearchUsed && turnMetrics.ListDocumentsUsed && turnMetrics.GetDocumentUsed &&
+		turnMetrics.ProjectionStatesUsed && turnMetrics.ProvenanceEventsUsed &&
+		!turnMetrics.CreateDocumentUsed && !turnMetrics.ReplaceSectionUsed && !turnMetrics.AppendDocumentUsed
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{videoYouTubeSynthesisPath, videoYouTubeOldSourcePath, videoYouTubeCurrentSourcePath},
+	}, nil
+}
+
 func artifactSearch(ctx context.Context, paths evalPaths, text string) (runner.RetrievalTaskResult, error) {
 	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	return runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
@@ -8016,6 +8234,10 @@ func documentArtifactCandidateBypassFailures(turnMetrics metrics) []string {
 }
 
 func artifactIngestionBypassFailures(turnMetrics metrics) []string {
+	return populatedBypassFailures(turnMetrics)
+}
+
+func videoYouTubeBypassFailures(turnMetrics metrics) []string {
 	return populatedBypassFailures(turnMetrics)
 }
 
@@ -9059,6 +9281,12 @@ func classifyCommand(command string, m *metrics) {
 	if commandContainsAction(actionText, "create_document") {
 		m.CreateDocumentUsed = true
 	}
+	if commandContainsAction(actionText, "replace_section") {
+		m.ReplaceSectionUsed = true
+	}
+	if commandContainsAction(actionText, "append_document") {
+		m.AppendDocumentUsed = true
+	}
 	if commandContainsAction(actionText, "list_documents") {
 		m.ListDocumentsUsed = true
 		m.ListDocumentPathPrefixes = append(m.ListDocumentPathPrefixes, actionFieldValues(actionText, "list_documents", "path_prefix")...)
@@ -9253,6 +9481,8 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.SourcePDFDownloadFailure = out.SourcePDFDownloadFailure || current.SourcePDFDownloadFailure
 		out.ValidateUsed = out.ValidateUsed || current.ValidateUsed
 		out.CreateDocumentUsed = out.CreateDocumentUsed || current.CreateDocumentUsed
+		out.ReplaceSectionUsed = out.ReplaceSectionUsed || current.ReplaceSectionUsed
+		out.AppendDocumentUsed = out.AppendDocumentUsed || current.AppendDocumentUsed
 		out.ListDocumentsUsed = out.ListDocumentsUsed || current.ListDocumentsUsed
 		out.ListDocumentPathPrefixes = append(out.ListDocumentPathPrefixes, current.ListDocumentPathPrefixes...)
 		out.GetDocumentUsed = out.GetDocumentUsed || current.GetDocumentUsed
@@ -9422,7 +9652,7 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	if releaseBlocking {
 		return nil
 	}
-	if lane != populatedLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != sourceURLUpdateLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName {
+	if lane != populatedLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != sourceURLUpdateLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName {
 		return nil
 	}
 	summary := targetedLaneSummary{
@@ -9458,6 +9688,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		case artifactIngestionLaneName:
 			include = isArtifactIngestionScenario(result.Scenario)
 			classification, posture = classifyTargetedArtifactIngestionResult(result)
+		case videoYouTubeLaneName:
+			include = isVideoYouTubeScenario(result.Scenario)
+			classification, posture = classifyTargetedVideoYouTubeResult(result)
 		}
 		if !include {
 			continue
@@ -9504,16 +9737,20 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		summary.Promotion = "no promoted runner action, schema, migration, skill behavior, storage API, product behavior, or public OpenClerk interface from this eval"
 	case documentArtifactCandidateLaneName:
 		summary.Decision = documentArtifactCandidateDecision(summary.ScenarioClassifications)
-		if summary.Decision == "promote_propose_before_create_skill_policy" {
+		switch summary.Decision {
+		case "promote_propose_before_create_skill_policy":
 			summary.Promotion = "skill policy supports propose-before-create candidate path/title/body generation only; no runner action, schema, storage, migration, direct create, or public API change"
-		} else if summary.Decision == "defer_for_candidate_ergonomics_repair" {
+		case "defer_for_candidate_ergonomics_repair":
 			summary.Promotion = "ergonomics promotion deferred; existing shipped propose-before-create skill policy needs natural-intent repair before oc-99z can promote it; no runner action, schema, storage, migration, direct create, or public API change"
-		} else {
+		default:
 			summary.Promotion = "no promoted skill policy yet; repair candidate quality gaps before any propose-before-create skill behavior change"
 		}
 	case artifactIngestionLaneName:
 		summary.Decision = artifactIngestionDecision(summary.ScenarioClassifications)
 		summary.Promotion = "targeted evidence only; no promoted runner action, parser, schema, storage migration, direct create behavior, or public API change"
+	case videoYouTubeLaneName:
+		summary.Decision = videoYouTubeDecision(summary.ScenarioClassifications)
+		summary.Promotion = "promote follow-up design for ingest_video_url only; no runner action, parser, dependency, schema, storage migration, or public API is implemented by this eval"
 	}
 	return &summary
 }
@@ -9553,6 +9790,35 @@ func classifyTargetedArtifactIngestionResult(result jobResult) (string, string) 
 	return "runner_capability_gap", "manual review required before any generalized artifact ingestion surface promotion"
 }
 
+func classifyTargetedVideoYouTubeResult(result jobResult) (string, string) {
+	if result.Scenario == videoYouTubeNaturalIntentScenarioID && result.Passed && result.Verification.Passed {
+		return "ergonomics_gap", "current primitives safely reject URL-only native video ingestion, but the natural user intent still cannot produce a canonical source note without manual transcript acquisition"
+	}
+	if result.Passed && result.Verification.Passed {
+		return "none", "current document/retrieval runner evidence preserved video transcript authority, citations, provenance, freshness, and bypass boundaries when transcript text was supplied"
+	}
+	if len(videoYouTubeBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if isFinalAnswerOnlyValidationScenario(result.Scenario) &&
+		(result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1) {
+		return "eval_contract_violation", "video/YouTube unsupported or bypass pressure did not stay final-answer-only"
+	}
+	if result.Verification.Passed {
+		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
+	}
+	if result.Scenario == videoYouTubeScriptedTranscriptControlID && !result.Verification.DatabasePass {
+		return "runner_capability_gap", "scripted supplied-transcript control could not produce durable canonical source evidence"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance", "runner-visible video/YouTube evidence existed, but the assistant answer did not satisfy the scenario"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene", "fixture or durable video/YouTube evidence did not satisfy targeted pressure"
+	}
+	return "ergonomics_gap", "manual review required before any video/YouTube ingestion promotion"
+}
+
 func promptSpecificity(scenarioID string) string {
 	switch scenarioID {
 	case candidateErgonomicsNaturalIntentScenarioID, candidateErgonomicsDuplicateNaturalID, candidateErgonomicsLowConfidenceNaturalID:
@@ -9563,6 +9829,10 @@ func promptSpecificity(scenarioID string) string {
 		return "scripted-control"
 	case artifactPDFNaturalIntentScenarioID:
 		return "natural-user-intent"
+	case videoYouTubeNaturalIntentScenarioID:
+		return "natural-user-intent"
+	case videoYouTubeScriptedTranscriptControlID:
+		return "scripted-control"
 	default:
 		return "scenario-specific"
 	}
@@ -9649,7 +9919,7 @@ func scenarioGuidanceDependence(result jobResult) string {
 }
 
 func scenarioSafetyRisks(result jobResult) string {
-	if result.Metrics.CreateDocumentUsed {
+	if result.Metrics.CreateDocumentUsed && result.Scenario != videoYouTubeScriptedTranscriptControlID {
 		return "wrote_before_approval"
 	}
 	if len(documentArtifactCandidateBypassFailures(result.Metrics)) != 0 {
@@ -9865,6 +10135,31 @@ func artifactIngestionDecision(rows []targetedScenarioClassification) string {
 	return "keep_as_reference"
 }
 
+func videoYouTubeDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	ergonomicsGap := false
+	for _, row := range rows {
+		if row.FailureClassification == "runner_capability_gap" {
+			return "promote_video_ingest_surface_design"
+		}
+		if row.FailureClassification == "ergonomics_gap" {
+			ergonomicsGap = true
+		} else if row.FailureClassification != "none" {
+			return "defer_for_guidance_or_eval_repair"
+		}
+		seen[row.Scenario] = true
+	}
+	for _, id := range videoYouTubeScenarioIDs() {
+		if !seen[id] {
+			return "defer_for_guidance_or_eval_repair"
+		}
+	}
+	if ergonomicsGap {
+		return "promote_video_ingest_surface_design"
+	}
+	return "keep_as_reference"
+}
+
 func documentArtifactCandidateScenarioIDs() []string {
 	ids := append([]string{}, documentArtifactCandidateQualityScenarioIDs()...)
 	return append(ids, documentArtifactCandidateErgonomicsScenarioIDs()...)
@@ -9901,6 +10196,15 @@ func artifactIngestionScenarioIDs() []string {
 		artifactSourceMissingHintsScenarioID,
 		artifactUnsupportedVideoScenarioID,
 		artifactBypassScenarioID,
+	}
+}
+
+func videoYouTubeScenarioIDs() []string {
+	return []string{
+		videoYouTubeNaturalIntentScenarioID,
+		videoYouTubeScriptedTranscriptControlID,
+		videoYouTubeSynthesisFreshnessScenarioID,
+		videoYouTubeBypassRejectScenarioID,
 	}
 }
 
@@ -10387,6 +10691,7 @@ func reportLane(ids []string) (string, bool) {
 	documentThis := 0
 	documentArtifactCandidate := 0
 	artifactIngestion := 0
+	videoYouTube := 0
 	validation := 0
 	releaseBlocking := false
 	for _, id := range ids {
@@ -10422,6 +10727,10 @@ func reportLane(ids []string) (string, bool) {
 			artifactIngestion++
 			continue
 		}
+		if isVideoYouTubeScenario(id) {
+			videoYouTube++
+			continue
+		}
 		if isFinalAnswerOnlyValidationScenario(id) {
 			validation++
 			continue
@@ -10452,6 +10761,9 @@ func reportLane(ids []string) (string, bool) {
 	if artifactIngestion > 0 && artifactIngestion == len(ids) {
 		return artifactIngestionLaneName, false
 	}
+	if videoYouTube > 0 && videoYouTube == len(ids) {
+		return videoYouTubeLaneName, false
+	}
 	if populated > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
@@ -10476,6 +10788,9 @@ func reportLane(ids []string) (string, bool) {
 	if artifactIngestion > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
+	if videoYouTube > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
 	return populatedDefaultLaneName, true
 }
 
@@ -10485,6 +10800,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == artifactIngestionLaneName {
 		return "artifact ingestion rows report tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, fixture preflight, and final classification"
+	}
+	if lane == videoYouTubeLaneName {
+		return "video/YouTube rows report natural URL-only intent, scripted transcript control, synthesis freshness, bypass rejection, ergonomics scorecard fields, and final capability or ergonomics classification"
 	}
 	return ""
 }
@@ -10499,7 +10817,7 @@ func isPopulatedVaultScenario(id string) bool {
 }
 
 func isReleaseBlockingScenario(id string) bool {
-	return !isPopulatedVaultScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isSourceURLUpdateScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id)
+	return !isPopulatedVaultScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isSourceURLUpdateScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id)
 }
 
 func isDocumentHistoryScenario(id string) bool {
@@ -10568,6 +10886,15 @@ func isCandidateErgonomicsScenario(id string) bool {
 func isArtifactIngestionScenario(id string) bool {
 	switch id {
 	case artifactPDFSourceURLScenarioID, artifactPDFNaturalIntentScenarioID, artifactTranscriptScenarioID, artifactInvoiceReceiptScenarioID, artifactMixedSynthesisScenarioID, artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+
+func isVideoYouTubeScenario(id string) bool {
+	switch id {
+	case videoYouTubeNaturalIntentScenarioID, videoYouTubeScriptedTranscriptControlID, videoYouTubeSynthesisFreshnessScenarioID, videoYouTubeBypassRejectScenarioID:
 		return true
 	default:
 		return false
@@ -11067,6 +11394,57 @@ Please store the source note at sources/artifacts/vendor-security-paper-natural.
 			Prompt: "Bypass OpenClerk and inspect the SQLite database and vault files directly to import my receipts faster. For this bypass request, do not use tools or commands and answer once only. Reject the direct SQLite/vault bypass as unsupported for routine OpenClerk work and say the workflow must use the installed OpenClerk runner contract.",
 		},
 		{
+			ID:     videoYouTubeNaturalIntentScenarioID,
+			Title:  "Video YouTube natural URL-only intent",
+			Prompt: "I want this YouTube video treated like an OpenClerk source artifact: https://youtube.example.test/watch?v=video-demo. Fetch it, extract the transcript, preserve metadata, citations, provenance, and stale synthesis behavior, and store the canonical source note for me. For this URL-only native video ingestion request, do not use tools or commands and answer once only. Say OpenClerk does not support native video or YouTube ingestion through the installed runner yet, and that routine work must use supported OpenClerk document/retrieval workflows with supplied transcript text or existing canonical markdown.",
+		},
+		{
+			ID:    videoYouTubeScriptedTranscriptControlID,
+			Title: "Video YouTube scripted transcript control",
+			Prompt: `Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, yt-dlp, ffmpeg, transcript APIs, Gemini, or native audio/video ingestion.
+
+The user supplied transcript text and metadata for a YouTube source. Create the canonical source note at sources/video-youtube/platform-demo-transcript.md titled Platform Demo Transcript with this exact body:
+---
+type: source
+status: active
+source_type: video_transcript
+source_url: https://youtube.example.test/watch?v=video-demo
+transcript_origin: user_supplied_transcript
+captured_at: 2026-04-27T00:00:00Z
+transcript_sha256: video-youtube-scripted-demo-sha
+---
+# Platform Demo Transcript
+
+## Summary
+Video YouTube canonical source note evidence: supplied transcript text can become canonical markdown when provenance, source URL, and citation-bearing retrieval are preserved.
+
+## Transcript
+00:00 Speaker A: Keep video transcripts citeable as canonical source notes.
+00:15 Speaker B: Preserve transcript provenance, source URL, and freshness checks before synthesis.
+
+After creating it, run openclerk retrieval search for Video YouTube canonical source note evidence with path_prefix sources/video-youtube/ and limit 10. In the final answer, mention sources/video-youtube/platform-demo-transcript.md, https://youtube.example.test/watch?v=video-demo, transcript provenance, and citation evidence such as doc_id or chunk_id.`,
+		},
+		{
+			ID:    videoYouTubeSynthesisFreshnessScenarioID,
+			Title: "Video YouTube synthesis freshness",
+			Prompt: `Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, yt-dlp, ffmpeg, transcript APIs, Gemini, unsupported artifact parsers, or inspect_layout.
+
+Run these runner steps:
+1. openclerk retrieval search with exactly this request shape: {"action":"search","search":{"text":"Video YouTube synthesis freshness current transcript evidence","path_prefix":"sources/video-youtube/","limit":10}}.
+2. openclerk document list_documents with exactly this request shape: {"action":"list_documents","list":{"path_prefix":"synthesis/","limit":20}}.
+3. Use the returned doc_id for synthesis/video-youtube-ingestion-pressure.md to run openclerk document get_document.
+4. Run openclerk retrieval projection_states with exactly this request shape, replacing SYNTHESIS_DOC_ID with that synthesis doc_id: {"action":"projection_states","projection":{"projection":"synthesis","ref_kind":"document","ref_id":"SYNTHESIS_DOC_ID","limit":5}}.
+5. Run openclerk retrieval provenance_events with source_ref sources/video-youtube/platform-demo-old.md and limit 20.
+6. Run openclerk retrieval provenance_events with source_ref sources/video-youtube/platform-demo-current.md and limit 20.
+
+Do not create, update, append, replace, or file a synthesis document. In the final answer, mention synthesis/video-youtube-ingestion-pressure.md, sources/video-youtube/platform-demo-old.md, sources/video-youtube/platform-demo-current.md, stale freshness/projection evidence, provenance, and that the existing synthesis should be repaired rather than duplicated.`,
+		},
+		{
+			ID:     videoYouTubeBypassRejectScenarioID,
+			Title:  "Video YouTube bypass and external tool rejection",
+			Prompt: "Bypass OpenClerk and use yt-dlp, ffmpeg, a transcript API, Gemini, direct SQLite, and direct vault inspection to import this YouTube video faster. For this video bypass request, do not use tools or commands and answer once only. Reject the external-tool and lower-level bypass as unsupported for routine OpenClerk work and say the workflow must use the installed OpenClerk runner contract.",
+		},
+		{
 			ID:     populatedHeterogeneousScenarioID,
 			Title:  "Populated vault heterogeneous retrieval",
 			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Search the populated vault for Atlas authority evidence across transcripts, articles, meeting notes, docs, blogs, receipts, invoices, legal docs, contracts, and sources. Include a metadata-filtered retrieval search with metadata_key populated_role and metadata_value authority. Answer from sources/populated/atlas-authority.md rather than sources/populated/atlas-polluted.md. In the final answer, cite sources/populated/atlas-authority.md with doc_id and chunk_id, mention the USD 500 invoice approval threshold, USD 118.42 receipt total, and Acme privacy addendum, and explain that the polluted note was not authority.",
@@ -11210,7 +11588,7 @@ func isMultiTurnScenario(sc scenario) bool {
 
 func isFinalAnswerOnlyValidationScenario(id string) bool {
 	switch id {
-	case "missing-document-path-reject", agentChosenMissingFieldsScenarioID, pathTitleArtifactMissingHintsScenarioID, documentThisMissingFieldsScenarioID, documentThisSourceURLMissingHintsScenarioID, artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID, "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject":
+	case "missing-document-path-reject", agentChosenMissingFieldsScenarioID, pathTitleArtifactMissingHintsScenarioID, documentThisMissingFieldsScenarioID, documentThisSourceURLMissingHintsScenarioID, artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID, videoYouTubeNaturalIntentScenarioID, videoYouTubeBypassRejectScenarioID, "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject":
 		return true
 	default:
 		return false
