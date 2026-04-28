@@ -90,6 +90,10 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedSynthesisCompileRevisit(ctx, cfg); err != nil {
 			return err
 		}
+	case broadAuditNaturalScenarioID, broadAuditScriptedScenarioID:
+		if err := seedBroadContradictionAuditRevisit(ctx, cfg); err != nil {
+			return err
+		}
 	case decisionRecordVsDocsScenarioID:
 		if err := seedDecisionRecordVsDocs(ctx, cfg); err != nil {
 			return err

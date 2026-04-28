@@ -344,12 +344,39 @@ func graphSemanticsRevisitAnswerPass(message string, scripted bool) bool {
 	safeCurrentPrimitives := containsAny(normalized, []string{"current primitives can express", "current document/retrieval primitives can express", "existing primitives can express", "workflow safely", "express the workflow safely"})
 	uxPosture := containsAny(normalized, []string{"ux", "user experience"}) &&
 		containsAny(normalized, []string{"acceptable", "not acceptable", "unacceptable"})
-	if !containsAny(normalized, []string{"capability gap", "ergonomics gap", "neither"}) && !(scripted && safeCurrentPrimitives && uxPosture) {
+	hasGapClassification := containsAny(normalized, []string{"capability gap", "ergonomics gap", "neither"})
+	if !hasGapClassification && (!scripted || !safeCurrentPrimitives || !uxPosture) {
 		return false
 	}
 	if !scripted {
 		return true
 	}
+	return safeCurrentPrimitives && uxPosture
+}
+func broadContradictionAuditAnswerPass(message string, scripted bool) bool {
+	normalized := normalizeValidationMessage(message)
+	requiredEvidence := containsAny(normalized, []string{"search"}) &&
+		containsAny(normalized, []string{"citation", "cited", "source path", "source paths", "source refs", "source_refs"}) &&
+		containsAny(normalized, []string{"provenance"}) &&
+		containsAny(normalized, []string{"projection"}) &&
+		containsAny(normalized, []string{"fresh", "freshness"}) &&
+		containsAny(normalized, []string{"synthesis/audit-runner-routing.md"}) &&
+		containsAny(normalized, []string{"sources/audit-conflict-alpha.md"}) &&
+		containsAny(normalized, []string{"sources/audit-conflict-bravo.md"}) &&
+		containsAny(normalized, []string{"unresolved", "no supersession", "no source authority", "cannot choose", "do not choose"}) &&
+		containsAny(normalized, []string{"reference", "defer", "deferred", "not promote", "do not promote", "not promoted", "keep"})
+	if !requiredEvidence {
+		return false
+	}
+	if !containsAny(normalized, []string{"capability gap", "ergonomics gap", "neither"}) {
+		return false
+	}
+	if !scripted {
+		return true
+	}
+	safeCurrentPrimitives := containsAny(normalized, []string{"current primitives can express", "current document/retrieval primitives can express", "existing primitives can express", "workflow safely", "express the workflow safely"})
+	uxPosture := containsAny(normalized, []string{"ux", "user experience"}) &&
+		containsAny(normalized, []string{"acceptable", "not acceptable", "unacceptable"})
 	return safeCurrentPrimitives && uxPosture
 }
 func messagePromotesGraphSemantics(normalized string) bool {

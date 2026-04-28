@@ -22,11 +22,19 @@ func isRepoDocsDogfoodScenario(id string) bool {
 	}
 }
 func isReleaseBlockingScenario(id string) bool {
-	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isSourceURLUpdateScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id)
+	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isSourceURLUpdateScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isBroadAuditScenario(id)
 }
 func isGraphSemanticsRevisitScenario(id string) bool {
 	switch id {
 	case graphSemanticsNaturalScenarioID, graphSemanticsScriptedScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+func isBroadAuditScenario(id string) bool {
+	switch id {
+	case broadAuditNaturalScenarioID, broadAuditScriptedScenarioID:
 		return true
 	default:
 		return false
@@ -156,6 +164,16 @@ func allScenarios() []scenario {
 			ID:     graphSemanticsScriptedScenarioID,
 			Title:  "Graph semantics revisit scripted control",
 			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or unsupported actions. First run openclerk retrieval search for graph semantics requires supersedes related operationalizes with limit 10. Then run openclerk document list_documents with path_prefix notes/graph/semantics/ and limit 10. Use the returned doc_id for notes/graph/semantics/index.md to run get_document, and use its relationship wording in your analysis. Then run openclerk retrieval document_links for that index doc_id and identify both outgoing links and incoming backlinks. Then run openclerk retrieval graph_neighborhood for that index doc_id with limit 20, and inspect projection_states with projection graph, ref_kind document, and that index doc_id. Do not create or update documents. In the final answer, explicitly mention search, markdown relationship text, document_links, incoming backlinks, graph_neighborhood, graph projection freshness, canonical markdown citations, whether current primitives can express the workflow safely, whether the current UX is acceptable, and this decision: keep richer graph semantics as a reference/deferred pattern, do not promote a semantic-label graph layer, and keep graph behavior derived from canonical markdown citations.",
+		},
+		{
+			ID:     broadAuditNaturalScenarioID,
+			Title:  "Broad contradiction/audit revisit natural intent",
+			Prompt: "Use the configured local OpenClerk data path. I need to decide whether broad contradiction/audit should become a promoted OpenClerk surface. Stay inside installed OpenClerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or unsupported actions. Audit the current source-sensitive evidence: repair the stale audit synthesis only if runner-visible current source authority supports it, preserve source refs and freshness, and also explain the unresolved retention conflict without choosing a winner when both sources are current. In the final answer, say whether this evidence shows a capability gap, an ergonomics gap, both, or neither; mention search, source paths or citations, provenance, projection freshness, the repaired synthesis path, the conflicting source paths, and whether to keep broad contradiction/audit reference/deferred rather than promote a broad semantic contradiction engine.",
+		},
+		{
+			ID:     broadAuditScriptedScenarioID,
+			Title:  "Broad contradiction/audit revisit scripted control",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or unsupported actions. First run openclerk retrieval search for source-sensitive audit runner repair evidence with limit 10. Then run openclerk document list_documents with path_prefix synthesis/ and limit 20. Use the returned doc_id for synthesis/audit-runner-routing.md to run get_document. Inspect projection_states for projection synthesis with ref_kind document and that synthesis doc_id, and inspect provenance_events for ref_kind projection with ref_id synthesis:SYNTHESIS_DOC_ID. Repair synthesis/audit-runner-routing.md only with replace_section or append_document; do not create a duplicate. Preserve the existing single-line source_refs for sources/audit-runner-current.md and sources/audit-runner-old.md. The repaired body must state: Current audit guidance: use the installed openclerk JSON runner; Current source: sources/audit-runner-current.md; Superseded source: sources/audit-runner-old.md. Keep ## Sources and ## Freshness. After repair, inspect projection_states again. Then run openclerk retrieval search for source sensitive audit conflict runner retention with limit 10 and inspect provenance_events for both sources/audit-conflict-alpha.md and sources/audit-conflict-bravo.md. Do not create any synthesis for the conflict. In the final answer, mention synthesis/audit-runner-routing.md, sources/audit-runner-current.md, sources/audit-conflict-alpha.md, sources/audit-conflict-bravo.md, provenance, projection freshness, that the seven-day vs thirty-day conflict is unresolved because both sources are current with no source authority, whether current primitives can express the workflow safely, whether the current UX is acceptable, and this decision: keep broad contradiction/audit as reference/deferred rather than promote a broad semantic contradiction engine.",
 		},
 		{
 			ID:    memoryRouterScenarioID,

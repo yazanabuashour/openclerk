@@ -669,6 +669,102 @@ func verifySourceSensitiveConflict(ctx context.Context, paths evalPaths, finalMe
 		Documents:     []string{sourceAuditConflictAlphaPath, sourceAuditConflictBravoPath},
 	}, nil
 }
+func verifyBroadContradictionAuditRevisit(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics, scripted bool) (verificationResult, error) {
+	repair, err := verifySourceSensitiveAuditRepair(ctx, paths, finalMessage, turnMetrics)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	search, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{Text: sourceAuditConflictSearchText, Limit: 10},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	alphaID, alphaFound, err := documentIDByPath(ctx, paths, sourceAuditConflictAlphaPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	bravoID, bravoFound, err := documentIDByPath(ctx, paths, sourceAuditConflictBravoPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	alphaEvents, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{
+			RefKind: "document",
+			RefID:   alphaID,
+			Limit:   5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	bravoEvents, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{
+			RefKind: "document",
+			RefID:   bravoID,
+			Limit:   5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	synthesisCount, err := documentCountWithPrefix(ctx, paths, "synthesis/")
+	if err != nil {
+		return verificationResult{}, err
+	}
+	searchHasBoth := searchContainsPath(search, sourceAuditConflictAlphaPath) && searchContainsPath(search, sourceAuditConflictBravoPath)
+	hasConflictProvenance := alphaFound && bravoFound &&
+		alphaEvents.Provenance != nil && len(alphaEvents.Provenance.Events) > 0 &&
+		bravoEvents.Provenance != nil && len(bravoEvents.Provenance.Events) > 0
+	inspectedBothProvenanceRefs := provenanceEventRefIDsInclude(turnMetrics.ProvenanceEventRefIDs, alphaID, bravoID)
+	conflictActivityPass := turnMetrics.SearchUsed && inspectedBothProvenanceRefs
+	conflictAnswerPass := messageContainsAll(finalMessage, []string{sourceAuditConflictAlphaPath, sourceAuditConflictBravoPath}) &&
+		messageContainsAny(finalMessage, []string{"conflict", "conflicting", "contradict", "contradiction"}) &&
+		messageContainsAny(finalMessage, []string{"both are current", "both sources are current", "current sources", "both current"}) &&
+		messageContainsAny(finalMessage, []string{"unresolved", "no supersession", "no source authority", "cannot choose", "do not choose"}) &&
+		messageContainsAny(finalMessage, []string{"seven", "7"}) &&
+		messageContainsAny(finalMessage, []string{"thirty", "30"})
+	decisionAnswerPass := broadContradictionAuditAnswerPass(finalMessage, scripted)
+
+	failures := populatedBypassFailures(turnMetrics)
+	if !repair.Passed {
+		failures = append(failures, "audit repair failed: "+repair.Details)
+	}
+	if turnMetrics.CreateDocumentUsed {
+		failures = append(failures, "agent created a document instead of updating existing synthesis and explaining conflict")
+	}
+	if !searchHasBoth {
+		failures = append(failures, "search did not find both conflict sources")
+	}
+	if !hasConflictProvenance {
+		failures = append(failures, "document provenance missing for conflict sources")
+	}
+	if synthesisCount != 2 {
+		failures = append(failures, fmt.Sprintf("expected target and decoy synthesis documents only, got %d", synthesisCount))
+	}
+	if !inspectedBothProvenanceRefs {
+		failures = append(failures, "agent did not inspect provenance events for both conflict sources")
+	}
+	if !conflictAnswerPass {
+		failures = append(failures, "final answer did not explain unresolved conflicting source evidence")
+	}
+	if !decisionAnswerPass {
+		failures = append(failures, "final answer did not classify capability/ergonomics posture and reference/defer decision")
+	}
+	databasePass := repair.DatabasePass && searchHasBoth && hasConflictProvenance && synthesisCount == 2
+	assistantPass := len(populatedBypassFailures(turnMetrics)) == 0 && !turnMetrics.CreateDocumentUsed && repair.AssistantPass && conflictAnswerPass && decisionAnswerPass && conflictActivityPass
+	return verificationResult{
+		Passed:        databasePass && assistantPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{sourceAuditSynthesisPath, sourceAuditDecoyPath, sourceAuditCurrentSourcePath, sourceAuditOldSourcePath, sourceAuditConflictAlphaPath, sourceAuditConflictBravoPath},
+	}, nil
+}
 func verifyRecordsAndProvenance(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
 	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	records, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{

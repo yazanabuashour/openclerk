@@ -97,7 +97,7 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	if releaseBlocking {
 		return nil
 	}
-	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != documentHistoryLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != sourceURLUpdateLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName {
+	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != documentHistoryLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != sourceURLUpdateLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName && lane != broadAuditLaneName {
 		return nil
 	}
 	summary := targetedLaneSummary{
@@ -148,6 +148,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		case synthesisCompileLaneName:
 			include = isSynthesisCompileScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
 			classification, posture = classifyTargetedSynthesisCompileResult(result)
+		case broadAuditLaneName:
+			include = isBroadAuditScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
+			classification, posture = classifyTargetedBroadAuditResult(result)
 		}
 		if !include {
 			continue
@@ -220,6 +223,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	case synthesisCompileLaneName:
 		summary.Decision = synthesisCompileDecision(summary.ScenarioClassifications)
 		summary.Promotion = "targeted evidence only; no compile_synthesis runner action, schema, migration, storage behavior, direct vault behavior, or public API change from this eval"
+	case broadAuditLaneName:
+		summary.Decision = broadAuditDecision(summary.ScenarioClassifications)
+		summary.Promotion = "targeted broad contradiction/audit revisit evidence only; no broad semantic contradiction engine, audit runner action, schema, migration, storage behavior, or public API change from this eval"
 	}
 	return &summary
 }
@@ -348,6 +354,39 @@ func classifyTargetedSynthesisCompileResult(result jobResult) (string, string) {
 	}
 	return "ergonomics_gap", "manual review required before any compile_synthesis promotion"
 }
+func classifyTargetedBroadAuditResult(result jobResult) (string, string) {
+	if isFinalAnswerOnlyValidationScenario(result.Scenario) {
+		if result.Passed && result.Verification.Passed {
+			return "none", "validation control stayed final-answer-only"
+		}
+		if result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1 {
+			return "skill_guidance_or_eval_coverage", "validation pressure did not stay final-answer-only"
+		}
+		return "skill_guidance_or_eval_coverage", "validation answer did not satisfy the rejection contract"
+	}
+	if result.Passed && result.Verification.Passed {
+		return "none", "current document/retrieval workflow preserved audit source authority, citations/source paths, provenance/freshness checks, unresolved-conflict handling, duplicate prevention, and bypass boundaries"
+	}
+	if len(populatedBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Verification.Passed {
+		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
+	}
+	if result.Scenario == broadAuditScriptedScenarioID && !result.Verification.DatabasePass {
+		return "capability_gap", "scripted current-primitives control could not safely express broad contradiction/audit workflow"
+	}
+	if result.Scenario == broadAuditNaturalScenarioID && !result.Verification.Passed {
+		return "ergonomics_gap", "natural broad contradiction/audit revisit intent did not complete the safe current-primitives workflow"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "fixture or durable audit evidence did not satisfy broad contradiction/audit revisit pressure"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible audit evidence existed, but the assistant answer or required runner steps did not satisfy the scenario"
+	}
+	return "ergonomics_gap", "manual review required before any broad contradiction/audit promotion"
+}
 func promptSpecificity(scenarioID string) string {
 	switch scenarioID {
 	case graphSemanticsNaturalScenarioID:
@@ -373,6 +412,10 @@ func promptSpecificity(scenarioID string) string {
 	case synthesisCompileNaturalScenarioID:
 		return "natural-user-intent"
 	case synthesisCompileScriptedScenarioID:
+		return "scripted-control"
+	case broadAuditNaturalScenarioID:
+		return "natural-user-intent"
+	case broadAuditScriptedScenarioID:
 		return "scripted-control"
 	default:
 		return "scenario-specific"
@@ -472,12 +515,19 @@ func scenarioGuidanceDependence(result jobResult) string {
 		return "high_if_natural_prompt_failed"
 	case synthesisCompileScriptedScenarioID:
 		return "high_exact_request_shape"
+	case broadAuditNaturalScenarioID:
+		if result.Passed {
+			return "low_natural_user_intent"
+		}
+		return "high_if_natural_prompt_failed"
+	case broadAuditScriptedScenarioID:
+		return "high_exact_request_shape"
 	default:
 		return "scenario_prompt"
 	}
 }
 func scenarioSafetyRisks(result jobResult) string {
-	if isSynthesisCompileScenario(result.Scenario) && result.Metrics.CreateDocumentUsed {
+	if (isSynthesisCompileScenario(result.Scenario) || isBroadAuditScenario(result.Scenario)) && result.Metrics.CreateDocumentUsed {
 		return "duplicate_or_unexpected_create"
 	}
 	if result.Metrics.CreateDocumentUsed && result.Scenario != videoYouTubeScriptedTranscriptControlID && result.Scenario != documentHistoryPendingScenarioID {
@@ -844,6 +894,36 @@ func synthesisCompileDecision(rows []targetedScenarioClassification) string {
 	}
 	return "defer_compile_synthesis"
 }
+func broadAuditDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	ergonomicsGaps := 0
+	hasCapabilityGap := false
+	for _, row := range rows {
+		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
+			hasCapabilityGap = true
+		} else if row.FailureClassification == "ergonomics_gap" {
+			ergonomicsGaps++
+		} else if row.FailureClassification != "none" {
+			return "defer_for_guidance_or_eval_repair"
+		}
+		seen[row.Scenario] = true
+	}
+	for _, id := range broadAuditScenarioIDs() {
+		if !seen[id] {
+			return "defer_for_guidance_or_eval_repair"
+		}
+	}
+	if hasCapabilityGap {
+		return "promote_broad_contradiction_audit_surface_design"
+	}
+	if ergonomicsGaps >= 2 {
+		return "promote_broad_contradiction_audit_surface_design"
+	}
+	if ergonomicsGaps > 0 {
+		return "defer_for_guidance_or_eval_repair"
+	}
+	return "keep_as_reference"
+}
 func documentArtifactCandidateScenarioIDs() []string {
 	ids := append([]string{}, documentArtifactCandidateQualityScenarioIDs()...)
 	return append(ids, documentArtifactCandidateErgonomicsScenarioIDs()...)
@@ -907,6 +987,12 @@ func graphSemanticsRevisitScenarioIDs() []string {
 	return []string{
 		graphSemanticsNaturalScenarioID,
 		graphSemanticsScriptedScenarioID,
+	}
+}
+func broadAuditScenarioIDs() []string {
+	return []string{
+		broadAuditNaturalScenarioID,
+		broadAuditScriptedScenarioID,
 	}
 }
 func productionScenariosDetails(passed int, total int, missing []string) string {
@@ -1085,6 +1171,7 @@ func reportLane(ids []string) (string, bool) {
 	artifactIngestion := 0
 	videoYouTube := 0
 	synthesisCompile := 0
+	broadAudit := 0
 	validation := 0
 	releaseBlocking := false
 	for _, id := range ids {
@@ -1136,6 +1223,10 @@ func reportLane(ids []string) (string, bool) {
 			synthesisCompile++
 			continue
 		}
+		if isBroadAuditScenario(id) {
+			broadAudit++
+			continue
+		}
 		if isFinalAnswerOnlyValidationScenario(id) {
 			validation++
 			continue
@@ -1178,6 +1269,9 @@ func reportLane(ids []string) (string, bool) {
 	if synthesisCompile > 0 && synthesisCompile+validation == len(ids) {
 		return synthesisCompileLaneName, false
 	}
+	if broadAudit > 0 && broadAudit+validation == len(ids) {
+		return broadAuditLaneName, false
+	}
 	if populated > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
@@ -1214,6 +1308,9 @@ func reportLane(ids []string) (string, bool) {
 	if synthesisCompile > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
+	if broadAudit > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
 	return populatedDefaultLaneName, true
 }
 func targetedAcceptanceNote(lane string) string {
@@ -1237,6 +1334,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == synthesisCompileLaneName {
 		return "synthesis compile revisit rows report natural compile intent, scripted current-primitives control, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"
+	}
+	if lane == broadAuditLaneName {
+		return "broad contradiction/audit revisit rows report natural audit intent, scripted current-primitives control, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"
 	}
 	return ""
 }

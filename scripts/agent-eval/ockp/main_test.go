@@ -1018,6 +1018,55 @@ func TestGraphSemanticsRevisitDecisionRequiresRepeatedEvidence(t *testing.T) {
 	}
 }
 
+func TestBroadAuditDecisionRequiresRepeatedEvidence(t *testing.T) {
+	rows := make([]targetedScenarioClassification, 0, len(broadAuditScenarioIDs()))
+	for _, id := range broadAuditScenarioIDs() {
+		rows = append(rows, targetedScenarioClassification{
+			Scenario:              id,
+			FailureClassification: "none",
+		})
+	}
+	if decision := broadAuditDecision(rows[:len(rows)-1]); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("partial decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	rows[0].FailureClassification = "capability_gap"
+	if decision := broadAuditDecision(rows[:len(rows)-1]); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("partial capability decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	rows[0].FailureClassification = "none"
+	if decision := broadAuditDecision(rows); decision != "keep_as_reference" {
+		t.Fatalf("complete passing decision = %q, want keep_as_reference", decision)
+	}
+	rows[0].FailureClassification = "ergonomics_gap"
+	if decision := broadAuditDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("single ergonomics decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	rows[1].FailureClassification = "ergonomics_gap"
+	if decision := broadAuditDecision(rows); decision != "promote_broad_contradiction_audit_surface_design" {
+		t.Fatalf("repeated ergonomics decision = %q, want promote_broad_contradiction_audit_surface_design", decision)
+	}
+	rows[0].FailureClassification = "capability_gap"
+	rows[1].FailureClassification = "none"
+	if decision := broadAuditDecision(rows); decision != "promote_broad_contradiction_audit_surface_design" {
+		t.Fatalf("capability decision = %q, want promote_broad_contradiction_audit_surface_design", decision)
+	}
+	rows[0].FailureClassification = "skill_guidance_or_eval_coverage"
+	if decision := broadAuditDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("guidance decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+}
+
+func TestBroadContradictionAuditAnswerRequiresProjectionFreshness(t *testing.T) {
+	message := "Search found source paths and citations. Updated synthesis/audit-runner-routing.md from sources/audit-runner-current.md; provenance and projection freshness are fresh. sources/audit-conflict-alpha.md says seven days and sources/audit-conflict-bravo.md says thirty days. Both sources are current, the conflict is unresolved because there is no source authority, and I cannot choose a winner. Neither a capability gap nor an ergonomics gap is proven. Current primitives can express the workflow safely, the UX is acceptable enough, and the decision is keep broad contradiction/audit reference/deferred, do not promote a broad semantic contradiction engine."
+	if !broadContradictionAuditAnswerPass(message, true) {
+		t.Fatalf("complete broad audit answer did not pass")
+	}
+	withoutProjection := strings.ReplaceAll(message, "projection freshness", "freshness")
+	if broadContradictionAuditAnswerPass(withoutProjection, true) {
+		t.Fatalf("broad audit answer passed without projection freshness")
+	}
+}
+
 func TestDocumentHistoryPromptSpecificityLabelsNaturalAndScriptedRows(t *testing.T) {
 	if got := promptSpecificity(graphSemanticsNaturalScenarioID); got != "natural-user-intent" {
 		t.Fatalf("natural graph semantics prompt specificity = %q, want natural-user-intent", got)
@@ -1027,6 +1076,12 @@ func TestDocumentHistoryPromptSpecificityLabelsNaturalAndScriptedRows(t *testing
 	}
 	if got := promptSpecificity(documentHistoryNaturalScenarioID); got != "natural-user-intent" {
 		t.Fatalf("natural document history prompt specificity = %q, want natural-user-intent", got)
+	}
+	if got := promptSpecificity(broadAuditNaturalScenarioID); got != "natural-user-intent" {
+		t.Fatalf("natural broad audit prompt specificity = %q, want natural-user-intent", got)
+	}
+	if got := promptSpecificity(broadAuditScriptedScenarioID); got != "scripted-control" {
+		t.Fatalf("scripted broad audit prompt specificity = %q, want scripted-control", got)
 	}
 	for _, id := range []string{
 		documentHistoryInspectScenarioID,
@@ -2085,7 +2140,7 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 	for _, id := range scenarioIDs() {
 		ids[id] = true
 	}
-	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, graphSemanticsScenarioID, graphSemanticsNaturalScenarioID, graphSemanticsScriptedScenarioID, memoryRouterScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, sourceURLUpdateDuplicateScenarioID, sourceURLUpdateSameSHAScenarioID, sourceURLUpdateChangedScenarioID, sourceURLUpdateConflictScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, synthesisCompileNaturalScenarioID, synthesisCompileScriptedScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, documentHistoryNaturalScenarioID, documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID, populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID, agentChosenExplicitScenarioID, agentChosenMissingFieldsScenarioID, agentChosenPathProposalScenarioID, agentChosenAutonomousScenarioID, agentChosenSynthesisScenarioID, agentChosenAmbiguousScenarioID, agentChosenUserPathScenarioID, pathTitleURLOnlyScenarioID, pathTitleArtifactMissingHintsScenarioID, pathTitleMultiSourceDuplicateScenarioID, pathTitleExplicitOverridesScenarioID, pathTitleDuplicateRiskScenarioID, pathTitleMetadataAuthorityScenarioID, documentThisMissingFieldsScenarioID, documentThisExplicitCreateScenarioID, documentThisSourceURLMissingHintsScenarioID, documentThisExplicitOverridesScenarioID, documentThisDuplicateCandidateScenarioID, documentThisExistingUpdateScenarioID, documentThisSynthesisFreshnessScenarioID, candidateNoteFromPastedContentScenarioID, candidateTitleAndPathFromHeadingScenarioID, candidateMixedSourceSummaryScenarioID, candidateExplicitOverridesWinScenarioID, candidateDuplicateRiskAsksScenarioID, candidateLowConfidenceAsksScenarioID, candidateBodyFaithfulnessScenarioID, artifactPDFSourceURLScenarioID, artifactPDFNaturalIntentScenarioID, artifactTranscriptScenarioID, artifactInvoiceReceiptScenarioID, artifactMixedSynthesisScenarioID, artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID, videoYouTubeNaturalIntentScenarioID, videoYouTubeScriptedTranscriptControlID, videoYouTubeSynthesisFreshnessScenarioID, videoYouTubeBypassRejectScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
+	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, graphSemanticsScenarioID, graphSemanticsNaturalScenarioID, graphSemanticsScriptedScenarioID, broadAuditNaturalScenarioID, broadAuditScriptedScenarioID, memoryRouterScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, sourceURLUpdateDuplicateScenarioID, sourceURLUpdateSameSHAScenarioID, sourceURLUpdateChangedScenarioID, sourceURLUpdateConflictScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, synthesisCompileNaturalScenarioID, synthesisCompileScriptedScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, documentHistoryNaturalScenarioID, documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID, populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID, agentChosenExplicitScenarioID, agentChosenMissingFieldsScenarioID, agentChosenPathProposalScenarioID, agentChosenAutonomousScenarioID, agentChosenSynthesisScenarioID, agentChosenAmbiguousScenarioID, agentChosenUserPathScenarioID, pathTitleURLOnlyScenarioID, pathTitleArtifactMissingHintsScenarioID, pathTitleMultiSourceDuplicateScenarioID, pathTitleExplicitOverridesScenarioID, pathTitleDuplicateRiskScenarioID, pathTitleMetadataAuthorityScenarioID, documentThisMissingFieldsScenarioID, documentThisExplicitCreateScenarioID, documentThisSourceURLMissingHintsScenarioID, documentThisExplicitOverridesScenarioID, documentThisDuplicateCandidateScenarioID, documentThisExistingUpdateScenarioID, documentThisSynthesisFreshnessScenarioID, candidateNoteFromPastedContentScenarioID, candidateTitleAndPathFromHeadingScenarioID, candidateMixedSourceSummaryScenarioID, candidateExplicitOverridesWinScenarioID, candidateDuplicateRiskAsksScenarioID, candidateLowConfidenceAsksScenarioID, candidateBodyFaithfulnessScenarioID, artifactPDFSourceURLScenarioID, artifactPDFNaturalIntentScenarioID, artifactTranscriptScenarioID, artifactInvoiceReceiptScenarioID, artifactMixedSynthesisScenarioID, artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID, videoYouTubeNaturalIntentScenarioID, videoYouTubeScriptedTranscriptControlID, videoYouTubeSynthesisFreshnessScenarioID, videoYouTubeBypassRejectScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
 		if !ids[want] {
 			t.Fatalf("scenarioIDs missing %q in %v", want, scenarioIDs())
 		}
@@ -2152,6 +2207,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 			t.Fatalf("default selected scenarios included targeted graph semantics revisit scenario %q", id)
 		}
 	}
+	for _, id := range broadAuditScenarioIDs() {
+		if defaultIDs[id] {
+			t.Fatalf("default selected scenarios included targeted broad audit scenario %q", id)
+		}
+	}
 	selected := selectedScenarioIDs(runConfig{Scenario: populatedHeterogeneousScenarioID + "," + populatedFreshnessConflictScenarioID + "," + populatedSynthesisUpdateScenarioID})
 	lane, releaseBlocking := reportLane(selected)
 	if lane != populatedLaneName || releaseBlocking {
@@ -2206,6 +2266,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	lane, releaseBlocking = reportLane(selected)
 	if lane != graphSemanticsRevisitLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, graphSemanticsRevisitLaneName)
+	}
+	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(append(broadAuditScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject"), ",")})
+	lane, releaseBlocking = reportLane(selected)
+	if lane != broadAuditLaneName || releaseBlocking {
+		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, broadAuditLaneName)
 	}
 }
 
@@ -3413,6 +3478,57 @@ func TestVerifySourceSensitiveConflictRequiresUnresolvedExplanationAndNoSynthesi
 	}
 	if result.Passed {
 		t.Fatalf("source audit conflict passed after creating synthesis: %+v", result)
+	}
+}
+
+func TestVerifyBroadContradictionAuditRevisitRequiresRepairConflictAndDecision(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: broadAuditScriptedScenarioID}); err != nil {
+		t.Fatalf("seed broad audit scenario: %v", err)
+	}
+	alphaID, alphaFound, err := documentIDByPath(ctx, paths, sourceAuditConflictAlphaPath)
+	if err != nil {
+		t.Fatalf("lookup alpha id: %v", err)
+	}
+	bravoID, bravoFound, err := documentIDByPath(ctx, paths, sourceAuditConflictBravoPath)
+	if err != nil {
+		t.Fatalf("lookup bravo id: %v", err)
+	}
+	if !alphaFound || !bravoFound {
+		t.Fatalf("missing conflict source ids: alpha=%v bravo=%v", alphaFound, bravoFound)
+	}
+	noTools := metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}}
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: broadAuditScriptedScenarioID}, 1, "Updated "+sourceAuditSynthesisPath+".", noTools)
+	if err != nil {
+		t.Fatalf("verify broad audit before repair: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("broad audit passed before repair: %+v", result)
+	}
+
+	replaceSeedSection(t, ctx, paths, sourceAuditSynthesisPath, "Summary", "Current audit guidance: use the installed openclerk JSON runner.\n\nCurrent source: "+sourceAuditCurrentSourcePath+"\n\nSuperseded source: "+sourceAuditOldSourcePath)
+	replaceSeedSection(t, ctx, paths, sourceAuditSynthesisPath, "Freshness", "Checked provenance events and synthesis projection freshness after the current source update.")
+	workflowMetrics := metrics{
+		AssistantCalls:        1,
+		SearchUsed:            true,
+		ListDocumentsUsed:     true,
+		GetDocumentUsed:       true,
+		ProjectionStatesUsed:  true,
+		ProvenanceEventsUsed:  true,
+		ReplaceSectionUsed:    true,
+		ProvenanceEventRefIDs: []string{alphaID, bravoID},
+		EventTypeCounts:       map[string]int{},
+		CommandExecutions:     8,
+		ToolCalls:             8,
+	}
+	finalAnswer := "Search found source paths and citations. Updated " + sourceAuditSynthesisPath + " from " + sourceAuditCurrentSourcePath + "; provenance and projection freshness are fresh. " + sourceAuditConflictAlphaPath + " says seven days; " + sourceAuditConflictBravoPath + " says thirty days. Both sources are current, the conflict is unresolved because there is no source authority, and I cannot choose a winner. Neither a capability gap nor an ergonomics gap is proven. Current primitives can express the workflow safely, the UX is acceptable enough, and the decision is keep broad contradiction/audit reference/deferred, do not promote a broad semantic contradiction engine."
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: broadAuditScriptedScenarioID}, 1, finalAnswer, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify broad audit after repair: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("broad audit failed after repair: %+v", result)
 	}
 }
 

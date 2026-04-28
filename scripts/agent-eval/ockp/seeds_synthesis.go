@@ -501,3 +501,9 @@ Bravo current source says source sensitive audit conflict runner retention shoul
 `) + "\n"
 	return createSeedDocument(ctx, cfg, sourceAuditConflictBravoPath, "Audit Conflict Bravo", bravoBody)
 }
+func seedBroadContradictionAuditRevisit(ctx context.Context, cfg runclient.Config) error {
+	if err := seedSourceSensitiveAuditRepair(ctx, cfg); err != nil {
+		return err
+	}
+	return seedSourceSensitiveConflict(ctx, cfg)
+}
