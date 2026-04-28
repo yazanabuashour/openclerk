@@ -102,8 +102,8 @@ compatibility review.
 ## Decision
 
 Defer document history and review controls. Keep the refreshed lane as
-reference pressure and repair guidance/eval gaps before reconsidering
-promotion.
+reference pressure; the latest minimized guidance repair shows promotion is not
+needed from this evidence.
 
 The refreshed report
 [`../evals/results/ockp-document-lifecycle-pressure.md`](../evals/results/ockp-document-lifecycle-pressure.md)
@@ -115,14 +115,14 @@ evaluated both accepted promotion paths:
   `openclerk retrieval` workflows can express those tasks while preserving
   source refs, provenance, freshness, privacy, local-first operation, and
   no-bypass boundaries.
-- **Ergonomics path:** defer for repair. The latest guidance repair improved
-  parts of the lane, but the committed full run still classified natural
-  lifecycle intent as `ergonomics_gap` after 12 tools/commands, 4 assistant
-  calls, and 38.70 wall seconds. Diff review remained `skill_guidance`, and
-  pending review was reclassified as `data_hygiene` durable-target pressure
-  after final-answer guidance passed. That is real pressure but not enough to
-  promote a new public runner surface before additional guidance/eval repair
-  and repeated evidence.
+- **Ergonomics path:** no promotion. The final minimized guidance variant
+  passed natural lifecycle intent with `none` failure classification after 40
+  tools/commands, 6 assistant calls, and 76.40 wall seconds. The workflow is
+  still multi-step and remains useful reference pressure, but it completed
+  without bypasses, raw private diff leakage, source-ref loss, provenance loss,
+  or freshness loss. Earlier smaller variants failed or regressed, so the
+  retained 312-line skill is the smallest tried variant that preserved the
+  lane.
 
 No public runner action, request or response schema, storage migration, storage
 API, semantic history table, review queue, rollback API, or public OpenClerk

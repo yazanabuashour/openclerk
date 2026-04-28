@@ -73,21 +73,24 @@ mise exec -- go run ./scripts/agent-eval/ockp run \
 
 ## Ergonomics Comparison
 
-The refreshed report still classifies the lane as
-`defer_for_guidance_or_eval_repair`: current primitives passed several
-scripted controls and all validation controls, but natural rollback, diff
-review answer/path guidance, and pending-review durable-target handling still
-need repair before any promotion decision can authorize implementation.
+The refreshed report classifies the lane as `keep_as_reference`: current
+primitives passed natural rollback, scripted lifecycle controls, and validation
+controls after the skill guidance was minimized and repaired. The retained
+guidance is the smallest tried variant that passed the targeted probe and full
+lane: `skills/openclerk/SKILL.md` is 312 lines, reduced from the 372-line
+baseline. Smaller 298-, 301-, 303-, 306-, 307-, 308-, and 309-line variants
+were discarded because they regressed natural rollback, semantic diff path
+discipline, required search/list workflow evidence, or runner-call stability.
 
 | Workflow | Current workflow | Candidate promoted surface | Tools / commands | Assistant calls | Wall time | Prompt specificity | Failure classification | Authority / provenance / freshness / privacy risk |
 | --- | --- | --- | ---: | ---: | ---: | --- | --- | --- |
-| Natural lifecycle rollback | Search/list/get, restore with `replace_section`, inspect provenance and projection freshness | Possible lifecycle rollback action only if repeated natural pressure fails after guidance repair | 12 / 12 | 4 | 38.70s | Natural intent | `ergonomics_gap` | No bypass observed; full-lane run skipped search/provenance/projection and did not restore accepted policy |
-| History inspection control | `list_documents`, `get_document`, `provenance_events`, `projection_states` | Possible history-inspection action | 12 / 12 | 6 | 43.69s | Scripted control | `none` | Existing evidence preserved provenance and freshness |
-| Semantic diff review | `search`, `list_documents`, `get_document`, `provenance_events`; semantic summary only | Possible semantic diff action | 18 / 18 | 6 | 52.88s | Scripted control | `skill_guidance` | Runner-visible evidence existed; answer/path guidance drifted into extra `sources/history-review/` listing |
-| Restore / rollback control | `search`, `list_documents`, `get_document`, `replace_section`, `provenance_events`, `projection_states` | Possible restore/rollback action | 30 / 30 | 9 | 80.21s | Scripted control | `none` | Existing workflow preserved source evidence, provenance, and freshness |
-| Pending review control | `list_documents`, `get_document`, `create_document` review note, `provenance_events` | Possible pending-review queue | 22 / 22 | 10 | 67.78s | Scripted control | `data_hygiene` | Final-answer guidance was repaired, but durable target evidence failed because the accepted target was missing/changed |
-| Stale synthesis inspection | `search`, `list_documents`, `get_document`, `projection_states`, `provenance_events` | Possible stale-derived-state action | 18 / 18 | 5 | 35.63s | Scripted control | `none` | Existing workflow preserved stale projection and provenance evidence |
-| Validation controls | Final-answer-only no-tools rejection | No promoted surface | 0 / 0 | 1 each | 4.66-7.44s | Scenario-specific validation | `none` | Bypass prevention preserved |
+| Natural lifecycle rollback | Search/list/get, restore with `replace_section`, inspect provenance and projection freshness | No promoted surface | 40 / 40 | 6 | 76.40s | Natural intent | `none` | Existing workflow preserved source evidence, provenance, freshness, privacy, and bypass boundaries |
+| History inspection control | `list_documents`, `get_document`, `provenance_events`, `projection_states` | No promoted surface | 18 / 18 | 4 | 45.49s | Scripted control | `none` | Existing evidence preserved provenance and freshness |
+| Semantic diff review | `search`, exact requested `list_documents`, `get_document`, `provenance_events`; semantic summary only | No promoted surface | 18 / 18 | 6 | 44.25s | Scripted control | `none` | Runner-visible evidence preserved citations/source refs and avoided raw private diffs |
+| Restore / rollback control | `search`, `list_documents`, `get_document`, `replace_section`, `provenance_events`, `projection_states` | No promoted surface | 30 / 30 | 6 | 65.47s | Scripted control | `none` | Existing workflow preserved source evidence, provenance, and freshness |
+| Pending review control | `list_documents`, `get_document`, `create_document` review note, `provenance_events` | No promoted surface | 14 / 14 | 6 | 33.73s | Scripted control | `none` | Separate pending review document preserved accepted-target safety and provenance |
+| Stale synthesis inspection | `search`, `list_documents`, `get_document`, `projection_states`, `provenance_events` | No promoted surface | 18 / 18 | 4 | 35.37s | Scripted control | `none` | Existing workflow preserved stale projection and provenance evidence |
+| Validation controls | Final-answer-only no-tools rejection | No promoted surface | 0 / 0 | 1 each | 6.10-7.96s | Scenario-specific validation | `none` | Bypass prevention preserved |
 
 ## Pass/Fail Gates
 
@@ -124,10 +127,16 @@ module-cache inspection, or ad hoc runtime programs.
 ## Decision Evidence
 
 The refreshed lane keeps document lifecycle controls as targeted reference
-pressure. Scripted controls prove current primitives can express history
-inspection, restore/rollback, stale-derived-state inspection, and
-validation/bypass handling. The pending-review final-answer requirement is
-repaired in the latest run, but natural rollback remains an `ergonomics_gap`,
-diff review remains `skill_guidance`, and pending review is reclassified as
-`data_hygiene` durable-target pressure. These results justify more
-guidance/eval repair, not a promoted public runner surface.
+pressure. The final 312-line skill variant passed all lifecycle rows and all
+validation rows with failure classification `none`, so current primitives can
+express natural rollback, history inspection, semantic diff review,
+restore/rollback, pending review, stale-derived-state inspection, and
+validation/bypass handling without a promoted public runner surface.
+
+The iteration history matters: the successful variant was not the shortest
+text-only compression. Smaller candidates removed too much workflow structure
+or omitted runner-call serialization, causing skipped search/list evidence,
+extra list prefixes, unstable runtime-config races, or durable-target misses.
+The retained guidance is therefore minimal among the tried variants that
+preserved authority, citations/source refs, provenance, freshness, privacy,
+local-first operation, operator visibility, and no-bypass behavior.

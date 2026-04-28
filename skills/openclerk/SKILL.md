@@ -16,10 +16,12 @@ openclerk document
 openclerk retrieval
 ```
 
-Pipe exactly one JSON request to one runner command, then answer only from the
-JSON result. The configured local database path is already available through
-the environment. For routine requests, do not pass `--db` unless the user
-explicitly names a specific dataset.
+Pipe exactly one JSON request to one runner command, wait for its JSON result,
+then run the next runner command. Do not run OpenClerk runner commands in
+parallel; setup and projection writes are local and can race. Answer only from
+runner JSON results. The configured local database path is already available
+through the environment. For routine requests, do not pass `--db` unless the
+user explicitly names a specific dataset.
 
 The runner honors `OPENCLERK_DATABASE_PATH`. The database stores the configured
 vault root, so routine agent work should use the configured environment and
@@ -35,7 +37,40 @@ OpenClerk document paths.
 
 If the user explicitly asks to initialize OpenClerk for an existing vault, run
 `openclerk init --vault-root <vault-root>`. This is setup work, not a routine
-knowledge task.
+knowledge task; do not use `init` to repair ordinary document or retrieval
+calls.
+
+## Lifecycle Quick Rules
+
+For unsafe accepted edits, rollback, restore, review-state, or semantic diff
+requests, stay inside `openclerk document` and `openclerk retrieval`; there is
+no public history, diff, review, restore, rollback, or lifecycle action.
+
+- Rollback/restore: run this sequence even when an earlier step returns doc
+  ids: retrieval `search`, then `list_documents`, then `get_document`.
+  `search` and `list_documents` do not substitute for each other. Update only
+  the unsafe section with `replace_section`; use authoritative source wording
+  for the accepted policy, for example `Accepted lifecycle policy:
+  runner-visible review before accepting source-sensitive durable edits.` when
+  that is the source-backed guidance. For natural history-review rollback
+  intent, preserve the existing target path, such as
+  `notes/history-review/restore-target.md`; do not create a replacement
+  document. Do not stop after the write: always run retrieval
+  `provenance_events` and `projection_states` for the target document `doc_id`.
+- Semantic diff: use the exact requested `list_documents.path_prefix`; do not
+  add extra list prefixes, including source prefixes, or query SQLite for doc
+  ids. First run retrieval `search`; `list_documents` is not a substitute. Use
+  `source_refs` or citations for source-path evidence; get the current
+  document, inspect `provenance_events` for the current document `doc_id`, cite
+  source paths from runner JSON, and summarize changes without raw private
+  diffs.
+- Pending review: do not modify the accepted target. Create a separate
+  `type: review`, `status: pending` review document when the proposed change
+  is explicit, inspect review-document `provenance_events`, and say the target
+  did not change or become accepted knowledge.
+- Final lifecycle answers must name relevant vault-relative paths, source
+  evidence, provenance, freshness when required, and avoid raw private diffs,
+  private artifact bodies, storage roots, absolute paths, and backslash paths.
 
 ## No-Tools Handling Before Runners
 
@@ -52,8 +87,10 @@ tools when the request:
   source text to preserve. A request like "Document this artifact from the
   links we discussed last week" is missing actual body content and must be
   answered without tools.
-- asks to ingest a source URL but `source.url`, `source.path_hint`, or
-  `source.asset_path_hint` is missing
+- asks to create a new source URL ingestion but `source.url`,
+  `source.path_hint`, or `source.asset_path_hint` is missing. Explicit
+  `source.mode: "update"` refresh requests require `source.url` but may omit
+  path hints.
 - asks to ingest a video or YouTube URL but `video.url` or
   `video.transcript.text` is missing, or is creating a new video source and
   `video.path_hint` is missing. The v1 runner surface requires supplied
@@ -184,124 +221,30 @@ manifest. Failing layout checks are runner-visible results; do not inspect the
 vault, SQLite, source files, or lower-level runtime state to diagnose routine
 layout problems.
 
-Use `ingest_source_url` when asked to ingest a PDF source URL into local
-OpenClerk knowledge. The URL must be HTTP/HTTPS, `path_hint` must be a
-vault-relative `sources/*.md` path, and `asset_path_hint` must be a
-vault-relative `assets/**/*.pdf` path. The result returns `ingestion.doc_id`,
-`source_path`, `asset_path`, `derived_path`, citations, hash, size, MIME type,
-page count, capture timestamp, and optional PDF metadata. Do not download the
-PDF, inspect the vault, write files directly, or create a separate markdown note
-outside the runner for routine source URL ingestion. Duplicate source URLs are
-rejected in default `create` mode.
+Use `ingest_source_url` for HTTP/HTTPS PDF source ingestion. Create mode
+requires `path_hint` as a vault-relative `sources/*.md` path and
+`asset_path_hint` as a vault-relative `assets/**/*.pdf` path. Do not download,
+inspect, or write the PDF yourself. Use `source.mode: "update"` only when
+refreshing an existing source URL; update mode may omit path hints, same-SHA
+updates are no-ops, and changed PDFs refresh citations, provenance, and
+dependent synthesis freshness.
 
-Use `source.mode: "update"` only when the user asks to refresh or re-ingest an
-existing source URL. Update mode targets the existing normalized `source.url`;
-it does not create a new source when the URL is unknown. You may omit
-`path_hint` and `asset_path_hint` in update mode, or provide them to confirm the
-stored source paths. If provided hints do not match the existing source path or
-asset path, the runner returns a conflict without writing. A same-SHA update is
-a no-op that preserves the existing source path, asset path, citations,
-provenance, and synthesis freshness. A changed-PDF update preserves the source
-path and asset path while refreshing the source note, search citations,
-provenance, and dependent synthesis freshness/projection visibility.
+Use `ingest_video_url` only when the user supplies transcript text and
+provenance. The source note lives under `sources/**/*.md`; optional metadata
+sidecars live under `assets/**/*.json`. Do not use `yt-dlp`, `ffmpeg`, local
+STT, transcript APIs, Gemini extraction, native media downloads, direct vault
+inspection, direct file edits, or SQLite as substitutes for runner JSON.
 
-Use `ingest_video_url` when asked to ingest a video or YouTube source only if
-the user supplies transcript text and provenance. The v1 surface creates or
-updates canonical markdown source notes under `sources/**/*.md` with
-`source_type: video_transcript`, `source_url`, `transcript_origin`,
-`transcript_policy`, `language`, `captured_at`, and `transcript_sha256`.
-Allowed transcript policies are empty, `supplied`, and `local_first`; empty
-means `supplied`. Do not use `yt-dlp`, `ffmpeg`, local STT, transcript APIs,
-Gemini extraction, native media downloads, direct vault inspection, direct file
-edits, or SQLite as substitutes for runner JSON. Missing
-`video.transcript.text` must be clarified without tools for routine requests.
+For source-linked synthesis, run `search`, list `synthesis/`, get the existing
+candidate before editing, and prefer `replace_section` or `append_document`
+over duplicates. Synthesis pages live under `synthesis/`, cite canonical
+`sources/`, use single-line comma-separated `source_refs`, include `## Sources`
+and `## Freshness`, and remain lower authority than canonical sources.
 
-Optional `video.asset_path_hint` writes a metadata sidecar only; it must be a
-vault-relative `assets/**/*.json` path. The sidecar is supporting metadata, not
-authority, and must not be treated as raw media storage. Duplicate video URLs
-are rejected in default `create` mode. Update mode targets the normalized
-`video.url`; path or asset hint mismatches conflict without writing. A same
-transcript hash is a no-op that preserves existing citations, provenance, and
-synthesis freshness. A changed transcript refreshes the canonical source note,
-search citations, provenance, and dependent synthesis freshness/projection
-visibility.
-
-## Document Lifecycle Maintenance
-
-For unsafe accepted edits, rollback, restore, review-state, or document
-lifecycle requests, use the existing document and retrieval runner actions. Do
-not invent a history, diff, review, restore, rollback, or lifecycle action.
-Do not inspect the vault, SQLite, raw event logs, or storage-root paths.
-
-For rollback or restore intent:
-
-1. Run retrieval `search` for source-backed lifecycle evidence.
-2. Run document `list_documents` with the narrow relevant path prefix.
-3. Run `get_document` for the target before modifying it.
-4. Restore only the unsafe section with `replace_section`; do not rewrite the
-   whole document unless the user explicitly supplied the full replacement.
-   Use the authoritative source wording as the replacement, not a paraphrase
-   that preserves the unsafe claim. For a policy summary, write the accepted
-   policy as a concise declarative sentence such as `Accepted lifecycle
-   policy: ...` using the source-backed policy text.
-5. After the write, inspect `provenance_events` for `ref_kind: "document"` and
-   the target `doc_id`.
-6. Inspect `projection_states` for `ref_kind: "document"` and the target
-   `doc_id` so freshness remains operator-visible.
-
-The final rollback answer must name the target document path, the source
-evidence path or citation path, the restore/rollback reason, the provenance
-check, and the projection freshness check. Do not print raw private diffs,
-private artifact bodies, `.openclerk-eval/vault`, configured vault-root paths,
-absolute filesystem paths, or OS-specific backslash paths.
-
-For pending-review intent, do not modify the accepted target document. Create a
-separate review document only when the request includes the proposed change and
-the review path/title/body are explicit or derivable from the prompt. The
-review document should use `type: review` and `status: pending` frontmatter and
-should name the target document. After creating it, inspect
-`provenance_events` for the review document. The final answer must name both
-paths, say the accepted target did not change or did not become accepted
-knowledge, and say the pending change is waiting for human or operator review.
-
-When writing source-linked synthesis, use this exact AgentOps workflow:
-
-1. Run retrieval `search` for source evidence.
-2. Run document `list_documents` with `path_prefix: "synthesis/"` to find
-   existing synthesis candidates.
-3. Run `get_document` before modifying an existing synthesis page.
-4. Prefer `replace_section` or `append_document` over creating duplicates.
-5. Inspect `provenance_events` and `projection_states` when the synthesis
-   depends on promoted records, services, derivation history, or freshness.
-6. For existing synthesis, inspect `projection_states` with
-   `projection: "synthesis"`, `ref_kind: "document"`, and the synthesis
-   `doc_id` before repairing stale claims.
-
-Prototype synthesis pages live under `synthesis/`. Canonical source docs live
-under `sources/`. Include frontmatter with `type: synthesis`, `status: active`,
-`freshness: fresh`, and `source_refs` set to a single-line comma-separated
-source path list. Do not use YAML list syntax for `source_refs`.
-Include a `## Sources` section with source paths or citation paths from runner
-JSON, and a `## Freshness` section that states which runner retrieval results
-were checked. Use only documented runner actions, not `upsert_document` or
-direct file edits. Synthesis is durable compiled knowledge, not a higher
-authority than the canonical sources it cites.
-
-Synthesis freshness is also exposed as a derived projection. A stale synthesis
-projection means at least one referenced source path is missing, a referenced
-source is newer than the synthesis page, or supersession metadata says a
-current replacement source is not represented in `source_refs`. Projection
-details include `current_source_refs`, `superseded_source_refs`,
-`missing_source_refs`, `stale_source_refs`, and `freshness_reason`.
-
-For source-sensitive audit or contradiction-like requests, stay narrow and
-source-backed. Search canonical sources first, then distinguish current sources,
-superseded sources, stale synthesis, and unresolved conflicting current sources
-from runner JSON. Inspect `projection_states` and `provenance_events` before
-repairing stale synthesis. If current sources conflict and no supersession or
-other source authority is visible, explain the unresolved conflict with both
-source paths instead of choosing a winner. Do not claim broad semantic
-contradiction detection.
+Inspect `projection_states` and `provenance_events` before repairing stale
+synthesis or source-sensitive audit output. If current sources conflict and no
+runner-visible supersession or authority resolves them, explain the unresolved
+conflict with both source paths instead of choosing a winner.
 
 For messy populated-vault retrieval, use runner-visible authority signals before
 writing the answer. Metadata-filtered authority results, active canonical

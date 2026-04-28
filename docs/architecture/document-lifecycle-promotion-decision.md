@@ -13,7 +13,8 @@ Accepted: defer document lifecycle promotion and keep the refreshed pressure
 lane as reference evidence.
 
 This decision does not add a runner action, schema, migration, storage
-behavior, public API, public OpenClerk interface, or shipped skill behavior.
+behavior, public API, or public OpenClerk interface. It keeps the minimized
+OpenClerk skill guidance that stabilized the reference lane.
 
 Evidence:
 
@@ -41,23 +42,21 @@ express those workflows safely when the task is explicit, while preserving
 canonical authority, citations/source refs, provenance, projection freshness,
 privacy boundaries, local-first operation, and no-bypass rules.
 
-Ergonomics path: defer for repair. The latest guidance repair improved parts
-of the lane but did not produce stable promotion evidence. The committed full
-run still classifies natural lifecycle intent as `ergonomics_gap` with 12
-tools/commands, 4 assistant calls, and 38.70 wall seconds because it skipped
-required source search, provenance, projection freshness, and accepted-policy
-restoration. Diff review is `skill_guidance` because runner-visible evidence
-existed but path-prefix guidance drifted. Pending review is reclassified as
-`data_hygiene`: final-answer guidance passed, but the accepted target was
-missing or changed in durable evidence. That evidence shows repair pressure,
-not justification for a public lifecycle surface.
+Ergonomics path: no promotion. The finalized trial-and-error repair reduced
+`skills/openclerk/SKILL.md` from 372 to 312 lines while passing the refreshed
+targeted lane. The natural lifecycle row completed with `none` failure
+classification using 40 tools/commands, 6 assistant calls, and 76.40 wall
+seconds. Scripted diff, restore, pending-review, stale-synthesis, inspection,
+and validation rows also completed with `none`. That evidence shows current
+primitives remain acceptable as reference workflows when the skill preserves
+runner-call serialization and concise lifecycle rules.
 
 ## Follow-Up Policy
 
 No implementation follow-up for document lifecycle controls is authorized by
-this decision. Future follow-up may continue repairing natural lifecycle
-rollback ergonomics, diff-review path guidance, and pending-review durable
-target hygiene, then rerun the targeted lane.
+this decision. Future follow-up may continue monitoring natural lifecycle
+rollback ergonomics and may rerun the targeted lane after broader OpenClerk
+skill changes.
 
 A future promotion issue may be opened only after refreshed evidence shows one
 of these conditions:

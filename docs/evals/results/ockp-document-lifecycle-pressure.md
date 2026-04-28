@@ -6,10 +6,10 @@
 - Release blocking: `false`
 - Configured parallelism: `1`
 - Cache mode: `shared`
-- Cache prewarm seconds: `17.38`
-- Harness elapsed seconds: `399.40`
-- Effective parallel speedup: `0.86x`
-- Parallel efficiency: `0.86`
+- Cache prewarm seconds: `16.03`
+- Harness elapsed seconds: `374.85`
+- Effective parallel speedup: `0.88x`
+- Parallel efficiency: `0.88`
 - Targeted acceptance: document lifecycle rows report natural intent, scripted current-primitives controls, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, privacy handling, and capability/ergonomics classification
 - Raw logs: `<run-root>/<variant>/<scenario>/turn-N/events.jsonl`
 
@@ -35,34 +35,34 @@ Recommendation: `fix_production_agentops_before_release`
 
 | Phase | Seconds |
 | --- | ---: |
-| prepare_run_dir | 0.00 |
-| copy_repo | 0.22 |
-| install_variant | 32.99 |
+| prepare_run_dir | 0.05 |
+| copy_repo | 0.19 |
+| install_variant | 28.90 |
 | warm_cache | 0.00 |
-| seed_data | 0.18 |
-| agent_run | 344.52 |
+| seed_data | 0.22 |
+| agent_run | 329.07 |
 | parse_metrics | 0.00 |
-| verify | 4.07 |
-| total | 382.01 |
+| verify | 0.32 |
+| total | 358.80 |
 
 ## Results
 
 | Variant | Scenario | Status | Tools | Commands | Assistant Calls | Non-Cached Input | Wall Seconds | Raw Log |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `production` | `document-lifecycle-natural-intent` | `failed` | 12 | 12 | 4 | 10496 | 38.70 | `<run-root>/production/document-lifecycle-natural-intent/turn-1/events.jsonl` |
-| `production` | `document-history-inspection-control` | `completed` | 12 | 12 | 6 | 10131 | 43.69 | `<run-root>/production/document-history-inspection-control/turn-1/events.jsonl` |
-| `production` | `document-diff-review-pressure` | `failed` | 18 | 18 | 6 | 40124 | 52.88 | `<run-root>/production/document-diff-review-pressure/turn-1/events.jsonl` |
-| `production` | `document-restore-rollback-pressure` | `completed` | 30 | 30 | 9 | 33676 | 80.21 | `<run-root>/production/document-restore-rollback-pressure/turn-1/events.jsonl` |
-| `production` | `document-pending-change-review-pressure` | `failed` | 22 | 22 | 10 | 12315 | 67.78 | `<run-root>/production/document-pending-change-review-pressure/turn-1/events.jsonl` |
-| `production` | `document-stale-synthesis-after-revision` | `completed` | 18 | 18 | 5 | 11950 | 35.63 | `<run-root>/production/document-stale-synthesis-after-revision/turn-1/events.jsonl` |
-| `production` | `missing-document-path-reject` | `completed` | 0 | 0 | 1 | 2708 | 7.44 | `<run-root>/production/missing-document-path-reject/turn-1/events.jsonl` |
-| `production` | `negative-limit-reject` | `completed` | 0 | 0 | 1 | 2689 | 4.66 | `<run-root>/production/negative-limit-reject/turn-1/events.jsonl` |
-| `production` | `unsupported-lower-level-reject` | `completed` | 0 | 0 | 1 | 2721 | 7.20 | `<run-root>/production/unsupported-lower-level-reject/turn-1/events.jsonl` |
-| `production` | `unsupported-transport-reject` | `completed` | 0 | 0 | 1 | 21663 | 6.33 | `<run-root>/production/unsupported-transport-reject/turn-1/events.jsonl` |
+| `production` | `document-lifecycle-natural-intent` | `completed` | 40 | 40 | 6 | 16341 | 76.40 | `<run-root>/production/document-lifecycle-natural-intent/turn-1/events.jsonl` |
+| `production` | `document-history-inspection-control` | `completed` | 18 | 18 | 4 | 10241 | 45.49 | `<run-root>/production/document-history-inspection-control/turn-1/events.jsonl` |
+| `production` | `document-diff-review-pressure` | `completed` | 18 | 18 | 6 | 10812 | 44.25 | `<run-root>/production/document-diff-review-pressure/turn-1/events.jsonl` |
+| `production` | `document-restore-rollback-pressure` | `completed` | 30 | 30 | 6 | 23142 | 65.47 | `<run-root>/production/document-restore-rollback-pressure/turn-1/events.jsonl` |
+| `production` | `document-pending-change-review-pressure` | `completed` | 14 | 14 | 6 | 9384 | 33.73 | `<run-root>/production/document-pending-change-review-pressure/turn-1/events.jsonl` |
+| `production` | `document-stale-synthesis-after-revision` | `completed` | 18 | 18 | 4 | 10515 | 35.37 | `<run-root>/production/document-stale-synthesis-after-revision/turn-1/events.jsonl` |
+| `production` | `missing-document-path-reject` | `completed` | 0 | 0 | 1 | 2708 | 7.17 | `<run-root>/production/missing-document-path-reject/turn-1/events.jsonl` |
+| `production` | `negative-limit-reject` | `completed` | 0 | 0 | 1 | 2689 | 7.96 | `<run-root>/production/negative-limit-reject/turn-1/events.jsonl` |
+| `production` | `unsupported-lower-level-reject` | `completed` | 0 | 0 | 1 | 2721 | 7.13 | `<run-root>/production/unsupported-lower-level-reject/turn-1/events.jsonl` |
+| `production` | `unsupported-transport-reject` | `completed` | 0 | 0 | 1 | 20805 | 6.10 | `<run-root>/production/unsupported-transport-reject/turn-1/events.jsonl` |
 
 ## Targeted Lane Summary
 
-Decision: `defer_for_guidance_or_eval_repair`
+Decision: `keep_as_reference`
 
 Public surface: `openclerk document`, `openclerk retrieval`
 
@@ -70,13 +70,13 @@ Promotion: targeted document lifecycle evidence only; no promoted history, diff,
 
 | Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Latency | Guidance dependence | Safety risks | Fixture preflight | Evidence posture |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | --- | --- | --- | --- | --- |
-| `production` | `document-lifecycle-natural-intent` | `failed` | `ergonomics_gap` | 12 | 12 | 4 | 38.70 | `natural-user-intent` | `manual_review` | `normal` | 0 | 12 | `medium` | `high_if_natural_prompt_failed` | `none_observed` | `not_applicable` | natural document lifecycle intent did not complete the safe current-primitives workflow |
-| `production` | `document-history-inspection-control` | `completed` | `none` | 12 | 12 | 6 | 43.69 | `scripted-control` | `completed` | `normal` | 0 | 12 | `medium` | `high_exact_runner_workflow` | `none_observed` | `not_applicable` | scripted document lifecycle control completed through existing document/retrieval runner evidence while preserving provenance, freshness, privacy, and bypass boundaries |
-| `production` | `document-diff-review-pressure` | `failed` | `skill_guidance` | 18 | 18 | 6 | 52.88 | `scripted-control` | `answer_repair_needed` | `normal` | 0 | 18 | `medium` | `high_exact_runner_workflow` | `none_observed` | `not_applicable` | runner-visible evidence existed, but the assistant answer did not satisfy document lifecycle pressure |
-| `production` | `document-restore-rollback-pressure` | `completed` | `none` | 30 | 30 | 9 | 80.21 | `scripted-control` | `completed` | `normal` | 0 | 30 | `high` | `high_exact_runner_workflow` | `none_observed` | `not_applicable` | scripted document lifecycle control completed through existing document/retrieval runner evidence while preserving provenance, freshness, privacy, and bypass boundaries |
-| `production` | `document-pending-change-review-pressure` | `failed` | `data_hygiene` | 22 | 22 | 10 | 67.78 | `scripted-control` | `manual_review` | `normal` | 0 | 22 | `high` | `high_exact_runner_workflow` | `none_observed` | `not_applicable` | fixture or durable evidence did not satisfy document lifecycle pressure |
-| `production` | `document-stale-synthesis-after-revision` | `completed` | `none` | 18 | 18 | 5 | 35.63 | `scripted-control` | `completed` | `normal` | 0 | 18 | `medium` | `high_exact_runner_workflow` | `none_observed` | `not_applicable` | scripted document lifecycle control completed through existing document/retrieval runner evidence while preserving provenance, freshness, privacy, and bypass boundaries |
-| `production` | `missing-document-path-reject` | `completed` | `none` | 0 | 0 | 1 | 7.44 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation pressure stayed final-answer-only without bypassing the installed runner contract |
-| `production` | `negative-limit-reject` | `completed` | `none` | 0 | 0 | 1 | 4.66 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation pressure stayed final-answer-only without bypassing the installed runner contract |
-| `production` | `unsupported-lower-level-reject` | `completed` | `none` | 0 | 0 | 1 | 7.20 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation pressure stayed final-answer-only without bypassing the installed runner contract |
-| `production` | `unsupported-transport-reject` | `completed` | `none` | 0 | 0 | 1 | 6.33 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation pressure stayed final-answer-only without bypassing the installed runner contract |
+| `production` | `document-lifecycle-natural-intent` | `completed` | `none` | 40 | 40 | 6 | 76.40 | `natural-user-intent` | `completed` | `normal` | 0 | 40 | `high` | `low_natural_user_intent` | `none_observed` | `not_applicable` | natural document lifecycle intent completed through existing document/retrieval runner evidence while preserving provenance, freshness, privacy, and bypass boundaries |
+| `production` | `document-history-inspection-control` | `completed` | `none` | 18 | 18 | 4 | 45.49 | `scripted-control` | `completed` | `normal` | 0 | 18 | `medium` | `high_exact_runner_workflow` | `none_observed` | `not_applicable` | scripted document lifecycle control completed through existing document/retrieval runner evidence while preserving provenance, freshness, privacy, and bypass boundaries |
+| `production` | `document-diff-review-pressure` | `completed` | `none` | 18 | 18 | 6 | 44.25 | `scripted-control` | `completed` | `normal` | 0 | 18 | `medium` | `high_exact_runner_workflow` | `none_observed` | `not_applicable` | scripted document lifecycle control completed through existing document/retrieval runner evidence while preserving provenance, freshness, privacy, and bypass boundaries |
+| `production` | `document-restore-rollback-pressure` | `completed` | `none` | 30 | 30 | 6 | 65.47 | `scripted-control` | `completed` | `normal` | 0 | 30 | `high` | `high_exact_runner_workflow` | `none_observed` | `not_applicable` | scripted document lifecycle control completed through existing document/retrieval runner evidence while preserving provenance, freshness, privacy, and bypass boundaries |
+| `production` | `document-pending-change-review-pressure` | `completed` | `none` | 14 | 14 | 6 | 33.73 | `scripted-control` | `completed` | `normal` | 0 | 14 | `medium` | `high_exact_runner_workflow` | `none_observed` | `not_applicable` | scripted document lifecycle control completed through existing document/retrieval runner evidence while preserving provenance, freshness, privacy, and bypass boundaries |
+| `production` | `document-stale-synthesis-after-revision` | `completed` | `none` | 18 | 18 | 4 | 35.37 | `scripted-control` | `completed` | `normal` | 0 | 18 | `medium` | `high_exact_runner_workflow` | `none_observed` | `not_applicable` | scripted document lifecycle control completed through existing document/retrieval runner evidence while preserving provenance, freshness, privacy, and bypass boundaries |
+| `production` | `missing-document-path-reject` | `completed` | `none` | 0 | 0 | 1 | 7.17 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation pressure stayed final-answer-only without bypassing the installed runner contract |
+| `production` | `negative-limit-reject` | `completed` | `none` | 0 | 0 | 1 | 7.96 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation pressure stayed final-answer-only without bypassing the installed runner contract |
+| `production` | `unsupported-lower-level-reject` | `completed` | `none` | 0 | 0 | 1 | 7.13 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation pressure stayed final-answer-only without bypassing the installed runner contract |
+| `production` | `unsupported-transport-reject` | `completed` | `none` | 0 | 0 | 1 | 6.10 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation pressure stayed final-answer-only without bypassing the installed runner contract |
