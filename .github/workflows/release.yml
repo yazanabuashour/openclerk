@@ -143,12 +143,12 @@ jobs:
           }
 
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32
         with:
           subject-path: dist/*
 
       - name: Attest SBOM
-        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e
         with:
           subject-path: dist/${{ steps.meta.outputs.archive }}
           sbom-path: dist/${{ steps.meta.outputs.sbom }}
