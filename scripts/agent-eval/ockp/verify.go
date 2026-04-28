@@ -51,6 +51,10 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyDocsNavigationBaseline(ctx, paths, finalMessage, turnMetrics)
 	case graphSemanticsScenarioID:
 		return verifyGraphSemanticsReference(ctx, paths, finalMessage, turnMetrics)
+	case graphSemanticsNaturalScenarioID:
+		return verifyGraphSemanticsRevisit(ctx, paths, finalMessage, turnMetrics, false)
+	case graphSemanticsScriptedScenarioID:
+		return verifyGraphSemanticsRevisit(ctx, paths, finalMessage, turnMetrics, true)
 	case memoryRouterScenarioID:
 		return verifyMemoryRouterReference(ctx, paths, finalMessage, turnMetrics)
 	case configuredLayoutScenarioID:

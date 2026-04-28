@@ -35,7 +35,7 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedDocsNavigationBaseline(ctx, cfg); err != nil {
 			return err
 		}
-	case graphSemanticsScenarioID:
+	case graphSemanticsScenarioID, graphSemanticsNaturalScenarioID, graphSemanticsScriptedScenarioID:
 		if err := seedGraphSemanticsReference(ctx, cfg); err != nil {
 			return err
 		}

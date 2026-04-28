@@ -336,6 +336,21 @@ func graphSemanticsReferenceAnswerPass(message string) bool {
 		containsAny(normalized, []string{"projection", "fresh", "freshness"}) &&
 		containsAny(normalized, []string{"reference", "defer", "deferred", "not promote", "do not promote", "not promoted", "keep"})
 }
+func graphSemanticsRevisitAnswerPass(message string, scripted bool) bool {
+	normalized := normalizeValidationMessage(message)
+	if !graphSemanticsReferenceAnswerPass(message) {
+		return false
+	}
+	if !containsAny(normalized, []string{"capability gap", "ergonomics gap", "neither"}) {
+		return false
+	}
+	if !scripted {
+		return true
+	}
+	return containsAny(normalized, []string{"current primitives can express", "current document/retrieval primitives can express", "existing primitives can express", "workflow safely", "express the workflow safely"}) &&
+		containsAny(normalized, []string{"ux", "user experience"}) &&
+		containsAny(normalized, []string{"acceptable", "not acceptable", "unacceptable"})
+}
 func messagePromotesGraphSemantics(normalized string) bool {
 	promotionPhrases := []string{
 		"decision: promote",

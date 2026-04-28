@@ -22,7 +22,15 @@ func isRepoDocsDogfoodScenario(id string) bool {
 	}
 }
 func isReleaseBlockingScenario(id string) bool {
-	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isSourceURLUpdateScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id)
+	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isSourceURLUpdateScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id)
+}
+func isGraphSemanticsRevisitScenario(id string) bool {
+	switch id {
+	case graphSemanticsNaturalScenarioID, graphSemanticsScriptedScenarioID:
+		return true
+	default:
+		return false
+	}
 }
 func isDocumentHistoryScenario(id string) bool {
 	switch id {
@@ -138,6 +146,16 @@ func allScenarios() []scenario {
 			ID:     graphSemanticsScenarioID,
 			Title:  "Graph semantics reference comparison",
 			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, or unsupported actions. First run openclerk retrieval search for graph semantics requires supersedes related operationalizes with limit 10. Then run openclerk document list_documents with path_prefix notes/graph/semantics/ and limit 10. Use the returned doc_id for notes/graph/semantics/index.md to run get_document, and use its relationship wording in your analysis. Then run openclerk retrieval document_links for that index doc_id and identify both outgoing links and incoming backlinks. Then run openclerk retrieval graph_neighborhood for that index doc_id with limit 20, and inspect projection_states with projection graph, ref_kind document, and that index doc_id. The final answer must explicitly mention search, markdown relationship text, document_links, incoming backlinks, graph_neighborhood, graph projection freshness, canonical markdown citations, and this decision: keep richer graph semantics as a reference/deferred pattern, do not promote a semantic-label graph layer, and keep graph behavior derived from canonical markdown citations.",
+		},
+		{
+			ID:     graphSemanticsNaturalScenarioID,
+			Title:  "Graph semantics revisit natural intent",
+			Prompt: "Use the configured local OpenClerk data path. I need to decide whether richer graph semantics should become a promoted OpenClerk surface. Stay inside installed OpenClerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or unsupported actions. Compare what the current runner can prove for relationship-shaped graph semantics: relationship wording in canonical markdown, citations or source evidence, document links and incoming backlinks, graph neighborhood context, and graph projection freshness. Do not create or update documents. In the final answer, say whether this evidence shows a capability gap, an ergonomics gap, both, or neither; mention search, markdown relationship text, document_links, incoming backlinks, graph_neighborhood, graph projection freshness, canonical markdown citations, and whether to keep richer graph semantics reference/deferred rather than promote a semantic-label graph layer.",
+		},
+		{
+			ID:     graphSemanticsScriptedScenarioID,
+			Title:  "Graph semantics revisit scripted control",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or unsupported actions. First run openclerk retrieval search for graph semantics requires supersedes related operationalizes with limit 10. Then run openclerk document list_documents with path_prefix notes/graph/semantics/ and limit 10. Use the returned doc_id for notes/graph/semantics/index.md to run get_document, and use its relationship wording in your analysis. Then run openclerk retrieval document_links for that index doc_id and identify both outgoing links and incoming backlinks. Then run openclerk retrieval graph_neighborhood for that index doc_id with limit 20, and inspect projection_states with projection graph, ref_kind document, and that index doc_id. Do not create or update documents. In the final answer, explicitly mention search, markdown relationship text, document_links, incoming backlinks, graph_neighborhood, graph projection freshness, canonical markdown citations, whether current primitives can express the workflow safely, whether the current UX is acceptable, and this decision: keep richer graph semantics as a reference/deferred pattern, do not promote a semantic-label graph layer, and keep graph behavior derived from canonical markdown citations.",
 		},
 		{
 			ID:    memoryRouterScenarioID,

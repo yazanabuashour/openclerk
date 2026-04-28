@@ -985,7 +985,46 @@ func TestSynthesisCompileDecisionRequiresRepeatedErgonomicsPressure(t *testing.T
 	}
 }
 
+func TestGraphSemanticsRevisitDecisionRequiresRepeatedEvidence(t *testing.T) {
+	rows := make([]targetedScenarioClassification, 0, len(graphSemanticsRevisitScenarioIDs()))
+	for _, id := range graphSemanticsRevisitScenarioIDs() {
+		rows = append(rows, targetedScenarioClassification{
+			Scenario:              id,
+			FailureClassification: "none",
+		})
+	}
+	if decision := graphSemanticsRevisitDecision(rows[:len(rows)-1]); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("partial decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	if decision := graphSemanticsRevisitDecision(rows); decision != "keep_as_reference" {
+		t.Fatalf("complete passing decision = %q, want keep_as_reference", decision)
+	}
+	rows[0].FailureClassification = "ergonomics_gap"
+	if decision := graphSemanticsRevisitDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("single ergonomics decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	rows[1].FailureClassification = "ergonomics_gap"
+	if decision := graphSemanticsRevisitDecision(rows); decision != "promote_graph_semantics_surface_design" {
+		t.Fatalf("repeated ergonomics decision = %q, want promote_graph_semantics_surface_design", decision)
+	}
+	rows[0].FailureClassification = "capability_gap"
+	rows[1].FailureClassification = "none"
+	if decision := graphSemanticsRevisitDecision(rows); decision != "promote_graph_semantics_surface_design" {
+		t.Fatalf("capability decision = %q, want promote_graph_semantics_surface_design", decision)
+	}
+	rows[0].FailureClassification = "skill_guidance_or_eval_coverage"
+	if decision := graphSemanticsRevisitDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("guidance decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+}
+
 func TestDocumentHistoryPromptSpecificityLabelsNaturalAndScriptedRows(t *testing.T) {
+	if got := promptSpecificity(graphSemanticsNaturalScenarioID); got != "natural-user-intent" {
+		t.Fatalf("natural graph semantics prompt specificity = %q, want natural-user-intent", got)
+	}
+	if got := promptSpecificity(graphSemanticsScriptedScenarioID); got != "scripted-control" {
+		t.Fatalf("scripted graph semantics prompt specificity = %q, want scripted-control", got)
+	}
 	if got := promptSpecificity(documentHistoryNaturalScenarioID); got != "natural-user-intent" {
 		t.Fatalf("natural document history prompt specificity = %q, want natural-user-intent", got)
 	}
@@ -2046,7 +2085,7 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 	for _, id := range scenarioIDs() {
 		ids[id] = true
 	}
-	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, graphSemanticsScenarioID, memoryRouterScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, sourceURLUpdateDuplicateScenarioID, sourceURLUpdateSameSHAScenarioID, sourceURLUpdateChangedScenarioID, sourceURLUpdateConflictScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, synthesisCompileNaturalScenarioID, synthesisCompileScriptedScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, documentHistoryNaturalScenarioID, documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID, populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID, agentChosenExplicitScenarioID, agentChosenMissingFieldsScenarioID, agentChosenPathProposalScenarioID, agentChosenAutonomousScenarioID, agentChosenSynthesisScenarioID, agentChosenAmbiguousScenarioID, agentChosenUserPathScenarioID, pathTitleURLOnlyScenarioID, pathTitleArtifactMissingHintsScenarioID, pathTitleMultiSourceDuplicateScenarioID, pathTitleExplicitOverridesScenarioID, pathTitleDuplicateRiskScenarioID, pathTitleMetadataAuthorityScenarioID, documentThisMissingFieldsScenarioID, documentThisExplicitCreateScenarioID, documentThisSourceURLMissingHintsScenarioID, documentThisExplicitOverridesScenarioID, documentThisDuplicateCandidateScenarioID, documentThisExistingUpdateScenarioID, documentThisSynthesisFreshnessScenarioID, candidateNoteFromPastedContentScenarioID, candidateTitleAndPathFromHeadingScenarioID, candidateMixedSourceSummaryScenarioID, candidateExplicitOverridesWinScenarioID, candidateDuplicateRiskAsksScenarioID, candidateLowConfidenceAsksScenarioID, candidateBodyFaithfulnessScenarioID, artifactPDFSourceURLScenarioID, artifactPDFNaturalIntentScenarioID, artifactTranscriptScenarioID, artifactInvoiceReceiptScenarioID, artifactMixedSynthesisScenarioID, artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID, videoYouTubeNaturalIntentScenarioID, videoYouTubeScriptedTranscriptControlID, videoYouTubeSynthesisFreshnessScenarioID, videoYouTubeBypassRejectScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
+	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, graphSemanticsScenarioID, graphSemanticsNaturalScenarioID, graphSemanticsScriptedScenarioID, memoryRouterScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, sourceURLUpdateDuplicateScenarioID, sourceURLUpdateSameSHAScenarioID, sourceURLUpdateChangedScenarioID, sourceURLUpdateConflictScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, synthesisCompileNaturalScenarioID, synthesisCompileScriptedScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, documentHistoryNaturalScenarioID, documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID, populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID, agentChosenExplicitScenarioID, agentChosenMissingFieldsScenarioID, agentChosenPathProposalScenarioID, agentChosenAutonomousScenarioID, agentChosenSynthesisScenarioID, agentChosenAmbiguousScenarioID, agentChosenUserPathScenarioID, pathTitleURLOnlyScenarioID, pathTitleArtifactMissingHintsScenarioID, pathTitleMultiSourceDuplicateScenarioID, pathTitleExplicitOverridesScenarioID, pathTitleDuplicateRiskScenarioID, pathTitleMetadataAuthorityScenarioID, documentThisMissingFieldsScenarioID, documentThisExplicitCreateScenarioID, documentThisSourceURLMissingHintsScenarioID, documentThisExplicitOverridesScenarioID, documentThisDuplicateCandidateScenarioID, documentThisExistingUpdateScenarioID, documentThisSynthesisFreshnessScenarioID, candidateNoteFromPastedContentScenarioID, candidateTitleAndPathFromHeadingScenarioID, candidateMixedSourceSummaryScenarioID, candidateExplicitOverridesWinScenarioID, candidateDuplicateRiskAsksScenarioID, candidateLowConfidenceAsksScenarioID, candidateBodyFaithfulnessScenarioID, artifactPDFSourceURLScenarioID, artifactPDFNaturalIntentScenarioID, artifactTranscriptScenarioID, artifactInvoiceReceiptScenarioID, artifactMixedSynthesisScenarioID, artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID, videoYouTubeNaturalIntentScenarioID, videoYouTubeScriptedTranscriptControlID, videoYouTubeSynthesisFreshnessScenarioID, videoYouTubeBypassRejectScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
 		if !ids[want] {
 			t.Fatalf("scenarioIDs missing %q in %v", want, scenarioIDs())
 		}
@@ -2108,6 +2147,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 			t.Fatalf("default selected scenarios included targeted synthesis compile scenario %q", id)
 		}
 	}
+	for _, id := range graphSemanticsRevisitScenarioIDs() {
+		if defaultIDs[id] {
+			t.Fatalf("default selected scenarios included targeted graph semantics revisit scenario %q", id)
+		}
+	}
 	selected := selectedScenarioIDs(runConfig{Scenario: populatedHeterogeneousScenarioID + "," + populatedFreshnessConflictScenarioID + "," + populatedSynthesisUpdateScenarioID})
 	lane, releaseBlocking := reportLane(selected)
 	if lane != populatedLaneName || releaseBlocking {
@@ -2157,6 +2201,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	lane, releaseBlocking = reportLane(selected)
 	if lane != synthesisCompileLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, synthesisCompileLaneName)
+	}
+	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(append(graphSemanticsRevisitScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject"), ",")})
+	lane, releaseBlocking = reportLane(selected)
+	if lane != graphSemanticsRevisitLaneName || releaseBlocking {
+		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, graphSemanticsRevisitLaneName)
 	}
 }
 
@@ -2614,6 +2663,71 @@ func TestVerifyGraphSemanticsReferenceRequiresSearchLinksGraphProjectionAndDecis
 	}
 	if result.Passed {
 		t.Fatalf("incomplete answer passed unexpectedly: %+v", result)
+	}
+}
+
+func TestVerifyGraphSemanticsRevisitMatchesNaturalAndScriptedPrompts(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: graphSemanticsNaturalScenarioID}); err != nil {
+		t.Fatalf("seed graph semantics revisit scenario: %v", err)
+	}
+	completeMetrics := metrics{
+		AssistantCalls:        1,
+		SearchUsed:            true,
+		ListDocumentsUsed:     true,
+		GetDocumentUsed:       true,
+		DocumentLinksUsed:     true,
+		GraphNeighborhoodUsed: true,
+		ProjectionStatesUsed:  true,
+		EventTypeCounts:       map[string]int{},
+	}
+	naturalMetrics := completeMetrics
+	naturalMetrics.ListDocumentsUsed = false
+	naturalAnswer := "Search finds canonical markdown relationship text: requires, supersedes, related to, and operationalizes. document_links shows outgoing links and incoming backlinks with canonical citations. graph_neighborhood shows structural context, and graph projection freshness is fresh. This shows an ergonomics gap, not a capability gap, so keep richer graph semantics as reference/deferred and do not promote a semantic-label graph layer."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: graphSemanticsNaturalScenarioID}, 1, naturalAnswer, naturalMetrics)
+	if err != nil {
+		t.Fatalf("verify natural graph semantics revisit: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("natural graph semantics revisit failed: %+v", result)
+	}
+
+	missingPostureAnswer := "Search finds canonical markdown relationship text. document_links shows outgoing links and incoming backlinks with citations. graph_neighborhood shows context, graph projection freshness is fresh, and the decision is keep richer graph semantics reference/deferred and do not promote a semantic-label graph layer."
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: graphSemanticsNaturalScenarioID}, 1, missingPostureAnswer, naturalMetrics)
+	if err != nil {
+		t.Fatalf("verify natural answer without gap posture: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("natural answer without gap posture passed unexpectedly: %+v", result)
+	}
+
+	scriptedAnswer := "Search finds canonical markdown relationship text: requires, supersedes, related to, and operationalizes. document_links shows outgoing links and incoming backlinks with canonical citations. graph_neighborhood shows structural context, and graph projection freshness is fresh. Current primitives can express the workflow safely, UX is acceptable, and the evidence shows neither a capability gap nor an ergonomics gap. Keep richer graph semantics as reference/deferred and do not promote a semantic-label graph layer."
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: graphSemanticsScriptedScenarioID}, 1, scriptedAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify scripted graph semantics revisit: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("scripted graph semantics revisit failed: %+v", result)
+	}
+
+	noListMetrics := completeMetrics
+	noListMetrics.ListDocumentsUsed = false
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: graphSemanticsScriptedScenarioID}, 1, scriptedAnswer, noListMetrics)
+	if err != nil {
+		t.Fatalf("verify scripted graph semantics revisit without list: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("scripted graph semantics revisit without list passed unexpectedly: %+v", result)
+	}
+
+	noUXAnswer := "Search finds canonical markdown relationship text: requires, supersedes, related to, and operationalizes. document_links shows outgoing links and incoming backlinks with canonical citations. graph_neighborhood shows structural context, and graph projection freshness is fresh. Current primitives can express the workflow safely, and the evidence shows neither a capability gap nor an ergonomics gap. Keep richer graph semantics as reference/deferred and do not promote a semantic-label graph layer."
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: graphSemanticsScriptedScenarioID}, 1, noUXAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify scripted answer without UX posture: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("scripted answer without UX posture passed unexpectedly: %+v", result)
 	}
 }
 

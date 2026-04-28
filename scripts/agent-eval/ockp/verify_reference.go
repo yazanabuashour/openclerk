@@ -352,6 +352,16 @@ func verifyDocsNavigationBaseline(ctx context.Context, paths evalPaths, finalMes
 	}, nil
 }
 func verifyGraphSemanticsReference(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	return verifyGraphSemanticsWorkflow(ctx, paths, finalMessage, turnMetrics, true, graphSemanticsReferenceAnswerPass(finalMessage), "final answer did not compare search, links/backlinks, graph neighborhood, markdown relationship text, and reference/defer decision")
+}
+func verifyGraphSemanticsRevisit(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics, scripted bool) (verificationResult, error) {
+	assistantFailure := "final answer did not compare graph evidence, capability/ergonomics posture, and reference/defer decision"
+	if scripted {
+		assistantFailure = "final answer did not compare graph evidence, current-primitives safety, UX acceptability, capability/ergonomics posture, and reference/defer decision"
+	}
+	return verifyGraphSemanticsWorkflow(ctx, paths, finalMessage, turnMetrics, scripted, graphSemanticsRevisitAnswerPass(finalMessage, scripted), assistantFailure)
+}
+func verifyGraphSemanticsWorkflow(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics, requireListDocuments bool, assistantPass bool, assistantFailure string) (verificationResult, error) {
 	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	search, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
 		Action: runner.RetrievalTaskActionSearch,
@@ -473,7 +483,7 @@ func verifyGraphSemanticsReference(ctx context.Context, paths evalPaths, finalMe
 	if !turnMetrics.SearchUsed {
 		failures = append(failures, "agent did not use retrieval search")
 	}
-	if !turnMetrics.ListDocumentsUsed {
+	if requireListDocuments && !turnMetrics.ListDocumentsUsed {
 		failures = append(failures, "agent did not use list_documents")
 	}
 	if !turnMetrics.GetDocumentUsed {
@@ -489,9 +499,8 @@ func verifyGraphSemanticsReference(ctx context.Context, paths evalPaths, finalMe
 		failures = append(failures, "agent did not inspect graph projection state")
 	}
 
-	assistantPass := graphSemanticsReferenceAnswerPass(finalMessage)
 	if !assistantPass {
-		failures = append(failures, "final answer did not compare search, links/backlinks, graph neighborhood, markdown relationship text, and reference/defer decision")
+		failures = append(failures, assistantFailure)
 	}
 
 	databasePass := searchContainsPath(search, graphSemanticsIndexPath) &&
@@ -505,11 +514,13 @@ func verifyGraphSemanticsReference(ctx context.Context, paths evalPaths, finalMe
 		hasGraph &&
 		hasProjection
 	activityPass := turnMetrics.SearchUsed &&
-		turnMetrics.ListDocumentsUsed &&
 		turnMetrics.GetDocumentUsed &&
 		turnMetrics.DocumentLinksUsed &&
 		turnMetrics.GraphNeighborhoodUsed &&
 		turnMetrics.ProjectionStatesUsed
+	if requireListDocuments {
+		activityPass = activityPass && turnMetrics.ListDocumentsUsed
+	}
 	return verificationResult{
 		Passed:        databasePass && assistantPass && activityPass,
 		DatabasePass:  databasePass,
