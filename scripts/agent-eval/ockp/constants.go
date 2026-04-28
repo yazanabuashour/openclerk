@@ -60,6 +60,18 @@ const (
 	memoryRouterSearchText              = "memory router temporal recall session promotion feedback weighting routing canonical docs"
 	memoryRouterSessionObservationTitle = "Memory Router Session Observation"
 
+	promotedRecordDomainLaneName           = "promoted-record-domain-expansion-pressure"
+	promotedRecordDomainNaturalScenarioID  = "promoted-record-domain-expansion-natural-intent"
+	promotedRecordDomainScriptedScenarioID = "promoted-record-domain-expansion-scripted-control"
+	promotedRecordDomainPrefix             = "records/policies/"
+	promotedRecordDomainPrimaryPath        = "records/policies/agentops-escalation-policy.md"
+	promotedRecordDomainAdjacentPath       = "records/policies/agentops-review-policy.md"
+	promotedRecordDomainNarrativePath      = "notes/promoted-record-domain/policy-narrative.md"
+	promotedRecordDomainEntityID           = "agentops-escalation-policy"
+	promotedRecordDomainEntityName         = "AgentOps Escalation Policy"
+	promotedRecordDomainEntityType         = "policy"
+	promotedRecordDomainSearchText         = "Promoted record domain expansion policy marker AgentOps escalation policy owner platform status active review cadence monthly citations"
+
 	configuredLayoutScenarioID = "configured-layout-explain"
 	invalidLayoutScenarioID    = "invalid-layout-visible"
 

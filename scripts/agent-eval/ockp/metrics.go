@@ -260,6 +260,10 @@ func classifyCommand(command string, m *metrics) {
 	if commandContainsAction(actionText, "records_lookup") {
 		m.RecordsLookupUsed = true
 	}
+	if commandContainsAction(actionText, "record_entity") {
+		m.RecordEntityUsed = true
+		m.RecordEntityIDs = append(m.RecordEntityIDs, actionFieldValues(actionText, "record_entity", "entity_id")...)
+	}
 	if commandContainsAction(actionText, "decisions_lookup") {
 		m.DecisionsLookupUsed = true
 	}
@@ -435,6 +439,8 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.DocumentLinksUsed = out.DocumentLinksUsed || current.DocumentLinksUsed
 		out.GraphNeighborhoodUsed = out.GraphNeighborhoodUsed || current.GraphNeighborhoodUsed
 		out.RecordsLookupUsed = out.RecordsLookupUsed || current.RecordsLookupUsed
+		out.RecordEntityUsed = out.RecordEntityUsed || current.RecordEntityUsed
+		out.RecordEntityIDs = append(out.RecordEntityIDs, current.RecordEntityIDs...)
 		out.DecisionsLookupUsed = out.DecisionsLookupUsed || current.DecisionsLookupUsed
 		out.DecisionRecordUsed = out.DecisionRecordUsed || current.DecisionRecordUsed
 		out.DecisionRecordIDs = append(out.DecisionRecordIDs, current.DecisionRecordIDs...)

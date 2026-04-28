@@ -134,6 +134,8 @@ type metrics struct {
 	DocumentLinksUsed         bool           `json:"document_links_used"`
 	GraphNeighborhoodUsed     bool           `json:"graph_neighborhood_used"`
 	RecordsLookupUsed         bool           `json:"records_lookup_used"`
+	RecordEntityUsed          bool           `json:"record_entity_used"`
+	RecordEntityIDs           []string       `json:"record_entity_ids,omitempty"`
 	DecisionsLookupUsed       bool           `json:"decisions_lookup_used"`
 	DecisionRecordUsed        bool           `json:"decision_record_used"`
 	DecisionRecordIDs         []string       `json:"decision_record_ids,omitempty"`

@@ -353,6 +353,55 @@ func seedMemoryRouterRevisit(ctx context.Context, cfg runclient.Config) error {
 	}
 	return createSeedDocument(ctx, cfg, memoryRouterSynthesisPath, "Memory Router Reference", memoryRouterReferenceSynthesisBody())
 }
+func seedPromotedRecordDomainExpansion(ctx context.Context, cfg runclient.Config) error {
+	narrativeBody := strings.TrimSpace(`---
+type: note
+status: active
+---
+# Promoted Record Domain Policy Narrative
+
+## Summary
+Plain docs evidence says the AgentOps escalation policy is important for runner review, but it does not provide typed policy filters or stable record identity.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, promotedRecordDomainNarrativePath, "Promoted Record Domain Policy Narrative", narrativeBody); err != nil {
+		return err
+	}
+	primaryBody := strings.TrimSpace(`---
+entity_id: agentops-escalation-policy
+entity_type: policy
+entity_name: AgentOps Escalation Policy
+---
+# AgentOps Escalation Policy
+
+## Summary
+Promoted record domain expansion policy marker: AgentOps escalation policy owner is platform, status active, review cadence monthly, and citations must stay with canonical markdown.
+
+## Facts
+- status: active
+- owner: platform
+- review_cadence: monthly
+- escalation_channel: runner-review
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, promotedRecordDomainPrimaryPath, promotedRecordDomainEntityName, primaryBody); err != nil {
+		return err
+	}
+	adjacentBody := strings.TrimSpace(`---
+entity_id: agentops-review-policy
+entity_type: policy
+entity_name: AgentOps Review Policy
+---
+# AgentOps Review Policy
+
+## Summary
+Adjacent policy record for promoted record domain expansion pressure. It is related to runner review but is not the escalation policy.
+
+## Facts
+- status: active
+- owner: operations
+- review_cadence: quarterly
+`) + "\n"
+	return createSeedDocument(ctx, cfg, promotedRecordDomainAdjacentPath, "AgentOps Review Policy", adjacentBody)
+}
 func memoryRouterSessionObservationBody() string {
 	return strings.TrimSpace(`---
 type: source

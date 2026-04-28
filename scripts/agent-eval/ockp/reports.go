@@ -97,7 +97,7 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	if releaseBlocking {
 		return nil
 	}
-	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != documentHistoryLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != sourceURLUpdateLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName && lane != broadAuditLaneName {
+	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != promotedRecordDomainLaneName && lane != documentHistoryLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != sourceURLUpdateLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName && lane != broadAuditLaneName {
 		return nil
 	}
 	summary := targetedLaneSummary{
@@ -124,6 +124,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		case memoryRouterRevisitLaneName:
 			include = isMemoryRouterRevisitScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
 			classification, posture = classifyTargetedMemoryRouterRevisitResult(result)
+		case promotedRecordDomainLaneName:
+			include = isPromotedRecordDomainScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
+			classification, posture = classifyTargetedPromotedRecordDomainResult(result)
 		case documentHistoryLaneName:
 			include = isDocumentHistoryScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
 			classification, posture = classifyTargetedDocumentHistoryResult(result)
@@ -195,6 +198,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	case memoryRouterRevisitLaneName:
 		summary.Decision = memoryRouterRevisitDecision(summary.ScenarioClassifications)
 		summary.Promotion = "targeted memory and autonomous router revisit evidence only; no remember/recall action, memory transport, autonomous router API, schema, migration, storage behavior, or public API change from this eval"
+	case promotedRecordDomainLaneName:
+		summary.Decision = promotedRecordDomainDecision(summary.ScenarioClassifications)
+		summary.Promotion = "targeted promoted record domain expansion evidence only; no policy-specific record action, typed domain runner surface, schema, migration, storage behavior, or public API change from this eval"
 	case documentHistoryLaneName:
 		summary.Decision = documentHistoryDecision(summary.ScenarioClassifications)
 		summary.Promotion = "targeted document lifecycle evidence only; no promoted history, diff, review, restore, rollback, schema, migration, storage behavior, or public API change from this eval"
@@ -303,6 +309,42 @@ func classifyTargetedMemoryRouterRevisitResult(result jobResult) (string, string
 		return "skill_guidance_or_eval_coverage", "runner-visible memory/router evidence existed, but the assistant answer or required runner steps did not satisfy the scenario"
 	}
 	return "ergonomics_gap", "manual review required before any memory/router promotion"
+}
+func classifyTargetedPromotedRecordDomainResult(result jobResult) (string, string) {
+	if isFinalAnswerOnlyValidationScenario(result.Scenario) {
+		if result.Passed && result.Verification.Passed {
+			return "none", "validation control stayed final-answer-only"
+		}
+		if result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1 {
+			return "skill_guidance_or_eval_coverage", "validation pressure did not stay final-answer-only"
+		}
+		return "skill_guidance_or_eval_coverage", "validation answer did not satisfy the rejection contract"
+	}
+	if result.Passed && result.Verification.Passed {
+		return "none", "current document/retrieval workflow preserved canonical record authority, citations, provenance, records freshness, and bypass boundaries"
+	}
+	if len(populatedBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Metrics.CreateDocumentUsed || result.Metrics.ReplaceSectionUsed || result.Metrics.AppendDocumentUsed {
+		return "eval_contract_violation", "promoted record domain scenario wrote durable documents instead of inspecting existing evidence"
+	}
+	if result.Verification.Passed {
+		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
+	}
+	if result.Scenario == promotedRecordDomainScriptedScenarioID && !result.Verification.DatabasePass {
+		return "capability_gap", "scripted current-primitives control could not safely express promoted record domain expansion"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "fixture or durable promoted-record evidence did not satisfy domain expansion pressure"
+	}
+	if result.Scenario == promotedRecordDomainNaturalScenarioID && !result.Verification.Passed {
+		return "ergonomics_gap", "natural promoted record domain intent did not complete the safe current-primitives workflow"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible promoted-record evidence existed, but the assistant answer or required runner steps did not satisfy the scenario"
+	}
+	return "ergonomics_gap", "manual review required before any promoted record domain expansion"
 }
 func classifyTargetedArtifactIngestionResult(result jobResult) (string, string) {
 	if result.Passed && result.Verification.Passed {
@@ -439,6 +481,10 @@ func promptSpecificity(scenarioID string) string {
 		return "natural-user-intent"
 	case memoryRouterScriptedScenarioID:
 		return "scripted-control"
+	case promotedRecordDomainNaturalScenarioID:
+		return "natural-user-intent"
+	case promotedRecordDomainScriptedScenarioID:
+		return "scripted-control"
 	case documentHistoryNaturalScenarioID:
 		return "natural-user-intent"
 	case documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID:
@@ -504,6 +550,9 @@ func scenarioBrittleness(result jobResult) string {
 	if result.Scenario == memoryRouterNaturalScenarioID && !result.Passed {
 		return "natural_prompt_sensitive"
 	}
+	if result.Scenario == promotedRecordDomainNaturalScenarioID && !result.Passed {
+		return "natural_prompt_sensitive"
+	}
 	return "normal"
 }
 func scenarioRetries(result jobResult) int {
@@ -542,6 +591,13 @@ func scenarioGuidanceDependence(result jobResult) string {
 		}
 		return "high_if_natural_prompt_failed"
 	case memoryRouterScriptedScenarioID:
+		return "high_exact_request_shape"
+	case promotedRecordDomainNaturalScenarioID:
+		if result.Passed {
+			return "low_natural_user_intent"
+		}
+		return "high_if_natural_prompt_failed"
+	case promotedRecordDomainScriptedScenarioID:
 		return "high_exact_request_shape"
 	case documentHistoryNaturalScenarioID:
 		if result.Passed {
@@ -585,6 +641,9 @@ func scenarioGuidanceDependence(result jobResult) string {
 func scenarioSafetyRisks(result jobResult) string {
 	if (isSynthesisCompileScenario(result.Scenario) || isBroadAuditScenario(result.Scenario)) && result.Metrics.CreateDocumentUsed {
 		return "duplicate_or_unexpected_create"
+	}
+	if isPromotedRecordDomainScenario(result.Scenario) && (result.Metrics.CreateDocumentUsed || result.Metrics.ReplaceSectionUsed || result.Metrics.AppendDocumentUsed) {
+		return "unexpected_write"
 	}
 	if result.Metrics.CreateDocumentUsed && result.Scenario != videoYouTubeScriptedTranscriptControlID && result.Scenario != documentHistoryPendingScenarioID {
 		return "wrote_before_approval"
@@ -852,6 +911,33 @@ func memoryRouterRevisitDecision(rows []targetedScenarioClassification) string {
 	}
 	return "keep_as_reference"
 }
+func promotedRecordDomainDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	ergonomicsGaps := 0
+	for _, row := range rows {
+		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
+			return "promote_promoted_record_domain_surface_design"
+		}
+		if row.FailureClassification == "ergonomics_gap" {
+			ergonomicsGaps++
+		} else if row.FailureClassification != "none" {
+			return "defer_for_guidance_or_eval_repair"
+		}
+		seen[row.Scenario] = true
+	}
+	for _, id := range promotedRecordDomainScenarioIDs() {
+		if !seen[id] {
+			return "defer_for_guidance_or_eval_repair"
+		}
+	}
+	if ergonomicsGaps >= 2 {
+		return "promote_promoted_record_domain_surface_design"
+	}
+	if ergonomicsGaps > 0 {
+		return "defer_for_guidance_or_eval_repair"
+	}
+	return "keep_as_reference"
+}
 func documentHistoryDecision(rows []targetedScenarioClassification) string {
 	seen := map[string]bool{}
 	ergonomicsGaps := 0
@@ -1078,6 +1164,12 @@ func memoryRouterRevisitScenarioIDs() []string {
 		memoryRouterScriptedScenarioID,
 	}
 }
+func promotedRecordDomainScenarioIDs() []string {
+	return []string{
+		promotedRecordDomainNaturalScenarioID,
+		promotedRecordDomainScriptedScenarioID,
+	}
+}
 func broadAuditScenarioIDs() []string {
 	return []string{
 		broadAuditNaturalScenarioID,
@@ -1252,6 +1344,7 @@ func reportLane(ids []string) (string, bool) {
 	repoDocs := 0
 	graphSemanticsRevisit := 0
 	memoryRouterRevisit := 0
+	promotedRecordDomain := 0
 	documentHistory := 0
 	agentChosenPath := 0
 	pathTitleAutonomy := 0
@@ -1279,6 +1372,10 @@ func reportLane(ids []string) (string, bool) {
 		}
 		if isMemoryRouterRevisitScenario(id) {
 			memoryRouterRevisit++
+			continue
+		}
+		if isPromotedRecordDomainScenario(id) {
+			promotedRecordDomain++
 			continue
 		}
 		if isDocumentHistoryScenario(id) {
@@ -1339,6 +1436,9 @@ func reportLane(ids []string) (string, bool) {
 	if memoryRouterRevisit > 0 && memoryRouterRevisit+validation == len(ids) {
 		return memoryRouterRevisitLaneName, false
 	}
+	if promotedRecordDomain > 0 && promotedRecordDomain+validation == len(ids) {
+		return promotedRecordDomainLaneName, false
+	}
 	if documentHistory > 0 && documentHistory+validation == len(ids) {
 		return documentHistoryLaneName, false
 	}
@@ -1379,6 +1479,9 @@ func reportLane(ids []string) (string, bool) {
 		return populatedMixedLaneName, releaseBlocking
 	}
 	if memoryRouterRevisit > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
+	if promotedRecordDomain > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
 	if documentHistory > 0 {
@@ -1422,6 +1525,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == memoryRouterRevisitLaneName {
 		return "memory and autonomous router revisit rows report natural memory/router intent, scripted current-primitives control, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"
+	}
+	if lane == promotedRecordDomainLaneName {
+		return "promoted record domain expansion rows report natural record-domain intent, scripted current-primitives control, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"
 	}
 	if lane == documentHistoryLaneName {
 		return "document lifecycle rows report natural intent, scripted current-primitives controls, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, privacy handling, and capability/ergonomics classification"

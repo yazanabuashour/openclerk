@@ -47,6 +47,10 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedMemoryRouterRevisit(ctx, cfg); err != nil {
 			return err
 		}
+	case promotedRecordDomainNaturalScenarioID, promotedRecordDomainScriptedScenarioID:
+		if err := seedPromotedRecordDomainExpansion(ctx, cfg); err != nil {
+			return err
+		}
 	case configuredLayoutScenarioID:
 		if err := seedConfiguredLayoutScenario(ctx, cfg); err != nil {
 			return err

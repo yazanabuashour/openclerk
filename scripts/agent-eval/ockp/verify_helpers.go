@@ -434,6 +434,59 @@ func memoryRouterRevisitAnswerPass(message string, scripted bool) bool {
 	}
 	return required
 }
+func promotedRecordDomainAnswerPass(message string, scripted bool) bool {
+	normalized := normalizeValidationMessage(message)
+	if messagePromotesRecordDomain(normalized) {
+		return false
+	}
+	requiredEvidence := containsAny(normalized, []string{"search"}) &&
+		containsAny(normalized, []string{"list_documents", "list documents"}) &&
+		containsAny(normalized, []string{"get_document", "get document"}) &&
+		containsAny(normalized, []string{"records_lookup", "records lookup", "generic records"}) &&
+		containsAny(normalized, []string{"record_entity", "record entity"}) &&
+		containsAny(normalized, []string{"provenance"}) &&
+		containsAny(normalized, []string{"projection", "freshness", "fresh"}) &&
+		containsAny(normalized, []string{"citation", "citations", "cited", "source"}) &&
+		containsAny(normalized, []string{"local-first", "no-bypass", "bypass boundaries", "no bypass"}) &&
+		containsAny(normalized, []string{"reference", "defer", "deferred", "not promote", "do not promote", "not promoted", "keep"})
+	if !requiredEvidence {
+		return false
+	}
+	capabilityPosture := containsAny(normalized, []string{"capability gap", "capability_gap", "neither"}) ||
+		containsAny(normalized, []string{"current primitives can express", "existing primitives can express", "can express the workflow safely", "express the workflow safely"})
+	ergonomicsPosture := containsAny(normalized, []string{"ergonomics gap", "ergonomics_gap", "neither", "ux", "user experience"}) ||
+		containsAny(normalized, []string{"current ux is acceptable", "ux is acceptable", "acceptable enough", "current workflow is acceptable"})
+	if !capabilityPosture || !ergonomicsPosture {
+		return false
+	}
+	if !scripted {
+		return true
+	}
+	return containsAny(normalized, []string{"current primitives", "existing primitives", "document and retrieval", "document/retrieval", "existing runner actions"}) &&
+		containsAny(normalized, []string{"express", "safely express", "can express", "workflow safely"}) &&
+		containsAny(normalized, []string{"acceptable", "ux acceptable", "current ux"})
+}
+func messagePromotesRecordDomain(normalized string) bool {
+	promotionPhrases := []string{
+		"decision: promote",
+		"promote policy-specific",
+		"promote a policy-specific",
+		"promote promoted record domain",
+		"promote record domain",
+		"add policy-specific",
+		"add a policy-specific",
+		"new policy-specific",
+	}
+	for _, phrase := range promotionPhrases {
+		if strings.Contains(normalized, phrase) &&
+			!strings.Contains(normalized, "do not "+phrase) &&
+			!strings.Contains(normalized, "not "+phrase) &&
+			!strings.Contains(normalized, "rather than "+phrase) {
+			return true
+		}
+	}
+	return false
+}
 func messagePromotesMemoryRouter(normalized string) bool {
 	promotionPhrases := []string{
 		"decision: promote memory",
@@ -589,6 +642,9 @@ func provenanceEventRefIDsInclude(actual []string, expected ...string) bool {
 	return stringValuesInclude(actual, expected...)
 }
 func decisionRecordIDsInclude(actual []string, expected ...string) bool {
+	return stringValuesInclude(actual, expected...)
+}
+func recordEntityIDsInclude(actual []string, expected ...string) bool {
 	return stringValuesInclude(actual, expected...)
 }
 func stringValuesInclude(actual []string, expected ...string) bool {

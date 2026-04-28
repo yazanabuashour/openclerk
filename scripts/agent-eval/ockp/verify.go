@@ -61,6 +61,10 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyMemoryRouterRevisit(ctx, paths, finalMessage, turnMetrics, false)
 	case memoryRouterScriptedScenarioID:
 		return verifyMemoryRouterRevisit(ctx, paths, finalMessage, turnMetrics, true)
+	case promotedRecordDomainNaturalScenarioID:
+		return verifyPromotedRecordDomainExpansion(ctx, paths, finalMessage, turnMetrics, false)
+	case promotedRecordDomainScriptedScenarioID:
+		return verifyPromotedRecordDomainExpansion(ctx, paths, finalMessage, turnMetrics, true)
 	case configuredLayoutScenarioID:
 		return verifyConfiguredLayoutScenario(ctx, paths, finalMessage, turnMetrics)
 	case invalidLayoutScenarioID:

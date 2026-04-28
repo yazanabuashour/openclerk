@@ -1135,6 +1135,39 @@ func TestMemoryRouterRevisitDecisionRequiresRepeatedEvidence(t *testing.T) {
 	}
 }
 
+func TestPromotedRecordDomainDecisionRequiresRepeatedEvidence(t *testing.T) {
+	rows := make([]targetedScenarioClassification, 0, len(promotedRecordDomainScenarioIDs()))
+	for _, id := range promotedRecordDomainScenarioIDs() {
+		rows = append(rows, targetedScenarioClassification{
+			Scenario:              id,
+			FailureClassification: "none",
+		})
+	}
+	if decision := promotedRecordDomainDecision(rows[:len(rows)-1]); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("partial decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	if decision := promotedRecordDomainDecision(rows); decision != "keep_as_reference" {
+		t.Fatalf("complete passing decision = %q, want keep_as_reference", decision)
+	}
+	rows[0].FailureClassification = "ergonomics_gap"
+	if decision := promotedRecordDomainDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("single ergonomics decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	rows[1].FailureClassification = "ergonomics_gap"
+	if decision := promotedRecordDomainDecision(rows); decision != "promote_promoted_record_domain_surface_design" {
+		t.Fatalf("repeated ergonomics decision = %q, want promote_promoted_record_domain_surface_design", decision)
+	}
+	rows[0].FailureClassification = "capability_gap"
+	rows[1].FailureClassification = "none"
+	if decision := promotedRecordDomainDecision(rows); decision != "promote_promoted_record_domain_surface_design" {
+		t.Fatalf("capability decision = %q, want promote_promoted_record_domain_surface_design", decision)
+	}
+	rows[0].FailureClassification = "skill_guidance_or_eval_coverage"
+	if decision := promotedRecordDomainDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("guidance decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+}
+
 func TestMemoryRouterRevisitClassifiesNaturalDatabaseFailureAsDataHygiene(t *testing.T) {
 	classification, posture := classifyTargetedMemoryRouterRevisitResult(jobResult{
 		Scenario: memoryRouterNaturalScenarioID,
@@ -2088,6 +2121,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\n  \"document_links\",\"doc_id\":\"doc_1\"}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\n  \"graph_neighborhood\",\"doc_id\":\"doc_1\"}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"records_lookup\",\"records\":{\"text\":\"runner\"}}' | openclerk retrieval"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"record_entity\",\"entity_id\":\"runner\"}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"decisions_lookup\",\"decisions\":{\"text\":\"runner\"}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"decision_record\",\"decision_id\":\"adr-runner\"}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"provenance_events\",\"provenance\":{\"ref_kind\":\"document\",\"ref_id\":\"doc_alpha\",\"limit\":10}}' | openclerk retrieval"}}`,
@@ -2105,7 +2139,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	if parsed.sessionID != "session-123" || parsed.finalMessage != "done" {
 		t.Fatalf("parsed = %+v", parsed)
 	}
-	if parsed.metrics.ToolCalls != 21 || parsed.metrics.CommandExecutions != 21 || parsed.metrics.AssistantCalls != 1 {
+	if parsed.metrics.ToolCalls != 22 || parsed.metrics.CommandExecutions != 22 || parsed.metrics.AssistantCalls != 1 {
 		t.Fatalf("metrics = %+v", parsed.metrics)
 	}
 	if !parsed.metrics.BroadRepoSearch {
@@ -2127,6 +2161,9 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	}
 	if !decisionRecordIDsInclude(parsed.metrics.DecisionRecordIDs, "adr-runner") {
 		t.Fatalf("expected decision record id in %+v", parsed.metrics)
+	}
+	if !recordEntityIDsInclude(parsed.metrics.RecordEntityIDs, "runner") {
+		t.Fatalf("expected record entity id in %+v", parsed.metrics)
 	}
 	if !containsAllStrings(parsed.metrics.ListDocumentPathPrefixes, []string{"synthesis/"}) {
 		t.Fatalf("expected list document path prefix in %+v", parsed.metrics)
@@ -2153,6 +2190,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		"document_links":         parsed.metrics.DocumentLinksUsed,
 		"graph_neighborhood":     parsed.metrics.GraphNeighborhoodUsed,
 		"records_lookup":         parsed.metrics.RecordsLookupUsed,
+		"record_entity":          parsed.metrics.RecordEntityUsed,
 		"decisions_lookup":       parsed.metrics.DecisionsLookupUsed,
 		"decision_record":        parsed.metrics.DecisionRecordUsed,
 		"provenance_events":      parsed.metrics.ProvenanceEventsUsed,
@@ -2332,7 +2370,7 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 	for _, id := range scenarioIDs() {
 		ids[id] = true
 	}
-	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, graphSemanticsScenarioID, graphSemanticsNaturalScenarioID, graphSemanticsScriptedScenarioID, memoryRouterNaturalScenarioID, memoryRouterScriptedScenarioID, broadAuditNaturalScenarioID, broadAuditScriptedScenarioID, memoryRouterScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, sourceURLUpdateDuplicateScenarioID, sourceURLUpdateSameSHAScenarioID, sourceURLUpdateChangedScenarioID, sourceURLUpdateConflictScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, synthesisCompileNaturalScenarioID, synthesisCompileScriptedScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, documentHistoryNaturalScenarioID, documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID, populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID, agentChosenExplicitScenarioID, agentChosenMissingFieldsScenarioID, agentChosenPathProposalScenarioID, agentChosenAutonomousScenarioID, agentChosenSynthesisScenarioID, agentChosenAmbiguousScenarioID, agentChosenUserPathScenarioID, pathTitleURLOnlyScenarioID, pathTitleArtifactMissingHintsScenarioID, pathTitleMultiSourceDuplicateScenarioID, pathTitleExplicitOverridesScenarioID, pathTitleDuplicateRiskScenarioID, pathTitleMetadataAuthorityScenarioID, documentThisMissingFieldsScenarioID, documentThisExplicitCreateScenarioID, documentThisSourceURLMissingHintsScenarioID, documentThisExplicitOverridesScenarioID, documentThisDuplicateCandidateScenarioID, documentThisExistingUpdateScenarioID, documentThisSynthesisFreshnessScenarioID, candidateNoteFromPastedContentScenarioID, candidateTitleAndPathFromHeadingScenarioID, candidateMixedSourceSummaryScenarioID, candidateExplicitOverridesWinScenarioID, candidateDuplicateRiskAsksScenarioID, candidateLowConfidenceAsksScenarioID, candidateBodyFaithfulnessScenarioID, artifactPDFSourceURLScenarioID, artifactPDFNaturalIntentScenarioID, artifactTranscriptScenarioID, artifactInvoiceReceiptScenarioID, artifactMixedSynthesisScenarioID, artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID, videoYouTubeNaturalIntentScenarioID, videoYouTubeScriptedTranscriptControlID, videoYouTubeSynthesisFreshnessScenarioID, videoYouTubeBypassRejectScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
+	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, graphSemanticsScenarioID, graphSemanticsNaturalScenarioID, graphSemanticsScriptedScenarioID, memoryRouterNaturalScenarioID, memoryRouterScriptedScenarioID, promotedRecordDomainNaturalScenarioID, promotedRecordDomainScriptedScenarioID, broadAuditNaturalScenarioID, broadAuditScriptedScenarioID, memoryRouterScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, sourceURLUpdateDuplicateScenarioID, sourceURLUpdateSameSHAScenarioID, sourceURLUpdateChangedScenarioID, sourceURLUpdateConflictScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, synthesisCompileNaturalScenarioID, synthesisCompileScriptedScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, documentHistoryNaturalScenarioID, documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID, populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID, agentChosenExplicitScenarioID, agentChosenMissingFieldsScenarioID, agentChosenPathProposalScenarioID, agentChosenAutonomousScenarioID, agentChosenSynthesisScenarioID, agentChosenAmbiguousScenarioID, agentChosenUserPathScenarioID, pathTitleURLOnlyScenarioID, pathTitleArtifactMissingHintsScenarioID, pathTitleMultiSourceDuplicateScenarioID, pathTitleExplicitOverridesScenarioID, pathTitleDuplicateRiskScenarioID, pathTitleMetadataAuthorityScenarioID, documentThisMissingFieldsScenarioID, documentThisExplicitCreateScenarioID, documentThisSourceURLMissingHintsScenarioID, documentThisExplicitOverridesScenarioID, documentThisDuplicateCandidateScenarioID, documentThisExistingUpdateScenarioID, documentThisSynthesisFreshnessScenarioID, candidateNoteFromPastedContentScenarioID, candidateTitleAndPathFromHeadingScenarioID, candidateMixedSourceSummaryScenarioID, candidateExplicitOverridesWinScenarioID, candidateDuplicateRiskAsksScenarioID, candidateLowConfidenceAsksScenarioID, candidateBodyFaithfulnessScenarioID, artifactPDFSourceURLScenarioID, artifactPDFNaturalIntentScenarioID, artifactTranscriptScenarioID, artifactInvoiceReceiptScenarioID, artifactMixedSynthesisScenarioID, artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID, videoYouTubeNaturalIntentScenarioID, videoYouTubeScriptedTranscriptControlID, videoYouTubeSynthesisFreshnessScenarioID, videoYouTubeBypassRejectScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
 		if !ids[want] {
 			t.Fatalf("scenarioIDs missing %q in %v", want, scenarioIDs())
 		}
@@ -2404,6 +2442,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 			t.Fatalf("default selected scenarios included targeted memory/router revisit scenario %q", id)
 		}
 	}
+	for _, id := range promotedRecordDomainScenarioIDs() {
+		if defaultIDs[id] {
+			t.Fatalf("default selected scenarios included targeted promoted record domain scenario %q", id)
+		}
+	}
 	for _, id := range broadAuditScenarioIDs() {
 		if defaultIDs[id] {
 			t.Fatalf("default selected scenarios included targeted broad audit scenario %q", id)
@@ -2468,6 +2511,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	lane, releaseBlocking = reportLane(selected)
 	if lane != memoryRouterRevisitLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, memoryRouterRevisitLaneName)
+	}
+	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(append(promotedRecordDomainScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject"), ",")})
+	lane, releaseBlocking = reportLane(selected)
+	if lane != promotedRecordDomainLaneName || releaseBlocking {
+		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, promotedRecordDomainLaneName)
 	}
 	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(append(broadAuditScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject"), ",")})
 	lane, releaseBlocking = reportLane(selected)

@@ -22,7 +22,7 @@ func isRepoDocsDogfoodScenario(id string) bool {
 	}
 }
 func isReleaseBlockingScenario(id string) bool {
-	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isSourceURLUpdateScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isBroadAuditScenario(id)
+	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isPromotedRecordDomainScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isSourceURLUpdateScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isBroadAuditScenario(id)
 }
 func isGraphSemanticsRevisitScenario(id string) bool {
 	switch id {
@@ -35,6 +35,14 @@ func isGraphSemanticsRevisitScenario(id string) bool {
 func isMemoryRouterRevisitScenario(id string) bool {
 	switch id {
 	case memoryRouterNaturalScenarioID, memoryRouterScriptedScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+func isPromotedRecordDomainScenario(id string) bool {
+	switch id {
+	case promotedRecordDomainNaturalScenarioID, promotedRecordDomainScriptedScenarioID:
 		return true
 	default:
 		return false
@@ -182,6 +190,16 @@ func allScenarios() []scenario {
 			ID:     memoryRouterScriptedScenarioID,
 			Title:  "Memory and router revisit scripted control",
 			Prompt: "Use the configured local OpenClerk data path. This scripted control is an evidence comparison over existing runner-visible documents; it is not a request to use or implement a memory transport, remember/recall action, autonomous router API, vector DB, embedding store, graph memory, or new runner action. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, memory transports, remember/recall actions, autonomous router APIs, or unsupported actions. First run openclerk retrieval search for memory router temporal recall session promotion feedback weighting routing canonical docs with limit 10. Then run openclerk document list_documents with path_prefix notes/memory-router/ and limit 10. Use the returned doc_ids for notes/memory-router/session-observation.md, notes/memory-router/temporal-policy.md, notes/memory-router/feedback-weighting.md, and notes/memory-router/routing-policy.md to run get_document for each. Inspect provenance_events for ref_kind document and the session observation doc_id. Then list documents with path_prefix synthesis/ and limit 20, use the returned doc_id for synthesis/memory-router-reference.md to run get_document, and inspect projection_states with projection synthesis, ref_kind document, and that synthesis doc_id. Do not create or update documents. In the final answer, explicitly mention search, temporal status, session promotion through canonical markdown with source refs, feedback weighting as advisory, routing through existing AgentOps document and retrieval actions, provenance, synthesis projection freshness, whether current primitives can express the workflow safely, whether the current UX is acceptable, and this decision: keep memory and autonomous routing as reference/deferred, do not promote remember/recall or an autonomous router surface.",
+		},
+		{
+			ID:     promotedRecordDomainNaturalScenarioID,
+			Title:  "Promoted record domain expansion natural intent",
+			Prompt: "Use the configured local OpenClerk data path. I need to decide whether policy-like promoted record domains beyond services and decisions should become their own promoted OpenClerk surface. Stay inside installed OpenClerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or unsupported actions. Compare what the current runner can prove for the AgentOps escalation policy: canonical markdown evidence, generic records_lookup, record_entity detail, source citations, provenance, records projection freshness, and adjacent plain docs. Do not create or update documents. In the final answer, say whether this evidence shows a capability gap, an ergonomics gap, both, or neither; mention search, list_documents, get_document, records_lookup, record_entity, provenance, records projection freshness, source citations, local-first/no-bypass boundaries, and whether to keep promoted record domain expansion deferred/reference rather than promote a policy-specific runner surface.",
+		},
+		{
+			ID:     promotedRecordDomainScriptedScenarioID,
+			Title:  "Promoted record domain expansion scripted control",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or unsupported actions. First run openclerk retrieval search for Promoted record domain expansion policy marker AgentOps escalation policy owner platform status active review cadence monthly citations with limit 10. Then run openclerk document list_documents with path_prefix records/policies/ and limit 10. Use the returned doc_id for records/policies/agentops-escalation-policy.md to run get_document. Then run openclerk retrieval records_lookup with records.text AgentOps Escalation Policy, records.entity_type policy, and limit 10. Use the returned entity_id agentops-escalation-policy to run record_entity. Inspect provenance_events for ref_kind entity and ref_id agentops-escalation-policy. Inspect projection_states with projection records, ref_kind entity, ref_id agentops-escalation-policy, and limit 5. Do not create or update documents. In the final answer, explicitly mention search, list_documents, get_document, records_lookup, record_entity, source citations, provenance, records projection freshness, whether current primitives can express the workflow safely, whether the current UX is acceptable, and this decision: keep promoted record domain expansion as deferred/reference rather than promote a policy-specific runner surface.",
 		},
 		{
 			ID:     broadAuditNaturalScenarioID,
