@@ -27,8 +27,8 @@ The targeted reduced report is
 | --- | --- | ---: | ---: | --- | --- | --- | --- |
 | Prior reference POC, `graph-semantics-reference-poc` | None; current document/retrieval workflow | 14 | 4 | 27.44s | Scripted-control | `none` in prior selected pressure | Low: canonical markdown carried relationship meaning; graph output stayed structural and cited. |
 | Baseline navigation, `canonical-docs-navigation-baseline` | None; current document/retrieval workflow | 16 | 5 | 35.64s | Scripted-control | `none` in prior selected pressure | Low: links, backlinks, graph neighborhood, and projection freshness were inspectable. |
-| New natural-intent revisit | Possible `graph_semantics_query` if repeated natural UX fails | 26 | 7 | 80.88s | Natural user intent | `ergonomics_gap` | Medium if a promoted surface hides markdown evidence, citations, or graph freshness. |
-| New scripted-control revisit | None; exact current primitive workflow | 28 | 6 | 86.21s | Scripted-control | `skill_guidance_or_eval_coverage` | Low if search, document retrieval, links, graph neighborhood, and freshness all remain visible. |
+| New natural-intent revisit | Possible `graph_semantics_query` if repeated natural UX fails | 28 | 5 | 99.11s | Natural user intent | `none` | Medium if a promoted surface hides markdown evidence, citations, or graph freshness. |
+| New scripted-control revisit | None; exact current primitive workflow | 22 | 6 | 46.95s | Scripted-control | `none` | Low if search, document retrieval, links, graph neighborhood, and freshness all remain visible. |
 
 Prior measurements come from
 [`results/ockp-graph-semantics-reference-poc.md`](results/ockp-graph-semantics-reference-poc.md).
@@ -82,11 +82,13 @@ Any future promoted surface must:
 
 ## POC Conclusion
 
-The targeted pressure lane found one natural-intent `ergonomics_gap` and one
-scripted-control `skill_guidance_or_eval_coverage` row. The scripted-control
-database evidence passed, so the failure does not prove structural
-insufficiency. The current evidence supports deferring promotion for guidance or
-eval repair rather than creating a graph semantics implementation follow-up.
+The refreshed targeted pressure lane completed both the natural-intent row and
+the scripted-control row with `none` failure classification. The scripted
+control proves current primitives can express the workflow safely; the natural
+row remains high-latency pressure, but it did not fail or show repeated
+ergonomics evidence that justifies promotion. The current evidence supports
+keeping graph semantics as reference pressure rather than creating a graph
+semantics implementation follow-up.
 
 The final decision is recorded in
 [`../architecture/graph-semantics-revisit-promotion-decision.md`](../architecture/graph-semantics-revisit-promotion-decision.md).

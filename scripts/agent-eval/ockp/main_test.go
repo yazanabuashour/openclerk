@@ -2711,6 +2711,15 @@ func TestVerifyGraphSemanticsRevisitMatchesNaturalAndScriptedPrompts(t *testing.
 		t.Fatalf("scripted graph semantics revisit failed: %+v", result)
 	}
 
+	scriptedEquivalentAnswer := "Search finds canonical markdown relationship text: requires, supersedes, related to, and operationalizes. document_links shows outgoing links and incoming backlinks with canonical citations. graph_neighborhood shows structural context, and graph projection freshness is fresh. Current primitives can express the workflow safely, and UX is acceptable for reference/deferred graph evidence. Keep richer graph semantics as reference/deferred and do not promote a semantic-label graph layer."
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: graphSemanticsScriptedScenarioID}, 1, scriptedEquivalentAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify scripted equivalent graph semantics revisit: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("scripted equivalent graph semantics revisit failed: %+v", result)
+	}
+
 	noListMetrics := completeMetrics
 	noListMetrics.ListDocumentsUsed = false
 	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: graphSemanticsScriptedScenarioID}, 1, scriptedAnswer, noListMetrics)

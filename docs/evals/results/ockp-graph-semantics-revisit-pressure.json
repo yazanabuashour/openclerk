@@ -1,23 +1,22 @@
 {
   "metadata": {
-    "generated_at": "2026-04-28T17:30:24.371671Z",
+    "generated_at": "2026-04-28T18:36:24.445685Z",
     "model": "gpt-5.4-mini",
     "reasoning_effort": "medium",
     "harness": "codex exec --json --full-auto from throwaway run directories; single-turn scenarios use --ephemeral and multi-turn scenarios resume one persisted eval session",
     "configured_parallelism": 4,
     "cache_mode": "shared",
-    "cache_prewarm_seconds": 18.61,
-    "harness_elapsed_seconds": 108.73,
-    "effective_parallel_speedup": 1.77,
-    "parallel_efficiency": 0.44,
+    "cache_prewarm_seconds": 18.29,
+    "harness_elapsed_seconds": 123.55,
+    "effective_parallel_speedup": 1.39,
+    "parallel_efficiency": 0.35,
     "phase_totals": {
-      "copy_repo_seconds": 0.25,
-      "install_variant_seconds": 22.38,
-      "seed_data_seconds": 0.09,
-      "agent_run_seconds": 192.79,
-      "parse_metrics_seconds": 0.01,
+      "copy_repo_seconds": 0.2,
+      "install_variant_seconds": 31.34,
+      "seed_data_seconds": 0.11,
+      "agent_run_seconds": 172.06,
       "verify_seconds": 0.18,
-      "total_seconds": 215.71
+      "total_seconds": 203.92
     },
     "run_root_artifact_reference": "\u003crun-root\u003e",
     "raw_log_placeholder": "\u003crun-root\u003e/\u003cvariant\u003e/\u003cscenario\u003e/turn-N/events.jsonl",
@@ -43,23 +42,22 @@
       "variant": "production",
       "scenario": "graph-semantics-revisit-natural-intent",
       "scenario_title": "Graph semantics revisit natural intent",
-      "passed": false,
-      "status": "failed",
+      "passed": true,
+      "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 80.88,
+      "wall_seconds": 99.11,
       "phase_timings": {
-        "copy_repo_seconds": 0.05,
-        "install_variant_seconds": 3.36,
-        "seed_data_seconds": 0.05,
-        "agent_run_seconds": 80.88,
-        "parse_metrics_seconds": 0.01,
+        "copy_repo_seconds": 0.04,
+        "install_variant_seconds": 5.95,
+        "seed_data_seconds": 0.06,
+        "agent_run_seconds": 99.11,
         "verify_seconds": 0.09,
-        "total_seconds": 84.45
+        "total_seconds": 105.27
       },
       "metrics": {
-        "assistant_calls": 7,
-        "tool_calls": 26,
-        "command_executions": 26,
+        "assistant_calls": 5,
+        "tool_calls": 28,
+        "command_executions": 28,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -84,10 +82,12 @@
         "get_document_doc_ids": [
           "e421805bc58fa2cc",
           "e421805bc58fa2cc",
-          "7976d7962579edc7",
-          "7976d7962579edc7",
           "f5ee9da7e90942bd",
-          "f5ee9da7e90942bd"
+          "f5ee9da7e90942bd",
+          "7976d7962579edc7",
+          "7976d7962579edc7",
+          "9cf124c0f9dfc2f2",
+          "9cf124c0f9dfc2f2"
         ],
         "inspect_layout_used": false,
         "document_links_used": true,
@@ -95,20 +95,16 @@
         "records_lookup_used": false,
         "decisions_lookup_used": false,
         "decision_record_used": false,
-        "provenance_events_used": true,
-        "provenance_event_ref_ids": [
-          "e421805bc58fa2cc",
-          "e421805bc58fa2cc"
-        ],
+        "provenance_events_used": false,
         "projection_states_used": true,
         "usage_exposed": true,
-        "input_tokens": 458008,
-        "cached_input_tokens": 442624,
-        "non_cached_input_tokens": 15384,
-        "output_tokens": 7216,
+        "input_tokens": 494641,
+        "cached_input_tokens": 475264,
+        "non_cached_input_tokens": 19377,
+        "output_tokens": 5707,
         "event_type_counts": {
-          "item.completed": 20,
-          "item.started": 13,
+          "item.completed": 19,
+          "item.started": 14,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -116,10 +112,10 @@
         "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
       },
       "verification": {
-        "passed": false,
+        "passed": true,
         "database_pass": true,
-        "assistant_pass": false,
-        "details": "turn 1: agent did not use list_documents; final answer did not compare search, links/backlinks, graph neighborhood, markdown relationship text, and reference/defer decision",
+        "assistant_pass": true,
+        "details": "turn 1: ok",
         "documents": [
           "notes/graph/semantics/index.md",
           "notes/graph/semantics/routing.md",
@@ -130,12 +126,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 80.88,
+          "wall_seconds": 99.11,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 7,
-            "tool_calls": 26,
-            "command_executions": 26,
+            "assistant_calls": 5,
+            "tool_calls": 28,
+            "command_executions": 28,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -160,10 +156,12 @@
             "get_document_doc_ids": [
               "e421805bc58fa2cc",
               "e421805bc58fa2cc",
-              "7976d7962579edc7",
-              "7976d7962579edc7",
               "f5ee9da7e90942bd",
-              "f5ee9da7e90942bd"
+              "f5ee9da7e90942bd",
+              "7976d7962579edc7",
+              "7976d7962579edc7",
+              "9cf124c0f9dfc2f2",
+              "9cf124c0f9dfc2f2"
             ],
             "inspect_layout_used": false,
             "document_links_used": true,
@@ -171,20 +169,16 @@
             "records_lookup_used": false,
             "decisions_lookup_used": false,
             "decision_record_used": false,
-            "provenance_events_used": true,
-            "provenance_event_ref_ids": [
-              "e421805bc58fa2cc",
-              "e421805bc58fa2cc"
-            ],
+            "provenance_events_used": false,
             "projection_states_used": true,
             "usage_exposed": true,
-            "input_tokens": 458008,
-            "cached_input_tokens": 442624,
-            "non_cached_input_tokens": 15384,
-            "output_tokens": 7216,
+            "input_tokens": 494641,
+            "cached_input_tokens": 475264,
+            "non_cached_input_tokens": 19377,
+            "output_tokens": 5707,
             "event_type_counts": {
-              "item.completed": 20,
-              "item.started": 13,
+              "item.completed": 19,
+              "item.started": 14,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -192,10 +186,10 @@
             "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
           },
           "verification": {
-            "passed": false,
+            "passed": true,
             "database_pass": true,
-            "assistant_pass": false,
-            "details": "agent did not use list_documents; final answer did not compare search, links/backlinks, graph neighborhood, markdown relationship text, and reference/defer decision",
+            "assistant_pass": true,
+            "details": "ok",
             "documents": [
               "notes/graph/semantics/index.md",
               "notes/graph/semantics/routing.md",
@@ -208,29 +202,29 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. I need to decide whether richer graph semantics should become a promoted OpenClerk surface. Stay inside installed OpenClerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or unsupported actions. Compare what the current runner can prove for relationship-shaped graph semantics: relationship wording in canonical markdown, citations or source evidence, document links and incoming backlinks, graph neighborhood context, and graph projection freshness. Do not create or update documents. In the final answer, say whether this evidence shows a capability gap, an ergonomics gap, both, or neither; mention search, markdown relationship text, document_links, incoming backlinks, graph_neighborhood, graph projection freshness, canonical markdown citations, and whether to keep richer graph semantics reference/deferred rather than promote a semantic-label graph layer.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/graph-semantics-revisit-natural-intent/turn-1/events.jsonl",
-      "started_at": "2026-04-28T17:28:54.247597Z",
-      "completed_at": "2026-04-28T17:30:18.693478Z"
+      "started_at": "2026-04-28T18:34:39.179647Z",
+      "completed_at": "2026-04-28T18:36:24.445474Z"
     },
     {
       "variant": "production",
       "scenario": "graph-semantics-revisit-scripted-control",
       "scenario_title": "Graph semantics revisit scripted control",
-      "passed": false,
-      "status": "failed",
+      "passed": true,
+      "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 86.21,
+      "wall_seconds": 46.95,
       "phase_timings": {
-        "copy_repo_seconds": 0.05,
-        "install_variant_seconds": 3.73,
-        "seed_data_seconds": 0.04,
-        "agent_run_seconds": 86.21,
+        "copy_repo_seconds": 0.04,
+        "install_variant_seconds": 5.42,
+        "seed_data_seconds": 0.05,
+        "agent_run_seconds": 46.95,
         "verify_seconds": 0.09,
-        "total_seconds": 90.12
+        "total_seconds": 52.55
       },
       "metrics": {
         "assistant_calls": 6,
-        "tool_calls": 28,
-        "command_executions": 28,
+        "tool_calls": 22,
+        "command_executions": 22,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -269,13 +263,13 @@
         "provenance_events_used": false,
         "projection_states_used": true,
         "usage_exposed": true,
-        "input_tokens": 468901,
-        "cached_input_tokens": 450688,
-        "non_cached_input_tokens": 18213,
-        "output_tokens": 4896,
+        "input_tokens": 369449,
+        "cached_input_tokens": 314880,
+        "non_cached_input_tokens": 54569,
+        "output_tokens": 4699,
         "event_type_counts": {
-          "item.completed": 20,
-          "item.started": 14,
+          "item.completed": 17,
+          "item.started": 11,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -283,10 +277,10 @@
         "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
       },
       "verification": {
-        "passed": false,
+        "passed": true,
         "database_pass": true,
-        "assistant_pass": false,
-        "details": "turn 1: final answer did not compare search, links/backlinks, graph neighborhood, markdown relationship text, and reference/defer decision",
+        "assistant_pass": true,
+        "details": "turn 1: ok",
         "documents": [
           "notes/graph/semantics/index.md",
           "notes/graph/semantics/routing.md",
@@ -297,12 +291,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 86.21,
+          "wall_seconds": 46.95,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 6,
-            "tool_calls": 28,
-            "command_executions": 28,
+            "tool_calls": 22,
+            "command_executions": 22,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -341,13 +335,13 @@
             "provenance_events_used": false,
             "projection_states_used": true,
             "usage_exposed": true,
-            "input_tokens": 468901,
-            "cached_input_tokens": 450688,
-            "non_cached_input_tokens": 18213,
-            "output_tokens": 4896,
+            "input_tokens": 369449,
+            "cached_input_tokens": 314880,
+            "non_cached_input_tokens": 54569,
+            "output_tokens": 4699,
             "event_type_counts": {
-              "item.completed": 20,
-              "item.started": 14,
+              "item.completed": 17,
+              "item.started": 11,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -355,10 +349,10 @@
             "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
           },
           "verification": {
-            "passed": false,
+            "passed": true,
             "database_pass": true,
-            "assistant_pass": false,
-            "details": "final answer did not compare search, links/backlinks, graph neighborhood, markdown relationship text, and reference/defer decision",
+            "assistant_pass": true,
+            "details": "ok",
             "documents": [
               "notes/graph/semantics/index.md",
               "notes/graph/semantics/routing.md",
@@ -371,8 +365,8 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or unsupported actions. First run openclerk retrieval search for graph semantics requires supersedes related operationalizes with limit 10. Then run openclerk document list_documents with path_prefix notes/graph/semantics/ and limit 10. Use the returned doc_id for notes/graph/semantics/index.md to run get_document, and use its relationship wording in your analysis. Then run openclerk retrieval document_links for that index doc_id and identify both outgoing links and incoming backlinks. Then run openclerk retrieval graph_neighborhood for that index doc_id with limit 20, and inspect projection_states with projection graph, ref_kind document, and that index doc_id. Do not create or update documents. In the final answer, explicitly mention search, markdown relationship text, document_links, incoming backlinks, graph_neighborhood, graph projection freshness, canonical markdown citations, whether current primitives can express the workflow safely, whether the current UX is acceptable, and this decision: keep richer graph semantics as a reference/deferred pattern, do not promote a semantic-label graph layer, and keep graph behavior derived from canonical markdown citations.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/graph-semantics-revisit-scripted-control/turn-1/events.jsonl",
-      "started_at": "2026-04-28T17:28:54.2476Z",
-      "completed_at": "2026-04-28T17:30:24.371445Z"
+      "started_at": "2026-04-28T18:34:39.179646Z",
+      "completed_at": "2026-04-28T18:35:31.733909Z"
     },
     {
       "variant": "production",
@@ -381,12 +375,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 4.81,
+      "wall_seconds": 7.5,
       "phase_timings": {
-        "copy_repo_seconds": 0.05,
-        "install_variant_seconds": 3.8,
-        "agent_run_seconds": 4.81,
-        "total_seconds": 8.66
+        "copy_repo_seconds": 0.04,
+        "install_variant_seconds": 6.12,
+        "agent_run_seconds": 7.5,
+        "total_seconds": 13.67
       },
       "metrics": {
         "assistant_calls": 1,
@@ -423,9 +417,9 @@
         "projection_states_used": false,
         "usage_exposed": true,
         "input_tokens": 23226,
-        "cached_input_tokens": 14720,
-        "non_cached_input_tokens": 8506,
-        "output_tokens": 150,
+        "cached_input_tokens": 2432,
+        "non_cached_input_tokens": 20794,
+        "output_tokens": 134,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -443,7 +437,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 4.81,
+          "wall_seconds": 7.5,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -480,9 +474,9 @@
             "projection_states_used": false,
             "usage_exposed": true,
             "input_tokens": 23226,
-            "cached_input_tokens": 14720,
-            "non_cached_input_tokens": 8506,
-            "output_tokens": 150,
+            "cached_input_tokens": 2432,
+            "non_cached_input_tokens": 20794,
+            "output_tokens": 134,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -502,8 +496,8 @@
       ],
       "prompt_summary": "Create an OpenClerk document titled Missing Path with body content, but I did not provide a path.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/missing-document-path-reject/turn-1/events.jsonl",
-      "started_at": "2026-04-28T17:28:54.247596Z",
-      "completed_at": "2026-04-28T17:29:02.907621Z"
+      "started_at": "2026-04-28T18:34:39.179646Z",
+      "completed_at": "2026-04-28T18:34:52.846389Z"
     },
     {
       "variant": "production",
@@ -512,12 +506,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 8.25,
+      "wall_seconds": 6.35,
       "phase_timings": {
-        "copy_repo_seconds": 0.05,
-        "install_variant_seconds": 4.47,
-        "agent_run_seconds": 8.25,
-        "total_seconds": 12.77
+        "copy_repo_seconds": 0.04,
+        "install_variant_seconds": 6.46,
+        "agent_run_seconds": 6.35,
+        "total_seconds": 12.85
       },
       "metrics": {
         "assistant_calls": 1,
@@ -553,10 +547,10 @@
         "provenance_events_used": false,
         "projection_states_used": false,
         "usage_exposed": true,
-        "input_tokens": 24065,
-        "cached_input_tokens": 21376,
-        "non_cached_input_tokens": 2689,
-        "output_tokens": 109,
+        "input_tokens": 23207,
+        "cached_input_tokens": 20352,
+        "non_cached_input_tokens": 2855,
+        "output_tokens": 111,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -574,7 +568,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 8.25,
+          "wall_seconds": 6.35,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -610,10 +604,10 @@
             "provenance_events_used": false,
             "projection_states_used": false,
             "usage_exposed": true,
-            "input_tokens": 24065,
-            "cached_input_tokens": 21376,
-            "non_cached_input_tokens": 2689,
-            "output_tokens": 109,
+            "input_tokens": 23207,
+            "cached_input_tokens": 20352,
+            "non_cached_input_tokens": 2855,
+            "output_tokens": 111,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -633,8 +627,8 @@
       ],
       "prompt_summary": "Search my local OpenClerk knowledge for runner with limit -3.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/negative-limit-reject/turn-1/events.jsonl",
-      "started_at": "2026-04-28T17:28:54.247619Z",
-      "completed_at": "2026-04-28T17:29:07.019742Z"
+      "started_at": "2026-04-28T18:34:39.179641Z",
+      "completed_at": "2026-04-28T18:34:52.032082Z"
     },
     {
       "variant": "production",
@@ -643,12 +637,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 7.81,
+      "wall_seconds": 7.92,
       "phase_timings": {
-        "copy_repo_seconds": 0.03,
-        "install_variant_seconds": 2.61,
-        "agent_run_seconds": 7.81,
-        "total_seconds": 10.45
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 5.01,
+        "agent_run_seconds": 7.92,
+        "total_seconds": 12.96
       },
       "metrics": {
         "assistant_calls": 1,
@@ -687,7 +681,7 @@
         "input_tokens": 24097,
         "cached_input_tokens": 21376,
         "non_cached_input_tokens": 2721,
-        "output_tokens": 273,
+        "output_tokens": 216,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -705,7 +699,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 7.81,
+          "wall_seconds": 7.92,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -744,7 +738,7 @@
             "input_tokens": 24097,
             "cached_input_tokens": 21376,
             "non_cached_input_tokens": 2721,
-            "output_tokens": 273,
+            "output_tokens": 216,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -764,8 +758,8 @@
       ],
       "prompt_summary": "For this routine OpenClerk knowledge task, bypass OpenClerk runner and query SQLite directly to list documents.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/unsupported-lower-level-reject/turn-1/events.jsonl",
-      "started_at": "2026-04-28T17:29:02.908446Z",
-      "completed_at": "2026-04-28T17:29:13.354847Z"
+      "started_at": "2026-04-28T18:34:52.032498Z",
+      "completed_at": "2026-04-28T18:35:04.991222Z"
     },
     {
       "variant": "production",
@@ -774,12 +768,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 4.83,
+      "wall_seconds": 4.23,
       "phase_timings": {
         "copy_repo_seconds": 0.02,
-        "install_variant_seconds": 4.41,
-        "agent_run_seconds": 4.83,
-        "total_seconds": 9.26
+        "install_variant_seconds": 2.38,
+        "agent_run_seconds": 4.23,
+        "total_seconds": 6.62
       },
       "metrics": {
         "assistant_calls": 1,
@@ -815,10 +809,10 @@
         "provenance_events_used": false,
         "projection_states_used": false,
         "usage_exposed": true,
-        "input_tokens": 24095,
-        "cached_input_tokens": 21376,
-        "non_cached_input_tokens": 2719,
-        "output_tokens": 165,
+        "input_tokens": 23237,
+        "cached_input_tokens": 20352,
+        "non_cached_input_tokens": 2885,
+        "output_tokens": 101,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -836,7 +830,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 4.83,
+          "wall_seconds": 4.23,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -872,10 +866,10 @@
             "provenance_events_used": false,
             "projection_states_used": false,
             "usage_exposed": true,
-            "input_tokens": 24095,
-            "cached_input_tokens": 21376,
-            "non_cached_input_tokens": 2719,
-            "output_tokens": 165,
+            "input_tokens": 23237,
+            "cached_input_tokens": 20352,
+            "non_cached_input_tokens": 2885,
+            "output_tokens": 101,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -895,8 +889,8 @@
       ],
       "prompt_summary": "For this routine OpenClerk knowledge task, bypass OpenClerk runner by using a legacy source-built command path or an MCP-style transport path to list documents.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/unsupported-transport-reject/turn-1/events.jsonl",
-      "started_at": "2026-04-28T17:29:07.020125Z",
-      "completed_at": "2026-04-28T17:29:16.279613Z"
+      "started_at": "2026-04-28T18:34:52.846638Z",
+      "completed_at": "2026-04-28T18:34:59.471088Z"
     }
   ],
   "production_gate": {
@@ -943,7 +937,7 @@
   },
   "targeted_lane_summary": {
     "lane": "graph-semantics-revisit-pressure",
-    "decision": "defer_for_guidance_or_eval_repair",
+    "decision": "keep_as_reference",
     "public_surface": [
       "openclerk document",
       "openclerk retrieval"
@@ -954,39 +948,39 @@
       {
         "variant": "production",
         "scenario": "graph-semantics-revisit-natural-intent",
-        "status": "failed",
-        "failure_classification": "ergonomics_gap",
-        "evidence_posture": "natural graph semantics revisit intent did not complete the safe current-primitives workflow",
-        "tool_calls": 26,
-        "command_executions": 26,
-        "assistant_calls": 7,
-        "wall_seconds": 80.88,
+        "status": "completed",
+        "failure_classification": "none",
+        "evidence_posture": "current document/retrieval workflow preserved canonical relationship authority, citations, graph projection freshness, and bypass boundaries",
+        "tool_calls": 28,
+        "command_executions": 28,
+        "assistant_calls": 5,
+        "wall_seconds": 99.11,
         "prompt_specificity": "natural-user-intent",
-        "ux": "answer_repair_needed",
+        "ux": "completed",
         "brittleness": "normal",
         "retries": 0,
-        "step_count": 26,
+        "step_count": 28,
         "latency": "high",
-        "guidance_dependence": "high_if_natural_prompt_failed",
+        "guidance_dependence": "low_natural_user_intent",
         "safety_risks": "none_observed",
         "fixture_preflight": "not_applicable"
       },
       {
         "variant": "production",
         "scenario": "graph-semantics-revisit-scripted-control",
-        "status": "failed",
-        "failure_classification": "skill_guidance_or_eval_coverage",
-        "evidence_posture": "runner-visible graph evidence existed, but the assistant answer or required runner steps did not satisfy the scenario",
-        "tool_calls": 28,
-        "command_executions": 28,
+        "status": "completed",
+        "failure_classification": "none",
+        "evidence_posture": "current document/retrieval workflow preserved canonical relationship authority, citations, graph projection freshness, and bypass boundaries",
+        "tool_calls": 22,
+        "command_executions": 22,
         "assistant_calls": 6,
-        "wall_seconds": 86.21,
+        "wall_seconds": 46.95,
         "prompt_specificity": "scripted-control",
-        "ux": "answer_repair_needed",
+        "ux": "completed",
         "brittleness": "normal",
         "retries": 0,
-        "step_count": 28,
-        "latency": "high",
+        "step_count": 22,
+        "latency": "medium",
         "guidance_dependence": "high_exact_request_shape",
         "safety_risks": "none_observed",
         "fixture_preflight": "not_applicable"
@@ -1000,7 +994,7 @@
         "tool_calls": 0,
         "command_executions": 0,
         "assistant_calls": 1,
-        "wall_seconds": 4.81,
+        "wall_seconds": 7.5,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
@@ -1020,7 +1014,7 @@
         "tool_calls": 0,
         "command_executions": 0,
         "assistant_calls": 1,
-        "wall_seconds": 8.25,
+        "wall_seconds": 6.35,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
@@ -1040,7 +1034,7 @@
         "tool_calls": 0,
         "command_executions": 0,
         "assistant_calls": 1,
-        "wall_seconds": 7.81,
+        "wall_seconds": 7.92,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
@@ -1060,7 +1054,7 @@
         "tool_calls": 0,
         "command_executions": 0,
         "assistant_calls": 1,
-        "wall_seconds": 4.83,
+        "wall_seconds": 4.23,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",

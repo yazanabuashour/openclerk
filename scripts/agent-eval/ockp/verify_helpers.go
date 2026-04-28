@@ -341,15 +341,16 @@ func graphSemanticsRevisitAnswerPass(message string, scripted bool) bool {
 	if !graphSemanticsReferenceAnswerPass(message) {
 		return false
 	}
-	if !containsAny(normalized, []string{"capability gap", "ergonomics gap", "neither"}) {
+	safeCurrentPrimitives := containsAny(normalized, []string{"current primitives can express", "current document/retrieval primitives can express", "existing primitives can express", "workflow safely", "express the workflow safely"})
+	uxPosture := containsAny(normalized, []string{"ux", "user experience"}) &&
+		containsAny(normalized, []string{"acceptable", "not acceptable", "unacceptable"})
+	if !containsAny(normalized, []string{"capability gap", "ergonomics gap", "neither"}) && !(scripted && safeCurrentPrimitives && uxPosture) {
 		return false
 	}
 	if !scripted {
 		return true
 	}
-	return containsAny(normalized, []string{"current primitives can express", "current document/retrieval primitives can express", "existing primitives can express", "workflow safely", "express the workflow safely"}) &&
-		containsAny(normalized, []string{"ux", "user experience"}) &&
-		containsAny(normalized, []string{"acceptable", "not acceptable", "unacceptable"})
+	return safeCurrentPrimitives && uxPosture
 }
 func messagePromotesGraphSemantics(normalized string) bool {
 	promotionPhrases := []string{

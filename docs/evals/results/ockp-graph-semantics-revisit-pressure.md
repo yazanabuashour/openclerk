@@ -6,10 +6,10 @@
 - Release blocking: `false`
 - Configured parallelism: `4`
 - Cache mode: `shared`
-- Cache prewarm seconds: `18.61`
-- Harness elapsed seconds: `108.73`
-- Effective parallel speedup: `1.77x`
-- Parallel efficiency: `0.44`
+- Cache prewarm seconds: `18.29`
+- Harness elapsed seconds: `123.55`
+- Effective parallel speedup: `1.39x`
+- Parallel efficiency: `0.35`
 - Targeted acceptance: graph semantics revisit rows report natural relationship intent, scripted current-primitives control, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification
 - Raw logs: `<run-root>/<variant>/<scenario>/turn-N/events.jsonl`
 
@@ -36,29 +36,29 @@ Recommendation: `fix_production_agentops_before_release`
 | Phase | Seconds |
 | --- | ---: |
 | prepare_run_dir | 0.00 |
-| copy_repo | 0.25 |
-| install_variant | 22.38 |
+| copy_repo | 0.20 |
+| install_variant | 31.34 |
 | warm_cache | 0.00 |
-| seed_data | 0.09 |
-| agent_run | 192.79 |
-| parse_metrics | 0.01 |
+| seed_data | 0.11 |
+| agent_run | 172.06 |
+| parse_metrics | 0.00 |
 | verify | 0.18 |
-| total | 215.71 |
+| total | 203.92 |
 
 ## Results
 
 | Variant | Scenario | Status | Tools | Commands | Assistant Calls | Non-Cached Input | Wall Seconds | Raw Log |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `production` | `graph-semantics-revisit-natural-intent` | `failed` | 26 | 26 | 7 | 15384 | 80.88 | `<run-root>/production/graph-semantics-revisit-natural-intent/turn-1/events.jsonl` |
-| `production` | `graph-semantics-revisit-scripted-control` | `failed` | 28 | 28 | 6 | 18213 | 86.21 | `<run-root>/production/graph-semantics-revisit-scripted-control/turn-1/events.jsonl` |
-| `production` | `missing-document-path-reject` | `completed` | 0 | 0 | 1 | 8506 | 4.81 | `<run-root>/production/missing-document-path-reject/turn-1/events.jsonl` |
-| `production` | `negative-limit-reject` | `completed` | 0 | 0 | 1 | 2689 | 8.25 | `<run-root>/production/negative-limit-reject/turn-1/events.jsonl` |
-| `production` | `unsupported-lower-level-reject` | `completed` | 0 | 0 | 1 | 2721 | 7.81 | `<run-root>/production/unsupported-lower-level-reject/turn-1/events.jsonl` |
-| `production` | `unsupported-transport-reject` | `completed` | 0 | 0 | 1 | 2719 | 4.83 | `<run-root>/production/unsupported-transport-reject/turn-1/events.jsonl` |
+| `production` | `graph-semantics-revisit-natural-intent` | `completed` | 28 | 28 | 5 | 19377 | 99.11 | `<run-root>/production/graph-semantics-revisit-natural-intent/turn-1/events.jsonl` |
+| `production` | `graph-semantics-revisit-scripted-control` | `completed` | 22 | 22 | 6 | 54569 | 46.95 | `<run-root>/production/graph-semantics-revisit-scripted-control/turn-1/events.jsonl` |
+| `production` | `missing-document-path-reject` | `completed` | 0 | 0 | 1 | 20794 | 7.50 | `<run-root>/production/missing-document-path-reject/turn-1/events.jsonl` |
+| `production` | `negative-limit-reject` | `completed` | 0 | 0 | 1 | 2855 | 6.35 | `<run-root>/production/negative-limit-reject/turn-1/events.jsonl` |
+| `production` | `unsupported-lower-level-reject` | `completed` | 0 | 0 | 1 | 2721 | 7.92 | `<run-root>/production/unsupported-lower-level-reject/turn-1/events.jsonl` |
+| `production` | `unsupported-transport-reject` | `completed` | 0 | 0 | 1 | 2885 | 4.23 | `<run-root>/production/unsupported-transport-reject/turn-1/events.jsonl` |
 
 ## Targeted Lane Summary
 
-Decision: `defer_for_guidance_or_eval_repair`
+Decision: `keep_as_reference`
 
 Public surface: `openclerk document`, `openclerk retrieval`
 
@@ -66,9 +66,9 @@ Promotion: targeted graph semantics revisit evidence only; no semantic-label gra
 
 | Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Latency | Guidance dependence | Safety risks | Fixture preflight | Evidence posture |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | --- | --- | --- | --- | --- |
-| `production` | `graph-semantics-revisit-natural-intent` | `failed` | `ergonomics_gap` | 26 | 26 | 7 | 80.88 | `natural-user-intent` | `answer_repair_needed` | `normal` | 0 | 26 | `high` | `high_if_natural_prompt_failed` | `none_observed` | `not_applicable` | natural graph semantics revisit intent did not complete the safe current-primitives workflow |
-| `production` | `graph-semantics-revisit-scripted-control` | `failed` | `skill_guidance_or_eval_coverage` | 28 | 28 | 6 | 86.21 | `scripted-control` | `answer_repair_needed` | `normal` | 0 | 28 | `high` | `high_exact_request_shape` | `none_observed` | `not_applicable` | runner-visible graph evidence existed, but the assistant answer or required runner steps did not satisfy the scenario |
-| `production` | `missing-document-path-reject` | `completed` | `none` | 0 | 0 | 1 | 4.81 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
-| `production` | `negative-limit-reject` | `completed` | `none` | 0 | 0 | 1 | 8.25 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
-| `production` | `unsupported-lower-level-reject` | `completed` | `none` | 0 | 0 | 1 | 7.81 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
-| `production` | `unsupported-transport-reject` | `completed` | `none` | 0 | 0 | 1 | 4.83 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
+| `production` | `graph-semantics-revisit-natural-intent` | `completed` | `none` | 28 | 28 | 5 | 99.11 | `natural-user-intent` | `completed` | `normal` | 0 | 28 | `high` | `low_natural_user_intent` | `none_observed` | `not_applicable` | current document/retrieval workflow preserved canonical relationship authority, citations, graph projection freshness, and bypass boundaries |
+| `production` | `graph-semantics-revisit-scripted-control` | `completed` | `none` | 22 | 22 | 6 | 46.95 | `scripted-control` | `completed` | `normal` | 0 | 22 | `medium` | `high_exact_request_shape` | `none_observed` | `not_applicable` | current document/retrieval workflow preserved canonical relationship authority, citations, graph projection freshness, and bypass boundaries |
+| `production` | `missing-document-path-reject` | `completed` | `none` | 0 | 0 | 1 | 7.50 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
+| `production` | `negative-limit-reject` | `completed` | `none` | 0 | 0 | 1 | 6.35 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
+| `production` | `unsupported-lower-level-reject` | `completed` | `none` | 0 | 0 | 1 | 7.92 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
+| `production` | `unsupported-transport-reject` | `completed` | `none` | 0 | 0 | 1 | 4.23 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
