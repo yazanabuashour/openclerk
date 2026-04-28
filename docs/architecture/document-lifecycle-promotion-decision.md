@@ -41,20 +41,23 @@ express those workflows safely when the task is explicit, while preserving
 canonical authority, citations/source refs, provenance, projection freshness,
 privacy boundaries, local-first operation, and no-bypass rules.
 
-Ergonomics path: defer for repair. The natural lifecycle intent row failed as
-`ergonomics_gap` with 48 tools/commands, 10 assistant calls, and 73.61 wall
-seconds. The pending-review row failed as `skill_guidance` even though
-runner-visible evidence existed. The stale synthesis scripted control also
-remained high-touch at 52 tools/commands, 14 assistant calls, and 175.68 wall
-seconds. That evidence shows real workflow pressure, but not repeated repaired
-natural-intent failures sufficient to promote a public lifecycle surface.
+Ergonomics path: defer for repair. The latest guidance repair improved parts
+of the lane but did not produce stable promotion evidence. The committed full
+run still classifies natural lifecycle intent as `ergonomics_gap` with 12
+tools/commands, 4 assistant calls, and 38.70 wall seconds because it skipped
+required source search, provenance, projection freshness, and accepted-policy
+restoration. Diff review is `skill_guidance` because runner-visible evidence
+existed but path-prefix guidance drifted. Pending review is reclassified as
+`data_hygiene`: final-answer guidance passed, but the accepted target was
+missing or changed in durable evidence. That evidence shows repair pressure,
+not justification for a public lifecycle surface.
 
 ## Follow-Up Policy
 
 No implementation follow-up for document lifecycle controls is authorized by
-this decision. A future follow-up may repair skill guidance or eval coverage
-for natural lifecycle rollback and pending-review answer quality, then rerun
-the targeted lane.
+this decision. Future follow-up may continue repairing natural lifecycle
+rollback ergonomics, diff-review path guidance, and pending-review durable
+target hygiene, then rerun the targeted lane.
 
 A future promotion issue may be opened only after refreshed evidence shows one
 of these conditions:

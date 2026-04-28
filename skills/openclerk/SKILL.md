@@ -226,6 +226,44 @@ synthesis freshness. A changed transcript refreshes the canonical source note,
 search citations, provenance, and dependent synthesis freshness/projection
 visibility.
 
+## Document Lifecycle Maintenance
+
+For unsafe accepted edits, rollback, restore, review-state, or document
+lifecycle requests, use the existing document and retrieval runner actions. Do
+not invent a history, diff, review, restore, rollback, or lifecycle action.
+Do not inspect the vault, SQLite, raw event logs, or storage-root paths.
+
+For rollback or restore intent:
+
+1. Run retrieval `search` for source-backed lifecycle evidence.
+2. Run document `list_documents` with the narrow relevant path prefix.
+3. Run `get_document` for the target before modifying it.
+4. Restore only the unsafe section with `replace_section`; do not rewrite the
+   whole document unless the user explicitly supplied the full replacement.
+   Use the authoritative source wording as the replacement, not a paraphrase
+   that preserves the unsafe claim. For a policy summary, write the accepted
+   policy as a concise declarative sentence such as `Accepted lifecycle
+   policy: ...` using the source-backed policy text.
+5. After the write, inspect `provenance_events` for `ref_kind: "document"` and
+   the target `doc_id`.
+6. Inspect `projection_states` for `ref_kind: "document"` and the target
+   `doc_id` so freshness remains operator-visible.
+
+The final rollback answer must name the target document path, the source
+evidence path or citation path, the restore/rollback reason, the provenance
+check, and the projection freshness check. Do not print raw private diffs,
+private artifact bodies, `.openclerk-eval/vault`, configured vault-root paths,
+absolute filesystem paths, or OS-specific backslash paths.
+
+For pending-review intent, do not modify the accepted target document. Create a
+separate review document only when the request includes the proposed change and
+the review path/title/body are explicit or derivable from the prompt. The
+review document should use `type: review` and `status: pending` frontmatter and
+should name the target document. After creating it, inspect
+`provenance_events` for the review document. The final answer must name both
+paths, say the accepted target did not change or did not become accepted
+knowledge, and say the pending change is waiting for human or operator review.
+
 When writing source-linked synthesis, use this exact AgentOps workflow:
 
 1. Run retrieval `search` for source evidence.

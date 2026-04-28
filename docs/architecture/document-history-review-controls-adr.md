@@ -115,12 +115,14 @@ evaluated both accepted promotion paths:
   `openclerk retrieval` workflows can express those tasks while preserving
   source refs, provenance, freshness, privacy, local-first operation, and
   no-bypass boundaries.
-- **Ergonomics path:** defer for repair. The natural lifecycle intent row
-  failed as `ergonomics_gap` after 48 tools/commands, 10 assistant calls, and
-  73.61 wall seconds. The pending-review scripted row failed as
-  `skill_guidance` after runner-visible evidence existed. That is real pressure
-  but not enough to promote a new public runner surface before guidance/eval
-  repair and repeated evidence.
+- **Ergonomics path:** defer for repair. The latest guidance repair improved
+  parts of the lane, but the committed full run still classified natural
+  lifecycle intent as `ergonomics_gap` after 12 tools/commands, 4 assistant
+  calls, and 38.70 wall seconds. Diff review remained `skill_guidance`, and
+  pending review was reclassified as `data_hygiene` durable-target pressure
+  after final-answer guidance passed. That is real pressure but not enough to
+  promote a new public runner surface before additional guidance/eval repair
+  and repeated evidence.
 
 No public runner action, request or response schema, storage migration, storage
 API, semantic history table, review queue, rollback API, or public OpenClerk

@@ -73,20 +73,21 @@ mise exec -- go run ./scripts/agent-eval/ockp run \
 
 ## Ergonomics Comparison
 
-The refreshed report classified the lane as
-`defer_for_guidance_or_eval_repair`: current primitives passed the scripted
-controls, but natural intent and pending-review guidance still need repair
-before any promotion decision can authorize implementation.
+The refreshed report still classifies the lane as
+`defer_for_guidance_or_eval_repair`: current primitives passed several
+scripted controls and all validation controls, but natural rollback, diff
+review answer/path guidance, and pending-review durable-target handling still
+need repair before any promotion decision can authorize implementation.
 
 | Workflow | Current workflow | Candidate promoted surface | Tools / commands | Assistant calls | Wall time | Prompt specificity | Failure classification | Authority / provenance / freshness / privacy risk |
 | --- | --- | --- | ---: | ---: | ---: | --- | --- | --- |
-| Natural lifecycle rollback | Search/list/get, restore with `replace_section`, inspect provenance and projection freshness | Possible lifecycle rollback action only if repeated natural pressure fails after guidance repair | 48 / 48 | 10 | 73.61s | Natural intent | `ergonomics_gap` | No bypass observed; failed to complete safe workflow, so repair guidance before promotion |
-| History inspection control | `list_documents`, `get_document`, `provenance_events`, `projection_states` | Possible history-inspection action | 16 / 16 | 6 | 39.43s | Scripted control | `none` | Existing evidence preserved provenance and freshness |
-| Semantic diff review | `search`, `list_documents`, `get_document`, `provenance_events`; semantic summary only | Possible semantic diff action | 12 / 12 | 5 | 40.56s | Scripted control | `none` | Repo-relative paths and no raw private diff leakage |
-| Restore / rollback control | `search`, `list_documents`, `get_document`, `replace_section`, `provenance_events`, `projection_states` | Possible restore/rollback action | 26 / 26 | 6 | 52.55s | Scripted control | `none` | Existing workflow preserved source evidence, provenance, and freshness |
-| Pending review control | `list_documents`, `get_document`, `create_document` review note, `provenance_events` | Possible pending-review queue | 22 / 22 | 6 | 47.50s | Scripted control | `skill_guidance` | Runner-visible evidence existed; answer/guidance repair needed before promotion evidence |
-| Stale synthesis inspection | `search`, `list_documents`, `get_document`, `projection_states`, `provenance_events` | Possible stale-derived-state action | 52 / 52 | 14 | 175.68s | Scripted control | `none` | Existing workflow preserved stale projection and provenance evidence, but remains high-touch |
-| Validation controls | Final-answer-only no-tools rejection | No promoted surface | 0 / 0 | 1 each | 4.67-7.76s | Scenario-specific validation | `none` | Bypass prevention preserved |
+| Natural lifecycle rollback | Search/list/get, restore with `replace_section`, inspect provenance and projection freshness | Possible lifecycle rollback action only if repeated natural pressure fails after guidance repair | 12 / 12 | 4 | 38.70s | Natural intent | `ergonomics_gap` | No bypass observed; full-lane run skipped search/provenance/projection and did not restore accepted policy |
+| History inspection control | `list_documents`, `get_document`, `provenance_events`, `projection_states` | Possible history-inspection action | 12 / 12 | 6 | 43.69s | Scripted control | `none` | Existing evidence preserved provenance and freshness |
+| Semantic diff review | `search`, `list_documents`, `get_document`, `provenance_events`; semantic summary only | Possible semantic diff action | 18 / 18 | 6 | 52.88s | Scripted control | `skill_guidance` | Runner-visible evidence existed; answer/path guidance drifted into extra `sources/history-review/` listing |
+| Restore / rollback control | `search`, `list_documents`, `get_document`, `replace_section`, `provenance_events`, `projection_states` | Possible restore/rollback action | 30 / 30 | 9 | 80.21s | Scripted control | `none` | Existing workflow preserved source evidence, provenance, and freshness |
+| Pending review control | `list_documents`, `get_document`, `create_document` review note, `provenance_events` | Possible pending-review queue | 22 / 22 | 10 | 67.78s | Scripted control | `data_hygiene` | Final-answer guidance was repaired, but durable target evidence failed because the accepted target was missing/changed |
+| Stale synthesis inspection | `search`, `list_documents`, `get_document`, `projection_states`, `provenance_events` | Possible stale-derived-state action | 18 / 18 | 5 | 35.63s | Scripted control | `none` | Existing workflow preserved stale projection and provenance evidence |
+| Validation controls | Final-answer-only no-tools rejection | No promoted surface | 0 / 0 | 1 each | 4.66-7.44s | Scenario-specific validation | `none` | Bypass prevention preserved |
 
 ## Pass/Fail Gates
 
@@ -124,7 +125,9 @@ module-cache inspection, or ad hoc runtime programs.
 
 The refreshed lane keeps document lifecycle controls as targeted reference
 pressure. Scripted controls prove current primitives can express history
-inspection, semantic diff review, restore/rollback, stale-derived-state
-inspection, and validation/bypass handling. The failed natural-intent and
-pending-review rows justify guidance or eval repair, not a promoted public
-runner surface from this evidence alone.
+inspection, restore/rollback, stale-derived-state inspection, and
+validation/bypass handling. The pending-review final-answer requirement is
+repaired in the latest run, but natural rollback remains an `ergonomics_gap`,
+diff review remains `skill_guidance`, and pending review is reclassified as
+`data_hygiene` durable-target pressure. These results justify more
+guidance/eval repair, not a promoted public runner surface.

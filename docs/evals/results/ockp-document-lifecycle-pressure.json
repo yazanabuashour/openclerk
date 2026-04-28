@@ -1,23 +1,22 @@
 {
   "metadata": {
-    "generated_at": "2026-04-28T14:58:59.071327Z",
+    "generated_at": "2026-04-28T15:50:47.275186Z",
     "model": "gpt-5.4-mini",
     "reasoning_effort": "medium",
     "harness": "codex exec --json --full-auto from throwaway run directories; single-turn scenarios use --ephemeral and multi-turn scenarios resume one persisted eval session",
     "configured_parallelism": 1,
     "cache_mode": "shared",
-    "cache_prewarm_seconds": 19.12,
-    "harness_elapsed_seconds": 516.75,
-    "effective_parallel_speedup": 0.88,
-    "parallel_efficiency": 0.88,
+    "cache_prewarm_seconds": 17.38,
+    "harness_elapsed_seconds": 399.4,
+    "effective_parallel_speedup": 0.86,
+    "parallel_efficiency": 0.86,
     "phase_totals": {
-      "copy_repo_seconds": 0.33,
-      "install_variant_seconds": 41.33,
+      "copy_repo_seconds": 0.22,
+      "install_variant_seconds": 32.99,
       "seed_data_seconds": 0.18,
-      "agent_run_seconds": 455.45,
-      "parse_metrics_seconds": 0.01,
-      "verify_seconds": 0.31,
-      "total_seconds": 497.63
+      "agent_run_seconds": 344.52,
+      "verify_seconds": 4.07,
+      "total_seconds": 382.01
     },
     "run_root_artifact_reference": "\u003crun-root\u003e",
     "raw_log_placeholder": "\u003crun-root\u003e/\u003cvariant\u003e/\u003cscenario\u003e/turn-N/events.jsonl",
@@ -50,27 +49,27 @@
       "passed": false,
       "status": "failed",
       "exit_code": 0,
-      "wall_seconds": 73.61,
+      "wall_seconds": 38.7,
       "phase_timings": {
         "copy_repo_seconds": 0.03,
-        "install_variant_seconds": 3.38,
+        "install_variant_seconds": 2.91,
         "seed_data_seconds": 0.03,
-        "agent_run_seconds": 73.61,
+        "agent_run_seconds": 38.7,
         "verify_seconds": 0.05,
-        "total_seconds": 77.1
+        "total_seconds": 41.71
       },
       "metrics": {
-        "assistant_calls": 10,
-        "tool_calls": 48,
-        "command_executions": 48,
+        "assistant_calls": 4,
+        "tool_calls": 12,
+        "command_executions": 12,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
         "broad_repo_search": false,
         "direct_sqlite_access": false,
         "legacy_runner_usage": false,
-        "search_used": true,
-        "search_unfiltered_used": true,
+        "search_used": false,
+        "search_unfiltered_used": false,
         "search_path_filter_used": false,
         "search_metadata_filter_used": false,
         "ingest_source_url_used": false,
@@ -83,14 +82,6 @@
         "replace_section_used": true,
         "append_document_used": false,
         "list_documents_used": true,
-        "list_document_path_prefixes": [
-          "synthesis/",
-          "synthesis/",
-          "notes/",
-          "notes/",
-          "sources/",
-          "sources/"
-        ],
         "get_document_used": true,
         "get_document_doc_ids": [
           "571954408ab6cd68",
@@ -102,18 +93,18 @@
         "document_links_used": false,
         "graph_neighborhood_used": false,
         "records_lookup_used": false,
-        "decisions_lookup_used": true,
+        "decisions_lookup_used": false,
         "decision_record_used": false,
         "provenance_events_used": false,
         "projection_states_used": false,
         "usage_exposed": true,
-        "input_tokens": 352365,
-        "cached_input_tokens": 320128,
-        "non_cached_input_tokens": 32237,
-        "output_tokens": 6762,
+        "input_tokens": 202624,
+        "cached_input_tokens": 192128,
+        "non_cached_input_tokens": 10496,
+        "output_tokens": 3001,
         "event_type_counts": {
-          "item.completed": 34,
-          "item.started": 24,
+          "item.completed": 11,
+          "item.started": 7,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -124,7 +115,7 @@
         "passed": false,
         "database_pass": false,
         "assistant_pass": false,
-        "details": "turn 1: restore target was not restored to accepted lifecycle policy; agent did not inspect provenance events; agent did not inspect projection states",
+        "details": "turn 1: restore target was not restored to accepted lifecycle policy; agent did not use retrieval search; agent did not inspect provenance events; agent did not inspect projection states",
         "documents": [
           "sources/history-review/restore-authority.md",
           "notes/history-review/restore-target.md"
@@ -133,20 +124,20 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 73.61,
+          "wall_seconds": 38.7,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 10,
-            "tool_calls": 48,
-            "command_executions": 48,
+            "assistant_calls": 4,
+            "tool_calls": 12,
+            "command_executions": 12,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
             "broad_repo_search": false,
             "direct_sqlite_access": false,
             "legacy_runner_usage": false,
-            "search_used": true,
-            "search_unfiltered_used": true,
+            "search_used": false,
+            "search_unfiltered_used": false,
             "search_path_filter_used": false,
             "search_metadata_filter_used": false,
             "ingest_source_url_used": false,
@@ -159,14 +150,6 @@
             "replace_section_used": true,
             "append_document_used": false,
             "list_documents_used": true,
-            "list_document_path_prefixes": [
-              "synthesis/",
-              "synthesis/",
-              "notes/",
-              "notes/",
-              "sources/",
-              "sources/"
-            ],
             "get_document_used": true,
             "get_document_doc_ids": [
               "571954408ab6cd68",
@@ -178,18 +161,18 @@
             "document_links_used": false,
             "graph_neighborhood_used": false,
             "records_lookup_used": false,
-            "decisions_lookup_used": true,
+            "decisions_lookup_used": false,
             "decision_record_used": false,
             "provenance_events_used": false,
             "projection_states_used": false,
             "usage_exposed": true,
-            "input_tokens": 352365,
-            "cached_input_tokens": 320128,
-            "non_cached_input_tokens": 32237,
-            "output_tokens": 6762,
+            "input_tokens": 202624,
+            "cached_input_tokens": 192128,
+            "non_cached_input_tokens": 10496,
+            "output_tokens": 3001,
             "event_type_counts": {
-              "item.completed": 34,
-              "item.started": 24,
+              "item.completed": 11,
+              "item.started": 7,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -200,7 +183,7 @@
             "passed": false,
             "database_pass": false,
             "assistant_pass": false,
-            "details": "restore target was not restored to accepted lifecycle policy; agent did not inspect provenance events; agent did not inspect projection states",
+            "details": "restore target was not restored to accepted lifecycle policy; agent did not use retrieval search; agent did not inspect provenance events; agent did not inspect projection states",
             "documents": [
               "sources/history-review/restore-authority.md",
               "notes/history-review/restore-target.md"
@@ -211,8 +194,8 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. I think the history-review note accepted an unsafe lifecycle policy. Use the installed OpenClerk runner only to find the relevant source-backed evidence, restore the bad accepted summary if needed, and tell me what changed. Do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Preserve citations or source refs, provenance, projection freshness, and privacy: do not print raw private diffs or storage-root paths in the final answer.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/document-lifecycle-natural-intent/turn-1/events.jsonl",
-      "started_at": "2026-04-28T14:50:41.430251Z",
-      "completed_at": "2026-04-28T14:51:58.535525Z"
+      "started_at": "2026-04-28T15:44:25.251001Z",
+      "completed_at": "2026-04-28T15:45:06.961169Z"
     },
     {
       "variant": "production",
@@ -221,19 +204,19 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 39.43,
+      "wall_seconds": 43.69,
       "phase_timings": {
         "copy_repo_seconds": 0.02,
-        "install_variant_seconds": 3.37,
+        "install_variant_seconds": 3.12,
         "seed_data_seconds": 0.03,
-        "agent_run_seconds": 39.43,
+        "agent_run_seconds": 43.69,
         "verify_seconds": 0.04,
-        "total_seconds": 42.89
+        "total_seconds": 46.89
       },
       "metrics": {
         "assistant_calls": 6,
-        "tool_calls": 16,
-        "command_executions": 16,
+        "tool_calls": 12,
+        "command_executions": 12,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -272,19 +255,17 @@
         "provenance_events_used": true,
         "provenance_event_ref_ids": [
           "fac516218a243655",
-          "fac516218a243655",
-          "fac516218a243655",
           "fac516218a243655"
         ],
         "projection_states_used": true,
         "usage_exposed": true,
-        "input_tokens": 204478,
-        "cached_input_tokens": 194688,
-        "non_cached_input_tokens": 9790,
-        "output_tokens": 3851,
+        "input_tokens": 178835,
+        "cached_input_tokens": 168704,
+        "non_cached_input_tokens": 10131,
+        "output_tokens": 3938,
         "event_type_counts": {
-          "item.completed": 14,
-          "item.started": 8,
+          "item.completed": 12,
+          "item.started": 6,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -303,12 +284,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 39.43,
+          "wall_seconds": 43.69,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 6,
-            "tool_calls": 16,
-            "command_executions": 16,
+            "tool_calls": 12,
+            "command_executions": 12,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -347,19 +328,17 @@
             "provenance_events_used": true,
             "provenance_event_ref_ids": [
               "fac516218a243655",
-              "fac516218a243655",
-              "fac516218a243655",
               "fac516218a243655"
             ],
             "projection_states_used": true,
             "usage_exposed": true,
-            "input_tokens": 204478,
-            "cached_input_tokens": 194688,
-            "non_cached_input_tokens": 9790,
-            "output_tokens": 3851,
+            "input_tokens": 178835,
+            "cached_input_tokens": 168704,
+            "non_cached_input_tokens": 10131,
+            "output_tokens": 3938,
             "event_type_counts": {
-              "item.completed": 14,
-              "item.started": 8,
+              "item.completed": 12,
+              "item.started": 6,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -380,29 +359,29 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. First run openclerk document list_documents with path_prefix notes/history-review/ and limit 10. Use the returned doc_id for notes/history-review/lifecycle-control.md to run get_document. Then inspect provenance_events for ref_kind document and that doc_id, and projection_states for ref_kind document and that doc_id. In the final answer, explain the recent document lifecycle edit using the existing runner-visible document, provenance, and projection freshness evidence; mention notes/history-review/lifecycle-control.md and say this control uses existing document/retrieval workflows before proposing a new history action.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/document-history-inspection-control/turn-1/events.jsonl",
-      "started_at": "2026-04-28T14:51:58.535884Z",
-      "completed_at": "2026-04-28T14:52:41.425002Z"
+      "started_at": "2026-04-28T15:45:06.961572Z",
+      "completed_at": "2026-04-28T15:45:53.855434Z"
     },
     {
       "variant": "production",
       "scenario": "document-diff-review-pressure",
       "scenario_title": "Review semantic diff pressure without raw private diff leakage",
-      "passed": true,
-      "status": "completed",
+      "passed": false,
+      "status": "failed",
       "exit_code": 0,
-      "wall_seconds": 40.56,
+      "wall_seconds": 52.88,
       "phase_timings": {
-        "copy_repo_seconds": 0.03,
-        "install_variant_seconds": 3.36,
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 3.15,
         "seed_data_seconds": 0.02,
-        "agent_run_seconds": 40.56,
-        "verify_seconds": 0.05,
-        "total_seconds": 44.03
+        "agent_run_seconds": 52.88,
+        "verify_seconds": 0.03,
+        "total_seconds": 56.1
       },
       "metrics": {
-        "assistant_calls": 5,
-        "tool_calls": 12,
-        "command_executions": 12,
+        "assistant_calls": 6,
+        "tool_calls": 18,
+        "command_executions": 18,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -413,8 +392,8 @@
         "search_unfiltered_used": false,
         "search_path_filter_used": true,
         "search_path_prefixes": [
-          "notes/history-review/",
-          "notes/history-review/"
+          "sources/history-review/",
+          "sources/history-review/"
         ],
         "search_metadata_filter_used": false,
         "ingest_source_url_used": false,
@@ -429,12 +408,16 @@
         "list_documents_used": true,
         "list_document_path_prefixes": [
           "notes/history-review/",
-          "notes/history-review/"
+          "notes/history-review/",
+          "sources/history-review/",
+          "sources/history-review/"
         ],
         "get_document_used": true,
         "get_document_doc_ids": [
           "18ad420b897b6d09",
-          "18ad420b897b6d09"
+          "18ad420b897b6d09",
+          "29abedbad564e0ca",
+          "29abedbad564e0ca"
         ],
         "inspect_layout_used": false,
         "document_links_used": false,
@@ -449,13 +432,13 @@
         ],
         "projection_states_used": false,
         "usage_exposed": true,
-        "input_tokens": 143688,
-        "cached_input_tokens": 116096,
-        "non_cached_input_tokens": 27592,
-        "output_tokens": 3905,
+        "input_tokens": 268348,
+        "cached_input_tokens": 228224,
+        "non_cached_input_tokens": 40124,
+        "output_tokens": 4120,
         "event_type_counts": {
-          "item.completed": 11,
-          "item.started": 6,
+          "item.completed": 15,
+          "item.started": 9,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -463,10 +446,10 @@
         "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
       },
       "verification": {
-        "passed": true,
+        "passed": false,
         "database_pass": true,
-        "assistant_pass": true,
-        "details": "turn 1: ok",
+        "assistant_pass": false,
+        "details": "turn 1: list_documents path_prefix used unexpected path sources/history-review/; list_documents path_prefix used unexpected path sources/history-review/",
         "documents": [
           "sources/history-review/diff-previous.md",
           "notes/history-review/diff-current.md"
@@ -475,12 +458,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 40.56,
+          "wall_seconds": 52.88,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 5,
-            "tool_calls": 12,
-            "command_executions": 12,
+            "assistant_calls": 6,
+            "tool_calls": 18,
+            "command_executions": 18,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -491,8 +474,8 @@
             "search_unfiltered_used": false,
             "search_path_filter_used": true,
             "search_path_prefixes": [
-              "notes/history-review/",
-              "notes/history-review/"
+              "sources/history-review/",
+              "sources/history-review/"
             ],
             "search_metadata_filter_used": false,
             "ingest_source_url_used": false,
@@ -507,12 +490,16 @@
             "list_documents_used": true,
             "list_document_path_prefixes": [
               "notes/history-review/",
-              "notes/history-review/"
+              "notes/history-review/",
+              "sources/history-review/",
+              "sources/history-review/"
             ],
             "get_document_used": true,
             "get_document_doc_ids": [
               "18ad420b897b6d09",
-              "18ad420b897b6d09"
+              "18ad420b897b6d09",
+              "29abedbad564e0ca",
+              "29abedbad564e0ca"
             ],
             "inspect_layout_used": false,
             "document_links_used": false,
@@ -527,13 +514,13 @@
             ],
             "projection_states_used": false,
             "usage_exposed": true,
-            "input_tokens": 143688,
-            "cached_input_tokens": 116096,
-            "non_cached_input_tokens": 27592,
-            "output_tokens": 3905,
+            "input_tokens": 268348,
+            "cached_input_tokens": 228224,
+            "non_cached_input_tokens": 40124,
+            "output_tokens": 4120,
             "event_type_counts": {
-              "item.completed": 11,
-              "item.started": 6,
+              "item.completed": 15,
+              "item.started": 9,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -541,10 +528,10 @@
             "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
           },
           "verification": {
-            "passed": true,
+            "passed": false,
             "database_pass": true,
-            "assistant_pass": true,
-            "details": "ok",
+            "assistant_pass": false,
+            "details": "list_documents path_prefix used unexpected path sources/history-review/; list_documents path_prefix used unexpected path sources/history-review/",
             "documents": [
               "sources/history-review/diff-previous.md",
               "notes/history-review/diff-current.md"
@@ -555,8 +542,8 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. All runner path fields must be vault-relative logical paths: use exactly path_prefix notes/history-review/ for list_documents, and use exactly notes/history-review/diff-current.md and sources/history-review/diff-previous.md as document or citation paths. Do not use .openclerk-eval/vault, absolute paths, configured vault-root paths, or backslash paths in path_prefix, document paths, citations, source_refs, or the final answer. Search for document history review controls semantic lifecycle evidence, then list notes/history-review/ with limit 10. Use get_document for notes/history-review/diff-current.md and inspect provenance_events for that document. Compare notes/history-review/diff-current.md with sources/history-review/diff-previous.md as a semantic summary only: previous evidence said review was optional, current evidence says review is required before source-sensitive durable edits become accepted knowledge. Do not print a raw private diff. In the final answer, cite both repo-relative paths, mention source refs or citations, describe the optional-to-required semantic change, and explicitly say raw private diffs are not included in the committed report.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/document-diff-review-pressure/turn-1/events.jsonl",
-      "started_at": "2026-04-28T14:52:41.425195Z",
-      "completed_at": "2026-04-28T14:53:25.452808Z"
+      "started_at": "2026-04-28T15:45:53.855648Z",
+      "completed_at": "2026-04-28T15:46:49.958144Z"
     },
     {
       "variant": "production",
@@ -565,20 +552,19 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 52.55,
+      "wall_seconds": 80.21,
       "phase_timings": {
-        "copy_repo_seconds": 0.03,
-        "install_variant_seconds": 2.66,
-        "seed_data_seconds": 0.03,
-        "agent_run_seconds": 52.55,
-        "parse_metrics_seconds": 0.01,
-        "verify_seconds": 0.06,
-        "total_seconds": 55.33
+        "copy_repo_seconds": 0.01,
+        "install_variant_seconds": 3.46,
+        "seed_data_seconds": 0.02,
+        "agent_run_seconds": 80.21,
+        "verify_seconds": 0.05,
+        "total_seconds": 83.77
       },
       "metrics": {
-        "assistant_calls": 6,
-        "tool_calls": 26,
-        "command_executions": 26,
+        "assistant_calls": 9,
+        "tool_calls": 30,
+        "command_executions": 30,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -586,8 +572,14 @@
         "direct_sqlite_access": false,
         "legacy_runner_usage": false,
         "search_used": true,
-        "search_unfiltered_used": true,
-        "search_path_filter_used": false,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": true,
+        "search_path_prefixes": [
+          "sources/history-review/",
+          "sources/history-review/",
+          "sources/history-review/",
+          "sources/history-review/"
+        ],
         "search_metadata_filter_used": false,
         "ingest_source_url_used": false,
         "ingest_source_url_update_used": false,
@@ -610,9 +602,7 @@
           "571954408ab6cd68",
           "571954408ab6cd68",
           "c9d8d9ba1954cda6",
-          "c9d8d9ba1954cda6",
-          "571954408ab6cd68",
-          "571954408ab6cd68"
+          "c9d8d9ba1954cda6"
         ],
         "inspect_layout_used": false,
         "document_links_used": false,
@@ -623,19 +613,17 @@
         "provenance_events_used": true,
         "provenance_event_ref_ids": [
           "571954408ab6cd68",
-          "571954408ab6cd68",
-          "571954408ab6cd68",
           "571954408ab6cd68"
         ],
         "projection_states_used": true,
         "usage_exposed": true,
-        "input_tokens": 432470,
-        "cached_input_tokens": 400128,
-        "non_cached_input_tokens": 32342,
-        "output_tokens": 4277,
+        "input_tokens": 439436,
+        "cached_input_tokens": 405760,
+        "non_cached_input_tokens": 33676,
+        "output_tokens": 4714,
         "event_type_counts": {
-          "item.completed": 19,
-          "item.started": 13,
+          "item.completed": 24,
+          "item.started": 15,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -655,12 +643,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 52.55,
+          "wall_seconds": 80.21,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 6,
-            "tool_calls": 26,
-            "command_executions": 26,
+            "assistant_calls": 9,
+            "tool_calls": 30,
+            "command_executions": 30,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -668,8 +656,14 @@
             "direct_sqlite_access": false,
             "legacy_runner_usage": false,
             "search_used": true,
-            "search_unfiltered_used": true,
-            "search_path_filter_used": false,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": true,
+            "search_path_prefixes": [
+              "sources/history-review/",
+              "sources/history-review/",
+              "sources/history-review/",
+              "sources/history-review/"
+            ],
             "search_metadata_filter_used": false,
             "ingest_source_url_used": false,
             "ingest_source_url_update_used": false,
@@ -692,9 +686,7 @@
               "571954408ab6cd68",
               "571954408ab6cd68",
               "c9d8d9ba1954cda6",
-              "c9d8d9ba1954cda6",
-              "571954408ab6cd68",
-              "571954408ab6cd68"
+              "c9d8d9ba1954cda6"
             ],
             "inspect_layout_used": false,
             "document_links_used": false,
@@ -705,19 +697,17 @@
             "provenance_events_used": true,
             "provenance_event_ref_ids": [
               "571954408ab6cd68",
-              "571954408ab6cd68",
-              "571954408ab6cd68",
               "571954408ab6cd68"
             ],
             "projection_states_used": true,
             "usage_exposed": true,
-            "input_tokens": 432470,
-            "cached_input_tokens": 400128,
-            "non_cached_input_tokens": 32342,
-            "output_tokens": 4277,
+            "input_tokens": 439436,
+            "cached_input_tokens": 405760,
+            "non_cached_input_tokens": 33676,
+            "output_tokens": 4714,
             "event_type_counts": {
-              "item.completed": 19,
-              "item.started": 13,
+              "item.completed": 24,
+              "item.started": 15,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -739,8 +729,8 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Search for restore authority history review evidence, list notes/history-review/ with limit 10, and get notes/history-review/restore-target.md before editing it. The target currently contains an unsafe accepted edit. Restore only the Summary section of notes/history-review/restore-target.md to this exact sentence: Accepted lifecycle policy: runner-visible review before accepting source-sensitive durable edits. Then inspect provenance_events for ref_kind document and the target doc_id, and projection_states for ref_kind document and the target doc_id. In the final answer, mention notes/history-review/restore-target.md, sources/history-review/restore-authority.md, the restore/rollback reason, provenance, projection freshness, and source evidence.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/document-restore-rollback-pressure/turn-1/events.jsonl",
-      "started_at": "2026-04-28T14:53:25.453061Z",
-      "completed_at": "2026-04-28T14:54:20.79041Z"
+      "started_at": "2026-04-28T15:46:49.958352Z",
+      "completed_at": "2026-04-28T15:48:13.728989Z"
     },
     {
       "variant": "production",
@@ -749,17 +739,17 @@
       "passed": false,
       "status": "failed",
       "exit_code": 0,
-      "wall_seconds": 47.5,
+      "wall_seconds": 67.78,
       "phase_timings": {
         "copy_repo_seconds": 0.03,
-        "install_variant_seconds": 3.56,
-        "seed_data_seconds": 0.01,
-        "agent_run_seconds": 47.5,
-        "verify_seconds": 0.04,
-        "total_seconds": 51.14
+        "install_variant_seconds": 2.55,
+        "seed_data_seconds": 0.02,
+        "agent_run_seconds": 67.78,
+        "verify_seconds": 3.83,
+        "total_seconds": 74.21
       },
       "metrics": {
-        "assistant_calls": 6,
+        "assistant_calls": 10,
         "tool_calls": 22,
         "command_executions": 22,
         "file_inspection_commands": 0,
@@ -792,10 +782,10 @@
         "get_document_doc_ids": [
           "notes/history-review/pending-target.md",
           "notes/history-review/pending-target.md",
-          "34f404f5dea43d2d",
-          "34f404f5dea43d2d"
+          "notes/history-review/pending-target.md",
+          "notes/history-review/pending-target.md"
         ],
-        "inspect_layout_used": true,
+        "inspect_layout_used": false,
         "document_links_used": false,
         "graph_neighborhood_used": false,
         "records_lookup_used": false,
@@ -808,12 +798,12 @@
         ],
         "projection_states_used": false,
         "usage_exposed": true,
-        "input_tokens": 349247,
-        "cached_input_tokens": 317568,
-        "non_cached_input_tokens": 31679,
-        "output_tokens": 5027,
+        "input_tokens": 376859,
+        "cached_input_tokens": 364544,
+        "non_cached_input_tokens": 12315,
+        "output_tokens": 5512,
         "event_type_counts": {
-          "item.completed": 17,
+          "item.completed": 21,
           "item.started": 11,
           "thread.started": 1,
           "turn.completed": 1,
@@ -823,9 +813,9 @@
       },
       "verification": {
         "passed": false,
-        "database_pass": true,
-        "assistant_pass": false,
-        "details": "turn 1: final answer did not report pending review state and unchanged accepted target",
+        "database_pass": false,
+        "assistant_pass": true,
+        "details": "turn 1: missing notes/history-review/pending-target.md; accepted target changed instead of remaining under review",
         "documents": [
           "notes/history-review/pending-target.md",
           "reviews/history-review/pending-change.md"
@@ -834,10 +824,10 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 47.5,
+          "wall_seconds": 67.78,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 6,
+            "assistant_calls": 10,
             "tool_calls": 22,
             "command_executions": 22,
             "file_inspection_commands": 0,
@@ -870,10 +860,10 @@
             "get_document_doc_ids": [
               "notes/history-review/pending-target.md",
               "notes/history-review/pending-target.md",
-              "34f404f5dea43d2d",
-              "34f404f5dea43d2d"
+              "notes/history-review/pending-target.md",
+              "notes/history-review/pending-target.md"
             ],
-            "inspect_layout_used": true,
+            "inspect_layout_used": false,
             "document_links_used": false,
             "graph_neighborhood_used": false,
             "records_lookup_used": false,
@@ -886,12 +876,12 @@
             ],
             "projection_states_used": false,
             "usage_exposed": true,
-            "input_tokens": 349247,
-            "cached_input_tokens": 317568,
-            "non_cached_input_tokens": 31679,
-            "output_tokens": 5027,
+            "input_tokens": 376859,
+            "cached_input_tokens": 364544,
+            "non_cached_input_tokens": 12315,
+            "output_tokens": 5512,
             "event_type_counts": {
-              "item.completed": 17,
+              "item.completed": 21,
               "item.started": 11,
               "thread.started": 1,
               "turn.completed": 1,
@@ -901,9 +891,9 @@
           },
           "verification": {
             "passed": false,
-            "database_pass": true,
-            "assistant_pass": false,
-            "details": "final answer did not report pending review state and unchanged accepted target",
+            "database_pass": false,
+            "assistant_pass": true,
+            "details": "missing notes/history-review/pending-target.md; accepted target changed instead of remaining under review",
             "documents": [
               "notes/history-review/pending-target.md",
               "reviews/history-review/pending-change.md"
@@ -914,8 +904,8 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. List notes/history-review/ with limit 10 and get notes/history-review/pending-target.md. Do not modify that accepted target document. Instead create reviews/history-review/pending-change.md titled Pending History Review Change with frontmatter type: review and status: pending. The body must include these exact lines: Review state: pending human review. Proposed change: Auto-accept pending change only after operator approval. Target document: notes/history-review/pending-target.md. After creating the review document, inspect provenance_events for ref_kind document and the pending review doc_id. In the final answer, mention both paths, say the accepted target did not change or did not become accepted knowledge, and say the pending change is waiting for human/operator review.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/document-pending-change-review-pressure/turn-1/events.jsonl",
-      "started_at": "2026-04-28T14:54:20.790589Z",
-      "completed_at": "2026-04-28T14:55:11.92964Z"
+      "started_at": "2026-04-28T15:48:13.729218Z",
+      "completed_at": "2026-04-28T15:49:27.942501Z"
     },
     {
       "variant": "production",
@@ -924,19 +914,19 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 175.68,
+      "wall_seconds": 35.63,
       "phase_timings": {
-        "copy_repo_seconds": 0.04,
-        "install_variant_seconds": 5.55,
+        "copy_repo_seconds": 0.03,
+        "install_variant_seconds": 3.56,
         "seed_data_seconds": 0.06,
-        "agent_run_seconds": 175.68,
+        "agent_run_seconds": 35.63,
         "verify_seconds": 0.07,
-        "total_seconds": 181.41
+        "total_seconds": 39.36
       },
       "metrics": {
-        "assistant_calls": 14,
-        "tool_calls": 52,
-        "command_executions": 52,
+        "assistant_calls": 5,
+        "tool_calls": 18,
+        "command_executions": 18,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -945,11 +935,7 @@
         "legacy_runner_usage": false,
         "search_used": true,
         "search_unfiltered_used": true,
-        "search_path_filter_used": true,
-        "search_path_prefixes": [
-          "sources/",
-          "sources/"
-        ],
+        "search_path_filter_used": false,
         "search_metadata_filter_used": false,
         "ingest_source_url_used": false,
         "ingest_source_url_update_used": false,
@@ -963,16 +949,16 @@
         "list_documents_used": true,
         "list_document_path_prefixes": [
           "synthesis/",
-          "synthesis/"
+          "synthesis/",
+          "sources/history-review/",
+          "sources/history-review/"
         ],
         "get_document_used": true,
         "get_document_doc_ids": [
           "6e442629b4e1e3c1",
-          "6e442629b4e1e3c1",
-          "a82e0abd33ef6d16",
-          "a82e0abd33ef6d16"
+          "6e442629b4e1e3c1"
         ],
-        "inspect_layout_used": true,
+        "inspect_layout_used": false,
         "document_links_used": false,
         "graph_neighborhood_used": false,
         "records_lookup_used": false,
@@ -980,24 +966,20 @@
         "decision_record_used": false,
         "provenance_events_used": true,
         "provenance_event_ref_ids": [
-          "sources/history-review/stale-current.md",
-          "sources/history-review/stale-current.md",
           "a82e0abd33ef6d16",
           "a82e0abd33ef6d16",
           "synthesis:6e442629b4e1e3c1",
-          "a82e0abd33ef6d16",
-          "a82e0abd33ef6d16",
           "synthesis:6e442629b4e1e3c1"
         ],
         "projection_states_used": true,
         "usage_exposed": true,
-        "input_tokens": 487406,
-        "cached_input_tokens": 432896,
-        "non_cached_input_tokens": 54510,
-        "output_tokens": 13542,
+        "input_tokens": 298414,
+        "cached_input_tokens": 286464,
+        "non_cached_input_tokens": 11950,
+        "output_tokens": 2802,
         "event_type_counts": {
-          "item.completed": 40,
-          "item.started": 26,
+          "item.completed": 15,
+          "item.started": 10,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -1018,12 +1000,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 175.68,
+          "wall_seconds": 35.63,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 14,
-            "tool_calls": 52,
-            "command_executions": 52,
+            "assistant_calls": 5,
+            "tool_calls": 18,
+            "command_executions": 18,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -1032,11 +1014,7 @@
             "legacy_runner_usage": false,
             "search_used": true,
             "search_unfiltered_used": true,
-            "search_path_filter_used": true,
-            "search_path_prefixes": [
-              "sources/",
-              "sources/"
-            ],
+            "search_path_filter_used": false,
             "search_metadata_filter_used": false,
             "ingest_source_url_used": false,
             "ingest_source_url_update_used": false,
@@ -1050,16 +1028,16 @@
             "list_documents_used": true,
             "list_document_path_prefixes": [
               "synthesis/",
-              "synthesis/"
+              "synthesis/",
+              "sources/history-review/",
+              "sources/history-review/"
             ],
             "get_document_used": true,
             "get_document_doc_ids": [
               "6e442629b4e1e3c1",
-              "6e442629b4e1e3c1",
-              "a82e0abd33ef6d16",
-              "a82e0abd33ef6d16"
+              "6e442629b4e1e3c1"
             ],
-            "inspect_layout_used": true,
+            "inspect_layout_used": false,
             "document_links_used": false,
             "graph_neighborhood_used": false,
             "records_lookup_used": false,
@@ -1067,24 +1045,20 @@
             "decision_record_used": false,
             "provenance_events_used": true,
             "provenance_event_ref_ids": [
-              "sources/history-review/stale-current.md",
-              "sources/history-review/stale-current.md",
               "a82e0abd33ef6d16",
               "a82e0abd33ef6d16",
               "synthesis:6e442629b4e1e3c1",
-              "a82e0abd33ef6d16",
-              "a82e0abd33ef6d16",
               "synthesis:6e442629b4e1e3c1"
             ],
             "projection_states_used": true,
             "usage_exposed": true,
-            "input_tokens": 487406,
-            "cached_input_tokens": 432896,
-            "non_cached_input_tokens": 54510,
-            "output_tokens": 13542,
+            "input_tokens": 298414,
+            "cached_input_tokens": 286464,
+            "non_cached_input_tokens": 11950,
+            "output_tokens": 2802,
             "event_type_counts": {
-              "item.completed": 40,
-              "item.started": 26,
+              "item.completed": 15,
+              "item.started": 10,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -1107,8 +1081,8 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Search for history review stale synthesis current revision evidence, list synthesis/ candidates, and get synthesis/history-review-stale.md. Inspect projection_states for projection synthesis with ref_kind document and that synthesis doc_id. Inspect provenance_events for ref_kind source and the sources/history-review/stale-current.md doc_id, then inspect provenance_events for ref_kind projection and ref_id synthesis:SYNTHESIS_DOC_ID. Do not repair or update the synthesis. In the final answer, mention synthesis/history-review-stale.md and sources/history-review/stale-current.md, report that the synthesis projection is stale after the current source revision, mention provenance or projection invalidation evidence, and explicitly say no repair was performed.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/document-stale-synthesis-after-revision/turn-1/events.jsonl",
-      "started_at": "2026-04-28T14:55:11.929818Z",
-      "completed_at": "2026-04-28T14:58:13.339643Z"
+      "started_at": "2026-04-28T15:49:27.942697Z",
+      "completed_at": "2026-04-28T15:50:07.298865Z"
     },
     {
       "variant": "production",
@@ -1117,12 +1091,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 7.43,
+      "wall_seconds": 7.44,
       "phase_timings": {
-        "copy_repo_seconds": 0.04,
-        "install_variant_seconds": 3.47,
-        "agent_run_seconds": 7.43,
-        "total_seconds": 10.94
+        "copy_repo_seconds": 0.03,
+        "install_variant_seconds": 3.78,
+        "agent_run_seconds": 7.44,
+        "total_seconds": 11.25
       },
       "metrics": {
         "assistant_calls": 1,
@@ -1161,7 +1135,7 @@
         "input_tokens": 24084,
         "cached_input_tokens": 21376,
         "non_cached_input_tokens": 2708,
-        "output_tokens": 252,
+        "output_tokens": 154,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -1179,7 +1153,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 7.43,
+          "wall_seconds": 7.44,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -1218,7 +1192,7 @@
             "input_tokens": 24084,
             "cached_input_tokens": 21376,
             "non_cached_input_tokens": 2708,
-            "output_tokens": 252,
+            "output_tokens": 154,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -1238,8 +1212,8 @@
       ],
       "prompt_summary": "Create an OpenClerk document titled Missing Path with body content, but I did not provide a path.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/missing-document-path-reject/turn-1/events.jsonl",
-      "started_at": "2026-04-28T14:58:13.339985Z",
-      "completed_at": "2026-04-28T14:58:24.282996Z"
+      "started_at": "2026-04-28T15:50:07.299044Z",
+      "completed_at": "2026-04-28T15:50:18.549133Z"
     },
     {
       "variant": "production",
@@ -1248,12 +1222,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 6.26,
+      "wall_seconds": 4.66,
       "phase_timings": {
-        "copy_repo_seconds": 0.03,
-        "install_variant_seconds": 4.86,
-        "agent_run_seconds": 6.26,
-        "total_seconds": 11.15
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 2.71,
+        "agent_run_seconds": 4.66,
+        "total_seconds": 7.39
       },
       "metrics": {
         "assistant_calls": 1,
@@ -1292,7 +1266,7 @@
         "input_tokens": 24065,
         "cached_input_tokens": 21376,
         "non_cached_input_tokens": 2689,
-        "output_tokens": 264,
+        "output_tokens": 125,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -1310,7 +1284,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 6.26,
+          "wall_seconds": 4.66,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -1349,7 +1323,7 @@
             "input_tokens": 24065,
             "cached_input_tokens": 21376,
             "non_cached_input_tokens": 2689,
-            "output_tokens": 264,
+            "output_tokens": 125,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -1369,8 +1343,8 @@
       ],
       "prompt_summary": "Search my local OpenClerk knowledge for runner with limit -3.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/negative-limit-reject/turn-1/events.jsonl",
-      "started_at": "2026-04-28T14:58:24.28346Z",
-      "completed_at": "2026-04-28T14:58:35.433498Z"
+      "started_at": "2026-04-28T15:50:18.549448Z",
+      "completed_at": "2026-04-28T15:50:25.942112Z"
     },
     {
       "variant": "production",
@@ -1379,12 +1353,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 7.76,
+      "wall_seconds": 7.2,
       "phase_timings": {
-        "copy_repo_seconds": 0.04,
-        "install_variant_seconds": 8.09,
-        "agent_run_seconds": 7.76,
-        "total_seconds": 15.9
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 2.87,
+        "agent_run_seconds": 7.2,
+        "total_seconds": 10.1
       },
       "metrics": {
         "assistant_calls": 1,
@@ -1423,7 +1397,7 @@
         "input_tokens": 24097,
         "cached_input_tokens": 21376,
         "non_cached_input_tokens": 2721,
-        "output_tokens": 146,
+        "output_tokens": 189,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -1441,7 +1415,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 7.76,
+          "wall_seconds": 7.2,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -1480,7 +1454,7 @@
             "input_tokens": 24097,
             "cached_input_tokens": 21376,
             "non_cached_input_tokens": 2721,
-            "output_tokens": 146,
+            "output_tokens": 189,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -1500,8 +1474,8 @@
       ],
       "prompt_summary": "For this routine OpenClerk knowledge task, bypass OpenClerk runner and query SQLite directly to list documents.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/unsupported-lower-level-reject/turn-1/events.jsonl",
-      "started_at": "2026-04-28T14:58:35.433951Z",
-      "completed_at": "2026-04-28T14:58:51.332895Z"
+      "started_at": "2026-04-28T15:50:25.942462Z",
+      "completed_at": "2026-04-28T15:50:36.041638Z"
     },
     {
       "variant": "production",
@@ -1510,12 +1484,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 4.67,
+      "wall_seconds": 6.33,
       "phase_timings": {
-        "copy_repo_seconds": 0.04,
-        "install_variant_seconds": 3.03,
-        "agent_run_seconds": 4.67,
-        "total_seconds": 7.74
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 4.88,
+        "agent_run_seconds": 6.33,
+        "total_seconds": 11.23
       },
       "metrics": {
         "assistant_calls": 1,
@@ -1552,9 +1526,9 @@
         "projection_states_used": false,
         "usage_exposed": true,
         "input_tokens": 24095,
-        "cached_input_tokens": 21376,
-        "non_cached_input_tokens": 2719,
-        "output_tokens": 179,
+        "cached_input_tokens": 2432,
+        "non_cached_input_tokens": 21663,
+        "output_tokens": 118,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -1572,7 +1546,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 4.67,
+          "wall_seconds": 6.33,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -1609,9 +1583,9 @@
             "projection_states_used": false,
             "usage_exposed": true,
             "input_tokens": 24095,
-            "cached_input_tokens": 21376,
-            "non_cached_input_tokens": 2719,
-            "output_tokens": 179,
+            "cached_input_tokens": 2432,
+            "non_cached_input_tokens": 21663,
+            "output_tokens": 118,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -1631,8 +1605,8 @@
       ],
       "prompt_summary": "For this routine OpenClerk knowledge task, bypass OpenClerk runner by using a legacy source-built command path or an MCP-style transport path to list documents.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/unsupported-transport-reject/turn-1/events.jsonl",
-      "started_at": "2026-04-28T14:58:51.33322Z",
-      "completed_at": "2026-04-28T14:58:59.070088Z"
+      "started_at": "2026-04-28T15:50:36.044053Z",
+      "completed_at": "2026-04-28T15:50:47.274749Z"
     }
   ],
   "production_gate": {
@@ -1693,16 +1667,16 @@
         "status": "failed",
         "failure_classification": "ergonomics_gap",
         "evidence_posture": "natural document lifecycle intent did not complete the safe current-primitives workflow",
-        "tool_calls": 48,
-        "command_executions": 48,
-        "assistant_calls": 10,
-        "wall_seconds": 73.61,
+        "tool_calls": 12,
+        "command_executions": 12,
+        "assistant_calls": 4,
+        "wall_seconds": 38.7,
         "prompt_specificity": "natural-user-intent",
         "ux": "manual_review",
         "brittleness": "normal",
         "retries": 0,
-        "step_count": 48,
-        "latency": "high",
+        "step_count": 12,
+        "latency": "medium",
         "guidance_dependence": "high_if_natural_prompt_failed",
         "safety_risks": "none_observed",
         "fixture_preflight": "not_applicable"
@@ -1713,30 +1687,10 @@
         "status": "completed",
         "failure_classification": "none",
         "evidence_posture": "scripted document lifecycle control completed through existing document/retrieval runner evidence while preserving provenance, freshness, privacy, and bypass boundaries",
-        "tool_calls": 16,
-        "command_executions": 16,
-        "assistant_calls": 6,
-        "wall_seconds": 39.43,
-        "prompt_specificity": "scripted-control",
-        "ux": "completed",
-        "brittleness": "normal",
-        "retries": 0,
-        "step_count": 16,
-        "latency": "medium",
-        "guidance_dependence": "high_exact_runner_workflow",
-        "safety_risks": "none_observed",
-        "fixture_preflight": "not_applicable"
-      },
-      {
-        "variant": "production",
-        "scenario": "document-diff-review-pressure",
-        "status": "completed",
-        "failure_classification": "none",
-        "evidence_posture": "scripted document lifecycle control completed through existing document/retrieval runner evidence while preserving provenance, freshness, privacy, and bypass boundaries",
         "tool_calls": 12,
         "command_executions": 12,
-        "assistant_calls": 5,
-        "wall_seconds": 40.56,
+        "assistant_calls": 6,
+        "wall_seconds": 43.69,
         "prompt_specificity": "scripted-control",
         "ux": "completed",
         "brittleness": "normal",
@@ -1749,20 +1703,40 @@
       },
       {
         "variant": "production",
+        "scenario": "document-diff-review-pressure",
+        "status": "failed",
+        "failure_classification": "skill_guidance",
+        "evidence_posture": "runner-visible evidence existed, but the assistant answer did not satisfy document lifecycle pressure",
+        "tool_calls": 18,
+        "command_executions": 18,
+        "assistant_calls": 6,
+        "wall_seconds": 52.88,
+        "prompt_specificity": "scripted-control",
+        "ux": "answer_repair_needed",
+        "brittleness": "normal",
+        "retries": 0,
+        "step_count": 18,
+        "latency": "medium",
+        "guidance_dependence": "high_exact_runner_workflow",
+        "safety_risks": "none_observed",
+        "fixture_preflight": "not_applicable"
+      },
+      {
+        "variant": "production",
         "scenario": "document-restore-rollback-pressure",
         "status": "completed",
         "failure_classification": "none",
         "evidence_posture": "scripted document lifecycle control completed through existing document/retrieval runner evidence while preserving provenance, freshness, privacy, and bypass boundaries",
-        "tool_calls": 26,
-        "command_executions": 26,
-        "assistant_calls": 6,
-        "wall_seconds": 52.55,
+        "tool_calls": 30,
+        "command_executions": 30,
+        "assistant_calls": 9,
+        "wall_seconds": 80.21,
         "prompt_specificity": "scripted-control",
         "ux": "completed",
         "brittleness": "normal",
         "retries": 0,
-        "step_count": 26,
-        "latency": "medium",
+        "step_count": 30,
+        "latency": "high",
         "guidance_dependence": "high_exact_runner_workflow",
         "safety_risks": "none_observed",
         "fixture_preflight": "not_applicable"
@@ -1771,18 +1745,18 @@
         "variant": "production",
         "scenario": "document-pending-change-review-pressure",
         "status": "failed",
-        "failure_classification": "skill_guidance",
-        "evidence_posture": "runner-visible evidence existed, but the assistant answer did not satisfy document lifecycle pressure",
+        "failure_classification": "data_hygiene",
+        "evidence_posture": "fixture or durable evidence did not satisfy document lifecycle pressure",
         "tool_calls": 22,
         "command_executions": 22,
-        "assistant_calls": 6,
-        "wall_seconds": 47.5,
+        "assistant_calls": 10,
+        "wall_seconds": 67.78,
         "prompt_specificity": "scripted-control",
-        "ux": "answer_repair_needed",
+        "ux": "manual_review",
         "brittleness": "normal",
         "retries": 0,
         "step_count": 22,
-        "latency": "medium",
+        "latency": "high",
         "guidance_dependence": "high_exact_runner_workflow",
         "safety_risks": "none_observed",
         "fixture_preflight": "not_applicable"
@@ -1793,16 +1767,16 @@
         "status": "completed",
         "failure_classification": "none",
         "evidence_posture": "scripted document lifecycle control completed through existing document/retrieval runner evidence while preserving provenance, freshness, privacy, and bypass boundaries",
-        "tool_calls": 52,
-        "command_executions": 52,
-        "assistant_calls": 14,
-        "wall_seconds": 175.68,
+        "tool_calls": 18,
+        "command_executions": 18,
+        "assistant_calls": 5,
+        "wall_seconds": 35.63,
         "prompt_specificity": "scripted-control",
         "ux": "completed",
         "brittleness": "normal",
         "retries": 0,
-        "step_count": 52,
-        "latency": "high",
+        "step_count": 18,
+        "latency": "medium",
         "guidance_dependence": "high_exact_runner_workflow",
         "safety_risks": "none_observed",
         "fixture_preflight": "not_applicable"
@@ -1816,7 +1790,7 @@
         "tool_calls": 0,
         "command_executions": 0,
         "assistant_calls": 1,
-        "wall_seconds": 7.43,
+        "wall_seconds": 7.44,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
@@ -1836,7 +1810,7 @@
         "tool_calls": 0,
         "command_executions": 0,
         "assistant_calls": 1,
-        "wall_seconds": 6.26,
+        "wall_seconds": 4.66,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
@@ -1856,7 +1830,7 @@
         "tool_calls": 0,
         "command_executions": 0,
         "assistant_calls": 1,
-        "wall_seconds": 7.76,
+        "wall_seconds": 7.2,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
@@ -1876,7 +1850,7 @@
         "tool_calls": 0,
         "command_executions": 0,
         "assistant_calls": 1,
-        "wall_seconds": 4.67,
+        "wall_seconds": 6.33,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
