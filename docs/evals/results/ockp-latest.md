@@ -38,6 +38,7 @@ full release-gate replacements.
 | Source-sensitive audit | `docs/evals/results/ockp-source-sensitive-audit-poc.md` | Stale repair and unresolved conflict scenarios completed |
 | Graph semantics reference | `docs/evals/results/ockp-graph-semantics-reference-poc.md` | Graph semantic-label pressure scenario completed as reference evidence |
 | Memory/router reference | `docs/evals/results/ockp-memory-router-reference-poc.md` | Memory and router pressure scenario completed as reference evidence |
+| Memory/router revisit | `docs/evals/results/ockp-memory-router-revisit-pressure.md` | Targeted revisit deferred for guidance/eval repair; no memory API, remember/recall action, or autonomous router surface promoted |
 | Real-vault dogfooding | `docs/evals/results/ockp-real-vault-agentops-trial.md` | Sanitized aggregate evidence only; raw logs, paths, titles, snippets, citations, document IDs, and raw JSON remain local-only |
 | Populated-vault synthetic pressure | `docs/evals/results/ockp-populated-vault-targeted.md`; follow-up `docs/evals/results/ockp-populated-vault-guidance-hardening.md` | Targeted run completed freshness/conflict and synthesis-update pressure; focused follow-up resolved the heterogeneous polluted-evidence guidance failure, with no runner capability gap or product/API promotion |
 | Document-this intake pressure | `docs/evals/results/ockp-document-this-intake-pressure.md` | Targeted document-this intake lane covers missing-field clarification, explicit create/override, duplicate candidates, existing updates, and synthesis freshness |
@@ -49,8 +50,9 @@ OpenClerk is currently proven for the v1 AgentOps runner slice: canonical docs,
 source-linked synthesis, promoted records, provenance events, projection
 freshness, and final-answer-only rejection gates.
 
-The later targeted POCs do not promote Mem0 or a memory API, an autonomous
-router, a semantic graph truth layer, a broad contradiction engine, or new
-public runner actions. Those capabilities remain deferred until eval evidence
-shows the existing `openclerk document` and `openclerk retrieval` actions are
-structurally insufficient.
+The later targeted POCs do not promote Mem0 or a memory API, remember/recall
+actions, an autonomous router, a semantic graph truth layer, a broad
+contradiction engine, or new public runner actions. Those capabilities remain
+deferred until eval evidence shows the existing `openclerk document` and
+`openclerk retrieval` actions are structurally insufficient or unacceptable
+after guidance/eval repair.

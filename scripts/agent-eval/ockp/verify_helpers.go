@@ -414,6 +414,22 @@ func memoryRouterReferenceAnswerPass(message string) bool {
 		containsAny(normalized, []string{"freshness", "fresh", "provenance", "projection"}) &&
 		containsAny(normalized, []string{"reference", "defer", "deferred", "not promote", "do not promote", "not promoted", "keep"})
 }
+func memoryRouterRevisitAnswerPass(message string, scripted bool) bool {
+	normalized := normalizeValidationMessage(message)
+	if !memoryRouterReferenceAnswerPass(message) {
+		return false
+	}
+	required := containsAny(normalized, []string{"capability gap", "capability_gap"}) &&
+		containsAny(normalized, []string{"ergonomics gap", "ergonomics_gap", "ux", "user experience"}) &&
+		containsAny(normalized, []string{"search"}) &&
+		containsAny(normalized, []string{"current primitives", "document and retrieval", "document/retrieval", "existing agentops document and retrieval"})
+	if scripted {
+		required = required &&
+			containsAny(normalized, []string{"express", "safely express", "can express", "workflow safely"}) &&
+			containsAny(normalized, []string{"acceptable", "ux acceptable", "current ux"})
+	}
+	return required
+}
 func messagePromotesMemoryRouter(normalized string) bool {
 	promotionPhrases := []string{
 		"decision: promote memory",

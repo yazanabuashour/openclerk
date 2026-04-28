@@ -691,6 +691,35 @@ func verifyMemoryRouterReference(ctx context.Context, paths evalPaths, finalMess
 		Documents:     append([]string{memoryRouterSynthesisPath}, sourceRefs...),
 	}, nil
 }
+func verifyMemoryRouterRevisit(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics, scripted bool) (verificationResult, error) {
+	base, err := verifyMemoryRouterReference(ctx, paths, finalMessage, turnMetrics)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := []string{}
+	if base.Details != "ok" {
+		failures = append(failures, base.Details)
+	}
+	if turnMetrics.CreateDocumentUsed || turnMetrics.ReplaceSectionUsed || turnMetrics.AppendDocumentUsed {
+		failures = append(failures, "revisit scenario created or updated documents")
+	}
+	assistantPass := memoryRouterRevisitAnswerPass(finalMessage, scripted)
+	if !assistantPass {
+		if scripted {
+			failures = append(failures, "final answer did not compare memory/router evidence, current-primitives safety, UX acceptability, capability/ergonomics posture, and reference/defer decision")
+		} else {
+			failures = append(failures, "final answer did not compare memory/router evidence, capability/ergonomics posture, and reference/defer decision")
+		}
+	}
+	noWrites := !turnMetrics.CreateDocumentUsed && !turnMetrics.ReplaceSectionUsed && !turnMetrics.AppendDocumentUsed
+	return verificationResult{
+		Passed:        base.DatabasePass && base.AssistantPass && assistantPass && noWrites,
+		DatabasePass:  base.DatabasePass,
+		AssistantPass: base.AssistantPass && assistantPass && noWrites,
+		Details:       missingDetails(failures),
+		Documents:     base.Documents,
+	}, nil
+}
 func verifyDocumentHistoryInspection(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
 	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	docID, found, err := documentIDByPath(ctx, paths, documentHistoryPolicyPath)

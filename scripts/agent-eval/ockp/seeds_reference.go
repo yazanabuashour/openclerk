@@ -344,6 +344,15 @@ The correct route for this reference POC is canonical docs plus provenance and p
 `) + "\n"
 	return createSeedDocument(ctx, cfg, memoryRouterRoutingPath, "Routing Policy", routingBody)
 }
+func seedMemoryRouterRevisit(ctx context.Context, cfg runclient.Config) error {
+	if err := seedMemoryRouterReference(ctx, cfg); err != nil {
+		return err
+	}
+	if err := createSeedDocument(ctx, cfg, memoryRouterSessionObservationPath, memoryRouterSessionObservationTitle, memoryRouterSessionObservationBody()); err != nil {
+		return err
+	}
+	return createSeedDocument(ctx, cfg, memoryRouterSynthesisPath, "Memory Router Reference", memoryRouterReferenceSynthesisBody())
+}
 func memoryRouterSessionObservationBody() string {
 	return strings.TrimSpace(`---
 type: source
@@ -357,6 +366,31 @@ Session observation: a user asked whether memory routing should promote recall. 
 
 ## Feedback
 Positive feedback weight 0.8 is advisory only and cannot hide stale canonical evidence.
+`) + "\n"
+}
+func memoryRouterReferenceSynthesisBody() string {
+	return strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: notes/memory-router/session-observation.md, notes/memory-router/temporal-policy.md, notes/memory-router/feedback-weighting.md, notes/memory-router/routing-policy.md
+---
+# Memory Router Reference
+
+Temporal status: current canonical docs outrank stale session observations.
+Session promotion path: durable canonical markdown with source refs.
+Feedback weighting: advisory only.
+Routing choice: existing AgentOps document and retrieval actions.
+Decision: keep memory and autonomous routing as reference/deferred.
+
+## Sources
+- notes/memory-router/session-observation.md
+- notes/memory-router/temporal-policy.md
+- notes/memory-router/feedback-weighting.md
+- notes/memory-router/routing-policy.md
+
+## Freshness
+Provenance and synthesis projection checks are required before reuse.
 `) + "\n"
 }
 func seedConfiguredLayoutScenario(ctx context.Context, cfg runclient.Config) error {

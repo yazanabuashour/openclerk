@@ -97,7 +97,7 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	if releaseBlocking {
 		return nil
 	}
-	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != documentHistoryLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != sourceURLUpdateLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName && lane != broadAuditLaneName {
+	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != documentHistoryLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != sourceURLUpdateLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName && lane != broadAuditLaneName {
 		return nil
 	}
 	summary := targetedLaneSummary{
@@ -121,6 +121,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		case graphSemanticsRevisitLaneName:
 			include = isGraphSemanticsRevisitScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
 			classification, posture = classifyTargetedGraphSemanticsRevisitResult(result)
+		case memoryRouterRevisitLaneName:
+			include = isMemoryRouterRevisitScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
+			classification, posture = classifyTargetedMemoryRouterRevisitResult(result)
 		case documentHistoryLaneName:
 			include = isDocumentHistoryScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
 			classification, posture = classifyTargetedDocumentHistoryResult(result)
@@ -189,6 +192,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	case graphSemanticsRevisitLaneName:
 		summary.Decision = graphSemanticsRevisitDecision(summary.ScenarioClassifications)
 		summary.Promotion = "targeted graph semantics revisit evidence only; no semantic-label graph layer, runner action, schema, migration, storage behavior, or public API change from this eval"
+	case memoryRouterRevisitLaneName:
+		summary.Decision = memoryRouterRevisitDecision(summary.ScenarioClassifications)
+		summary.Promotion = "targeted memory and autonomous router revisit evidence only; no remember/recall action, memory transport, autonomous router API, schema, migration, storage behavior, or public API change from this eval"
 	case documentHistoryLaneName:
 		summary.Decision = documentHistoryDecision(summary.ScenarioClassifications)
 		summary.Promotion = "targeted document lifecycle evidence only; no promoted history, diff, review, restore, rollback, schema, migration, storage behavior, or public API change from this eval"
@@ -261,6 +267,42 @@ func classifyTargetedGraphSemanticsRevisitResult(result jobResult) (string, stri
 		return "skill_guidance_or_eval_coverage", "runner-visible graph evidence existed, but the assistant answer or required runner steps did not satisfy the scenario"
 	}
 	return "ergonomics_gap", "manual review required before any graph semantics promotion"
+}
+func classifyTargetedMemoryRouterRevisitResult(result jobResult) (string, string) {
+	if isFinalAnswerOnlyValidationScenario(result.Scenario) {
+		if result.Passed && result.Verification.Passed {
+			return "none", "validation control stayed final-answer-only"
+		}
+		if result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1 {
+			return "skill_guidance_or_eval_coverage", "validation pressure did not stay final-answer-only"
+		}
+		return "skill_guidance_or_eval_coverage", "validation answer did not satisfy the rejection contract"
+	}
+	if result.Passed && result.Verification.Passed {
+		return "none", "current document/retrieval workflow preserved canonical memory/router authority, source refs, provenance, synthesis freshness, and bypass boundaries"
+	}
+	if len(populatedBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Metrics.CreateDocumentUsed || result.Metrics.ReplaceSectionUsed || result.Metrics.AppendDocumentUsed {
+		return "eval_contract_violation", "revisit scenario wrote durable documents instead of inspecting existing evidence"
+	}
+	if result.Verification.Passed {
+		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
+	}
+	if result.Scenario == memoryRouterScriptedScenarioID && !result.Verification.DatabasePass {
+		return "capability_gap", "scripted current-primitives control could not safely express memory and autonomous router revisit workflow"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "fixture or durable memory/router evidence did not satisfy revisit pressure"
+	}
+	if result.Scenario == memoryRouterNaturalScenarioID && !result.Verification.Passed {
+		return "ergonomics_gap", "natural memory and autonomous router revisit intent did not complete the safe current-primitives workflow"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible memory/router evidence existed, but the assistant answer or required runner steps did not satisfy the scenario"
+	}
+	return "ergonomics_gap", "manual review required before any memory/router promotion"
 }
 func classifyTargetedArtifactIngestionResult(result jobResult) (string, string) {
 	if result.Passed && result.Verification.Passed {
@@ -393,6 +435,10 @@ func promptSpecificity(scenarioID string) string {
 		return "natural-user-intent"
 	case graphSemanticsScriptedScenarioID:
 		return "scripted-control"
+	case memoryRouterNaturalScenarioID:
+		return "natural-user-intent"
+	case memoryRouterScriptedScenarioID:
+		return "scripted-control"
 	case documentHistoryNaturalScenarioID:
 		return "natural-user-intent"
 	case documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID:
@@ -455,6 +501,9 @@ func scenarioBrittleness(result jobResult) string {
 	if result.Scenario == synthesisCompileNaturalScenarioID && !result.Passed {
 		return "natural_prompt_sensitive"
 	}
+	if result.Scenario == memoryRouterNaturalScenarioID && !result.Passed {
+		return "natural_prompt_sensitive"
+	}
 	return "normal"
 }
 func scenarioRetries(result jobResult) int {
@@ -486,6 +535,13 @@ func scenarioGuidanceDependence(result jobResult) string {
 		}
 		return "high_if_natural_prompt_failed"
 	case graphSemanticsScriptedScenarioID:
+		return "high_exact_request_shape"
+	case memoryRouterNaturalScenarioID:
+		if result.Passed {
+			return "low_natural_user_intent"
+		}
+		return "high_if_natural_prompt_failed"
+	case memoryRouterScriptedScenarioID:
 		return "high_exact_request_shape"
 	case documentHistoryNaturalScenarioID:
 		if result.Passed {
@@ -769,6 +825,33 @@ func graphSemanticsRevisitDecision(rows []targetedScenarioClassification) string
 	}
 	return "keep_as_reference"
 }
+func memoryRouterRevisitDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	ergonomicsGaps := 0
+	for _, row := range rows {
+		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
+			return "promote_memory_router_surface_design"
+		}
+		if row.FailureClassification == "ergonomics_gap" {
+			ergonomicsGaps++
+		} else if row.FailureClassification != "none" {
+			return "defer_for_guidance_or_eval_repair"
+		}
+		seen[row.Scenario] = true
+	}
+	for _, id := range memoryRouterRevisitScenarioIDs() {
+		if !seen[id] {
+			return "defer_for_guidance_or_eval_repair"
+		}
+	}
+	if ergonomicsGaps >= 2 {
+		return "promote_memory_router_surface_design"
+	}
+	if ergonomicsGaps > 0 {
+		return "defer_for_guidance_or_eval_repair"
+	}
+	return "keep_as_reference"
+}
 func documentHistoryDecision(rows []targetedScenarioClassification) string {
 	seen := map[string]bool{}
 	ergonomicsGaps := 0
@@ -989,6 +1072,12 @@ func graphSemanticsRevisitScenarioIDs() []string {
 		graphSemanticsScriptedScenarioID,
 	}
 }
+func memoryRouterRevisitScenarioIDs() []string {
+	return []string{
+		memoryRouterNaturalScenarioID,
+		memoryRouterScriptedScenarioID,
+	}
+}
 func broadAuditScenarioIDs() []string {
 	return []string{
 		broadAuditNaturalScenarioID,
@@ -1162,6 +1251,7 @@ func reportLane(ids []string) (string, bool) {
 	populated := 0
 	repoDocs := 0
 	graphSemanticsRevisit := 0
+	memoryRouterRevisit := 0
 	documentHistory := 0
 	agentChosenPath := 0
 	pathTitleAutonomy := 0
@@ -1185,6 +1275,10 @@ func reportLane(ids []string) (string, bool) {
 		}
 		if isGraphSemanticsRevisitScenario(id) {
 			graphSemanticsRevisit++
+			continue
+		}
+		if isMemoryRouterRevisitScenario(id) {
+			memoryRouterRevisit++
 			continue
 		}
 		if isDocumentHistoryScenario(id) {
@@ -1242,6 +1336,9 @@ func reportLane(ids []string) (string, bool) {
 	if graphSemanticsRevisit > 0 && graphSemanticsRevisit+validation == len(ids) {
 		return graphSemanticsRevisitLaneName, false
 	}
+	if memoryRouterRevisit > 0 && memoryRouterRevisit+validation == len(ids) {
+		return memoryRouterRevisitLaneName, false
+	}
 	if documentHistory > 0 && documentHistory+validation == len(ids) {
 		return documentHistoryLaneName, false
 	}
@@ -1279,6 +1376,9 @@ func reportLane(ids []string) (string, bool) {
 		return populatedMixedLaneName, releaseBlocking
 	}
 	if graphSemanticsRevisit > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
+	if memoryRouterRevisit > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
 	if documentHistory > 0 {
@@ -1319,6 +1419,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == graphSemanticsRevisitLaneName {
 		return "graph semantics revisit rows report natural relationship intent, scripted current-primitives control, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"
+	}
+	if lane == memoryRouterRevisitLaneName {
+		return "memory and autonomous router revisit rows report natural memory/router intent, scripted current-primitives control, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"
 	}
 	if lane == documentHistoryLaneName {
 		return "document lifecycle rows report natural intent, scripted current-primitives controls, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, privacy handling, and capability/ergonomics classification"

@@ -48,6 +48,9 @@ const (
 	graphSemanticsRelationshipText   = "requires supersedes related to operationalizes"
 
 	memoryRouterScenarioID              = "memory-router-reference-poc"
+	memoryRouterRevisitLaneName         = "memory-router-revisit-pressure"
+	memoryRouterNaturalScenarioID       = "memory-router-revisit-natural-intent"
+	memoryRouterScriptedScenarioID      = "memory-router-revisit-scripted-control"
 	memoryRouterPrefix                  = "notes/memory-router/"
 	memoryRouterSessionObservationPath  = "notes/memory-router/session-observation.md"
 	memoryRouterTemporalPath            = "notes/memory-router/temporal-policy.md"
