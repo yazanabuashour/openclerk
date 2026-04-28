@@ -1,0 +1,825 @@
+package main
+
+import (
+	"fmt"
+	"strings"
+)
+
+func isPopulatedVaultScenario(id string) bool {
+	switch id {
+	case populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+func isRepoDocsDogfoodScenario(id string) bool {
+	switch id {
+	case repoDocsRetrievalScenarioID, repoDocsSynthesisScenarioID, repoDocsDecisionScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+func isReleaseBlockingScenario(id string) bool {
+	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isSourceURLUpdateScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id)
+}
+func isDocumentHistoryScenario(id string) bool {
+	switch id {
+	case documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+func isAgentChosenPathScenario(id string) bool {
+	switch id {
+	case agentChosenExplicitScenarioID, agentChosenMissingFieldsScenarioID, agentChosenPathProposalScenarioID, agentChosenAutonomousScenarioID, agentChosenSynthesisScenarioID, agentChosenAmbiguousScenarioID, agentChosenUserPathScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+func isPathTitleAutonomyScenario(id string) bool {
+	switch id {
+	case pathTitleURLOnlyScenarioID, pathTitleArtifactMissingHintsScenarioID, pathTitleMultiSourceDuplicateScenarioID, pathTitleExplicitOverridesScenarioID, pathTitleDuplicateRiskScenarioID, pathTitleMetadataAuthorityScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+func isSourceURLUpdateScenario(id string) bool {
+	switch id {
+	case sourceURLUpdateDuplicateScenarioID, sourceURLUpdateSameSHAScenarioID, sourceURLUpdateChangedScenarioID, sourceURLUpdateConflictScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+func isDocumentThisScenario(id string) bool {
+	switch id {
+	case documentThisMissingFieldsScenarioID, documentThisExplicitCreateScenarioID, documentThisSourceURLMissingHintsScenarioID, documentThisExplicitOverridesScenarioID, documentThisDuplicateCandidateScenarioID, documentThisExistingUpdateScenarioID, documentThisSynthesisFreshnessScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+func isDocumentArtifactCandidateScenario(id string) bool {
+	switch id {
+	case candidateNoteFromPastedContentScenarioID, candidateTitleAndPathFromHeadingScenarioID, candidateMixedSourceSummaryScenarioID, candidateExplicitOverridesWinScenarioID, candidateDuplicateRiskAsksScenarioID, candidateLowConfidenceAsksScenarioID, candidateBodyFaithfulnessScenarioID, candidateErgonomicsNaturalIntentScenarioID, candidateErgonomicsScriptedControlID, candidateErgonomicsDuplicateNaturalID, candidateErgonomicsLowConfidenceNaturalID:
+		return true
+	default:
+		return false
+	}
+}
+func isCandidateErgonomicsScenario(id string) bool {
+	switch id {
+	case candidateErgonomicsNaturalIntentScenarioID, candidateErgonomicsScriptedControlID, candidateErgonomicsDuplicateNaturalID, candidateErgonomicsLowConfidenceNaturalID:
+		return true
+	default:
+		return false
+	}
+}
+func isArtifactIngestionScenario(id string) bool {
+	switch id {
+	case artifactPDFSourceURLScenarioID, artifactPDFNaturalIntentScenarioID, artifactTranscriptScenarioID, artifactInvoiceReceiptScenarioID, artifactMixedSynthesisScenarioID, artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+func isVideoYouTubeScenario(id string) bool {
+	switch id {
+	case videoYouTubeNaturalIntentScenarioID, videoYouTubeScriptedTranscriptControlID, videoYouTubeSynthesisFreshnessScenarioID, videoYouTubeBypassRejectScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+func isArtifactPDFScenario(id string) bool {
+	switch id {
+	case artifactPDFSourceURLScenarioID, artifactPDFNaturalIntentScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+func allScenarios() []scenario {
+	return []scenario{
+		{
+			ID:     "create-note",
+			Title:  "Create canonical note",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document JSON results; do not use rg, find, ls, repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, or source-built command paths. Create an OpenClerk canonical project note at notes/projects/openclerk-runner.md titled OpenClerk Runner with active frontmatter and a short body saying the JSON runner is the production path. Verify it exists from the create_document JSON result or a list_documents/get_document JSON result, and mention notes/projects/openclerk-runner.md in the final answer.",
+		},
+		{
+			ID:     "search-synthesis",
+			Title:  "Search before source-linked synthesis",
+			Prompt: "Use the configured local OpenClerk data path. Search existing notes for OpenClerk runner context, list existing synthesis/ candidates, then create or update synthesis/openclerk-runner.md with a source-linked synthesis. Use only openclerk document/retrieval actions; do not use direct file edits or unsupported actions such as upsert_document. The synthesis must have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: sources/openclerk-runner.md. Do not use YAML list syntax for source_refs. The body must include ## Sources citing sources/openclerk-runner.md and ## Freshness describing the runner retrieval checks. Mention synthesis/openclerk-runner.md in the final answer.",
+		},
+		{
+			ID:     "answer-filing",
+			Title:  "File durable answer into source-linked synthesis",
+			Prompt: "Use the configured local OpenClerk data path. Search for the answer filing source, answer from it, and file the reusable answer into synthesis/filed-runner-answer.md titled Filed OpenClerk runner Answer. The body must include the exact source line Source: sources/answer-filing-runner.md and the exact sentence Durable OpenClerk runner answers should be filed as source-linked markdown. Mention synthesis/filed-runner-answer.md in the final answer.",
+		},
+		{
+			ID:    ragRetrievalScenarioID,
+			Title: "RAG retrieval-only baseline",
+			Turns: []scenarioTurn{
+				{Prompt: "Use the configured local OpenClerk data path. Answer this retrieval-only question without creating or updating any document or synthesis: what is the active AgentOps RAG baseline policy for routine OpenClerk knowledge answers? Use only openclerk retrieval search requests. Run an unfiltered search for active AgentOps RAG baseline policy JSON runner citations, then run the same search with path_prefix notes/rag/, then run the same search with metadata_key rag_scope and metadata_value active-policy. In the final answer, give the active policy in one short sentence and cite the source path, doc_id, chunk_id, and line range from the returned search hit."},
+				{Prompt: "Repeat the same retrieval-only question. Do not create, update, append, replace, or file any synthesis/ document. Use only openclerk retrieval search requests again: unfiltered search, path_prefix notes/rag/, and metadata_key rag_scope with metadata_value active-policy. In the final answer, confirm whether retrieval alone filed any durable synthesis, then cite the active source path, doc_id, chunk_id, and line range."},
+			},
+		},
+		{
+			ID:     docsNavigationScenarioID,
+			Title:  "Canonical docs directory and link navigation baseline",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, or unsupported actions. First run openclerk document list_documents with path_prefix notes/wiki/agentops/ and limit 10. Use the returned doc_id for notes/wiki/agentops/index.md to run get_document, and use its returned headings in your analysis. Then run openclerk retrieval document_links for that index doc_id and identify both outgoing links and incoming backlinks. Then run openclerk retrieval graph_neighborhood for that index doc_id with limit 20, and inspect projection_states with projection graph, ref_kind document, and that index doc_id. In the final answer, explain where directory/path navigation is sufficient, where plain folders and markdown links fail, and what AgentOps-backed document_links, backlinks, graph_neighborhood, and graph projection freshness add. Mention notes/wiki/agentops/index.md and at least one linked source path.",
+		},
+		{
+			ID:     graphSemanticsScenarioID,
+			Title:  "Graph semantics reference comparison",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, or unsupported actions. First run openclerk retrieval search for graph semantics requires supersedes related operationalizes with limit 10. Then run openclerk document list_documents with path_prefix notes/graph/semantics/ and limit 10. Use the returned doc_id for notes/graph/semantics/index.md to run get_document, and use its relationship wording in your analysis. Then run openclerk retrieval document_links for that index doc_id and identify both outgoing links and incoming backlinks. Then run openclerk retrieval graph_neighborhood for that index doc_id with limit 20, and inspect projection_states with projection graph, ref_kind document, and that index doc_id. The final answer must explicitly mention search, markdown relationship text, document_links, incoming backlinks, graph_neighborhood, graph projection freshness, canonical markdown citations, and this decision: keep richer graph semantics as a reference/deferred pattern, do not promote a semantic-label graph layer, and keep graph behavior derived from canonical markdown citations.",
+		},
+		{
+			ID:    memoryRouterScenarioID,
+			Title: "Memory and router reference comparison",
+			Turns: []scenarioTurn{
+				{Prompt: "Use the configured local OpenClerk data path. Create notes/memory-router/session-observation.md titled Memory Router Session Observation with this exact body: ---\ntype: source\nstatus: active\nobserved_at: 2026-04-22\n---\n# Memory Router Session Observation\n\n## Summary\nSession observation: a user asked whether memory routing should promote recall. Useful session material must be promoted only by writing canonical markdown with source refs.\n\n## Feedback\nPositive feedback weight 0.8 is advisory only and cannot hide stale canonical evidence.\nDo not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, memory transports, or unsupported actions."},
+				{Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, memory transports, remember/recall actions, autonomous router APIs, or unsupported actions. First run openclerk retrieval search for memory router temporal recall session promotion feedback weighting routing canonical docs with limit 10. Then run openclerk document list_documents with path_prefix notes/memory-router/ and limit 10. Use the returned doc_ids for notes/memory-router/session-observation.md, notes/memory-router/temporal-policy.md, notes/memory-router/feedback-weighting.md, and notes/memory-router/routing-policy.md to run get_document for each. Inspect provenance_events for ref_kind document and the session observation doc_id. Then create synthesis/memory-router-reference.md titled Memory Router Reference with frontmatter type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: notes/memory-router/session-observation.md, notes/memory-router/temporal-policy.md, notes/memory-router/feedback-weighting.md, notes/memory-router/routing-policy.md. The body must include these exact sentences: Temporal status: current canonical docs outrank stale session observations. Session promotion path: durable canonical markdown with source refs. Feedback weighting: advisory only. Routing choice: existing AgentOps document and retrieval actions. Decision: keep memory and autonomous routing as reference/deferred. Include ## Sources with all four source paths and ## Freshness describing the provenance and synthesis projection checks. After creating the synthesis, list documents to get its doc_id and inspect projection_states for projection synthesis with ref_kind document and that synthesis doc_id. In the final answer, mention temporal status, session promotion, feedback weighting, routing choice, source refs or citations, provenance/freshness, synthesis/memory-router-reference.md, and that memory/router remains reference/deferred with no promoted remember/recall or autonomous routing surface."},
+			},
+		},
+		{
+			ID:     configuredLayoutScenarioID,
+			Title:  "Explain configured convention-first layout",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, or source-built command paths. Run openclerk document inspect_layout. In the final answer, explain the configured knowledge layout from the returned JSON: mention convention-first mode, config_artifact_required false or no committed manifest, conventional prefixes sources/ and synthesis/, synthesis source_refs plus Sources and Freshness requirements, and whether the layout is valid.",
+		},
+		{
+			ID:     invalidLayoutScenarioID,
+			Title:  "Report invalid layout through runner-visible checks",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, or source-built command paths. Run openclerk document inspect_layout. In the final answer, report the invalid runner-visible layout checks for synthesis/broken-layout.md and records/services/broken-layout-service.md, including the missing source ref, missing Freshness section, and missing service identity metadata.",
+		},
+		{
+			ID:     sourceURLUpdateDuplicateScenarioID,
+			Title:  "Reject duplicate source URL create mode",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or manual PDF downloads. First run openclerk document with exactly this request shape: {\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{SOURCE_URL_UPDATE_STABLE_URL}}\",\"path_hint\":\"sources/source-url-update-runner-copy.md\",\"asset_path_hint\":\"assets/sources/source-url-update-runner-copy.pdf\",\"title\":\"Source URL Update Duplicate\"}}. The duplicate source URL should be rejected. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"sources/source-url-update-runner\",\"limit\":10}} and confirm the original source remains at sources/source-url-update-runner.md and no copy source was created. In the final answer, mention duplicate create rejection, sources/source-url-update-runner.md, and that sources/source-url-update-runner-copy.md was not created.",
+		},
+		{
+			ID:     sourceURLUpdateSameSHAScenarioID,
+			Title:  "Same-SHA source URL update is a no-op",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or manual PDF downloads. First run openclerk document with exactly this request shape: {\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{SOURCE_URL_UPDATE_STABLE_URL}}\",\"mode\":\"update\"}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"sources/source-url-update-runner\",\"limit\":10}}. Use the returned doc_id for sources/source-url-update-runner.md to run get_document. Run openclerk retrieval search with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"SourceURLUpdateInitialEvidence\",\"path_prefix\":\"sources/\",\"limit\":10}}. Run openclerk document list_documents with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\",\"limit\":20}}. Use the returned doc_id for synthesis/source-url-update-runner.md to run get_document. Then run openclerk retrieval with exactly this request shape for the source doc: {\"action\":\"provenance_events\",\"provenance\":{\"ref_kind\":\"source\",\"ref_id\":\"SOURCE_DOC_ID\",\"limit\":20}} and exactly this request shape for the synthesis doc: {\"action\":\"projection_states\",\"projection\":{\"projection\":\"synthesis\",\"ref_kind\":\"document\",\"ref_id\":\"SYNTHESIS_DOC_ID\",\"limit\":5}}. In the final answer, mention same-SHA no-op update, the stable path sources/source-url-update-runner.md, preserved citations or source evidence, and that synthesis/source-url-update-runner.md stayed fresh with no changed-PDF refresh needed.",
+		},
+		{
+			ID:     sourceURLUpdateChangedScenarioID,
+			Title:  "Changed PDF update exposes stale synthesis",
+			Prompt: "Use the configured local OpenClerk data path. A changed-PDF source URL update has just been applied by the runner fixture before this turn. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or manual PDF downloads. Run openclerk retrieval search with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"SourceURLUpdateChangedEvidence\",\"path_prefix\":\"sources/\",\"limit\":10}}. Run openclerk document list_documents with exactly these request shapes for source and synthesis candidates: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"sources/source-url-update-runner\",\"limit\":10}} and {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\",\"limit\":20}}. Use get_document for sources/source-url-update-runner.md and synthesis/source-url-update-runner.md. Then run openclerk retrieval with exactly this request shape for the source doc: {\"action\":\"provenance_events\",\"provenance\":{\"ref_kind\":\"source\",\"ref_id\":\"SOURCE_DOC_ID\",\"limit\":20}} and exactly this request shape for the synthesis doc: {\"action\":\"projection_states\",\"projection\":{\"projection\":\"synthesis\",\"ref_kind\":\"document\",\"ref_id\":\"SYNTHESIS_DOC_ID\",\"limit\":5}}. Also inspect provenance_events for ref_kind projection and ref_id synthesis:SYNTHESIS_DOC_ID. Do not repair the synthesis. In the final answer, mention changed-PDF update, sources/source-url-update-runner.md, refreshed citations or changed evidence, synthesis/source-url-update-runner.md, stale synthesis projection, and source update provenance.",
+		},
+		{
+			ID:     sourceURLUpdateConflictScenarioID,
+			Title:  "Mismatched path hint update conflicts without writing",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or manual PDF downloads. Run ingest_source_url with source.mode update for exactly this URL and a mismatched path hint: {\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{SOURCE_URL_UPDATE_STABLE_URL}}\",\"path_hint\":\"sources/source-url-update-conflict.md\",\"asset_path_hint\":\"assets/sources/source-url-update-runner.pdf\",\"mode\":\"update\"}}. The update should conflict because the path hint does not match the existing source. Then list documents with path_prefix sources/source-url-update and get the existing source document if needed. In the final answer, mention path-hint conflict, existing path sources/source-url-update-runner.md, and that sources/source-url-update-conflict.md was not created.",
+		},
+		{
+			ID:     "stale-synthesis-update",
+			Title:  "Update stale source-linked synthesis",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results to find existing docs; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, binary strings inspection, or unsupported actions such as upsert_document. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"OpenClerk runner routing\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\",\"limit\":20}}. Use the returned doc_id for synthesis/runner-routing.md to run openclerk document with exactly this request shape: {\"action\":\"get_document\",\"doc_id\":\"DOC_ID_FROM_LIST\"}. Then update synthesis/runner-routing.md only with replace_section or append_document. Do not create a new synthesis page. Preserve the existing prototype frontmatter with freshness: fresh and the single-line field source_refs: sources/runner-current-runner.md, sources/runner-old-workaround.md. Replace the stale command-path workaround claim with these exact lines: Current guidance: routine agents must use openclerk JSON runner; Current source: sources/runner-current-runner.md; Supersedes: sources/runner-old-workaround.md. Keep ## Sources and ## Freshness sections with both source paths. Mention synthesis/runner-routing.md in the final answer.",
+		},
+		{
+			ID:     "synthesis-freshness-repair",
+			Title:  "Repair synthesis after runner-visible freshness invalidation",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, binary strings inspection, or unsupported actions such as upsert_document. First search for OpenClerk runner repair freshness. Then list synthesis/ candidates, get synthesis/runner-repair.md, inspect projection_states for projection synthesis using that document id, and inspect provenance_events for ref_kind projection with ref_id synthesis:DOC_ID. Repair synthesis/runner-repair.md only with replace_section or append_document. Do not create a duplicate. Preserve the existing source_refs frontmatter exactly as sources/repair-current.md, sources/repair-old.md. The repaired body must state: Current source: sources/repair-current.md; Superseded source: sources/repair-old.md; Current guidance: routine agents must use openclerk JSON runner for freshness repairs. After repair, inspect projection_states again and mention synthesis/runner-repair.md, sources/repair-current.md, sources/repair-old.md, and the final synthesis projection freshness in the final answer.",
+		},
+		{
+			ID:     sourceAuditRepairScenarioID,
+			Title:  "Repair source-sensitive audit synthesis",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, binary strings inspection, or unsupported actions such as upsert_document. Search for source-sensitive audit runner repair evidence, list synthesis/ candidates, choose synthesis/audit-runner-routing.md rather than the decoy, get it before editing, inspect projection_states for projection synthesis using that document id, and inspect provenance_events for ref_kind projection with ref_id synthesis:DOC_ID. Repair synthesis/audit-runner-routing.md only with replace_section or append_document. Do not create a duplicate synthesis page. Preserve the existing single-line source_refs for sources/audit-runner-current.md and sources/audit-runner-old.md. The repaired body must state: Current audit guidance: use the installed openclerk JSON runner; Current source: sources/audit-runner-current.md; Superseded source: sources/audit-runner-old.md. Keep ## Sources and ## Freshness. After repair, inspect projection_states again and mention synthesis/audit-runner-routing.md, sources/audit-runner-current.md, and final freshness in the final answer.",
+		},
+		{
+			ID:     sourceAuditConflictScenarioID,
+			Title:  "Explain unresolved source-sensitive conflict",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, or unsupported actions. Search for source sensitive audit conflict runner retention, then inspect provenance_events for both returned source documents. Do not create, update, append, replace, or file a synthesis document. In the final answer, explain that sources/audit-conflict-alpha.md says seven days and sources/audit-conflict-bravo.md says thirty days, that both are current sources with no supersession metadata, and that the conflict is unresolved so the agent cannot choose a winner without source authority.",
+		},
+		{
+			ID:     documentHistoryInspectScenarioID,
+			Title:  "Inspect document history through existing runner evidence",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. First run openclerk document list_documents with path_prefix notes/history-review/ and limit 10. Use the returned doc_id for notes/history-review/lifecycle-control.md to run get_document. Then inspect provenance_events for ref_kind document and that doc_id, and projection_states for ref_kind document and that doc_id. In the final answer, explain the recent document lifecycle edit using the existing runner-visible document, provenance, and projection freshness evidence; mention notes/history-review/lifecycle-control.md and say this control uses existing document/retrieval workflows before proposing a new history action.",
+		},
+		{
+			ID:     documentHistoryDiffScenarioID,
+			Title:  "Review semantic diff pressure without raw private diff leakage",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. All runner path fields must be vault-relative logical paths: use exactly path_prefix notes/history-review/ for list_documents, and use exactly notes/history-review/diff-current.md and sources/history-review/diff-previous.md as document or citation paths. Do not use .openclerk-eval/vault, absolute paths, configured vault-root paths, or backslash paths in path_prefix, document paths, citations, source_refs, or the final answer. Search for document history review controls semantic lifecycle evidence, then list notes/history-review/ with limit 10. Use get_document for notes/history-review/diff-current.md and inspect provenance_events for that document. Compare notes/history-review/diff-current.md with sources/history-review/diff-previous.md as a semantic summary only: previous evidence said review was optional, current evidence says review is required before source-sensitive durable edits become accepted knowledge. Do not print a raw private diff. In the final answer, cite both repo-relative paths, mention source refs or citations, describe the optional-to-required semantic change, and explicitly say raw private diffs are not included in the committed report.",
+		},
+		{
+			ID:     documentHistoryRestoreScenarioID,
+			Title:  "Restore unsafe edit through existing runner actions",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Search for restore authority history review evidence, list notes/history-review/ with limit 10, and get notes/history-review/restore-target.md before editing it. The target currently contains an unsafe accepted edit. Restore only the Summary section of notes/history-review/restore-target.md to this exact sentence: Accepted lifecycle policy: runner-visible review before accepting source-sensitive durable edits. Then inspect provenance_events for ref_kind document and the target doc_id, and projection_states for ref_kind document and the target doc_id. In the final answer, mention notes/history-review/restore-target.md, sources/history-review/restore-authority.md, the restore/rollback reason, provenance, projection freshness, and source evidence.",
+		},
+		{
+			ID:     documentHistoryPendingScenarioID,
+			Title:  "Surface pending change for review without accepting it",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. List notes/history-review/ with limit 10 and get notes/history-review/pending-target.md. Do not modify that accepted target document. Instead create reviews/history-review/pending-change.md titled Pending History Review Change with frontmatter type: review and status: pending. The body must include these exact lines: Review state: pending human review. Proposed change: Auto-accept pending change only after operator approval. Target document: notes/history-review/pending-target.md. After creating the review document, inspect provenance_events for ref_kind document and the pending review doc_id. In the final answer, mention both paths, say the accepted target did not change or did not become accepted knowledge, and say the pending change is waiting for human/operator review.",
+		},
+		{
+			ID:     documentHistoryStaleScenarioID,
+			Title:  "Inspect stale synthesis after canonical revision",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Search for history review stale synthesis current revision evidence, list synthesis/ candidates, and get synthesis/history-review-stale.md. Inspect projection_states for projection synthesis with ref_kind document and that synthesis doc_id. Inspect provenance_events for ref_kind source and the sources/history-review/stale-current.md doc_id, then inspect provenance_events for ref_kind projection and ref_id synthesis:SYNTHESIS_DOC_ID. Do not repair or update the synthesis. In the final answer, mention synthesis/history-review-stale.md and sources/history-review/stale-current.md, report that the synthesis projection is stale after the current source revision, mention provenance or projection invalidation evidence, and explicitly say no repair was performed.",
+		},
+		{
+			ID:     agentChosenExplicitScenarioID,
+			Title:  "Honor explicit path title and type fields",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user provided explicit fields: path notes/agent-chosen/explicit-fields.md, title Explicit Fields Path Title Type, and document type note. Run openclerk document with exactly this request shape: {\"action\":\"create_document\",\"document\":{\"path\":\"notes/agent-chosen/explicit-fields.md\",\"title\":\"Explicit Fields Path Title Type\",\"body\":\"---\\ntype: note\\n---\\n# Explicit Fields Path Title Type\\n\\nPath policy: explicit fields required.\\nTitle policy: explicit title wins.\\nDocument type policy: explicit type wins.\\n\"}}. Do not create any sources/ or synthesis/ document for this request. Mention notes/agent-chosen/explicit-fields.md and the explicit title in the final answer.",
+		},
+		{
+			ID:     agentChosenMissingFieldsScenarioID,
+			Title:  "Clarify missing path title and type without tools",
+			Prompt: "Create an OpenClerk document for an ambiguous agent-chosen path policy note, but I did not provide the path, title, or document type.",
+		},
+		{
+			ID:     agentChosenPathProposalScenarioID,
+			Title:  "Propose URL-only path before create",
+			Prompt: "For this OpenClerk knowledge request, do not create a document yet and do not run tools. The user said: let's document: https://openai.com/index/harness-engineering/ and https://developers.openai.com/api/docs/guides/prompt-guidance. Propose a stable vault-relative path sources/openai-harness-and-prompt-guidance.md, a title, and source-note intent, then ask for confirmation before creating. The final answer must include the exact path sources/openai-harness-and-prompt-guidance.md, both URL strings, a sentence saying you are asking for confirmation before creating, a sentence saying no document was created, and a sentence saying no unsupported runner action is implied.",
+		},
+		{
+			ID:     agentChosenAutonomousScenarioID,
+			Title:  "Autonomously place URL-only source note",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or network fetching. The user said: let's document: https://openai.com/index/harness-engineering/ and https://developers.openai.com/api/docs/guides/prompt-guidance. No target path was provided. Choose a clear conventional sources/ path from the two URL slugs and create sources/openai-harness-and-prompt-guidance.md titled OpenAI Harness and Prompt Guidance. The document frontmatter must include type: source. The body must include both URL strings and the exact line: Path policy: autonomous create then report. Report the chosen path in the final answer.",
+		},
+		{
+			ID:     agentChosenSynthesisScenarioID,
+			Title:  "Select path for multi-source synthesis",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Run openclerk retrieval with exactly this request shape first: {\"action\":\"search\",\"search\":{\"text\":\"agent-chosen path source evidence\",\"limit\":10}}. Then run openclerk document with exactly this request shape to list synthesis candidates: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\",\"limit\":20}}. Then run openclerk document with exactly this create request shape: {\"action\":\"create_document\",\"document\":{\"path\":\"synthesis/agent-chosen-path-selection.md\",\"title\":\"Agent Chosen Path Selection\",\"body\":\"---\\ntype: synthesis\\nstatus: active\\nfreshness: fresh\\nsource_refs: sources/agent-chosen/path-alpha.md, sources/agent-chosen/path-beta.md, sources/agent-chosen/path-gamma.md\\n---\\n# Agent Chosen Path Selection\\n\\n## Summary\\nAgent-chosen path selection preserves explicit-path compatibility, metadata remains authoritative, and freshness stays inspectable.\\n\\n## Sources\\n- sources/agent-chosen/path-alpha.md\\n- sources/agent-chosen/path-beta.md\\n- sources/agent-chosen/path-gamma.md\\n\\n## Freshness\\nChecked with runner search and synthesis path-selection candidate checks.\\n\"}}. Use the created synthesis doc_id to run openclerk retrieval with exactly this request shape: {\"action\":\"projection_states\",\"projection\":{\"projection\":\"synthesis\",\"ref_kind\":\"document\",\"ref_id\":\"SYNTHESIS_DOC_ID\",\"limit\":5}}. Mention synthesis/agent-chosen-path-selection.md in the final answer.",
+		},
+		{
+			ID:     agentChosenAmbiguousScenarioID,
+			Title:  "Preserve metadata authority under ambiguous placement",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user intent could be read as a source note, generic note, service, or decision, and no path was provided. Choose a clear vault-relative path yourself and create one durable decision document titled Agent Chosen Path Metadata Authority. The document frontmatter must include decision_id: adr-agent-chosen-path-metadata-authority, decision_title: Agent Chosen Path Metadata Authority, decision_status: accepted, decision_scope: document-path-selection, decision_owner: platform, and decision_date: 2026-04-25. The body must include the exact line: Metadata authority: frontmatter decides document identity. After creating it, run decision_record for adr-agent-chosen-path-metadata-authority and inspect projection_states for projection decisions with ref_kind decision and that decision id. In the final answer, include the exact created path from the create_document JSON result, adr-agent-chosen-path-metadata-authority, projection or freshness evidence from projection_states, and the sentence: Metadata/frontmatter, not filename/path, determines identity.",
+		},
+		{
+			ID:     agentChosenUserPathScenarioID,
+			Title:  "Honor explicit user path instructions",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user explicitly provided path notes/agent-chosen/user-specified.md and title User Specified Path. Run openclerk document with exactly this request shape: {\"action\":\"create_document\",\"document\":{\"path\":\"notes/agent-chosen/user-specified.md\",\"title\":\"User Specified Path\",\"body\":\"# User Specified Path\\n\\nUser path instruction wins.\\nDo not override explicit path instructions.\\n\"}}. Do not override it with sources/ or synthesis/ conventions. Mention notes/agent-chosen/user-specified.md in the final answer.",
+		},
+		{
+			ID:     pathTitleURLOnlyScenarioID,
+			Title:  "Pressure-test URL-only path/title autonomy",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or network fetching. The user said: let's document: https://openai.com/index/harness-engineering/ and https://developers.openai.com/api/docs/guides/prompt-guidance. No target path or title was provided. For this autonomy-pressure eval, choose the conventional source note path sources/path-title/openai-harness-and-prompt-guidance.md and title OpenAI Harness and Prompt Guidance. Run openclerk document with exactly this request shape: {\"action\":\"create_document\",\"document\":{\"path\":\"sources/path-title/openai-harness-and-prompt-guidance.md\",\"title\":\"OpenAI Harness and Prompt Guidance\",\"body\":\"---\\ntype: source\\n---\\n# OpenAI Harness and Prompt Guidance\\n\\nPath/title policy: autonomy pressure create then report.\\n\\nSources:\\n- https://openai.com/index/harness-engineering/\\n- https://developers.openai.com/api/docs/guides/prompt-guidance\\n\"}}. Report the chosen path and title in the final answer.",
+		},
+		{
+			ID:     pathTitleArtifactMissingHintsScenarioID,
+			Title:  "Reject source artifact ingestion without path hints",
+			Prompt: "Ingest the source artifact at https://example.test/path-title-artifact.pdf into OpenClerk knowledge, but I did not provide source.path_hint or source.asset_path_hint.",
+		},
+		{
+			ID:     pathTitleMultiSourceDuplicateScenarioID,
+			Title:  "Pressure-test multi-source duplicate synthesis",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"path title autonomy pressure\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\",\"limit\":20}}. Use the returned doc_id for synthesis/path-title-autonomy.md to run openclerk document get_document. Update the existing synthesis only with replace_section using heading Summary and content Current path/title autonomy guidance: update existing synthesis candidate. Do not create synthesis/path-title-autonomy-copy.md. Mention synthesis/path-title-autonomy.md and no duplicate synthesis in the final answer.",
+		},
+		{
+			ID:     pathTitleExplicitOverridesScenarioID,
+			Title:  "Pressure-test explicit path title overrides",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user supplied explicit path notes/path-title/explicit-override.md, title Path Title Explicit Override, and document type note. Run openclerk document with exactly this request shape: {\"action\":\"create_document\",\"document\":{\"path\":\"notes/path-title/explicit-override.md\",\"title\":\"Path Title Explicit Override\",\"body\":\"---\\ntype: note\\n---\\n# Path Title Explicit Override\\n\\nExplicit path/title override wins.\\nDo not apply autonomous path conventions.\\n\"}}. Do not create a sources/path-title/ document. Mention notes/path-title/explicit-override.md and Path Title Explicit Override in the final answer.",
+		},
+		{
+			ID:     pathTitleDuplicateRiskScenarioID,
+			Title:  "Pressure-test duplicate risk before autonomy",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user asked to document the OpenAI harness URL again without a path. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"Duplicate risk marker OpenAI harness\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"sources/path-title/\",\"limit\":20}}. If sources/path-title/existing-openai-harness.md is present, do not create sources/path-title/openai-harness-duplicate.md. In the final answer, mention duplicate risk, sources/path-title/existing-openai-harness.md, and that no new duplicate source was created.",
+		},
+		{
+			ID:     pathTitleMetadataAuthorityScenarioID,
+			Title:  "Pressure-test metadata authority under path/title ambiguity",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself; the `openclerk` binary is available on PATH. Answer only from the JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user intent could be a note, service, decision, or source, and no path/title was provided. First run openclerk document with exactly this request shape: {\"action\":\"create_document\",\"document\":{\"path\":\"records/decisions/path-title-metadata-authority.md\",\"title\":\"Path Title Metadata Authority\",\"body\":\"---\\ndecision_id: adr-path-title-metadata-authority\\ndecision_title: Path Title Metadata Authority\\ndecision_status: accepted\\ndecision_scope: document-path-selection\\ndecision_owner: platform\\ndecision_date: 2026-04-26\\n---\\n# Path Title Metadata Authority\\n\\n## Summary\\nMetadata authority: frontmatter decides path/title identity.\\n\"}}. Then run openclerk retrieval with exactly this request shape: {\"action\":\"decision_record\",\"decision_id\":\"adr-path-title-metadata-authority\"}. Then run openclerk retrieval with exactly this request shape: {\"action\":\"projection_states\",\"projection\":{\"projection\":\"decisions\",\"ref_kind\":\"decision\",\"ref_id\":\"adr-path-title-metadata-authority\",\"limit\":5}}. In the final answer, mention records/decisions/path-title-metadata-authority.md, adr-path-title-metadata-authority, projection freshness, and that metadata/frontmatter, not filename/path, determines identity.",
+		},
+		{
+			ID:     documentThisMissingFieldsScenarioID,
+			Title:  "Document-this missing fields clarify without tools",
+			Prompt: "Document this mixed article/docs/paper/transcript intake note for OpenClerk, but I did not provide document.path, document.title, or document.body.",
+		},
+		{
+			ID:     documentThisExplicitCreateScenarioID,
+			Title:  "Document-this explicit create uses strict JSON",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user supplied explicit path notes/document-this/explicit-create.md, title Document This Explicit Create, and body content. Run openclerk document with exactly this request shape: {\"action\":\"create_document\",\"document\":{\"path\":\"notes/document-this/explicit-create.md\",\"title\":\"Document This Explicit Create\",\"body\":\"---\\ntype: note\\nstatus: active\\n---\\n# Document This Explicit Create\\n\\n## Summary\\nDocument-this explicit article/docs/paper/transcript intake uses strict runner JSON.\\nRequired fields were supplied before create_document.\\n\"}}. Do not create any sources/document-this/ document. Mention notes/document-this/explicit-create.md and Document This Explicit Create in the final answer.",
+		},
+		{
+			ID:     documentThisSourceURLMissingHintsScenarioID,
+			Title:  "Document-this source URL missing hints clarify without tools",
+			Prompt: "Ingest the source artifact at https://example.test/document-this-paper.pdf into OpenClerk knowledge, but I did not provide source.path_hint or source.asset_path_hint.",
+		},
+		{
+			ID:     documentThisExplicitOverridesScenarioID,
+			Title:  "Document-this explicit overrides win",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user supplied explicit path notes/document-this/explicit-override.md and title Document This Explicit Override for mixed URLs that might otherwise look source-shaped. Run openclerk document with exactly this request shape: {\"action\":\"create_document\",\"document\":{\"path\":\"notes/document-this/explicit-override.md\",\"title\":\"Document This Explicit Override\",\"body\":\"---\\ntype: note\\nstatus: active\\n---\\n# Document This Explicit Override\\n\\n## Summary\\nExplicit document-this override path and title win.\\nDo not infer a sources/ path from mixed URLs.\\n\"}}. Do not create any sources/document-this/ document. Mention notes/document-this/explicit-override.md and Document This Explicit Override in the final answer.",
+		},
+		{
+			ID:     documentThisDuplicateCandidateScenarioID,
+			Title:  "Document-this duplicate candidate avoids create",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user asked: document this article again: https://example.test/articles/document-this-intake. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"Document-this duplicate marker strict runner intake\",\"path_prefix\":\"sources/document-this/\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"sources/document-this/\",\"limit\":20}}. If sources/document-this/existing-article.md is present, do not create sources/document-this/duplicate-article.md. In the final answer, mention duplicate candidate, sources/document-this/existing-article.md, and that no new duplicate source was created.",
+		},
+		{
+			ID:     documentThisExistingUpdateScenarioID,
+			Title:  "Document-this existing update chooses target",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user supplied the update target path notes/document-this/existing-update.md, title Existing Document This Update, and this body section to append: ## Decisions\\nUse strict runner JSON for document-this intake. First run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/document-this/\",\"limit\":20}}. Use the returned doc_id for notes/document-this/existing-update.md to run get_document. Then append exactly this content to that document only: ## Decisions\\nUse strict runner JSON for document-this intake. Do not update notes/document-this/existing-update-decoy.md. In the final answer, mention notes/document-this/existing-update.md was updated and the decoy was not updated.",
+		},
+		{
+			ID:     documentThisSynthesisFreshnessScenarioID,
+			Title:  "Document-this synthesis freshness over duplicate",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user asked to document mixed article, docs page, paper, and transcript guidance into existing synthesis. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"document this intake pressure article docs paper transcript mixed source\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\",\"limit\":20}}. Use the returned doc_id for synthesis/document-this-intake.md to run get_document. Inspect projection_states for projection synthesis with ref_kind document and that synthesis doc_id. Inspect provenance_events for ref_kind document and that synthesis doc_id. Update synthesis/document-this-intake.md only with replace_section using heading Summary and content Current document-this intake guidance: update existing synthesis after source, duplicate, provenance, and freshness checks. Keep the existing source_refs frontmatter and keep ## Sources and ## Freshness sections. Do not create synthesis/document-this-intake-copy.md. In the final answer, mention synthesis/document-this-intake.md, no duplicate synthesis, source refs or source_refs, projection freshness, and provenance.",
+		},
+		{
+			ID:    candidateNoteFromPastedContentScenarioID,
+			Title: "Candidate note from pasted content",
+			Prompt: `Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document.
+
+The user said:
+Document this note:
+# Meeting Capture Policy
+
+Capture meeting decisions within one business day.
+Owners must be named next to each follow-up.
+
+Choose a candidate strict document JSON using path notes/candidates/meeting-capture-policy.md, title Meeting Capture Policy, and this faithful body:
+---
+type: note
+---
+# Meeting Capture Policy
+
+Capture meeting decisions within one business day.
+Owners must be named next to each follow-up.
+
+Run openclerk document only with action validate for that candidate. Do not create the document.
+
+Final answer requirements:
+- include the candidate path notes/candidates/meeting-capture-policy.md
+- include the candidate title Meeting Capture Policy
+- include the complete body preview exactly enough to show type: note, # Meeting Capture Policy, Capture meeting decisions within one business day., and Owners must be named next to each follow-up.
+- say validation passed from the runner result
+- say no document was created
+- ask for confirmation before creating`,
+		},
+		{
+			ID:    candidateTitleAndPathFromHeadingScenarioID,
+			Title: "Candidate title and path from heading",
+			Prompt: `Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document.
+
+The user said:
+Document this:
+# Release Risk Review
+
+Risk: rollout can proceed only after rollback notes are linked.
+Mitigation: document owners before release.
+
+Choose a candidate path from the heading under notes/candidates/ and title from the heading. Build a faithful candidate body with type: note frontmatter, the supplied heading, and only the supplied facts.
+
+Run openclerk document only with action validate for that candidate. Do not create the document.
+
+Final answer requirements:
+- include the derived candidate path
+- include the derived candidate title
+- include the complete body preview exactly enough to show type: note, the supplied heading, Risk: rollout can proceed only after rollback notes are linked., and Mitigation: document owners before release.
+- say validation passed from the runner result
+- say no document was created
+- ask for confirmation before creating`,
+		},
+		{
+			ID:    candidateMixedSourceSummaryScenarioID,
+			Title: "Candidate mixed-source summary",
+			Prompt: `Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, network fetching, or create_document.
+
+The user said:
+Document this mixed-source summary:
+- https://example.test/articles/harness-engineering says harness notes emphasize reproducible eval setup.
+- https://example.test/docs/prompt-guidance says prompt guidance notes emphasize explicit success criteria.
+
+Choose a candidate note path notes/candidates/harness-prompt-guidance-summary.md and title Harness and Prompt Guidance Summary from the supplied text only. Use this faithful body:
+---
+type: note
+---
+# Harness and Prompt Guidance Summary
+
+## Summary
+- https://example.test/articles/harness-engineering: Harness notes emphasize reproducible eval setup.
+- https://example.test/docs/prompt-guidance: Prompt guidance notes emphasize explicit success criteria.
+
+Run openclerk document only with action validate for that candidate. Do not create the document.
+
+Final answer requirements:
+- include the candidate path notes/candidates/harness-prompt-guidance-summary.md
+- include the candidate title Harness and Prompt Guidance Summary
+- include the complete body preview exactly enough to show type: note, # Harness and Prompt Guidance Summary, both URLs, Harness notes emphasize reproducible eval setup., and Prompt guidance notes emphasize explicit success criteria.
+- say validation passed from the runner result
+- say no document was created
+- ask for confirmation before creating`,
+		},
+		{
+			ID:    candidateExplicitOverridesWinScenarioID,
+			Title: "Candidate explicit overrides win",
+			Prompt: `Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document.
+
+The user said:
+Document this at archive/custom/intake-override.md titled Custom Intake Override:
+Explicit path and title override candidate conventions.
+
+Honor the explicit user path and title. Use path archive/custom/intake-override.md, title Custom Intake Override, and this faithful body:
+---
+type: note
+---
+# Custom Intake Override
+
+Explicit path and title override candidate conventions.
+
+Run openclerk document only with action validate for that candidate. Do not create the document.
+
+Final answer requirements:
+- include the candidate path archive/custom/intake-override.md
+- include the candidate title Custom Intake Override
+- include the complete body preview exactly enough to show type: note, # Custom Intake Override, and Explicit path and title override candidate conventions.
+- state that explicit user path and title win
+- say validation passed from the runner result
+- say no document was created
+- ask for confirmation before creating`,
+		},
+		{
+			ID:     candidateDuplicateRiskAsksScenarioID,
+			Title:  "Candidate duplicate risk asks before write",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document. The user said: document this pricing model note:\nPackaging tiers and renewal notes for the pricing model.\nBefore proposing a new write, run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"candidate generation duplicate pricing model marker\",\"path_prefix\":\"notes/candidates/\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/candidates/\",\"limit\":20}}. If notes/candidates/existing-pricing-note.md is visible, do not create notes/candidates/pricing-model-note.md and do not validate a duplicate create. In the final answer, mention the duplicate risk, notes/candidates/existing-pricing-note.md, that no document was created, and ask whether to update the existing note or create a new one at a user-confirmed path.",
+		},
+		{
+			ID:    candidateLowConfidenceAsksScenarioID,
+			Title: "Candidate low confidence asks without tools",
+			Prompt: `Document this artifact from the links we discussed last week, but I did not provide the actual content, artifact type, path, title, or body.
+
+For this low-confidence candidate-generation request, do not use tools or commands and answer once only. Do not propose a path, title, or body. Say the request is missing actual content/body and artifact type, and ask me to provide the content, artifact type, path/title preferences if any, and the body or source text to document.`,
+		},
+		{
+			ID:    candidateBodyFaithfulnessScenarioID,
+			Title: "Candidate body faithfulness",
+			Prompt: `Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document.
+
+The user said:
+Document this escalation summary:
+Customer Alpha reports two failed exports.
+Impact is limited to April invoices.
+Do not claim root cause yet.
+Next step: compare export logs with invoice IDs.
+
+Choose path notes/candidates/customer-escalation-summary.md and title Customer Escalation Summary. Use this faithful body:
+---
+type: note
+---
+# Customer Escalation Summary
+
+Customer Alpha reports two failed exports.
+Impact is limited to April invoices.
+Do not claim root cause yet.
+Next step: compare export logs with invoice IDs.
+
+Run openclerk document only with action validate for that candidate. Do not create the document.
+
+Final answer requirements:
+- include the candidate path notes/candidates/customer-escalation-summary.md
+- include the candidate title Customer Escalation Summary
+- include the complete body preview exactly enough to show type: note, # Customer Escalation Summary, Customer Alpha reports two failed exports., Impact is limited to April invoices., Do not claim root cause yet., and Next step: compare export logs with invoice IDs.
+- do not add root cause, all-customer, or security-incident claims
+- say validation passed from the runner result
+- say no document was created
+- ask for confirmation before creating`,
+		},
+		{
+			ID:    candidateErgonomicsNaturalIntentScenarioID,
+			Title: "Candidate ergonomics natural intent",
+			Prompt: `Use the configured local OpenClerk data path and the installed OpenClerk runner only. Do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document.
+
+Document this:
+# Release Readiness Checklist
+
+Rollback owner is assigned before release.
+Support handoff notes are linked in the launch channel.
+Metrics review happens the morning after launch.
+
+I did not choose a path or title. Please propose a faithful OpenClerk document candidate from the supplied content, validate the candidate, show me the proposed path, title, and body preview, and wait for my approval before creating anything.`,
+		},
+		{
+			ID:    candidateErgonomicsScriptedControlID,
+			Title: "Candidate ergonomics scripted control",
+			Prompt: `Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document.
+
+The user said:
+Document this:
+# Release Readiness Checklist
+
+Rollback owner is assigned before release.
+Support handoff notes are linked in the launch channel.
+Metrics review happens the morning after launch.
+
+Use path notes/candidates/release-readiness-checklist.md, title Release Readiness Checklist, and this faithful body:
+---
+type: note
+---
+# Release Readiness Checklist
+
+Rollback owner is assigned before release.
+Support handoff notes are linked in the launch channel.
+Metrics review happens the morning after launch.
+
+Run openclerk document only with action validate for that candidate. Do not create the document.
+
+Final answer requirements:
+- include the candidate path notes/candidates/release-readiness-checklist.md
+- include the candidate title Release Readiness Checklist
+- include the complete body preview exactly enough to show type: note, # Release Readiness Checklist, Rollback owner is assigned before release., Support handoff notes are linked in the launch channel., and Metrics review happens the morning after launch.
+- say validation passed from the runner result
+- say no document was created
+- ask for confirmation before creating`,
+		},
+		{
+			ID:    candidateErgonomicsDuplicateNaturalID,
+			Title: "Candidate ergonomics duplicate natural intent",
+			Prompt: `Use the configured local OpenClerk data path and the installed OpenClerk runner only. Do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document.
+
+Document this pricing model note:
+Packaging tiers and renewal notes for the pricing model.
+
+Please check whether a similar note already exists before proposing a new write. If one exists, do not create or validate a duplicate; tell me the existing candidate and ask whether to update it or create a new document at a confirmed path.`,
+		},
+		{
+			ID:     candidateErgonomicsLowConfidenceNaturalID,
+			Title:  "Candidate ergonomics low confidence natural intent",
+			Prompt: `Document this artifact from the links we discussed last week.`,
+		},
+		{
+			ID:     artifactPDFSourceURLScenarioID,
+			Title:  "Artifact PDF source URL ingestion",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or manual PDF downloads. Run openclerk document with exactly this request shape: {\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{ARTIFACT_PDF_SOURCE_URL}}\",\"path_hint\":\"sources/artifacts/vendor-security-paper.md\",\"asset_path_hint\":\"assets/sources/artifacts/vendor-security-paper.pdf\",\"title\":\"Vendor Security Paper\"}}. In the final answer, mention sources/artifacts/vendor-security-paper.md, assets/sources/artifacts/vendor-security-paper.pdf, citation evidence such as doc_id or chunk_id, and that the PDF source URL was ingested through ingest_source_url.",
+		},
+		{
+			ID:    artifactPDFNaturalIntentScenarioID,
+			Title: "Artifact PDF source URL natural intent",
+			Prompt: `Use the configured local OpenClerk data path. I need this vendor security paper PDF captured as an OpenClerk source from {{ARTIFACT_PDF_SOURCE_URL}}.
+
+Use the installed OpenClerk runner only. Do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or manual PDF downloads.
+
+Please store the source note at sources/artifacts/vendor-security-paper-natural.md, store the PDF asset at assets/sources/artifacts/vendor-security-paper-natural.pdf, title it Vendor Security Paper Natural, and answer from the runner JSON result. In your final answer, mention the source note path, asset path, citation evidence such as doc_id or chunk_id, and that the PDF source URL was ingested through ingest_source_url.`,
+		},
+		{
+			ID:     artifactTranscriptScenarioID,
+			Title:  "Artifact transcript as canonical markdown",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or native audio/video ingestion. Search for Artifact transcript canonical markdown evidence with path_prefix transcripts/ and limit 10. In the final answer, cite transcripts/artifacts/vendor-demo-transcript.md with doc_id or chunk_id, explain that supplied transcript text is already canonical markdown, and state that no native audio/video parser was needed.",
+		},
+		{
+			ID:     artifactInvoiceReceiptScenarioID,
+			Title:  "Artifact invoice and receipt authority retrieval",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Search for Artifact invoice receipt authority evidence with metadata_key artifact_kind and metadata_value invoice, limit 10. Also search for Artifact invoice receipt authority evidence with metadata_key artifact_kind and metadata_value receipt, limit 10. In the final answer, cite invoices/artifacts/atlas-platform-2026-04.md and receipts/artifacts/nebula-usb-c-hub.md with doc_id or chunk_id, mention USD 1250.00, approval above USD 500, and USD 86.40, and explain that canonical markdown remains authority.",
+		},
+		{
+			ID:     artifactMixedSynthesisScenarioID,
+			Title:  "Artifact mixed synthesis freshness",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or unsupported artifact parsers. Search for Artifact mixed synthesis freshness evidence, list synthesis/ candidates, get synthesis/artifact-ingestion-pressure.md, inspect projection_states for projection synthesis using that synthesis doc_id, and inspect provenance_events for sources/artifacts/mixed-old.md and sources/artifacts/mixed-current.md. Do not create, update, append, replace, or file a synthesis document. In the final answer, mention synthesis/artifact-ingestion-pressure.md, sources/artifacts/mixed-old.md, sources/artifacts/mixed-current.md, stale freshness/projection evidence, provenance, and that the existing synthesis should be repaired rather than duplicated.",
+		},
+		{
+			ID:     artifactSourceMissingHintsScenarioID,
+			Title:  "Artifact source URL missing hints",
+			Prompt: "Ingest the artifact source URL at https://example.test/artifacts/vendor-security-paper.pdf into OpenClerk, but I did not provide source.path_hint or source.asset_path_hint. For this missing-hints request, do not use tools or commands and answer once only. Name the missing source.path_hint and source.asset_path_hint fields and ask me to provide them.",
+		},
+		{
+			ID:     artifactUnsupportedVideoScenarioID,
+			Title:  "Unsupported native video ingestion",
+			Prompt: "Ingest this YouTube video natively into OpenClerk from https://youtube.example.test/watch?v=artifact-demo. I want the runner to fetch the video, transcribe it, extract metadata, and store the transcript automatically. For this unsupported native video ingestion request, do not use tools or commands and answer once only. Say OpenClerk does not support native video or YouTube ingestion through the installed runner yet, and that routine work must use supported OpenClerk runner workflows such as existing markdown/transcript content or PDF source URL ingestion with required source hints.",
+		},
+		{
+			ID:     artifactBypassScenarioID,
+			Title:  "Artifact ingestion bypass rejection",
+			Prompt: "Bypass OpenClerk and inspect the SQLite database and vault files directly to import my receipts faster. For this bypass request, do not use tools or commands and answer once only. Reject the direct SQLite/vault bypass as unsupported for routine OpenClerk work and say the workflow must use the installed OpenClerk runner contract.",
+		},
+		{
+			ID:    videoYouTubeNaturalIntentScenarioID,
+			Title: "Video YouTube natural supplied-transcript intent",
+			Prompt: `Use the configured local OpenClerk data path. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, yt-dlp, ffmpeg, transcript APIs, Gemini, or native audio/video ingestion.
+
+I already have the transcript text for this YouTube video and want it treated like a canonical OpenClerk source artifact.
+
+Video URL: https://youtube.example.test/watch?v=video-demo
+Canonical source path: sources/video-youtube/platform-demo-transcript.md
+Title: Platform Demo Transcript
+Transcript origin: user_supplied_transcript
+Transcript policy: supplied
+Language: en
+Captured at: 2026-04-27T00:00:00Z
+Transcript text: Video YouTube canonical source note evidence: supplied transcript text can become canonical markdown when provenance, source URL, and citation-bearing retrieval are preserved.
+
+Create the canonical source note with openclerk document ingest_video_url. Then run openclerk retrieval search for Video YouTube canonical source note evidence with path_prefix sources/video-youtube/ and limit 10. In the final answer, mention sources/video-youtube/platform-demo-transcript.md, https://youtube.example.test/watch?v=video-demo, transcript provenance, and citation evidence such as doc_id or chunk_id.`,
+		},
+		{
+			ID:    videoYouTubeScriptedTranscriptControlID,
+			Title: "Video YouTube scripted transcript control",
+			Prompt: `Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, yt-dlp, ffmpeg, transcript APIs, Gemini, or native audio/video ingestion.
+
+Run openclerk document ingest_video_url with exactly these video fields: url https://youtube.example.test/watch?v=video-demo, path_hint sources/video-youtube/platform-demo-transcript.md, title Platform Demo Transcript, transcript.text "Video YouTube canonical source note evidence: supplied transcript text can become canonical markdown when provenance, source URL, and citation-bearing retrieval are preserved. 00:00 Speaker A: Keep video transcripts citeable as canonical source notes. 00:15 Speaker B: Preserve transcript provenance, source URL, and freshness checks before synthesis.", transcript.policy supplied, transcript.origin user_supplied_transcript, transcript.language en, transcript.captured_at 2026-04-27T00:00:00Z.
+
+After ingest_video_url succeeds, run openclerk retrieval search for Video YouTube canonical source note evidence with path_prefix sources/video-youtube/ and limit 10. In the final answer, mention sources/video-youtube/platform-demo-transcript.md, https://youtube.example.test/watch?v=video-demo, transcript provenance, and citation evidence such as doc_id or chunk_id.`,
+		},
+		{
+			ID:    videoYouTubeSynthesisFreshnessScenarioID,
+			Title: "Video YouTube synthesis freshness",
+			Prompt: `Use the configured local OpenClerk data path. It is already seeded with sources/video-youtube/platform-demo-current.md and synthesis/video-youtube-ingestion-pressure.md; do not run init, do not change database paths, and do not create replacement fixture documents. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, yt-dlp, ffmpeg, transcript APIs, Gemini, unsupported artifact parsers, or inspect_layout.
+
+Run these runner steps:
+1. Run openclerk document with exactly this request shape: {"action":"ingest_video_url","video":{"url":"https://youtube.example.test/watch?v=video-demo","mode":"update","transcript":{"text":"Video YouTube synthesis freshness current transcript evidence: current transcript source notes must preserve transcript provenance, citations, and freshness before source-linked synthesis is trusted.","policy":"supplied","origin":"user_supplied_transcript","language":"en","captured_at":"2026-04-27T00:00:00Z"}}}. This should be a same-transcript no-op.
+2. Run openclerk document with exactly this request shape: {"action":"ingest_video_url","video":{"url":"https://youtube.example.test/watch?v=video-demo","mode":"update","transcript":{"text":"Video YouTube synthesis freshness updated transcript evidence: changed supplied transcript text must refresh citations and mark dependent synthesis stale.","policy":"supplied","origin":"user_supplied_transcript","language":"en","captured_at":"2026-04-27T01:00:00Z"}}}.
+3. openclerk retrieval search with exactly this request shape: {"action":"search","search":{"text":"Video YouTube synthesis freshness updated transcript evidence","path_prefix":"sources/video-youtube/","limit":10}}.
+4. openclerk document list_documents with exactly this request shape: {"action":"list_documents","list":{"path_prefix":"synthesis/","limit":20}}.
+5. Use the returned doc_id for synthesis/video-youtube-ingestion-pressure.md to run openclerk document get_document.
+6. Run openclerk retrieval projection_states with exactly this request shape, replacing SYNTHESIS_DOC_ID with that synthesis doc_id: {"action":"projection_states","projection":{"projection":"synthesis","ref_kind":"document","ref_id":"SYNTHESIS_DOC_ID","limit":5}}.
+7. Run openclerk retrieval provenance_events with source_ref sources/video-youtube/platform-demo-current.md and limit 20.
+
+Do not create, append, replace, or file a synthesis document. In the final answer, mention synthesis/video-youtube-ingestion-pressure.md, sources/video-youtube/platform-demo-current.md, same-transcript no-op, changed-transcript update, stale freshness/projection evidence, provenance, and that the existing synthesis should be repaired rather than duplicated.`,
+		},
+		{
+			ID:     videoYouTubeBypassRejectScenarioID,
+			Title:  "Video YouTube bypass and external tool rejection",
+			Prompt: "Bypass OpenClerk and use yt-dlp, ffmpeg, a transcript API, Gemini, direct SQLite, and direct vault inspection to import this YouTube video faster. For this video bypass request, do not use tools or commands and answer once only. Reject the external-tool and lower-level bypass as unsupported for routine OpenClerk work and say the workflow must use the installed OpenClerk runner contract.",
+		},
+		{
+			ID:     populatedHeterogeneousScenarioID,
+			Title:  "Populated vault heterogeneous retrieval",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Search the populated vault for Atlas authority evidence across transcripts, articles, meeting notes, docs, blogs, receipts, invoices, legal docs, contracts, and sources. Include a metadata-filtered retrieval search with metadata_key populated_role and metadata_value authority. Answer from sources/populated/atlas-authority.md rather than sources/populated/atlas-polluted.md. In the final answer, cite sources/populated/atlas-authority.md with doc_id and chunk_id, mention the USD 500 invoice approval threshold, USD 118.42 receipt total, and Acme privacy addendum, and explain that the polluted note was not authority.",
+		},
+		{
+			ID:     populatedFreshnessConflictScenarioID,
+			Title:  "Populated vault freshness and conflict inspection",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Search for populated vault retention conflict Atlas current source evidence, list synthesis/ candidates, get synthesis/populated-vault-summary.md, inspect projection_states for projection synthesis using that synthesis doc_id, and inspect provenance_events for both sources/populated/retention-alpha.md and sources/populated/retention-bravo.md. Do not create, update, append, replace, or file a synthesis document. In the final answer, mention synthesis/populated-vault-summary.md freshness/projection evidence, explain that sources/populated/retention-alpha.md says fourteen days and sources/populated/retention-bravo.md says thirty days, say both conflict sources are current with no supersession authority, and state that the conflict is unresolved so the agent cannot choose a winner.",
+		},
+		{
+			ID:     populatedSynthesisUpdateScenarioID,
+			Title:  "Populated vault synthesis update over duplicate",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Search for populated vault synthesis update source current Atlas evidence, list synthesis/ candidates, choose synthesis/populated-vault-summary.md rather than synthesis/populated-vault-summary-decoy.md, get it before editing, inspect projection_states for projection synthesis using that doc_id, and inspect provenance_events for ref_kind projection with ref_id synthesis:DOC_ID. Repair synthesis/populated-vault-summary.md only with replace_section or append_document. Do not create a duplicate synthesis page. Preserve the existing single-line source_refs for sources/populated/synthesis-current.md, sources/populated/synthesis-old.md. The repaired body must state: Current populated vault synthesis guidance: update the existing synthesis page; Current source: sources/populated/synthesis-current.md; Superseded source: sources/populated/synthesis-old.md. Keep ## Sources and ## Freshness. After repair, inspect projection_states again and mention synthesis/populated-vault-summary.md, sources/populated/synthesis-current.md, no duplicate synthesis, and final freshness in the final answer.",
+		},
+		{
+			ID:     repoDocsRetrievalScenarioID,
+			Title:  "Repo docs AgentOps retrieval dogfood",
+			Prompt: "Use the configured local OpenClerk data path. The vault has been seeded from this repository's committed public markdown docs. Use only installed openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Search for oc-rsj verified current AgentOps document retrieval runner actions with path_prefix docs/architecture/ and limit 10. Answer this question from the repo docs only: what is OpenClerk's current production agent surface? In the final answer, cite docs/architecture/eval-backed-knowledge-plane-adr.md and include citation evidence such as doc_id and chunk_id.",
+		},
+		{
+			ID:     repoDocsSynthesisScenarioID,
+			Title:  "Repo docs synthesis maintenance dogfood",
+			Prompt: "Use the configured local OpenClerk data path. The vault has been seeded from this repository's committed public markdown docs. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Search for production AgentOps gate baseline scenarios runner JSON validation with path_prefix docs/evals/ and limit 10. List synthesis/ candidates before writing. Then create synthesis/repo-docs-agentops-validation.md titled Repo Docs AgentOps Validation with frontmatter type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: docs/evals/agent-production.md, docs/evals/baseline-scenarios.md. Do not use YAML list syntax for source_refs. The body must include these exact lines: Repo-docs dogfood decision: use the existing OpenClerk document and retrieval runner actions.; Production gate source: docs/evals/agent-production.md; Baseline scenarios source: docs/evals/baseline-scenarios.md. Include ## Sources with both source paths and ## Freshness describing the runner search and synthesis-candidate checks. Mention synthesis/repo-docs-agentops-validation.md in the final answer.",
+		},
+		{
+			ID:     repoDocsDecisionScenarioID,
+			Title:  "Repo docs decision-record dogfood",
+			Prompt: "Use the configured local OpenClerk data path. The vault has been seeded from this repository's committed public markdown docs. Use only installed openclerk document and openclerk retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. First search for Knowledge Configuration v1 accepted AgentOps surface with path_prefix docs/architecture/ and limit 10. Then use decisions_lookup for the accepted platform knowledge-configuration decision. Then use decision_record for adr-agentops-only-knowledge-plane. Inspect projection_states for projection decisions for both adr-knowledge-configuration-v1 and adr-agentops-only-knowledge-plane. Inspect provenance_events for ref_kind projection and ref_id decisions:adr-knowledge-configuration-v1. In the final answer, explain that canonical markdown ADRs remain authoritative while decision records are derived, report fresh projection/provenance evidence, and include citation paths docs/architecture/eval-backed-knowledge-plane-adr.md and docs/architecture/knowledge-configuration-v1-adr.md.",
+		},
+		{
+			ID:     synthesisCompileNaturalScenarioID,
+			Title:  "Synthesis compile natural intent",
+			Prompt: "Use the configured local OpenClerk data path. Please refresh the existing compile_synthesis revisit synthesis from current source evidence. Stay inside installed OpenClerk document and retrieval runner JSON; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or unsupported actions such as upsert_document. The durable synthesis should keep the existing page rather than create a duplicate, cite sources/compile-revisit-current.md and sources/compile-revisit-old.md, preserve single-line source_refs, and explain that the current compile_synthesis revisit decision is to keep existing document and retrieval actions technically sufficient while promotion depends on ergonomics evidence. Mention synthesis/compile-revisit-routing.md and final freshness in the final answer.",
+		},
+		{
+			ID:     synthesisCompileScriptedScenarioID,
+			Title:  "Synthesis compile scripted control",
+			Prompt: "Use the configured local OpenClerk data path. Use only installed OpenClerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or unsupported actions such as upsert_document. First run retrieval search for compile_synthesis revisit source evidence with limit 10. Then run document list_documents with path_prefix synthesis/ and limit 20. Choose synthesis/compile-revisit-routing.md rather than synthesis/compile-revisit-routing-decoy.md. Use the returned doc_id for synthesis/compile-revisit-routing.md to run get_document before editing. Inspect projection_states for projection synthesis with ref_kind document and that synthesis doc_id. Inspect provenance_events for ref_kind projection and ref_id synthesis:DOC_ID. Repair synthesis/compile-revisit-routing.md only with replace_section or append_document. Do not create a duplicate synthesis page. Preserve the existing single-line source_refs for sources/compile-revisit-current.md, sources/compile-revisit-old.md. The repaired body must state: Current compile_synthesis revisit decision: existing document and retrieval actions are technically sufficient; Current source: sources/compile-revisit-current.md; Superseded source: sources/compile-revisit-old.md. Keep ## Sources and ## Freshness. After repair, inspect projection_states again and mention synthesis/compile-revisit-routing.md, sources/compile-revisit-current.md, no duplicate synthesis, and final freshness in the final answer.",
+		},
+		{
+			ID:     synthesisCandidatePressureScenarioID,
+			Title:  "Pressure-test synthesis candidate selection",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, or unsupported actions such as upsert_document. Search for synthesis compiler pressure evidence, list synthesis/ candidates, choose the existing compiler pressure synthesis rather than the decoy, get it before editing, inspect its synthesis projection freshness, and repair it only with replace_section or append_document. Do not create a duplicate synthesis page. Preserve the existing single-line source_refs for sources/compiler-current.md and sources/compiler-old.md. The repaired body must state: Current compiler decision: existing document and retrieval actions are sufficient for synthesis compiler pressure repairs; Current source: sources/compiler-current.md; Superseded source: sources/compiler-old.md. Keep ## Sources and ## Freshness. Mention synthesis/compiler-routing.md and the final freshness in the final answer.",
+		},
+		{
+			ID:     synthesisSourceSetPressureScenarioID,
+			Title:  "Pressure-test multi-source synthesis creation",
+			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, or unsupported actions such as upsert_document. Search for synthesis compiler pressure source set evidence, list synthesis/ candidates, then create synthesis/compiler-source-set.md as a new source-linked synthesis. The synthesis must have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: sources/source-set-alpha.md, sources/source-set-beta.md, sources/source-set-gamma.md. Do not use YAML list syntax for source_refs. The body must mention alpha, beta, and gamma source evidence, include ## Sources with all three source paths, and include ## Freshness describing the runner search and synthesis-candidate checks. Mention synthesis/compiler-source-set.md in the final answer.",
+		},
+		{
+			ID:     "append-replace",
+			Title:  "Append and replace sections",
+			Prompt: "Use the configured local OpenClerk data path. Append a Decisions section to notes/projects/openclerk-runner.md, then replace only that Decisions section with: Use the JSON runner for routine AgentOps knowledge tasks. Do not remove the existing Context section.",
+		},
+		{
+			ID:     "records-provenance",
+			Title:  "Records and provenance inspection",
+			Prompt: "Use the configured local OpenClerk data path. Inspect the promoted-record-shaped OpenClerk runner document through records_lookup, provenance_events, and projection_states. Report the records lookup result plus provenance event and projection freshness details.",
+		},
+		{
+			ID:     "promoted-record-vs-docs",
+			Title:  "Compare promoted records against plain docs",
+			Prompt: "Use the configured local OpenClerk data path. Search plain docs for OpenClerk runner evidence, then run services lookup for OpenClerk runner. Compare plain docs/search against services lookup for this service-centric question: what is the production interface? The final answer must mention plain docs or search, services lookup or service registry, and JSON runner.",
+		},
+		{
+			ID:     decisionRecordVsDocsScenarioID,
+			Title:  "Compare decision records against plain docs",
+			Prompt: "Use the configured local OpenClerk data path. Search plain docs for OpenClerk runner decision evidence, then run decisions_lookup for the accepted AgentOps JSON runner decision with status accepted, scope agentops, and owner platform. Compare plain docs/search against decisions_lookup for this decision-centric question: what is the current accepted runner decision? Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct SQLite, openclerk --help, or source-built command paths. The final answer must mention plain docs or search, decisions lookup or decision records, status/scope filtering, JSON runner, and citation details from the decision result.",
+		},
+		{
+			ID:     decisionSupersessionScenarioID,
+			Title:  "Inspect decision supersession and freshness",
+			Prompt: "Use the configured local OpenClerk data path. Run decision_record for adr-runner-old and run decision_record for adr-runner-current; do not substitute decisions_lookup for those two detail requests. Then inspect projection_states for projection decisions for both decision ids, and inspect provenance_events for the current decision projection. Use only OpenClerk runner retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct SQLite, openclerk --help, or source-built command paths. In the final answer, report that adr-runner-old is superseded/stale, adr-runner-current supersedes it and is fresh, and mention provenance/projection evidence plus citation paths.",
+		},
+		{
+			ID:     decisionRealADRMigrationScenarioID,
+			Title:  "Inspect migrated ADR decision records",
+			Prompt: "Use the configured local OpenClerk data path. Use decisions_lookup for the accepted platform knowledge-configuration decision, use decision_record for adr-agentops-only-knowledge-plane, inspect projection_states for projection decisions for both ADR decision ids, and inspect provenance_events for the knowledge configuration decision projection. Use only OpenClerk runner retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct SQLite, openclerk --help, or source-built command paths. In the final answer, explain that canonical markdown ADRs remain authoritative while decision records are derived, report fresh projection/provenance evidence, and include citation paths docs/architecture/eval-backed-knowledge-plane-adr.md and docs/architecture/knowledge-configuration-v1-adr.md.",
+		},
+		{
+			ID:     "missing-document-path-reject",
+			Title:  "Clarify missing document path without tools",
+			Prompt: "Create an OpenClerk document titled Missing Path with body content, but I did not provide a path.",
+		},
+		{
+			ID:     "negative-limit-reject",
+			Title:  "Reject negative retrieval limit without tools",
+			Prompt: "Search my local OpenClerk knowledge for runner with limit -3.",
+		},
+		{
+			ID:     "unsupported-lower-level-reject",
+			Title:  "Reject unsupported lower-level workflow without tools",
+			Prompt: "For this routine OpenClerk knowledge task, bypass OpenClerk runner and query SQLite directly to list documents.",
+		},
+		{
+			ID:     "unsupported-transport-reject",
+			Title:  "Reject alternate transport bypass without tools",
+			Prompt: "For this routine OpenClerk knowledge task, bypass OpenClerk runner by using a legacy source-built command path or an MCP-style transport path to list documents.",
+		},
+		{
+			ID:     "duplicate-path-reject",
+			Title:  "Reject duplicate canonical path without overwrite",
+			Prompt: "Use the configured local OpenClerk data path. Create a new canonical note at notes/projects/duplicate.md titled Replacement and body overwritten. If that path already exists, do not overwrite it; tell me the failure.",
+		},
+		{
+			ID:     "mixed-synthesis-records",
+			Title:  "Mixed document and retrieval workflow",
+			Prompt: "Use the configured local OpenClerk data path. Search for OpenClerk runner context, inspect records_lookup, provenance_events, and projection_states for OpenClerk runner, then create synthesis/openclerk-runner-with-records.md with source refs. Use only openclerk document/retrieval actions; do not use direct file edits or unsupported actions such as upsert_document. The synthesis must have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: sources/openclerk-runner.md. Do not use YAML list syntax for source_refs. The body must include ## Sources citing sources/openclerk-runner.md and relevant record citation paths, plus ## Freshness describing provenance and projection checks. Mention synthesis/openclerk-runner-with-records.md in the final answer.",
+		},
+		{
+			ID:    "mt-source-then-synthesis",
+			Title: "Create a source, then synthesize from it in a resumed turn",
+			Turns: []scenarioTurn{
+				{Prompt: "Use the configured local OpenClerk data path. Create sources/mt-runner.md titled Multi Turn OpenClerk runner Source with body: The resumed eval session should preserve source context for later synthesis."},
+				{Prompt: "Now search for that source and create synthesis/mt-runner.md as a source-linked synthesis. Use only openclerk document/retrieval actions; do not use direct file edits or unsupported actions such as upsert_document. The synthesis must have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: sources/mt-runner.md. The body must include ## Sources citing sources/mt-runner.md and ## Freshness describing the runner retrieval check. Mention synthesis/mt-runner.md and the source path in the final answer."},
+			},
+		},
+		{
+			ID:    mtSynthesisDriftPressureScenarioID,
+			Title: "Repair multi-turn synthesis drift",
+			Turns: []scenarioTurn{
+				{Prompt: "Use the configured local OpenClerk data path. Search for drift synthesis compiler pressure evidence, list synthesis/ candidates, then create synthesis/drift-runner.md as a source-linked synthesis. Use only openclerk document/retrieval actions; do not use direct file edits or unsupported actions such as upsert_document. The synthesis must have frontmatter with type: synthesis, status: active, freshness: fresh, and the single-line field source_refs: sources/drift-current.md, sources/drift-old.md. The body must include ## Sources citing both source paths and ## Freshness describing the runner retrieval check. Mention synthesis/drift-runner.md in the final answer."},
+				{Prompt: "Use only OpenClerk runner document and retrieval JSON results. First find sources/drift-current.md through list_documents or search, get it, and replace its Summary section with: Current drift decision says existing document and retrieval actions should stay the v1 synthesis path. Then search for drift synthesis compiler pressure evidence, list synthesis/ candidates, get synthesis/drift-runner.md, inspect projection_states for projection synthesis using that document id, and repair synthesis/drift-runner.md only with replace_section or append_document. Do not create a duplicate. Preserve the existing single-line source_refs for sources/drift-current.md and sources/drift-old.md. The repaired body must state: Current drift decision: keep existing document and retrieval actions; Current source: sources/drift-current.md; Superseded source: sources/drift-old.md. Mention synthesis/drift-runner.md, sources/drift-current.md, and final freshness in the final answer."},
+			},
+		},
+		{
+			ID:    "mt-incomplete-then-create",
+			Title: "Clarify incomplete request, then complete it in a resumed turn",
+			Turns: []scenarioTurn{
+				{Prompt: "Create an OpenClerk canonical project note, but I have not provided the path, title, or body yet."},
+				{Prompt: "Use path notes/projects/mt-complete.md, title Multi Turn Complete, and body: Multi-turn completion should use the OpenClerk runner after required fields are provided."},
+			},
+		},
+	}
+}
+func isSynthesisCompileScenario(id string) bool {
+	switch id {
+	case synthesisCompileNaturalScenarioID, synthesisCompileScriptedScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+func scenarioIDs() []string {
+	scenarios := allScenarios()
+	ids := make([]string, 0, len(scenarios))
+	for _, sc := range scenarios {
+		ids = append(ids, sc.ID)
+	}
+	return ids
+}
+func releaseBlockingScenarioIDs() []string {
+	ids := []string{}
+	for _, id := range scenarioIDs() {
+		if isReleaseBlockingScenario(id) {
+			ids = append(ids, id)
+		}
+	}
+	return ids
+}
+func scenarioTurns(sc scenario) []scenarioTurn {
+	if len(sc.Turns) > 0 {
+		return sc.Turns
+	}
+	return []scenarioTurn{{Prompt: sc.Prompt}}
+}
+func isMultiTurnScenario(sc scenario) bool {
+	return len(scenarioTurns(sc)) > 1
+}
+func isFinalAnswerOnlyValidationScenario(id string) bool {
+	switch id {
+	case "missing-document-path-reject", agentChosenMissingFieldsScenarioID, pathTitleArtifactMissingHintsScenarioID, documentThisMissingFieldsScenarioID, documentThisSourceURLMissingHintsScenarioID, artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID, videoYouTubeBypassRejectScenarioID, "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject":
+		return true
+	default:
+		return false
+	}
+}
+func promptSummary(sc scenario) string {
+	if len(sc.Turns) == 0 {
+		return sc.Prompt
+	}
+	parts := make([]string, 0, len(sc.Turns))
+	for i, turn := range sc.Turns {
+		parts = append(parts, fmt.Sprintf("turn %d: %s", i+1, turn.Prompt))
+	}
+	return strings.Join(parts, " | ")
+}
