@@ -26,7 +26,7 @@ func isReleaseBlockingScenario(id string) bool {
 }
 func isDocumentHistoryScenario(id string) bool {
 	switch id {
-	case documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID:
+	case documentHistoryNaturalScenarioID, documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID:
 		return true
 	default:
 		return false
@@ -196,6 +196,11 @@ func allScenarios() []scenario {
 			ID:     sourceAuditConflictScenarioID,
 			Title:  "Explain unresolved source-sensitive conflict",
 			Prompt: "Use the configured local OpenClerk data path. Use only OpenClerk runner retrieval JSON results; do not use rg, find, ls, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, or unsupported actions. Search for source sensitive audit conflict runner retention, then inspect provenance_events for both returned source documents. Do not create, update, append, replace, or file a synthesis document. In the final answer, explain that sources/audit-conflict-alpha.md says seven days and sources/audit-conflict-bravo.md says thirty days, that both are current sources with no supersession metadata, and that the conflict is unresolved so the agent cannot choose a winner without source authority.",
+		},
+		{
+			ID:     documentHistoryNaturalScenarioID,
+			Title:  "Resolve document lifecycle rollback from natural intent",
+			Prompt: "Use the configured local OpenClerk data path. I think the history-review note accepted an unsafe lifecycle policy. Use the installed OpenClerk runner only to find the relevant source-backed evidence, restore the bad accepted summary if needed, and tell me what changed. Do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Preserve citations or source refs, provenance, projection freshness, and privacy: do not print raw private diffs or storage-root paths in the final answer.",
 		},
 		{
 			ID:     documentHistoryInspectScenarioID,

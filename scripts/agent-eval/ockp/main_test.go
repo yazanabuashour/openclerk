@@ -985,6 +985,23 @@ func TestSynthesisCompileDecisionRequiresRepeatedErgonomicsPressure(t *testing.T
 	}
 }
 
+func TestDocumentHistoryPromptSpecificityLabelsNaturalAndScriptedRows(t *testing.T) {
+	if got := promptSpecificity(documentHistoryNaturalScenarioID); got != "natural-user-intent" {
+		t.Fatalf("natural document history prompt specificity = %q, want natural-user-intent", got)
+	}
+	for _, id := range []string{
+		documentHistoryInspectScenarioID,
+		documentHistoryDiffScenarioID,
+		documentHistoryRestoreScenarioID,
+		documentHistoryPendingScenarioID,
+		documentHistoryStaleScenarioID,
+	} {
+		if got := promptSpecificity(id); got != "scripted-control" {
+			t.Fatalf("scripted document history prompt specificity for %s = %q, want scripted-control", id, got)
+		}
+	}
+}
+
 func TestVerifyVideoYouTubeValidationScenariosUseFinalAnswerVerifier(t *testing.T) {
 	noTools := metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}}
 	for _, sc := range []scenario{
@@ -2029,7 +2046,7 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 	for _, id := range scenarioIDs() {
 		ids[id] = true
 	}
-	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, graphSemanticsScenarioID, memoryRouterScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, sourceURLUpdateDuplicateScenarioID, sourceURLUpdateSameSHAScenarioID, sourceURLUpdateChangedScenarioID, sourceURLUpdateConflictScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, synthesisCompileNaturalScenarioID, synthesisCompileScriptedScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID, populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID, agentChosenExplicitScenarioID, agentChosenMissingFieldsScenarioID, agentChosenPathProposalScenarioID, agentChosenAutonomousScenarioID, agentChosenSynthesisScenarioID, agentChosenAmbiguousScenarioID, agentChosenUserPathScenarioID, pathTitleURLOnlyScenarioID, pathTitleArtifactMissingHintsScenarioID, pathTitleMultiSourceDuplicateScenarioID, pathTitleExplicitOverridesScenarioID, pathTitleDuplicateRiskScenarioID, pathTitleMetadataAuthorityScenarioID, documentThisMissingFieldsScenarioID, documentThisExplicitCreateScenarioID, documentThisSourceURLMissingHintsScenarioID, documentThisExplicitOverridesScenarioID, documentThisDuplicateCandidateScenarioID, documentThisExistingUpdateScenarioID, documentThisSynthesisFreshnessScenarioID, candidateNoteFromPastedContentScenarioID, candidateTitleAndPathFromHeadingScenarioID, candidateMixedSourceSummaryScenarioID, candidateExplicitOverridesWinScenarioID, candidateDuplicateRiskAsksScenarioID, candidateLowConfidenceAsksScenarioID, candidateBodyFaithfulnessScenarioID, artifactPDFSourceURLScenarioID, artifactPDFNaturalIntentScenarioID, artifactTranscriptScenarioID, artifactInvoiceReceiptScenarioID, artifactMixedSynthesisScenarioID, artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID, videoYouTubeNaturalIntentScenarioID, videoYouTubeScriptedTranscriptControlID, videoYouTubeSynthesisFreshnessScenarioID, videoYouTubeBypassRejectScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
+	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, graphSemanticsScenarioID, memoryRouterScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, sourceURLUpdateDuplicateScenarioID, sourceURLUpdateSameSHAScenarioID, sourceURLUpdateChangedScenarioID, sourceURLUpdateConflictScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, synthesisCompileNaturalScenarioID, synthesisCompileScriptedScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, documentHistoryNaturalScenarioID, documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID, populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID, agentChosenExplicitScenarioID, agentChosenMissingFieldsScenarioID, agentChosenPathProposalScenarioID, agentChosenAutonomousScenarioID, agentChosenSynthesisScenarioID, agentChosenAmbiguousScenarioID, agentChosenUserPathScenarioID, pathTitleURLOnlyScenarioID, pathTitleArtifactMissingHintsScenarioID, pathTitleMultiSourceDuplicateScenarioID, pathTitleExplicitOverridesScenarioID, pathTitleDuplicateRiskScenarioID, pathTitleMetadataAuthorityScenarioID, documentThisMissingFieldsScenarioID, documentThisExplicitCreateScenarioID, documentThisSourceURLMissingHintsScenarioID, documentThisExplicitOverridesScenarioID, documentThisDuplicateCandidateScenarioID, documentThisExistingUpdateScenarioID, documentThisSynthesisFreshnessScenarioID, candidateNoteFromPastedContentScenarioID, candidateTitleAndPathFromHeadingScenarioID, candidateMixedSourceSummaryScenarioID, candidateExplicitOverridesWinScenarioID, candidateDuplicateRiskAsksScenarioID, candidateLowConfidenceAsksScenarioID, candidateBodyFaithfulnessScenarioID, artifactPDFSourceURLScenarioID, artifactPDFNaturalIntentScenarioID, artifactTranscriptScenarioID, artifactInvoiceReceiptScenarioID, artifactMixedSynthesisScenarioID, artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID, videoYouTubeNaturalIntentScenarioID, videoYouTubeScriptedTranscriptControlID, videoYouTubeSynthesisFreshnessScenarioID, videoYouTubeBypassRejectScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
 		if !ids[want] {
 			t.Fatalf("scenarioIDs missing %q in %v", want, scenarioIDs())
 		}
@@ -2046,7 +2063,7 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 			t.Fatalf("default selected scenarios included targeted populated scenario %q", id)
 		}
 	}
-	for _, id := range []string{documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID} {
+	for _, id := range documentHistoryScenarioIDs() {
 		if defaultIDs[id] {
 			t.Fatalf("default selected scenarios included targeted document history scenario %q", id)
 		}
@@ -2096,7 +2113,7 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	if lane != populatedLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, populatedLaneName)
 	}
-	selected = selectedScenarioIDs(runConfig{Scenario: documentHistoryInspectScenarioID + "," + documentHistoryDiffScenarioID + "," + documentHistoryRestoreScenarioID + "," + documentHistoryPendingScenarioID + "," + documentHistoryStaleScenarioID + ",missing-document-path-reject,negative-limit-reject,unsupported-lower-level-reject,unsupported-transport-reject"})
+	selected = selectedScenarioIDs(runConfig{Scenario: documentHistoryNaturalScenarioID + "," + documentHistoryInspectScenarioID + "," + documentHistoryDiffScenarioID + "," + documentHistoryRestoreScenarioID + "," + documentHistoryPendingScenarioID + "," + documentHistoryStaleScenarioID + ",missing-document-path-reject,negative-limit-reject,unsupported-lower-level-reject,unsupported-transport-reject"})
 	lane, releaseBlocking = reportLane(selected)
 	if lane != documentHistoryLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, documentHistoryLaneName)
@@ -3290,12 +3307,26 @@ func TestVerifyDocumentHistoryReviewScenarios(t *testing.T) {
 		EventTypeCounts:      map[string]int{},
 	}
 
+	naturalPaths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, naturalPaths, scenario{ID: documentHistoryNaturalScenarioID}); err != nil {
+		t.Fatalf("seed natural lifecycle pressure: %v", err)
+	}
+	replaceSeedSection(t, ctx, naturalPaths, documentHistoryRestoreTargetPath, "Summary", "Accepted lifecycle policy: runner-visible review before accepting source-sensitive durable edits.")
+	naturalAnswer := "Restored notes/history-review/restore-target.md from sources/history-review/restore-authority.md after natural lifecycle review intent. The rollback preserved source evidence, provenance, projection freshness, and no raw private diffs."
+	result, err := verifyScenarioTurn(ctx, naturalPaths, scenario{ID: documentHistoryNaturalScenarioID}, 1, naturalAnswer, commonMetrics)
+	if err != nil {
+		t.Fatalf("verify natural lifecycle pressure: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("natural lifecycle pressure failed: %+v", result)
+	}
+
 	inspectionPaths := scenarioPaths(t.TempDir())
 	if err := seedScenario(ctx, inspectionPaths, scenario{ID: documentHistoryInspectScenarioID}); err != nil {
 		t.Fatalf("seed history inspection: %v", err)
 	}
 	inspectionAnswer := "Existing runner workflow inspected notes/history-review/lifecycle-control.md with document_updated provenance and fresh projection freshness before proposing any new history action."
-	result, err := verifyScenarioTurn(ctx, inspectionPaths, scenario{ID: documentHistoryInspectScenarioID}, 1, inspectionAnswer, commonMetrics)
+	result, err = verifyScenarioTurn(ctx, inspectionPaths, scenario{ID: documentHistoryInspectScenarioID}, 1, inspectionAnswer, commonMetrics)
 	if err != nil {
 		t.Fatalf("verify history inspection: %v", err)
 	}

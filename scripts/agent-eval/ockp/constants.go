@@ -119,6 +119,7 @@ const (
 	sourceAuditConflictBravoPath  = "sources/audit-conflict-bravo.md"
 	sourceAuditConflictSearchText = "source sensitive audit conflict runner retention"
 
+	documentHistoryNaturalScenarioID      = "document-lifecycle-natural-intent"
 	documentHistoryLaneName               = "document-history-review-controls-poc"
 	documentHistoryPolicyPath             = "notes/history-review/lifecycle-control.md"
 	documentHistoryDiffPreviousPath       = "sources/history-review/diff-previous.md"

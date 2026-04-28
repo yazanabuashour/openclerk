@@ -83,6 +83,8 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifySourceSensitiveAuditRepair(ctx, paths, finalMessage, turnMetrics)
 	case sourceAuditConflictScenarioID:
 		return verifySourceSensitiveConflict(ctx, paths, finalMessage, turnMetrics)
+	case documentHistoryNaturalScenarioID:
+		return verifyDocumentHistoryRestore(ctx, paths, finalMessage, turnMetrics)
 	case documentHistoryInspectScenarioID:
 		return verifyDocumentHistoryInspection(ctx, paths, finalMessage, turnMetrics)
 	case documentHistoryDiffScenarioID:

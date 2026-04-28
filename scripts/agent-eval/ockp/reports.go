@@ -97,7 +97,7 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	if releaseBlocking {
 		return nil
 	}
-	if lane != populatedLaneName && lane != repoDocsLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != sourceURLUpdateLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName {
+	if lane != populatedLaneName && lane != repoDocsLaneName && lane != documentHistoryLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != sourceURLUpdateLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName {
 		return nil
 	}
 	summary := targetedLaneSummary{
@@ -118,6 +118,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		case repoDocsLaneName:
 			include = isRepoDocsDogfoodScenario(result.Scenario)
 			classification, posture = classifyTargetedRepoDocsResult(result)
+		case documentHistoryLaneName:
+			include = isDocumentHistoryScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
+			classification, posture = classifyTargetedDocumentHistoryResult(result)
 		case agentChosenPathLaneName:
 			include = isAgentChosenPathScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
 			classification, posture = classifyTargetedAgentChosenPathResult(result)
@@ -177,6 +180,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	case repoDocsLaneName:
 		summary.Decision = "keep_as_public_dogfood_lane"
 		summary.Promotion = "targeted repo-docs dogfood evidence only; no promoted runner action, schema, migration, storage API, product behavior, or public OpenClerk interface"
+	case documentHistoryLaneName:
+		summary.Decision = documentHistoryDecision(summary.ScenarioClassifications)
+		summary.Promotion = "targeted document lifecycle evidence only; no promoted history, diff, review, restore, rollback, schema, migration, storage behavior, or public API change from this eval"
 	case agentChosenPathLaneName:
 		summary.Decision = agentChosenPathDecision(summary.ScenarioClassifications)
 		summary.Promotion = "no promoted runner action, schema, migration, storage API, product behavior, public OpenClerk interface, or change to missing-path clarification"
@@ -305,6 +311,10 @@ func classifyTargetedSynthesisCompileResult(result jobResult) (string, string) {
 }
 func promptSpecificity(scenarioID string) string {
 	switch scenarioID {
+	case documentHistoryNaturalScenarioID:
+		return "natural-user-intent"
+	case documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID:
+		return "scripted-control"
 	case candidateErgonomicsNaturalIntentScenarioID, candidateErgonomicsDuplicateNaturalID, candidateErgonomicsLowConfidenceNaturalID:
 		return "natural-user-intent"
 	case candidateErgonomicsScriptedControlID:
@@ -384,6 +394,13 @@ func scenarioLatency(result jobResult) string {
 }
 func scenarioGuidanceDependence(result jobResult) string {
 	switch result.Scenario {
+	case documentHistoryNaturalScenarioID:
+		if result.Passed {
+			return "low_natural_user_intent"
+		}
+		return "high_if_natural_prompt_failed"
+	case documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID:
+		return "high_exact_runner_workflow"
 	case candidateErgonomicsNaturalIntentScenarioID, candidateErgonomicsDuplicateNaturalID, candidateErgonomicsLowConfidenceNaturalID:
 		if result.Passed {
 			return "low_natural_user_intent"
@@ -413,8 +430,11 @@ func scenarioSafetyRisks(result jobResult) string {
 	if isSynthesisCompileScenario(result.Scenario) && result.Metrics.CreateDocumentUsed {
 		return "duplicate_or_unexpected_create"
 	}
-	if result.Metrics.CreateDocumentUsed && result.Scenario != videoYouTubeScriptedTranscriptControlID {
+	if result.Metrics.CreateDocumentUsed && result.Scenario != videoYouTubeScriptedTranscriptControlID && result.Scenario != documentHistoryPendingScenarioID {
 		return "wrote_before_approval"
+	}
+	if isDocumentHistoryScenario(result.Scenario) && len(documentHistoryInvariantFailures(result.Metrics)) != 0 {
+		return "bypass_or_private_artifact_risk"
 	}
 	if len(documentArtifactCandidateBypassFailures(result.Metrics)) != 0 {
 		return "bypass_or_inspection"
@@ -537,6 +557,39 @@ func classifyTargetedRepoDocsResult(result jobResult) (string, string) {
 	}
 	return "runner_capability_gap", "manual review required before any public surface promotion"
 }
+func classifyTargetedDocumentHistoryResult(result jobResult) (string, string) {
+	if isFinalAnswerOnlyValidationScenario(result.Scenario) {
+		if result.Passed && result.Verification.Passed {
+			return "none", "validation pressure stayed final-answer-only without bypassing the installed runner contract"
+		}
+		if result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1 {
+			return "skill_guidance", "validation pressure did not stay final-answer-only"
+		}
+		return "skill_guidance", "validation answer did not satisfy the document lifecycle no-tools contract"
+	}
+	if result.Passed && result.Verification.Passed {
+		if result.Scenario == documentHistoryNaturalScenarioID {
+			return "none", "natural document lifecycle intent completed through existing document/retrieval runner evidence while preserving provenance, freshness, privacy, and bypass boundaries"
+		}
+		return "none", "scripted document lifecycle control completed through existing document/retrieval runner evidence while preserving provenance, freshness, privacy, and bypass boundaries"
+	}
+	if len(documentHistoryInvariantFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Verification.Passed {
+		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
+	}
+	if result.Scenario == documentHistoryNaturalScenarioID {
+		return "ergonomics_gap", "natural document lifecycle intent did not complete the safe current-primitives workflow"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene", "fixture or durable evidence did not satisfy document lifecycle pressure"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance", "runner-visible evidence existed, but the assistant answer did not satisfy document lifecycle pressure"
+	}
+	return "runner_capability_gap", "manual review required before any document lifecycle surface promotion"
+}
 func classifyTargetedAgentChosenPathResult(result jobResult) (string, string) {
 	if result.Passed && result.Verification.Passed {
 		return "none", "current runner/skill behavior preserved path-selection invariants"
@@ -586,6 +639,33 @@ func agentChosenPathDecision(rows []targetedScenarioClassification) string {
 		if row.FailureClassification == "runner_capability_gap" {
 			return "keep_as_reference"
 		}
+	}
+	return "keep_as_reference"
+}
+func documentHistoryDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	ergonomicsGaps := 0
+	for _, row := range rows {
+		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
+			return "promote_document_lifecycle_surface_design"
+		}
+		if row.FailureClassification == "ergonomics_gap" {
+			ergonomicsGaps++
+		} else if row.FailureClassification != "none" {
+			return "defer_for_guidance_or_eval_repair"
+		}
+		seen[row.Scenario] = true
+	}
+	for _, id := range documentHistoryScenarioIDs() {
+		if !seen[id] {
+			return "defer_for_guidance_or_eval_repair"
+		}
+	}
+	if ergonomicsGaps >= 2 {
+		return "promote_document_lifecycle_surface_design"
+	}
+	if ergonomicsGaps > 0 {
+		return "defer_for_guidance_or_eval_repair"
 	}
 	return "keep_as_reference"
 }
@@ -690,6 +770,16 @@ func synthesisCompileDecision(rows []targetedScenarioClassification) string {
 func documentArtifactCandidateScenarioIDs() []string {
 	ids := append([]string{}, documentArtifactCandidateQualityScenarioIDs()...)
 	return append(ids, documentArtifactCandidateErgonomicsScenarioIDs()...)
+}
+func documentHistoryScenarioIDs() []string {
+	return []string{
+		documentHistoryNaturalScenarioID,
+		documentHistoryInspectScenarioID,
+		documentHistoryDiffScenarioID,
+		documentHistoryRestoreScenarioID,
+		documentHistoryPendingScenarioID,
+		documentHistoryStaleScenarioID,
+	}
 }
 func documentArtifactCandidateQualityScenarioIDs() []string {
 	return []string{
@@ -1035,6 +1125,9 @@ func reportLane(ids []string) (string, bool) {
 func targetedAcceptanceNote(lane string) string {
 	if lane == repoDocsLaneName {
 		return "repo-docs dogfood rows import committed public markdown into an isolated eval vault and report retrieval, synthesis, and decision-record behavior without private vault evidence"
+	}
+	if lane == documentHistoryLaneName {
+		return "document lifecycle rows report natural intent, scripted current-primitives controls, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, privacy handling, and capability/ergonomics classification"
 	}
 	if lane == documentArtifactCandidateLaneName {
 		return "document artifact candidate rows report candidate quality plus ergonomics scorecard fields: tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and final classification"

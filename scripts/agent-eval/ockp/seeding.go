@@ -110,6 +110,10 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedSourceSensitiveConflict(ctx, cfg); err != nil {
 			return err
 		}
+	case documentHistoryNaturalScenarioID:
+		if err := seedDocumentHistoryRestore(ctx, cfg); err != nil {
+			return err
+		}
 	case documentHistoryInspectScenarioID:
 		if err := seedDocumentHistoryInspection(ctx, cfg); err != nil {
 			return err
