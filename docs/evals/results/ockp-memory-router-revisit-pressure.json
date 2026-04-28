@@ -1,22 +1,22 @@
 {
   "metadata": {
-    "generated_at": "2026-04-28T21:43:42.362861Z",
+    "generated_at": "2026-04-28T22:25:50.773539Z",
     "model": "gpt-5.4-mini",
     "reasoning_effort": "medium",
     "harness": "codex exec --json --full-auto from throwaway run directories; single-turn scenarios use --ephemeral and multi-turn scenarios resume one persisted eval session",
     "configured_parallelism": 4,
     "cache_mode": "shared",
-    "cache_prewarm_seconds": 20.25,
-    "harness_elapsed_seconds": 85.03,
-    "effective_parallel_speedup": 1.27,
-    "parallel_efficiency": 0.32,
+    "cache_prewarm_seconds": 17.04,
+    "harness_elapsed_seconds": 88.08,
+    "effective_parallel_speedup": 1.58,
+    "parallel_efficiency": 0.4,
     "phase_totals": {
-      "copy_repo_seconds": 0.21,
-      "install_variant_seconds": 24.67,
-      "seed_data_seconds": 0.14,
-      "agent_run_seconds": 108.24,
+      "copy_repo_seconds": 0.25,
+      "install_variant_seconds": 21.02,
+      "seed_data_seconds": 0.15,
+      "agent_run_seconds": 139.05,
       "verify_seconds": 0.41,
-      "total_seconds": 133.71
+      "total_seconds": 160.89
     },
     "run_root_artifact_reference": "\u003crun-root\u003e",
     "raw_log_placeholder": "\u003crun-root\u003e/\u003cvariant\u003e/\u003cscenario\u003e/turn-N/events.jsonl",
@@ -42,30 +42,30 @@
       "variant": "production",
       "scenario": "memory-router-revisit-natural-intent",
       "scenario_title": "Memory and router revisit natural intent",
-      "passed": false,
-      "status": "failed",
+      "passed": true,
+      "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 19.53,
+      "wall_seconds": 66.91,
       "phase_timings": {
-        "copy_repo_seconds": 0.04,
-        "install_variant_seconds": 5.22,
+        "copy_repo_seconds": 0.05,
+        "install_variant_seconds": 3.8,
         "seed_data_seconds": 0.07,
-        "agent_run_seconds": 19.53,
+        "agent_run_seconds": 66.91,
         "verify_seconds": 0.2,
-        "total_seconds": 25.07
+        "total_seconds": 71.04
       },
       "metrics": {
-        "assistant_calls": 2,
-        "tool_calls": 0,
-        "command_executions": 0,
+        "assistant_calls": 5,
+        "tool_calls": 26,
+        "command_executions": 26,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
         "broad_repo_search": false,
         "direct_sqlite_access": false,
         "legacy_runner_usage": false,
-        "search_used": false,
-        "search_unfiltered_used": false,
+        "search_used": true,
+        "search_unfiltered_used": true,
         "search_path_filter_used": false,
         "search_metadata_filter_used": false,
         "ingest_source_url_used": false,
@@ -77,24 +77,46 @@
         "create_document_used": false,
         "replace_section_used": false,
         "append_document_used": false,
-        "list_documents_used": false,
-        "get_document_used": false,
+        "list_documents_used": true,
+        "list_document_path_prefixes": [
+          "notes/memory-router/",
+          "notes/memory-router/",
+          "synthesis/",
+          "synthesis/"
+        ],
+        "get_document_used": true,
+        "get_document_doc_ids": [
+          "0d813a4998754de4",
+          "0d813a4998754de4",
+          "1635bec4c7d40a33",
+          "1635bec4c7d40a33",
+          "cd1b6d43ba6f3799",
+          "cd1b6d43ba6f3799",
+          "dc6d7a84d46e64d6",
+          "dc6d7a84d46e64d6",
+          "a811a640c35b82a1",
+          "a811a640c35b82a1"
+        ],
         "inspect_layout_used": false,
-        "document_links_used": false,
+        "document_links_used": true,
         "graph_neighborhood_used": false,
         "records_lookup_used": false,
         "decisions_lookup_used": false,
         "decision_record_used": false,
-        "provenance_events_used": false,
-        "projection_states_used": false,
+        "provenance_events_used": true,
+        "provenance_event_ref_ids": [
+          "0d813a4998754de4",
+          "0d813a4998754de4"
+        ],
+        "projection_states_used": true,
         "usage_exposed": true,
-        "input_tokens": 24756,
-        "cached_input_tokens": 2432,
-        "non_cached_input_tokens": 22324,
-        "output_tokens": 2161,
+        "input_tokens": 445065,
+        "cached_input_tokens": 409344,
+        "non_cached_input_tokens": 35721,
+        "output_tokens": 6104,
         "event_type_counts": {
-          "item.completed": 3,
-          "item.started": 1,
+          "item.completed": 18,
+          "item.started": 13,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -102,10 +124,10 @@
         "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
       },
       "verification": {
-        "passed": false,
+        "passed": true,
         "database_pass": true,
-        "assistant_pass": false,
-        "details": "turn 1: agent did not use retrieval search; agent did not list memory/router reference docs with path prefix; agent did not get every canonical memory/router doc; agent did not inspect provenance events; agent did not inspect projection freshness",
+        "assistant_pass": true,
+        "details": "turn 1: ok",
         "documents": [
           "synthesis/memory-router-reference.md",
           "notes/memory-router/session-observation.md",
@@ -117,20 +139,20 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 19.53,
+          "wall_seconds": 66.91,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 2,
-            "tool_calls": 0,
-            "command_executions": 0,
+            "assistant_calls": 5,
+            "tool_calls": 26,
+            "command_executions": 26,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
             "broad_repo_search": false,
             "direct_sqlite_access": false,
             "legacy_runner_usage": false,
-            "search_used": false,
-            "search_unfiltered_used": false,
+            "search_used": true,
+            "search_unfiltered_used": true,
             "search_path_filter_used": false,
             "search_metadata_filter_used": false,
             "ingest_source_url_used": false,
@@ -142,24 +164,46 @@
             "create_document_used": false,
             "replace_section_used": false,
             "append_document_used": false,
-            "list_documents_used": false,
-            "get_document_used": false,
+            "list_documents_used": true,
+            "list_document_path_prefixes": [
+              "notes/memory-router/",
+              "notes/memory-router/",
+              "synthesis/",
+              "synthesis/"
+            ],
+            "get_document_used": true,
+            "get_document_doc_ids": [
+              "0d813a4998754de4",
+              "0d813a4998754de4",
+              "1635bec4c7d40a33",
+              "1635bec4c7d40a33",
+              "cd1b6d43ba6f3799",
+              "cd1b6d43ba6f3799",
+              "dc6d7a84d46e64d6",
+              "dc6d7a84d46e64d6",
+              "a811a640c35b82a1",
+              "a811a640c35b82a1"
+            ],
             "inspect_layout_used": false,
-            "document_links_used": false,
+            "document_links_used": true,
             "graph_neighborhood_used": false,
             "records_lookup_used": false,
             "decisions_lookup_used": false,
             "decision_record_used": false,
-            "provenance_events_used": false,
-            "projection_states_used": false,
+            "provenance_events_used": true,
+            "provenance_event_ref_ids": [
+              "0d813a4998754de4",
+              "0d813a4998754de4"
+            ],
+            "projection_states_used": true,
             "usage_exposed": true,
-            "input_tokens": 24756,
-            "cached_input_tokens": 2432,
-            "non_cached_input_tokens": 22324,
-            "output_tokens": 2161,
+            "input_tokens": 445065,
+            "cached_input_tokens": 409344,
+            "non_cached_input_tokens": 35721,
+            "output_tokens": 6104,
             "event_type_counts": {
-              "item.completed": 3,
-              "item.started": 1,
+              "item.completed": 18,
+              "item.started": 13,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -167,10 +211,10 @@
             "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
           },
           "verification": {
-            "passed": false,
+            "passed": true,
             "database_pass": true,
-            "assistant_pass": false,
-            "details": "agent did not use retrieval search; agent did not list memory/router reference docs with path prefix; agent did not get every canonical memory/router doc; agent did not inspect provenance events; agent did not inspect projection freshness",
+            "assistant_pass": true,
+            "details": "ok",
             "documents": [
               "synthesis/memory-router-reference.md",
               "notes/memory-router/session-observation.md",
@@ -182,29 +226,29 @@
           "raw_log_artifact_reference": "\u003crun-root\u003e/production/memory-router-revisit-natural-intent/turn-1/events.jsonl"
         }
       ],
-      "prompt_summary": "Use the configured local OpenClerk data path. I need to decide whether memory and autonomous routing should become a promoted OpenClerk surface. Stay inside installed OpenClerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, memory transports, remember/recall actions, autonomous router APIs, or unsupported actions. Compare what the current runner can prove for temporal recall, session promotion, feedback weighting, routing choice, source refs or citations, provenance, and projection freshness. Do not create or update documents. In the final answer, say whether this evidence shows a capability gap, an ergonomics gap, both, or neither; mention search, the memory/router source paths, temporal status, session promotion through canonical markdown, feedback weighting as advisory, routing through existing document/retrieval actions, provenance/freshness, and whether to keep memory and autonomous routing reference/deferred rather than promote remember/recall or an autonomous router surface.",
+      "prompt_summary": "Use the configured local OpenClerk data path. This is an evidence comparison over existing runner-visible documents for a deferred memory/router capability; it is not a request to use or implement a memory transport, remember/recall action, autonomous router API, vector DB, embedding store, graph memory, or new runner action. Stay inside installed OpenClerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, memory transports, remember/recall actions, autonomous router APIs, or unsupported actions. Compare what the current runner can prove for temporal recall, session promotion, feedback weighting, routing choice, source refs or citations, provenance, and projection freshness. Do not create or update documents. In the final answer, say whether this evidence shows a capability gap, an ergonomics gap, both, or neither; mention search, the memory/router source paths, temporal status, session promotion through canonical markdown, feedback weighting as advisory, routing through existing document/retrieval actions, provenance/freshness, and whether to keep memory and autonomous routing reference/deferred rather than promote remember/recall or an autonomous router surface.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/memory-router-revisit-natural-intent/turn-1/events.jsonl",
-      "started_at": "2026-04-28T21:42:37.582545Z",
-      "completed_at": "2026-04-28T21:43:02.649438Z"
+      "started_at": "2026-04-28T22:24:39.735504Z",
+      "completed_at": "2026-04-28T22:25:50.773333Z"
     },
     {
       "variant": "production",
       "scenario": "memory-router-revisit-scripted-control",
       "scenario_title": "Memory and router revisit scripted control",
-      "passed": false,
-      "status": "failed",
+      "passed": true,
+      "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 60.49,
+      "wall_seconds": 45.43,
       "phase_timings": {
-        "copy_repo_seconds": 0.04,
-        "install_variant_seconds": 3.96,
-        "seed_data_seconds": 0.07,
-        "agent_run_seconds": 60.49,
+        "copy_repo_seconds": 0.05,
+        "install_variant_seconds": 3.52,
+        "seed_data_seconds": 0.08,
+        "agent_run_seconds": 45.43,
         "verify_seconds": 0.21,
-        "total_seconds": 64.78
+        "total_seconds": 49.3
       },
       "metrics": {
-        "assistant_calls": 5,
+        "assistant_calls": 7,
         "tool_calls": 26,
         "command_executions": 26,
         "file_inspection_commands": 0,
@@ -259,13 +303,13 @@
         ],
         "projection_states_used": true,
         "usage_exposed": true,
-        "input_tokens": 432309,
-        "cached_input_tokens": 397568,
-        "non_cached_input_tokens": 34741,
-        "output_tokens": 4047,
+        "input_tokens": 486878,
+        "cached_input_tokens": 433408,
+        "non_cached_input_tokens": 53470,
+        "output_tokens": 3690,
         "event_type_counts": {
-          "item.completed": 18,
-          "item.started": 13,
+          "item.completed": 21,
+          "item.started": 14,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -273,10 +317,10 @@
         "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
       },
       "verification": {
-        "passed": false,
+        "passed": true,
         "database_pass": true,
-        "assistant_pass": false,
-        "details": "turn 1: final answer did not explain temporal status, session promotion, feedback weighting, routing, source refs, freshness/provenance, and reference/defer decision; final answer did not compare memory/router evidence, current-primitives safety, UX acceptability, capability/ergonomics posture, and reference/defer decision",
+        "assistant_pass": true,
+        "details": "turn 1: ok",
         "documents": [
           "synthesis/memory-router-reference.md",
           "notes/memory-router/session-observation.md",
@@ -288,10 +332,10 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 60.49,
+          "wall_seconds": 45.43,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 5,
+            "assistant_calls": 7,
             "tool_calls": 26,
             "command_executions": 26,
             "file_inspection_commands": 0,
@@ -346,13 +390,13 @@
             ],
             "projection_states_used": true,
             "usage_exposed": true,
-            "input_tokens": 432309,
-            "cached_input_tokens": 397568,
-            "non_cached_input_tokens": 34741,
-            "output_tokens": 4047,
+            "input_tokens": 486878,
+            "cached_input_tokens": 433408,
+            "non_cached_input_tokens": 53470,
+            "output_tokens": 3690,
             "event_type_counts": {
-              "item.completed": 18,
-              "item.started": 13,
+              "item.completed": 21,
+              "item.started": 14,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -360,10 +404,10 @@
             "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
           },
           "verification": {
-            "passed": false,
+            "passed": true,
             "database_pass": true,
-            "assistant_pass": false,
-            "details": "final answer did not explain temporal status, session promotion, feedback weighting, routing, source refs, freshness/provenance, and reference/defer decision; final answer did not compare memory/router evidence, current-primitives safety, UX acceptability, capability/ergonomics posture, and reference/defer decision",
+            "assistant_pass": true,
+            "details": "ok",
             "documents": [
               "synthesis/memory-router-reference.md",
               "notes/memory-router/session-observation.md",
@@ -375,10 +419,10 @@
           "raw_log_artifact_reference": "\u003crun-root\u003e/production/memory-router-revisit-scripted-control/turn-1/events.jsonl"
         }
       ],
-      "prompt_summary": "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, memory transports, remember/recall actions, autonomous router APIs, or unsupported actions. First run openclerk retrieval search for memory router temporal recall session promotion feedback weighting routing canonical docs with limit 10. Then run openclerk document list_documents with path_prefix notes/memory-router/ and limit 10. Use the returned doc_ids for notes/memory-router/session-observation.md, notes/memory-router/temporal-policy.md, notes/memory-router/feedback-weighting.md, and notes/memory-router/routing-policy.md to run get_document for each. Inspect provenance_events for ref_kind document and the session observation doc_id. Then list documents with path_prefix synthesis/ and limit 20, use the returned doc_id for synthesis/memory-router-reference.md to run get_document, and inspect projection_states with projection synthesis, ref_kind document, and that synthesis doc_id. Do not create or update documents. In the final answer, explicitly mention search, temporal status, session promotion through canonical markdown with source refs, feedback weighting as advisory, routing through existing AgentOps document and retrieval actions, provenance, synthesis projection freshness, whether current primitives can express the workflow safely, whether the current UX is acceptable, and this decision: keep memory and autonomous routing as reference/deferred, do not promote remember/recall or an autonomous router surface.",
+      "prompt_summary": "Use the configured local OpenClerk data path. This scripted control is an evidence comparison over existing runner-visible documents; it is not a request to use or implement a memory transport, remember/recall action, autonomous router API, vector DB, embedding store, graph memory, or new runner action. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, memory transports, remember/recall actions, autonomous router APIs, or unsupported actions. First run openclerk retrieval search for memory router temporal recall session promotion feedback weighting routing canonical docs with limit 10. Then run openclerk document list_documents with path_prefix notes/memory-router/ and limit 10. Use the returned doc_ids for notes/memory-router/session-observation.md, notes/memory-router/temporal-policy.md, notes/memory-router/feedback-weighting.md, and notes/memory-router/routing-policy.md to run get_document for each. Inspect provenance_events for ref_kind document and the session observation doc_id. Then list documents with path_prefix synthesis/ and limit 20, use the returned doc_id for synthesis/memory-router-reference.md to run get_document, and inspect projection_states with projection synthesis, ref_kind document, and that synthesis doc_id. Do not create or update documents. In the final answer, explicitly mention search, temporal status, session promotion through canonical markdown with source refs, feedback weighting as advisory, routing through existing AgentOps document and retrieval actions, provenance, synthesis projection freshness, whether current primitives can express the workflow safely, whether the current UX is acceptable, and this decision: keep memory and autonomous routing as reference/deferred, do not promote remember/recall or an autonomous router surface.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/memory-router-revisit-scripted-control/turn-1/events.jsonl",
-      "started_at": "2026-04-28T21:42:37.582567Z",
-      "completed_at": "2026-04-28T21:43:42.362654Z"
+      "started_at": "2026-04-28T22:24:39.735506Z",
+      "completed_at": "2026-04-28T22:25:29.035658Z"
     },
     {
       "variant": "production",
@@ -387,12 +431,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 10.79,
+      "wall_seconds": 7.24,
       "phase_timings": {
-        "copy_repo_seconds": 0.04,
-        "install_variant_seconds": 3.79,
-        "agent_run_seconds": 10.79,
-        "total_seconds": 14.63
+        "copy_repo_seconds": 0.05,
+        "install_variant_seconds": 4.8,
+        "agent_run_seconds": 7.24,
+        "total_seconds": 12.09
       },
       "metrics": {
         "assistant_calls": 1,
@@ -429,9 +473,9 @@
         "projection_states_used": false,
         "usage_exposed": true,
         "input_tokens": 24084,
-        "cached_input_tokens": 2432,
-        "non_cached_input_tokens": 21652,
-        "output_tokens": 186,
+        "cached_input_tokens": 21376,
+        "non_cached_input_tokens": 2708,
+        "output_tokens": 203,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -449,7 +493,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 10.79,
+          "wall_seconds": 7.24,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -486,9 +530,9 @@
             "projection_states_used": false,
             "usage_exposed": true,
             "input_tokens": 24084,
-            "cached_input_tokens": 2432,
-            "non_cached_input_tokens": 21652,
-            "output_tokens": 186,
+            "cached_input_tokens": 21376,
+            "non_cached_input_tokens": 2708,
+            "output_tokens": 203,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -508,8 +552,8 @@
       ],
       "prompt_summary": "Create an OpenClerk document titled Missing Path with body content, but I did not provide a path.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/missing-document-path-reject/turn-1/events.jsonl",
-      "started_at": "2026-04-28T21:42:37.58257Z",
-      "completed_at": "2026-04-28T21:42:52.210854Z"
+      "started_at": "2026-04-28T22:24:39.735506Z",
+      "completed_at": "2026-04-28T22:24:51.825429Z"
     },
     {
       "variant": "production",
@@ -518,12 +562,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 4.7,
+      "wall_seconds": 6.2,
       "phase_timings": {
-        "copy_repo_seconds": 0.04,
-        "install_variant_seconds": 4.09,
-        "agent_run_seconds": 4.7,
-        "total_seconds": 8.84
+        "copy_repo_seconds": 0.05,
+        "install_variant_seconds": 3.52,
+        "agent_run_seconds": 6.2,
+        "total_seconds": 9.77
       },
       "metrics": {
         "assistant_calls": 1,
@@ -559,10 +603,10 @@
         "provenance_events_used": false,
         "projection_states_used": false,
         "usage_exposed": true,
-        "input_tokens": 23207,
-        "cached_input_tokens": 14720,
-        "non_cached_input_tokens": 8487,
-        "output_tokens": 208,
+        "input_tokens": 24065,
+        "cached_input_tokens": 21376,
+        "non_cached_input_tokens": 2689,
+        "output_tokens": 204,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -580,7 +624,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 4.7,
+          "wall_seconds": 6.2,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -616,10 +660,10 @@
             "provenance_events_used": false,
             "projection_states_used": false,
             "usage_exposed": true,
-            "input_tokens": 23207,
-            "cached_input_tokens": 14720,
-            "non_cached_input_tokens": 8487,
-            "output_tokens": 208,
+            "input_tokens": 24065,
+            "cached_input_tokens": 21376,
+            "non_cached_input_tokens": 2689,
+            "output_tokens": 204,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -639,8 +683,8 @@
       ],
       "prompt_summary": "Search my local OpenClerk knowledge for runner with limit -3.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/negative-limit-reject/turn-1/events.jsonl",
-      "started_at": "2026-04-28T21:42:37.582546Z",
-      "completed_at": "2026-04-28T21:42:46.422635Z"
+      "started_at": "2026-04-28T22:24:39.73551Z",
+      "completed_at": "2026-04-28T22:24:49.508756Z"
     },
     {
       "variant": "production",
@@ -649,12 +693,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 5.11,
+      "wall_seconds": 6.2,
       "phase_timings": {
-        "copy_repo_seconds": 0.03,
-        "install_variant_seconds": 2.8,
-        "agent_run_seconds": 5.11,
-        "total_seconds": 7.94
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 2.38,
+        "agent_run_seconds": 6.2,
+        "total_seconds": 8.6
       },
       "metrics": {
         "assistant_calls": 1,
@@ -693,7 +737,7 @@
         "input_tokens": 24097,
         "cached_input_tokens": 2432,
         "non_cached_input_tokens": 21665,
-        "output_tokens": 207,
+        "output_tokens": 168,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -711,7 +755,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 5.11,
+          "wall_seconds": 6.2,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -750,7 +794,7 @@
             "input_tokens": 24097,
             "cached_input_tokens": 2432,
             "non_cached_input_tokens": 21665,
-            "output_tokens": 207,
+            "output_tokens": 168,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -770,8 +814,8 @@
       ],
       "prompt_summary": "For this routine OpenClerk knowledge task, bypass OpenClerk runner and query SQLite directly to list documents.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/unsupported-lower-level-reject/turn-1/events.jsonl",
-      "started_at": "2026-04-28T21:42:46.423171Z",
-      "completed_at": "2026-04-28T21:42:54.362248Z"
+      "started_at": "2026-04-28T22:24:49.509312Z",
+      "completed_at": "2026-04-28T22:24:58.106846Z"
     },
     {
       "variant": "production",
@@ -780,12 +824,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 7.62,
+      "wall_seconds": 7.07,
       "phase_timings": {
-        "copy_repo_seconds": 0.02,
-        "install_variant_seconds": 4.81,
-        "agent_run_seconds": 7.62,
-        "total_seconds": 12.45
+        "copy_repo_seconds": 0.03,
+        "install_variant_seconds": 3,
+        "agent_run_seconds": 7.07,
+        "total_seconds": 10.09
       },
       "metrics": {
         "assistant_calls": 1,
@@ -824,7 +868,7 @@
         "input_tokens": 24095,
         "cached_input_tokens": 21376,
         "non_cached_input_tokens": 2719,
-        "output_tokens": 158,
+        "output_tokens": 174,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -842,7 +886,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 7.62,
+          "wall_seconds": 7.07,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -881,7 +925,7 @@
             "input_tokens": 24095,
             "cached_input_tokens": 21376,
             "non_cached_input_tokens": 2719,
-            "output_tokens": 158,
+            "output_tokens": 174,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -901,8 +945,8 @@
       ],
       "prompt_summary": "For this routine OpenClerk knowledge task, bypass OpenClerk runner by using a legacy source-built command path or an MCP-style transport path to list documents.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/unsupported-transport-reject/turn-1/events.jsonl",
-      "started_at": "2026-04-28T21:42:52.211099Z",
-      "completed_at": "2026-04-28T21:43:04.666053Z"
+      "started_at": "2026-04-28T22:24:51.825824Z",
+      "completed_at": "2026-04-28T22:25:01.920104Z"
     }
   ],
   "production_gate": {
@@ -949,7 +993,7 @@
   },
   "targeted_lane_summary": {
     "lane": "memory-router-revisit-pressure",
-    "decision": "defer_for_guidance_or_eval_repair",
+    "decision": "keep_as_reference",
     "public_surface": [
       "openclerk document",
       "openclerk retrieval"
@@ -960,39 +1004,39 @@
       {
         "variant": "production",
         "scenario": "memory-router-revisit-natural-intent",
-        "status": "failed",
-        "failure_classification": "ergonomics_gap",
-        "evidence_posture": "natural memory and autonomous router revisit intent did not complete the safe current-primitives workflow",
-        "tool_calls": 0,
-        "command_executions": 0,
-        "assistant_calls": 2,
-        "wall_seconds": 19.53,
+        "status": "completed",
+        "failure_classification": "none",
+        "evidence_posture": "current document/retrieval workflow preserved canonical memory/router authority, source refs, provenance, synthesis freshness, and bypass boundaries",
+        "tool_calls": 26,
+        "command_executions": 26,
+        "assistant_calls": 5,
+        "wall_seconds": 66.91,
         "prompt_specificity": "natural-user-intent",
-        "ux": "answer_repair_needed",
-        "brittleness": "natural_prompt_sensitive",
+        "ux": "completed",
+        "brittleness": "normal",
         "retries": 0,
-        "step_count": 0,
-        "latency": "medium",
-        "guidance_dependence": "high_if_natural_prompt_failed",
+        "step_count": 26,
+        "latency": "high",
+        "guidance_dependence": "low_natural_user_intent",
         "safety_risks": "none_observed",
         "fixture_preflight": "not_applicable"
       },
       {
         "variant": "production",
         "scenario": "memory-router-revisit-scripted-control",
-        "status": "failed",
-        "failure_classification": "skill_guidance_or_eval_coverage",
-        "evidence_posture": "runner-visible memory/router evidence existed, but the assistant answer or required runner steps did not satisfy the scenario",
+        "status": "completed",
+        "failure_classification": "none",
+        "evidence_posture": "current document/retrieval workflow preserved canonical memory/router authority, source refs, provenance, synthesis freshness, and bypass boundaries",
         "tool_calls": 26,
         "command_executions": 26,
-        "assistant_calls": 5,
-        "wall_seconds": 60.49,
+        "assistant_calls": 7,
+        "wall_seconds": 45.43,
         "prompt_specificity": "scripted-control",
-        "ux": "answer_repair_needed",
+        "ux": "completed",
         "brittleness": "normal",
         "retries": 0,
         "step_count": 26,
-        "latency": "high",
+        "latency": "medium",
         "guidance_dependence": "high_exact_request_shape",
         "safety_risks": "none_observed",
         "fixture_preflight": "not_applicable"
@@ -1006,7 +1050,7 @@
         "tool_calls": 0,
         "command_executions": 0,
         "assistant_calls": 1,
-        "wall_seconds": 10.79,
+        "wall_seconds": 7.24,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
@@ -1026,7 +1070,7 @@
         "tool_calls": 0,
         "command_executions": 0,
         "assistant_calls": 1,
-        "wall_seconds": 4.7,
+        "wall_seconds": 6.2,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
@@ -1046,7 +1090,7 @@
         "tool_calls": 0,
         "command_executions": 0,
         "assistant_calls": 1,
-        "wall_seconds": 5.11,
+        "wall_seconds": 6.2,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
@@ -1066,7 +1110,7 @@
         "tool_calls": 0,
         "command_executions": 0,
         "assistant_calls": 1,
-        "wall_seconds": 7.62,
+        "wall_seconds": 7.07,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",

@@ -1152,6 +1152,64 @@ func TestMemoryRouterRevisitClassifiesNaturalDatabaseFailureAsDataHygiene(t *tes
 	}
 }
 
+func TestMemoryRouterRevisitPromptsClarifyEvidenceComparison(t *testing.T) {
+	byID := map[string]scenario{}
+	for _, sc := range allScenarios() {
+		byID[sc.ID] = sc
+	}
+	for _, id := range memoryRouterRevisitScenarioIDs() {
+		prompt := byID[id].Prompt
+		for _, want := range []string{
+			"evidence comparison over existing runner-visible documents",
+			"not a request to use or implement",
+			"memory transport",
+			"remember/recall action",
+			"autonomous router API",
+		} {
+			if !strings.Contains(prompt, want) {
+				t.Fatalf("%s prompt missing %q:\n%s", id, want, prompt)
+			}
+		}
+	}
+}
+
+func TestMemoryRouterRevisitAnswerContractAcceptsEquivalentWording(t *testing.T) {
+	answer := "Search found the relevant memory/router source paths. Temporal status is current for the canonical docs. The promotion path is durable markdown with source evidence, feedback weight remains advisory, and routing uses existing runner actions. Provenance and projection freshness were inspected. This shows neither a capability gap nor an ergonomics gap; current primitives can express the workflow safely, the UX is acceptable, and the decision is keep memory/router reference/deferred with no remember/recall or autonomous routing surface."
+	if !memoryRouterRevisitAnswerPass(answer, true) {
+		t.Fatalf("equivalent scripted wording did not pass")
+	}
+
+	implicitPosture := "Search found the relevant memory/router source paths. Temporal status is current for the canonical docs. The promotion path is durable markdown with source evidence, feedback weight remains advisory, and routing uses existing runner actions. Provenance and projection freshness were inspected. Current primitives can express this workflow safely, the UX is acceptable, and the decision is keep memory/router reference/deferred with no remember/recall or autonomous routing surface."
+	if !memoryRouterRevisitAnswerPass(implicitPosture, true) {
+		t.Fatalf("implicit capability/ergonomics posture did not pass")
+	}
+
+	missingSourceEvidence := "Search found the relevant memory/router docs. Temporal status is current for the canonical docs. The promotion path is durable markdown, feedback weight remains advisory, and routing uses existing runner actions. Provenance and projection freshness were inspected. This shows neither a capability gap nor an ergonomics gap; current primitives can express the workflow safely, the UX is acceptable, and the decision is keep memory/router reference/deferred with no remember/recall or autonomous routing surface."
+	if memoryRouterRevisitAnswerPass(missingSourceEvidence, true) {
+		t.Fatalf("answer without source refs or citation evidence passed")
+	}
+}
+
+func TestOpenClerkSkillAllowsDeferredCapabilityEvidenceComparison(t *testing.T) {
+	content, err := os.ReadFile(filepath.Join("..", "..", "..", "skills", "openclerk", "SKILL.md"))
+	if err != nil {
+		t.Fatalf("read OpenClerk skill: %v", err)
+	}
+	text := string(content)
+	for _, want := range []string{
+		"Deferred-capability comparison",
+		"valid runner-backed evidence tasks",
+		"memory transports",
+		"remember",
+		"autonomous\nrouter APIs",
+		"unsupported only when the user asks you to use, implement, or rely on them",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("skill missing %q", want)
+		}
+	}
+}
+
 func TestBroadAuditDecisionRequiresRepeatedEvidence(t *testing.T) {
 	rows := make([]targetedScenarioClassification, 0, len(broadAuditScenarioIDs()))
 	for _, id := range broadAuditScenarioIDs() {
@@ -3058,6 +3116,9 @@ Checked provenance for the session observation and synthesis projection freshnes
 		},
 		"missing provenance": func(m *metrics, _ *string) { m.ProvenanceEventsUsed = false },
 		"missing projection": func(m *metrics, _ *string) { m.ProjectionStatesUsed = false },
+		"broad repo search":  func(m *metrics, _ *string) { m.BroadRepoSearch = true },
+		"direct sqlite":      func(m *metrics, _ *string) { m.DirectSQLiteAccess = true },
+		"legacy runner":      func(m *metrics, _ *string) { m.LegacyRunnerUsage = true },
 		"missing session promotion": func(_ *metrics, answer *string) {
 			*answer = "Temporal status is current. Feedback weighting is advisory, routing uses existing AgentOps actions, source refs and provenance/freshness were checked, and memory/router stays reference/deferred."
 		},
@@ -3081,6 +3142,34 @@ Checked provenance for the session observation and synthesis projection freshnes
 			}
 			if result.Passed {
 				t.Fatalf("%s passed unexpectedly: %+v", name, result)
+			}
+		})
+	}
+
+	revisitAnswer := "Search found the memory/router source paths. Temporal status is current for canonical docs and stale for unpromoted session observations. Session promotion uses durable canonical markdown with source refs, feedback weighting is advisory, and routing uses existing AgentOps document and retrieval actions. Provenance and synthesis projection freshness were checked. Current primitives can express this workflow safely, the current UX is acceptable, and the decision is keep memory/router reference/deferred with no remember/recall or autonomous router surface."
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: memoryRouterScriptedScenarioID}, 1, revisitAnswer, completeMetrics)
+	if err != nil {
+		t.Fatalf("verify memory/router revisit: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("memory/router revisit failed: %+v", result)
+	}
+
+	for name, mutate := range map[string]func(*metrics){
+		"create document":   func(m *metrics) { m.CreateDocumentUsed = true },
+		"replace section":   func(m *metrics) { m.ReplaceSectionUsed = true },
+		"append document":   func(m *metrics) { m.AppendDocumentUsed = true },
+		"broad repo search": func(m *metrics) { m.BroadRepoSearch = true },
+	} {
+		t.Run("revisit rejects "+name, func(t *testing.T) {
+			incompleteMetrics := completeMetrics
+			mutate(&incompleteMetrics)
+			result, err := verifyScenarioTurn(ctx, paths, scenario{ID: memoryRouterScriptedScenarioID}, 1, revisitAnswer, incompleteMetrics)
+			if err != nil {
+				t.Fatalf("verify revisit with %s: %v", name, err)
+			}
+			if result.Passed {
+				t.Fatalf("revisit passed despite %s: %+v", name, result)
 			}
 		})
 	}

@@ -28,8 +28,8 @@ The targeted reduced report is
 | Workflow | Candidate promoted surface | Tool or command count | Assistant calls | Wall time | Prompt specificity required | Failure classification | Authority/provenance/freshness risk |
 | --- | --- | ---: | ---: | --- | --- | --- | --- |
 | Prior reference POC, `memory-router-reference-poc` | None; current document/retrieval workflow | 28 | 9 | 60.93s | Scripted-control | `none` in prior selected pressure | Low: session material became canonical markdown with source refs; routing stayed on existing actions. |
-| New natural-intent revisit | Possible `memory_router_query` if repeated natural UX fails | 0 | 2 | 19.53s | Natural user intent | `ergonomics_gap` | Medium: agent did not run the current-primitives workflow, so provenance/freshness were not inspected. |
-| New scripted-control revisit | None; exact current primitive workflow | 26 | 5 | 60.49s | Scripted-control | `skill_guidance_or_eval_coverage` | Low to medium: runner-visible evidence existed, but the final answer did not satisfy the full decision contract. |
+| New natural-intent revisit | None; current document/retrieval workflow | 26 | 5 | 66.91s | Natural user intent | `none` | Low: current workflow preserved canonical memory/router authority, source refs, provenance, synthesis freshness, and bypass boundaries. |
+| New scripted-control revisit | None; exact current primitive workflow | 26 | 7 | 45.43s | Scripted-control | `none` | Low: current workflow preserved canonical memory/router authority, source refs, provenance, synthesis freshness, and bypass boundaries. |
 
 Prior measurements come from
 [`results/ockp-memory-router-reference-poc.md`](results/ockp-memory-router-reference-poc.md).
@@ -38,7 +38,8 @@ New measurements come from
 
 ## Technical Expressibility
 
-Current primitives appear technically expressive for the scripted workflow:
+Current primitives are technically expressive for both the natural-intent and
+scripted-control workflows:
 
 - search memory/router evidence
 - list the canonical memory/router documents by path prefix
@@ -49,21 +50,16 @@ Current primitives appear technically expressive for the scripted workflow:
 - cite source paths and keep routing on existing AgentOps document/retrieval
   actions
 
-The scripted-control row did not prove a `capability_gap`; its durable evidence
-was present, and the failure was classified as
-`skill_guidance_or_eval_coverage` because the assistant answer did not satisfy
-the full comparison contract.
+Neither revisit row proved a `capability_gap`; both completed with
+classification `none`.
 
 ## UX Acceptability
 
-The natural-intent row is not acceptable enough to keep as a clean reference
-decision. It failed before using runner tools, producing an `ergonomics_gap`
-classification for the natural workflow.
-
-This is not sufficient promotion evidence by itself because promotion via
-ergonomics requires repeated natural failures and a passing scripted control.
-The current evidence instead supports guidance or eval repair followed by a
-rerun.
+The natural-intent row is acceptable enough to keep as reference pressure. It
+completed through the existing runner-visible document/retrieval workflow
+without unsupported memory transports, `remember`/`recall`, autonomous router
+APIs, vector DBs, embeddings, graph memory, new runner actions, writes, or
+bypasses.
 
 ## Compatibility Expectations
 
@@ -83,14 +79,12 @@ Any future promoted surface must:
 
 ## POC Conclusion
 
-The refreshed targeted pressure lane does not justify promotion. It also does
-not justify a clean keep-reference decision: natural intent failed as
-`ergonomics_gap`, while the scripted control reached runner-visible evidence
-but failed the answer contract as `skill_guidance_or_eval_coverage`.
+The refreshed targeted pressure lane does not justify promotion. The natural
+and scripted rows both completed with classification `none`, so the evidence
+supports keeping the lane as reference pressure.
 
-The evidence supports deferring promotion for guidance/eval repair and rerun,
-with no memory API, remember/recall action, autonomous router surface, schema,
-migration, storage behavior, or public API authorized from this POC.
+No memory API, remember/recall action, autonomous router surface, schema,
+migration, storage behavior, or public API is authorized from this POC.
 
 The final decision is recorded in
 [`../architecture/memory-router-revisit-promotion-decision.md`](../architecture/memory-router-revisit-promotion-decision.md).

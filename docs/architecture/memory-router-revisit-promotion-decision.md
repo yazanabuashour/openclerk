@@ -9,7 +9,7 @@ decision_owner: platform
 
 ## Status
 
-Accepted: defer for guidance/eval repair. Do not promote a public memory,
+Accepted: keep as reference pressure. Do not promote a public memory,
 remember/recall, or autonomous router surface from the refreshed evidence.
 
 Evidence:
@@ -30,15 +30,14 @@ The current public surface remains:
 - `openclerk retrieval`
 
 Capability path: no promotion. The scripted-control row ran 26 tool/command
-calls, 5 assistant calls, and 60.49s wall time. It failed as
-`skill_guidance_or_eval_coverage`, not `capability_gap`: runner-visible
-memory/router evidence existed, but the final answer did not satisfy the full
-decision contract.
+calls, 7 assistant calls, and 45.43s wall time. It completed with
+classification `none`, preserving canonical memory/router authority, source
+refs, provenance, synthesis freshness, and bypass boundaries.
 
-Ergonomics path: defer. The natural-intent row failed as `ergonomics_gap` with
-0 tool/command calls, 2 assistant calls, and 19.53s wall time. That shows
-natural UX/reliability pressure, but a single natural failure plus a scripted
-answer-contract failure is not enough to promote a new surface.
+Ergonomics path: keep as reference. The natural-intent row ran 26 tool/command
+calls, 5 assistant calls, and 66.91s wall time. It completed with
+classification `none`, showing the existing workflow can handle the natural
+revisit question after guidance/eval repair.
 
 Validation controls passed final-answer-only for missing document path,
 negative limit, unsupported lower-level workflow, and unsupported transport.
@@ -53,13 +52,13 @@ No bypass risk was observed in the selected rows.
 | Kill | The candidate creates independent memory authority, hides citations/source refs, hides provenance or freshness, weakens canonical markdown authority, silently routes across sources, or encourages bypasses. |
 | Keep as reference | Existing document/retrieval workflows are sufficient enough, natural UX is acceptable, and the lane remains useful benchmark pressure. |
 
-The current decision is **defer for guidance/eval repair**. No implementation
+The current decision is **keep as reference pressure**. No implementation
 issue is authorized.
 
 ## Follow-Up
 
-Future work may tighten skill guidance, prompts, or verifier wording and rerun
-the targeted lane. Any future promotion decision must answer both:
+Future work may rerun the targeted lane when memory/router evidence changes.
+Any future promotion decision must answer both:
 
 - Can current primitives express memory and autonomous routing safely?
 - Is the current UX acceptable enough to keep without a promoted surface?

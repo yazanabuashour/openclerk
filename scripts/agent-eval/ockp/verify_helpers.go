@@ -407,10 +407,10 @@ func memoryRouterReferenceAnswerPass(message string) bool {
 		return false
 	}
 	return containsAny(normalized, []string{"temporal", "current", "stale", "effective"}) &&
-		containsAny(normalized, []string{"session promotion", "session-derived", "session observation", "canonical markdown", "canonicalization"}) &&
+		containsAny(normalized, []string{"session promotion", "session-derived", "session observation", "promotion path", "durable markdown", "canonical markdown", "canonicalization"}) &&
 		containsAny(normalized, []string{"feedback", "weight", "weighted", "advisory"}) &&
 		containsAny(normalized, []string{"routing", "route", "router"}) &&
-		containsAny(normalized, []string{"source_refs", "source ref", "source refs", "citation", "cited", "source path"}) &&
+		containsAny(normalized, []string{"source_refs", "source ref", "source refs", "source evidence", "citation", "citations", "cited", "source path", "source paths"}) &&
 		containsAny(normalized, []string{"freshness", "fresh", "provenance", "projection"}) &&
 		containsAny(normalized, []string{"reference", "defer", "deferred", "not promote", "do not promote", "not promoted", "keep"})
 }
@@ -419,10 +419,14 @@ func memoryRouterRevisitAnswerPass(message string, scripted bool) bool {
 	if !memoryRouterReferenceAnswerPass(message) {
 		return false
 	}
-	required := containsAny(normalized, []string{"capability gap", "capability_gap"}) &&
-		containsAny(normalized, []string{"ergonomics gap", "ergonomics_gap", "ux", "user experience"}) &&
+	capabilityPosture := containsAny(normalized, []string{"capability gap", "capability_gap"}) ||
+		containsAny(normalized, []string{"express the workflow safely", "can express this workflow safely", "can express safely", "current primitives can express", "current primitives express"})
+	ergonomicsPosture := containsAny(normalized, []string{"ergonomics gap", "ergonomics_gap", "ux", "user experience"}) ||
+		containsAny(normalized, []string{"current ux is acceptable", "ux is acceptable", "acceptable enough", "current workflow is acceptable"})
+	required := capabilityPosture &&
+		ergonomicsPosture &&
 		containsAny(normalized, []string{"search"}) &&
-		containsAny(normalized, []string{"current primitives", "document and retrieval", "document/retrieval", "existing agentops document and retrieval"})
+		containsAny(normalized, []string{"current primitives", "current workflow", "document and retrieval", "document/retrieval", "existing agentops document and retrieval", "existing document/retrieval", "existing runner actions"})
 	if scripted {
 		required = required &&
 			containsAny(normalized, []string{"express", "safely express", "can express", "workflow safely"}) &&

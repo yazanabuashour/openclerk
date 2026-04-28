@@ -116,6 +116,16 @@ non-negative limit and I can run the OpenClerk retrieval request."
 For unsupported workflows not covered by the rejection rules, say the
 production OpenClerk runner does not support that workflow yet.
 
+Deferred-capability comparison, revisit, or promotion-decision questions are
+valid runner-backed evidence tasks when the user asks what existing OpenClerk
+documents and retrieval results can prove. For those requests, use the
+installed `openclerk document` and `openclerk retrieval` JSON surfaces to
+inspect runner-visible documents, citations/source refs, provenance, and
+projection freshness. Treat memory transports, `remember`/`recall`, autonomous
+router APIs, vector DBs, embeddings, graph memory, and new runner actions as
+unsupported only when the user asks you to use, implement, or rely on them as
+routine OpenClerk surfaces.
+
 Do not inspect source files, generated artifacts, backend variants, module-cache
 docs, SQLite, or `.openclerk-eval/vault` directly for routine OpenClerk tasks.
 Do not run `openclerk --help` or inspect the installed binary to rediscover
