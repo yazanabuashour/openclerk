@@ -20,6 +20,7 @@ migrations, or native video acquisition.
 Evidence:
 
 - [`video-youtube-source-ingestion-adr.md`](video-youtube-source-ingestion-adr.md)
+- [`video-transcript-acquisition-design.md`](video-transcript-acquisition-design.md)
 - [`../evals/video-youtube-ingestion-toolchain-comparison-poc.md`](../evals/video-youtube-ingestion-toolchain-comparison-poc.md)
 - [`../evals/video-youtube-canonical-source-note-pressure.md`](../evals/video-youtube-canonical-source-note-pressure.md)
 - [`../evals/results/ockp-video-youtube-canonical-source-note.md`](../evals/results/ockp-video-youtube-canonical-source-note.md)
@@ -115,6 +116,12 @@ The following gates remain deferred for later acquisition work:
 - remote transcript API and remote extraction policy
 - richer timestamp-span citation mapping
 - raw media storage policy, if ever needed
+
+The coordinated design for the first four deferred gates is recorded in
+[`video-transcript-acquisition-design.md`](video-transcript-acquisition-design.md).
+That design preserves the current v1 boundary: supplied transcripts are
+implemented, while native acquisition remains unsupported until a separate
+promotion decision and implementation Beads name an exact surface.
 
 If these gates cannot preserve authority, citations, provenance, freshness,
 privacy, local-first operation, and the no-bypass contract, defer or kill the

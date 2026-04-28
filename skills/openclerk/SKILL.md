@@ -244,6 +244,10 @@ provenance. The source note lives under `sources/**/*.md`; optional metadata
 sidecars live under `assets/**/*.json`. Do not use `yt-dlp`, `ffmpeg`, local
 STT, transcript APIs, Gemini extraction, native media downloads, direct vault
 inspection, direct file edits, or SQLite as substitutes for runner JSON.
+Future timestamp-span, platform-caption, local-STT, and remote-transcript
+policies are design-only until a promoted implementation ships; routine
+requests for those acquisition paths remain unsupported and must not be
+implemented through external tools or bypasses.
 
 For source-linked synthesis, run `search`, list `synthesis/`, get the existing
 candidate before editing, and prefer `replace_section` or `append_document`

@@ -9,6 +9,8 @@ behavior, or shipped skill behavior.
 
 The governing ADR is
 [`../architecture/video-youtube-source-ingestion-adr.md`](../architecture/video-youtube-source-ingestion-adr.md).
+Follow-up acquisition design is recorded in
+[`../architecture/video-transcript-acquisition-design.md`](../architecture/video-transcript-acquisition-design.md).
 The targeted reduced report is
 [`results/ockp-video-youtube-canonical-source-note.md`](results/ockp-video-youtube-canonical-source-note.md).
 

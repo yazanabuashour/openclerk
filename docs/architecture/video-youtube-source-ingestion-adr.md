@@ -19,6 +19,7 @@ Supporting evidence:
 - [`../evals/video-youtube-canonical-source-note-pressure.md`](../evals/video-youtube-canonical-source-note-pressure.md)
 - [`../evals/results/ockp-video-youtube-canonical-source-note.md`](../evals/results/ockp-video-youtube-canonical-source-note.md)
 - [`video-youtube-ingestion-promotion-decision.md`](video-youtube-ingestion-promotion-decision.md)
+- [`video-transcript-acquisition-design.md`](video-transcript-acquisition-design.md)
 
 ## Context
 
@@ -116,3 +117,9 @@ or ergonomics-gap pressure and a promotion decision names the exact request
 shape, response shape, dependency policy, privacy model, transcript provenance
 contract, citation mapping, update behavior, failure modes, compatibility
 rules, and follow-up implementation Beads.
+
+The shared future acquisition design is recorded in
+[`video-transcript-acquisition-design.md`](video-transcript-acquisition-design.md).
+It defines timestamp-span citation enrichment and provenance policy for local
+platform captions, local STT, and remote transcript APIs without authorizing
+native acquisition behavior.

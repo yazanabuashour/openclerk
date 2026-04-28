@@ -88,6 +88,12 @@ proves `ingest_video_url` create/update behavior, transcript provenance,
 citation-bearing search, same-hash no-op behavior, changed-transcript stale
 synthesis visibility, and external-tool bypass rejection.
 
+Future timestamp-span citations, platform caption retrieval, local STT, and
+remote transcript API policies are design-only in
+`docs/architecture/video-transcript-acquisition-design.md`. Release notes,
+skills, and smoke tests must not imply those acquisition paths are available
+until a later promoted implementation ships them.
+
 Committed reports and docs must use repo-relative artifact paths. Raw eval log
 references, when included in reduced reports, must use neutral placeholders
 such as `<run-root>/<variant>/<scenario>/turn-N/events.jsonl` rather than

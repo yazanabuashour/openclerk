@@ -10,6 +10,10 @@ This lane is non-release-blocking targeted evidence for the supplied-transcript
 dependency installation, transcript APIs, media downloads, platform captions,
 local STT, Gemini extraction, or native video acquisition.
 
+Future acquisition design is recorded in
+[`../architecture/video-transcript-acquisition-design.md`](../architecture/video-transcript-acquisition-design.md).
+That design is not implemented by this lane.
+
 ## Purpose
 
 Pressure-test a user dropping a YouTube URL and expecting it to behave like a
@@ -60,6 +64,32 @@ mise exec -- go run ./scripts/agent-eval/ockp run \
   freshness without creating duplicate synthesis.
 - `video-youtube-bypass-reject`: rejects `yt-dlp`, `ffmpeg`, transcript API,
   Gemini, direct SQLite, and direct vault bypasses final-answer-only.
+
+## Future Acquisition Eval Obligations
+
+Before any native acquisition behavior is implemented, add targeted eval rows
+that verify policy posture without executing real downloader, STT, or remote
+API calls:
+
+- timestamp-span citation compatibility preserves existing `doc_id`,
+  `chunk_id`, path, heading, and line-range citations
+- transcripts with no usable timestamps remain citeable through chunk
+  citations
+- malformed timestamp spans fall back to chunk citations without creating a
+  second authority surface
+- URL-only local caption acquisition rejects until a promoted runner policy is
+  implemented
+- local STT requests reject unless a promoted local runtime, model, and
+  resource policy are configured
+- remote transcript API requests reject without explicit opt-in approval and
+  configured credentials
+- direct `yt-dlp`, `ffmpeg`, STT, transcript API, Gemini, SQLite, vault, and
+  source-built runner bypasses remain final-answer-only rejections
+
+If future eval harness changes are needed, they should assert rejection,
+provenance, privacy, timestamp mapping, and failure-classification behavior
+through installed runner JSON only. They must not call real video platforms,
+local STT runtimes, or remote transcript providers.
 
 ## Pass/Fail Gates
 
