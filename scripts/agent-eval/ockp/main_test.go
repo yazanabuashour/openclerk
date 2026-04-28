@@ -888,12 +888,6 @@ func TestExecuteRunLabelsSynthesisCompileLaneAsNonReleaseBlocking(t *testing.T) 
 		if job.Scenario.ID == synthesisCompileScriptedScenarioID {
 			resultMetrics = metrics{AssistantCalls: 8, ToolCalls: 48, CommandExecutions: 48, EventTypeCounts: map[string]int{}}
 		}
-		if job.Scenario.ID == "negative-limit-reject" {
-			passed = false
-			status = "failed"
-			resultMetrics = metrics{AssistantCalls: 2, ToolCalls: 2, CommandExecutions: 2, EventTypeCounts: map[string]int{}}
-			verification = verificationResult{Passed: false, DatabasePass: false, AssistantPass: true, Details: "expected no tools and at most one assistant answer"}
-		}
 		return jobResult{
 			Variant:       job.Variant,
 			Scenario:      job.Scenario.ID,
@@ -923,8 +917,8 @@ func TestExecuteRunLabelsSynthesisCompileLaneAsNonReleaseBlocking(t *testing.T) 
 	if report.TargetedLaneSummary == nil {
 		t.Fatal("synthesis compile report missing targeted lane summary")
 	}
-	if report.TargetedLaneSummary.Decision != "defer_for_guidance_or_eval_repair" {
-		t.Fatalf("decision = %q, want defer_for_guidance_or_eval_repair", report.TargetedLaneSummary.Decision)
+	if report.TargetedLaneSummary.Decision != "defer_compile_synthesis" {
+		t.Fatalf("decision = %q, want defer_compile_synthesis", report.TargetedLaneSummary.Decision)
 	}
 	classifications := map[string]targetedScenarioClassification{}
 	for _, row := range report.TargetedLaneSummary.ScenarioClassifications {
@@ -939,8 +933,8 @@ func TestExecuteRunLabelsSynthesisCompileLaneAsNonReleaseBlocking(t *testing.T) 
 	if classifications["missing-document-path-reject"].EvidencePosture != "validation control stayed final-answer-only" {
 		t.Fatalf("validation evidence posture = %q, want validation posture", classifications["missing-document-path-reject"].EvidencePosture)
 	}
-	if classifications["negative-limit-reject"].FailureClassification != "skill_guidance_or_eval_coverage" {
-		t.Fatalf("negative-limit classification = %q, want skill_guidance_or_eval_coverage", classifications["negative-limit-reject"].FailureClassification)
+	if classifications["negative-limit-reject"].EvidencePosture != "validation control stayed final-answer-only" {
+		t.Fatalf("negative-limit evidence posture = %q, want validation posture", classifications["negative-limit-reject"].EvidencePosture)
 	}
 	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-synthesis-compile-revisit-pressure-test.md"))
 	if err != nil {
@@ -949,9 +943,8 @@ func TestExecuteRunLabelsSynthesisCompileLaneAsNonReleaseBlocking(t *testing.T) 
 	for _, want := range []string{
 		"Lane: `" + synthesisCompileLaneName + "`",
 		"Release blocking: `false`",
-		"Decision: `defer_for_guidance_or_eval_repair`",
+		"Decision: `defer_compile_synthesis`",
 		"validation control stayed final-answer-only",
-		"validation pressure did not stay final-answer-only",
 	} {
 		if !strings.Contains(string(markdown), want) {
 			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
@@ -1624,7 +1617,7 @@ Knowledge Configuration v1 accepted AgentOps surface keeps canonical markdown do
 }
 
 func TestPromptInputPreflightFlagsOpenClerkAgentsInstructions(t *testing.T) {
-	clean := "### Project Skills\n- OpenClerk: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner. Bootstrap no-tools rule for routine OpenClerk requests - if required fields are missing, if creating or updating a document but document path, title, or body is missing, this description is complete; respond with exactly one no-tools assistant answer that names the missing fields and asks the user to provide them. Do not open this skill file, run commands, use tools, call the runner, or inspect files for those validation cases. If a numeric limit is negative such as limit -3, or if the user asks to bypass the runner through SQLite, HTTP, MCP, legacy or source-built paths, or unsupported transports, reject final-answer-only without opening this skill file, running commands, or using tools. For valid create or update requests, use only openclerk document or openclerk retrieval JSON results; never use rg --files, find, ls, direct vault inspection, direct file edits, or repo search to verify routine work. (file: /tmp/repo/.agents/skills/openclerk/SKILL.md)\n"
+	clean := "### Project Skills\n- OpenClerk: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner. Bootstrap no-tools rule for routine requests - if required fields are missing, if creating or updating a document but document path, title, or body is missing, or if source-ingestion fields are missing, this description is complete; Do not open this skill file, run commands, use tools, or call the runner; respond with exactly one no-tools assistant answer to name the missing fields and ask the user to provide them. Negative numeric limit -3, SQLite, HTTP, MCP, legacy or source-built paths, unsupported transports, direct vault inspection, repo search, rg --files, find, ls, or requests to bypass the runner also require no skill-file open, commands, tools, or runner call; answer once that the limit is invalid or the workflow is unsupported. For valid work, use only openclerk document or openclerk retrieval JSON. (file: /tmp/repo/.agents/skills/openclerk/SKILL.md)\n"
 	if !containsOpenClerkSkillDiscovery(clean) {
 		t.Fatalf("clean skill discovery is missing the OpenClerk skill marker: %s", clean)
 	}

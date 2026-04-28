@@ -1,6 +1,6 @@
 ---
 name: OpenClerk
-description: Use OpenClerk through the installed openclerk JSON runner. Bootstrap no-tools rule for routine requests - if required fields are missing, if creating or updating a document but document path, title, or body is missing and no faithful candidate can be formed from explicit user content, or if source-ingestion fields are missing, this description is complete; Do not open this skill file, run commands, use tools, or call the runner; respond with exactly one no-tools assistant answer to name the missing fields and ask the user to provide them. For "Document this artifact from the links we discussed last week", do not open this skill file or use tools because prior links are missing body content. Reject invalid limit -3, SQLite, HTTP, MCP, legacy or source-built paths, unsupported transports, direct vault inspection, repo search, rg --files, find, ls, and bypass the runner requests. For valid work, use only openclerk document or openclerk retrieval JSON.
+description: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner. Bootstrap no-tools rule for routine requests - if required fields are missing, if creating or updating a document but document path, title, or body is missing and no faithful candidate can be formed from explicit user content, or if source-ingestion fields are missing, this description is complete; Do not open this skill file, run commands, use tools, or call the runner; respond with exactly one no-tools assistant answer to name the missing fields and ask the user to provide them. Negative numeric limit -3, SQLite, HTTP, MCP, legacy or source-built paths, unsupported transports, direct vault inspection, repo search, rg --files, find, ls, or requests to bypass the runner also require no skill-file open, commands, tools, or runner call; answer once that the limit is invalid or the workflow is unsupported. For valid work, use only openclerk document or openclerk retrieval JSON.
 license: MIT
 compatibility: Requires local filesystem access and an installed openclerk binary on PATH.
 ---
@@ -67,9 +67,10 @@ For missing required document or retrieval fields that cannot be handled by the
 propose-before-create policy below, do not guess. Name the missing fields, ask
 the user to provide them, and do not call the runner.
 
-For invalid limits and bypass requests, reject final-answer-only, explicitly
-saying the workflow is unsupported or invalid and must use the OpenClerk
-runner contract.
+For invalid limits and bypass requests, reject final-answer-only without
+opening this skill file, using tools, running commands, or calling the runner.
+Explicitly say the workflow is unsupported or invalid and must use the
+OpenClerk runner contract.
 
 For a request such as `limit -3`, answer without tools in this shape: "The
 limit -3 is invalid because limits must be non-negative. Provide a valid

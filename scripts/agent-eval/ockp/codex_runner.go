@@ -486,17 +486,29 @@ func installVariant(repoRoot string, repoDir string, variant string) error {
 }
 func preflightEvalContext(repoRoot string, repoDir string, runDir string, paths evalPaths, cache cacheConfig, codexBin string) error {
 	sourceSkill := filepath.Join(repoRoot, "skills", "openclerk", "SKILL.md")
-	installedSkill := filepath.Join(repoDir, ".agents", "skills", "openclerk", "SKILL.md")
+	projectSkill := filepath.Join(repoDir, ".agents", "skills", "openclerk", "SKILL.md")
+	effectivePaths := evalPathsFor(runDir, paths, cache)
+	codexHomeSkill := filepath.Join(effectivePaths.CodexHome, "skills", "openclerk", "SKILL.md")
 	sourceBytes, err := os.ReadFile(sourceSkill)
 	if err != nil {
 		return err
 	}
-	installedBytes, err := os.ReadFile(installedSkill)
+	projectBytes, err := os.ReadFile(projectSkill)
 	if err != nil {
 		return err
 	}
-	if !bytes.Equal(sourceBytes, installedBytes) {
-		return errors.New("installed production skill does not match shipped SKILL.md")
+	if !bytes.Equal(sourceBytes, projectBytes) {
+		return errors.New("installed project production skill does not match shipped SKILL.md")
+	}
+	if err := copyDir(filepath.Dir(sourceSkill), filepath.Dir(codexHomeSkill)); err != nil {
+		return fmt.Errorf("install eval CODEX_HOME openclerk skill: %w", err)
+	}
+	codexHomeBytes, err := os.ReadFile(codexHomeSkill)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(sourceBytes, codexHomeBytes) {
+		return errors.New("installed CODEX_HOME production skill does not match shipped SKILL.md")
 	}
 	if _, err := os.Stat(filepath.Join(repoDir, "AGENTS.md")); !os.IsNotExist(err) {
 		if err == nil {
@@ -516,11 +528,9 @@ func preflightEvalContext(repoRoot string, repoDir string, runDir string, paths 
 	if !containsOpenClerkSkillDiscovery(rendered) {
 		return errors.New("rendered prompt is missing openclerk skill discovery")
 	}
-	if !strings.Contains(rendered, ".agents/skills/openclerk/SKILL.md") {
-		return errors.New("rendered prompt does not point openclerk to the installed project skill")
-	}
-	if strings.Contains(rendered, filepath.ToSlash(filepath.Join(evalPathsFor(runDir, paths, cache).CodexHome, "skills", "openclerk", "SKILL.md"))) {
-		return errors.New("rendered prompt exposes a competing CODEX_HOME openclerk skill")
+	if !strings.Contains(rendered, "codex-home/skills/openclerk/SKILL.md") &&
+		!strings.Contains(rendered, ".agents/skills/openclerk/SKILL.md") {
+		return errors.New("rendered prompt does not point openclerk to an installed eval skill")
 	}
 	if !containsOpenClerkBootstrapRejectionGuidance(rendered) {
 		return errors.New("rendered prompt is missing openclerk bootstrap rejection guidance")
@@ -537,8 +547,10 @@ func containsOpenClerkBootstrapRejectionGuidance(rendered string) bool {
 	return strings.Contains(rendered, openClerkBootstrapRejectionText) &&
 		strings.Contains(rendered, "required fields are missing") &&
 		strings.Contains(rendered, "creating or updating a document but document path, title, or body is missing") &&
-		strings.Contains(rendered, "limit -3") &&
-		strings.Contains(rendered, "bypass the runner")
+		strings.Contains(rendered, "name the missing fields") &&
+		strings.Contains(rendered, "Negative numeric limit -3") &&
+		strings.Contains(rendered, "SQLite, HTTP, MCP, legacy or source-built paths, unsupported transports") &&
+		strings.Contains(rendered, "requests to bypass the runner also require no skill-file open, commands, tools, or runner call")
 }
 func containsOpenClerkAgentsInstructions(rendered string) bool {
 	const marker = "# AGENTS.md instructions"

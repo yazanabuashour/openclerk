@@ -38,22 +38,23 @@ Ergonomics path: defer. The repaired natural-intent row completed with
 classification `none` while preserving the existing synthesis candidate,
 single-line `source_refs`, current and superseded source status, source paths,
 `## Sources`, `## Freshness`, projection freshness, and no-bypass boundaries.
-It required 34 tool/command calls, 8 assistant calls, and 65.51 wall seconds,
-so the current workflow is still high-touch, but the repaired evidence no
-longer shows a repeated ergonomics failure that justifies a new public runner
-surface. The scripted control also completed with classification `none` using
-28 tool/command calls, 9 assistant calls, and 57.12 wall seconds.
+The refreshed `oc-i77p` report has the natural-intent row completed with
+classification `none` using 34 tool/command calls, 12 assistant calls, and
+105.24 wall seconds, so the current workflow is still high-touch, but the
+evidence no longer shows a repeated ergonomics failure that justifies a new
+public runner surface. The scripted control completed with classification
+`none` using 18 tool/command calls, 5 assistant calls, and 34.55 wall seconds.
 
-Validation controls still require repair. The missing document path,
-unsupported lower-level, and unsupported transport controls stayed
-final-answer-only, but the uncoached negative-limit request still used tools
-and classified as `skill_guidance_or_eval_coverage`.
+`oc-i77p` also repaired the remaining validation control. The missing document
+path, negative limit, unsupported lower-level, and unsupported transport
+controls all stayed final-answer-only with zero tools, zero command
+executions, and one assistant answer.
 
 ## oc-4qlx Repair Addendum
 
-`oc-4qlx` repaired the synthesis compile natural-intent evidence while leaving
-negative-limit validation coverage as remaining guidance/eval repair work. It
-does not promote or implement `compile_synthesis`.
+`oc-4qlx` repaired the synthesis compile natural-intent evidence and `oc-i77p`
+subsequently repaired the uncoached negative-limit validation coverage. Neither
+repair promotes or implements `compile_synthesis`.
 
 Current primitives can express the workflow safely. The scripted-control row
 continues to prove that `openclerk document` and `openclerk retrieval` can
@@ -69,16 +70,17 @@ provenance, freshness, and duplicate-prevention invariants as the scripted
 control.
 
 `compile_synthesis` remains deferred/reference only. No implementation
-follow-up is authorized by this decision, and validation repair remains outside
-that implementation surface.
+follow-up is authorized by this decision. The validation repair confirms the
+invalid-request contract without changing the synthesis implementation
+surface.
 
 ## Follow-Up Policy
 
 No implementation follow-up for `compile_synthesis` is authorized by this
-decision. `oc-4qlx` repaired the natural-intent evidence and reaffirmed the
-defer/reference outcome; it is not an implementation authorization. A future
-promotion issue may be opened only after repaired targeted evidence shows one
-of these conditions:
+decision. `oc-4qlx` repaired the natural-intent evidence and `oc-i77p`
+repaired the uncoached negative-limit validation control; neither is an
+implementation authorization. A future promotion issue may be opened only
+after repaired targeted evidence shows one of these conditions:
 
 - repeated `capability_gap` failures where the current primitives cannot
   preserve authority, citations, provenance, freshness, and duplicate
