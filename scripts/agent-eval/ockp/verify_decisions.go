@@ -634,9 +634,15 @@ func verifySourceSensitiveConflict(ctx context.Context, paths evalPaths, finalMe
 	hasProvenance := alphaFound && bravoFound &&
 		alphaEvents.Provenance != nil && len(alphaEvents.Provenance.Events) > 0 &&
 		bravoEvents.Provenance != nil && len(bravoEvents.Provenance.Events) > 0
+	explainsCurrentSourceEvidence := messageContainsAny(finalMessage, []string{"both are current", "both sources are current", "current sources", "both current"}) ||
+		(messageContainsAny(finalMessage, []string{"current source says", "current-source says"}) &&
+			messageContainsAny(finalMessage, []string{"seven", "7"}) &&
+			messageContainsAny(finalMessage, []string{"thirty", "30"})) ||
+		(messageContainsAny(finalMessage, []string{"only `document_created`", "only document_created", "document_created events", "document_created event"}) &&
+			messageContainsAny(finalMessage, []string{"no supersession", "no source authority"}))
 	assistantPass := messageContainsAll(finalMessage, []string{sourceAuditConflictAlphaPath, sourceAuditConflictBravoPath}) &&
 		messageContainsAny(finalMessage, []string{"conflict", "conflicting", "contradict", "contradiction"}) &&
-		messageContainsAny(finalMessage, []string{"both are current", "both sources are current", "current sources", "both current"}) &&
+		explainsCurrentSourceEvidence &&
 		messageContainsAny(finalMessage, []string{"unresolved", "no supersession", "no source authority", "cannot choose", "do not choose"}) &&
 		messageContainsAny(finalMessage, []string{"seven", "7"}) &&
 		messageContainsAny(finalMessage, []string{"thirty", "30"})

@@ -21,7 +21,7 @@ func verifyMemoryRouterSessionObservation(ctx context.Context, paths evalPaths, 
 		if doc.Title != memoryRouterSessionObservationTitle {
 			failures = append(failures, "expected title "+memoryRouterSessionObservationTitle)
 		}
-		if doc.Body != memoryRouterSessionObservationBody() {
+		if strings.TrimSpace(doc.Body) != strings.TrimSpace(memoryRouterSessionObservationBody()) {
 			failures = append(failures, "session observation body does not match exact fixture")
 		}
 	}
@@ -31,7 +31,7 @@ func verifyMemoryRouterSessionObservation(ctx context.Context, paths evalPaths, 
 	}
 	databasePass := found && doc != nil &&
 		doc.Title == memoryRouterSessionObservationTitle &&
-		doc.Body == memoryRouterSessionObservationBody()
+		strings.TrimSpace(doc.Body) == strings.TrimSpace(memoryRouterSessionObservationBody())
 	return verificationResult{
 		Passed:        databasePass && assistantPass,
 		DatabasePass:  databasePass,

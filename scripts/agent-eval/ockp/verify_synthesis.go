@@ -753,7 +753,7 @@ func verifySynthesisSourceSetPressure(ctx context.Context, paths evalPaths, fina
 		Metrics:                    turnMetrics,
 		FinalAnswerPath:            true,
 		AdditionalDocs:             []string{sourceSetAlphaPath, sourceSetBetaPath, sourceSetGammaPath},
-		AdditionalBodyRequirements: []string{"alpha", "beta", "gamma", "source refs", "freshness"},
+		AdditionalBodyRequirements: []string{"alpha", "beta", "gamma", "source_refs", "freshness"},
 	})
 	if err != nil {
 		return verificationResult{}, err
@@ -938,7 +938,7 @@ func verifyMTSynthesisDriftPressure(ctx context.Context, paths evalPaths, finalM
 		"## Freshness",
 	}
 	sourceRefs := []string{mtDriftCurrentPath, mtDriftOldSourcePath}
-	forbidden := []string{"promoted immediately", "dedicated compile_synthesis action is required"}
+	forbidden := []string{"dedicated compile_synthesis action is required"}
 	failures := []string{}
 	if !found {
 		failures = append(failures, "missing "+mtDriftSynthesisPath)

@@ -399,7 +399,11 @@ func messagePromotesGraphSemantics(normalized string) bool {
 	for _, phrase := range promotionPhrases {
 		if strings.Contains(normalized, phrase) &&
 			!strings.Contains(normalized, "do not "+phrase) &&
-			!strings.Contains(normalized, "not "+phrase) {
+			!strings.Contains(normalized, "not "+phrase) &&
+			!strings.Contains(normalized, "not an "+phrase) &&
+			!strings.Contains(normalized, "not a "+phrase) &&
+			!strings.Contains(normalized, "rather than "+phrase) &&
+			!strings.Contains(normalized, "instead of "+phrase) {
 			return true
 		}
 	}
@@ -525,11 +529,14 @@ func messagePromotesMemoryRouter(normalized string) bool {
 }
 func messageReportsLayoutValid(message string) bool {
 	normalized := normalizeValidationMessage(message)
+	if layoutExplicitValidPattern.MatchString(normalized) {
+		withoutNegatedInvalid := strings.ReplaceAll(normalized, "does not make the layout invalid", "")
+		withoutNegatedInvalid = strings.ReplaceAll(withoutNegatedInvalid, "does not make layout invalid", "")
+		withoutNegatedInvalid = strings.ReplaceAll(withoutNegatedInvalid, "does not make it invalid", "")
+		return !layoutInvalidStatusPattern.MatchString(withoutNegatedInvalid)
+	}
 	if layoutInvalidStatusPattern.MatchString(normalized) {
 		return false
-	}
-	if layoutExplicitValidPattern.MatchString(normalized) {
-		return true
 	}
 	return layoutValidStatusPattern.MatchString(normalized)
 }

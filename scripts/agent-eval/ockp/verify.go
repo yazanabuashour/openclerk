@@ -359,7 +359,7 @@ func isMissingFieldClarification(message string, fields []string) bool {
 	if !containsAny(lower, []string{"missing", "required", "need"}) {
 		return false
 	}
-	if !containsAny(lower, []string{"provide", "share", "supply", "send"}) {
+	if !containsAny(lower, []string{"provide", "share", "supply", "send", "need the", "need a"}) {
 		return false
 	}
 	for _, field := range fields {

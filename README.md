@@ -23,7 +23,7 @@ sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/latest/
 For a pinned release:
 
 ```bash
-OPENCLERK_VERSION=v0.2.1 sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/v0.2.1/install.sh)"
+OPENCLERK_VERSION=v0.2.2 sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/v0.2.2/install.sh)"
 ```
 
 A complete install has two parts:
@@ -123,7 +123,7 @@ test -z "$(gofmt -l $(git ls-files '*.go'))"
 mise exec -- golangci-lint run
 mise exec -- go test ./...
 mise exec -- ./scripts/validate-agent-skill.sh skills/openclerk
-mise exec -- ./scripts/validate-release-docs.sh v0.2.1
+mise exec -- ./scripts/validate-release-docs.sh v0.2.2
 ```
 
 `golangci-lint` is pinned by `mise.toml`; use `mise exec -- golangci-lint run`

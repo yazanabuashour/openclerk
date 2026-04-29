@@ -13,7 +13,7 @@ production gate artifact.
 
 - Variant: `production`
 - Gate: passing
-- Scenario coverage: 18/18 production scenarios passed
+- Scenario coverage: 30/30 production scenarios passed
 - Recommendation: use the AgentOps runner for routine OpenClerk operations
 - Raw logs: `<run-root>/<variant>/<scenario>/turn-N/events.jsonl`
 
