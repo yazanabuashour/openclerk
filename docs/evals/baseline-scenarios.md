@@ -16,7 +16,11 @@ explicit promote/defer/kill/reference decision before any implementation issue
 is filed. Promotion evidence can be a capability gap or an ergonomics gap; an
 expressible workflow may still justify promotion if targeted evidence shows it
 is too slow, too many steps, too scripted, too brittle, or too dependent on
-skill guidance for routine use.
+skill guidance for routine use. Defer/reference decisions must still run the
+taste review: distinguish read/fetch/inspect permission from durable-write
+approval, prefer natural extensions of existing runner actions when the input
+belongs there, and record completed-but-ceremonial passes as possible taste
+debt.
 
 ## Ergonomics Scorecard
 
@@ -34,10 +38,15 @@ alongside correctness:
   refs
 - authority, provenance, freshness, privacy, and bypass risks for any proposed
   surface
+- safety pass, capability pass, and UX quality as separate report conclusions
 
 Each lane should include a natural-user-intent scenario and a scripted-control
 scenario. The natural scenario measures UX; the scripted control verifies what
 the current primitives can do when the agent is given exact instructions.
+Passing both scenarios does not erase taste debt. If the workflow succeeds only
+through ceremony, high latency, high step count, exact prompt choreography, or
+surprising clarification turns, record UX quality separately from the safety
+and capability passes.
 
 ## Source-Grounded Retrieval
 

@@ -103,6 +103,34 @@ Reports include:
 
 Legacy source-built runner usage is counted only for executed source-tree command paths, not installed OpenClerk runner calls or documentation text containing command strings.
 
+## Targeted Report Template
+
+Targeted ADR, POC, eval, promotion, and deferred-capability reports should
+separate correctness from taste review. The reduced report or companion
+decision note should record three lenses:
+
+- **Safety pass:** whether the workflow preserved authority, citations,
+  provenance, freshness, local-first behavior, duplicate handling,
+  runner-only access, and approval-before-write.
+- **Capability pass:** whether current `openclerk document` and
+  `openclerk retrieval` primitives can technically express the workflow
+  without a new runner action, schema, storage behavior, transport, or public
+  API.
+- **UX quality:** whether the workflow is acceptable for routine use, or
+  whether it is taste debt because it completed only through high step count,
+  long latency, exact prompt choreography, repeated assistant turns, or
+  surprising clarification.
+
+A scenario can pass safety and capability while still recording UX quality as
+taste debt. That outcome supports follow-up audit, design, or eval work, but it
+does not authorize implementation without targeted evidence and an explicit
+promotion decision naming the exact surface and gates.
+
+Committed reports must continue to use repo-relative paths and neutral
+placeholders such as `<run-root>` for raw logs. This template guidance does not
+require a generated report JSON field, harness schema change, runner action, or
+storage migration.
+
 ## Scenario Coverage
 
 The `ockp` harness covers routine local knowledge-plane workflows:

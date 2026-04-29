@@ -10,7 +10,8 @@ When doing OpenClerk ADR, POC, eval, promotion, or deferred-capability decision 
 - Distinguish read/fetch/inspect permission from durable-write approval. A public user-provided URL can be enough to fetch through the runner; approval belongs at durable writes, privileged access, purchases/actions, or other irreversible changes.
 - Prefer extending the natural existing runner action when the input clearly belongs there, instead of declaring the adjacent UX unsupported.
 - Treat "completed but ceremonial" eval passes as possible taste debt when they require high step count, long latency, exact prompt choreography, or surprising clarification turns.
-- Do not use taste review to bypass safety: authority, citations, provenance, freshness, local-first behavior, duplicate handling, runner-only access, and approval-before-write still apply.
+- Record safety pass, capability pass, and UX quality separately when a report or decision needs to justify defer/reference.
+- Do not use taste review to bypass safety or evidence discipline: authority, citations, provenance, freshness, local-first behavior, duplicate handling, runner-only access, approval-before-write, and ADR/POC/eval/promotion decisions still apply.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker

@@ -59,17 +59,19 @@ decision note identify the exact promoted surface and its gates.
 
 ## Taste Review Checkpoint
 
-Before deferring a capability or keeping it as reference, run a qualitative
+Before any defer or keep-as-reference outcome is accepted, run a qualitative
 taste review in addition to the safety and capability checks. The review asks
 whether a normal user would reasonably expect a simpler OpenClerk surface and
-whether the current workflow is safe but surprisingly indirect.
+whether the current workflow is safe but surprisingly indirect. A decision note
+or targeted report should record the result even when the final outcome stays
+defer or reference.
 
 Use `oc-v1ed` as the reference correction: public HTML/web-page URLs became
 part of the existing `ingest_source_url` runner-owned intake surface, and a
-user-provided public URL became sufficient permission for fetch/inspect. The
-approval boundary stayed at durable writes, credentialed or private access,
-external egress beyond the configured runner policy, purchase or account
-actions, and irreversible mutation.
+user-provided public URL became sufficient permission for read, fetch, and
+inspect through the runner. The approval boundary stayed at durable writes,
+credentialed or private access, external egress beyond the configured runner
+policy, purchase or account actions, and irreversible mutation.
 
 The taste review should flag possible UX debt when:
 
@@ -86,7 +88,9 @@ Taste debt does not automatically authorize implementation. It creates
 follow-up audit, design, or eval backlog unless the targeted evidence and a
 promotion decision name the exact smoother surface and show that authority,
 citations, provenance, freshness, local-first operation, duplicate handling,
-runner-only access, and approval-before-write remain intact.
+runner-only access, and approval-before-write remain intact. In particular, a
+successful but ceremonial eval pass can justify more evaluation or design work,
+but not a runner action, schema, storage, or skill behavior change by itself.
 
 ## Required Invariants
 
@@ -125,6 +129,17 @@ is:
   any proposed surface
 - safety pass, capability pass, and UX quality as separate conclusions, so a
   technically passing workflow can still be recorded as taste debt
+
+Use these three conclusions consistently:
+
+- **Safety pass:** the workflow preserved authority, citations, provenance,
+  freshness, local-first operation, duplicate handling, runner-only access, and
+  approval-before-write.
+- **Capability pass:** current primitives can technically express the workflow
+  without a new public runner action, schema, storage behavior, or transport.
+- **UX quality:** the workflow is acceptable for routine use, or it is recorded
+  as taste debt because it is too ceremonial, high-touch, slow, brittle, or
+  guidance-dependent.
 
 Ergonomics promotion is not a shortcut around safety. A smoother surface should
 be killed or deferred if it creates a second truth system, hides provenance,

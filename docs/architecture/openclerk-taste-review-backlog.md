@@ -4,10 +4,10 @@
 
 Planning backlog created after `oc-v1ed`.
 
-This note records a process correction, not a new public API. It keeps the
-successful ADR, POC, eval, decision, and implementation workflow, while adding
-a clearer taste review for cases where OpenClerk is technically safe but
-unnecessarily awkward.
+This note records a process refinement after `oc-v1ed`, not a new public API.
+It keeps the successful ADR, POC, eval, decision, and implementation workflow,
+while adding a clearer taste review for cases where OpenClerk is technically
+safe but unnecessarily awkward.
 
 ## Baseline Lesson
 
@@ -53,7 +53,10 @@ Useful signals include:
 This lens does not weaken OpenClerk invariants. Authority, citations,
 provenance, projection freshness, local-first operation, duplicate handling,
 runner-only access, and approval-before-write still decide whether a smoother
-surface is acceptable.
+surface is acceptable. Taste review can identify audit, design, or eval
+backlog, but it does not authorize runner actions, storage migrations, schema
+changes, public APIs, or skill behavior changes without targeted eval evidence
+and an explicit promotion decision.
 
 ## Tracker Backlog
 
@@ -94,3 +97,8 @@ Update process docs so future eval reports can separately record:
 - safety pass: the workflow preserved invariants and rejected bypasses
 - capability pass: current primitives can technically express the workflow
 - UX quality: the workflow is or is not acceptable for routine use
+
+Reports may mark safety pass and capability pass while still recording UX
+quality as taste debt. Committed reports should keep repo-relative paths and
+neutral placeholders such as `<run-root>`; raw logs and machine-local paths
+remain out of committed artifacts.
