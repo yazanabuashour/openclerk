@@ -95,11 +95,23 @@ The default database is
 stores the configured markdown vault root. Override the database location with
 `OPENCLERK_DATABASE_PATH` or `--db`.
 
-For an existing vault, bind it once:
+When troubleshooting configuration after an upgrade or runner failure, inspect
+the effective database and vault paths before changing setup:
+
+```bash
+printf '%s\n' '{"action":"resolve_paths"}' | openclerk document
+printf '%s\n' '{"action":"inspect_layout"}' | openclerk document
+```
+
+For an existing vault, bind it once during setup or intentionally rebind it:
 
 ```bash
 openclerk init --vault-root <vault-root>
 ```
+
+Do not use `init` as routine repair for document or retrieval errors; use
+`resolve_paths` and `inspect_layout` first to confirm which database and
+configured vault root the runner is using.
 
 ## Eval Evidence
 

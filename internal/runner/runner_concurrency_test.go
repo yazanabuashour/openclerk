@@ -58,6 +58,47 @@ func TestResolvePathsUsesDatabaseAnchoredConfig(t *testing.T) {
 	}
 }
 
+func TestStoredVaultRootSurvivesRunnerReplacementAndRetiredEnv(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	vaultRoot := filepath.Join(t.TempDir(), "wiki")
+	initialized, err := runclient.InitializePaths(runclient.Config{DatabasePath: dbPath}, vaultRoot)
+	if err != nil {
+		t.Fatalf("initialize paths: %v", err)
+	}
+	if initialized.DatabasePath != dbPath || initialized.VaultRoot != vaultRoot {
+		t.Fatalf("initialized paths = %+v, want db %q vault %q", initialized, dbPath, vaultRoot)
+	}
+
+	t.Setenv("OPENCLERK_DATABASE_PATH", dbPath)
+	t.Setenv("XDG_DATA_HOME", filepath.Join(t.TempDir(), "changed-xdg"))
+	t.Setenv("OPENCLERK_DATA_DIR", filepath.Join(t.TempDir(), "retired-data"))
+	t.Setenv("OPENCLERK_VAULT_ROOT", filepath.Join(t.TempDir(), "retired-vault"))
+
+	resolved, err := runner.RunDocumentTask(context.Background(), runclient.Config{}, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionResolvePaths,
+	})
+	if err != nil {
+		t.Fatalf("resolve paths after replacement: %v", err)
+	}
+	if resolved.Paths == nil ||
+		resolved.Paths.DatabasePath != dbPath ||
+		resolved.Paths.VaultRoot != vaultRoot {
+		t.Fatalf("resolved paths = %+v, want db %q vault %q", resolved.Paths, dbPath, vaultRoot)
+	}
+
+	layout, err := runner.RunDocumentTask(context.Background(), runclient.Config{}, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionInspectLayout,
+	})
+	if err != nil {
+		t.Fatalf("inspect layout after replacement: %v", err)
+	}
+	if layout.Layout == nil ||
+		layout.Layout.Paths.DatabasePath != dbPath ||
+		layout.Layout.Paths.VaultRoot != vaultRoot {
+		t.Fatalf("layout paths = %+v, want db %q vault %q", layout.Layout, dbPath, vaultRoot)
+	}
+}
+
 func TestResolvePathsZeroConfigCreatesDefaultDatabaseAndVaultConfig(t *testing.T) {
 	t.Setenv("XDG_DATA_HOME", filepath.Join(t.TempDir(), "xdg"))
 	t.Setenv("OPENCLERK_DATABASE_PATH", "")

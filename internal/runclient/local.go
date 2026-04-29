@@ -64,7 +64,7 @@ func ResolvePaths(cfg Config) (Paths, error) {
 	databasePath = filepath.Clean(databasePath)
 	runtimeConfig, err := sqlite.ResolveRuntimeConfig(context.Background(), databasePath, filepath.Join(filepath.Dir(databasePath), defaultVaultDir))
 	if err != nil {
-		return Paths{}, err
+		return Paths{}, decorateRuntimeConfigError("resolve", databasePath, err)
 	}
 	return Paths{DatabasePath: databasePath, VaultRoot: runtimeConfig.VaultRoot}, nil
 }
@@ -91,9 +91,24 @@ func InitializePaths(cfg Config, vaultRoot string) (Paths, error) {
 	}
 	runtimeConfig, err := sqlite.InitializeRuntimeConfig(context.Background(), databasePath, vaultRoot, filepath.Join(dataDir, defaultVaultDir))
 	if err != nil {
-		return Paths{}, err
+		return Paths{}, decorateRuntimeConfigError("initialize", databasePath, err)
 	}
 	return Paths{DatabasePath: databasePath, VaultRoot: runtimeConfig.VaultRoot}, nil
+}
+
+func decorateRuntimeConfigError(operation string, databasePath string, err error) error {
+	if err == nil {
+		return nil
+	}
+	if strings.TrimSpace(databasePath) == "" {
+		return err
+	}
+	message := fmt.Sprintf(
+		"%s OpenClerk configuration for database %q: run {\"action\":\"resolve_paths\"} or {\"action\":\"inspect_layout\"} with openclerk document before init; use openclerk init --vault-root <vault-root> only for first-time binding or intentional rebinding",
+		operation,
+		databasePath,
+	)
+	return domain.InternalError(message, err)
 }
 
 func newRuntime(backend domain.BackendKind, cfg Config) (*Runtime, error) {

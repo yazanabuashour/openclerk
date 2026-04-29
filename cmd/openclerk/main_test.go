@@ -250,6 +250,34 @@ func TestRunnerRuntimeErrorExitsNonZero(t *testing.T) {
 	}
 }
 
+func TestRunnerConfigErrorIsActionable(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
+		t.Fatalf("create db dir: %v", err)
+	}
+	if err := os.WriteFile(dbPath, []byte("not a sqlite database"), 0o644); err != nil {
+		t.Fatalf("write corrupt db: %v", err)
+	}
+
+	var result runner.DocumentTaskResult
+	code, stderr := runJSON(t, []string{"document", "--db", dbPath}, `{"action":"resolve_paths"}`, &result)
+	if code == 0 {
+		t.Fatalf("exit = 0, want non-zero")
+	}
+	if !strings.Contains(stderr, dbPath) {
+		t.Fatalf("stderr = %q, want database path %q", stderr, dbPath)
+	}
+	if !strings.Contains(stderr, "resolve_paths") && !strings.Contains(stderr, "inspect_layout") {
+		t.Fatalf("stderr = %q, want diagnostic action hint", stderr)
+	}
+	if strings.Contains(stderr, "upsert runtime config") ||
+		strings.Contains(stderr, "initialize runtime config") {
+		t.Fatalf("stderr leaked raw runtime config message: %q", stderr)
+	}
+}
+
 func TestRunnerDBFlag(t *testing.T) {
 	t.Parallel()
 

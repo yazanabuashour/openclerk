@@ -50,6 +50,7 @@ command -v openclerk
 openclerk --version
 openclerk --help
 printf '%s\n' '{"action":"resolve_paths"}' | openclerk document
+printf '%s\n' '{"action":"inspect_layout"}' | openclerk document
 ```
 
 The valid runner domains are `document` and `retrieval`. A complete install
@@ -58,6 +59,11 @@ Release verification should confirm installed runner and skill alignment: the
 agent-facing examples must use the installed `openclerk document` and
 `openclerk retrieval` commands, not source-tree binaries, direct SQLite access,
 HTTP/MCP bypasses, or retired APIs.
+
+Use `resolve_paths` and `inspect_layout` before `openclerk init` when
+diagnosing an upgraded install or routine runner failure. `init --vault-root
+<vault-root>` is for first-time binding or intentional rebinding of an existing
+vault, not routine repair.
 
 For v0.2.x source URL update behavior, the release notes and skill examples
 should match this runner request shape:

@@ -40,10 +40,16 @@ openclerk retrieval
   tools, no commands, and no runner call. Name the missing field(s) or reject
   the invalid/unsupported workflow.
 
+For configuration diagnostics after upgrades or routine runner failures, run
+`resolve_paths` first, then `inspect_layout` when layout state matters. These
+show the effective database path, configured vault root, and convention-first
+layout state without rebinding configuration.
+
 If the user explicitly asks to initialize OpenClerk for an existing vault, run
-`openclerk init --vault-root <vault-root>`. This is setup work, not a routine
-knowledge task; do not use `init` to repair ordinary document or retrieval
-calls.
+`openclerk init --vault-root <vault-root>`. This is first-time setup or
+intentional rebinding, not a routine knowledge task; do not use `init` to
+repair ordinary document or retrieval calls before inspecting effective
+configuration.
 
 ## Lifecycle Quick Rules
 
@@ -169,10 +175,11 @@ optional `mode` (`create` default, or `update`). A `video` has `url`,
 Validation rejections are JSON results with `rejected: true` and
 `rejection_reason`; runtime failures exit non-zero and write errors to stderr.
 
-Use `inspect_layout` for configured layout questions and answer from `layout`
-JSON fields such as `mode`, `config_artifact_required`, `conventional_paths`,
-`document_kinds`, and `checks`. Do not inspect lower-level storage to diagnose
-routine layout problems.
+Use `resolve_paths` to confirm the effective database path and configured
+vault root. Use `inspect_layout` for configured layout questions and answer
+from `layout` JSON fields such as `mode`, `config_artifact_required`,
+`conventional_paths`, `document_kinds`, and `checks`. Do not inspect lower-level
+storage or run `init` to diagnose routine layout problems.
 
 Use `ingest_source_url` for HTTP/HTTPS PDF source ingestion. Create mode needs
 vault-relative `sources/*.md` and `assets/**/*.pdf` hints. Update mode may omit
