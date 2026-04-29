@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/yazanabuashour/openclerk/internal/domain"
 	"github.com/yazanabuashour/openclerk/internal/runclient"
 )
 
@@ -67,7 +68,13 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 
 	switch normalized.Action {
 	case DocumentTaskActionList:
-		documents, err := client.ListDocuments(ctx, runclient.DocumentListOptions(normalized.List))
+		documents, err := client.ListDocuments(ctx, domain.DocumentListQuery{
+			PathPrefix:    normalized.List.PathPrefix,
+			MetadataKey:   normalized.List.MetadataKey,
+			MetadataValue: normalized.List.MetadataValue,
+			Limit:         normalized.List.Limit,
+			Cursor:        normalized.List.Cursor,
+		})
 		if err != nil {
 			return DocumentTaskResult{}, err
 		}
@@ -120,7 +127,11 @@ func isMutatingDocumentAction(action string) bool {
 func runMutatingDocumentTask(ctx context.Context, client *runclient.Client, normalized normalizedDocumentTaskRequest) (DocumentTaskResult, error) {
 	switch normalized.Action {
 	case DocumentTaskActionCreate:
-		document, err := client.CreateDocument(ctx, runclient.DocumentInput(normalized.Document))
+		document, err := client.CreateDocument(ctx, domain.CreateDocumentInput{
+			Path:  normalized.Document.Path,
+			Title: normalized.Document.Title,
+			Body:  normalized.Document.Body,
+		})
 		if err != nil {
 			return DocumentTaskResult{}, err
 		}
@@ -130,7 +141,14 @@ func runMutatingDocumentTask(ctx context.Context, client *runclient.Client, norm
 			Summary:  fmt.Sprintf("created document %s", converted.DocID),
 		}, nil
 	case DocumentTaskActionIngestSourceURL:
-		ingestion, err := client.IngestSourceURL(ctx, runclient.SourceURLInput(normalized.Source))
+		ingestion, err := client.IngestSourceURL(ctx, domain.SourceURLInput{
+			URL:           normalized.Source.URL,
+			PathHint:      normalized.Source.PathHint,
+			AssetPathHint: normalized.Source.AssetPathHint,
+			Title:         normalized.Source.Title,
+			Mode:          normalized.Source.Mode,
+			SourceType:    normalized.Source.SourceType,
+		})
 		if err != nil {
 			return DocumentTaskResult{}, err
 		}
@@ -140,13 +158,13 @@ func runMutatingDocumentTask(ctx context.Context, client *runclient.Client, norm
 			Summary:   fmt.Sprintf("ingested source URL into %s", converted.SourcePath),
 		}, nil
 	case DocumentTaskActionIngestVideoURL:
-		ingestion, err := client.IngestVideoURL(ctx, runclient.VideoURLInput{
+		ingestion, err := client.IngestVideoURL(ctx, domain.VideoURLInput{
 			URL:           normalized.Video.URL,
 			PathHint:      normalized.Video.PathHint,
 			AssetPathHint: normalized.Video.AssetPathHint,
 			Title:         normalized.Video.Title,
 			Mode:          normalized.Video.Mode,
-			Transcript: runclient.VideoTranscriptInput{
+			Transcript: domain.VideoTranscriptInput{
 				Text:       normalized.Video.Transcript.Text,
 				Policy:     normalized.Video.Transcript.Policy,
 				Origin:     normalized.Video.Transcript.Origin,
@@ -166,7 +184,7 @@ func runMutatingDocumentTask(ctx context.Context, client *runclient.Client, norm
 			Summary:        fmt.Sprintf("ingested video URL into %s", converted.SourcePath),
 		}, nil
 	case DocumentTaskActionAppend:
-		document, err := client.AppendDocument(ctx, normalized.DocID, normalized.Content)
+		document, err := client.AppendDocument(ctx, normalized.DocID, domain.AppendDocumentInput{Content: normalized.Content})
 		if err != nil {
 			return DocumentTaskResult{}, err
 		}
@@ -176,7 +194,10 @@ func runMutatingDocumentTask(ctx context.Context, client *runclient.Client, norm
 			Summary:  fmt.Sprintf("appended document %s", converted.DocID),
 		}, nil
 	case DocumentTaskActionReplaceSection:
-		document, err := client.ReplaceSection(ctx, normalized.DocID, normalized.Heading, normalized.Content)
+		document, err := client.ReplaceSection(ctx, normalized.DocID, domain.ReplaceSectionInput{
+			Heading: normalized.Heading,
+			Content: normalized.Content,
+		})
 		if err != nil {
 			return DocumentTaskResult{}, err
 		}

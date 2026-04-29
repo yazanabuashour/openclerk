@@ -2,25 +2,13 @@ package runclient
 
 import (
 	"context"
-	"github.com/yazanabuashour/openclerk/internal/app"
+
 	"github.com/yazanabuashour/openclerk/internal/domain"
 )
 
 // Client is the preferred internal runner client for the embedded OpenClerk runtime.
 type Client struct {
 	runtime *Runtime
-}
-
-type Capabilities struct {
-	Backend     string
-	AuthMode    string
-	SearchModes []string
-	Extensions  []string
-}
-
-type GraphNeighborhood struct {
-	Nodes []GraphNode
-	Edges []GraphEdge
 }
 
 // Open creates the primary embedded OpenClerk client without binding a local port.
@@ -69,290 +57,172 @@ func (c *Client) Paths() Paths {
 	return c.runtime.Paths()
 }
 
-func (c *Client) Capabilities(ctx context.Context) (Capabilities, error) {
-	service, err := c.service()
+func (c *Client) Capabilities(ctx context.Context) (domain.Capabilities, error) {
+	store, err := c.store()
 	if err != nil {
-		return Capabilities{}, err
+		return domain.Capabilities{}, err
 	}
-	capabilities, err := service.Capabilities(ctx)
-	if err != nil {
-		return Capabilities{}, wrapError(err)
-	}
-	return Capabilities{
-		Backend:     string(capabilities.Backend),
-		AuthMode:    capabilities.AuthMode,
-		SearchModes: append([]string(nil), capabilities.SearchModes...),
-		Extensions:  append([]string(nil), capabilities.Extensions...),
-	}, nil
+	return wrapResult(store.Capabilities(ctx))
 }
 
-func (c *Client) CreateDocument(ctx context.Context, input DocumentInput) (Document, error) {
-	service, err := c.service()
+func (c *Client) CreateDocument(ctx context.Context, input domain.CreateDocumentInput) (domain.Document, error) {
+	store, err := c.store()
 	if err != nil {
-		return Document{}, err
+		return domain.Document{}, err
 	}
-	document, err := service.CreateDocument(ctx, domain.CreateDocumentInput(input))
-	if err != nil {
-		return Document{}, wrapError(err)
-	}
-	return toDocument(document), nil
+	return wrapResult(store.CreateDocument(ctx, input))
 }
 
-func (c *Client) IngestSourceURL(ctx context.Context, input SourceURLInput) (SourceIngestionResult, error) {
-	service, err := c.service()
+func (c *Client) IngestSourceURL(ctx context.Context, input domain.SourceURLInput) (domain.SourceIngestionResult, error) {
+	store, err := c.store()
 	if err != nil {
-		return SourceIngestionResult{}, err
+		return domain.SourceIngestionResult{}, err
 	}
-	ingestion, err := service.IngestSourceURL(ctx, domain.SourceURLInput(input))
-	if err != nil {
-		return SourceIngestionResult{}, wrapError(err)
-	}
-	return toSourceIngestionResult(ingestion), nil
+	return wrapResult(store.IngestSourceURL(ctx, input))
 }
 
-func (c *Client) IngestVideoURL(ctx context.Context, input VideoURLInput) (VideoIngestionResult, error) {
-	service, err := c.service()
+func (c *Client) IngestVideoURL(ctx context.Context, input domain.VideoURLInput) (domain.VideoIngestionResult, error) {
+	store, err := c.store()
 	if err != nil {
-		return VideoIngestionResult{}, err
+		return domain.VideoIngestionResult{}, err
 	}
-	ingestion, err := service.IngestVideoURL(ctx, domain.VideoURLInput{
-		URL:           input.URL,
-		PathHint:      input.PathHint,
-		AssetPathHint: input.AssetPathHint,
-		Title:         input.Title,
-		Mode:          input.Mode,
-		Transcript: domain.VideoTranscriptInput{
-			Text:       input.Transcript.Text,
-			Policy:     input.Transcript.Policy,
-			Origin:     input.Transcript.Origin,
-			Language:   input.Transcript.Language,
-			CapturedAt: input.Transcript.CapturedAt,
-			Tool:       input.Transcript.Tool,
-			Model:      input.Transcript.Model,
-			SHA256:     input.Transcript.SHA256,
-		},
-	})
-	if err != nil {
-		return VideoIngestionResult{}, wrapError(err)
-	}
-	return toVideoIngestionResult(ingestion), nil
+	return wrapResult(store.IngestVideoURL(ctx, input))
 }
 
-func (c *Client) GetDocument(ctx context.Context, docID string) (Document, error) {
-	service, err := c.service()
+func (c *Client) GetDocument(ctx context.Context, docID string) (domain.Document, error) {
+	store, err := c.store()
 	if err != nil {
-		return Document{}, err
+		return domain.Document{}, err
 	}
-	document, err := service.GetDocument(ctx, docID)
-	if err != nil {
-		return Document{}, wrapError(err)
-	}
-	return toDocument(document), nil
+	return wrapResult(store.GetDocument(ctx, docID))
 }
 
-func (c *Client) ListDocuments(ctx context.Context, options DocumentListOptions) (DocumentList, error) {
-	service, err := c.service()
+func (c *Client) ListDocuments(ctx context.Context, query domain.DocumentListQuery) (domain.DocumentListResult, error) {
+	store, err := c.store()
 	if err != nil {
-		return DocumentList{}, err
+		return domain.DocumentListResult{}, err
 	}
-	result, err := service.ListDocuments(ctx, domain.DocumentListQuery(options))
-	if err != nil {
-		return DocumentList{}, wrapError(err)
-	}
-	return DocumentList{
-		Documents: toDocumentSummaries(result.Documents),
-		PageInfo:  toPageInfo(result.PageInfo),
-	}, nil
+	return wrapResult(store.ListDocuments(ctx, query))
 }
 
-func (c *Client) Search(ctx context.Context, options SearchOptions) (SearchResult, error) {
-	service, err := c.service()
+func (c *Client) Search(ctx context.Context, query domain.SearchQuery) (domain.SearchResult, error) {
+	store, err := c.store()
 	if err != nil {
-		return SearchResult{}, err
+		return domain.SearchResult{}, err
 	}
-	result, err := service.Search(ctx, domain.SearchQuery{
-		Text:          options.Text,
-		Limit:         options.Limit,
-		Cursor:        options.Cursor,
-		PathPrefix:    options.PathPrefix,
-		MetadataKey:   options.MetadataKey,
-		MetadataValue: options.MetadataValue,
-	})
-	if err != nil {
-		return SearchResult{}, wrapError(err)
-	}
-	return toSearchResult(result), nil
+	return wrapResult(store.Search(ctx, query))
 }
 
-func (c *Client) AppendDocument(ctx context.Context, docID string, content string) (Document, error) {
-	service, err := c.service()
+func (c *Client) AppendDocument(ctx context.Context, docID string, input domain.AppendDocumentInput) (domain.Document, error) {
+	store, err := c.store()
 	if err != nil {
-		return Document{}, err
+		return domain.Document{}, err
 	}
-	document, err := service.AppendDocument(ctx, docID, domain.AppendDocumentInput{Content: content})
-	if err != nil {
-		return Document{}, wrapError(err)
-	}
-	return toDocument(document), nil
+	return wrapResult(store.AppendDocument(ctx, docID, input))
 }
 
-func (c *Client) ReplaceSection(ctx context.Context, docID string, heading string, content string) (Document, error) {
-	service, err := c.service()
+func (c *Client) ReplaceSection(ctx context.Context, docID string, input domain.ReplaceSectionInput) (domain.Document, error) {
+	store, err := c.store()
 	if err != nil {
-		return Document{}, err
+		return domain.Document{}, err
 	}
-	document, err := service.ReplaceDocumentSection(ctx, docID, domain.ReplaceSectionInput{
-		Heading: heading,
-		Content: content,
-	})
-	if err != nil {
-		return Document{}, wrapError(err)
-	}
-	return toDocument(document), nil
+	return wrapResult(store.ReplaceDocumentSection(ctx, docID, input))
 }
 
-func (c *Client) GetDocumentLinks(ctx context.Context, docID string) (DocumentLinks, error) {
-	service, err := c.service()
+func (c *Client) GetDocumentLinks(ctx context.Context, docID string) (domain.DocumentLinks, error) {
+	store, err := c.store()
 	if err != nil {
-		return DocumentLinks{}, err
+		return domain.DocumentLinks{}, err
 	}
-	links, err := service.GetDocumentLinks(ctx, docID)
-	if err != nil {
-		return DocumentLinks{}, wrapError(err)
-	}
-	return toDocumentLinksResult(links), nil
+	return wrapResult(store.GetDocumentLinks(ctx, docID))
 }
 
-func (c *Client) GraphNeighborhood(ctx context.Context, options GraphNeighborhoodOptions) (GraphNeighborhood, error) {
-	service, err := c.service()
+func (c *Client) GraphNeighborhood(ctx context.Context, input domain.GraphNeighborhoodInput) (domain.GraphNeighborhood, error) {
+	store, err := c.store()
 	if err != nil {
-		return GraphNeighborhood{}, err
+		return domain.GraphNeighborhood{}, err
 	}
-	neighborhood, err := service.GraphNeighborhood(ctx, domain.GraphNeighborhoodInput(options))
-	if err != nil {
-		return GraphNeighborhood{}, wrapError(err)
-	}
-	return toGraphNeighborhood(neighborhood), nil
+	return wrapResult(store.GraphNeighborhood(ctx, input))
 }
 
-func (c *Client) LookupRecords(ctx context.Context, options RecordLookupOptions) (RecordLookupResult, error) {
-	service, err := c.service()
+func (c *Client) LookupRecords(ctx context.Context, input domain.RecordLookupInput) (domain.RecordLookupResult, error) {
+	store, err := c.store()
 	if err != nil {
-		return RecordLookupResult{}, err
+		return domain.RecordLookupResult{}, err
 	}
-	result, err := service.RecordsLookup(ctx, domain.RecordLookupInput(options))
-	if err != nil {
-		return RecordLookupResult{}, wrapError(err)
-	}
-	return RecordLookupResult{
-		Entities: toRecordEntities(result.Entities),
-		PageInfo: toPageInfo(result.PageInfo),
-	}, nil
+	return wrapResult(store.RecordsLookup(ctx, input))
 }
 
-func (c *Client) GetRecordEntity(ctx context.Context, entityID string) (RecordEntity, error) {
-	service, err := c.service()
+func (c *Client) GetRecordEntity(ctx context.Context, entityID string) (domain.RecordEntity, error) {
+	store, err := c.store()
 	if err != nil {
-		return RecordEntity{}, err
+		return domain.RecordEntity{}, err
 	}
-	entity, err := service.GetRecordEntity(ctx, entityID)
-	if err != nil {
-		return RecordEntity{}, wrapError(err)
-	}
-	return toRecordEntity(entity), nil
+	return wrapResult(store.GetRecordEntity(ctx, entityID))
 }
 
-func (c *Client) LookupServices(ctx context.Context, options ServiceLookupOptions) (ServiceLookupResult, error) {
-	service, err := c.service()
+func (c *Client) LookupServices(ctx context.Context, input domain.ServiceLookupInput) (domain.ServiceLookupResult, error) {
+	store, err := c.store()
 	if err != nil {
-		return ServiceLookupResult{}, err
+		return domain.ServiceLookupResult{}, err
 	}
-	result, err := service.ServicesLookup(ctx, domain.ServiceLookupInput(options))
-	if err != nil {
-		return ServiceLookupResult{}, wrapError(err)
-	}
-	return ServiceLookupResult{
-		Services: toServiceRecords(result.Services),
-		PageInfo: toPageInfo(result.PageInfo),
-	}, nil
+	return wrapResult(store.ServicesLookup(ctx, input))
 }
 
-func (c *Client) GetServiceRecord(ctx context.Context, serviceID string) (ServiceRecord, error) {
-	service, err := c.service()
+func (c *Client) GetServiceRecord(ctx context.Context, serviceID string) (domain.ServiceRecord, error) {
+	store, err := c.store()
 	if err != nil {
-		return ServiceRecord{}, err
+		return domain.ServiceRecord{}, err
 	}
-	serviceRecord, err := service.GetServiceRecord(ctx, serviceID)
-	if err != nil {
-		return ServiceRecord{}, wrapError(err)
-	}
-	return toServiceRecord(serviceRecord), nil
+	return wrapResult(store.GetServiceRecord(ctx, serviceID))
 }
 
-func (c *Client) LookupDecisions(ctx context.Context, options DecisionLookupOptions) (DecisionLookupResult, error) {
-	service, err := c.service()
+func (c *Client) LookupDecisions(ctx context.Context, input domain.DecisionLookupInput) (domain.DecisionLookupResult, error) {
+	store, err := c.store()
 	if err != nil {
-		return DecisionLookupResult{}, err
+		return domain.DecisionLookupResult{}, err
 	}
-	result, err := service.DecisionsLookup(ctx, domain.DecisionLookupInput(options))
-	if err != nil {
-		return DecisionLookupResult{}, wrapError(err)
-	}
-	return DecisionLookupResult{
-		Decisions: toDecisionRecords(result.Decisions),
-		PageInfo:  toPageInfo(result.PageInfo),
-	}, nil
+	return wrapResult(store.DecisionsLookup(ctx, input))
 }
 
-func (c *Client) GetDecisionRecord(ctx context.Context, decisionID string) (DecisionRecord, error) {
-	service, err := c.service()
+func (c *Client) GetDecisionRecord(ctx context.Context, decisionID string) (domain.DecisionRecord, error) {
+	store, err := c.store()
 	if err != nil {
-		return DecisionRecord{}, err
+		return domain.DecisionRecord{}, err
 	}
-	decision, err := service.GetDecisionRecord(ctx, decisionID)
-	if err != nil {
-		return DecisionRecord{}, wrapError(err)
-	}
-	return toDecisionRecord(decision), nil
+	return wrapResult(store.GetDecisionRecord(ctx, decisionID))
 }
 
-func (c *Client) ListProvenanceEvents(ctx context.Context, options ProvenanceEventOptions) (ProvenanceEventList, error) {
-	service, err := c.service()
+func (c *Client) ListProvenanceEvents(ctx context.Context, query domain.ProvenanceEventQuery) (domain.ProvenanceEventResult, error) {
+	store, err := c.store()
 	if err != nil {
-		return ProvenanceEventList{}, err
+		return domain.ProvenanceEventResult{}, err
 	}
-	result, err := service.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery(options))
-	if err != nil {
-		return ProvenanceEventList{}, wrapError(err)
-	}
-	return ProvenanceEventList{
-		Events:   toProvenanceEvents(result.Events),
-		PageInfo: toPageInfo(result.PageInfo),
-	}, nil
+	return wrapResult(store.ListProvenanceEvents(ctx, query))
 }
 
-func (c *Client) ListProjectionStates(ctx context.Context, options ProjectionStateOptions) (ProjectionStateList, error) {
-	service, err := c.service()
+func (c *Client) ListProjectionStates(ctx context.Context, query domain.ProjectionStateQuery) (domain.ProjectionStateResult, error) {
+	store, err := c.store()
 	if err != nil {
-		return ProjectionStateList{}, err
+		return domain.ProjectionStateResult{}, err
 	}
-	result, err := service.ListProjectionStates(ctx, domain.ProjectionStateQuery(options))
-	if err != nil {
-		return ProjectionStateList{}, wrapError(err)
-	}
-	return ProjectionStateList{
-		Projections: toProjectionStates(result.Projections),
-		PageInfo:    toPageInfo(result.PageInfo),
-	}, nil
+	return wrapResult(store.ListProjectionStates(ctx, query))
 }
 
-func (c *Client) service() (*app.Service, error) {
-	if c == nil || c.runtime == nil || c.runtime.service == nil {
+func (c *Client) store() (domain.Store, error) {
+	if c == nil || c.runtime == nil || c.runtime.store == nil {
 		return nil, &Error{
 			Code:    "invalid_client",
 			Message: "local OpenClerk client is required",
 			Status:  400,
 		}
 	}
-	return c.runtime.service, nil
+	return c.runtime.store, nil
+}
+
+func wrapResult[T any](value T, err error) (T, error) {
+	if err != nil {
+		return value, wrapError(err)
+	}
+	return value, nil
 }

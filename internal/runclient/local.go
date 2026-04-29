@@ -11,7 +11,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/yazanabuashour/openclerk/internal/app"
 	"github.com/yazanabuashour/openclerk/internal/domain"
 	"github.com/yazanabuashour/openclerk/internal/infra/sqlite"
 )
@@ -35,16 +34,16 @@ type Paths struct {
 
 // Runtime owns the in-process store used by the runner runtime.
 type Runtime struct {
-	paths   Paths
-	service *app.Service
+	paths Paths
+	store domain.Store
 }
 
 // Close releases the underlying SQLite-backed runtime.
 func (r *Runtime) Close() error {
-	if r == nil || r.service == nil {
+	if r == nil || r.store == nil {
 		return nil
 	}
-	return r.service.Close()
+	return r.store.Close()
 }
 
 // Paths returns the resolved storage locations for this runtime.
@@ -155,10 +154,9 @@ func newRuntimeWithMode(backend domain.BackendKind, cfg Config, mode runtimeOpen
 	if err != nil {
 		return nil, err
 	}
-	service := app.New(store)
 	return &Runtime{
-		paths:   paths,
-		service: service,
+		paths: paths,
+		store: store,
 	}, nil
 }
 

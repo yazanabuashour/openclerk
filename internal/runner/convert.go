@@ -1,6 +1,9 @@
 package runner
 
-import "github.com/yazanabuashour/openclerk/internal/runclient"
+import (
+	"github.com/yazanabuashour/openclerk/internal/domain"
+	"github.com/yazanabuashour/openclerk/internal/runclient"
+)
 
 func toPaths(paths runclient.Paths) Paths {
 	return Paths{
@@ -9,7 +12,7 @@ func toPaths(paths runclient.Paths) Paths {
 	}
 }
 
-func toDocument(document runclient.Document) Document {
+func toDocument(document domain.Document) Document {
 	return Document{
 		DocID:     document.DocID,
 		Path:      document.Path,
@@ -22,7 +25,7 @@ func toDocument(document runclient.Document) Document {
 	}
 }
 
-func toDocumentSummaries(documents []runclient.DocumentSummary) []DocumentSummary {
+func toDocumentSummaries(documents []domain.DocumentSummary) []DocumentSummary {
 	result := make([]DocumentSummary, 0, len(documents))
 	for _, document := range documents {
 		result = append(result, DocumentSummary{
@@ -36,14 +39,14 @@ func toDocumentSummaries(documents []runclient.DocumentSummary) []DocumentSummar
 	return result
 }
 
-func toPageInfo(pageInfo runclient.PageInfo) PageInfo {
+func toPageInfo(pageInfo domain.PageInfo) PageInfo {
 	return PageInfo{
 		NextCursor: pageInfo.NextCursor,
 		HasMore:    pageInfo.HasMore,
 	}
 }
 
-func toSearchResult(result runclient.SearchResult) SearchResult {
+func toSearchResult(result domain.SearchResult) SearchResult {
 	hits := make([]SearchHit, 0, len(result.Hits))
 	for _, hit := range result.Hits {
 		hits = append(hits, SearchHit{
@@ -62,7 +65,7 @@ func toSearchResult(result runclient.SearchResult) SearchResult {
 	}
 }
 
-func toSourceIngestionResult(result runclient.SourceIngestionResult) SourceIngestionResult {
+func toSourceIngestionResult(result domain.SourceIngestionResult) SourceIngestionResult {
 	return SourceIngestionResult{
 		DocID:       result.DocID,
 		SourcePath:  result.SourcePath,
@@ -80,7 +83,7 @@ func toSourceIngestionResult(result runclient.SourceIngestionResult) SourceInges
 	}
 }
 
-func toVideoIngestionResult(result runclient.VideoIngestionResult) VideoIngestionResult {
+func toVideoIngestionResult(result domain.VideoIngestionResult) VideoIngestionResult {
 	return VideoIngestionResult{
 		DocID:                    result.DocID,
 		SourcePath:               result.SourcePath,
@@ -99,7 +102,7 @@ func toVideoIngestionResult(result runclient.VideoIngestionResult) VideoIngestio
 	}
 }
 
-func toCitations(citations []runclient.Citation) []Citation {
+func toCitations(citations []domain.Citation) []Citation {
 	result := make([]Citation, 0, len(citations))
 	for _, citation := range citations {
 		result = append(result, Citation{
@@ -114,7 +117,7 @@ func toCitations(citations []runclient.Citation) []Citation {
 	return result
 }
 
-func toDocumentLinksResult(links runclient.DocumentLinks) DocumentLinks {
+func toDocumentLinksResult(links domain.DocumentLinks) DocumentLinks {
 	return DocumentLinks{
 		DocID:    links.DocID,
 		Outgoing: toDocumentLinks(links.Outgoing),
@@ -122,7 +125,7 @@ func toDocumentLinksResult(links runclient.DocumentLinks) DocumentLinks {
 	}
 }
 
-func toDocumentLinks(links []runclient.DocumentLink) []DocumentLink {
+func toDocumentLinks(links []domain.DocumentLink) []DocumentLink {
 	result := make([]DocumentLink, 0, len(links))
 	for _, link := range links {
 		result = append(result, DocumentLink{
@@ -135,7 +138,7 @@ func toDocumentLinks(links []runclient.DocumentLink) []DocumentLink {
 	return result
 }
 
-func toGraphNeighborhood(neighborhood runclient.GraphNeighborhood) GraphNeighborhood {
+func toGraphNeighborhood(neighborhood domain.GraphNeighborhood) GraphNeighborhood {
 	nodes := make([]GraphNode, 0, len(neighborhood.Nodes))
 	for _, node := range neighborhood.Nodes {
 		nodes = append(nodes, GraphNode{
@@ -161,14 +164,14 @@ func toGraphNeighborhood(neighborhood runclient.GraphNeighborhood) GraphNeighbor
 	}
 }
 
-func toRecordLookupResult(result runclient.RecordLookupResult) RecordLookupResult {
+func toRecordLookupResult(result domain.RecordLookupResult) RecordLookupResult {
 	return RecordLookupResult{
 		Entities: toRecordEntities(result.Entities),
 		PageInfo: toPageInfo(result.PageInfo),
 	}
 }
 
-func toRecordEntities(entities []runclient.RecordEntity) []RecordEntity {
+func toRecordEntities(entities []domain.RecordEntity) []RecordEntity {
 	result := make([]RecordEntity, 0, len(entities))
 	for _, entity := range entities {
 		result = append(result, toRecordEntity(entity))
@@ -176,7 +179,7 @@ func toRecordEntities(entities []runclient.RecordEntity) []RecordEntity {
 	return result
 }
 
-func toRecordEntity(entity runclient.RecordEntity) RecordEntity {
+func toRecordEntity(entity domain.RecordEntity) RecordEntity {
 	facts := make([]RecordFact, 0, len(entity.Facts))
 	for _, fact := range entity.Facts {
 		facts = append(facts, RecordFact{
@@ -196,14 +199,14 @@ func toRecordEntity(entity runclient.RecordEntity) RecordEntity {
 	}
 }
 
-func toServiceLookupResult(result runclient.ServiceLookupResult) ServiceLookupResult {
+func toServiceLookupResult(result domain.ServiceLookupResult) ServiceLookupResult {
 	return ServiceLookupResult{
 		Services: toServiceRecords(result.Services),
 		PageInfo: toPageInfo(result.PageInfo),
 	}
 }
 
-func toServiceRecords(services []runclient.ServiceRecord) []ServiceRecord {
+func toServiceRecords(services []domain.ServiceRecord) []ServiceRecord {
 	result := make([]ServiceRecord, 0, len(services))
 	for _, service := range services {
 		result = append(result, toServiceRecord(service))
@@ -211,7 +214,7 @@ func toServiceRecords(services []runclient.ServiceRecord) []ServiceRecord {
 	return result
 }
 
-func toServiceRecord(service runclient.ServiceRecord) ServiceRecord {
+func toServiceRecord(service domain.ServiceRecord) ServiceRecord {
 	facts := make([]ServiceFact, 0, len(service.Facts))
 	for _, fact := range service.Facts {
 		facts = append(facts, ServiceFact{
@@ -233,14 +236,14 @@ func toServiceRecord(service runclient.ServiceRecord) ServiceRecord {
 	}
 }
 
-func toDecisionLookupResult(result runclient.DecisionLookupResult) DecisionLookupResult {
+func toDecisionLookupResult(result domain.DecisionLookupResult) DecisionLookupResult {
 	return DecisionLookupResult{
 		Decisions: toDecisionRecords(result.Decisions),
 		PageInfo:  toPageInfo(result.PageInfo),
 	}
 }
 
-func toDecisionRecords(decisions []runclient.DecisionRecord) []DecisionRecord {
+func toDecisionRecords(decisions []domain.DecisionRecord) []DecisionRecord {
 	result := make([]DecisionRecord, 0, len(decisions))
 	for _, decision := range decisions {
 		result = append(result, toDecisionRecord(decision))
@@ -248,7 +251,7 @@ func toDecisionRecords(decisions []runclient.DecisionRecord) []DecisionRecord {
 	return result
 }
 
-func toDecisionRecord(decision runclient.DecisionRecord) DecisionRecord {
+func toDecisionRecord(decision domain.DecisionRecord) DecisionRecord {
 	return DecisionRecord{
 		DecisionID:   decision.DecisionID,
 		Title:        decision.Title,
@@ -265,14 +268,14 @@ func toDecisionRecord(decision runclient.DecisionRecord) DecisionRecord {
 	}
 }
 
-func toProvenanceEventList(list runclient.ProvenanceEventList) ProvenanceEventList {
+func toProvenanceEventList(list domain.ProvenanceEventResult) ProvenanceEventList {
 	return ProvenanceEventList{
 		Events:   toProvenanceEvents(list.Events),
 		PageInfo: toPageInfo(list.PageInfo),
 	}
 }
 
-func toProvenanceEvents(events []runclient.ProvenanceEvent) []ProvenanceEvent {
+func toProvenanceEvents(events []domain.ProvenanceEvent) []ProvenanceEvent {
 	result := make([]ProvenanceEvent, 0, len(events))
 	for _, event := range events {
 		result = append(result, ProvenanceEvent{
@@ -288,14 +291,14 @@ func toProvenanceEvents(events []runclient.ProvenanceEvent) []ProvenanceEvent {
 	return result
 }
 
-func toProjectionStateList(list runclient.ProjectionStateList) ProjectionStateList {
+func toProjectionStateList(list domain.ProjectionStateResult) ProjectionStateList {
 	return ProjectionStateList{
 		Projections: toProjectionStates(list.Projections),
 		PageInfo:    toPageInfo(list.PageInfo),
 	}
 }
 
-func toProjectionStates(projections []runclient.ProjectionState) []ProjectionState {
+func toProjectionStates(projections []domain.ProjectionState) []ProjectionState {
 	result := make([]ProjectionState, 0, len(projections))
 	for _, projection := range projections {
 		result = append(result, ProjectionState{

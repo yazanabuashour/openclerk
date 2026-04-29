@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/yazanabuashour/openclerk/internal/domain"
 	"github.com/yazanabuashour/openclerk/internal/runclient"
 )
 
@@ -121,7 +122,7 @@ func listAllDocuments(ctx context.Context, client *runclient.Client) ([]Document
 	documents := []DocumentSummary{}
 	cursor := ""
 	for {
-		result, err := client.ListDocuments(ctx, runclient.DocumentListOptions{Limit: 100, Cursor: cursor})
+		result, err := client.ListDocuments(ctx, domain.DocumentListQuery{Limit: 100, Cursor: cursor})
 		if err != nil {
 			return nil, err
 		}

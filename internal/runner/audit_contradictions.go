@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/yazanabuashour/openclerk/internal/domain"
 	"github.com/yazanabuashour/openclerk/internal/runclient"
 )
 
@@ -28,7 +29,7 @@ func runAuditContradictions(ctx context.Context, client *runclient.Client, optio
 		FailureClassification: "none",
 	}
 
-	search, err := client.Search(ctx, runclient.SearchOptions{Text: options.Query, Limit: limit})
+	search, err := client.Search(ctx, domain.SearchQuery{Text: options.Query, Limit: limit})
 	if err != nil {
 		return AuditContradictionsResult{}, err
 	}
@@ -60,7 +61,7 @@ func runAuditContradictions(ctx context.Context, client *runclient.Client, optio
 	if err != nil {
 		return AuditContradictionsResult{}, err
 	}
-	before, err := client.ListProjectionStates(ctx, runclient.ProjectionStateOptions{
+	before, err := client.ListProjectionStates(ctx, domain.ProjectionStateQuery{
 		Projection: "synthesis",
 		RefKind:    "document",
 		RefID:      target.DocID,
@@ -72,7 +73,7 @@ func runAuditContradictions(ctx context.Context, client *runclient.Client, optio
 	result.ProjectionFreshnessBefore = toProjectionStates(before.Projections)
 	result.CurrentSourcePaths, result.SupersededSourcePaths = sourceClassesFromProjection(before.Projections)
 
-	targetEvents, err := client.ListProvenanceEvents(ctx, runclient.ProvenanceEventOptions{
+	targetEvents, err := client.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{
 		RefKind: "projection",
 		RefID:   "synthesis:" + target.DocID,
 		Limit:   10,
@@ -90,7 +91,7 @@ func runAuditContradictions(ctx context.Context, client *runclient.Client, optio
 		if !ok {
 			continue
 		}
-		sourceEvents, err := client.ListProvenanceEvents(ctx, runclient.ProvenanceEventOptions{
+		sourceEvents, err := client.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{
 			RefKind: "document",
 			RefID:   sourceDoc.DocID,
 			Limit:   10,
@@ -109,7 +110,10 @@ func runAuditContradictions(ctx context.Context, client *runclient.Client, optio
 			result.RepairStatus = "skipped_insufficient_source_classification"
 			result.FailureClassification = "insufficient_evidence"
 		} else {
-			repaired, err := client.ReplaceSection(ctx, target.DocID, "Summary", repairContent)
+			repaired, err := client.ReplaceSection(ctx, target.DocID, domain.ReplaceSectionInput{
+				Heading: "Summary",
+				Content: repairContent,
+			})
 			if err != nil {
 				return AuditContradictionsResult{}, err
 			}
@@ -119,7 +123,7 @@ func runAuditContradictions(ctx context.Context, client *runclient.Client, optio
 		}
 	}
 
-	after, err := client.ListProjectionStates(ctx, runclient.ProjectionStateOptions{
+	after, err := client.ListProjectionStates(ctx, domain.ProjectionStateQuery{
 		Projection: "synthesis",
 		RefKind:    "document",
 		RefID:      target.DocID,
@@ -154,7 +158,7 @@ func auditContradictionsSummary(result AuditContradictionsResult) string {
 	)
 }
 
-func auditSourceEvidence(hits []runclient.SearchHit) ([]string, []Citation) {
+func auditSourceEvidence(hits []domain.SearchHit) ([]string, []Citation) {
 	paths := []string{}
 	citations := []Citation{}
 	for _, hit := range hits {
@@ -165,19 +169,19 @@ func auditSourceEvidence(hits []runclient.SearchHit) ([]string, []Citation) {
 			if citation.Path != "" {
 				paths = appendUniqueString(paths, citation.Path)
 			}
-			citations = append(citations, toCitations([]runclient.Citation{citation})...)
+			citations = append(citations, toCitations([]domain.Citation{citation})...)
 		}
 	}
 	sort.Strings(paths)
 	return paths, citations
 }
 
-func auditSynthesisCandidates(ctx context.Context, client *runclient.Client, targetPath string) ([]string, []runclient.DocumentSummary, error) {
+func auditSynthesisCandidates(ctx context.Context, client *runclient.Client, targetPath string) ([]string, []domain.DocumentSummary, error) {
 	candidatePaths := []string{}
-	targetMatches := []runclient.DocumentSummary{}
+	targetMatches := []domain.DocumentSummary{}
 	cursor := ""
 	for {
-		list, err := client.ListDocuments(ctx, runclient.DocumentListOptions{
+		list, err := client.ListDocuments(ctx, domain.DocumentListQuery{
 			PathPrefix: "synthesis/",
 			Limit:      100,
 			Cursor:     cursor,
@@ -203,7 +207,7 @@ func auditSynthesisCandidates(ctx context.Context, client *runclient.Client, tar
 	return candidatePaths, targetMatches, nil
 }
 
-func sourceClassesFromProjection(projections []runclient.ProjectionState) ([]string, []string) {
+func sourceClassesFromProjection(projections []domain.ProjectionState) ([]string, []string) {
 	current := []string{}
 	superseded := []string{}
 	for _, projection := range projections {
@@ -231,7 +235,7 @@ func auditRepairSummaryContent(currentSourcePaths []string, supersededSourcePath
 }
 
 func auditUnresolvedConflicts(ctx context.Context, client *runclient.Client, query string, limit int) ([]AuditConflictGroup, []AuditProvenanceInspection, error) {
-	search, err := client.Search(ctx, runclient.SearchOptions{Text: query, Limit: limit})
+	search, err := client.Search(ctx, domain.SearchQuery{Text: query, Limit: limit})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -269,7 +273,7 @@ func auditUnresolvedConflicts(ctx context.Context, client *runclient.Client, que
 		if docID == "" {
 			continue
 		}
-		events, err := client.ListProvenanceEvents(ctx, runclient.ProvenanceEventOptions{
+		events, err := client.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{
 			RefKind: "document",
 			RefID:   docID,
 			Limit:   10,
@@ -296,10 +300,10 @@ func auditUnresolvedConflicts(ctx context.Context, client *runclient.Client, que
 	}}, inspections, nil
 }
 
-func auditDocumentByPath(ctx context.Context, client *runclient.Client, path string) (runclient.Document, bool, error) {
-	list, err := client.ListDocuments(ctx, runclient.DocumentListOptions{PathPrefix: path, Limit: 10})
+func auditDocumentByPath(ctx context.Context, client *runclient.Client, path string) (domain.Document, bool, error) {
+	list, err := client.ListDocuments(ctx, domain.DocumentListQuery{PathPrefix: path, Limit: 10})
 	if err != nil {
-		return runclient.Document{}, false, err
+		return domain.Document{}, false, err
 	}
 	for _, summary := range list.Documents {
 		if summary.Path != path {
@@ -307,14 +311,14 @@ func auditDocumentByPath(ctx context.Context, client *runclient.Client, path str
 		}
 		document, err := client.GetDocument(ctx, summary.DocID)
 		if err != nil {
-			return runclient.Document{}, false, err
+			return domain.Document{}, false, err
 		}
 		return document, true, nil
 	}
-	return runclient.Document{}, false, nil
+	return domain.Document{}, false, nil
 }
 
-func auditProvenanceInspection(refKind string, refID string, sourcePath string, events []runclient.ProvenanceEvent) AuditProvenanceInspection {
+func auditProvenanceInspection(refKind string, refID string, sourcePath string, events []domain.ProvenanceEvent) AuditProvenanceInspection {
 	inspection := AuditProvenanceInspection{
 		RefKind:    refKind,
 		RefID:      refID,
@@ -332,7 +336,7 @@ func auditProvenanceInspection(refKind string, refID string, sourcePath string, 
 	return inspection
 }
 
-func isSupersededAuditDocument(document runclient.Document) bool {
+func isSupersededAuditDocument(document domain.Document) bool {
 	return strings.EqualFold(strings.TrimSpace(document.Metadata["status"]), "superseded")
 }
 

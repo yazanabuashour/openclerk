@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/yazanabuashour/openclerk/internal/domain"
 	"github.com/yazanabuashour/openclerk/internal/runclient"
 )
 
@@ -59,7 +60,14 @@ func isMutatingRetrievalAction(normalized normalizedRetrievalTaskRequest) bool {
 func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, normalized normalizedRetrievalTaskRequest) (RetrievalTaskResult, error) {
 	switch normalized.Action {
 	case RetrievalTaskActionSearch:
-		search, err := client.Search(ctx, runclient.SearchOptions(normalized.Search))
+		search, err := client.Search(ctx, domain.SearchQuery{
+			Text:          normalized.Search.Text,
+			PathPrefix:    normalized.Search.PathPrefix,
+			MetadataKey:   normalized.Search.MetadataKey,
+			MetadataValue: normalized.Search.MetadataValue,
+			Limit:         normalized.Search.Limit,
+			Cursor:        normalized.Search.Cursor,
+		})
 		if err != nil {
 			return RetrievalTaskResult{}, err
 		}
@@ -79,7 +87,7 @@ func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, n
 			Summary: fmt.Sprintf("returned links for document %s", normalized.DocID),
 		}, nil
 	case RetrievalTaskActionGraph:
-		graph, err := client.GraphNeighborhood(ctx, runclient.GraphNeighborhoodOptions{
+		graph, err := client.GraphNeighborhood(ctx, domain.GraphNeighborhoodInput{
 			DocID:   normalized.DocID,
 			ChunkID: normalized.ChunkID,
 			NodeID:  normalized.NodeID,
@@ -94,7 +102,12 @@ func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, n
 			Summary: fmt.Sprintf("returned %d graph nodes and %d edges", len(converted.Nodes), len(converted.Edges)),
 		}, nil
 	case RetrievalTaskActionRecordsLookup:
-		records, err := client.LookupRecords(ctx, runclient.RecordLookupOptions(normalized.Records))
+		records, err := client.LookupRecords(ctx, domain.RecordLookupInput{
+			Text:       normalized.Records.Text,
+			EntityType: normalized.Records.EntityType,
+			Limit:      normalized.Records.Limit,
+			Cursor:     normalized.Records.Cursor,
+		})
 		if err != nil {
 			return RetrievalTaskResult{}, err
 		}
@@ -114,7 +127,14 @@ func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, n
 			Summary: fmt.Sprintf("returned record entity %s", converted.EntityID),
 		}, nil
 	case RetrievalTaskActionServicesLookup:
-		services, err := client.LookupServices(ctx, runclient.ServiceLookupOptions(normalized.Services))
+		services, err := client.LookupServices(ctx, domain.ServiceLookupInput{
+			Text:      normalized.Services.Text,
+			Status:    normalized.Services.Status,
+			Owner:     normalized.Services.Owner,
+			Interface: normalized.Services.Interface,
+			Limit:     normalized.Services.Limit,
+			Cursor:    normalized.Services.Cursor,
+		})
 		if err != nil {
 			return RetrievalTaskResult{}, err
 		}
@@ -134,7 +154,14 @@ func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, n
 			Summary: fmt.Sprintf("returned service %s", converted.ServiceID),
 		}, nil
 	case RetrievalTaskActionDecisionsLookup:
-		decisions, err := client.LookupDecisions(ctx, runclient.DecisionLookupOptions(normalized.Decisions))
+		decisions, err := client.LookupDecisions(ctx, domain.DecisionLookupInput{
+			Text:   normalized.Decisions.Text,
+			Status: normalized.Decisions.Status,
+			Scope:  normalized.Decisions.Scope,
+			Owner:  normalized.Decisions.Owner,
+			Limit:  normalized.Decisions.Limit,
+			Cursor: normalized.Decisions.Cursor,
+		})
 		if err != nil {
 			return RetrievalTaskResult{}, err
 		}
@@ -154,7 +181,13 @@ func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, n
 			Summary:  fmt.Sprintf("returned decision %s", converted.DecisionID),
 		}, nil
 	case RetrievalTaskActionProvenanceEvents:
-		events, err := client.ListProvenanceEvents(ctx, runclient.ProvenanceEventOptions(normalized.Provenance))
+		events, err := client.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{
+			RefKind:   normalized.Provenance.RefKind,
+			RefID:     normalized.Provenance.RefID,
+			SourceRef: normalized.Provenance.SourceRef,
+			Limit:     normalized.Provenance.Limit,
+			Cursor:    normalized.Provenance.Cursor,
+		})
 		if err != nil {
 			return RetrievalTaskResult{}, err
 		}
@@ -164,7 +197,13 @@ func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, n
 			Summary:    fmt.Sprintf("returned %d provenance events", len(converted.Events)),
 		}, nil
 	case RetrievalTaskActionProjectionStates:
-		projections, err := client.ListProjectionStates(ctx, runclient.ProjectionStateOptions(normalized.Projection))
+		projections, err := client.ListProjectionStates(ctx, domain.ProjectionStateQuery{
+			Projection: normalized.Projection.Projection,
+			RefKind:    normalized.Projection.RefKind,
+			RefID:      normalized.Projection.RefID,
+			Limit:      normalized.Projection.Limit,
+			Cursor:     normalized.Projection.Cursor,
+		})
 		if err != nil {
 			return RetrievalTaskResult{}, err
 		}

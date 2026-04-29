@@ -43,6 +43,20 @@ type sourceDownload struct {
 	SourceType string
 }
 
+type normalizedSourceURLRequest struct {
+	URL           string
+	Mode          string
+	RequestedType string
+}
+
+type noteMutationLabels struct {
+	WriteAsset     string
+	WriteNote      string
+	RestoreAsset   string
+	RestoreNote    string
+	RestoreIndexed string
+}
+
 var sourceHTTPClient = defaultSourceHTTPClient
 
 func defaultSourceHTTPClient(checkRedirect func(*http.Request, []*http.Request) error) *http.Client {
@@ -50,26 +64,38 @@ func defaultSourceHTTPClient(checkRedirect func(*http.Request, []*http.Request) 
 }
 
 func (s *Store) IngestSourceURL(ctx context.Context, input domain.SourceURLInput) (domain.SourceIngestionResult, error) {
-	sourceURL, err := normalizeSourceURL(input.URL)
+	request, err := normalizeSourceURLRequest(input)
 	if err != nil {
 		return domain.SourceIngestionResult{}, err
 	}
-	mode, err := normalizeSourceURLMode(input.Mode)
-	if err != nil {
-		return domain.SourceIngestionResult{}, err
-	}
-	requestedType, err := normalizeSourceType(input.SourceType)
-	if err != nil {
-		return domain.SourceIngestionResult{}, err
-	}
-	switch mode {
+	switch request.Mode {
 	case sourceURLModeCreate:
-		return s.createSourceURL(ctx, input, sourceURL, requestedType)
+		return s.createSourceURL(ctx, input, request.URL, request.RequestedType)
 	case sourceURLModeUpdate:
-		return s.updateSourceURL(ctx, input, sourceURL, requestedType)
+		return s.updateSourceURL(ctx, input, request.URL, request.RequestedType)
 	default:
 		return domain.SourceIngestionResult{}, domain.ValidationError("source mode must be create or update", map[string]any{"mode": input.Mode})
 	}
+}
+
+func normalizeSourceURLRequest(input domain.SourceURLInput) (normalizedSourceURLRequest, error) {
+	sourceURL, err := normalizeSourceURL(input.URL)
+	if err != nil {
+		return normalizedSourceURLRequest{}, err
+	}
+	mode, err := normalizeSourceURLMode(input.Mode)
+	if err != nil {
+		return normalizedSourceURLRequest{}, err
+	}
+	requestedType, err := normalizeSourceType(input.SourceType)
+	if err != nil {
+		return normalizedSourceURLRequest{}, err
+	}
+	return normalizedSourceURLRequest{
+		URL:           sourceURL,
+		Mode:          mode,
+		RequestedType: requestedType,
+	}, nil
 }
 
 func (s *Store) createSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string, requestedType string) (domain.SourceIngestionResult, error) {
@@ -482,47 +508,80 @@ func (s *Store) sourceIngestionResultFromDocument(ctx context.Context, document 
 }
 
 func (s *Store) replaceSourceAssetAndNote(ctx context.Context, sourcePath string, sourceAbsPath string, assetAbsPath string, oldBody string, oldAssetBytes []byte, newAssetBytes []byte, newBody string, title string) error {
+	return s.replaceIngestedAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, newAssetBytes, newBody, title, noteMutationLabels{
+		WriteAsset:     "write source asset",
+		WriteNote:      "write source note",
+		RestoreAsset:   "restore source asset after failed update",
+		RestoreNote:    "restore source note after failed update",
+		RestoreIndexed: "restore indexed source after failed update",
+	})
+}
+
+func (s *Store) restoreSourceAssetAndNote(ctx context.Context, sourcePath string, sourceAbsPath string, assetAbsPath string, oldBody string, oldAssetBytes []byte, cause error) error {
+	return s.restoreIngestedAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, cause, noteMutationLabels{
+		RestoreAsset:   "restore source asset after failed update",
+		RestoreNote:    "restore source note after failed update",
+		RestoreIndexed: "restore indexed source after failed update",
+	})
+}
+
+func (s *Store) replaceSourceNote(ctx context.Context, sourcePath string, sourceAbsPath string, oldBody string, newBody string, title string) error {
+	return s.replaceIngestedNote(ctx, sourcePath, sourceAbsPath, oldBody, newBody, title, noteMutationLabels{
+		WriteNote:      "write source note",
+		RestoreNote:    "restore source note after failed update",
+		RestoreIndexed: "restore indexed source after failed update",
+	})
+}
+
+func (s *Store) restoreSourceNote(ctx context.Context, sourcePath string, sourceAbsPath string, oldBody string, cause error) error {
+	return s.restoreIngestedNote(ctx, sourcePath, sourceAbsPath, oldBody, cause, noteMutationLabels{
+		RestoreNote:    "restore source note after failed update",
+		RestoreIndexed: "restore indexed source after failed update",
+	})
+}
+
+func (s *Store) replaceIngestedAssetAndNote(ctx context.Context, sourcePath string, sourceAbsPath string, assetAbsPath string, oldBody string, oldAssetBytes []byte, newAssetBytes []byte, newBody string, title string, labels noteMutationLabels) error {
 	if err := osWriteBytes(assetAbsPath, newAssetBytes); err != nil {
-		return domain.InternalError("write source asset", err)
+		return domain.InternalError(labels.WriteAsset, err)
 	}
 	if err := osWriteFile(sourceAbsPath, newBody); err != nil {
-		return s.restoreSourceAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, domain.InternalError("write source note", err))
+		return s.restoreIngestedAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, domain.InternalError(labels.WriteNote, err), labels)
 	}
 	if err := s.syncDocumentFromDisk(ctx, sourcePath, title); err != nil {
-		return s.restoreSourceAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, err)
+		return s.restoreIngestedAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, err, labels)
 	}
 	return nil
 }
 
-func (s *Store) restoreSourceAssetAndNote(ctx context.Context, sourcePath string, sourceAbsPath string, assetAbsPath string, oldBody string, oldAssetBytes []byte, cause error) error {
+func (s *Store) restoreIngestedAssetAndNote(ctx context.Context, sourcePath string, sourceAbsPath string, assetAbsPath string, oldBody string, oldAssetBytes []byte, cause error, labels noteMutationLabels) error {
 	if restoreErr := osWriteBytes(assetAbsPath, oldAssetBytes); restoreErr != nil {
-		return domain.InternalError("restore source asset after failed update", errors.Join(cause, restoreErr))
+		return domain.InternalError(labels.RestoreAsset, errors.Join(cause, restoreErr))
 	}
 	if restoreErr := osWriteFile(sourceAbsPath, oldBody); restoreErr != nil {
-		return domain.InternalError("restore source note after failed update", errors.Join(cause, restoreErr))
+		return domain.InternalError(labels.RestoreNote, errors.Join(cause, restoreErr))
 	}
 	if restoreErr := s.syncDocumentFromDisk(ctx, sourcePath, ""); restoreErr != nil {
-		return domain.InternalError("restore indexed source after failed update", errors.Join(cause, restoreErr))
+		return domain.InternalError(labels.RestoreIndexed, errors.Join(cause, restoreErr))
 	}
 	return cause
 }
 
-func (s *Store) replaceSourceNote(ctx context.Context, sourcePath string, sourceAbsPath string, oldBody string, newBody string, title string) error {
+func (s *Store) replaceIngestedNote(ctx context.Context, sourcePath string, sourceAbsPath string, oldBody string, newBody string, title string, labels noteMutationLabels) error {
 	if err := osWriteFile(sourceAbsPath, newBody); err != nil {
-		return domain.InternalError("write source note", err)
+		return domain.InternalError(labels.WriteNote, err)
 	}
 	if err := s.syncDocumentFromDisk(ctx, sourcePath, title); err != nil {
-		return s.restoreSourceNote(ctx, sourcePath, sourceAbsPath, oldBody, err)
+		return s.restoreIngestedNote(ctx, sourcePath, sourceAbsPath, oldBody, err, labels)
 	}
 	return nil
 }
 
-func (s *Store) restoreSourceNote(ctx context.Context, sourcePath string, sourceAbsPath string, oldBody string, cause error) error {
+func (s *Store) restoreIngestedNote(ctx context.Context, sourcePath string, sourceAbsPath string, oldBody string, cause error, labels noteMutationLabels) error {
 	if restoreErr := osWriteFile(sourceAbsPath, oldBody); restoreErr != nil {
-		return domain.InternalError("restore source note after failed update", errors.Join(cause, restoreErr))
+		return domain.InternalError(labels.RestoreNote, errors.Join(cause, restoreErr))
 	}
 	if restoreErr := s.syncDocumentFromDisk(ctx, sourcePath, ""); restoreErr != nil {
-		return domain.InternalError("restore indexed source after failed update", errors.Join(cause, restoreErr))
+		return domain.InternalError(labels.RestoreIndexed, errors.Join(cause, restoreErr))
 	}
 	return cause
 }

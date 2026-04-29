@@ -27,12 +27,13 @@ type normalizedVideoTranscript struct {
 	SHA256     string
 }
 
+type normalizedVideoURLRequest struct {
+	URL  string
+	Mode string
+}
+
 func (s *Store) IngestVideoURL(ctx context.Context, input domain.VideoURLInput) (domain.VideoIngestionResult, error) {
-	videoURL, err := normalizeSourceURL(input.URL)
-	if err != nil {
-		return domain.VideoIngestionResult{}, err
-	}
-	mode, err := normalizeVideoURLMode(input.Mode)
+	request, err := normalizeVideoURLRequest(input)
 	if err != nil {
 		return domain.VideoIngestionResult{}, err
 	}
@@ -40,14 +41,26 @@ func (s *Store) IngestVideoURL(ctx context.Context, input domain.VideoURLInput) 
 	if err != nil {
 		return domain.VideoIngestionResult{}, err
 	}
-	switch mode {
+	switch request.Mode {
 	case sourceURLModeCreate:
-		return s.createVideoURL(ctx, input, videoURL, normalized)
+		return s.createVideoURL(ctx, input, request.URL, normalized)
 	case sourceURLModeUpdate:
-		return s.updateVideoURL(ctx, input, videoURL, normalized)
+		return s.updateVideoURL(ctx, input, request.URL, normalized)
 	default:
 		return domain.VideoIngestionResult{}, domain.ValidationError("video mode must be create or update", map[string]any{"mode": input.Mode})
 	}
+}
+
+func normalizeVideoURLRequest(input domain.VideoURLInput) (normalizedVideoURLRequest, error) {
+	videoURL, err := normalizeSourceURL(input.URL)
+	if err != nil {
+		return normalizedVideoURLRequest{}, err
+	}
+	mode, err := normalizeVideoURLMode(input.Mode)
+	if err != nil {
+		return normalizedVideoURLRequest{}, err
+	}
+	return normalizedVideoURLRequest{URL: videoURL, Mode: mode}, nil
 }
 
 func (s *Store) createVideoURL(ctx context.Context, input domain.VideoURLInput, videoURL string, transcript normalizedVideoTranscript) (domain.VideoIngestionResult, error) {
@@ -177,16 +190,7 @@ func (s *Store) updateVideoURL(ctx context.Context, input domain.VideoURLInput, 
 			return domain.VideoIngestionResult{}, err
 		}
 	} else {
-		if err := osWriteFile(sourceAbsPath, body); err != nil {
-			return domain.VideoIngestionResult{}, domain.InternalError("write video source note", err)
-		}
-		if err := s.syncDocumentFromDisk(ctx, sourcePath, title); err != nil {
-			if restoreErr := osWriteFile(sourceAbsPath, oldBody); restoreErr != nil {
-				return domain.VideoIngestionResult{}, domain.InternalError("restore video source note after failed update", errors.Join(err, restoreErr))
-			}
-			if restoreErr := s.syncDocumentFromDisk(ctx, sourcePath, ""); restoreErr != nil {
-				return domain.VideoIngestionResult{}, domain.InternalError("restore indexed video source after failed update", errors.Join(err, restoreErr))
-			}
+		if err := s.replaceVideoNote(ctx, sourcePath, sourceAbsPath, oldBody, body, title); err != nil {
 			return domain.VideoIngestionResult{}, err
 		}
 	}
@@ -252,29 +256,25 @@ func videoIngestionResultFromDocument(document domain.Document, citations []doma
 }
 
 func (s *Store) replaceVideoAssetAndNote(ctx context.Context, sourcePath string, sourceAbsPath string, assetAbsPath string, oldBody string, oldAssetBytes []byte, newAssetBytes []byte, newBody string, title string) error {
-	if err := osWriteBytes(assetAbsPath, newAssetBytes); err != nil {
-		return domain.InternalError("write video metadata asset", err)
-	}
-	if err := osWriteFile(sourceAbsPath, newBody); err != nil {
-		return s.restoreVideoAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, domain.InternalError("write video source note", err))
-	}
-	if err := s.syncDocumentFromDisk(ctx, sourcePath, title); err != nil {
-		return s.restoreVideoAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, err)
-	}
-	return nil
+	return s.replaceIngestedAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, newAssetBytes, newBody, title, videoNoteMutationLabels())
 }
 
 func (s *Store) restoreVideoAssetAndNote(ctx context.Context, sourcePath string, sourceAbsPath string, assetAbsPath string, oldBody string, oldAssetBytes []byte, cause error) error {
-	if restoreErr := osWriteBytes(assetAbsPath, oldAssetBytes); restoreErr != nil {
-		return domain.InternalError("restore video metadata asset after failed update", errors.Join(cause, restoreErr))
+	return s.restoreIngestedAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, cause, videoNoteMutationLabels())
+}
+
+func (s *Store) replaceVideoNote(ctx context.Context, sourcePath string, sourceAbsPath string, oldBody string, newBody string, title string) error {
+	return s.replaceIngestedNote(ctx, sourcePath, sourceAbsPath, oldBody, newBody, title, videoNoteMutationLabels())
+}
+
+func videoNoteMutationLabels() noteMutationLabels {
+	return noteMutationLabels{
+		WriteAsset:     "write video metadata asset",
+		WriteNote:      "write video source note",
+		RestoreAsset:   "restore video metadata asset after failed update",
+		RestoreNote:    "restore video source note after failed update",
+		RestoreIndexed: "restore indexed video source after failed update",
 	}
-	if restoreErr := osWriteFile(sourceAbsPath, oldBody); restoreErr != nil {
-		return domain.InternalError("restore video source note after failed update", errors.Join(cause, restoreErr))
-	}
-	if restoreErr := s.syncDocumentFromDisk(ctx, sourcePath, ""); restoreErr != nil {
-		return domain.InternalError("restore indexed video source after failed update", errors.Join(cause, restoreErr))
-	}
-	return cause
 }
 
 func normalizeVideoTranscript(input domain.VideoTranscriptInput, defaultCapturedAt time.Time) (normalizedVideoTranscript, error) {
