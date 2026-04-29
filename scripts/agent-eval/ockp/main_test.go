@@ -2370,7 +2370,7 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 	for _, id := range scenarioIDs() {
 		ids[id] = true
 	}
-	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, docsNavigationScenarioID, graphSemanticsScenarioID, graphSemanticsNaturalScenarioID, graphSemanticsScriptedScenarioID, memoryRouterNaturalScenarioID, memoryRouterScriptedScenarioID, promotedRecordDomainNaturalScenarioID, promotedRecordDomainScriptedScenarioID, broadAuditNaturalScenarioID, broadAuditScriptedScenarioID, memoryRouterScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, sourceURLUpdateDuplicateScenarioID, sourceURLUpdateSameSHAScenarioID, sourceURLUpdateChangedScenarioID, sourceURLUpdateConflictScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, synthesisCompileNaturalScenarioID, synthesisCompileScriptedScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, documentHistoryNaturalScenarioID, documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID, populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID, agentChosenExplicitScenarioID, agentChosenMissingFieldsScenarioID, agentChosenPathProposalScenarioID, agentChosenAutonomousScenarioID, agentChosenSynthesisScenarioID, agentChosenAmbiguousScenarioID, agentChosenUserPathScenarioID, pathTitleURLOnlyScenarioID, pathTitleArtifactMissingHintsScenarioID, pathTitleMultiSourceDuplicateScenarioID, pathTitleExplicitOverridesScenarioID, pathTitleDuplicateRiskScenarioID, pathTitleMetadataAuthorityScenarioID, documentThisMissingFieldsScenarioID, documentThisExplicitCreateScenarioID, documentThisSourceURLMissingHintsScenarioID, documentThisExplicitOverridesScenarioID, documentThisDuplicateCandidateScenarioID, documentThisExistingUpdateScenarioID, documentThisSynthesisFreshnessScenarioID, candidateNoteFromPastedContentScenarioID, candidateTitleAndPathFromHeadingScenarioID, candidateMixedSourceSummaryScenarioID, candidateExplicitOverridesWinScenarioID, candidateDuplicateRiskAsksScenarioID, candidateLowConfidenceAsksScenarioID, candidateBodyFaithfulnessScenarioID, artifactPDFSourceURLScenarioID, artifactPDFNaturalIntentScenarioID, artifactTranscriptScenarioID, artifactInvoiceReceiptScenarioID, artifactMixedSynthesisScenarioID, artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID, videoYouTubeNaturalIntentScenarioID, videoYouTubeScriptedTranscriptControlID, videoYouTubeSynthesisFreshnessScenarioID, videoYouTubeBypassRejectScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
+	for _, want := range []string{"answer-filing", ragRetrievalScenarioID, parallelRunnerStartupScenarioID, parallelRunnerReadsScenarioID, docsNavigationScenarioID, graphSemanticsScenarioID, graphSemanticsNaturalScenarioID, graphSemanticsScriptedScenarioID, memoryRouterNaturalScenarioID, memoryRouterScriptedScenarioID, promotedRecordDomainNaturalScenarioID, promotedRecordDomainScriptedScenarioID, broadAuditNaturalScenarioID, broadAuditScriptedScenarioID, memoryRouterScenarioID, configuredLayoutScenarioID, invalidLayoutScenarioID, sourceURLUpdateDuplicateScenarioID, sourceURLUpdateSameSHAScenarioID, sourceURLUpdateChangedScenarioID, sourceURLUpdateConflictScenarioID, synthesisCandidatePressureScenarioID, synthesisSourceSetPressureScenarioID, synthesisCompileNaturalScenarioID, synthesisCompileScriptedScenarioID, decisionRecordVsDocsScenarioID, decisionSupersessionScenarioID, sourceAuditRepairScenarioID, sourceAuditConflictScenarioID, documentHistoryNaturalScenarioID, documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID, populatedHeterogeneousScenarioID, populatedFreshnessConflictScenarioID, populatedSynthesisUpdateScenarioID, agentChosenExplicitScenarioID, agentChosenMissingFieldsScenarioID, agentChosenPathProposalScenarioID, agentChosenAutonomousScenarioID, agentChosenSynthesisScenarioID, agentChosenAmbiguousScenarioID, agentChosenUserPathScenarioID, pathTitleURLOnlyScenarioID, pathTitleArtifactMissingHintsScenarioID, pathTitleMultiSourceDuplicateScenarioID, pathTitleExplicitOverridesScenarioID, pathTitleDuplicateRiskScenarioID, pathTitleMetadataAuthorityScenarioID, documentThisMissingFieldsScenarioID, documentThisExplicitCreateScenarioID, documentThisSourceURLMissingHintsScenarioID, documentThisExplicitOverridesScenarioID, documentThisDuplicateCandidateScenarioID, documentThisExistingUpdateScenarioID, documentThisSynthesisFreshnessScenarioID, candidateNoteFromPastedContentScenarioID, candidateTitleAndPathFromHeadingScenarioID, candidateMixedSourceSummaryScenarioID, candidateExplicitOverridesWinScenarioID, candidateDuplicateRiskAsksScenarioID, candidateLowConfidenceAsksScenarioID, candidateBodyFaithfulnessScenarioID, artifactPDFSourceURLScenarioID, artifactPDFNaturalIntentScenarioID, artifactTranscriptScenarioID, artifactInvoiceReceiptScenarioID, artifactMixedSynthesisScenarioID, artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID, videoYouTubeNaturalIntentScenarioID, videoYouTubeScriptedTranscriptControlID, videoYouTubeSynthesisFreshnessScenarioID, videoYouTubeBypassRejectScenarioID, mtSynthesisDriftPressureScenarioID, "stale-synthesis-update", "promoted-record-vs-docs", "unsupported-transport-reject"} {
 		if !ids[want] {
 			t.Fatalf("scenarioIDs missing %q in %v", want, scenarioIDs())
 		}
@@ -2447,6 +2447,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 			t.Fatalf("default selected scenarios included targeted promoted record domain scenario %q", id)
 		}
 	}
+	for _, id := range parallelRunnerScenarioIDs() {
+		if defaultIDs[id] {
+			t.Fatalf("default selected scenarios included targeted parallel runner scenario %q", id)
+		}
+	}
 	for _, id := range broadAuditScenarioIDs() {
 		if defaultIDs[id] {
 			t.Fatalf("default selected scenarios included targeted broad audit scenario %q", id)
@@ -2517,10 +2522,66 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	if lane != promotedRecordDomainLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, promotedRecordDomainLaneName)
 	}
+	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(parallelRunnerScenarioIDs(), ",")})
+	lane, releaseBlocking = reportLane(selected)
+	if lane != parallelRunnerLaneName || releaseBlocking {
+		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, parallelRunnerLaneName)
+	}
 	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(append(broadAuditScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject"), ",")})
 	lane, releaseBlocking = reportLane(selected)
 	if lane != broadAuditLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, broadAuditLaneName)
+	}
+}
+
+func TestExecuteRunLabelsParallelRunnerLaneAsNonReleaseBlocking(t *testing.T) {
+	reportDir := filepath.Join(t.TempDir(), "reports")
+	config := runConfig{
+		Parallel:   2,
+		Variant:    productionVariant,
+		Scenario:   strings.Join(parallelRunnerScenarioIDs(), ","),
+		RunRoot:    filepath.Join(t.TempDir(), "run"),
+		ReportDir:  reportDir,
+		ReportName: "ockp-parallel-runner-test",
+		RepoRoot:   ".",
+		CodexBin:   "codex",
+		CacheMode:  cacheModeIsolated,
+	}
+	err := executeRun(context.Background(), config, &strings.Builder{}, func(_ context.Context, _ runConfig, job evalJob, _ cacheConfig) jobResult {
+		now := time.Now()
+		return jobResult{
+			Variant:                 job.Variant,
+			Scenario:                job.Scenario.ID,
+			ScenarioTitle:           job.Scenario.Title,
+			Status:                  "completed",
+			Passed:                  true,
+			WallSeconds:             0.25,
+			Metrics:                 metrics{AssistantCalls: 1, ToolCalls: 2, CommandExecutions: 2},
+			Verification:            verificationResult{Passed: true, DatabasePass: true, AssistantPass: true},
+			RawLogArtifactReference: "<run-root>/" + job.Variant + "/" + job.Scenario.ID + "/turn-1/events.jsonl",
+			StartedAt:               now,
+			CompletedAt:             &now,
+		}
+	})
+	if err != nil {
+		t.Fatalf("execute run: %v", err)
+	}
+	content, err := os.ReadFile(filepath.Join(reportDir, "ockp-parallel-runner-test.json"))
+	if err != nil {
+		t.Fatalf("read JSON report: %v", err)
+	}
+	var report report
+	if err := json.Unmarshal(content, &report); err != nil {
+		t.Fatalf("decode JSON report: %v", err)
+	}
+	if report.Metadata.Lane != parallelRunnerLaneName || report.Metadata.ReleaseBlocking {
+		t.Fatalf("lane metadata = %q/%t, want %q/false", report.Metadata.Lane, report.Metadata.ReleaseBlocking, parallelRunnerLaneName)
+	}
+	if report.TargetedLaneSummary == nil || report.TargetedLaneSummary.Decision != "relax_skill_guidance_for_safe_parallel_reads" {
+		t.Fatalf("targeted summary = %+v", report.TargetedLaneSummary)
+	}
+	if len(report.TargetedLaneSummary.ScenarioClassifications) != len(parallelRunnerScenarioIDs()) {
+		t.Fatalf("classifications = %d, want %d", len(report.TargetedLaneSummary.ScenarioClassifications), len(parallelRunnerScenarioIDs()))
 	}
 }
 

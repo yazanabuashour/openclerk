@@ -31,6 +31,10 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedRAGRetrievalBaseline(ctx, cfg); err != nil {
 			return err
 		}
+	case parallelRunnerReadsScenarioID:
+		if err := seedParallelRunnerReads(ctx, cfg); err != nil {
+			return err
+		}
 	case docsNavigationScenarioID:
 		if err := seedDocsNavigationBaseline(ctx, cfg); err != nil {
 			return err
@@ -331,6 +335,40 @@ func sourceTitleFromPath(path string) string {
 		parts[i] = strings.ToUpper(part[:1]) + part[1:]
 	}
 	return strings.Join(parts, " ")
+}
+func seedParallelRunnerReads(ctx context.Context, cfg runclient.Config) error {
+	if err := createSeedDocument(ctx, cfg, parallelRunnerDocPath, "Parallel Runner Read Contract", "# Parallel Runner Read Contract\n\n## Summary\nParallel runner safe read contract evidence says resolve_paths, list_documents, retrieval search, service lookup, decision lookup, provenance, and projection reads may run concurrently without raw SQLite runtime_config or upsert failures.\n"); err != nil {
+		return err
+	}
+	serviceBody := strings.TrimSpace(`---
+service_id: parallel-runner
+service_name: Parallel runner
+service_status: active
+service_owner: runner
+service_interface: JSON runner
+---
+# Parallel runner
+
+## Summary
+Parallel runner service evidence confirms safe read workflows stay on the installed JSON runner.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, parallelRunnerServicePath, "Parallel runner", serviceBody); err != nil {
+		return err
+	}
+	decisionBody := strings.TrimSpace(`---
+decision_id: adr-parallel-runner-concurrency
+decision_title: Parallel runner concurrency
+decision_status: accepted
+decision_scope: runner
+decision_owner: platform
+decision_date: 2026-04-29
+---
+# Parallel runner concurrency
+
+## Summary
+The accepted parallel runner concurrency decision permits safe read workflows while writes remain serialized.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, parallelRunnerDecisionPath, "Parallel runner concurrency", decisionBody)
 }
 func createSeedDocument(ctx context.Context, cfg runclient.Config, path, title, body string) error {
 	result, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{

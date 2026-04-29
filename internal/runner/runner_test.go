@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -1594,6 +1595,191 @@ func TestResolvePathsZeroConfigCreatesDefaultDatabaseAndVaultConfig(t *testing.T
 	}
 }
 
+func TestParallelFreshStartupReadActions(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	runConcurrent(t, 24, func(i int) error {
+		switch i % 3 {
+		case 0:
+			_, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{Action: runner.DocumentTaskActionResolvePaths})
+			return err
+		case 1:
+			_, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+				Action: runner.DocumentTaskActionList,
+				List:   runner.DocumentListOptions{PathPrefix: "notes/", Limit: 10},
+			})
+			return err
+		default:
+			_, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+				Action: runner.RetrievalTaskActionSearch,
+				Search: runner.SearchOptions{
+					Text:  "runner",
+					Limit: 10,
+				},
+			})
+			return err
+		}
+	})
+}
+
+func TestParallelReadWorkflowsAfterSeed(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	doc := createDocument(t, ctx, config, "notes/projects/concurrency.md", "Concurrency", "# Concurrency\n\n## Summary\nParallel runner safe read evidence.\n")
+	createDocument(t, ctx, config, "records/services/parallel-runner.md", "Parallel runner service", "---\nservice_id: parallel-runner\nservice_name: Parallel runner\nservice_status: active\nservice_owner: runner\nservice_interface: JSON runner\n---\n# Parallel runner\n\n## Summary\nParallel read service evidence.\n")
+	createDocument(t, ctx, config, "docs/architecture/parallel-runner-decision.md", "Parallel runner decision", "---\ndecision_id: adr-parallel-runner\ndecision_title: Parallel runner reads\ndecision_status: accepted\ndecision_scope: runner\ndecision_owner: platform\ndecision_date: 2026-04-29\n---\n# Parallel runner decision\n\n## Summary\nAllow safe parallel read commands.\n")
+
+	runConcurrent(t, 30, func(i int) error {
+		switch i % 6 {
+		case 0:
+			_, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+				Action: runner.DocumentTaskActionList,
+				List:   runner.DocumentListOptions{PathPrefix: "notes/", Limit: 10},
+			})
+			return err
+		case 1:
+			_, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+				Action: runner.DocumentTaskActionGet,
+				DocID:  doc.DocID,
+			})
+			return err
+		case 2:
+			_, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+				Action: runner.RetrievalTaskActionSearch,
+				Search: runner.SearchOptions{
+					Text:  "parallel runner",
+					Limit: 10,
+				},
+			})
+			return err
+		case 3:
+			_, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+				Action: runner.RetrievalTaskActionServicesLookup,
+				Services: runner.ServiceLookupOptions{
+					Text:  "Parallel runner",
+					Limit: 10,
+				},
+			})
+			return err
+		case 4:
+			_, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+				Action: runner.RetrievalTaskActionDecisionsLookup,
+				Decisions: runner.DecisionLookupOptions{
+					Text:  "Parallel runner",
+					Limit: 10,
+				},
+			})
+			return err
+		default:
+			_, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+				Action: runner.RetrievalTaskActionProvenanceEvents,
+				Provenance: runner.ProvenanceEventOptions{
+					RefKind: "document",
+					RefID:   doc.DocID,
+					Limit:   10,
+				},
+			})
+			return err
+		}
+	})
+}
+
+func TestReadWriteOverlapAndConflictingWrites(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	doc := createDocument(t, ctx, config, "notes/projects/overlap.md", "Overlap", "# Overlap\n\n## Summary\nRead write overlap evidence.\n")
+
+	runConcurrent(t, 24, func(i int) error {
+		if i == 0 {
+			_, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+				Action:  runner.DocumentTaskActionAppend,
+				DocID:   doc.DocID,
+				Content: "## Update\nSerialized write completed.\n",
+			})
+			return err
+		}
+		if i%2 == 0 {
+			_, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+				Action: runner.DocumentTaskActionList,
+				List:   runner.DocumentListOptions{PathPrefix: "notes/", Limit: 10},
+			})
+			return err
+		}
+		_, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+			Action: runner.RetrievalTaskActionSearch,
+			Search: runner.SearchOptions{
+				Text:  "overlap evidence",
+				Limit: 10,
+			},
+		})
+		return err
+	})
+
+	var successes int
+	var conflicts int
+	var mu sync.Mutex
+	runConcurrent(t, 8, func(i int) error {
+		_, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+			Action: runner.DocumentTaskActionCreate,
+			Document: runner.DocumentInput{
+				Path:  "notes/projects/conflicting-create.md",
+				Title: "Conflicting create",
+				Body:  "# Conflicting create\n\n## Summary\nOnly one write should win.\n",
+			},
+		})
+		mu.Lock()
+		defer mu.Unlock()
+		if err == nil {
+			successes++
+			return nil
+		}
+		if isClearConcurrencyConflict(err) {
+			conflicts++
+			return nil
+		}
+		return err
+	})
+	if successes != 1 || conflicts != 7 {
+		t.Fatalf("conflicting creates: successes=%d conflicts=%d, want 1/7", successes, conflicts)
+	}
+}
+
+func TestMutatingDocumentTaskSyncsVaultBeforeWrite(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	create := createDocument(t, ctx, config, "notes/projects/manual-edit.md", "Manual edit", "# Manual edit\n\n## Summary\nOriginal registry body.\n")
+	paths, err := runclient.ResolvePaths(config)
+	if err != nil {
+		t.Fatalf("resolve paths: %v", err)
+	}
+	manualBody := "# Manual edit\n\n## Summary\nEdited outside the runner before append.\n"
+	if err := os.WriteFile(filepath.Join(paths.VaultRoot, "notes", "projects", "manual-edit.md"), []byte(manualBody), 0o644); err != nil {
+		t.Fatalf("write manual edit: %v", err)
+	}
+
+	appendResult, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action:  runner.DocumentTaskActionAppend,
+		DocID:   create.DocID,
+		Content: "## Follow-up\nRunner append preserved manual edits.\n",
+	})
+	if err != nil {
+		t.Fatalf("append document task: %v", err)
+	}
+	if appendResult.Document == nil ||
+		!strings.Contains(appendResult.Document.Body, "Edited outside the runner before append.") ||
+		!strings.Contains(appendResult.Document.Body, "Runner append preserved manual edits.") {
+		t.Fatalf("append result body = %q", appendResult.Document.Body)
+	}
+}
+
 func createDocument(t *testing.T, ctx context.Context, config runclient.Config, path string, title string, body string) runner.Document {
 	t.Helper()
 	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
@@ -1611,6 +1797,43 @@ func createDocument(t *testing.T, ctx context.Context, config runclient.Config, 
 		t.Fatalf("create %s result = %+v", path, result)
 	}
 	return *result.Document
+}
+
+func runConcurrent(t *testing.T, count int, fn func(int) error) {
+	t.Helper()
+
+	var wg sync.WaitGroup
+	errs := make(chan error, count)
+	for i := 0; i < count; i++ {
+		i := i
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := fn(i); err != nil {
+				errs <- err
+			}
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			if strings.Contains(strings.ToLower(err.Error()), "sqlite") ||
+				strings.Contains(strings.ToLower(err.Error()), "runtime config") ||
+				strings.Contains(strings.ToLower(err.Error()), "upsert") {
+				t.Fatalf("raw concurrency failure leaked: %v", err)
+			}
+			t.Fatalf("concurrent task failed: %v", err)
+		}
+	}
+}
+
+func isClearConcurrencyConflict(err error) bool {
+	if err == nil {
+		return false
+	}
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "already exists") || strings.Contains(message, "conflict")
 }
 
 func runnerEventTypesInclude(events []runner.ProvenanceEvent, eventType string) bool {

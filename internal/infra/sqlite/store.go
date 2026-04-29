@@ -78,21 +78,21 @@ func configureRuntime(ctx context.Context, databasePath string, vaultRoot string
 	if err := ensureDir(filepath.Dir(databasePath)); err != nil {
 		return RuntimeConfig{}, domain.InternalError("create database directory", err)
 	}
-	db, err := sql.Open("sqlite", databasePath)
+	db, err := openSQLiteDatabase(ctx, databasePath)
 	if err != nil {
-		return RuntimeConfig{}, domain.InternalError("open sqlite database", err)
+		return RuntimeConfig{}, err
 	}
 	defer func() {
 		_ = db.Close()
 	}()
-	db.SetMaxOpenConns(1)
 	if err := initRuntimeConfigSchema(ctx, db); err != nil {
 		return RuntimeConfig{}, err
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	resolvedVaultRoot := filepath.Clean(defaultVaultRoot)
-	if strings.TrimSpace(vaultRoot) != "" {
+	explicitVaultRoot := strings.TrimSpace(vaultRoot) != ""
+	if explicitVaultRoot {
 		resolvedVaultRoot = filepath.Clean(vaultRoot)
 	} else if stored, err := runtimeConfigValue(ctx, db, configKeyVaultRoot); err != nil {
 		return RuntimeConfig{}, err
@@ -102,24 +102,72 @@ func configureRuntime(ctx context.Context, databasePath string, vaultRoot string
 	if err := ensureDir(resolvedVaultRoot); err != nil {
 		return RuntimeConfig{}, domain.InternalError("create vault root", err)
 	}
-	if err := upsertRuntimeConfigValue(ctx, db, configKeyVaultRoot, resolvedVaultRoot, now); err != nil {
+	if explicitVaultRoot {
+		if err := upsertRuntimeConfigValue(ctx, db, configKeyVaultRoot, resolvedVaultRoot, now); err != nil {
+			return RuntimeConfig{}, err
+		}
+	} else if err := insertRuntimeConfigValueIfAbsent(ctx, db, configKeyVaultRoot, resolvedVaultRoot, now); err != nil {
 		return RuntimeConfig{}, err
 	}
 
+	if err := insertRuntimeConfigValueIfAbsent(ctx, db, configKeyLayoutConventionVersion, defaultLayoutConventionVersion, now); err != nil {
+		return RuntimeConfig{}, err
+	}
 	layoutVersion, err := runtimeConfigValue(ctx, db, configKeyLayoutConventionVersion)
 	if err != nil {
 		return RuntimeConfig{}, err
 	}
 	if strings.TrimSpace(layoutVersion) == "" {
 		layoutVersion = defaultLayoutConventionVersion
-		if err := upsertRuntimeConfigValue(ctx, db, configKeyLayoutConventionVersion, layoutVersion, now); err != nil {
-			return RuntimeConfig{}, err
-		}
 	}
 	return RuntimeConfig{
 		VaultRoot:               resolvedVaultRoot,
 		LayoutConventionVersion: layoutVersion,
 	}, nil
+}
+
+func openSQLiteDatabase(ctx context.Context, databasePath string) (*sql.DB, error) {
+	db, err := sql.Open("sqlite", databasePath)
+	if err != nil {
+		return nil, domain.InternalError("open sqlite database", err)
+	}
+	db.SetMaxOpenConns(1)
+	if err := configureSQLiteConnection(ctx, db); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	return db, nil
+}
+
+func openSQLiteDatabaseReadMostly(ctx context.Context, databasePath string) (*sql.DB, error) {
+	db, err := sql.Open("sqlite", databasePath)
+	if err != nil {
+		return nil, domain.InternalError("open sqlite database", err)
+	}
+	db.SetMaxOpenConns(1)
+	for _, statement := range []string{
+		`PRAGMA busy_timeout = 5000;`,
+		`PRAGMA foreign_keys = ON;`,
+	} {
+		if _, err := db.ExecContext(ctx, statement); err != nil {
+			_ = db.Close()
+			return nil, domain.InternalError("configure sqlite connection", err)
+		}
+	}
+	return db, nil
+}
+
+func configureSQLiteConnection(ctx context.Context, db *sql.DB) error {
+	for _, statement := range []string{
+		`PRAGMA busy_timeout = 5000;`,
+		`PRAGMA foreign_keys = ON;`,
+		`PRAGMA journal_mode = WAL;`,
+	} {
+		if _, err := db.ExecContext(ctx, statement); err != nil {
+			return domain.InternalError("configure sqlite connection", err)
+		}
+	}
+	return nil
 }
 
 func initRuntimeConfigSchema(ctx context.Context, db *sql.DB) error {
@@ -153,6 +201,15 @@ ON CONFLICT(key_name) DO UPDATE SET
 	value_text = excluded.value_text,
 	updated_at = excluded.updated_at`, key, value, updatedAt); err != nil {
 		return domain.InternalError("upsert runtime config", err)
+	}
+	return nil
+}
+
+func insertRuntimeConfigValueIfAbsent(ctx context.Context, db *sql.DB, key string, value string, updatedAt string) error {
+	if _, err := db.ExecContext(ctx, `
+INSERT OR IGNORE INTO runtime_config (key_name, value_text, updated_at)
+VALUES (?, ?, ?)`, key, value, updatedAt); err != nil {
+		return domain.InternalError("initialize runtime config", err)
 	}
 	return nil
 }
@@ -222,6 +279,18 @@ type normalizedVideoTranscript struct {
 }
 
 func New(ctx context.Context, cfg Config) (*Store, error) {
+	return newStore(ctx, cfg, true)
+}
+
+func NewUnsynced(ctx context.Context, cfg Config) (*Store, error) {
+	return newStore(ctx, cfg, false)
+}
+
+func NewReadOnly(ctx context.Context, cfg Config) (*Store, error) {
+	return newReadOnlyStore(ctx, cfg)
+}
+
+func newStore(ctx context.Context, cfg Config, syncVault bool) (*Store, error) {
 	if cfg.DatabasePath == "" {
 		return nil, domain.ValidationError("database path is required", nil)
 	}
@@ -235,11 +304,10 @@ func New(ctx context.Context, cfg Config) (*Store, error) {
 		return nil, domain.InternalError("create database directory", err)
 	}
 
-	db, err := sql.Open("sqlite", cfg.DatabasePath)
+	db, err := openSQLiteDatabase(ctx, cfg.DatabasePath)
 	if err != nil {
-		return nil, domain.InternalError("open sqlite database", err)
+		return nil, err
 	}
-	db.SetMaxOpenConns(1)
 
 	store := &Store{
 		db:        db,
@@ -252,19 +320,94 @@ func New(ctx context.Context, cfg Config) (*Store, error) {
 		return nil, err
 	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
-	if err := upsertRuntimeConfigValue(ctx, db, configKeyVaultRoot, filepath.Clean(cfg.VaultRoot), now); err != nil {
+	if err := insertRuntimeConfigValueIfAbsent(ctx, db, configKeyVaultRoot, filepath.Clean(cfg.VaultRoot), now); err != nil {
 		_ = db.Close()
 		return nil, err
 	}
-	if err := upsertRuntimeConfigValue(ctx, db, configKeyLayoutConventionVersion, defaultLayoutConventionVersion, now); err != nil {
+	if err := insertRuntimeConfigValueIfAbsent(ctx, db, configKeyLayoutConventionVersion, defaultLayoutConventionVersion, now); err != nil {
 		_ = db.Close()
 		return nil, err
 	}
-	if err := store.syncVault(ctx); err != nil {
-		_ = db.Close()
-		return nil, err
+	if syncVault {
+		if err := store.syncVault(ctx); err != nil {
+			_ = db.Close()
+			return nil, err
+		}
 	}
 	return store, nil
+}
+
+func newReadOnlyStore(ctx context.Context, cfg Config) (*Store, error) {
+	if cfg.DatabasePath == "" {
+		return nil, domain.ValidationError("database path is required", nil)
+	}
+	if cfg.VaultRoot == "" {
+		return nil, domain.ValidationError("vault root is required", nil)
+	}
+	if initialized, err := sqliteStoreInitialized(ctx, cfg.DatabasePath); err != nil {
+		return nil, err
+	} else if !initialized {
+		return newStore(ctx, cfg, false)
+	}
+	db, err := openSQLiteDatabaseReadMostly(ctx, cfg.DatabasePath)
+	if err != nil {
+		return nil, err
+	}
+	return &Store{
+		db:        db,
+		backend:   cfg.Backend,
+		vaultRoot: cfg.VaultRoot,
+		now:       time.Now,
+	}, nil
+}
+
+func sqliteStoreInitialized(ctx context.Context, databasePath string) (bool, error) {
+	if _, err := osStat(databasePath); err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return false, nil
+		}
+		return false, domain.InternalError("stat sqlite database", err)
+	}
+	db, err := openSQLiteDatabaseReadMostly(ctx, databasePath)
+	if err != nil {
+		return false, err
+	}
+	defer func() {
+		_ = db.Close()
+	}()
+	for _, table := range sqliteSchemaTables() {
+		var name string
+		err := db.QueryRowContext(ctx, `SELECT name FROM sqlite_master WHERE name = ?`, table).Scan(&name)
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		if err != nil {
+			return false, domain.InternalError("inspect sqlite schema", err)
+		}
+	}
+	return true, nil
+}
+
+func sqliteSchemaTables() []string {
+	return []string{
+		"runtime_config",
+		"documents",
+		"document_metadata",
+		"chunks",
+		"chunk_fts",
+		"graph_nodes",
+		"graph_edges",
+		"record_entities",
+		"record_facts",
+		"record_citations",
+		"service_records",
+		"service_facts",
+		"service_citations",
+		"decision_records",
+		"decision_citations",
+		"provenance_events",
+		"projection_states",
+	}
 }
 
 func (s *Store) Close() error {
@@ -881,7 +1024,7 @@ func (s *Store) AppendDocument(ctx context.Context, docID string, input domain.A
 	if strings.TrimSpace(input.Content) == "" {
 		return domain.Document{}, domain.ValidationError("content is required", nil)
 	}
-	doc, err := s.GetDocument(ctx, docID)
+	doc, err := s.refreshDocumentFromDisk(ctx, docID)
 	if err != nil {
 		return domain.Document{}, err
 	}
@@ -890,7 +1033,7 @@ func (s *Store) AppendDocument(ctx context.Context, docID string, input domain.A
 	if err := osWriteFile(filepath.Join(s.vaultRoot, filepath.FromSlash(doc.Path)), body); err != nil {
 		return domain.Document{}, domain.InternalError("append document content", err)
 	}
-	if err := s.syncDocumentFromDisk(ctx, doc.Path, ""); err != nil {
+	if err := s.syncDocumentFromDisk(ctx, doc.Path, doc.Title); err != nil {
 		return domain.Document{}, err
 	}
 	return s.GetDocument(ctx, docID)
@@ -900,7 +1043,7 @@ func (s *Store) ReplaceDocumentSection(ctx context.Context, docID string, input 
 	if strings.TrimSpace(input.Heading) == "" {
 		return domain.Document{}, domain.ValidationError("heading is required", nil)
 	}
-	doc, err := s.GetDocument(ctx, docID)
+	doc, err := s.refreshDocumentFromDisk(ctx, docID)
 	if err != nil {
 		return domain.Document{}, err
 	}
@@ -910,6 +1053,17 @@ func (s *Store) ReplaceDocumentSection(ctx context.Context, docID string, input 
 	}
 	if err := osWriteFile(filepath.Join(s.vaultRoot, filepath.FromSlash(doc.Path)), body); err != nil {
 		return domain.Document{}, domain.InternalError("replace document section", err)
+	}
+	if err := s.syncDocumentFromDisk(ctx, doc.Path, ""); err != nil {
+		return domain.Document{}, err
+	}
+	return s.GetDocument(ctx, docID)
+}
+
+func (s *Store) refreshDocumentFromDisk(ctx context.Context, docID string) (domain.Document, error) {
+	doc, err := s.GetDocument(ctx, docID)
+	if err != nil {
+		return domain.Document{}, err
 	}
 	if err := s.syncDocumentFromDisk(ctx, doc.Path, ""); err != nil {
 		return domain.Document{}, err
@@ -2092,9 +2246,10 @@ VALUES (?, ?, ?, ?, ?)`,
 		}
 	}
 
+	contentVersion := hashID("document-version", relPath, title, body, string(headingsJSON), string(metadataJSON))
 	if contentChanged {
 		if err := insertProvenanceEvent(ctx, tx, domain.ProvenanceEvent{
-			EventID:    hashID("event", eventType, relPath, now.Format(time.RFC3339Nano)),
+			EventID:    hashID("event", eventType, relPath, now.Format(time.RFC3339Nano), contentVersion),
 			EventType:  eventType,
 			RefKind:    "document",
 			RefID:      docID,
@@ -2116,7 +2271,7 @@ VALUES (?, ?, ?, ?, ?)`,
 				sourceDetails = sourceUpdateProvenanceDetails(relPath, frontmatter, previousFrontmatter)
 			}
 			if err := insertProvenanceEvent(ctx, tx, domain.ProvenanceEvent{
-				EventID:    hashID("event", sourceEventType, relPath, now.Format(time.RFC3339Nano)),
+				EventID:    hashID("event", sourceEventType, relPath, now.Format(time.RFC3339Nano), contentVersion),
 				EventType:  sourceEventType,
 				RefKind:    "source",
 				RefID:      docID,
@@ -2144,7 +2299,7 @@ VALUES (?, ?, ?, ?, ?)`,
 			return domain.InternalError("mark graph projection stale", err)
 		}
 		if err := insertProvenanceEvent(ctx, tx, domain.ProvenanceEvent{
-			EventID:    hashID("event", "projection_invalidated", "graph", docID, now.Format(time.RFC3339Nano)),
+			EventID:    hashID("event", "projection_invalidated", "graph", docID, now.Format(time.RFC3339Nano), contentVersion),
 			EventType:  "projection_invalidated",
 			RefKind:    "projection",
 			RefID:      "graph:" + docID,
@@ -2163,7 +2318,7 @@ VALUES (?, ?, ?, ?, ?)`,
 		_, _, projectedRecords := extractRecordProjection(existingBody)
 		if projectsRecords || projectedRecords {
 			if err := insertProvenanceEvent(ctx, tx, domain.ProvenanceEvent{
-				EventID:    hashID("event", "projection_invalidated", "records", docID, now.Format(time.RFC3339Nano)),
+				EventID:    hashID("event", "projection_invalidated", "records", docID, now.Format(time.RFC3339Nano), contentVersion),
 				EventType:  "projection_invalidated",
 				RefKind:    "projection",
 				RefID:      "records-source:" + docID,
@@ -2183,7 +2338,7 @@ VALUES (?, ?, ?, ?, ?)`,
 		_, projectedServices := extractServiceProjection(existingBody)
 		if projectsServices || projectedServices {
 			if err := insertProvenanceEvent(ctx, tx, domain.ProvenanceEvent{
-				EventID:    hashID("event", "projection_invalidated", "services", docID, now.Format(time.RFC3339Nano)),
+				EventID:    hashID("event", "projection_invalidated", "services", docID, now.Format(time.RFC3339Nano), contentVersion),
 				EventType:  "projection_invalidated",
 				RefKind:    "projection",
 				RefID:      "services-source:" + docID,
@@ -2203,7 +2358,7 @@ VALUES (?, ?, ?, ?, ?)`,
 		_, projectedDecisions := extractDecisionProjection(existingBody)
 		if projectsDecisions || projectedDecisions {
 			if err := insertProvenanceEvent(ctx, tx, domain.ProvenanceEvent{
-				EventID:    hashID("event", "projection_invalidated", "decisions", docID, now.Format(time.RFC3339Nano)),
+				EventID:    hashID("event", "projection_invalidated", "decisions", docID, now.Format(time.RFC3339Nano), contentVersion),
 				EventType:  "projection_invalidated",
 				RefKind:    "projection",
 				RefID:      "decisions-source:" + docID,
@@ -2412,7 +2567,7 @@ func (s *Store) rebuildGraph(ctx context.Context) error {
 		}
 		if previous, ok := previousStates[doc.DocID]; !ok || previous.ProjectionVersion != version {
 			if err := insertProvenanceEvent(ctx, tx, domain.ProvenanceEvent{
-				EventID:    hashID("event", "projection_refreshed", "graph", doc.DocID, now.Format(time.RFC3339Nano)),
+				EventID:    hashID("event", "projection_refreshed", "graph", doc.DocID, version, now.Format(time.RFC3339Nano)),
 				EventType:  "projection_refreshed",
 				RefKind:    "projection",
 				RefID:      "graph:" + doc.DocID,
@@ -2564,7 +2719,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		}
 		if entityChanged {
 			if err := insertProvenanceEvent(ctx, tx, domain.ProvenanceEvent{
-				EventID:    hashID("event", "projection_refreshed", "records", entityID, now.Format(time.RFC3339Nano)),
+				EventID:    hashID("event", "projection_refreshed", "records", entityID, version, now.Format(time.RFC3339Nano)),
 				EventType:  "projection_refreshed",
 				RefKind:    "projection",
 				RefID:      "records:" + entityID,
@@ -2724,7 +2879,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		}
 		if serviceChanged {
 			if err := insertProvenanceEvent(ctx, tx, domain.ProvenanceEvent{
-				EventID:    hashID("event", "projection_refreshed", "services", projected.ServiceID, now.Format(time.RFC3339Nano)),
+				EventID:    hashID("event", "projection_refreshed", "services", projected.ServiceID, version, now.Format(time.RFC3339Nano)),
 				EventType:  "projection_refreshed",
 				RefKind:    "projection",
 				RefID:      "services:" + projected.ServiceID,
@@ -2928,7 +3083,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		}
 		if decisionChanged {
 			if err := insertProvenanceEvent(ctx, tx, domain.ProvenanceEvent{
-				EventID:    hashID("event", "projection_refreshed", "decisions", decision.DecisionID, now.Format(time.RFC3339Nano)),
+				EventID:    hashID("event", "projection_refreshed", "decisions", decision.DecisionID, version, now.Format(time.RFC3339Nano)),
 				EventType:  "projection_refreshed",
 				RefKind:    "projection",
 				RefID:      "decisions:" + decision.DecisionID,
@@ -3192,6 +3347,9 @@ func ensureColumn(ctx context.Context, db *sql.DB, table string, column string, 
 		return domain.InternalError("iterate sqlite table info", err)
 	}
 	if _, err := db.ExecContext(ctx, fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", table, column, definition)); err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "duplicate column name") {
+			return nil
+		}
 		return domain.InternalError("alter sqlite table", err)
 	}
 	return nil
@@ -3218,20 +3376,37 @@ func insertProvenanceEvent(ctx context.Context, tx *sql.Tx, event domain.Provena
 	if err != nil {
 		return domain.InternalError("encode provenance event details", err)
 	}
-	if _, err := tx.ExecContext(ctx, `
+	baseEventID := event.EventID
+	for attempt := 0; attempt < 8; attempt++ {
+		eventID := baseEventID
+		if attempt > 0 {
+			eventID = hashID(baseEventID, strconv.Itoa(attempt))
+		}
+		if _, err := tx.ExecContext(ctx, `
 INSERT INTO provenance_events (event_id, event_type, ref_kind, ref_id, source_ref, occurred_at, details_json)
 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		event.EventID,
-		event.EventType,
-		event.RefKind,
-		event.RefID,
-		event.SourceRef,
-		event.OccurredAt.UTC().Format(time.RFC3339Nano),
-		string(detailsJSON),
-	); err != nil {
-		return domain.InternalError("insert provenance event", err)
+			eventID,
+			event.EventType,
+			event.RefKind,
+			event.RefID,
+			event.SourceRef,
+			event.OccurredAt.UTC().Format(time.RFC3339Nano),
+			string(detailsJSON),
+		); err != nil {
+			if isProvenanceEventIDConflict(err) {
+				continue
+			}
+			return domain.InternalError("insert provenance event", err)
+		}
+		return nil
 	}
-	return nil
+	return domain.InternalError("insert provenance event", fmt.Errorf("provenance event id collision: %s", baseEventID))
+}
+
+func isProvenanceEventIDConflict(err error) bool {
+	message := err.Error()
+	return strings.Contains(message, "provenance_events.event_id") &&
+		(strings.Contains(message, "constraint failed") || strings.Contains(message, "UNIQUE constraint failed"))
 }
 
 func upsertProjectionState(ctx context.Context, tx *sql.Tx, projection domain.ProjectionState) error {

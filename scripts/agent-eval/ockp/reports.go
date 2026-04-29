@@ -97,7 +97,7 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	if releaseBlocking {
 		return nil
 	}
-	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != promotedRecordDomainLaneName && lane != documentHistoryLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != sourceURLUpdateLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName && lane != broadAuditLaneName {
+	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != promotedRecordDomainLaneName && lane != parallelRunnerLaneName && lane != documentHistoryLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != sourceURLUpdateLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName && lane != broadAuditLaneName {
 		return nil
 	}
 	summary := targetedLaneSummary{
@@ -127,6 +127,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		case promotedRecordDomainLaneName:
 			include = isPromotedRecordDomainScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
 			classification, posture = classifyTargetedPromotedRecordDomainResult(result)
+		case parallelRunnerLaneName:
+			include = isParallelRunnerScenario(result.Scenario)
+			classification, posture = classifyTargetedParallelRunnerResult(result)
 		case documentHistoryLaneName:
 			include = isDocumentHistoryScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
 			classification, posture = classifyTargetedDocumentHistoryResult(result)
@@ -201,6 +204,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	case promotedRecordDomainLaneName:
 		summary.Decision = promotedRecordDomainDecision(summary.ScenarioClassifications)
 		summary.Promotion = "targeted promoted record domain expansion evidence only; no policy-specific record action, typed domain runner surface, schema, migration, storage behavior, or public API change from this eval"
+	case parallelRunnerLaneName:
+		summary.Decision = "relax_skill_guidance_for_safe_parallel_reads"
+		summary.Promotion = "targeted parallel runner UX evidence for documented safe read/startup workflows; no public JSON schema, storage schema, or write-concurrency expansion"
 	case documentHistoryLaneName:
 		summary.Decision = documentHistoryDecision(summary.ScenarioClassifications)
 		summary.Promotion = "targeted document lifecycle evidence only; no promoted history, diff, review, restore, rollback, schema, migration, storage behavior, or public API change from this eval"
@@ -274,6 +280,23 @@ func classifyTargetedGraphSemanticsRevisitResult(result jobResult) (string, stri
 	}
 	return "ergonomics_gap", "manual review required before any graph semantics promotion"
 }
+
+func classifyTargetedParallelRunnerResult(result jobResult) (string, string) {
+	if result.Passed && result.Verification.Passed {
+		return "none", "parallel startup/read workflow completed through installed runner commands without raw SQLite/runtime_config/upsert failures"
+	}
+	if len(populatedBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Metrics.CreateDocumentUsed || result.Metrics.AppendDocumentUsed || result.Metrics.ReplaceSectionUsed || result.Metrics.IngestSourceURLUsed || result.Metrics.IngestVideoURLUsed {
+		return "skill_guidance_or_eval_coverage", "parallel read scenario used a mutating document action"
+	}
+	if result.Verification.Passed {
+		return "runner_execution_failure", "scenario verification passed, but the job did not complete successfully"
+	}
+	return "skill_guidance_or_eval_coverage", "runner-visible parallel evidence existed, but the assistant answer or required runner steps did not satisfy the scenario"
+}
+
 func classifyTargetedMemoryRouterRevisitResult(result jobResult) (string, string) {
 	if isFinalAnswerOnlyValidationScenario(result.Scenario) {
 		if result.Passed && result.Verification.Passed {
@@ -1170,6 +1193,12 @@ func promotedRecordDomainScenarioIDs() []string {
 		promotedRecordDomainScriptedScenarioID,
 	}
 }
+func parallelRunnerScenarioIDs() []string {
+	return []string{
+		parallelRunnerStartupScenarioID,
+		parallelRunnerReadsScenarioID,
+	}
+}
 func broadAuditScenarioIDs() []string {
 	return []string{
 		broadAuditNaturalScenarioID,
@@ -1345,6 +1374,7 @@ func reportLane(ids []string) (string, bool) {
 	graphSemanticsRevisit := 0
 	memoryRouterRevisit := 0
 	promotedRecordDomain := 0
+	parallelRunner := 0
 	documentHistory := 0
 	agentChosenPath := 0
 	pathTitleAutonomy := 0
@@ -1376,6 +1406,10 @@ func reportLane(ids []string) (string, bool) {
 		}
 		if isPromotedRecordDomainScenario(id) {
 			promotedRecordDomain++
+			continue
+		}
+		if isParallelRunnerScenario(id) {
+			parallelRunner++
 			continue
 		}
 		if isDocumentHistoryScenario(id) {
@@ -1439,6 +1473,9 @@ func reportLane(ids []string) (string, bool) {
 	if promotedRecordDomain > 0 && promotedRecordDomain+validation == len(ids) {
 		return promotedRecordDomainLaneName, false
 	}
+	if parallelRunner > 0 && parallelRunner == len(ids) {
+		return parallelRunnerLaneName, false
+	}
 	if documentHistory > 0 && documentHistory+validation == len(ids) {
 		return documentHistoryLaneName, false
 	}
@@ -1482,6 +1519,9 @@ func reportLane(ids []string) (string, bool) {
 		return populatedMixedLaneName, releaseBlocking
 	}
 	if promotedRecordDomain > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
+	if parallelRunner > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
 	if documentHistory > 0 {
@@ -1528,6 +1568,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == promotedRecordDomainLaneName {
 		return "promoted record domain expansion rows report natural record-domain intent, scripted current-primitives control, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"
+	}
+	if lane == parallelRunnerLaneName {
+		return "parallel runner rows report fresh startup and safe-read command UX, tool count, command count, assistant calls, wall time, guidance dependence, safety risks, and raw SQLite/runtime_config/upsert failure absence"
 	}
 	if lane == documentHistoryLaneName {
 		return "document lifecycle rows report natural intent, scripted current-primitives controls, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, privacy handling, and capability/ergonomics classification"

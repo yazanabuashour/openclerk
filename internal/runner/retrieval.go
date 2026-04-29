@@ -22,7 +22,26 @@ func RunRetrievalTask(ctx context.Context, config runclient.Config, request Retr
 		return RetrievalTaskResult{Summary: "valid"}, nil
 	}
 
-	client, err := runclient.Open(config)
+	if isMutatingRetrievalAction(normalized) {
+		var result RetrievalTaskResult
+		err := runclient.WithWriteLock(ctx, config, func() error {
+			client, err := runclient.OpenForWrite(config)
+			if err != nil {
+				return err
+			}
+			defer func() {
+				_ = client.Close()
+			}()
+			result, err = runRetrievalTaskWithClient(ctx, client, normalized)
+			return err
+		})
+		if err != nil {
+			return RetrievalTaskResult{}, err
+		}
+		return result, nil
+	}
+
+	client, err := runclient.OpenReadOnly(config)
 	if err != nil {
 		return RetrievalTaskResult{}, err
 	}
@@ -30,6 +49,14 @@ func RunRetrievalTask(ctx context.Context, config runclient.Config, request Retr
 		_ = client.Close()
 	}()
 
+	return runRetrievalTaskWithClient(ctx, client, normalized)
+}
+
+func isMutatingRetrievalAction(normalized normalizedRetrievalTaskRequest) bool {
+	return normalized.Action == RetrievalTaskActionAuditContradictions && normalized.Audit.Mode == "repair_existing"
+}
+
+func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, normalized normalizedRetrievalTaskRequest) (RetrievalTaskResult, error) {
 	switch normalized.Action {
 	case RetrievalTaskActionSearch:
 		search, err := client.Search(ctx, runclient.SearchOptions(normalized.Search))

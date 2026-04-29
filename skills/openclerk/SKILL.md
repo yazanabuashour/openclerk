@@ -1,6 +1,6 @@
 ---
 name: OpenClerk
-description: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner. Bootstrap no-tools rule - if required retrieval, source, or video fields are missing; if document path, title, or body is missing and no faithful propose-before-create candidate can be formed from explicit user content; if a numeric limit is negative; or if the user asks to bypass the runner with SQLite, raw vault/file/repo inspection, HTTP/MCP, legacy/source-built paths, unsupported transports, backend variants, module-cache inspection, rg, find, or ls, this description is complete; do not open this skill file, run commands, use tools, or call the runner; respond with exactly one no-tools assistant answer that names the missing/invalid fields or rejects the unsupported workflow. For valid work, use only openclerk document or openclerk retrieval JSON.
+description: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner. Bootstrap no-tools rule - if required fields are missing, if required retrieval, source, or video fields are missing, if document path, title, or body is missing and no faithful propose-before-create candidate can be formed from explicit user content, if a numeric limit is negative such as limit -3, or if the user asks to bypass the runner with SQLite, raw vault/file/repo inspection, HTTP, MCP, legacy or source-built paths, unsupported transports, backend variants, module-cache inspection, rg --files, find, ls, direct vault inspection, or repo search, this description is complete; Do not open this skill file, run commands, use tools, or call the runner; respond with exactly one no-tools assistant answer to name the missing fields and ask the user to provide them, or reject the invalid/unsupported workflow. For valid work, use only openclerk document or openclerk retrieval JSON.
 license: MIT
 compatibility: Requires local filesystem access and an installed openclerk binary on PATH.
 ---
@@ -8,7 +8,8 @@ compatibility: Requires local filesystem access and an installed openclerk binar
 # OpenClerk
 
 Use this skill for routine local OpenClerk knowledge-plane tasks. The
-production interface is AgentOps: this skill plus the installed JSON runner.
+production interface is AgentOps: this Skills-compatible skill plus the
+installed JSON runner.
 
 ```bash
 openclerk document
@@ -17,8 +18,11 @@ openclerk retrieval
 
 ## Core Guardrails
 
-- Pipe exactly one JSON request to one runner command, wait for its JSON result,
-  then run the next request. Do not run runner commands in parallel.
+- Parallelize runner commands only for documented safe reads: `resolve_paths`,
+  `list_documents`, `get_document`, `inspect_layout`, retrieval read actions,
+  and `audit_contradictions` with `mode: "plan_only"`. Sequence all writes,
+  including `init`, create/ingest/append/replace document actions, and
+  `audit_contradictions` with `mode: "repair_existing"`.
 - Answer routine OpenClerk requests only from runner JSON results. Use the
   configured environment; pass `--db` only when the user explicitly names a
   dataset.
@@ -198,10 +202,12 @@ source conflicts. Use `plan_only` for review and `repair_existing` only when
 the request asks to repair an existing target.
 
 For messy populated-vault retrieval, answer from runner-visible authority:
-metadata-filtered authority results, active canonical sources, cited source
+Metadata-filtered authority results, active canonical sources, cited source
 paths, `doc_id`, and `chunk_id`. Treat polluted, decoy, stale, draft, archived,
 duplicate, or candidate documents as non-authority unless runner-visible source
-authority says otherwise.
+authority says otherwise. If a result is marked with `status: polluted` or
+`populated_role: decoy`, explicitly reject that hit as not authority and do not
+repeat its false claim text as a valid answer.
 
 Even when synthesis maintenance is repetitive, stay with documented AgentOps
 document and retrieval actions.

@@ -38,7 +38,26 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 		}, nil
 	}
 
-	client, err := runclient.Open(config)
+	if isMutatingDocumentAction(normalized.Action) {
+		var result DocumentTaskResult
+		err := runclient.WithWriteLock(ctx, config, func() error {
+			client, err := runclient.OpenForWrite(config)
+			if err != nil {
+				return err
+			}
+			defer func() {
+				_ = client.Close()
+			}()
+			result, err = runMutatingDocumentTask(ctx, client, normalized)
+			return err
+		})
+		if err != nil {
+			return DocumentTaskResult{}, err
+		}
+		return result, nil
+	}
+
+	client, err := runclient.OpenReadOnly(config)
 	if err != nil {
 		return DocumentTaskResult{}, err
 	}
@@ -46,6 +65,59 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 		_ = client.Close()
 	}()
 
+	switch normalized.Action {
+	case DocumentTaskActionList:
+		documents, err := client.ListDocuments(ctx, runclient.DocumentListOptions(normalized.List))
+		if err != nil {
+			return DocumentTaskResult{}, err
+		}
+		return DocumentTaskResult{
+			Documents: toDocumentSummaries(documents.Documents),
+			PageInfo:  toPageInfo(documents.PageInfo),
+			Summary:   fmt.Sprintf("returned %d documents", len(documents.Documents)),
+		}, nil
+	case DocumentTaskActionGet:
+		document, err := client.GetDocument(ctx, normalized.DocID)
+		if err != nil {
+			return DocumentTaskResult{}, err
+		}
+		converted := toDocument(document)
+		return DocumentTaskResult{
+			Document: &converted,
+			Summary:  fmt.Sprintf("returned document %s", converted.DocID),
+		}, nil
+	case DocumentTaskActionInspectLayout:
+		layout, err := inspectKnowledgeLayout(ctx, client)
+		if err != nil {
+			return DocumentTaskResult{}, err
+		}
+		status := "valid"
+		if !layout.Valid {
+			status = "invalid"
+		}
+		return DocumentTaskResult{
+			Layout:  &layout,
+			Summary: fmt.Sprintf("inspected %s OpenClerk knowledge layout", status),
+		}, nil
+	default:
+		return DocumentTaskResult{}, fmt.Errorf("unsupported document task action %q", normalized.Action)
+	}
+}
+
+func isMutatingDocumentAction(action string) bool {
+	switch action {
+	case DocumentTaskActionCreate,
+		DocumentTaskActionIngestSourceURL,
+		DocumentTaskActionIngestVideoURL,
+		DocumentTaskActionAppend,
+		DocumentTaskActionReplaceSection:
+		return true
+	default:
+		return false
+	}
+}
+
+func runMutatingDocumentTask(ctx context.Context, client *runclient.Client, normalized normalizedDocumentTaskRequest) (DocumentTaskResult, error) {
 	switch normalized.Action {
 	case DocumentTaskActionCreate:
 		document, err := client.CreateDocument(ctx, runclient.DocumentInput(normalized.Document))
@@ -93,26 +165,6 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 			VideoIngestion: &converted,
 			Summary:        fmt.Sprintf("ingested video URL into %s", converted.SourcePath),
 		}, nil
-	case DocumentTaskActionList:
-		documents, err := client.ListDocuments(ctx, runclient.DocumentListOptions(normalized.List))
-		if err != nil {
-			return DocumentTaskResult{}, err
-		}
-		return DocumentTaskResult{
-			Documents: toDocumentSummaries(documents.Documents),
-			PageInfo:  toPageInfo(documents.PageInfo),
-			Summary:   fmt.Sprintf("returned %d documents", len(documents.Documents)),
-		}, nil
-	case DocumentTaskActionGet:
-		document, err := client.GetDocument(ctx, normalized.DocID)
-		if err != nil {
-			return DocumentTaskResult{}, err
-		}
-		converted := toDocument(document)
-		return DocumentTaskResult{
-			Document: &converted,
-			Summary:  fmt.Sprintf("returned document %s", converted.DocID),
-		}, nil
 	case DocumentTaskActionAppend:
 		document, err := client.AppendDocument(ctx, normalized.DocID, normalized.Content)
 		if err != nil {
@@ -133,21 +185,8 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 			Document: &converted,
 			Summary:  fmt.Sprintf("replaced section in document %s", converted.DocID),
 		}, nil
-	case DocumentTaskActionInspectLayout:
-		layout, err := inspectKnowledgeLayout(ctx, client)
-		if err != nil {
-			return DocumentTaskResult{}, err
-		}
-		status := "valid"
-		if !layout.Valid {
-			status = "invalid"
-		}
-		return DocumentTaskResult{
-			Layout:  &layout,
-			Summary: fmt.Sprintf("inspected %s OpenClerk knowledge layout", status),
-		}, nil
 	default:
-		return DocumentTaskResult{}, fmt.Errorf("unsupported document task action %q", normalized.Action)
+		return DocumentTaskResult{}, fmt.Errorf("unsupported mutating document task action %q", normalized.Action)
 	}
 }
 

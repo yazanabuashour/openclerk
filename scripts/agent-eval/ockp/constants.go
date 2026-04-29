@@ -140,6 +140,14 @@ const (
 	sourceAuditConflictBravoPath  = "sources/audit-conflict-bravo.md"
 	sourceAuditConflictSearchText = "source sensitive audit conflict runner retention"
 
+	parallelRunnerLaneName          = "parallel-runner-ux"
+	parallelRunnerStartupScenarioID = "parallel-runner-safe-startup"
+	parallelRunnerReadsScenarioID   = "parallel-runner-safe-reads"
+	parallelRunnerDocPath           = "notes/parallel-runner/read-contract.md"
+	parallelRunnerServicePath       = "records/services/parallel-runner.md"
+	parallelRunnerDecisionPath      = "docs/architecture/parallel-runner-concurrency.md"
+	parallelRunnerSearchText        = "parallel runner safe read contract evidence"
+
 	documentHistoryNaturalScenarioID      = "document-lifecycle-natural-intent"
 	documentHistoryLaneName               = "document-history-review-controls-poc"
 	documentHistoryPolicyPath             = "notes/history-review/lifecycle-control.md"

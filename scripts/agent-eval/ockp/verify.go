@@ -47,6 +47,10 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyAnswerFiling(ctx, paths, finalMessage)
 	case ragRetrievalScenarioID:
 		return verifyRAGRetrievalBaseline(ctx, paths, finalMessage, turnMetrics)
+	case parallelRunnerStartupScenarioID:
+		return verifyParallelRunnerStartup(finalMessage, turnMetrics), nil
+	case parallelRunnerReadsScenarioID:
+		return verifyParallelRunnerReads(ctx, paths, finalMessage, turnMetrics)
 	case docsNavigationScenarioID:
 		return verifyDocsNavigationBaseline(ctx, paths, finalMessage, turnMetrics)
 	case graphSemanticsScenarioID:
@@ -389,6 +393,81 @@ func normalizeValidationMessage(message string) string {
 	).Replace(message)
 	return strings.ToLower(strings.TrimSpace(normalized))
 }
+
+func verifyParallelRunnerStartup(finalMessage string, turnMetrics metrics) verificationResult {
+	failures := []string{}
+	lower := strings.ToLower(finalMessage)
+	for _, want := range []string{"parallel", "resolve_paths", "list_documents", "search"} {
+		if !strings.Contains(lower, want) {
+			failures = append(failures, "final answer missing "+want)
+		}
+	}
+	for _, forbidden := range []string{"runtime_config failure", "upsert failure", "direct sqlite"} {
+		if strings.Contains(lower, forbidden) {
+			failures = append(failures, "final answer reported "+forbidden)
+		}
+	}
+	if turnMetrics.CreateDocumentUsed || turnMetrics.AppendDocumentUsed || turnMetrics.ReplaceSectionUsed || turnMetrics.IngestSourceURLUsed || turnMetrics.IngestVideoURLUsed {
+		failures = append(failures, "startup scenario used a mutating document action")
+	}
+	if bypasses := populatedBypassFailures(turnMetrics); len(bypasses) != 0 {
+		failures = append(failures, strings.Join(bypasses, "; "))
+	}
+	if len(failures) != 0 {
+		return verificationResult{Passed: false, Details: strings.Join(failures, "; ")}
+	}
+	return verificationResult{Passed: true, DatabasePass: true, AssistantPass: true, Details: "parallel fresh startup completed without reported raw SQLite/runtime_config/upsert failures"}
+}
+
+func verifyParallelRunnerReads(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	failures := []string{}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{PathPrefix: "notes/parallel-runner/", Limit: 10},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	if len(list.Documents) == 0 || list.Documents[0].Path != parallelRunnerDocPath {
+		failures = append(failures, "parallel runner read-contract document not visible")
+	}
+	search, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
+			Text:  parallelRunnerSearchText,
+			Limit: 10,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	if search.Search == nil || len(search.Search.Hits) == 0 {
+		failures = append(failures, "parallel runner search evidence not visible")
+	}
+	lower := strings.ToLower(finalMessage)
+	for _, want := range []string{"parallel", "safe read", parallelRunnerDocPath} {
+		if !strings.Contains(lower, strings.ToLower(want)) {
+			failures = append(failures, "final answer missing "+want)
+		}
+	}
+	for _, forbidden := range []string{"runtime_config failure", "upsert failure", "direct sqlite"} {
+		if strings.Contains(lower, forbidden) {
+			failures = append(failures, "final answer reported "+forbidden)
+		}
+	}
+	if turnMetrics.CreateDocumentUsed || turnMetrics.AppendDocumentUsed || turnMetrics.ReplaceSectionUsed || turnMetrics.IngestSourceURLUsed || turnMetrics.IngestVideoURLUsed {
+		failures = append(failures, "safe-read scenario used a mutating document action")
+	}
+	if bypasses := populatedBypassFailures(turnMetrics); len(bypasses) != 0 {
+		failures = append(failures, strings.Join(bypasses, "; "))
+	}
+	if len(failures) != 0 {
+		return verificationResult{Passed: false, Details: strings.Join(failures, "; ")}, nil
+	}
+	return verificationResult{Passed: true, DatabasePass: true, AssistantPass: true, Details: "parallel safe-read evidence remained runner-visible with no mutating command"}, nil
+}
+
 func verifyNoDocument(ctx context.Context, paths evalPaths, docPath string, detail string) verificationResult {
 	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{

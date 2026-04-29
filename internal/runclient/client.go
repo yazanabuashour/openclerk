@@ -363,6 +363,27 @@ func Open(cfg Config) (*Client, error) {
 	return &Client{runtime: runtime}, nil
 }
 
+// OpenForWrite creates an embedded client for serialized runner write actions.
+// Mutating actions sync the affected document after writing, so startup skips a
+// vault-wide sync while the process-wide write lock is held.
+func OpenForWrite(cfg Config) (*Client, error) {
+	runtime, err := newWriteRuntime(domain.BackendOpenClerk, cfg)
+	if err != nil {
+		return nil, wrapError(err)
+	}
+	return &Client{runtime: runtime}, nil
+}
+
+// OpenReadOnly creates an embedded OpenClerk client for runner actions that do
+// not mutate vault files, document registry rows, provenance, or projections.
+func OpenReadOnly(cfg Config) (*Client, error) {
+	runtime, err := newReadOnlyRuntime(domain.BackendOpenClerk, cfg)
+	if err != nil {
+		return nil, wrapError(err)
+	}
+	return &Client{runtime: runtime}, nil
+}
+
 // Close releases the internal runtime.
 func (c *Client) Close() error {
 	if c == nil || c.runtime == nil {

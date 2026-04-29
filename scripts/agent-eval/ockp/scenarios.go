@@ -22,7 +22,15 @@ func isRepoDocsDogfoodScenario(id string) bool {
 	}
 }
 func isReleaseBlockingScenario(id string) bool {
-	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isPromotedRecordDomainScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isSourceURLUpdateScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isBroadAuditScenario(id)
+	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isPromotedRecordDomainScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isSourceURLUpdateScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isBroadAuditScenario(id) && !isParallelRunnerScenario(id)
+}
+func isParallelRunnerScenario(id string) bool {
+	switch id {
+	case parallelRunnerStartupScenarioID, parallelRunnerReadsScenarioID:
+		return true
+	default:
+		return false
+	}
 }
 func isGraphSemanticsRevisitScenario(id string) bool {
 	switch id {
@@ -152,6 +160,16 @@ func allScenarios() []scenario {
 			ID:     "answer-filing",
 			Title:  "File durable answer into source-linked synthesis",
 			Prompt: "Use the configured local OpenClerk data path. Search for the answer filing source, answer from it, and file the reusable answer into synthesis/filed-runner-answer.md titled Filed OpenClerk runner Answer. The body must include the exact source line Source: sources/answer-filing-runner.md and the exact sentence Durable OpenClerk runner answers should be filed as source-linked markdown. Mention synthesis/filed-runner-answer.md in the final answer.",
+		},
+		{
+			ID:     parallelRunnerStartupScenarioID,
+			Title:  "Parallel runner safe fresh startup",
+			Prompt: "Use the configured local OpenClerk data path. This is a valid runner verification task, not a missing-fields request; all required JSON request fields are provided below. Exercise safe parallel OpenClerk runner startup only with installed openclerk JSON commands; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Run these three read-only startup commands concurrently: openclerk document with {\"action\":\"resolve_paths\"}, openclerk document with {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/\",\"limit\":10}}, and openclerk retrieval with {\"action\":\"search\",\"search\":{\"text\":\"parallel runner safe startup\",\"limit\":10}}. Wait for all JSON results. If any command fails with raw SQLite, runtime_config, or upsert wording, report the failure. In the final answer, mention parallel fresh startup, resolve_paths, list_documents, retrieval search, no raw SQLite/runtime_config/upsert failure, and that no durable document write was requested.",
+		},
+		{
+			ID:     parallelRunnerReadsScenarioID,
+			Title:  "Parallel runner safe reads",
+			Prompt: "Use the configured local OpenClerk data path. This is a valid runner verification task, not a missing-fields request; all required JSON request fields are provided below. Exercise safe parallel OpenClerk read workflows only with installed openclerk JSON commands; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Run these read-only commands concurrently where possible: openclerk document list_documents with path_prefix notes/parallel-runner/ and limit 10; openclerk retrieval search for parallel runner safe read contract evidence with limit 10; openclerk retrieval services_lookup with services.text Parallel runner and limit 10; openclerk retrieval decisions_lookup with decisions.text parallel runner concurrency and limit 10; and openclerk retrieval projection_states with limit 20. Wait for all JSON results. In the final answer, mention parallel safe reads, notes/parallel-runner/read-contract.md, records/services/parallel-runner.md or service evidence, docs/architecture/parallel-runner-concurrency.md or decision evidence, no raw SQLite/runtime_config/upsert failure, and that no write command was run.",
 		},
 		{
 			ID:    ragRetrievalScenarioID,
