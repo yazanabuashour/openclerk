@@ -511,7 +511,9 @@ func TestVerifySourceURLUpdateChangedPDFRequiresStaleProjection(t *testing.T) {
 	if err := seedScenarioWithFixtures(ctx, paths, scenario{ID: sourceURLUpdateChangedScenarioID}, fixtures); err != nil {
 		t.Fatalf("seed source URL changed scenario: %v", err)
 	}
-	fixtures.prepareForAgent(sourceURLUpdateChangedScenarioID)
+	if err := fixtures.prepareForAgent(t.TempDir(), sourceURLUpdateChangedScenarioID); err != nil {
+		t.Fatalf("prepare source URL fixture: %v", err)
+	}
 	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	if _, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionIngestSourceURL,

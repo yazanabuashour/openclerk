@@ -66,6 +66,8 @@ func toSourceIngestionResult(result runclient.SourceIngestionResult) SourceInges
 	return SourceIngestionResult{
 		DocID:       result.DocID,
 		SourcePath:  result.SourcePath,
+		SourceURL:   result.SourceURL,
+		SourceType:  result.SourceType,
 		AssetPath:   result.AssetPath,
 		DerivedPath: result.DerivedPath,
 		Citations:   toCitations(result.Citations),

@@ -25,7 +25,8 @@ OpenClerk already supports local-first AgentOps workflows through the installed
 `openclerk document` and `openclerk retrieval` JSON runners. The only native
 source ingestion action today is `ingest_source_url`, which downloads an
 HTTP/HTTPS PDF source URL into a canonical source note and a vault-relative
-asset path.
+asset path, and after `oc-v1ed` can also fetch public HTML/web pages into
+canonical markdown source notes.
 
 The next artifact question is broader: whether OpenClerk should generalize
 source ingestion beyond PDF URLs to videos and YouTube links, transcripts,
@@ -59,9 +60,9 @@ records unless a later decision explicitly promotes a typed domain.
 Use the following runner-surface options as the comparison frame for POC and
 eval evidence:
 
-- **Keep `ingest_source_url` only:** preserve the current PDF URL ingestion
-  contract and model non-PDF artifacts as canonical markdown or source-linked
-  synthesis.
+- **Keep `ingest_source_url` only:** preserve the PDF and public web URL
+  ingestion contract and model other non-PDF artifacts as canonical markdown
+  or source-linked synthesis.
 - **Add artifact-specific actions:** consider actions such as
   `ingest_video_url`, `ingest_transcript`, or `ingest_receipt` only if targeted
   evidence shows artifact-specific validation, parsing, provenance, or citation

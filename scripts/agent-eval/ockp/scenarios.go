@@ -22,7 +22,7 @@ func isRepoDocsDogfoodScenario(id string) bool {
 	}
 }
 func isReleaseBlockingScenario(id string) bool {
-	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isPromotedRecordDomainScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isSourceURLUpdateScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isBroadAuditScenario(id) && !isParallelRunnerScenario(id)
+	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isPromotedRecordDomainScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isSourceURLUpdateScenario(id) && !isWebURLIntakeScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isBroadAuditScenario(id) && !isParallelRunnerScenario(id)
 }
 func isParallelRunnerScenario(id string) bool {
 	switch id {
@@ -96,6 +96,14 @@ func isSourceURLUpdateScenario(id string) bool {
 		return false
 	}
 }
+func isWebURLIntakeScenario(id string) bool {
+	switch id {
+	case webURLMissingHintScenarioID, webURLCreateScenarioID, webURLDuplicateScenarioID, webURLSameHashScenarioID, webURLChangedScenarioID, webURLUnsupportedScenarioID:
+		return true
+	default:
+		return false
+	}
+}
 func isDocumentThisScenario(id string) bool {
 	switch id {
 	case documentThisMissingFieldsScenarioID, documentThisExplicitCreateScenarioID, documentThisSourceURLMissingHintsScenarioID, documentThisExplicitOverridesScenarioID, documentThisDuplicateCandidateScenarioID, documentThisExistingUpdateScenarioID, documentThisSynthesisFreshnessScenarioID:
@@ -143,6 +151,9 @@ func isArtifactPDFScenario(id string) bool {
 	default:
 		return false
 	}
+}
+func isSourceURLFixtureScenario(id string) bool {
+	return isSourceURLUpdateScenario(id) || isArtifactPDFScenario(id) || isWebURLIntakeScenario(id)
 }
 func allScenarios() []scenario {
 	return []scenario{
@@ -266,6 +277,36 @@ func allScenarios() []scenario {
 			ID:     sourceURLUpdateConflictScenarioID,
 			Title:  "Mismatched path hint update conflicts without writing",
 			Prompt: "Use the configured local OpenClerk data path. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or manual PDF downloads. Run ingest_source_url with source.mode update for exactly this URL and a mismatched path hint: {\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{SOURCE_URL_UPDATE_STABLE_URL}}\",\"path_hint\":\"sources/source-url-update-conflict.md\",\"asset_path_hint\":\"assets/sources/source-url-update-runner.pdf\",\"mode\":\"update\"}}. The update should conflict because the path hint does not match the existing source. Then list documents with path_prefix sources/source-url-update and get the existing source document if needed. In the final answer, mention path-hint conflict, existing path sources/source-url-update-runner.md, and that sources/source-url-update-conflict.md was not created.",
+		},
+		{
+			ID:     webURLMissingHintScenarioID,
+			Title:  "Web URL missing path hint clarifies without tools",
+			Prompt: "Ingest this public web URL into OpenClerk knowledge: https://example.test/products/widget, but I did not provide source.path_hint. For this missing path-hint request, do not use tools or commands and answer once only. Name source.path_hint as missing and ask me to provide it, or provide complete document fields for a proposal.",
+		},
+		{
+			ID:     webURLCreateScenarioID,
+			Title:  "Web URL create through ingest_source_url",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk document runner command yourself and answer only from its JSON result. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or external fetch tools. Run openclerk document with exactly this request shape: {\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{WEB_URL_INTAKE_URL}}\",\"path_hint\":\"sources/web-url/product-page.md\",\"source_type\":\"web\",\"title\":\"Web URL Intake Product Page\"}}. Do not provide source.asset_path_hint. In the final answer, mention sources/web-url/product-page.md, source_type web, citation evidence such as doc_id or chunk_id, and that the web URL was fetched through ingest_source_url.",
+		},
+		{
+			ID:     webURLDuplicateScenarioID,
+			Title:  "Web URL duplicate normalized URL rejects",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk document runner command yourself and answer only from its JSON result. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or external fetch tools. First run openclerk document with exactly this request shape: {\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{WEB_URL_INTAKE_URL}}\",\"path_hint\":\"sources/web-url/product-page-copy.md\",\"source_type\":\"web\",\"title\":\"Duplicate Product Page\"}}. The duplicate normalized source URL should be rejected. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"sources/web-url/\",\"limit\":10}} and confirm the original source remains at sources/web-url/product-page.md and no copy source was created. In the final answer, mention duplicate source URL rejection, sources/web-url/product-page.md, and that sources/web-url/product-page-copy.md was not created.",
+		},
+		{
+			ID:     webURLSameHashScenarioID,
+			Title:  "Web URL same-hash update is a no-op",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk document and retrieval runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or external fetch tools. First run openclerk document with exactly this request shape: {\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{WEB_URL_INTAKE_URL}}\",\"mode\":\"update\",\"source_type\":\"web\"}}. Then list documents with path_prefix sources/web-url/ and get sources/web-url/product-page.md. Search for WebURLIntakeInitialEvidence with path_prefix sources/. In the final answer, mention same-hash no-op update, sources/web-url/product-page.md, source_type web, preserved citation evidence, and no changed-page refresh needed.",
+		},
+		{
+			ID:     webURLChangedScenarioID,
+			Title:  "Web URL changed update marks synthesis stale",
+			Prompt: "Use the configured local OpenClerk data path. The web URL fixture changed before this turn. The installed openclerk binary is on PATH; run it directly with JSON on stdin and do not stop to claim the runner is unavailable. Execute the installed openclerk document and retrieval runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or external fetch tools. First run this command shape with the rendered URL: printf '%s' '{\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{WEB_URL_INTAKE_URL}}\",\"mode\":\"update\",\"source_type\":\"web\",\"path_hint\":\"sources/web-url/product-page.md\"}}' | openclerk document. Then search for WebURLIntakeChangedEvidence with path_prefix sources/. List documents with path_prefix synthesis/ and get synthesis/web-url-product-page.md. Inspect projection_states for projection synthesis with ref_kind document and that synthesis doc_id. In the final answer, mention changed web update, sources/web-url/product-page.md, refreshed changed evidence, synthesis/web-url-product-page.md, and stale synthesis projection.",
+		},
+		{
+			ID:     webURLUnsupportedScenarioID,
+			Title:  "Web URL non-HTML acquisition rejects",
+			Prompt: "Use the configured local OpenClerk data path. This is a supported OpenClerk runner validation request with all required fields; do not answer final-only. The installed openclerk binary is on PATH; run it directly with JSON on stdin and do not stop to claim the runner is unavailable. Answer only from the runner result. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, backend variants, module-cache inspection, or external fetch tools. Run this command shape with the rendered URL: printf '%s' '{\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{WEB_URL_UNSUPPORTED_URL}}\",\"path_hint\":\"sources/web-url/unsupported.md\",\"source_type\":\"web\",\"title\":\"Plain Text Web Source\"}}' | openclerk document. The plain-text non-HTML response should reject by content type without creating sources/web-url/unsupported.md. In the final answer, mention content type or non-HTML rejection, no durable write, and sources/web-url/unsupported.md was not created.",
 		},
 		{
 			ID:     "stale-synthesis-update",

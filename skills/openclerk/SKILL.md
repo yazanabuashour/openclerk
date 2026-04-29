@@ -86,8 +86,9 @@ Required-field rules:
   faithful candidate from explicit user content.
 - Requests that refer to missing prior context, such as "the links we
   discussed" or "that artifact", lack preservable body/source content.
-- New source URL ingestion needs `source.url`, `source.path_hint`, and
-  `source.asset_path_hint`; update mode needs `source.url`.
+- New PDF source URL ingestion needs `source.url`, `source.path_hint`, and
+  `source.asset_path_hint`; new web source URL ingestion needs `source.url`
+  and `source.path_hint`. Update mode needs `source.url`.
 - Video/YouTube ingestion needs `video.url` and supplied transcript text; new
   video sources also need `video.path_hint`.
 - Limits must be non-negative.
@@ -113,6 +114,9 @@ may propose a candidate document before writing only if the user supplied
 enough explicit content to preserve a faithful body. Supported inputs include
 pasted notes, excerpts, clear headings, transcript snippets, operational notes,
 or user-written URL summaries where the claims to preserve are in the prompt.
+If the user provides a public web URL plus the required source path hint, use
+`ingest_source_url` instead of proposing a candidate; no separate approval is
+needed before the runner fetches the URL.
 
 For candidate proposals:
 
@@ -137,7 +141,8 @@ For candidate proposals:
 Use no-tools clarification instead of proposing when actual body content is
 missing, the durable artifact type is unclear, the request is only a bare URL
 or source artifact without source-ingestion hints, the candidate would require
-network fetching, or confidence is too low to preserve a faithful body.
+network fetching outside `ingest_source_url`, or confidence is too low to
+preserve a faithful body.
 
 ## Document Tasks
 
@@ -154,6 +159,8 @@ Common request shapes:
 {"action":"create_document","document":{"path":"notes/projects/example.md","title":"Example","body":"# Example\n\n## Summary\nReusable knowledge.\n"}}
 {"action":"ingest_source_url","source":{"url":"https://example.test/source.pdf","path_hint":"sources/example.md","asset_path_hint":"assets/sources/example.pdf","title":"Optional title"}}
 {"action":"ingest_source_url","source":{"url":"https://example.test/source.pdf","mode":"update"}}
+{"action":"ingest_source_url","source":{"url":"https://example.test/page.html","path_hint":"sources/web/example.md","source_type":"web","title":"Optional title"}}
+{"action":"ingest_source_url","source":{"url":"https://example.test/page.html","mode":"update","source_type":"web"}}
 {"action":"ingest_video_url","video":{"url":"https://youtube.example.test/watch?v=demo","path_hint":"sources/video-youtube/demo.md","title":"Demo Video Transcript","transcript":{"text":"Supplied transcript text.","policy":"supplied","origin":"user_supplied_transcript","language":"en","captured_at":"2026-04-27T00:00:00Z"}}}
 {"action":"ingest_video_url","video":{"url":"https://youtube.example.test/watch?v=demo","mode":"update","transcript":{"text":"Updated supplied transcript text.","policy":"supplied","origin":"user_supplied_transcript"}}}
 {"action":"list_documents","list":{"path_prefix":"notes/","limit":20}}
@@ -166,8 +173,9 @@ Common request shapes:
 
 Request fields are `action`, `document`, `source`, `video`, `doc_id`,
 `content`, `heading`, and `list`. A `document` has `path`, `title`, and `body`.
-A `source` has `url`, `path_hint`, `asset_path_hint`, optional `title`, and
-optional `mode` (`create` default, or `update`). A `video` has `url`,
+A `source` has `url`, `path_hint`, optional `asset_path_hint`, optional
+`title`, optional `mode` (`create` default, or `update`), and optional
+`source_type` (`pdf` or `web`). A `video` has `url`,
 `path_hint`, optional `asset_path_hint`, optional `title`, optional `mode`, and
 `transcript`. A `list` may include `path_prefix`, `metadata_key`,
 `metadata_value`, `limit`, and `cursor`.
@@ -181,11 +189,20 @@ from `layout` JSON fields such as `mode`, `config_artifact_required`,
 `conventional_paths`, `document_kinds`, and `checks`. Do not inspect lower-level
 storage or run `init` to diagnose routine layout problems.
 
-Use `ingest_source_url` for HTTP/HTTPS PDF source ingestion. Create mode needs
-vault-relative `sources/*.md` and `assets/**/*.pdf` hints. Update mode may omit
-path hints and refreshes runner-visible citations, provenance, and dependent
-freshness when content changes. Do not download, inspect, or write PDFs
-yourself.
+Use `ingest_source_url` for HTTP/HTTPS PDF and public web source ingestion.
+PDF create mode needs vault-relative `sources/*.md` and `assets/**/*.pdf`
+hints. Web create mode needs a vault-relative `sources/*.md` hint and may set
+`source_type: "web"`; it must not set `source.asset_path_hint`. If
+`source_type` is omitted, the runner detects PDF versus HTML from the URL and
+response. Update mode may omit path hints and refreshes runner-visible
+citations, provenance, and dependent freshness when content changes. Do not
+download, inspect, or write source URLs yourself with external HTTP, browser,
+or file tools.
+
+For product pages, preserve only runner-visible public page text and metadata.
+Do not automate carts, purchases, login, account state, captcha, paywall, or
+private-network acquisition. If a page cannot be fetched as public HTML, report
+the runner rejection and ask for pasted content or a supported source.
 
 Use `ingest_video_url` only with user-supplied transcript text and provenance.
 Do not acquire media or transcripts with external tools or lower-level storage.

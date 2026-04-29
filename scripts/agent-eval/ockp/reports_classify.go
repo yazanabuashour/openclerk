@@ -530,6 +530,29 @@ func classifyTargetedSourceURLUpdateResult(result jobResult) (string, string) {
 	return "runner_capability_gap", "manual review required before any public surface change"
 }
 
+func classifyTargetedWebURLIntakeResult(result jobResult) (string, string) {
+	if result.Passed && result.Verification.Passed {
+		return "none", "ingest_source_url web source behavior preserved source evidence, duplicate handling, and freshness boundaries"
+	}
+	if len(webURLBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Scenario == webURLMissingHintScenarioID &&
+		(result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1) {
+		return "skill_guidance_or_eval_coverage", "web URL missing path-hint pressure did not stay final-answer-only"
+	}
+	if result.Verification.Passed {
+		return "runner_execution_failure", "scenario verification passed, but the job did not complete successfully"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "fixture or database evidence did not satisfy the web URL intake contract"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible evidence existed, but the assistant answer did not satisfy the scenario"
+	}
+	return "runner_capability_gap", "manual review required before any web URL intake promotion"
+}
+
 func classifyTargetedPopulatedResult(result jobResult) (string, string) {
 	if result.Passed && result.Verification.Passed {
 		return "none", "existing document/retrieval runner evidence was sufficient"

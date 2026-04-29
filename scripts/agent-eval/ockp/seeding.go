@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -89,6 +91,18 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		}
 		if err := seedSourceURLUpdateSynthesis(ctx, cfg); err != nil {
 			return err
+		}
+	case webURLDuplicateScenarioID, webURLSameHashScenarioID, webURLChangedScenarioID:
+		if fixtures == nil {
+			return errors.New("web URL intake fixture server is required")
+		}
+		if err := seedWebURLIntakeSource(ctx, cfg, fixtures.stableURL(), fixtures.initialHTML); err != nil {
+			return err
+		}
+		if sc.ID == webURLSameHashScenarioID || sc.ID == webURLChangedScenarioID {
+			if err := seedWebURLIntakeSynthesis(ctx, cfg); err != nil {
+				return err
+			}
 		}
 	case synthesisCandidatePressureScenarioID:
 		if err := seedSynthesisCandidatePressure(ctx, cfg); err != nil {
@@ -426,9 +440,64 @@ Initial synthesis depends on SourceURLUpdateInitialEvidence.
 
 ## Freshness
 Checked source URL update source before PDF refresh.
-`) + "\n"
+	`) + "\n"
 	return createSeedDocument(ctx, cfg, sourceURLUpdateSynthesisPath, "Source URL Update Runner", body)
 }
+
+func seedWebURLIntakeSource(ctx context.Context, cfg runclient.Config, sourceURL string, htmlBody []byte) error {
+	sha := sha256.Sum256(htmlBody)
+	shaHex := hex.EncodeToString(sha[:])
+	body := strings.TrimSpace(fmt.Sprintf(`---
+type: source
+source_type: web
+modality: markdown
+source_url: "%s"
+derived_path: "%s"
+sha256: "%s"
+size_bytes: %d
+mime_type: "text/html"
+captured_at: "2026-04-29T00:00:00Z"
+source_title: "%s"
+---
+# %s
+
+## Summary
+Web source ingested from %s.
+
+## Source Page
+- Source URL: %s
+- SHA256: %s
+- Size bytes: %d
+- Page title: %s
+
+## Extracted Text
+%s %s visible public product-page evidence. Add to cart
+`, sourceURL, webURLSourcePath, shaHex, len(htmlBody), webURLTitle, webURLTitle, sourceURL, sourceURL, shaHex, len(htmlBody), webURLTitle, webURLTitle, webURLInitialText)) + "\n"
+	return createSeedDocument(ctx, cfg, webURLSourcePath, webURLTitle, body)
+}
+
+func seedWebURLIntakeSynthesis(ctx context.Context, cfg runclient.Config) error {
+	body := strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: sources/web-url/product-page.md
+---
+
+# Web URL Product Page
+
+## Summary
+Initial synthesis depends on WebURLIntakeInitialEvidence.
+
+## Sources
+- sources/web-url/product-page.md
+
+## Freshness
+Checked web URL intake source before web refresh.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, webURLSynthesisPath, "Web URL Product Page", body)
+}
+
 func prepareSourceURLUpdateAgentState(ctx context.Context, paths evalPaths, sc scenario, fixtures *sourceURLUpdateFixtures) error {
 	if sc.ID != sourceURLUpdateChangedScenarioID {
 		return nil

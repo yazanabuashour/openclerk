@@ -14,6 +14,7 @@ func reportLane(ids []string) (string, bool) {
 	agentChosenPath := 0
 	pathTitleAutonomy := 0
 	sourceURLUpdate := 0
+	webURLIntake := 0
 	documentThis := 0
 	documentArtifactCandidate := 0
 	artifactIngestion := 0
@@ -61,6 +62,10 @@ func reportLane(ids []string) (string, bool) {
 		}
 		if isSourceURLUpdateScenario(id) {
 			sourceURLUpdate++
+			continue
+		}
+		if isWebURLIntakeScenario(id) {
+			webURLIntake++
 			continue
 		}
 		if isDocumentThisScenario(id) {
@@ -123,6 +128,9 @@ func reportLane(ids []string) (string, bool) {
 	if sourceURLUpdate > 0 && sourceURLUpdate+validation == len(ids) {
 		return sourceURLUpdateLaneName, false
 	}
+	if webURLIntake > 0 && webURLIntake+validation == len(ids) {
+		return webURLIntakeLaneName, false
+	}
 	if documentThis > 0 && documentThis == len(ids) {
 		return documentThisLaneName, false
 	}
@@ -171,6 +179,9 @@ func reportLane(ids []string) (string, bool) {
 	if sourceURLUpdate > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
+	if webURLIntake > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
 	if documentThis > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
@@ -216,6 +227,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == artifactIngestionLaneName {
 		return "artifact ingestion rows report tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, fixture preflight, and final classification"
+	}
+	if lane == webURLIntakeLaneName {
+		return "web URL intake rows report missing path-hint handling, web create, duplicate URL rejection, no-op update, changed-source stale synthesis evidence, unsupported acquisition rejection, and final classification"
 	}
 	if lane == videoYouTubeLaneName {
 		return "video/YouTube rows report natural supplied-transcript intent, scripted transcript control, synthesis freshness, bypass rejection, ergonomics scorecard fields, and final capability classification"

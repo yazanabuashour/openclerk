@@ -59,6 +59,8 @@ func toSourceIngestionResult(result domain.SourceIngestionResult) SourceIngestio
 	return SourceIngestionResult{
 		DocID:       result.DocID,
 		SourcePath:  result.SourcePath,
+		SourceURL:   result.SourceURL,
+		SourceType:  result.SourceType,
 		AssetPath:   result.AssetPath,
 		DerivedPath: result.DerivedPath,
 		Citations:   toCitations(result.Citations),

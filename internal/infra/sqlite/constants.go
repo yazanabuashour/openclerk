@@ -10,6 +10,8 @@ const (
 	maxSourceDownloadBytes           = 50 << 20
 	sourceURLModeCreate              = "create"
 	sourceURLModeUpdate              = "update"
+	sourceTypePDF                    = "pdf"
+	sourceTypeWeb                    = "web"
 	evalSourceFixtureRootEnv         = "OPENCLERK_EVAL_SOURCE_FIXTURE_ROOT"
 	evalSourceFixtureHost            = "openclerk-eval.local"
 )

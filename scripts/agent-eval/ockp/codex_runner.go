@@ -72,7 +72,10 @@ func codexJobRunner(ctx context.Context, config runConfig, job evalJob, cache ca
 		return result
 	}
 	if fixtures != nil {
-		fixtures.prepareForAgent(job.Scenario.ID)
+		if err := fixtures.prepareForAgent(jobDir, job.Scenario.ID); err != nil {
+			result.Error = fmt.Sprintf("prepare source URL fixture state: %v", err)
+			return result
+		}
 		if err := prepareSourceURLUpdateAgentState(ctx, paths, job.Scenario, fixtures); err != nil {
 			result.Error = fmt.Sprintf("prepare source URL update state: %v", err)
 			return result

@@ -72,6 +72,14 @@ should match this runner request shape:
 printf '%s\n' '{"action":"ingest_source_url","source":{"url":"https://example.test/source.pdf","mode":"update"}}' | openclerk document
 ```
 
+For web source URL behavior after `oc-v1ed`, the skill examples should match
+this runner request shape and must not imply external browser, HTTP/MCP,
+purchase, login, captcha, paywall, or direct vault acquisition:
+
+```bash
+printf '%s\n' '{"action":"ingest_source_url","source":{"url":"https://example.test/page.html","path_hint":"sources/web/example.md","source_type":"web"}}' | openclerk document
+```
+
 For supplied-transcript video/YouTube source ingestion, the release notes and
 skill examples should match this runner request shape and must not imply native
 video download, platform caption retrieval, local STT, transcript APIs, or

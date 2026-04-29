@@ -25,8 +25,8 @@ Supporting evidence:
 
 OpenClerk already supports local-first AgentOps workflows through the installed
 `openclerk document` and `openclerk retrieval` JSON runners. The promoted
-native source ingestion action is `ingest_source_url`, limited to HTTP/HTTPS
-PDF source URLs.
+native source ingestion action is `ingest_source_url`; after `oc-v1ed` it
+covers HTTP/HTTPS PDF and public web source URLs.
 
 Video and YouTube links differ from PDF source URLs because the canonical text
 usually depends on a transcript acquisition step. That step may come from a
@@ -57,7 +57,7 @@ Current public surface remains:
 
 - `openclerk document`
 - `openclerk retrieval`
-- existing `ingest_source_url` for PDF source URLs
+- existing `ingest_source_url` for PDF and public web source URLs
 - `ingest_video_url` for supplied transcript text only
 
 Routine agents must not fetch video media, run `yt-dlp`, run `ffmpeg`, call

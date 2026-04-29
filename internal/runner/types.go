@@ -53,6 +53,7 @@ type SourceURLInput struct {
 	AssetPathHint string `json:"asset_path_hint"`
 	Title         string `json:"title,omitempty"`
 	Mode          string `json:"mode,omitempty"`
+	SourceType    string `json:"source_type,omitempty"`
 }
 
 type VideoURLInput struct {
@@ -84,7 +85,9 @@ type SourcePDFMetadata struct {
 type SourceIngestionResult struct {
 	DocID       string            `json:"doc_id"`
 	SourcePath  string            `json:"source_path"`
-	AssetPath   string            `json:"asset_path"`
+	SourceURL   string            `json:"source_url"`
+	SourceType  string            `json:"source_type"`
+	AssetPath   string            `json:"asset_path,omitempty"`
 	DerivedPath string            `json:"derived_path"`
 	Citations   []Citation        `json:"citations,omitempty"`
 	SHA256      string            `json:"sha256"`

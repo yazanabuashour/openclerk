@@ -110,6 +110,7 @@ type SourceURLInput struct {
 	AssetPathHint string
 	Title         string
 	Mode          string
+	SourceType    string
 }
 
 type VideoURLInput struct {
@@ -141,6 +142,8 @@ type SourcePDFMetadata struct {
 type SourceIngestionResult struct {
 	DocID       string
 	SourcePath  string
+	SourceURL   string
+	SourceType  string
 	AssetPath   string
 	DerivedPath string
 	Citations   []Citation

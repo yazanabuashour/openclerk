@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"github.com/yazanabuashour/openclerk/internal/domain"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -261,6 +262,246 @@ func TestIngestSourceURLUpdateMode(t *testing.T) {
 	projection := requireSynthesisProjection(t, ctx, store, docIDForPath("synthesis/runner.md"))
 	if projection.Freshness != "stale" || projection.Details["stale_source_refs"] != "sources/runner-ingest.md" {
 		t.Fatalf("synthesis projection after source update = %+v", projection)
+	}
+}
+
+func TestIngestSourceURLWebCreateAndUpdateMode(t *testing.T) {
+	initialHTML := `<!doctype html><html><head><title>Runner Web Title</title><script>hidden()</script></head><body><nav><a href="/login">Login</a></nav><h1>Runner Web Title</h1><p>Initial web evidence for OpenClerk.</p><button>Add to cart</button></body></html>`
+	updatedHTML := `<!doctype html><html><head><title>Runner Web Title Updated</title></head><body><h1>Runner Web Title Updated</h1><p>Updated web evidence for OpenClerk.</p></body></html>`
+	fixtureRoot := t.TempDir()
+	fixturePath := filepath.Join(fixtureRoot, "web", "runner-product.html")
+	if err := os.MkdirAll(filepath.Dir(fixturePath), 0o755); err != nil {
+		t.Fatalf("mkdir web fixture: %v", err)
+	}
+	if err := os.WriteFile(fixturePath, []byte(initialHTML), 0o644); err != nil {
+		t.Fatalf("write web fixture: %v", err)
+	}
+	t.Setenv(evalSourceFixtureRootEnv, fixtureRoot)
+	sourceURL := "http://openclerk-eval.local/web/runner-product.html?tag=tracking"
+
+	ctx := context.Background()
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+
+	created, err := store.IngestSourceURL(ctx, domain.SourceURLInput{
+		URL:      sourceURL + "#fragment",
+		PathHint: "sources/web/runner-product.md",
+	})
+	if err != nil {
+		t.Fatalf("create web source URL: %v", err)
+	}
+	if created.SourceType != "web" ||
+		created.SourceURL != sourceURL ||
+		created.AssetPath != "" ||
+		created.SourcePath != "sources/web/runner-product.md" ||
+		created.DerivedPath != "sources/web/runner-product.md" ||
+		created.MIMEType != "text/html" ||
+		created.PageCount != 0 ||
+		len(created.SHA256) != 64 ||
+		len(created.Citations) == 0 {
+		t.Fatalf("created web ingestion = %+v", created)
+	}
+	if _, err := os.Stat(filepath.Join(vaultRoot, "assets")); !os.IsNotExist(err) {
+		t.Fatalf("web ingestion created asset directory: %v", err)
+	}
+	doc, err := store.GetDocument(ctx, created.DocID)
+	if err != nil {
+		t.Fatalf("get web source: %v", err)
+	}
+	if doc.Metadata["source_type"] != "web" ||
+		doc.Metadata["source_url"] != created.SourceURL ||
+		doc.Metadata["asset_path"] != "" ||
+		!strings.Contains(doc.Body, "Initial web evidence for OpenClerk.") ||
+		strings.Contains(doc.Body, "hidden()") {
+		t.Fatalf("web source document = %+v", doc)
+	}
+	if _, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+		Path:  "synthesis/web-runner.md",
+		Title: "Web Runner Synthesis",
+		Body:  synthesisBody("sources/web/runner-product.md", "Initial web evidence for OpenClerk."),
+	}); err != nil {
+		t.Fatalf("create synthesis: %v", err)
+	}
+
+	var appErr *domain.Error
+	_, err = store.IngestSourceURL(ctx, domain.SourceURLInput{
+		URL:      created.SourceURL,
+		PathHint: "sources/web/runner-product-copy.md",
+	})
+	if !errors.As(err, &appErr) || appErr.Status != 409 || appErr.Code != "already_exists" {
+		t.Fatalf("duplicate web create error = %v, want already_exists 409", err)
+	}
+	_, err = store.IngestSourceURL(ctx, domain.SourceURLInput{
+		URL:        created.SourceURL,
+		SourceType: "pdf",
+		Mode:       "update",
+	})
+	if !errors.As(err, &appErr) || appErr.Status != 409 || appErr.Code != "conflict" {
+		t.Fatalf("mismatched source type update error = %v, want conflict 409", err)
+	}
+
+	beforeSourceEvents, err := store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{RefKind: "source", RefID: created.DocID, Limit: 20})
+	if err != nil {
+		t.Fatalf("source events before no-op: %v", err)
+	}
+	beforeProjectionEvents, err := store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{RefKind: "projection", Limit: 50})
+	if err != nil {
+		t.Fatalf("projection events before no-op: %v", err)
+	}
+	same, err := store.IngestSourceURL(ctx, domain.SourceURLInput{
+		URL:  created.SourceURL,
+		Mode: "update",
+	})
+	if err != nil {
+		t.Fatalf("same web update: %v", err)
+	}
+	if same.DocID != created.DocID || same.SourcePath != created.SourcePath || same.AssetPath != "" || same.SHA256 != created.SHA256 || same.SourceType != "web" {
+		t.Fatalf("same web update result = %+v, want existing ingestion result", same)
+	}
+	afterSourceEvents, err := store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{RefKind: "source", RefID: created.DocID, Limit: 20})
+	if err != nil {
+		t.Fatalf("source events after no-op: %v", err)
+	}
+	afterProjectionEvents, err := store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{RefKind: "projection", Limit: 50})
+	if err != nil {
+		t.Fatalf("projection events after no-op: %v", err)
+	}
+	if countEventType(afterSourceEvents.Events, "source_updated") != countEventType(beforeSourceEvents.Events, "source_updated") ||
+		countEventType(afterProjectionEvents.Events, "projection_invalidated") != countEventType(beforeProjectionEvents.Events, "projection_invalidated") {
+		t.Fatalf("same web update created stale-state churn: source=%+v projection=%+v", afterSourceEvents.Events, afterProjectionEvents.Events)
+	}
+
+	if err := os.WriteFile(fixturePath, []byte(updatedHTML), 0o644); err != nil {
+		t.Fatalf("write updated web fixture: %v", err)
+	}
+	changed, err := store.IngestSourceURL(ctx, domain.SourceURLInput{
+		URL:        created.SourceURL,
+		PathHint:   "sources/web/runner-product.md",
+		SourceType: "web",
+		Mode:       "update",
+	})
+	if err != nil {
+		t.Fatalf("changed web update: %v", err)
+	}
+	if changed.DocID != created.DocID || changed.SourcePath != created.SourcePath || changed.AssetPath != "" || changed.SHA256 == created.SHA256 {
+		t.Fatalf("changed web update = %+v, created = %+v", changed, created)
+	}
+	updatedDoc, err := store.GetDocument(ctx, created.DocID)
+	if err != nil {
+		t.Fatalf("get updated web source: %v", err)
+	}
+	if updatedDoc.Metadata["sha256"] != changed.SHA256 || !strings.Contains(updatedDoc.Body, "Updated web evidence for OpenClerk.") {
+		t.Fatalf("updated web source document = %+v", updatedDoc)
+	}
+	search, err := store.Search(ctx, domain.SearchQuery{Text: "Updated web evidence", PathPrefix: "sources/", Limit: 10})
+	if err != nil {
+		t.Fatalf("search updated web source: %v", err)
+	}
+	if len(search.Hits) == 0 || search.Hits[0].Citations[0].DocID != created.DocID {
+		t.Fatalf("search updated web source = %+v", search)
+	}
+	sourceEvents, err := store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{RefKind: "source", RefID: created.DocID, Limit: 20})
+	if err != nil {
+		t.Fatalf("source update events: %v", err)
+	}
+	var foundUpdate bool
+	for _, event := range sourceEvents.Events {
+		if event.EventType == "source_updated" &&
+			event.Details["previous_sha256"] == created.SHA256 &&
+			event.Details["new_sha256"] == changed.SHA256 &&
+			event.Details["source_type"] == "web" &&
+			event.Details["source_url"] == created.SourceURL {
+			foundUpdate = true
+		}
+	}
+	if !foundUpdate {
+		t.Fatalf("source update provenance = %+v", sourceEvents.Events)
+	}
+	projection := requireSynthesisProjection(t, ctx, store, docIDForPath("synthesis/web-runner.md"))
+	if projection.Freshness != "stale" || projection.Details["stale_source_refs"] != "sources/web/runner-product.md" {
+		t.Fatalf("synthesis projection after web source update = %+v", projection)
+	}
+}
+
+func TestIngestSourceURLWebRejectsPrivateNetworkHost(t *testing.T) {
+	_, err := downloadSource(context.Background(), "http://127.0.0.1/private-page", sourceTypeWeb)
+	var appErr *domain.Error
+	if !errors.As(err, &appErr) || appErr.Status != 400 || !strings.Contains(appErr.Message, "publicly fetchable") {
+		t.Fatalf("private web URL error = %v, want publicly fetchable validation", err)
+	}
+}
+
+func TestIngestSourceURLWebRejectsPrivateRedirectTarget(t *testing.T) {
+	oldClient := sourceHTTPClient
+	defer func() {
+		sourceHTTPClient = oldClient
+	}()
+	var requestedPrivate bool
+	sourceHTTPClient = func(checkRedirect func(*http.Request, []*http.Request) error) *http.Client {
+		return &http.Client{
+			CheckRedirect: checkRedirect,
+			Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+				if request.URL.Host == "127.0.0.1" {
+					requestedPrivate = true
+					return htmlTestResponse(request, "private"), nil
+				}
+				return &http.Response{
+					StatusCode: http.StatusFound,
+					Header:     http.Header{"Location": []string{"http://127.0.0.1/private-page"}},
+					Body:       io.NopCloser(strings.NewReader("")),
+					Request:    request,
+				}, nil
+			}),
+		}
+	}
+
+	_, err := downloadSource(context.Background(), "http://93.184.216.34/web-page", sourceTypeWeb)
+	var appErr *domain.Error
+	if !errors.As(err, &appErr) || appErr.Status != 400 || !strings.Contains(appErr.Message, "publicly fetchable") {
+		t.Fatalf("private redirect error = %v, want publicly fetchable validation", err)
+	}
+	if requestedPrivate {
+		t.Fatal("followed private redirect target")
+	}
+}
+
+func TestIngestSourceURLAutodetectedWebRejectsPrivateFinalURL(t *testing.T) {
+	oldClient := sourceHTTPClient
+	defer func() {
+		sourceHTTPClient = oldClient
+	}()
+	sourceHTTPClient = func(checkRedirect func(*http.Request, []*http.Request) error) *http.Client {
+		return &http.Client{
+			CheckRedirect: checkRedirect,
+			Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+				return htmlTestResponse(request, "private html from pdf-looking URL"), nil
+			}),
+		}
+	}
+
+	_, err := downloadSource(context.Background(), "http://127.0.0.1/private.pdf", "")
+	var appErr *domain.Error
+	if !errors.As(err, &appErr) || appErr.Status != 400 || !strings.Contains(appErr.Message, "publicly fetchable") {
+		t.Fatalf("private autodetected web error = %v, want publicly fetchable validation", err)
+	}
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(request *http.Request) (*http.Response, error) {
+	return f(request)
+}
+
+func htmlTestResponse(request *http.Request, text string) *http.Response {
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/html"}},
+		Body:       io.NopCloser(strings.NewReader("<!doctype html><html><body>" + text + "</body></html>")),
+		Request:    request,
 	}
 }
 

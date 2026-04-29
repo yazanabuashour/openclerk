@@ -6,6 +6,9 @@ Decision: promote `openclerk document` action `ingest_source_url`.
 
 Issue: `oc-jb0`
 
+Later `oc-v1ed` extended the same action to public HTML/web-page source
+ingestion. This report remains the PDF source URL promotion evidence.
+
 ## Targeted Evidence
 
 The POC compared the current document/retrieval runner surface against source
@@ -46,11 +49,11 @@ Response shape adds `ingestion` with created `doc_id`, `source_path`,
 `asset_path`, `derived_path`, citations, SHA256, size, MIME type, page count,
 capture timestamp, and optional PDF metadata.
 
-The action rejects missing fields before runtime initialization, accepts only
-HTTP/HTTPS PDF sources, keeps paths vault-relative, rejects duplicate
-`source_url` values unless a future update mode is explicitly designed, and
-validates generated metadata, asset existence, and indexed citations before
-success.
+For the PDF contract covered by this report, the action rejects missing fields
+before runtime initialization, accepts HTTP/HTTPS PDF sources, keeps paths
+vault-relative, rejects duplicate `source_url` values unless update mode is
+explicitly requested, and validates generated metadata, asset existence, and
+indexed citations before success.
 
 ## Targeted Checks
 
@@ -58,7 +61,7 @@ Implementation coverage is in Go tests rather than a full agent eval run:
 
 - missing, invalid-scheme, and unsafe path requests reject before creating the
   runtime database or vault
-- non-PDF responses reject
+- non-PDF responses rejected before the later `oc-v1ed` web-source extension
 - a served PDF fixture creates the asset, source note, source metadata,
   retrieval citations, and provenance details
 - duplicate source URLs reject without update behavior

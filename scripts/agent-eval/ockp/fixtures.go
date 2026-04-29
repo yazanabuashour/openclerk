@@ -24,15 +24,25 @@ type sourceURLUpdateFixtures struct {
 	changedPDF      []byte
 	serveChangedPDF bool
 	artifactPDF     bool
+	webURLIntake    bool
+	initialHTML     []byte
+	changedHTML     []byte
+	serveChangedWeb bool
 }
 
 func startSourceURLUpdateFixtures(scenarioID string) *sourceURLUpdateFixtures {
-	if !isSourceURLUpdateScenario(scenarioID) && !isArtifactPDFScenario(scenarioID) {
+	if !isSourceURLFixtureScenario(scenarioID) {
 		return nil
 	}
 	fixtures := &sourceURLUpdateFixtures{
 		initialPDF: minimalEvalPDF("Source URL Update Stable", "OpenClerk Eval", sourceURLUpdateInitialText),
 		changedPDF: minimalEvalPDF("Source URL Update Changed", "OpenClerk Eval", sourceURLUpdateChangedText),
+	}
+	if isWebURLIntakeScenario(scenarioID) {
+		fixtures.webURLIntake = true
+		fixtures.initialHTML = []byte(`<!doctype html><html><head><title>` + webURLTitle + `</title></head><body><h1>` + webURLTitle + `</h1><p>` + webURLInitialText + ` visible public product-page evidence.</p><button>Add to cart</button></body></html>`)
+		fixtures.changedHTML = []byte(`<!doctype html><html><head><title>` + webURLTitle + ` Updated</title></head><body><h1>` + webURLTitle + ` Updated</h1><p>` + webURLChangedText + ` refreshed public product-page evidence.</p></body></html>`)
+		return fixtures
 	}
 	if isArtifactPDFScenario(scenarioID) {
 		fixtures.initialPDF = minimalEvalPDF("Artifact PDF Source", "OpenClerk Eval", artifactPDFEvidenceText)
@@ -62,18 +72,28 @@ func (f *sourceURLUpdateFixtures) stableURL() string {
 	if f.artifactPDF {
 		return artifactPDFEvalSourceURL
 	}
+	if f.webURLIntake {
+		return webURLEvalSourceURL
+	}
 	return f.server.URL + "/stable.pdf"
 }
 func (f *sourceURLUpdateFixtures) changedURL() string {
 	return f.stableURL()
 }
-func (f *sourceURLUpdateFixtures) prepareForAgent(scenarioID string) {
+func (f *sourceURLUpdateFixtures) prepareForAgent(runDir string, scenarioID string) error {
+	if scenarioID == webURLChangedScenarioID {
+		f.mu.Lock()
+		f.serveChangedWeb = true
+		f.mu.Unlock()
+		return writeSourceURLFixtureFile(runDir, "web-url/product-page.html", f.changedHTML)
+	}
 	if scenarioID != sourceURLUpdateChangedScenarioID {
-		return
+		return nil
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.serveChangedPDF = true
+	return nil
 }
 func (f *sourceURLUpdateFixtures) renderPrompt(prompt string) string {
 	if f == nil {
@@ -81,17 +101,31 @@ func (f *sourceURLUpdateFixtures) renderPrompt(prompt string) string {
 	}
 	prompt = strings.ReplaceAll(prompt, sourceURLUpdateStableURLToken, f.stableURL())
 	prompt = strings.ReplaceAll(prompt, sourceURLUpdateChangedURLToken, f.changedURL())
-	return strings.ReplaceAll(prompt, artifactPDFSourceURLToken, f.stableURL())
+	prompt = strings.ReplaceAll(prompt, artifactPDFSourceURLToken, f.stableURL())
+	prompt = strings.ReplaceAll(prompt, webURLUnsupportedToken, webURLUnsupportedEvalSourceURL)
+	return strings.ReplaceAll(prompt, webURLToken, f.stableURL())
 }
 func (f *sourceURLUpdateFixtures) prepareFiles(runDir string) error {
-	if f == nil || !f.artifactPDF {
+	if f == nil {
 		return nil
 	}
-	target := filepath.Join(evalSourceFixtureRoot(runDir), "artifacts", "vendor-security-paper.pdf")
+	if f.webURLIntake {
+		if err := writeSourceURLFixtureFile(runDir, "web-url/product-page.html", f.initialHTML); err != nil {
+			return err
+		}
+		return writeSourceURLFixtureFile(runDir, "web-url/unsupported.txt", []byte("unsupported plain text"))
+	}
+	if !f.artifactPDF {
+		return nil
+	}
+	return writeSourceURLFixtureFile(runDir, "artifacts/vendor-security-paper.pdf", f.initialPDF)
+}
+func writeSourceURLFixtureFile(runDir string, relPath string, body []byte) error {
+	target := filepath.Join(evalSourceFixtureRoot(runDir), filepath.FromSlash(relPath))
 	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(target, f.initialPDF, 0o644)
+	return os.WriteFile(target, body, 0o644)
 }
 func evalSourceFixtureRoot(runDir string) string {
 	return filepath.Join(runDir, "source-fixtures")

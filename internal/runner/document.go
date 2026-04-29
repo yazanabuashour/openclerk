@@ -281,6 +281,7 @@ func trimSourceURLInput(input SourceURLInput) SourceURLInput {
 		AssetPathHint: strings.TrimSpace(input.AssetPathHint),
 		Title:         strings.TrimSpace(input.Title),
 		Mode:          strings.TrimSpace(input.Mode),
+		SourceType:    strings.TrimSpace(input.SourceType),
 	}
 }
 
@@ -322,12 +323,24 @@ func validateSourceURLInput(input SourceURLInput) string {
 	if mode != "create" && mode != "update" {
 		return "source.mode must be create or update"
 	}
+	sourceType := input.SourceType
+	if sourceType != "" && sourceType != "pdf" && sourceType != "web" {
+		return "source.source_type must be pdf or web"
+	}
+	if sourceType == "web" && input.AssetPathHint != "" {
+		return "source.asset_path_hint is not supported for source_type web"
+	}
 	if mode == "create" || input.PathHint != "" {
 		if rejection := validateSourcePathHint(input.PathHint); rejection != "" {
 			return rejection
 		}
 	}
-	if mode == "create" || input.AssetPathHint != "" {
+	requiresPDFAsset := sourceType == "pdf" || (sourceType == "" && strings.HasSuffix(strings.ToLower(parsed.Path), ".pdf"))
+	if requiresPDFAsset && (mode == "create" || input.AssetPathHint != "") {
+		if rejection := validateAssetPathHint(input.AssetPathHint); rejection != "" {
+			return rejection
+		}
+	} else if input.AssetPathHint != "" {
 		if rejection := validateAssetPathHint(input.AssetPathHint); rejection != "" {
 			return rejection
 		}

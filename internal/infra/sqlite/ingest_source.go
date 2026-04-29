@@ -9,14 +9,17 @@ import (
 	"errors"
 	"fmt"
 	"github.com/yazanabuashour/openclerk/internal/domain"
+	"html"
 	"io"
 	"io/fs"
 	"mime"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"rsc.io/pdf"
 	"sort"
 	"strings"
@@ -29,6 +32,23 @@ type pdfExtraction struct {
 	Pages    int
 }
 
+type webExtraction struct {
+	Title string
+	Text  string
+}
+
+type sourceDownload struct {
+	Body       []byte
+	MIMEType   string
+	SourceType string
+}
+
+var sourceHTTPClient = defaultSourceHTTPClient
+
+func defaultSourceHTTPClient(checkRedirect func(*http.Request, []*http.Request) error) *http.Client {
+	return &http.Client{Timeout: 30 * time.Second, CheckRedirect: checkRedirect}
+}
+
 func (s *Store) IngestSourceURL(ctx context.Context, input domain.SourceURLInput) (domain.SourceIngestionResult, error) {
 	sourceURL, err := normalizeSourceURL(input.URL)
 	if err != nil {
@@ -38,22 +58,22 @@ func (s *Store) IngestSourceURL(ctx context.Context, input domain.SourceURLInput
 	if err != nil {
 		return domain.SourceIngestionResult{}, err
 	}
+	requestedType, err := normalizeSourceType(input.SourceType)
+	if err != nil {
+		return domain.SourceIngestionResult{}, err
+	}
 	switch mode {
 	case sourceURLModeCreate:
-		return s.createSourceURL(ctx, input, sourceURL)
+		return s.createSourceURL(ctx, input, sourceURL, requestedType)
 	case sourceURLModeUpdate:
-		return s.updateSourceURL(ctx, input, sourceURL)
+		return s.updateSourceURL(ctx, input, sourceURL, requestedType)
 	default:
 		return domain.SourceIngestionResult{}, domain.ValidationError("source mode must be create or update", map[string]any{"mode": input.Mode})
 	}
 }
 
-func (s *Store) createSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string) (domain.SourceIngestionResult, error) {
+func (s *Store) createSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string, requestedType string) (domain.SourceIngestionResult, error) {
 	sourcePath, err := normalizeSourceDocumentPath(input.PathHint)
-	if err != nil {
-		return domain.SourceIngestionResult{}, err
-	}
-	assetPath, err := normalizeSourceAssetPath(input.AssetPathHint)
 	if err != nil {
 		return domain.SourceIngestionResult{}, err
 	}
@@ -68,6 +88,26 @@ func (s *Store) createSourceURL(ctx context.Context, input domain.SourceURLInput
 	} else if !errors.Is(err, fs.ErrNotExist) {
 		return domain.SourceIngestionResult{}, domain.InternalError("stat source document path", err)
 	}
+
+	download, err := downloadSource(ctx, sourceURL, requestedType)
+	if err != nil {
+		return domain.SourceIngestionResult{}, err
+	}
+	switch download.SourceType {
+	case sourceTypePDF:
+		return s.createPDFSourceURL(ctx, input, sourceURL, sourcePath, sourceAbsPath, download)
+	case sourceTypeWeb:
+		return s.createWebSourceURL(ctx, input, sourceURL, sourcePath, sourceAbsPath, download)
+	default:
+		return domain.SourceIngestionResult{}, domain.ValidationError("source URL returned an unsupported content type", map[string]any{"mime_type": download.MIMEType})
+	}
+}
+
+func (s *Store) createPDFSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string, sourcePath string, sourceAbsPath string, download sourceDownload) (domain.SourceIngestionResult, error) {
+	assetPath, err := normalizeSourceAssetPath(input.AssetPathHint)
+	if err != nil {
+		return domain.SourceIngestionResult{}, err
+	}
 	assetAbsPath := filepath.Join(s.vaultRoot, filepath.FromSlash(assetPath))
 	if _, err := osStat(assetAbsPath); err == nil {
 		return domain.SourceIngestionResult{}, domain.AlreadyExistsError("asset path", assetPath)
@@ -75,14 +115,10 @@ func (s *Store) createSourceURL(ctx context.Context, input domain.SourceURLInput
 		return domain.SourceIngestionResult{}, domain.InternalError("stat source asset path", err)
 	}
 
-	pdfBytes, mimeType, err := downloadSourcePDF(ctx, sourceURL)
-	if err != nil {
-		return domain.SourceIngestionResult{}, err
-	}
 	if err := ensureDir(filepath.Dir(assetAbsPath)); err != nil {
 		return domain.SourceIngestionResult{}, domain.InternalError("create source asset directory", err)
 	}
-	if err := osWriteBytes(assetAbsPath, pdfBytes); err != nil {
+	if err := osWriteBytes(assetAbsPath, download.Body); err != nil {
 		return domain.SourceIngestionResult{}, domain.InternalError("write source asset", err)
 	}
 	assetWritten := true
@@ -99,10 +135,10 @@ func (s *Store) createSourceURL(ctx context.Context, input domain.SourceURLInput
 		return domain.SourceIngestionResult{}, err
 	}
 	capturedAt := s.now().UTC()
-	sha := sha256.Sum256(pdfBytes)
+	sha := sha256.Sum256(download.Body)
 	shaHex := hex.EncodeToString(sha[:])
 	title := resolvedSourceTitle(input.Title, extracted.Metadata.Title, sourcePath)
-	body := buildSourceNoteBody(sourceURL, sourcePath, assetPath, title, shaHex, int64(len(pdfBytes)), mimeType, capturedAt, extracted)
+	body := buildPDFSourceNoteBody(sourceURL, sourcePath, assetPath, title, shaHex, int64(len(download.Body)), download.MIMEType, capturedAt, extracted)
 	document, err := s.CreateDocument(ctx, domain.CreateDocumentInput{
 		Path:  sourcePath,
 		Title: title,
@@ -128,23 +164,88 @@ func (s *Store) createSourceURL(ctx context.Context, input domain.SourceURLInput
 	return domain.SourceIngestionResult{
 		DocID:       document.DocID,
 		SourcePath:  sourcePath,
+		SourceURL:   sourceURL,
+		SourceType:  sourceTypePDF,
 		AssetPath:   assetPath,
 		DerivedPath: sourcePath,
 		Citations:   citations,
 		SHA256:      shaHex,
-		SizeBytes:   int64(len(pdfBytes)),
-		MIMEType:    mimeType,
+		SizeBytes:   int64(len(download.Body)),
+		MIMEType:    download.MIMEType,
 		PageCount:   extracted.Pages,
 		CapturedAt:  capturedAt,
 		PDFMetadata: extracted.Metadata,
 	}, nil
 }
 
-func (s *Store) updateSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string) (domain.SourceIngestionResult, error) {
+func (s *Store) createWebSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string, sourcePath string, _ string, download sourceDownload) (domain.SourceIngestionResult, error) {
+	if strings.TrimSpace(input.AssetPathHint) != "" {
+		return domain.SourceIngestionResult{}, domain.ValidationError("source.asset_path_hint is not supported for web source ingestion", nil)
+	}
+	extracted, err := extractWebPage(download.Body)
+	if err != nil {
+		return domain.SourceIngestionResult{}, err
+	}
+	capturedAt := s.now().UTC()
+	sha := sha256.Sum256(download.Body)
+	shaHex := hex.EncodeToString(sha[:])
+	title := resolvedSourceTitle(input.Title, extracted.Title, sourcePath)
+	body := buildWebSourceNoteBody(sourceURL, sourcePath, title, shaHex, int64(len(download.Body)), download.MIMEType, capturedAt, extracted)
+	document, err := s.CreateDocument(ctx, domain.CreateDocumentInput{
+		Path:  sourcePath,
+		Title: title,
+		Body:  body,
+	})
+	if err != nil {
+		return domain.SourceIngestionResult{}, err
+	}
+	citations, err := s.sourceDocumentCitations(ctx, document)
+	if err != nil {
+		return domain.SourceIngestionResult{}, err
+	}
+	if len(citations) == 0 {
+		return domain.SourceIngestionResult{}, domain.InternalError("validate web source ingestion citations", errors.New("created source has no indexed citations"))
+	}
+	if err := validateIngestedSource(document, sourceURL, sourcePath, "", ""); err != nil {
+		return domain.SourceIngestionResult{}, err
+	}
+	return domain.SourceIngestionResult{
+		DocID:       document.DocID,
+		SourcePath:  sourcePath,
+		SourceURL:   sourceURL,
+		SourceType:  sourceTypeWeb,
+		DerivedPath: sourcePath,
+		Citations:   citations,
+		SHA256:      shaHex,
+		SizeBytes:   int64(len(download.Body)),
+		MIMEType:    download.MIMEType,
+		CapturedAt:  capturedAt,
+	}, nil
+}
+
+func (s *Store) updateSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string, requestedType string) (domain.SourceIngestionResult, error) {
 	document, err := s.sourceDocumentByURL(ctx, sourceURL)
 	if err != nil {
 		return domain.SourceIngestionResult{}, err
 	}
+	storedType := strings.TrimSpace(document.Metadata["source_type"])
+	if storedType == "" {
+		storedType = sourceTypePDF
+	}
+	if requestedType != "" && requestedType != storedType {
+		return domain.SourceIngestionResult{}, domain.ConflictError("source_type does not match existing source", map[string]any{"source_url": sourceURL, "source_type": requestedType, "existing_source_type": storedType})
+	}
+	switch storedType {
+	case sourceTypePDF:
+		return s.updatePDFSourceURL(ctx, input, sourceURL, document)
+	case sourceTypeWeb:
+		return s.updateWebSourceURL(ctx, input, sourceURL, document)
+	default:
+		return domain.SourceIngestionResult{}, domain.ConflictError("source URL belongs to an unsupported source type", map[string]any{"source_url": sourceURL, "source_type": storedType, "path": document.Path})
+	}
+}
+
+func (s *Store) updatePDFSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string, document domain.Document) (domain.SourceIngestionResult, error) {
 	sourcePath := document.Path
 	assetPath := strings.TrimSpace(document.Metadata["asset_path"])
 	if assetPath == "" {
@@ -173,18 +274,18 @@ func (s *Store) updateSourceURL(ctx context.Context, input domain.SourceURLInput
 		return domain.SourceIngestionResult{}, domain.InternalError("validate existing source asset", err)
 	}
 
-	pdfBytes, mimeType, err := downloadSourcePDF(ctx, sourceURL)
+	download, err := downloadSource(ctx, sourceURL, sourceTypePDF)
 	if err != nil {
 		return domain.SourceIngestionResult{}, err
 	}
-	sha := sha256.Sum256(pdfBytes)
+	sha := sha256.Sum256(download.Body)
 	shaHex := hex.EncodeToString(sha[:])
 	if strings.TrimSpace(document.Metadata["sha256"]) == shaHex {
 		return s.sourceIngestionResultFromDocument(ctx, document)
 	}
 
 	tempAssetPath := assetAbsPath + ".openclerk-update-" + hashID("asset", sourceURL, shaHex)
-	if err := osWriteBytes(tempAssetPath, pdfBytes); err != nil {
+	if err := osWriteBytes(tempAssetPath, download.Body); err != nil {
 		return domain.SourceIngestionResult{}, domain.InternalError("write source asset staging file", err)
 	}
 	defer func() {
@@ -203,8 +304,8 @@ func (s *Store) updateSourceURL(ctx context.Context, input domain.SourceURLInput
 	}
 	capturedAt := s.now().UTC()
 	title := resolvedSourceTitle(input.Title, extracted.Metadata.Title, sourcePath)
-	body := buildSourceNoteBody(sourceURL, sourcePath, assetPath, title, shaHex, int64(len(pdfBytes)), mimeType, capturedAt, extracted)
-	if err := s.replaceSourceAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, pdfBytes, body, title); err != nil {
+	body := buildPDFSourceNoteBody(sourceURL, sourcePath, assetPath, title, shaHex, int64(len(download.Body)), download.MIMEType, capturedAt, extracted)
+	if err := s.replaceSourceAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, download.Body, body, title); err != nil {
 		return domain.SourceIngestionResult{}, err
 	}
 	updated, err := s.GetDocument(ctx, document.DocID)
@@ -224,15 +325,80 @@ func (s *Store) updateSourceURL(ctx context.Context, input domain.SourceURLInput
 	return domain.SourceIngestionResult{
 		DocID:       updated.DocID,
 		SourcePath:  sourcePath,
+		SourceURL:   sourceURL,
+		SourceType:  sourceTypePDF,
 		AssetPath:   assetPath,
 		DerivedPath: sourcePath,
 		Citations:   citations,
 		SHA256:      shaHex,
-		SizeBytes:   int64(len(pdfBytes)),
-		MIMEType:    mimeType,
+		SizeBytes:   int64(len(download.Body)),
+		MIMEType:    download.MIMEType,
 		PageCount:   extracted.Pages,
 		CapturedAt:  capturedAt,
 		PDFMetadata: extracted.Metadata,
+	}, nil
+}
+
+func (s *Store) updateWebSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string, document domain.Document) (domain.SourceIngestionResult, error) {
+	sourcePath := document.Path
+	if strings.TrimSpace(input.PathHint) != "" {
+		requestPath, err := normalizeSourceDocumentPath(input.PathHint)
+		if err != nil {
+			return domain.SourceIngestionResult{}, err
+		}
+		if requestPath != sourcePath {
+			return domain.SourceIngestionResult{}, domain.ConflictError("source path hint does not match existing source", map[string]any{"source_url": sourceURL, "path_hint": requestPath, "existing_path": sourcePath})
+		}
+	}
+	if strings.TrimSpace(input.AssetPathHint) != "" {
+		return domain.SourceIngestionResult{}, domain.ConflictError("web source does not have an asset path", map[string]any{"source_url": sourceURL, "asset_path_hint": input.AssetPathHint, "existing_path": sourcePath})
+	}
+	download, err := downloadSource(ctx, sourceURL, sourceTypeWeb)
+	if err != nil {
+		return domain.SourceIngestionResult{}, err
+	}
+	sha := sha256.Sum256(download.Body)
+	shaHex := hex.EncodeToString(sha[:])
+	if strings.TrimSpace(document.Metadata["sha256"]) == shaHex {
+		return s.sourceIngestionResultFromDocument(ctx, document)
+	}
+	extracted, err := extractWebPage(download.Body)
+	if err != nil {
+		return domain.SourceIngestionResult{}, err
+	}
+	sourceAbsPath := filepath.Join(s.vaultRoot, filepath.FromSlash(sourcePath))
+	oldBody := document.Body
+	capturedAt := s.now().UTC()
+	title := resolvedSourceTitle(input.Title, extracted.Title, sourcePath)
+	body := buildWebSourceNoteBody(sourceURL, sourcePath, title, shaHex, int64(len(download.Body)), download.MIMEType, capturedAt, extracted)
+	if err := s.replaceSourceNote(ctx, sourcePath, sourceAbsPath, oldBody, body, title); err != nil {
+		return domain.SourceIngestionResult{}, err
+	}
+	updated, err := s.GetDocument(ctx, document.DocID)
+	if err != nil {
+		return domain.SourceIngestionResult{}, s.restoreSourceNote(ctx, sourcePath, sourceAbsPath, oldBody, err)
+	}
+	citations, err := s.sourceDocumentCitations(ctx, updated)
+	if err != nil {
+		return domain.SourceIngestionResult{}, s.restoreSourceNote(ctx, sourcePath, sourceAbsPath, oldBody, err)
+	}
+	if len(citations) == 0 {
+		return domain.SourceIngestionResult{}, s.restoreSourceNote(ctx, sourcePath, sourceAbsPath, oldBody, domain.InternalError("validate web source update citations", errors.New("updated source has no indexed citations")))
+	}
+	if err := validateIngestedSource(updated, sourceURL, sourcePath, "", ""); err != nil {
+		return domain.SourceIngestionResult{}, s.restoreSourceNote(ctx, sourcePath, sourceAbsPath, oldBody, err)
+	}
+	return domain.SourceIngestionResult{
+		DocID:       updated.DocID,
+		SourcePath:  sourcePath,
+		SourceURL:   sourceURL,
+		SourceType:  sourceTypeWeb,
+		DerivedPath: sourcePath,
+		Citations:   citations,
+		SHA256:      shaHex,
+		SizeBytes:   int64(len(download.Body)),
+		MIMEType:    download.MIMEType,
+		CapturedAt:  capturedAt,
 	}, nil
 }
 
@@ -271,15 +437,22 @@ LIMIT 1`, sourceURL).Scan(&found)
 
 func (s *Store) sourceIngestionResultFromDocument(ctx context.Context, document domain.Document) (domain.SourceIngestionResult, error) {
 	sourceURL := strings.TrimSpace(document.Metadata["source_url"])
+	sourceType := strings.TrimSpace(document.Metadata["source_type"])
+	if sourceType == "" {
+		sourceType = sourceTypePDF
+	}
 	assetPath := strings.TrimSpace(document.Metadata["asset_path"])
 	derivedPath := strings.TrimSpace(document.Metadata["derived_path"])
 	if derivedPath == "" {
 		derivedPath = document.Path
 	}
-	if sourceURL == "" || assetPath == "" {
+	if sourceURL == "" || (sourceType == sourceTypePDF && assetPath == "") {
 		return domain.SourceIngestionResult{}, domain.InternalError("source document is missing ingestion metadata", fmt.Errorf("path %q", document.Path))
 	}
-	assetAbsPath := filepath.Join(s.vaultRoot, filepath.FromSlash(assetPath))
+	assetAbsPath := ""
+	if assetPath != "" {
+		assetAbsPath = filepath.Join(s.vaultRoot, filepath.FromSlash(assetPath))
+	}
 	if err := validateIngestedSource(document, sourceURL, document.Path, assetPath, assetAbsPath); err != nil {
 		return domain.SourceIngestionResult{}, err
 	}
@@ -290,6 +463,8 @@ func (s *Store) sourceIngestionResultFromDocument(ctx context.Context, document 
 	return domain.SourceIngestionResult{
 		DocID:       document.DocID,
 		SourcePath:  document.Path,
+		SourceURL:   sourceURL,
+		SourceType:  sourceType,
 		AssetPath:   assetPath,
 		DerivedPath: derivedPath,
 		Citations:   citations,
@@ -332,57 +507,182 @@ func (s *Store) restoreSourceAssetAndNote(ctx context.Context, sourcePath string
 	return cause
 }
 
-func downloadSourcePDF(ctx context.Context, sourceURL string) ([]byte, string, error) {
+func (s *Store) replaceSourceNote(ctx context.Context, sourcePath string, sourceAbsPath string, oldBody string, newBody string, title string) error {
+	if err := osWriteFile(sourceAbsPath, newBody); err != nil {
+		return domain.InternalError("write source note", err)
+	}
+	if err := s.syncDocumentFromDisk(ctx, sourcePath, title); err != nil {
+		return s.restoreSourceNote(ctx, sourcePath, sourceAbsPath, oldBody, err)
+	}
+	return nil
+}
+
+func (s *Store) restoreSourceNote(ctx context.Context, sourcePath string, sourceAbsPath string, oldBody string, cause error) error {
+	if restoreErr := osWriteFile(sourceAbsPath, oldBody); restoreErr != nil {
+		return domain.InternalError("restore source note after failed update", errors.Join(cause, restoreErr))
+	}
+	if restoreErr := s.syncDocumentFromDisk(ctx, sourcePath, ""); restoreErr != nil {
+		return domain.InternalError("restore indexed source after failed update", errors.Join(cause, restoreErr))
+	}
+	return cause
+}
+
+func downloadSource(ctx context.Context, sourceURL string, requestedType string) (sourceDownload, error) {
 	if fixturePath, ok, err := resolveEvalSourceFixturePath(sourceURL); err != nil {
-		return nil, "", err
+		return sourceDownload{}, err
 	} else if ok {
 		body, err := osReadFile(fixturePath)
 		if err != nil {
-			return nil, "", domain.InternalError("read eval source PDF fixture", err)
+			return sourceDownload{}, domain.InternalError("read eval source fixture", err)
 		}
 		if len(body) > maxSourceDownloadBytes {
-			return nil, "", domain.ValidationError("source PDF exceeds maximum supported size", map[string]any{"max_bytes": maxSourceDownloadBytes})
+			return sourceDownload{}, domain.ValidationError("source URL exceeds maximum supported size", map[string]any{"max_bytes": maxSourceDownloadBytes})
 		}
-		if !looksLikePDF(body) {
-			return nil, "", domain.ValidationError("source URL did not return a PDF", nil)
+		kind, mimeType, err := classifySourceBody(body, "application/pdf", requestedType)
+		if err != nil {
+			return sourceDownload{}, err
 		}
-		return body, "application/pdf", nil
+		return sourceDownload{Body: body, MIMEType: mimeType, SourceType: kind}, nil
+	}
+	parsedURL, err := validateSourceFetchURL(sourceURL)
+	if err != nil {
+		return sourceDownload{}, err
+	}
+	if shouldValidatePublicSourceHost(parsedURL, requestedType) {
+		if err := validatePublicSourceHost(ctx, parsedURL); err != nil {
+			return sourceDownload{}, err
+		}
 	}
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, sourceURL, nil)
 	if err != nil {
-		return nil, "", domain.ValidationError("source url must be fetchable", map[string]any{"url": sourceURL})
+		return sourceDownload{}, domain.ValidationError("source url must be fetchable", map[string]any{"url": sourceURL})
 	}
-	client := http.Client{Timeout: 30 * time.Second}
+	var redirectValidationErr error
+	client := sourceHTTPClient(func(request *http.Request, _ []*http.Request) error {
+		if requestedType != sourceTypeWeb {
+			return nil
+		}
+		if request == nil || request.URL == nil {
+			redirectValidationErr = domain.ValidationError("source url must be fetchable", map[string]any{"url": sourceURL})
+			return redirectValidationErr
+		}
+		redirectValidationErr = validateSourceFetchURLTarget(ctx, request.URL)
+		return redirectValidationErr
+	})
+	if client == nil {
+		client = defaultSourceHTTPClient(nil)
+	}
 	response, err := client.Do(request)
 	if err != nil {
-		return nil, "", domain.InternalError("download source PDF", err)
+		if redirectValidationErr != nil {
+			return sourceDownload{}, redirectValidationErr
+		}
+		return sourceDownload{}, domain.InternalError("download source URL", err)
 	}
 	defer func() {
 		_ = response.Body.Close()
 	}()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return nil, "", domain.ValidationError("source URL returned a non-success status", map[string]any{"status": response.StatusCode})
+		if response.StatusCode == http.StatusUnauthorized || response.StatusCode == http.StatusForbidden || response.StatusCode == http.StatusProxyAuthRequired {
+			return sourceDownload{}, domain.ValidationError("source URL requires unsupported authenticated or restricted access", map[string]any{"status": response.StatusCode})
+		}
+		return sourceDownload{}, domain.ValidationError("source URL returned a non-success status", map[string]any{"status": response.StatusCode})
 	}
 	body, err := io.ReadAll(io.LimitReader(response.Body, maxSourceDownloadBytes+1))
 	if err != nil {
-		return nil, "", domain.InternalError("read source PDF response", err)
+		return sourceDownload{}, domain.InternalError("read source URL response", err)
 	}
 	if len(body) > maxSourceDownloadBytes {
-		return nil, "", domain.ValidationError("source PDF exceeds maximum supported size", map[string]any{"max_bytes": maxSourceDownloadBytes})
-	}
-	if !looksLikePDF(body) {
-		return nil, "", domain.ValidationError("source URL did not return a PDF", nil)
+		return sourceDownload{}, domain.ValidationError("source URL exceeds maximum supported size", map[string]any{"max_bytes": maxSourceDownloadBytes})
 	}
 	mimeType := ""
-	if parsed, _, err := mime.ParseMediaType(response.Header.Get("Content-Type")); err == nil && parsed == "application/pdf" {
+	if parsed, _, err := mime.ParseMediaType(response.Header.Get("Content-Type")); err == nil {
 		mimeType = parsed
 	} else {
 		mimeType = http.DetectContentType(body)
 	}
-	if mimeType == "" || mimeType == "application/octet-stream" {
-		mimeType = "application/pdf"
+	kind, mimeType, err := classifySourceBody(body, mimeType, requestedType)
+	if err != nil {
+		return sourceDownload{}, err
 	}
-	return body, mimeType, nil
+	if kind == sourceTypeWeb {
+		finalURL := response.Request.URL
+		if finalURL == nil {
+			finalURL = parsedURL
+		}
+		if err := validateSourceFetchURLTarget(ctx, finalURL); err != nil {
+			return sourceDownload{}, err
+		}
+	}
+	return sourceDownload{Body: body, MIMEType: mimeType, SourceType: kind}, nil
+}
+
+func validateSourceFetchURL(sourceURL string) (*url.URL, error) {
+	parsed, err := url.Parse(sourceURL)
+	if err != nil || parsed.Hostname() == "" {
+		return nil, domain.ValidationError("source url must be fetchable", map[string]any{"url": sourceURL})
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return nil, domain.ValidationError("source URL must use http or https", map[string]any{"scheme": parsed.Scheme})
+	}
+	return parsed, nil
+}
+
+func shouldValidatePublicSourceHost(parsed *url.URL, requestedType string) bool {
+	if requestedType == sourceTypeWeb {
+		return true
+	}
+	if requestedType == sourceTypePDF {
+		return false
+	}
+	return !strings.EqualFold(path.Ext(parsed.EscapedPath()), ".pdf")
+}
+
+func validatePublicSourceHost(ctx context.Context, parsed *url.URL) error {
+	host := strings.TrimSpace(parsed.Hostname())
+	if host == "" {
+		return domain.ValidationError("source url must be fetchable", map[string]any{"url": parsed.String()})
+	}
+	lowerHost := strings.ToLower(host)
+	if lowerHost == "localhost" || strings.HasSuffix(lowerHost, ".localhost") || strings.HasSuffix(lowerHost, ".local") {
+		return domain.ValidationError("source URL must be publicly fetchable", map[string]any{"host": host})
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		if !isPublicSourceIP(ip) {
+			return domain.ValidationError("source URL must be publicly fetchable", map[string]any{"host": host})
+		}
+		return nil
+	}
+	addrs, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+	if err != nil {
+		return domain.ValidationError("source URL host must resolve publicly", map[string]any{"host": host})
+	}
+	for _, addr := range addrs {
+		if !isPublicSourceIP(addr.IP) {
+			return domain.ValidationError("source URL must be publicly fetchable", map[string]any{"host": host})
+		}
+	}
+	return nil
+}
+
+func validateSourceFetchURLTarget(ctx context.Context, parsed *url.URL) error {
+	if parsed == nil || parsed.Hostname() == "" {
+		return domain.ValidationError("source url must be fetchable", map[string]any{"url": ""})
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return domain.ValidationError("source URL must use http or https", map[string]any{"scheme": parsed.Scheme})
+	}
+	return validatePublicSourceHost(ctx, parsed)
+}
+
+func isPublicSourceIP(ip net.IP) bool {
+	return ip != nil &&
+		!ip.IsUnspecified() &&
+		!ip.IsLoopback() &&
+		!ip.IsPrivate() &&
+		!ip.IsLinkLocalUnicast() &&
+		!ip.IsLinkLocalMulticast() &&
+		!ip.IsMulticast()
 }
 
 func resolveEvalSourceFixturePath(sourceURL string) (string, bool, error) {
@@ -417,6 +717,37 @@ func resolveEvalSourceFixturePath(sourceURL string) (string, bool, error) {
 func looksLikePDF(body []byte) bool {
 	prefixLen := min(len(body), 1024)
 	return bytes.Contains(body[:prefixLen], []byte("%PDF-"))
+}
+
+func looksLikeHTML(body []byte) bool {
+	prefixLen := min(len(body), 4096)
+	prefix := strings.ToLower(string(body[:prefixLen]))
+	return strings.Contains(prefix, "<!doctype html") || strings.Contains(prefix, "<html") || strings.Contains(prefix, "<head") || strings.Contains(prefix, "<body")
+}
+
+func classifySourceBody(body []byte, mimeType string, requestedType string) (string, string, error) {
+	if looksLikePDF(body) {
+		if requestedType == sourceTypeWeb {
+			return "", "", domain.ValidationError("source URL returned a PDF, not a web page", nil)
+		}
+		if mimeType == "" || mimeType == "application/octet-stream" || mimeType == "text/plain" {
+			mimeType = "application/pdf"
+		}
+		return sourceTypePDF, mimeType, nil
+	}
+	if mimeType == "text/html" || looksLikeHTML(body) {
+		if requestedType == sourceTypePDF {
+			return "", "", domain.ValidationError("source URL did not return a PDF", nil)
+		}
+		return sourceTypeWeb, "text/html", nil
+	}
+	if requestedType == sourceTypePDF {
+		return "", "", domain.ValidationError("source URL did not return a PDF", nil)
+	}
+	if requestedType == sourceTypeWeb {
+		return "", "", domain.ValidationError("source URL did not return an HTML web page", map[string]any{"mime_type": mimeType})
+	}
+	return "", "", domain.ValidationError("source URL returned an unsupported content type", map[string]any{"mime_type": mimeType})
 }
 
 func extractPDF(assetPath string) (pdfExtraction, error) {
@@ -492,7 +823,7 @@ func resolvedSourceTitle(requestTitle string, pdfTitle string, sourcePath string
 	return strings.TrimSuffix(path.Base(sourcePath), path.Ext(sourcePath))
 }
 
-func buildSourceNoteBody(sourceURL string, sourcePath string, assetPath string, title string, sha string, sizeBytes int64, mimeType string, capturedAt time.Time, extracted pdfExtraction) string {
+func buildPDFSourceNoteBody(sourceURL string, sourcePath string, assetPath string, title string, sha string, sizeBytes int64, mimeType string, capturedAt time.Time, extracted pdfExtraction) string {
 	var body strings.Builder
 	body.WriteString("---\n")
 	body.WriteString("type: source\n")
@@ -547,6 +878,78 @@ func buildSourceNoteBody(sourceURL string, sourcePath string, assetPath string, 
 	return body.String()
 }
 
+func buildWebSourceNoteBody(sourceURL string, sourcePath string, title string, sha string, sizeBytes int64, mimeType string, capturedAt time.Time, extracted webExtraction) string {
+	var body strings.Builder
+	body.WriteString("---\n")
+	body.WriteString("type: source\n")
+	body.WriteString("source_type: web\n")
+	body.WriteString("modality: markdown\n")
+	body.WriteString("source_url: " + frontmatterScalar(sourceURL) + "\n")
+	body.WriteString("derived_path: " + frontmatterScalar(sourcePath) + "\n")
+	body.WriteString("sha256: " + frontmatterScalar(sha) + "\n")
+	_, _ = fmt.Fprintf(&body, "size_bytes: %d\n", sizeBytes)
+	body.WriteString("mime_type: " + frontmatterScalar(mimeType) + "\n")
+	body.WriteString("captured_at: " + frontmatterScalar(capturedAt.Format(time.RFC3339Nano)) + "\n")
+	if extracted.Title != "" {
+		body.WriteString("source_title: " + frontmatterScalar(extracted.Title) + "\n")
+	}
+	body.WriteString("---\n")
+	body.WriteString("# " + markdownLine(title) + "\n\n")
+	body.WriteString("## Summary\n")
+	body.WriteString("Web source ingested from " + sourceURL + ".\n\n")
+	body.WriteString("## Source Page\n")
+	body.WriteString("- Source URL: " + sourceURL + "\n")
+	body.WriteString("- SHA256: " + sha + "\n")
+	_, _ = fmt.Fprintf(&body, "- Size bytes: %d\n", sizeBytes)
+	if extracted.Title != "" {
+		body.WriteString("- Page title: " + extracted.Title + "\n")
+	}
+	body.WriteString("\n## Extracted Text\n")
+	if extracted.Text != "" {
+		body.WriteString(extracted.Text + "\n")
+	} else {
+		body.WriteString("No visible page text was found.\n")
+	}
+	return body.String()
+}
+
+var (
+	htmlScriptStylePattern = regexp.MustCompile(`(?is)<(script|style|noscript|svg|template)\b[^>]*>.*?</(script|style|noscript|svg|template)>`)
+	htmlCommentPattern     = regexp.MustCompile(`(?is)<!--.*?-->`)
+	htmlTitlePattern       = regexp.MustCompile(`(?is)<title\b[^>]*>(.*?)</title>`)
+	htmlTagPattern         = regexp.MustCompile(`(?is)<[^>]+>`)
+	htmlWhitespacePattern  = regexp.MustCompile(`[ \t\r\n]+`)
+)
+
+func extractWebPage(body []byte) (webExtraction, error) {
+	raw := string(body)
+	lower := strings.ToLower(raw)
+	for _, marker := range []string{"captcha", "sign in to continue", "login required", "access denied", "enable cookies"} {
+		if strings.Contains(lower, marker) {
+			return webExtraction{}, domain.ValidationError("source URL appears to require unsupported interactive, authenticated, or restricted access", nil)
+		}
+	}
+	withoutHidden := htmlScriptStylePattern.ReplaceAllString(raw, " ")
+	withoutHidden = htmlCommentPattern.ReplaceAllString(withoutHidden, " ")
+	title := ""
+	if match := htmlTitlePattern.FindStringSubmatch(withoutHidden); len(match) > 1 {
+		title = cleanExtractedHTMLText(match[1])
+	}
+	text := htmlTagPattern.ReplaceAllString(withoutHidden, " ")
+	text = cleanExtractedHTMLText(text)
+	if text == "" && title == "" {
+		return webExtraction{}, domain.ValidationError("source URL did not expose visible HTML text", nil)
+	}
+	return webExtraction{Title: title, Text: text}, nil
+}
+
+func cleanExtractedHTMLText(value string) string {
+	value = html.UnescapeString(value)
+	value = strings.ReplaceAll(value, "\u00a0", " ")
+	value = htmlWhitespacePattern.ReplaceAllString(value, " ")
+	return strings.TrimSpace(value)
+}
+
 func sourceMetadataFallbackText(metadata domain.SourcePDFMetadata, title string) string {
 	parts := []string{"No extractable page text was found."}
 	if strings.TrimSpace(title) != "" {
@@ -573,21 +976,31 @@ func validateIngestedSource(document domain.Document, sourceURL string, sourcePa
 	if document.DocID == "" || document.Path != sourcePath {
 		return domain.InternalError("validate ingested source document", fmt.Errorf("created document path %q does not match %q", document.Path, sourcePath))
 	}
+	sourceType := sourceTypePDF
+	if assetPath == "" {
+		sourceType = sourceTypeWeb
+	}
 	requiredMetadata := map[string]string{
 		"type":         "source",
-		"source_type":  "pdf",
+		"source_type":  sourceType,
 		"modality":     "markdown",
 		"source_url":   sourceURL,
-		"asset_path":   assetPath,
 		"derived_path": sourcePath,
+	}
+	if sourceType == sourceTypePDF {
+		requiredMetadata["asset_path"] = assetPath
 	}
 	for key, want := range requiredMetadata {
 		if got := strings.TrimSpace(document.Metadata[key]); got != want {
 			return domain.InternalError("validate ingested source metadata", fmt.Errorf("metadata %s = %q, want %q", key, got, want))
 		}
 	}
-	if _, err := osStat(assetAbsPath); err != nil {
-		return domain.InternalError("validate ingested source asset", err)
+	if assetAbsPath != "" {
+		if _, err := osStat(assetAbsPath); err != nil {
+			return domain.InternalError("validate ingested source asset", err)
+		}
+	} else if strings.TrimSpace(document.Metadata["asset_path"]) != "" {
+		return domain.InternalError("validate ingested source asset", errors.New("web source must not record asset_path metadata"))
 	}
 	return nil
 }
@@ -604,6 +1017,7 @@ func sourceProvenanceDetails(relPath string, frontmatter map[string]string) map[
 		"mime_type",
 		"page_count",
 		"captured_at",
+		"source_title",
 		"transcript_origin",
 		"transcript_policy",
 		"language",

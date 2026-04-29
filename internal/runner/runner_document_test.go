@@ -219,6 +219,25 @@ func TestDocumentTaskRejectsInvalidSourceURLIngestBeforeRuntimeFiles(t *testing.
 			},
 			wantErr: "source.mode",
 		},
+		{
+			name: "invalid source type",
+			source: runner.SourceURLInput{
+				URL:        "https://example.test/uploaded.html",
+				PathHint:   "sources/uploaded-web.md",
+				SourceType: "html",
+			},
+			wantErr: "source.source_type",
+		},
+		{
+			name: "web source asset path",
+			source: runner.SourceURLInput{
+				URL:           "https://example.test/uploaded.html",
+				PathHint:      "sources/uploaded-web.md",
+				AssetPathHint: "assets/sources/uploaded-web.pdf",
+				SourceType:    "web",
+			},
+			wantErr: "source.asset_path_hint",
+		},
 	}
 
 	for _, tt := range tests {
@@ -487,6 +506,125 @@ func TestDocumentTaskIngestSourceURLPDF(t *testing.T) {
 	}
 }
 
+func TestDocumentTaskIngestSourceURLWeb(t *testing.T) {
+	htmlBody := `<!doctype html>
+<html>
+<head><title>Runner Web Product</title><style>.hidden{display:none}</style></head>
+<body>
+<h1>Runner Web Product</h1>
+<p>Visible web source evidence for OpenClerk.</p>
+<script>doNotIndex()</script>
+</body>
+</html>`
+	fixtureRoot := t.TempDir()
+	fixturePath := filepath.Join(fixtureRoot, "web", "runner-product.html")
+	if err := os.MkdirAll(filepath.Dir(fixturePath), 0o755); err != nil {
+		t.Fatalf("mkdir web fixture: %v", err)
+	}
+	if err := os.WriteFile(fixturePath, []byte(htmlBody), 0o644); err != nil {
+		t.Fatalf("write web fixture: %v", err)
+	}
+	t.Setenv("OPENCLERK_EVAL_SOURCE_FIXTURE_ROOT", fixtureRoot)
+	sourceURL := "http://openclerk-eval.local/web/runner-product.html?ref=tracker"
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	config := runclient.Config{DatabasePath: dbPath}
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestSourceURL,
+		Source: runner.SourceURLInput{
+			URL:        sourceURL,
+			PathHint:   "sources/web/runner-product.md",
+			SourceType: "web",
+		},
+	})
+	if err != nil {
+		t.Fatalf("ingest web source URL: %v", err)
+	}
+	if result.Rejected || result.Ingestion == nil {
+		t.Fatalf("ingest result = %+v", result)
+	}
+	ingestion := result.Ingestion
+	if ingestion.DocID == "" ||
+		ingestion.SourcePath != "sources/web/runner-product.md" ||
+		ingestion.SourceURL != sourceURL ||
+		ingestion.SourceType != "web" ||
+		ingestion.AssetPath != "" ||
+		ingestion.DerivedPath != "sources/web/runner-product.md" ||
+		ingestion.PageCount != 0 ||
+		ingestion.MIMEType != "text/html" ||
+		len(ingestion.Citations) == 0 ||
+		len(ingestion.SHA256) != 64 {
+		t.Fatalf("ingestion = %+v", ingestion)
+	}
+
+	get, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGet,
+		DocID:  ingestion.DocID,
+	})
+	if err != nil {
+		t.Fatalf("get ingested web document: %v", err)
+	}
+	if get.Document == nil ||
+		get.Document.Metadata["source_url"] != sourceURL ||
+		get.Document.Metadata["source_type"] != "web" ||
+		get.Document.Metadata["asset_path"] != "" ||
+		get.Document.Metadata["mime_type"] != "text/html" ||
+		!strings.Contains(get.Document.Body, "Runner Web Product") ||
+		!strings.Contains(get.Document.Body, "Visible web source evidence for OpenClerk.") ||
+		strings.Contains(get.Document.Body, "doNotIndex") {
+		t.Fatalf("ingested web document = %+v", get.Document)
+	}
+
+	search, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
+			Text:       "Visible web source evidence",
+			PathPrefix: "sources/",
+			Limit:      10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("search ingested web text: %v", err)
+	}
+	if search.Search == nil || len(search.Search.Hits) == 0 || search.Search.Hits[0].Citations[0].Path != "sources/web/runner-product.md" {
+		t.Fatalf("search = %+v", search.Search)
+	}
+
+	provenance, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{
+			RefKind: "source",
+			RefID:   ingestion.DocID,
+			Limit:   10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("source provenance: %v", err)
+	}
+	if provenance.Provenance == nil || len(provenance.Provenance.Events) == 0 {
+		t.Fatalf("provenance = %+v", provenance.Provenance)
+	}
+	details := provenance.Provenance.Events[0].Details
+	if details["source_url"] != sourceURL || details["source_type"] != "web" || details["asset_path"] != "" {
+		t.Fatalf("source provenance details = %+v", details)
+	}
+
+	duplicate, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestSourceURL,
+		Source: runner.SourceURLInput{
+			URL:      sourceURL,
+			PathHint: "sources/web/runner-product-copy.md",
+		},
+	})
+	if err == nil {
+		t.Fatalf("duplicate result = %+v, want error", duplicate)
+	}
+	if !strings.Contains(err.Error(), "source URL") {
+		t.Fatalf("duplicate error = %v", err)
+	}
+}
+
 func TestDocumentTaskIngestVideoURLSuppliedTranscript(t *testing.T) {
 	t.Parallel()
 
@@ -609,6 +747,7 @@ func TestDocumentTaskRejectsNonPDFSourceURL(t *testing.T) {
 			URL:           server.URL + "/not-pdf.txt",
 			PathHint:      "sources/not-pdf.md",
 			AssetPathHint: "assets/sources/not-pdf.pdf",
+			SourceType:    "pdf",
 		},
 	})
 	if err == nil || !strings.Contains(err.Error(), "PDF") {

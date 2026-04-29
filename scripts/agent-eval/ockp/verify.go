@@ -81,6 +81,18 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifySourceURLUpdateChangedPDF(ctx, paths, finalMessage, turnMetrics)
 	case sourceURLUpdateConflictScenarioID:
 		return verifySourceURLUpdateConflict(ctx, paths, finalMessage, turnMetrics)
+	case webURLMissingHintScenarioID:
+		return verifyFinalAnswerOnly(sc, finalMessage, turnMetrics), nil
+	case webURLCreateScenarioID:
+		return verifyWebURLCreate(ctx, paths, finalMessage, turnMetrics)
+	case webURLDuplicateScenarioID:
+		return verifyWebURLDuplicate(ctx, paths, finalMessage, turnMetrics)
+	case webURLSameHashScenarioID:
+		return verifyWebURLSameHash(ctx, paths, finalMessage, turnMetrics)
+	case webURLChangedScenarioID:
+		return verifyWebURLChanged(ctx, paths, finalMessage, turnMetrics)
+	case webURLUnsupportedScenarioID:
+		return verifyWebURLUnsupported(ctx, paths, finalMessage, turnMetrics)
 	case synthesisCandidatePressureScenarioID:
 		return verifySynthesisCandidatePressure(ctx, paths, finalMessage, turnMetrics)
 	case synthesisSourceSetPressureScenarioID:
@@ -326,6 +338,8 @@ func isValidationRejection(scenarioID string, message string) bool {
 		return isMissingFieldClarification(message, []string{"path", "title", "type"})
 	case pathTitleArtifactMissingHintsScenarioID:
 		return isMissingFieldClarification(message, []string{"source.path_hint", "source.asset_path_hint"})
+	case webURLMissingHintScenarioID:
+		return isMissingFieldClarification(message, []string{"source.path_hint"})
 	case documentThisMissingFieldsScenarioID:
 		return isDocumentThisMissingFieldsClarification(message)
 	case documentThisSourceURLMissingHintsScenarioID:

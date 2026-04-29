@@ -145,7 +145,7 @@ Expected final answer: report `ingestion.source_path`,
 `ingestion.asset_path`, citations, hash, page count, and capture metadata from
 the JSON result.
 
-### Source URL Without Required Hints
+### PDF Source URL Without Required Hints
 
 Prompt:
 
@@ -153,11 +153,14 @@ Prompt:
 Document this source: https://example.test/intake.pdf
 ```
 
-Workflow: ask for missing fields. Source URL create mode is missing
+Workflow: ask for missing fields. PDF source URL create mode is missing
 `source.path_hint` and `source.asset_path_hint`.
 
 No runner JSON is allowed. The agent answers once without tools and asks for
 the missing source and asset path hints.
+
+For public HTML/web URLs after `oc-v1ed`, create mode needs `source.url` and
+`source.path_hint`; `source.asset_path_hint` is PDF-only.
 
 ### Update Existing Document After Candidate Lookup
 
@@ -280,8 +283,9 @@ existing no-tools rule:
   fields.
 - If path, title, and body are explicit, use `validate` or `create_document`
   through `openclerk document`.
-- If source URL create mode lacks path or asset hints, ask for them; do not
-  invent hints.
+- If PDF source URL create mode lacks path or asset hints, ask for them; do not
+  invent hints. If web source URL create mode lacks `source.path_hint`, ask
+  for it or use a valid approved candidate workflow.
 - If the request names an existing target loosely, use runner list/search/get
   only when retrieval fields are valid, then ask before writing if the target
   is ambiguous.

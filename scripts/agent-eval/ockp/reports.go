@@ -136,6 +136,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		case sourceURLUpdateLaneName:
 			include = isSourceURLUpdateScenario(result.Scenario)
 			classification, posture = classifyTargetedSourceURLUpdateResult(result)
+		case webURLIntakeLaneName:
+			include = isWebURLIntakeScenario(result.Scenario)
+			classification, posture = classifyTargetedWebURLIntakeResult(result)
 		case documentThisLaneName:
 			include = isDocumentThisScenario(result.Scenario)
 			classification, posture = classifyTargetedDocumentThisResult(result)
@@ -213,6 +216,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	case sourceURLUpdateLaneName:
 		summary.Decision = "keep_existing_update_mode"
 		summary.Promotion = "targeted AgentOps evidence for existing ingest_source_url source.mode update behavior; no new runner action, schema, storage API, or transport"
+	case webURLIntakeLaneName:
+		summary.Decision = webURLIntakeDecision(summary.ScenarioClassifications)
+		summary.Promotion = "promote ingest_source_url web source handling; same runner action, source.source_type extension, no external acquisition tools"
 	case documentThisLaneName:
 		summary.Decision = "evaluate_for_oc_99z"
 		summary.Promotion = "no promoted runner action, schema, migration, skill behavior, storage API, product behavior, or public OpenClerk interface from this eval"

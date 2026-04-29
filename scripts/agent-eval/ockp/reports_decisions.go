@@ -156,6 +156,25 @@ func documentArtifactCandidateDecision(rows []targetedScenarioClassification) st
 	return "promote_propose_before_create_skill_policy"
 }
 
+func webURLIntakeDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	for _, row := range rows {
+		if row.FailureClassification == "runner_capability_gap" {
+			return "repair_web_url_runner_capability"
+		}
+		if row.FailureClassification != "none" {
+			return "repair_web_url_skill_or_eval_guidance"
+		}
+		seen[row.Scenario] = true
+	}
+	for _, id := range webURLIntakeScenarioIDs() {
+		if !seen[id] {
+			return "repair_web_url_skill_or_eval_guidance"
+		}
+	}
+	return "promote_ingest_source_url_web_sources"
+}
+
 func artifactIngestionDecision(rows []targetedScenarioClassification) string {
 	seen := map[string]bool{}
 	for _, row := range rows {
@@ -306,6 +325,17 @@ func artifactIngestionScenarioIDs() []string {
 		artifactSourceMissingHintsScenarioID,
 		artifactUnsupportedVideoScenarioID,
 		artifactBypassScenarioID,
+	}
+}
+
+func webURLIntakeScenarioIDs() []string {
+	return []string{
+		webURLMissingHintScenarioID,
+		webURLCreateScenarioID,
+		webURLDuplicateScenarioID,
+		webURLSameHashScenarioID,
+		webURLChangedScenarioID,
+		webURLUnsupportedScenarioID,
 	}
 }
 

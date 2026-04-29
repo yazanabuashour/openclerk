@@ -39,6 +39,9 @@ func normalizeSourceURL(raw string) (string, error) {
 	if parsed.Scheme != "http" && parsed.Scheme != "https" {
 		return "", domain.ValidationError("source url must use http or https", map[string]any{"scheme": parsed.Scheme})
 	}
+	parsed.Scheme = strings.ToLower(parsed.Scheme)
+	parsed.Host = strings.ToLower(parsed.Host)
+	parsed.Fragment = ""
 	return parsed.String(), nil
 }
 
@@ -51,6 +54,17 @@ func normalizeSourceURLMode(raw string) (string, error) {
 		return "", domain.ValidationError("source mode must be create or update", map[string]any{"mode": raw})
 	}
 	return mode, nil
+}
+
+func normalizeSourceType(raw string) (string, error) {
+	sourceType := strings.TrimSpace(raw)
+	if sourceType == "" {
+		return "", nil
+	}
+	if sourceType != sourceTypePDF && sourceType != sourceTypeWeb {
+		return "", domain.ValidationError("source.source_type must be pdf or web", map[string]any{"source_type": raw})
+	}
+	return sourceType, nil
 }
 
 func normalizeVideoURLMode(raw string) (string, error) {
