@@ -544,13 +544,25 @@ func containsOpenClerkSkillDiscovery(rendered string) bool {
 	return strings.Contains(rendered, "- OpenClerk:") || strings.Contains(rendered, "- openclerk:")
 }
 func containsOpenClerkBootstrapRejectionGuidance(rendered string) bool {
+	lower := strings.ToLower(rendered)
 	return strings.Contains(rendered, openClerkBootstrapRejectionText) &&
-		strings.Contains(rendered, "required fields are missing") &&
-		strings.Contains(rendered, "creating or updating a document but document path, title, or body is missing") &&
-		strings.Contains(rendered, "name the missing fields") &&
-		strings.Contains(rendered, "Negative numeric limit -3") &&
-		strings.Contains(rendered, "SQLite, HTTP, MCP, legacy or source-built paths, unsupported transports") &&
-		strings.Contains(rendered, "requests to bypass the runner also require no skill-file open, commands, tools, or runner call")
+		strings.Contains(lower, "required") &&
+		strings.Contains(lower, "missing") &&
+		strings.Contains(lower, "document") &&
+		strings.Contains(lower, "faithful") &&
+		strings.Contains(lower, "explicit user content") &&
+		strings.Contains(lower, "source") &&
+		strings.Contains(lower, "negative") &&
+		strings.Contains(lower, "limit") &&
+		strings.Contains(lower, "sqlite") &&
+		strings.Contains(lower, "http") &&
+		strings.Contains(lower, "mcp") &&
+		strings.Contains(lower, "source-built") &&
+		strings.Contains(lower, "unsupported transport") &&
+		strings.Contains(lower, "bypass") &&
+		(strings.Contains(lower, "without tools") || strings.Contains(lower, "no-tools")) &&
+		strings.Contains(lower, "openclerk document") &&
+		strings.Contains(lower, "openclerk retrieval")
 }
 func containsOpenClerkAgentsInstructions(rendered string) bool {
 	const marker = "# AGENTS.md instructions"
