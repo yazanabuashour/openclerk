@@ -30,7 +30,7 @@ Artifact-specific actions could look like:
 
 ```json
 {"action":"ingest_video_url","video":{"url":"https://youtube.example.test/watch?v=demo","path_hint":"transcripts/demo.md","asset_path_hint":"assets/videos/demo.json","title":"Demo Video"}}
-{"action":"ingest_receipt","receipt":{"uri":"file://<artifact-root>/receipt.pdf","path_hint":"receipts/vendor-2026-04.md","asset_path_hint":"assets/receipts/vendor-2026-04.pdf","metadata":{"vendor":"Vendor","total_usd":"86.40"}}}
+{"action":"ingest_receipt","receipt":{"uri":"<receipt-artifact-uri>","path_hint":"receipts/vendor-2026-04.md","asset_path_hint":"assets/receipts/vendor-2026-04.pdf","metadata":{"vendor":"Vendor","total_usd":"86.40"}}}
 ```
 
 This option may keep validation and failure modes clear, but it risks a growing

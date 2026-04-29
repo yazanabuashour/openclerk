@@ -57,6 +57,37 @@ No promoted implementation work should be filed from this document alone. A
 separate follow-up Bead is allowed only after a targeted eval report and
 decision note identify the exact promoted surface and its gates.
 
+## Taste Review Checkpoint
+
+Before deferring a capability or keeping it as reference, run a qualitative
+taste review in addition to the safety and capability checks. The review asks
+whether a normal user would reasonably expect a simpler OpenClerk surface and
+whether the current workflow is safe but surprisingly indirect.
+
+Use `oc-v1ed` as the reference correction: public HTML/web-page URLs became
+part of the existing `ingest_source_url` runner-owned intake surface, and a
+user-provided public URL became sufficient permission for fetch/inspect. The
+approval boundary stayed at durable writes, credentialed or private access,
+external egress beyond the configured runner policy, purchase or account
+actions, and irreversible mutation.
+
+The taste review should flag possible UX debt when:
+
+- an adjacent input naturally belongs under an existing runner action, but the
+  plan declares it unsupported instead of extending that action
+- an eval row completes with `none` classification but still needs high step
+  count, high latency, exact prompt choreography, or repeated assistant turns
+- the agent asks for approval before a read, fetch, or inspect step when the
+  real safety boundary is a durable write or privileged action
+- a workflow is technically expressible only through ceremony that routine
+  users would not expect
+
+Taste debt does not automatically authorize implementation. It creates
+follow-up audit, design, or eval backlog unless the targeted evidence and a
+promotion decision name the exact smoother surface and show that authority,
+citations, provenance, freshness, local-first operation, duplicate handling,
+runner-only access, and approval-before-write remain intact.
+
 ## Required Invariants
 
 Every candidate must preserve the current AgentOps invariants:
@@ -92,6 +123,8 @@ is:
   eval coverage, capability gap, ergonomics gap, or contract violation
 - authority, provenance, freshness, privacy, and bypass risks introduced by
   any proposed surface
+- safety pass, capability pass, and UX quality as separate conclusions, so a
+  technically passing workflow can still be recorded as taste debt
 
 Ergonomics promotion is not a shortcut around safety. A smoother surface should
 be killed or deferred if it creates a second truth system, hides provenance,
@@ -192,10 +225,12 @@ Future POCs for deferred capabilities must follow this pattern:
    and retry or brittleness signals.
 5. Classify failures as data hygiene, ordinary skill guidance, eval coverage,
    capability gap, ergonomics gap, or contract violation.
-6. Record targeted evidence under `docs/evals/results/` using repo-relative
+6. Record the taste review separately from pass/fail classification: safety
+   pass, capability pass, and UX quality.
+7. Record targeted evidence under `docs/evals/results/` using repo-relative
    paths and `<run-root>` placeholders.
-7. End with an explicit decision: promote, defer, kill, or keep as reference.
-8. If promoted, file a separate implementation Bead that names the exact
+8. End with an explicit decision: promote, defer, kill, or keep as reference.
+9. If promoted, file a separate implementation Bead that names the exact
    surface and gates.
 
 This keeps capability pressure measurable without letting interesting reference

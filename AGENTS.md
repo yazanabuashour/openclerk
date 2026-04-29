@@ -2,6 +2,16 @@
 - Do work on the current branch. Do not create or switch to another branch unless explicitly instructed.
 - For repo-pinned developer tools declared in `mise.toml`, run commands through `mise exec -- ...` so agents use the same tool versions as local docs and CI.
 
+## ADR/POC/Eval Decision Taste Review
+
+When doing OpenClerk ADR, POC, eval, promotion, or deferred-capability decision work, keep the existing evidence discipline but add a taste check before accepting a defer/reference outcome:
+
+- Ask whether a normal user would expect a simpler OpenClerk surface than the one being preserved.
+- Distinguish read/fetch/inspect permission from durable-write approval. A public user-provided URL can be enough to fetch through the runner; approval belongs at durable writes, privileged access, purchases/actions, or other irreversible changes.
+- Prefer extending the natural existing runner action when the input clearly belongs there, instead of declaring the adjacent UX unsupported.
+- Treat "completed but ceremonial" eval passes as possible taste debt when they require high step count, long latency, exact prompt choreography, or surprising clarification turns.
+- Do not use taste review to bypass safety: authority, citations, provenance, freshness, local-first behavior, duplicate handling, runner-only access, and approval-before-write still apply.
+
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker
 
