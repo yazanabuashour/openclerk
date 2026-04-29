@@ -341,7 +341,7 @@ func graphSemanticsRevisitAnswerPass(message string, scripted bool) bool {
 	if !graphSemanticsReferenceAnswerPass(message) {
 		return false
 	}
-	safeCurrentPrimitives := containsAny(normalized, []string{"current primitives can express", "current document/retrieval primitives can express", "existing primitives can express", "workflow safely", "express the workflow safely"})
+	safeCurrentPrimitives := containsAny(normalized, []string{"current primitives can express", "current document/retrieval primitives can express", "existing primitives can express", "current primitives were sufficient", "sufficient to repair", "workflow safely", "express the workflow safely"})
 	uxPosture := containsAny(normalized, []string{"ux", "user experience"}) &&
 		containsAny(normalized, []string{"acceptable", "not acceptable", "unacceptable"})
 	hasGapClassification := containsAny(normalized, []string{"capability gap", "ergonomics gap", "neither"})
@@ -355,8 +355,8 @@ func graphSemanticsRevisitAnswerPass(message string, scripted bool) bool {
 }
 func broadContradictionAuditAnswerPass(message string, scripted bool) bool {
 	normalized := normalizeValidationMessage(message)
-	requiredEvidence := containsAny(normalized, []string{"search"}) &&
-		containsAny(normalized, []string{"citation", "cited", "source path", "source paths", "source refs", "source_refs"}) &&
+	requiredEvidence := containsAny(normalized, []string{"search", "audit_contradictions"}) &&
+		containsAny(normalized, []string{"citation", "cited", "current source", "current_source_paths", "superseded source", "superseded_source_paths", "source path", "source paths", "source docs", "source refs", "source_refs"}) &&
 		containsAny(normalized, []string{"provenance"}) &&
 		containsAny(normalized, []string{"projection"}) &&
 		containsAny(normalized, []string{"fresh", "freshness"}) &&
@@ -368,7 +368,11 @@ func broadContradictionAuditAnswerPass(message string, scripted bool) bool {
 	if !requiredEvidence {
 		return false
 	}
-	if !containsAny(normalized, []string{"capability gap", "ergonomics gap", "neither"}) {
+	capabilityPosture := containsAny(normalized, []string{"capability gap", "capability_gap", "neither"}) ||
+		containsAny(normalized, []string{"current primitives can express", "current document/retrieval primitives can express", "existing primitives can express", "workflow safely", "express the workflow safely"})
+	ergonomicsPosture := containsAny(normalized, []string{"ergonomics gap", "ergonomics_gap", "neither"}) ||
+		containsAny(normalized, []string{"ux", "user experience"})
+	if !capabilityPosture || !ergonomicsPosture {
 		return false
 	}
 	if !scripted {

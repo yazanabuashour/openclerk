@@ -85,6 +85,7 @@ func TestOpenClerkSkillUsesInstalledRunnerForRoutineWork(t *testing.T) {
 		"## Freshness",
 		"provenance_events",
 		"projection_states",
+		"audit_contradictions",
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("SKILL.md missing %q", want)

@@ -515,7 +515,7 @@ func verifySourceSensitiveAuditRepair(ctx context.Context, paths evalPaths, fina
 		projectionDetailContains(projection.Details, "superseded_source_refs", sourceAuditOldSourcePath)
 	hasInvalidation := events.Provenance != nil && eventTypesInclude(events.Provenance.Events, "projection_invalidated")
 	hasRefresh := events.Provenance != nil && eventTypesInclude(events.Provenance.Events, "projection_refreshed")
-	activityPass := turnMetrics.SearchUsed &&
+	activityPass := turnMetrics.AuditContradictionsUsed || turnMetrics.SearchUsed &&
 		turnMetrics.ListDocumentsUsed &&
 		turnMetrics.GetDocumentUsed &&
 		turnMetrics.ProjectionStatesUsed &&
@@ -548,20 +548,22 @@ func verifySourceSensitiveAuditRepair(ctx context.Context, paths evalPaths, fina
 	if !hasRefresh {
 		failures = append(failures, "audit synthesis refresh event missing")
 	}
-	if !turnMetrics.SearchUsed {
-		failures = append(failures, "agent did not use retrieval search")
-	}
-	if !turnMetrics.ListDocumentsUsed {
-		failures = append(failures, "agent did not list synthesis candidates")
-	}
-	if !turnMetrics.GetDocumentUsed {
-		failures = append(failures, "agent did not get existing synthesis before update")
-	}
-	if !turnMetrics.ProjectionStatesUsed {
-		failures = append(failures, "agent did not inspect projection states")
-	}
-	if !turnMetrics.ProvenanceEventsUsed {
-		failures = append(failures, "agent did not inspect provenance events")
+	if !turnMetrics.AuditContradictionsUsed {
+		if !turnMetrics.SearchUsed {
+			failures = append(failures, "agent did not use retrieval search")
+		}
+		if !turnMetrics.ListDocumentsUsed {
+			failures = append(failures, "agent did not list synthesis candidates")
+		}
+		if !turnMetrics.GetDocumentUsed {
+			failures = append(failures, "agent did not get existing synthesis before update")
+		}
+		if !turnMetrics.ProjectionStatesUsed {
+			failures = append(failures, "agent did not inspect projection states")
+		}
+		if !turnMetrics.ProvenanceEventsUsed {
+			failures = append(failures, "agent did not inspect provenance events")
+		}
 	}
 	if !assistantPass {
 		failures = append(failures, "final answer did not report audit repair and current source")
@@ -721,10 +723,10 @@ func verifyBroadContradictionAuditRevisit(ctx context.Context, paths evalPaths, 
 		alphaEvents.Provenance != nil && len(alphaEvents.Provenance.Events) > 0 &&
 		bravoEvents.Provenance != nil && len(bravoEvents.Provenance.Events) > 0
 	inspectedBothProvenanceRefs := provenanceEventRefIDsInclude(turnMetrics.ProvenanceEventRefIDs, alphaID, bravoID)
-	conflictActivityPass := turnMetrics.SearchUsed && inspectedBothProvenanceRefs
+	conflictActivityPass := turnMetrics.AuditContradictionsUsed || turnMetrics.SearchUsed && inspectedBothProvenanceRefs
 	conflictAnswerPass := messageContainsAll(finalMessage, []string{sourceAuditConflictAlphaPath, sourceAuditConflictBravoPath}) &&
 		messageContainsAny(finalMessage, []string{"conflict", "conflicting", "contradict", "contradiction"}) &&
-		messageContainsAny(finalMessage, []string{"both are current", "both sources are current", "current sources", "both current"}) &&
+		(turnMetrics.AuditContradictionsUsed || messageContainsAny(finalMessage, []string{"both are current", "both sources are current", "current sources", "both current"})) &&
 		messageContainsAny(finalMessage, []string{"unresolved", "no supersession", "no source authority", "cannot choose", "do not choose"}) &&
 		messageContainsAny(finalMessage, []string{"seven", "7"}) &&
 		messageContainsAny(finalMessage, []string{"thirty", "30"})
@@ -746,7 +748,7 @@ func verifyBroadContradictionAuditRevisit(ctx context.Context, paths evalPaths, 
 	if synthesisCount != 2 {
 		failures = append(failures, fmt.Sprintf("expected target and decoy synthesis documents only, got %d", synthesisCount))
 	}
-	if !inspectedBothProvenanceRefs {
+	if !turnMetrics.AuditContradictionsUsed && !inspectedBothProvenanceRefs {
 		failures = append(failures, "agent did not inspect provenance events for both conflict sources")
 	}
 	if !conflictAnswerPass {

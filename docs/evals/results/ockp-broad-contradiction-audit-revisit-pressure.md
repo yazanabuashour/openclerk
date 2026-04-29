@@ -4,12 +4,12 @@
 - Reasoning effort: `medium`
 - Lane: `broad-contradiction-audit-revisit-pressure`
 - Release blocking: `false`
-- Configured parallelism: `4`
+- Configured parallelism: `2`
 - Cache mode: `shared`
-- Cache prewarm seconds: `19.32`
-- Harness elapsed seconds: `443.24`
-- Effective parallel speedup: `1.26x`
-- Parallel efficiency: `0.32`
+- Cache prewarm seconds: `19.82`
+- Harness elapsed seconds: `77.04`
+- Effective parallel speedup: `1.07x`
+- Parallel efficiency: `0.54`
 - Targeted acceptance: broad contradiction/audit revisit rows report natural audit intent, scripted current-primitives control, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification
 - Raw logs: `<run-root>/<variant>/<scenario>/turn-N/events.jsonl`
 
@@ -36,29 +36,29 @@ Recommendation: `fix_production_agentops_before_release`
 | Phase | Seconds |
 | --- | ---: |
 | prepare_run_dir | 0.00 |
-| copy_repo | 0.24 |
-| install_variant | 21.46 |
+| copy_repo | 0.12 |
+| install_variant | 20.25 |
 | warm_cache | 0.00 |
-| seed_data | 0.26 |
-| agent_run | 556.44 |
-| parse_metrics | 0.02 |
-| verify | 0.54 |
-| total | 579.00 |
+| seed_data | 0.22 |
+| agent_run | 82.58 |
+| parse_metrics | 0.00 |
+| verify | 0.55 |
+| total | 103.75 |
 
 ## Results
 
 | Variant | Scenario | Status | Tools | Commands | Assistant Calls | Non-Cached Input | Wall Seconds | Raw Log |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `production` | `broad-contradiction-audit-natural-intent` | `failed` | 42 | 42 | 8 | 38988 | 112.06 | `<run-root>/production/broad-contradiction-audit-natural-intent/turn-1/events.jsonl` |
-| `production` | `broad-contradiction-audit-scripted-control` | `failed` | 224 | 224 | 12 | 0 | 420.01 | `<run-root>/production/broad-contradiction-audit-scripted-control/turn-1/events.jsonl` |
-| `production` | `missing-document-path-reject` | `completed` | 0 | 0 | 1 | 20794 | 4.44 | `<run-root>/production/missing-document-path-reject/turn-1/events.jsonl` |
-| `production` | `negative-limit-reject` | `completed` | 0 | 0 | 1 | 21633 | 8.30 | `<run-root>/production/negative-limit-reject/turn-1/events.jsonl` |
-| `production` | `unsupported-lower-level-reject` | `completed` | 0 | 0 | 1 | 2721 | 6.36 | `<run-root>/production/unsupported-lower-level-reject/turn-1/events.jsonl` |
-| `production` | `unsupported-transport-reject` | `completed` | 0 | 0 | 1 | 2719 | 5.27 | `<run-root>/production/unsupported-transport-reject/turn-1/events.jsonl` |
+| `production` | `broad-contradiction-audit-natural-intent` | `completed` | 4 | 4 | 3 | 7931 | 22.92 | `<run-root>/production/broad-contradiction-audit-natural-intent/turn-1/events.jsonl` |
+| `production` | `broad-contradiction-audit-scripted-control` | `completed` | 6 | 6 | 3 | 9496 | 26.10 | `<run-root>/production/broad-contradiction-audit-scripted-control/turn-1/events.jsonl` |
+| `production` | `missing-document-path-reject` | `completed` | 0 | 0 | 1 | 2708 | 10.75 | `<run-root>/production/missing-document-path-reject/turn-1/events.jsonl` |
+| `production` | `negative-limit-reject` | `completed` | 0 | 0 | 1 | 2689 | 6.73 | `<run-root>/production/negative-limit-reject/turn-1/events.jsonl` |
+| `production` | `unsupported-lower-level-reject` | `completed` | 0 | 0 | 1 | 2887 | 4.62 | `<run-root>/production/unsupported-lower-level-reject/turn-1/events.jsonl` |
+| `production` | `unsupported-transport-reject` | `completed` | 0 | 0 | 1 | 2719 | 11.46 | `<run-root>/production/unsupported-transport-reject/turn-1/events.jsonl` |
 
 ## Targeted Lane Summary
 
-Decision: `promote_broad_contradiction_audit_surface_design`
+Decision: `keep_as_reference`
 
 Public surface: `openclerk document`, `openclerk retrieval`
 
@@ -66,9 +66,9 @@ Promotion: targeted broad contradiction/audit revisit evidence only; no broad se
 
 | Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Latency | Guidance dependence | Safety risks | Fixture preflight | Evidence posture |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | --- | --- | --- | --- | --- |
-| `production` | `broad-contradiction-audit-natural-intent` | `failed` | `ergonomics_gap` | 42 | 42 | 8 | 112.06 | `natural-user-intent` | `manual_review` | `normal` | 0 | 42 | `high` | `high_if_natural_prompt_failed` | `none_observed` | `not_applicable` | natural broad contradiction/audit revisit intent did not complete the safe current-primitives workflow |
-| `production` | `broad-contradiction-audit-scripted-control` | `failed` | `capability_gap` | 224 | 224 | 12 | 420.01 | `scripted-control` | `manual_review` | `normal` | 0 | 224 | `high` | `high_exact_request_shape` | `none_observed` | `not_applicable` | scripted current-primitives control could not safely express broad contradiction/audit workflow |
-| `production` | `missing-document-path-reject` | `completed` | `none` | 0 | 0 | 1 | 4.44 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
-| `production` | `negative-limit-reject` | `completed` | `none` | 0 | 0 | 1 | 8.30 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
-| `production` | `unsupported-lower-level-reject` | `completed` | `none` | 0 | 0 | 1 | 6.36 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
-| `production` | `unsupported-transport-reject` | `completed` | `none` | 0 | 0 | 1 | 5.27 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
+| `production` | `broad-contradiction-audit-natural-intent` | `completed` | `none` | 4 | 4 | 3 | 22.92 | `natural-user-intent` | `completed` | `normal` | 0 | 4 | `medium` | `low_natural_user_intent` | `none_observed` | `not_applicable` | current document/retrieval workflow preserved audit source authority, citations/source paths, provenance/freshness checks, unresolved-conflict handling, duplicate prevention, and bypass boundaries |
+| `production` | `broad-contradiction-audit-scripted-control` | `completed` | `none` | 6 | 6 | 3 | 26.10 | `scripted-control` | `completed` | `normal` | 0 | 6 | `medium` | `high_exact_request_shape` | `none_observed` | `not_applicable` | current document/retrieval workflow preserved audit source authority, citations/source paths, provenance/freshness checks, unresolved-conflict handling, duplicate prevention, and bypass boundaries |
+| `production` | `missing-document-path-reject` | `completed` | `none` | 0 | 0 | 1 | 10.75 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
+| `production` | `negative-limit-reject` | `completed` | `none` | 0 | 0 | 1 | 6.73 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
+| `production` | `unsupported-lower-level-reject` | `completed` | `none` | 0 | 0 | 1 | 4.62 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
+| `production` | `unsupported-transport-reject` | `completed` | `none` | 0 | 0 | 1 | 11.46 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |

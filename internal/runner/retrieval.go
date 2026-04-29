@@ -146,6 +146,15 @@ func RunRetrievalTask(ctx context.Context, config runclient.Config, request Retr
 			Projections: &converted,
 			Summary:     fmt.Sprintf("returned %d projection states", len(converted.Projections)),
 		}, nil
+	case RetrievalTaskActionAuditContradictions:
+		audit, err := runAuditContradictions(ctx, client, normalized.Audit)
+		if err != nil {
+			return RetrievalTaskResult{}, err
+		}
+		return RetrievalTaskResult{
+			Audit:   &audit,
+			Summary: auditContradictionsSummary(audit),
+		}, nil
 	default:
 		return RetrievalTaskResult{}, fmt.Errorf("unsupported retrieval task action %q", normalized.Action)
 	}
@@ -165,6 +174,7 @@ type normalizedRetrievalTaskRequest struct {
 	Decisions  DecisionLookupOptions
 	Provenance ProvenanceEventOptions
 	Projection ProjectionStateOptions
+	Audit      AuditContradictionsOptions
 	Limit      int
 }
 
@@ -187,6 +197,7 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		Decisions:  request.Decisions,
 		Provenance: request.Provenance,
 		Projection: request.Projection,
+		Audit:      request.Audit,
 		Limit:      request.Limit,
 	}
 
@@ -196,7 +207,8 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		request.Services.Limit < 0 ||
 		request.Decisions.Limit < 0 ||
 		request.Provenance.Limit < 0 ||
-		request.Projection.Limit < 0 {
+		request.Projection.Limit < 0 ||
+		request.Audit.Limit < 0 {
 		return normalizedRetrievalTaskRequest{}, "limit must be greater than or equal to 0"
 	}
 
@@ -243,6 +255,24 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		}
 		return normalized, ""
 	case RetrievalTaskActionProvenanceEvents, RetrievalTaskActionProjectionStates:
+		return normalized, ""
+	case RetrievalTaskActionAuditContradictions:
+		normalized.Audit.Query = strings.TrimSpace(request.Audit.Query)
+		normalized.Audit.TargetPath = strings.TrimSpace(request.Audit.TargetPath)
+		normalized.Audit.Mode = strings.TrimSpace(request.Audit.Mode)
+		normalized.Audit.ConflictQuery = strings.TrimSpace(request.Audit.ConflictQuery)
+		if normalized.Audit.Mode == "" {
+			normalized.Audit.Mode = "plan_only"
+		}
+		if normalized.Audit.Query == "" {
+			return normalizedRetrievalTaskRequest{}, "audit.query is required"
+		}
+		if normalized.Audit.TargetPath == "" {
+			return normalizedRetrievalTaskRequest{}, "audit.target_path is required"
+		}
+		if normalized.Audit.Mode != "plan_only" && normalized.Audit.Mode != "repair_existing" {
+			return normalizedRetrievalTaskRequest{}, "audit.mode must be plan_only or repair_existing"
+		}
 		return normalized, ""
 	default:
 		return normalizedRetrievalTaskRequest{}, fmt.Sprintf("unsupported retrieval task action %q", action)

@@ -15,18 +15,19 @@ const (
 	DocumentTaskActionResolvePaths    = "resolve_paths"
 	DocumentTaskActionInspectLayout   = "inspect_layout"
 
-	RetrievalTaskActionValidate         = "validate"
-	RetrievalTaskActionSearch           = "search"
-	RetrievalTaskActionDocumentLinks    = "document_links"
-	RetrievalTaskActionGraph            = "graph_neighborhood"
-	RetrievalTaskActionRecordsLookup    = "records_lookup"
-	RetrievalTaskActionRecordEntity     = "record_entity"
-	RetrievalTaskActionServicesLookup   = "services_lookup"
-	RetrievalTaskActionServiceRecord    = "service_record"
-	RetrievalTaskActionDecisionsLookup  = "decisions_lookup"
-	RetrievalTaskActionDecisionRecord   = "decision_record"
-	RetrievalTaskActionProvenanceEvents = "provenance_events"
-	RetrievalTaskActionProjectionStates = "projection_states"
+	RetrievalTaskActionValidate            = "validate"
+	RetrievalTaskActionSearch              = "search"
+	RetrievalTaskActionDocumentLinks       = "document_links"
+	RetrievalTaskActionGraph               = "graph_neighborhood"
+	RetrievalTaskActionRecordsLookup       = "records_lookup"
+	RetrievalTaskActionRecordEntity        = "record_entity"
+	RetrievalTaskActionServicesLookup      = "services_lookup"
+	RetrievalTaskActionServiceRecord       = "service_record"
+	RetrievalTaskActionDecisionsLookup     = "decisions_lookup"
+	RetrievalTaskActionDecisionRecord      = "decision_record"
+	RetrievalTaskActionProvenanceEvents    = "provenance_events"
+	RetrievalTaskActionProjectionStates    = "projection_states"
+	RetrievalTaskActionAuditContradictions = "audit_contradictions"
 )
 
 type DocumentTaskRequest struct {
@@ -133,20 +134,21 @@ type DocumentTaskResult struct {
 }
 
 type RetrievalTaskRequest struct {
-	Action     string                 `json:"action"`
-	Search     SearchOptions          `json:"search,omitempty"`
-	DocID      string                 `json:"doc_id,omitempty"`
-	ChunkID    string                 `json:"chunk_id,omitempty"`
-	NodeID     string                 `json:"node_id,omitempty"`
-	EntityID   string                 `json:"entity_id,omitempty"`
-	ServiceID  string                 `json:"service_id,omitempty"`
-	DecisionID string                 `json:"decision_id,omitempty"`
-	Records    RecordLookupOptions    `json:"records,omitempty"`
-	Services   ServiceLookupOptions   `json:"services,omitempty"`
-	Decisions  DecisionLookupOptions  `json:"decisions,omitempty"`
-	Provenance ProvenanceEventOptions `json:"provenance,omitempty"`
-	Projection ProjectionStateOptions `json:"projection,omitempty"`
-	Limit      int                    `json:"limit,omitempty"`
+	Action     string                     `json:"action"`
+	Search     SearchOptions              `json:"search,omitempty"`
+	DocID      string                     `json:"doc_id,omitempty"`
+	ChunkID    string                     `json:"chunk_id,omitempty"`
+	NodeID     string                     `json:"node_id,omitempty"`
+	EntityID   string                     `json:"entity_id,omitempty"`
+	ServiceID  string                     `json:"service_id,omitempty"`
+	DecisionID string                     `json:"decision_id,omitempty"`
+	Records    RecordLookupOptions        `json:"records,omitempty"`
+	Services   ServiceLookupOptions       `json:"services,omitempty"`
+	Decisions  DecisionLookupOptions      `json:"decisions,omitempty"`
+	Provenance ProvenanceEventOptions     `json:"provenance,omitempty"`
+	Projection ProjectionStateOptions     `json:"projection,omitempty"`
+	Audit      AuditContradictionsOptions `json:"audit,omitempty"`
+	Limit      int                        `json:"limit,omitempty"`
 }
 
 type SearchOptions struct {
@@ -199,21 +201,67 @@ type ProjectionStateOptions struct {
 	Cursor     string `json:"cursor,omitempty"`
 }
 
+type AuditContradictionsOptions struct {
+	Query         string `json:"query,omitempty"`
+	TargetPath    string `json:"target_path,omitempty"`
+	Mode          string `json:"mode,omitempty"`
+	ConflictQuery string `json:"conflict_query,omitempty"`
+	Limit         int    `json:"limit,omitempty"`
+}
+
 type RetrievalTaskResult struct {
-	Rejected        bool                  `json:"rejected"`
-	RejectionReason string                `json:"rejection_reason,omitempty"`
-	Search          *SearchResult         `json:"search,omitempty"`
-	Links           *DocumentLinks        `json:"links,omitempty"`
-	Graph           *GraphNeighborhood    `json:"graph,omitempty"`
-	Records         *RecordLookupResult   `json:"records,omitempty"`
-	Entity          *RecordEntity         `json:"entity,omitempty"`
-	Services        *ServiceLookupResult  `json:"services,omitempty"`
-	Service         *ServiceRecord        `json:"service,omitempty"`
-	Decisions       *DecisionLookupResult `json:"decisions,omitempty"`
-	Decision        *DecisionRecord       `json:"decision,omitempty"`
-	Provenance      *ProvenanceEventList  `json:"provenance,omitempty"`
-	Projections     *ProjectionStateList  `json:"projections,omitempty"`
-	Summary         string                `json:"summary"`
+	Rejected        bool                       `json:"rejected"`
+	RejectionReason string                     `json:"rejection_reason,omitempty"`
+	Search          *SearchResult              `json:"search,omitempty"`
+	Links           *DocumentLinks             `json:"links,omitempty"`
+	Graph           *GraphNeighborhood         `json:"graph,omitempty"`
+	Records         *RecordLookupResult        `json:"records,omitempty"`
+	Entity          *RecordEntity              `json:"entity,omitempty"`
+	Services        *ServiceLookupResult       `json:"services,omitempty"`
+	Service         *ServiceRecord             `json:"service,omitempty"`
+	Decisions       *DecisionLookupResult      `json:"decisions,omitempty"`
+	Decision        *DecisionRecord            `json:"decision,omitempty"`
+	Provenance      *ProvenanceEventList       `json:"provenance,omitempty"`
+	Projections     *ProjectionStateList       `json:"projections,omitempty"`
+	Audit           *AuditContradictionsResult `json:"audit,omitempty"`
+	Summary         string                     `json:"summary"`
+}
+
+type AuditContradictionsResult struct {
+	Query                     string                      `json:"query"`
+	TargetPath                string                      `json:"target_path"`
+	Mode                      string                      `json:"mode"`
+	SelectedTargetPath        string                      `json:"selected_target_path,omitempty"`
+	CandidateSynthesisPaths   []string                    `json:"candidate_synthesis_paths,omitempty"`
+	SourcePaths               []string                    `json:"source_paths,omitempty"`
+	Citations                 []Citation                  `json:"citations,omitempty"`
+	CurrentSourcePaths        []string                    `json:"current_source_paths,omitempty"`
+	SupersededSourcePaths     []string                    `json:"superseded_source_paths,omitempty"`
+	ProvenanceInspected       []AuditProvenanceInspection `json:"provenance_inspected,omitempty"`
+	ProjectionFreshnessBefore []ProjectionState           `json:"projection_freshness_before,omitempty"`
+	ProjectionFreshnessAfter  []ProjectionState           `json:"projection_freshness_after,omitempty"`
+	RepairStatus              string                      `json:"repair_status"`
+	RepairApplied             bool                        `json:"repair_applied"`
+	DuplicatePrevention       string                      `json:"duplicate_prevention"`
+	UnresolvedConflictGroups  []AuditConflictGroup        `json:"unresolved_conflict_groups,omitempty"`
+	FailureClassification     string                      `json:"failure_classification"`
+}
+
+type AuditProvenanceInspection struct {
+	RefKind    string            `json:"ref_kind"`
+	RefID      string            `json:"ref_id"`
+	SourcePath string            `json:"source_path,omitempty"`
+	EventIDs   []string          `json:"event_ids,omitempty"`
+	EventTypes []string          `json:"event_types,omitempty"`
+	Details    map[string]string `json:"details,omitempty"`
+}
+
+type AuditConflictGroup struct {
+	Query       string   `json:"query"`
+	SourcePaths []string `json:"source_paths,omitempty"`
+	Claims      []string `json:"claims,omitempty"`
+	Status      string   `json:"status"`
+	Reason      string   `json:"reason"`
 }
 
 type Paths struct {

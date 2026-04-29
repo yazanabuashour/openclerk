@@ -278,6 +278,10 @@ func classifyCommand(command string, m *metrics) {
 	if commandContainsAction(actionText, "projection_states") {
 		m.ProjectionStatesUsed = true
 	}
+	if commandContainsAction(actionText, "audit_contradictions") {
+		m.AuditContradictionsUsed = true
+		m.AuditContradictionsModes = append(m.AuditContradictionsModes, actionFieldValues(actionText, "audit_contradictions", "mode")...)
+	}
 }
 func commandContainsAction(actionText string, action string) bool {
 	compacted := strings.Join(strings.Fields(actionText), "")
@@ -447,6 +451,8 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.ProvenanceEventsUsed = out.ProvenanceEventsUsed || current.ProvenanceEventsUsed
 		out.ProvenanceEventRefIDs = append(out.ProvenanceEventRefIDs, current.ProvenanceEventRefIDs...)
 		out.ProjectionStatesUsed = out.ProjectionStatesUsed || current.ProjectionStatesUsed
+		out.AuditContradictionsUsed = out.AuditContradictionsUsed || current.AuditContradictionsUsed
+		out.AuditContradictionsModes = append(out.AuditContradictionsModes, current.AuditContradictionsModes...)
 		out.GeneratedFileEvidence = append(out.GeneratedFileEvidence, current.GeneratedFileEvidence...)
 		out.ModuleCacheEvidence = append(out.ModuleCacheEvidence, current.ModuleCacheEvidence...)
 		out.BroadRepoSearchEvidence = append(out.BroadRepoSearchEvidence, current.BroadRepoSearchEvidence...)

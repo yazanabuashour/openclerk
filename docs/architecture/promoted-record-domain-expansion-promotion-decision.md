@@ -70,3 +70,9 @@ request/response shapes, explain compatibility with current document/retrieval
 and generic record workflows, and preserve canonical markdown authority,
 citations, provenance, records projection freshness, local-first operation, and
 no-bypass boundaries.
+
+Follow-up `oc-biyn` repaired the scripted answer contract and reran
+`docs/evals/results/ockp-promoted-record-domain-expansion-pressure.md`. The
+lane now passes as `keep_as_reference`; no policy-specific record action, typed
+record-domain runner surface, schema, migration, storage behavior, public API,
+or implementation follow-up is promoted by that repaired evidence.

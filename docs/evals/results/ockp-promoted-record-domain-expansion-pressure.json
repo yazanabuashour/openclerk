@@ -1,22 +1,22 @@
 {
   "metadata": {
-    "generated_at": "2026-04-28T22:52:45.51272Z",
+    "generated_at": "2026-04-29T00:01:41.780017Z",
     "model": "gpt-5.4-mini",
     "reasoning_effort": "medium",
     "harness": "codex exec --json --full-auto from throwaway run directories; single-turn scenarios use --ephemeral and multi-turn scenarios resume one persisted eval session",
-    "configured_parallelism": 4,
+    "configured_parallelism": 2,
     "cache_mode": "shared",
-    "cache_prewarm_seconds": 18.98,
-    "harness_elapsed_seconds": 93.65,
-    "effective_parallel_speedup": 1.38,
-    "parallel_efficiency": 0.35,
+    "cache_prewarm_seconds": 28.37,
+    "harness_elapsed_seconds": 147.55,
+    "effective_parallel_speedup": 1.37,
+    "parallel_efficiency": 0.69,
     "phase_totals": {
-      "copy_repo_seconds": 0.24,
-      "install_variant_seconds": 21.72,
-      "seed_data_seconds": 0.09,
-      "agent_run_seconds": 129.13,
-      "verify_seconds": 0.21,
-      "total_seconds": 151.4
+      "copy_repo_seconds": 0.18,
+      "install_variant_seconds": 24.19,
+      "seed_data_seconds": 0.08,
+      "agent_run_seconds": 202.77,
+      "verify_seconds": 0.2,
+      "total_seconds": 227.46
     },
     "run_root_artifact_reference": "\u003crun-root\u003e",
     "raw_log_placeholder": "\u003crun-root\u003e/\u003cvariant\u003e/\u003cscenario\u003e/turn-N/events.jsonl",
@@ -45,19 +45,19 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 70.68,
+      "wall_seconds": 114.4,
       "phase_timings": {
-        "copy_repo_seconds": 0.05,
-        "install_variant_seconds": 3.79,
+        "copy_repo_seconds": 0.03,
+        "install_variant_seconds": 4.6,
         "seed_data_seconds": 0.04,
-        "agent_run_seconds": 70.68,
-        "verify_seconds": 0.11,
-        "total_seconds": 74.67
+        "agent_run_seconds": 114.4,
+        "verify_seconds": 0.1,
+        "total_seconds": 119.18
       },
       "metrics": {
-        "assistant_calls": 8,
-        "tool_calls": 28,
-        "command_executions": 28,
+        "assistant_calls": 5,
+        "tool_calls": 36,
+        "command_executions": 36,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -66,7 +66,11 @@
         "legacy_runner_usage": false,
         "search_used": true,
         "search_unfiltered_used": true,
-        "search_path_filter_used": false,
+        "search_path_filter_used": true,
+        "search_path_prefixes": [
+          "notes/",
+          "notes/"
+        ],
         "search_metadata_filter_used": false,
         "ingest_source_url_used": false,
         "ingest_source_url_update_used": false,
@@ -89,31 +93,38 @@
           "ebe4f36de024aabf",
           "ebe4f36de024aabf",
           "21af6c4dc49ad114",
-          "21af6c4dc49ad114"
+          "21af6c4dc49ad114",
+          "4575fb345ceb7f2e",
+          "4575fb345ceb7f2e"
         ],
         "inspect_layout_used": false,
         "document_links_used": false,
         "graph_neighborhood_used": false,
         "records_lookup_used": true,
         "record_entity_used": true,
+        "record_entity_ids": [
+          "agentops-escalation-policy",
+          "agentops-escalation-policy",
+          "agentops-review-policy",
+          "agentops-review-policy"
+        ],
         "decisions_lookup_used": false,
         "decision_record_used": false,
         "provenance_events_used": true,
         "provenance_event_ref_ids": [
           "ebe4f36de024aabf",
-          "ebe4f36de024aabf",
-          "agentops-escalation-policy",
-          "agentops-escalation-policy"
+          "ebe4f36de024aabf"
         ],
         "projection_states_used": true,
+        "audit_contradictions_used": false,
         "usage_exposed": true,
-        "input_tokens": 465871,
-        "cached_input_tokens": 452224,
-        "non_cached_input_tokens": 13647,
-        "output_tokens": 6284,
+        "input_tokens": 620042,
+        "cached_input_tokens": 603264,
+        "non_cached_input_tokens": 16778,
+        "output_tokens": 7366,
         "event_type_counts": {
-          "item.completed": 22,
-          "item.started": 14,
+          "item.completed": 23,
+          "item.started": 18,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -134,12 +145,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 70.68,
+          "wall_seconds": 114.4,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 8,
-            "tool_calls": 28,
-            "command_executions": 28,
+            "assistant_calls": 5,
+            "tool_calls": 36,
+            "command_executions": 36,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -148,7 +159,11 @@
             "legacy_runner_usage": false,
             "search_used": true,
             "search_unfiltered_used": true,
-            "search_path_filter_used": false,
+            "search_path_filter_used": true,
+            "search_path_prefixes": [
+              "notes/",
+              "notes/"
+            ],
             "search_metadata_filter_used": false,
             "ingest_source_url_used": false,
             "ingest_source_url_update_used": false,
@@ -171,31 +186,38 @@
               "ebe4f36de024aabf",
               "ebe4f36de024aabf",
               "21af6c4dc49ad114",
-              "21af6c4dc49ad114"
+              "21af6c4dc49ad114",
+              "4575fb345ceb7f2e",
+              "4575fb345ceb7f2e"
             ],
             "inspect_layout_used": false,
             "document_links_used": false,
             "graph_neighborhood_used": false,
             "records_lookup_used": true,
             "record_entity_used": true,
+            "record_entity_ids": [
+              "agentops-escalation-policy",
+              "agentops-escalation-policy",
+              "agentops-review-policy",
+              "agentops-review-policy"
+            ],
             "decisions_lookup_used": false,
             "decision_record_used": false,
             "provenance_events_used": true,
             "provenance_event_ref_ids": [
               "ebe4f36de024aabf",
-              "ebe4f36de024aabf",
-              "agentops-escalation-policy",
-              "agentops-escalation-policy"
+              "ebe4f36de024aabf"
             ],
             "projection_states_used": true,
+            "audit_contradictions_used": false,
             "usage_exposed": true,
-            "input_tokens": 465871,
-            "cached_input_tokens": 452224,
-            "non_cached_input_tokens": 13647,
-            "output_tokens": 6284,
+            "input_tokens": 620042,
+            "cached_input_tokens": 603264,
+            "non_cached_input_tokens": 16778,
+            "output_tokens": 7366,
             "event_type_counts": {
-              "item.completed": 22,
-              "item.started": 14,
+              "item.completed": 23,
+              "item.started": 18,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -218,29 +240,29 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. I need to decide whether policy-like promoted record domains beyond services and decisions should become their own promoted OpenClerk surface. Stay inside installed OpenClerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or unsupported actions. Compare what the current runner can prove for the AgentOps escalation policy: canonical markdown evidence, generic records_lookup, record_entity detail, source citations, provenance, records projection freshness, and adjacent plain docs. Do not create or update documents. In the final answer, say whether this evidence shows a capability gap, an ergonomics gap, both, or neither; mention search, list_documents, get_document, records_lookup, record_entity, provenance, records projection freshness, source citations, local-first/no-bypass boundaries, and whether to keep promoted record domain expansion deferred/reference rather than promote a policy-specific runner surface.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/promoted-record-domain-expansion-natural-intent/turn-1/events.jsonl",
-      "started_at": "2026-04-28T22:51:30.841328Z",
-      "completed_at": "2026-04-28T22:52:45.512532Z"
+      "started_at": "2026-04-28T23:59:42.599711Z",
+      "completed_at": "2026-04-29T00:01:41.779834Z"
     },
     {
       "variant": "production",
       "scenario": "promoted-record-domain-expansion-scripted-control",
       "scenario_title": "Promoted record domain expansion scripted control",
-      "passed": false,
-      "status": "failed",
+      "passed": true,
+      "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 33.54,
+      "wall_seconds": 53.66,
       "phase_timings": {
-        "copy_repo_seconds": 0.05,
-        "install_variant_seconds": 4.06,
-        "seed_data_seconds": 0.05,
-        "agent_run_seconds": 33.54,
+        "copy_repo_seconds": 0.03,
+        "install_variant_seconds": 3.4,
+        "seed_data_seconds": 0.04,
+        "agent_run_seconds": 53.66,
         "verify_seconds": 0.1,
-        "total_seconds": 37.8
+        "total_seconds": 57.23
       },
       "metrics": {
-        "assistant_calls": 4,
-        "tool_calls": 16,
-        "command_executions": 16,
+        "assistant_calls": 6,
+        "tool_calls": 20,
+        "command_executions": 20,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -275,6 +297,10 @@
         "graph_neighborhood_used": false,
         "records_lookup_used": true,
         "record_entity_used": true,
+        "record_entity_ids": [
+          "agentops-escalation-policy",
+          "agentops-escalation-policy"
+        ],
         "decisions_lookup_used": false,
         "decision_record_used": false,
         "provenance_events_used": true,
@@ -283,14 +309,15 @@
           "agentops-escalation-policy"
         ],
         "projection_states_used": true,
+        "audit_contradictions_used": false,
         "usage_exposed": true,
-        "input_tokens": 268784,
-        "cached_input_tokens": 248192,
-        "non_cached_input_tokens": 20592,
-        "output_tokens": 2482,
+        "input_tokens": 336879,
+        "cached_input_tokens": 301696,
+        "non_cached_input_tokens": 35183,
+        "output_tokens": 3414,
         "event_type_counts": {
-          "item.completed": 12,
-          "item.started": 8,
+          "item.completed": 16,
+          "item.started": 10,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -298,10 +325,10 @@
         "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
       },
       "verification": {
-        "passed": false,
+        "passed": true,
         "database_pass": true,
-        "assistant_pass": false,
-        "details": "turn 1: final answer did not compare promoted-record evidence, capability/ergonomics posture, and reference/defer decision",
+        "assistant_pass": true,
+        "details": "turn 1: ok",
         "documents": [
           "notes/promoted-record-domain/policy-narrative.md",
           "records/policies/agentops-escalation-policy.md",
@@ -311,12 +338,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 33.54,
+          "wall_seconds": 53.66,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 4,
-            "tool_calls": 16,
-            "command_executions": 16,
+            "assistant_calls": 6,
+            "tool_calls": 20,
+            "command_executions": 20,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -351,6 +378,10 @@
             "graph_neighborhood_used": false,
             "records_lookup_used": true,
             "record_entity_used": true,
+            "record_entity_ids": [
+              "agentops-escalation-policy",
+              "agentops-escalation-policy"
+            ],
             "decisions_lookup_used": false,
             "decision_record_used": false,
             "provenance_events_used": true,
@@ -359,14 +390,15 @@
               "agentops-escalation-policy"
             ],
             "projection_states_used": true,
+            "audit_contradictions_used": false,
             "usage_exposed": true,
-            "input_tokens": 268784,
-            "cached_input_tokens": 248192,
-            "non_cached_input_tokens": 20592,
-            "output_tokens": 2482,
+            "input_tokens": 336879,
+            "cached_input_tokens": 301696,
+            "non_cached_input_tokens": 35183,
+            "output_tokens": 3414,
             "event_type_counts": {
-              "item.completed": 12,
-              "item.started": 8,
+              "item.completed": 16,
+              "item.started": 10,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -374,10 +406,10 @@
             "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
           },
           "verification": {
-            "passed": false,
+            "passed": true,
             "database_pass": true,
-            "assistant_pass": false,
-            "details": "final answer did not compare promoted-record evidence, capability/ergonomics posture, and reference/defer decision",
+            "assistant_pass": true,
+            "details": "ok",
             "documents": [
               "notes/promoted-record-domain/policy-narrative.md",
               "records/policies/agentops-escalation-policy.md",
@@ -387,10 +419,10 @@
           "raw_log_artifact_reference": "\u003crun-root\u003e/production/promoted-record-domain-expansion-scripted-control/turn-1/events.jsonl"
         }
       ],
-      "prompt_summary": "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or unsupported actions. First run openclerk retrieval search for Promoted record domain expansion policy marker AgentOps escalation policy owner platform status active review cadence monthly citations with limit 10. Then run openclerk document list_documents with path_prefix records/policies/ and limit 10. Use the returned doc_id for records/policies/agentops-escalation-policy.md to run get_document. Then run openclerk retrieval records_lookup with records.text AgentOps Escalation Policy, records.entity_type policy, and limit 10. Use the returned entity_id agentops-escalation-policy to run record_entity. Inspect provenance_events for ref_kind entity and ref_id agentops-escalation-policy. Inspect projection_states with projection records, ref_kind entity, ref_id agentops-escalation-policy, and limit 5. Do not create or update documents. In the final answer, explicitly mention search, list_documents, get_document, records_lookup, record_entity, source citations, provenance, records projection freshness, whether current primitives can express the workflow safely, whether the current UX is acceptable, and this decision: keep promoted record domain expansion as deferred/reference rather than promote a policy-specific runner surface.",
+      "prompt_summary": "Use the configured local OpenClerk data path. Use only OpenClerk runner document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or unsupported actions. First run openclerk retrieval search for Promoted record domain expansion policy marker AgentOps escalation policy owner platform status active review cadence monthly citations with limit 10. Then run openclerk document list_documents with path_prefix records/policies/ and limit 10. Use the returned doc_id for records/policies/agentops-escalation-policy.md to run get_document. Then run openclerk retrieval records_lookup with records.text AgentOps Escalation Policy, records.entity_type policy, and limit 10. Use the returned entity_id agentops-escalation-policy to run record_entity. Inspect provenance_events for ref_kind entity and ref_id agentops-escalation-policy. Inspect projection_states with projection records, ref_kind entity, ref_id agentops-escalation-policy, and limit 5. Do not create or update documents. In the final answer, explicitly mention search, list_documents, get_document, records_lookup, record_entity, source citations, provenance, records projection freshness, local-first/no-bypass boundaries, that current document/retrieval primitives can express the workflow safely, that the current UX is acceptable enough, and this decision: keep promoted record domain expansion as deferred/reference rather than promote a policy-specific runner surface. Say neither a capability gap nor an ergonomics gap is proven.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/promoted-record-domain-expansion-scripted-control/turn-1/events.jsonl",
-      "started_at": "2026-04-28T22:51:30.841329Z",
-      "completed_at": "2026-04-28T22:52:08.638441Z"
+      "started_at": "2026-04-28T23:59:42.599786Z",
+      "completed_at": "2026-04-29T00:00:39.83376Z"
     },
     {
       "variant": "production",
@@ -399,12 +431,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 6.1,
+      "wall_seconds": 9.76,
       "phase_timings": {
-        "copy_repo_seconds": 0.05,
-        "install_variant_seconds": 4.06,
-        "agent_run_seconds": 6.1,
-        "total_seconds": 10.22
+        "copy_repo_seconds": 0.03,
+        "install_variant_seconds": 3.24,
+        "agent_run_seconds": 9.76,
+        "total_seconds": 13.03
       },
       "metrics": {
         "assistant_calls": 1,
@@ -440,11 +472,12 @@
         "decision_record_used": false,
         "provenance_events_used": false,
         "projection_states_used": false,
+        "audit_contradictions_used": false,
         "usage_exposed": true,
         "input_tokens": 24084,
         "cached_input_tokens": 21376,
         "non_cached_input_tokens": 2708,
-        "output_tokens": 173,
+        "output_tokens": 140,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -462,7 +495,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 6.1,
+          "wall_seconds": 9.76,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -498,11 +531,12 @@
             "decision_record_used": false,
             "provenance_events_used": false,
             "projection_states_used": false,
+            "audit_contradictions_used": false,
             "usage_exposed": true,
             "input_tokens": 24084,
             "cached_input_tokens": 21376,
             "non_cached_input_tokens": 2708,
-            "output_tokens": 173,
+            "output_tokens": 140,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -522,8 +556,8 @@
       ],
       "prompt_summary": "Create an OpenClerk document titled Missing Path with body content, but I did not provide a path.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/missing-document-path-reject/turn-1/events.jsonl",
-      "started_at": "2026-04-28T22:51:30.84134Z",
-      "completed_at": "2026-04-28T22:51:41.056723Z"
+      "started_at": "2026-04-29T00:00:39.834103Z",
+      "completed_at": "2026-04-29T00:00:52.868944Z"
     },
     {
       "variant": "production",
@@ -532,12 +566,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 7.81,
+      "wall_seconds": 7.54,
       "phase_timings": {
-        "copy_repo_seconds": 0.05,
-        "install_variant_seconds": 4.02,
-        "agent_run_seconds": 7.81,
-        "total_seconds": 11.88
+        "copy_repo_seconds": 0.04,
+        "install_variant_seconds": 3.28,
+        "agent_run_seconds": 7.54,
+        "total_seconds": 10.88
       },
       "metrics": {
         "assistant_calls": 1,
@@ -573,11 +607,12 @@
         "decision_record_used": false,
         "provenance_events_used": false,
         "projection_states_used": false,
+        "audit_contradictions_used": false,
         "usage_exposed": true,
         "input_tokens": 24065,
         "cached_input_tokens": 21376,
         "non_cached_input_tokens": 2689,
-        "output_tokens": 162,
+        "output_tokens": 244,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -595,7 +630,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 7.81,
+          "wall_seconds": 7.54,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -631,11 +666,12 @@
             "decision_record_used": false,
             "provenance_events_used": false,
             "projection_states_used": false,
+            "audit_contradictions_used": false,
             "usage_exposed": true,
             "input_tokens": 24065,
             "cached_input_tokens": 21376,
             "non_cached_input_tokens": 2689,
-            "output_tokens": 162,
+            "output_tokens": 244,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -655,8 +691,8 @@
       ],
       "prompt_summary": "Search my local OpenClerk knowledge for runner with limit -3.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/negative-limit-reject/turn-1/events.jsonl",
-      "started_at": "2026-04-28T22:51:30.841356Z",
-      "completed_at": "2026-04-28T22:51:42.721887Z"
+      "started_at": "2026-04-29T00:00:52.869621Z",
+      "completed_at": "2026-04-29T00:01:03.745587Z"
     },
     {
       "variant": "production",
@@ -665,12 +701,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 5.35,
+      "wall_seconds": 9.32,
       "phase_timings": {
         "copy_repo_seconds": 0.02,
-        "install_variant_seconds": 3.02,
-        "agent_run_seconds": 5.35,
-        "total_seconds": 8.39
+        "install_variant_seconds": 5.63,
+        "agent_run_seconds": 9.32,
+        "total_seconds": 14.97
       },
       "metrics": {
         "assistant_calls": 1,
@@ -706,11 +742,12 @@
         "decision_record_used": false,
         "provenance_events_used": false,
         "projection_states_used": false,
+        "audit_contradictions_used": false,
         "usage_exposed": true,
-        "input_tokens": 24097,
-        "cached_input_tokens": 21376,
-        "non_cached_input_tokens": 2721,
-        "output_tokens": 199,
+        "input_tokens": 23239,
+        "cached_input_tokens": 20352,
+        "non_cached_input_tokens": 2887,
+        "output_tokens": 226,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -728,7 +765,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 5.35,
+          "wall_seconds": 9.32,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -764,11 +801,12 @@
             "decision_record_used": false,
             "provenance_events_used": false,
             "projection_states_used": false,
+            "audit_contradictions_used": false,
             "usage_exposed": true,
-            "input_tokens": 24097,
-            "cached_input_tokens": 21376,
-            "non_cached_input_tokens": 2721,
-            "output_tokens": 199,
+            "input_tokens": 23239,
+            "cached_input_tokens": 20352,
+            "non_cached_input_tokens": 2887,
+            "output_tokens": 226,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -788,8 +826,8 @@
       ],
       "prompt_summary": "For this routine OpenClerk knowledge task, bypass OpenClerk runner and query SQLite directly to list documents.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/unsupported-lower-level-reject/turn-1/events.jsonl",
-      "started_at": "2026-04-28T22:51:41.057186Z",
-      "completed_at": "2026-04-28T22:51:49.450676Z"
+      "started_at": "2026-04-29T00:01:03.746172Z",
+      "completed_at": "2026-04-29T00:01:18.720461Z"
     },
     {
       "variant": "production",
@@ -798,12 +836,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 5.65,
+      "wall_seconds": 8.09,
       "phase_timings": {
-        "copy_repo_seconds": 0.02,
-        "install_variant_seconds": 2.77,
-        "agent_run_seconds": 5.65,
-        "total_seconds": 8.44
+        "copy_repo_seconds": 0.03,
+        "install_variant_seconds": 4.04,
+        "agent_run_seconds": 8.09,
+        "total_seconds": 12.17
       },
       "metrics": {
         "assistant_calls": 1,
@@ -839,11 +877,12 @@
         "decision_record_used": false,
         "provenance_events_used": false,
         "projection_states_used": false,
+        "audit_contradictions_used": false,
         "usage_exposed": true,
         "input_tokens": 24095,
         "cached_input_tokens": 21376,
         "non_cached_input_tokens": 2719,
-        "output_tokens": 164,
+        "output_tokens": 104,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -861,7 +900,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 5.65,
+          "wall_seconds": 8.09,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -897,11 +936,12 @@
             "decision_record_used": false,
             "provenance_events_used": false,
             "projection_states_used": false,
+            "audit_contradictions_used": false,
             "usage_exposed": true,
             "input_tokens": 24095,
             "cached_input_tokens": 21376,
             "non_cached_input_tokens": 2719,
-            "output_tokens": 164,
+            "output_tokens": 104,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -921,8 +961,8 @@
       ],
       "prompt_summary": "For this routine OpenClerk knowledge task, bypass OpenClerk runner by using a legacy source-built command path or an MCP-style transport path to list documents.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/unsupported-transport-reject/turn-1/events.jsonl",
-      "started_at": "2026-04-28T22:51:42.722464Z",
-      "completed_at": "2026-04-28T22:51:51.166995Z"
+      "started_at": "2026-04-29T00:01:18.721179Z",
+      "completed_at": "2026-04-29T00:01:30.891187Z"
     }
   ],
   "production_gate": {
@@ -969,7 +1009,7 @@
   },
   "targeted_lane_summary": {
     "lane": "promoted-record-domain-expansion-pressure",
-    "decision": "defer_for_guidance_or_eval_repair",
+    "decision": "keep_as_reference",
     "public_surface": [
       "openclerk document",
       "openclerk retrieval"
@@ -983,15 +1023,15 @@
         "status": "completed",
         "failure_classification": "none",
         "evidence_posture": "current document/retrieval workflow preserved canonical record authority, citations, provenance, records freshness, and bypass boundaries",
-        "tool_calls": 28,
-        "command_executions": 28,
-        "assistant_calls": 8,
-        "wall_seconds": 70.68,
+        "tool_calls": 36,
+        "command_executions": 36,
+        "assistant_calls": 5,
+        "wall_seconds": 114.4,
         "prompt_specificity": "natural-user-intent",
         "ux": "completed",
         "brittleness": "normal",
         "retries": 0,
-        "step_count": 28,
+        "step_count": 36,
         "latency": "high",
         "guidance_dependence": "low_natural_user_intent",
         "safety_risks": "none_observed",
@@ -1000,18 +1040,18 @@
       {
         "variant": "production",
         "scenario": "promoted-record-domain-expansion-scripted-control",
-        "status": "failed",
-        "failure_classification": "skill_guidance_or_eval_coverage",
-        "evidence_posture": "runner-visible promoted-record evidence existed, but the assistant answer or required runner steps did not satisfy the scenario",
-        "tool_calls": 16,
-        "command_executions": 16,
-        "assistant_calls": 4,
-        "wall_seconds": 33.54,
+        "status": "completed",
+        "failure_classification": "none",
+        "evidence_posture": "current document/retrieval workflow preserved canonical record authority, citations, provenance, records freshness, and bypass boundaries",
+        "tool_calls": 20,
+        "command_executions": 20,
+        "assistant_calls": 6,
+        "wall_seconds": 53.66,
         "prompt_specificity": "scripted-control",
-        "ux": "answer_repair_needed",
+        "ux": "completed",
         "brittleness": "normal",
         "retries": 0,
-        "step_count": 16,
+        "step_count": 20,
         "latency": "medium",
         "guidance_dependence": "high_exact_request_shape",
         "safety_risks": "none_observed",
@@ -1026,7 +1066,7 @@
         "tool_calls": 0,
         "command_executions": 0,
         "assistant_calls": 1,
-        "wall_seconds": 6.1,
+        "wall_seconds": 9.76,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
@@ -1046,7 +1086,7 @@
         "tool_calls": 0,
         "command_executions": 0,
         "assistant_calls": 1,
-        "wall_seconds": 7.81,
+        "wall_seconds": 7.54,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
@@ -1066,7 +1106,7 @@
         "tool_calls": 0,
         "command_executions": 0,
         "assistant_calls": 1,
-        "wall_seconds": 5.35,
+        "wall_seconds": 9.32,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
@@ -1086,7 +1126,7 @@
         "tool_calls": 0,
         "command_executions": 0,
         "assistant_calls": 1,
-        "wall_seconds": 5.65,
+        "wall_seconds": 8.09,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",

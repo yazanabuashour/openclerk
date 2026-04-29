@@ -710,6 +710,346 @@ Checked source refs.
 	}
 }
 
+func TestRetrievalTaskAuditContradictionsPlansAndRepairsExistingSynthesis(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	oldSource := createDocument(t, ctx, config, "sources/audit-runner-old.md", "Old audit runner source", strings.TrimSpace(`---
+type: source
+status: superseded
+superseded_by: sources/audit-runner-current.md
+---
+# Old audit runner source
+
+## Summary
+Older source-sensitive audit runner repair evidence said agents should prefer a legacy command-path workaround.
+`)+"\n")
+	currentSource := createDocument(t, ctx, config, "sources/audit-runner-current.md", "Current audit runner source", strings.TrimSpace(`---
+type: source
+status: active
+supersedes: sources/audit-runner-old.md
+---
+# Current audit runner source
+
+## Summary
+Current source-sensitive audit runner repair evidence says use the installed openclerk JSON runner.
+`)+"\n")
+	synthesis := createDocument(t, ctx, config, "synthesis/audit-runner-routing.md", "Audit runner routing", strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: sources/audit-runner-current.md, sources/audit-runner-old.md
+---
+# Audit runner routing
+
+## Summary
+Stale audit claim: agents should prefer a legacy command-path workaround.
+
+## Sources
+- sources/audit-runner-current.md
+- sources/audit-runner-old.md
+
+## Freshness
+Checked source refs.
+`)+"\n")
+	createDocument(t, ctx, config, "synthesis/audit-runner-routing-decoy.md", "Audit runner routing decoy", "# Audit runner routing decoy\n\n## Summary\nDecoy.\n")
+	createDocument(t, ctx, config, "sources/audit-conflict-alpha.md", "Audit conflict alpha", strings.TrimSpace(`---
+type: source
+status: active
+---
+# Audit conflict alpha
+
+## Summary
+Source sensitive audit conflict runner retention is seven days.
+`)+"\n")
+	createDocument(t, ctx, config, "sources/audit-conflict-bravo.md", "Audit conflict bravo", strings.TrimSpace(`---
+type: source
+status: active
+---
+# Audit conflict bravo
+
+## Summary
+Source sensitive audit conflict runner retention is thirty days.
+`)+"\n")
+
+	time.Sleep(time.Millisecond)
+	_, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action:  runner.DocumentTaskActionReplaceSection,
+		DocID:   currentSource.DocID,
+		Heading: "Summary",
+		Content: "Current source-sensitive audit runner repair evidence says use the installed openclerk JSON runner for audit repairs.",
+	})
+	if err != nil {
+		t.Fatalf("update current source: %v", err)
+	}
+
+	plan, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionAuditContradictions,
+		Audit: runner.AuditContradictionsOptions{
+			Query:         "source-sensitive audit runner repair evidence",
+			TargetPath:    "synthesis/audit-runner-routing.md",
+			Mode:          "plan_only",
+			ConflictQuery: "source sensitive audit conflict runner retention",
+			Limit:         10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("audit plan: %v", err)
+	}
+	if plan.Audit == nil ||
+		plan.Audit.RepairStatus != "planned" ||
+		plan.Audit.RepairApplied ||
+		plan.Audit.SelectedTargetPath != "synthesis/audit-runner-routing.md" ||
+		!containsString(plan.Audit.CandidateSynthesisPaths, "synthesis/audit-runner-routing-decoy.md") ||
+		!containsString(plan.Audit.CurrentSourcePaths, currentSource.Path) ||
+		!containsString(plan.Audit.SupersededSourcePaths, oldSource.Path) ||
+		len(plan.Audit.ProjectionFreshnessBefore) == 0 ||
+		len(plan.Audit.ProjectionFreshnessAfter) == 0 ||
+		len(plan.Audit.UnresolvedConflictGroups) != 1 ||
+		plan.Audit.UnresolvedConflictGroups[0].Status != "unresolved" {
+		t.Fatalf("audit plan result = %+v", plan.Audit)
+	}
+	if !auditInspectedPath(plan.Audit.ProvenanceInspected, "sources/audit-conflict-alpha.md") ||
+		!auditInspectedPath(plan.Audit.ProvenanceInspected, "sources/audit-conflict-bravo.md") {
+		t.Fatalf("audit plan did not inspect conflict provenance: %+v", plan.Audit.ProvenanceInspected)
+	}
+	unchanged, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGet,
+		DocID:  synthesis.DocID,
+	})
+	if err != nil {
+		t.Fatalf("get unchanged synthesis: %v", err)
+	}
+	if !strings.Contains(unchanged.Document.Body, "legacy command-path workaround") {
+		t.Fatalf("plan_only changed synthesis body = %q", unchanged.Document.Body)
+	}
+
+	repaired, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionAuditContradictions,
+		Audit: runner.AuditContradictionsOptions{
+			Query:         "source-sensitive audit runner repair evidence",
+			TargetPath:    "synthesis/audit-runner-routing.md",
+			Mode:          "repair_existing",
+			ConflictQuery: "source sensitive audit conflict runner retention",
+			Limit:         10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("audit repair: %v", err)
+	}
+	if repaired.Audit == nil ||
+		repaired.Audit.RepairStatus != "applied" ||
+		!repaired.Audit.RepairApplied ||
+		repaired.Audit.DuplicatePrevention != "existing_target_selected_no_duplicate_created" ||
+		repaired.Audit.FailureClassification != "none" {
+		t.Fatalf("audit repair result = %+v", repaired.Audit)
+	}
+	if len(repaired.Audit.ProjectionFreshnessAfter) == 0 || repaired.Audit.ProjectionFreshnessAfter[0].Freshness != "fresh" {
+		t.Fatalf("projection after repair = %+v", repaired.Audit.ProjectionFreshnessAfter)
+	}
+	updated, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGet,
+		DocID:  synthesis.DocID,
+	})
+	if err != nil {
+		t.Fatalf("get repaired synthesis: %v", err)
+	}
+	for _, want := range []string{
+		"source_refs: sources/audit-runner-current.md, sources/audit-runner-old.md",
+		"Current audit guidance: use the installed openclerk JSON runner.",
+		"Current source: sources/audit-runner-current.md.",
+		"Superseded source: sources/audit-runner-old.md.",
+		"## Sources",
+		"## Freshness",
+	} {
+		if !strings.Contains(updated.Document.Body, want) {
+			t.Fatalf("repaired body missing %q:\n%s", want, updated.Document.Body)
+		}
+	}
+}
+
+func TestRetrievalTaskAuditContradictionsFindsTargetAfterFirstSynthesisPage(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "sources/audit-page-old.md", "Old audit page source", strings.TrimSpace(`---
+type: source
+status: superseded
+superseded_by: sources/audit-page-current.md
+---
+# Old audit page source
+
+## Summary
+Older source-sensitive audit page evidence said to use a legacy command path.
+`)+"\n")
+	createDocument(t, ctx, config, "sources/audit-page-current.md", "Current audit page source", strings.TrimSpace(`---
+type: source
+status: active
+supersedes: sources/audit-page-old.md
+---
+# Current audit page source
+
+## Summary
+Current source-sensitive audit page evidence says use the installed openclerk JSON runner.
+`)+"\n")
+	for i := 0; i < 101; i++ {
+		createDocument(t, ctx, config, fmt.Sprintf("synthesis/aa-audit-decoy-%03d.md", i), fmt.Sprintf("Audit decoy %03d", i), fmt.Sprintf("# Audit decoy %03d\n\n## Summary\nDecoy.\n", i))
+	}
+	target := createDocument(t, ctx, config, "synthesis/zz-audit-page-target.md", "Audit page target", strings.TrimSpace(`---
+type: synthesis
+status: active
+source_refs: sources/audit-page-current.md, sources/audit-page-old.md
+---
+# Audit page target
+
+## Summary
+Stale audit page claim.
+
+## Sources
+- sources/audit-page-current.md
+- sources/audit-page-old.md
+
+## Freshness
+Checked source refs.
+`)+"\n")
+
+	result, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionAuditContradictions,
+		Audit: runner.AuditContradictionsOptions{
+			Query:      "source-sensitive audit page evidence",
+			TargetPath: target.Path,
+			Mode:       "plan_only",
+			Limit:      10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("audit paginated target: %v", err)
+	}
+	if result.Audit == nil ||
+		result.Audit.SelectedTargetPath != target.Path ||
+		result.Audit.RepairStatus != "planned" ||
+		result.Audit.DuplicatePrevention != "existing_target_selected_no_duplicate_created" {
+		t.Fatalf("audit paginated target result = %+v", result.Audit)
+	}
+}
+
+func TestRetrievalTaskAuditContradictionsDoesNotReportMatchingCurrentSourcesAsConflict(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "sources/audit-agree-old.md", "Old audit agree source", strings.TrimSpace(`---
+type: source
+status: superseded
+superseded_by: sources/audit-agree-current.md
+---
+# Old audit agree source
+
+## Summary
+Older source-sensitive audit agreement evidence said to use a legacy command path.
+`)+"\n")
+	createDocument(t, ctx, config, "sources/audit-agree-current.md", "Current audit agree source", strings.TrimSpace(`---
+type: source
+status: active
+supersedes: sources/audit-agree-old.md
+---
+# Current audit agree source
+
+## Summary
+Current source-sensitive audit agreement evidence says use the installed openclerk JSON runner.
+`)+"\n")
+	createDocument(t, ctx, config, "synthesis/audit-agree-target.md", "Audit agree target", strings.TrimSpace(`---
+type: synthesis
+status: active
+source_refs: sources/audit-agree-current.md, sources/audit-agree-old.md
+---
+# Audit agree target
+
+## Summary
+Stale audit agreement claim.
+
+## Sources
+- sources/audit-agree-current.md
+- sources/audit-agree-old.md
+
+## Freshness
+Checked source refs.
+`)+"\n")
+	createDocument(t, ctx, config, "sources/audit-retention-alpha.md", "Audit retention alpha", strings.TrimSpace(`---
+type: source
+status: active
+---
+# Audit retention alpha
+
+## Summary
+Source sensitive audit matching retention is seven days.
+`)+"\n")
+	createDocument(t, ctx, config, "sources/audit-retention-bravo.md", "Audit retention bravo", strings.TrimSpace(`---
+type: source
+status: active
+---
+# Audit retention bravo
+
+## Summary
+Source sensitive audit matching retention is seven days.
+`)+"\n")
+
+	result, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionAuditContradictions,
+		Audit: runner.AuditContradictionsOptions{
+			Query:         "source-sensitive audit agreement evidence",
+			TargetPath:    "synthesis/audit-agree-target.md",
+			Mode:          "plan_only",
+			ConflictQuery: "source sensitive audit matching retention",
+			Limit:         10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("audit matching conflict: %v", err)
+	}
+	if result.Audit == nil || len(result.Audit.UnresolvedConflictGroups) != 0 {
+		t.Fatalf("matching current sources reported as conflict = %+v", result.Audit)
+	}
+	if !auditInspectedPath(result.Audit.ProvenanceInspected, "sources/audit-retention-alpha.md") ||
+		!auditInspectedPath(result.Audit.ProvenanceInspected, "sources/audit-retention-bravo.md") {
+		t.Fatalf("audit matching conflict did not inspect provenance: %+v", result.Audit.ProvenanceInspected)
+	}
+}
+
+func TestRetrievalTaskAuditContradictionsValidation(t *testing.T) {
+	t.Parallel()
+
+	missing, err := runner.RunRetrievalTask(context.Background(), runclient.Config{}, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionAuditContradictions,
+		Audit: runner.AuditContradictionsOptions{
+			TargetPath: "synthesis/audit-runner-routing.md",
+		},
+	})
+	if err != nil {
+		t.Fatalf("missing audit query validation: %v", err)
+	}
+	if !missing.Rejected || missing.RejectionReason != "audit.query is required" {
+		t.Fatalf("missing result = %+v", missing)
+	}
+
+	invalidMode, err := runner.RunRetrievalTask(context.Background(), runclient.Config{}, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionAuditContradictions,
+		Audit: runner.AuditContradictionsOptions{
+			Query:      "source-sensitive audit runner repair evidence",
+			TargetPath: "synthesis/audit-runner-routing.md",
+			Mode:       "create_new",
+		},
+	})
+	if err != nil {
+		t.Fatalf("invalid audit mode validation: %v", err)
+	}
+	if !invalidMode.Rejected || invalidMode.RejectionReason != "audit.mode must be plan_only or repair_existing" {
+		t.Fatalf("invalid mode result = %+v", invalidMode)
+	}
+}
+
 func TestDocumentTaskInspectLayout(t *testing.T) {
 	t.Parallel()
 
@@ -1276,6 +1616,24 @@ func createDocument(t *testing.T, ctx context.Context, config runclient.Config, 
 func runnerEventTypesInclude(events []runner.ProvenanceEvent, eventType string) bool {
 	for _, event := range events {
 		if event.EventType == eventType {
+			return true
+		}
+	}
+	return false
+}
+
+func containsString(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
+}
+
+func auditInspectedPath(inspections []runner.AuditProvenanceInspection, path string) bool {
+	for _, inspection := range inspections {
+		if inspection.SourcePath == path && len(inspection.EventIDs) > 0 {
 			return true
 		}
 	}

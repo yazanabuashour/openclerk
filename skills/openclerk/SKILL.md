@@ -260,6 +260,18 @@ synthesis or source-sensitive audit output. If current sources conflict and no
 runner-visible supersession or authority resolves them, explain the unresolved
 conflict with both source paths instead of choosing a winner.
 
+Use retrieval `audit_contradictions` for the promoted narrow source-linked
+audit workflow. It is not a broad semantic contradiction engine. The action may
+plan or repair an existing synthesis page, inspect provenance and projection
+freshness, prevent duplicate synthesis creation, and report unresolved
+current-source conflicts without choosing a winner. Use `mode: "plan_only"` for
+no-write review and `mode: "repair_existing"` only when the request asks to
+repair an existing target path. Final answers from this action must name
+`audit_contradictions`, the repaired or selected synthesis path, source paths
+or citations, provenance, projection freshness, duplicate-prevention status,
+any unresolved conflict source paths, and whether repair was applied, skipped,
+or rejected.
+
 For messy populated-vault retrieval, use runner-visible authority signals before
 writing the answer. Metadata-filtered authority results, active canonical
 sources, cited source paths, `doc_id`, and `chunk_id` are the evidence to answer
@@ -299,11 +311,15 @@ Common request shapes:
 {"action":"projection_states","projection":{"ref_kind":"document","ref_id":"doc_id_from_json","limit":20}}
 {"action":"projection_states","projection":{"projection":"synthesis","ref_kind":"document","ref_id":"synthesis_doc_id_from_json","limit":20}}
 {"action":"projection_states","projection":{"projection":"decisions","ref_kind":"decision","ref_id":"decision_id_from_json","limit":20}}
+{"action":"audit_contradictions","audit":{"query":"source-sensitive audit runner repair evidence","target_path":"synthesis/audit-runner-routing.md","mode":"plan_only","conflict_query":"source sensitive audit conflict runner retention","limit":10}}
+{"action":"audit_contradictions","audit":{"query":"source-sensitive audit runner repair evidence","target_path":"synthesis/audit-runner-routing.md","mode":"repair_existing","conflict_query":"source sensitive audit conflict runner retention","limit":10}}
 ```
 
 Request fields are `action`, `search`, `doc_id`, `chunk_id`, `node_id`,
 `entity_id`, `service_id`, `decision_id`, `records`, `services`, `decisions`,
-`provenance`, `projection`, and `limit`.
+`provenance`, `projection`, `audit`, and `limit`. An `audit` request has
+`query`, `target_path`, `mode`, `conflict_query`, and `limit`. Supported
+`audit.mode` values are `plan_only` and `repair_existing`.
 
 Use search for source-grounded answers, document links for explicit markdown
 relationships, graph neighborhoods for nearby derived context, records lookup

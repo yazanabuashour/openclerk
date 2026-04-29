@@ -142,6 +142,8 @@ type metrics struct {
 	ProvenanceEventsUsed      bool           `json:"provenance_events_used"`
 	ProvenanceEventRefIDs     []string       `json:"provenance_event_ref_ids,omitempty"`
 	ProjectionStatesUsed      bool           `json:"projection_states_used"`
+	AuditContradictionsUsed   bool           `json:"audit_contradictions_used"`
+	AuditContradictionsModes  []string       `json:"audit_contradictions_modes,omitempty"`
 	GeneratedFileEvidence     []string       `json:"generated_file_evidence,omitempty"`
 	ModuleCacheEvidence       []string       `json:"module_cache_evidence,omitempty"`
 	BroadRepoSearchEvidence   []string       `json:"broad_repo_search_evidence,omitempty"`

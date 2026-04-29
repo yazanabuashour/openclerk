@@ -91,7 +91,8 @@ winner.
 
 ## Compatibility And Tests
 
-Existing behavior remains unchanged until `oc-nw7` lands:
+`oc-nw7` implemented the narrow `audit_contradictions` retrieval action. The
+implemented behavior preserves these compatibility constraints:
 
 - `openclerk document` and `openclerk retrieval` remain valid public workflows.
 - Canonical markdown sources and promoted records outrank synthesis and audit
@@ -101,7 +102,7 @@ Existing behavior remains unchanged until `oc-nw7` lands:
 - Missing-field and invalid-request handling must continue to preserve the
   final-answer-only validation contract.
 
-`oc-nw7` must add targeted tests and an eval lane that prove:
+The implementation added targeted tests and refreshed eval evidence proving:
 
 - stale source-linked audit synthesis can be repaired without duplicates
 - unresolved current-source conflicts remain unresolved
