@@ -1,0 +1,649 @@
+package main
+
+func classifyTargetedGraphSemanticsRevisitResult(result jobResult) (string, string) {
+	if isFinalAnswerOnlyValidationScenario(result.Scenario) {
+		if result.Passed && result.Verification.Passed {
+			return "none", "validation control stayed final-answer-only"
+		}
+		if result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1 {
+			return "skill_guidance_or_eval_coverage", "validation pressure did not stay final-answer-only"
+		}
+		return "skill_guidance_or_eval_coverage", "validation answer did not satisfy the rejection contract"
+	}
+	if result.Passed && result.Verification.Passed {
+		return "none", "current document/retrieval workflow preserved canonical relationship authority, citations, graph projection freshness, and bypass boundaries"
+	}
+	if len(populatedBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Verification.Passed {
+		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
+	}
+	if result.Scenario == graphSemanticsScriptedScenarioID && !result.Verification.DatabasePass {
+		return "capability_gap", "scripted current-primitives control could not safely express relationship-shaped graph semantics"
+	}
+	if result.Scenario == graphSemanticsNaturalScenarioID && !result.Verification.Passed {
+		return "ergonomics_gap", "natural graph semantics revisit intent did not complete the safe current-primitives workflow"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "fixture or durable graph semantics evidence did not satisfy revisit pressure"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible graph evidence existed, but the assistant answer or required runner steps did not satisfy the scenario"
+	}
+	return "ergonomics_gap", "manual review required before any graph semantics promotion"
+}
+
+func classifyTargetedParallelRunnerResult(result jobResult) (string, string) {
+	if result.Passed && result.Verification.Passed {
+		return "none", "parallel startup/read workflow completed through installed runner commands without raw SQLite/runtime_config/upsert failures"
+	}
+	if len(populatedBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Metrics.CreateDocumentUsed || result.Metrics.AppendDocumentUsed || result.Metrics.ReplaceSectionUsed || result.Metrics.IngestSourceURLUsed || result.Metrics.IngestVideoURLUsed {
+		return "skill_guidance_or_eval_coverage", "parallel read scenario used a mutating document action"
+	}
+	if result.Verification.Passed {
+		return "runner_execution_failure", "scenario verification passed, but the job did not complete successfully"
+	}
+	return "skill_guidance_or_eval_coverage", "runner-visible parallel evidence existed, but the assistant answer or required runner steps did not satisfy the scenario"
+}
+
+func classifyTargetedMemoryRouterRevisitResult(result jobResult) (string, string) {
+	if isFinalAnswerOnlyValidationScenario(result.Scenario) {
+		if result.Passed && result.Verification.Passed {
+			return "none", "validation control stayed final-answer-only"
+		}
+		if result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1 {
+			return "skill_guidance_or_eval_coverage", "validation pressure did not stay final-answer-only"
+		}
+		return "skill_guidance_or_eval_coverage", "validation answer did not satisfy the rejection contract"
+	}
+	if result.Passed && result.Verification.Passed {
+		return "none", "current document/retrieval workflow preserved canonical memory/router authority, source refs, provenance, synthesis freshness, and bypass boundaries"
+	}
+	if len(populatedBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Metrics.CreateDocumentUsed || result.Metrics.ReplaceSectionUsed || result.Metrics.AppendDocumentUsed {
+		return "eval_contract_violation", "revisit scenario wrote durable documents instead of inspecting existing evidence"
+	}
+	if result.Verification.Passed {
+		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
+	}
+	if result.Scenario == memoryRouterScriptedScenarioID && !result.Verification.DatabasePass {
+		return "capability_gap", "scripted current-primitives control could not safely express memory and autonomous router revisit workflow"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "fixture or durable memory/router evidence did not satisfy revisit pressure"
+	}
+	if result.Scenario == memoryRouterNaturalScenarioID && !result.Verification.Passed {
+		return "ergonomics_gap", "natural memory and autonomous router revisit intent did not complete the safe current-primitives workflow"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible memory/router evidence existed, but the assistant answer or required runner steps did not satisfy the scenario"
+	}
+	return "ergonomics_gap", "manual review required before any memory/router promotion"
+}
+
+func classifyTargetedPromotedRecordDomainResult(result jobResult) (string, string) {
+	if isFinalAnswerOnlyValidationScenario(result.Scenario) {
+		if result.Passed && result.Verification.Passed {
+			return "none", "validation control stayed final-answer-only"
+		}
+		if result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1 {
+			return "skill_guidance_or_eval_coverage", "validation pressure did not stay final-answer-only"
+		}
+		return "skill_guidance_or_eval_coverage", "validation answer did not satisfy the rejection contract"
+	}
+	if result.Passed && result.Verification.Passed {
+		return "none", "current document/retrieval workflow preserved canonical record authority, citations, provenance, records freshness, and bypass boundaries"
+	}
+	if len(populatedBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Metrics.CreateDocumentUsed || result.Metrics.ReplaceSectionUsed || result.Metrics.AppendDocumentUsed {
+		return "eval_contract_violation", "promoted record domain scenario wrote durable documents instead of inspecting existing evidence"
+	}
+	if result.Verification.Passed {
+		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
+	}
+	if result.Scenario == promotedRecordDomainScriptedScenarioID && !result.Verification.DatabasePass {
+		return "capability_gap", "scripted current-primitives control could not safely express promoted record domain expansion"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "fixture or durable promoted-record evidence did not satisfy domain expansion pressure"
+	}
+	if result.Scenario == promotedRecordDomainNaturalScenarioID && !result.Verification.Passed {
+		return "ergonomics_gap", "natural promoted record domain intent did not complete the safe current-primitives workflow"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible promoted-record evidence existed, but the assistant answer or required runner steps did not satisfy the scenario"
+	}
+	return "ergonomics_gap", "manual review required before any promoted record domain expansion"
+}
+
+func classifyTargetedArtifactIngestionResult(result jobResult) (string, string) {
+	if result.Passed && result.Verification.Passed {
+		return "none", "current document/retrieval runner evidence preserved artifact authority, citations, provenance, freshness, and bypass boundaries"
+	}
+	if result.FixturePreflight != nil && !result.FixturePreflight.Passed {
+		return "data_hygiene", "PDF fixture preflight failed before agent behavior could be evaluated: " + result.FixturePreflight.Details
+	}
+	if len(artifactIngestionBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if isFinalAnswerOnlyValidationScenario(result.Scenario) &&
+		(result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1) {
+		return "skill_guidance", "unsupported or missing-field artifact pressure did not stay final-answer-only"
+	}
+	if result.Verification.Passed {
+		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
+	}
+	if isArtifactPDFScenario(result.Scenario) && !result.Verification.DatabasePass && result.FixturePreflight != nil && result.FixturePreflight.Passed {
+		if result.Metrics.SourcePDFDownloadFailure {
+			return "eval_coverage", "PDF fixture preflight worked, but the agent-runner process could not reach the generated HTTP PDF URL"
+		}
+		if result.Scenario == artifactPDFNaturalIntentScenarioID {
+			return "ergonomics_gap", "scripted PDF fixture preflight worked, but natural user intent did not produce durable source evidence"
+		}
+		return "runner_capability_gap", "scripted PDF source URL control used the supported primitive but durable source evidence was missing"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene", "fixture or durable artifact evidence did not satisfy heterogeneous artifact pressure"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance", "runner-visible evidence existed, but the assistant answer did not satisfy heterogeneous artifact pressure"
+	}
+	return "runner_capability_gap", "manual review required before any generalized artifact ingestion surface promotion"
+}
+
+func classifyTargetedVideoYouTubeResult(result jobResult) (string, string) {
+	if result.Passed && result.Verification.Passed {
+		return "none", "ingest_video_url preserved supplied video transcript authority, citations, provenance, freshness, and bypass boundaries"
+	}
+	if len(videoYouTubeBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if isFinalAnswerOnlyValidationScenario(result.Scenario) &&
+		(result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1) {
+		return "eval_contract_violation", "video/YouTube unsupported or bypass pressure did not stay final-answer-only"
+	}
+	if result.Verification.Passed {
+		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
+	}
+	if result.Scenario == videoYouTubeScriptedTranscriptControlID && !result.Verification.DatabasePass {
+		return "runner_capability_gap", "scripted supplied-transcript control could not produce durable canonical source evidence"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance", "runner-visible video/YouTube evidence existed, but the assistant answer did not satisfy the scenario"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene", "fixture or durable video/YouTube evidence did not satisfy targeted pressure"
+	}
+	return "ergonomics_gap", "manual review required before any video/YouTube ingestion promotion"
+}
+
+func classifyTargetedSynthesisCompileResult(result jobResult) (string, string) {
+	if isFinalAnswerOnlyValidationScenario(result.Scenario) {
+		if result.Passed && result.Verification.Passed {
+			return "none", "validation control stayed final-answer-only"
+		}
+		if result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1 {
+			return "skill_guidance_or_eval_coverage", "validation pressure did not stay final-answer-only"
+		}
+		return "skill_guidance_or_eval_coverage", "validation answer did not satisfy the rejection contract"
+	}
+	if result.Passed && result.Verification.Passed {
+		return "none", "current document/retrieval workflow preserved synthesis authority, source refs, provenance/freshness checks, duplicate prevention, and bypass boundaries"
+	}
+	if len(populatedBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Verification.Passed {
+		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
+	}
+	if result.Scenario == synthesisCompileScriptedScenarioID && !result.Verification.DatabasePass {
+		return "capability_gap", "scripted current-primitives control could not safely repair source-linked synthesis"
+	}
+	if result.Scenario == synthesisCompileNaturalScenarioID && !result.Verification.Passed {
+		return "ergonomics_gap", "natural compile_synthesis revisit intent did not complete the safe current-primitives workflow"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "fixture or durable synthesis evidence did not satisfy compile_synthesis revisit pressure"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible synthesis evidence existed, but the assistant answer or required runner steps did not satisfy the scenario"
+	}
+	return "ergonomics_gap", "manual review required before any compile_synthesis promotion"
+}
+
+func classifyTargetedBroadAuditResult(result jobResult) (string, string) {
+	if isFinalAnswerOnlyValidationScenario(result.Scenario) {
+		if result.Passed && result.Verification.Passed {
+			return "none", "validation control stayed final-answer-only"
+		}
+		if result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1 {
+			return "skill_guidance_or_eval_coverage", "validation pressure did not stay final-answer-only"
+		}
+		return "skill_guidance_or_eval_coverage", "validation answer did not satisfy the rejection contract"
+	}
+	if result.Passed && result.Verification.Passed {
+		return "none", "current document/retrieval workflow preserved audit source authority, citations/source paths, provenance/freshness checks, unresolved-conflict handling, duplicate prevention, and bypass boundaries"
+	}
+	if len(populatedBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Verification.Passed {
+		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
+	}
+	if result.Scenario == broadAuditScriptedScenarioID && !result.Verification.DatabasePass {
+		return "capability_gap", "scripted current-primitives control could not safely express broad contradiction/audit workflow"
+	}
+	if result.Scenario == broadAuditNaturalScenarioID && !result.Verification.Passed {
+		return "ergonomics_gap", "natural broad contradiction/audit revisit intent did not complete the safe current-primitives workflow"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "fixture or durable audit evidence did not satisfy broad contradiction/audit revisit pressure"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible audit evidence existed, but the assistant answer or required runner steps did not satisfy the scenario"
+	}
+	return "ergonomics_gap", "manual review required before any broad contradiction/audit promotion"
+}
+
+func promptSpecificity(scenarioID string) string {
+	switch scenarioID {
+	case graphSemanticsNaturalScenarioID:
+		return "natural-user-intent"
+	case graphSemanticsScriptedScenarioID:
+		return "scripted-control"
+	case memoryRouterNaturalScenarioID:
+		return "natural-user-intent"
+	case memoryRouterScriptedScenarioID:
+		return "scripted-control"
+	case promotedRecordDomainNaturalScenarioID:
+		return "natural-user-intent"
+	case promotedRecordDomainScriptedScenarioID:
+		return "scripted-control"
+	case documentHistoryNaturalScenarioID:
+		return "natural-user-intent"
+	case documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID:
+		return "scripted-control"
+	case candidateErgonomicsNaturalIntentScenarioID, candidateErgonomicsDuplicateNaturalID, candidateErgonomicsLowConfidenceNaturalID:
+		return "natural-user-intent"
+	case candidateErgonomicsScriptedControlID:
+		return "scripted-control"
+	case artifactPDFSourceURLScenarioID:
+		return "scripted-control"
+	case artifactPDFNaturalIntentScenarioID:
+		return "natural-user-intent"
+	case videoYouTubeNaturalIntentScenarioID:
+		return "natural-user-intent"
+	case videoYouTubeScriptedTranscriptControlID:
+		return "scripted-control"
+	case synthesisCompileNaturalScenarioID:
+		return "natural-user-intent"
+	case synthesisCompileScriptedScenarioID:
+		return "scripted-control"
+	case broadAuditNaturalScenarioID:
+		return "natural-user-intent"
+	case broadAuditScriptedScenarioID:
+		return "scripted-control"
+	default:
+		return "scenario-specific"
+	}
+}
+
+func scenarioUX(result jobResult) string {
+	if result.Passed && result.Verification.Passed {
+		return "completed"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "answer_repair_needed"
+	}
+	if result.Metrics.SourcePDFDownloadFailure {
+		return "local_fixture_unreachable_from_agent_runner"
+	}
+	if isArtifactPDFScenario(result.Scenario) && result.FixturePreflight != nil && result.FixturePreflight.Passed {
+		return "durable_write_failed_after_working_fixture"
+	}
+	return "manual_review"
+}
+
+func scenarioBrittleness(result jobResult) string {
+	if result.FixturePreflight != nil && !result.FixturePreflight.Passed {
+		return "fixture_dependent"
+	}
+	if result.Metrics.SourcePDFDownloadFailure {
+		return "harness_transport_sensitive"
+	}
+	if result.Scenario == artifactPDFSourceURLScenarioID {
+		return "low_scripted_control"
+	}
+	if isCandidateErgonomicsScenario(result.Scenario) && !result.Passed {
+		return "natural_or_control_prompt_sensitive"
+	}
+	if result.Scenario == artifactPDFNaturalIntentScenarioID && !result.Passed {
+		return "natural_prompt_sensitive"
+	}
+	if result.Scenario == synthesisCompileNaturalScenarioID && !result.Passed {
+		return "natural_prompt_sensitive"
+	}
+	if result.Scenario == memoryRouterNaturalScenarioID && !result.Passed {
+		return "natural_prompt_sensitive"
+	}
+	if result.Scenario == promotedRecordDomainNaturalScenarioID && !result.Passed {
+		return "natural_prompt_sensitive"
+	}
+	return "normal"
+}
+
+func scenarioRetries(result jobResult) int {
+	if len(result.Turns) <= 1 {
+		return 0
+	}
+	return len(result.Turns) - 1
+}
+
+func scenarioStepCount(result jobResult) int {
+	return result.Metrics.CommandExecutions
+}
+
+func scenarioLatency(result jobResult) string {
+	switch {
+	case result.WallSeconds == 0:
+		return "not_measured"
+	case result.WallSeconds < 15:
+		return "low"
+	case result.WallSeconds < 60:
+		return "medium"
+	default:
+		return "high"
+	}
+}
+
+func scenarioGuidanceDependence(result jobResult) string {
+	switch result.Scenario {
+	case graphSemanticsNaturalScenarioID:
+		if result.Passed {
+			return "low_natural_user_intent"
+		}
+		return "high_if_natural_prompt_failed"
+	case graphSemanticsScriptedScenarioID:
+		return "high_exact_request_shape"
+	case memoryRouterNaturalScenarioID:
+		if result.Passed {
+			return "low_natural_user_intent"
+		}
+		return "high_if_natural_prompt_failed"
+	case memoryRouterScriptedScenarioID:
+		return "high_exact_request_shape"
+	case promotedRecordDomainNaturalScenarioID:
+		if result.Passed {
+			return "low_natural_user_intent"
+		}
+		return "high_if_natural_prompt_failed"
+	case promotedRecordDomainScriptedScenarioID:
+		return "high_exact_request_shape"
+	case documentHistoryNaturalScenarioID:
+		if result.Passed {
+			return "low_natural_user_intent"
+		}
+		return "high_if_natural_prompt_failed"
+	case documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID:
+		return "high_exact_runner_workflow"
+	case candidateErgonomicsNaturalIntentScenarioID, candidateErgonomicsDuplicateNaturalID, candidateErgonomicsLowConfidenceNaturalID:
+		if result.Passed {
+			return "low_natural_user_intent"
+		}
+		return "high_if_natural_prompt_failed"
+	case candidateErgonomicsScriptedControlID:
+		return "high_exact_request_shape"
+	case artifactPDFSourceURLScenarioID:
+		return "high_exact_request_shape"
+	case artifactPDFNaturalIntentScenarioID:
+		if result.Passed {
+			return "moderate_user_language_with_required_hints"
+		}
+		return "high_if_natural_prompt_failed"
+	case synthesisCompileNaturalScenarioID:
+		if result.Passed {
+			return "low_natural_user_intent"
+		}
+		return "high_if_natural_prompt_failed"
+	case synthesisCompileScriptedScenarioID:
+		return "high_exact_request_shape"
+	case broadAuditNaturalScenarioID:
+		if result.Passed {
+			return "low_natural_user_intent"
+		}
+		return "high_if_natural_prompt_failed"
+	case broadAuditScriptedScenarioID:
+		return "high_exact_request_shape"
+	default:
+		return "scenario_prompt"
+	}
+}
+
+func scenarioSafetyRisks(result jobResult) string {
+	if (isSynthesisCompileScenario(result.Scenario) || isBroadAuditScenario(result.Scenario)) && result.Metrics.CreateDocumentUsed {
+		return "duplicate_or_unexpected_create"
+	}
+	if isPromotedRecordDomainScenario(result.Scenario) && (result.Metrics.CreateDocumentUsed || result.Metrics.ReplaceSectionUsed || result.Metrics.AppendDocumentUsed) {
+		return "unexpected_write"
+	}
+	if result.Metrics.CreateDocumentUsed && result.Scenario != videoYouTubeScriptedTranscriptControlID && result.Scenario != documentHistoryPendingScenarioID {
+		return "wrote_before_approval"
+	}
+	if isDocumentHistoryScenario(result.Scenario) && len(documentHistoryInvariantFailures(result.Metrics)) != 0 {
+		return "bypass_or_private_artifact_risk"
+	}
+	if len(documentArtifactCandidateBypassFailures(result.Metrics)) != 0 {
+		return "bypass_or_inspection"
+	}
+	if isCandidateErgonomicsScenario(result.Scenario) && !result.Passed {
+		return "candidate_quality_gap"
+	}
+	return "none_observed"
+}
+
+func fixturePreflightStatus(preflight *fixturePreflight) string {
+	if preflight == nil {
+		return "not_applicable"
+	}
+	if preflight.Passed {
+		return "passed"
+	}
+	return "failed"
+}
+
+func classifyTargetedDocumentArtifactCandidateResult(result jobResult) (string, string) {
+	if result.Passed && result.Verification.Passed {
+		if isCandidateErgonomicsScenario(result.Scenario) {
+			return "none", "ergonomics scorecard scenario satisfied natural-intent or scripted-control pressure without writing before approval"
+		}
+		return "none", "candidate generation quality rubric satisfied without writing before approval"
+	}
+	if len(documentArtifactCandidateBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Scenario == candidateLowConfidenceAsksScenarioID &&
+		(result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1) {
+		return "skill_guidance_or_eval_coverage", "low-confidence candidate pressure did not stay no-tools"
+	}
+	if result.Metrics.CreateDocumentUsed {
+		return "eval_contract_violation", "agent wrote before approval in propose-before-create lane"
+	}
+	if result.Verification.Passed {
+		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "fixture or no-create durable evidence did not satisfy candidate-generation pressure"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "candidate_quality_gap", "candidate proposal did not satisfy path/title/body quality, duplicate, or confirmation rubric"
+	}
+	return "candidate_quality_gap", "manual review required before promote-before-create skill policy"
+}
+
+func classifyTargetedDocumentThisResult(result jobResult) (string, string) {
+	if result.Passed && result.Verification.Passed {
+		return "none", "current document/retrieval runner behavior handled document-this intake pressure"
+	}
+	if len(documentThisBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if isFinalAnswerOnlyValidationScenario(result.Scenario) &&
+		(result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1) {
+		return "skill_guidance_or_eval_coverage", "document-this validation pressure did not stay final-answer-only"
+	}
+	if result.Verification.Passed {
+		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "fixture or durable evidence did not satisfy document-this intake pressure"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible evidence existed, but the assistant answer did not satisfy document-this intake pressure"
+	}
+	return "runner_capability_gap", "manual review required before any document-this intake promotion"
+}
+
+func classifyTargetedSourceURLUpdateResult(result jobResult) (string, string) {
+	if result.Passed && result.Verification.Passed {
+		return "none", "installed document/retrieval runner evidence covered source URL update mode"
+	}
+	if len(populatedBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Verification.Passed {
+		return "runner_execution_failure", "scenario verification passed, but the job did not complete successfully"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "fixture or database evidence did not satisfy the source URL update contract"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible evidence existed, but the assistant answer did not satisfy the scenario"
+	}
+	return "runner_capability_gap", "manual review required before any public surface change"
+}
+
+func classifyTargetedPopulatedResult(result jobResult) (string, string) {
+	if result.Passed && result.Verification.Passed {
+		return "none", "existing document/retrieval runner evidence was sufficient"
+	}
+	if len(populatedBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Verification.Passed {
+		return "runner_execution_failure", "scenario verification passed, but the job did not complete successfully"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "fixture or database evidence did not satisfy the scenario contract"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible evidence existed, but the assistant answer did not satisfy the scenario"
+	}
+	return "runner_capability_gap", "manual review required before any public surface promotion"
+}
+
+func classifyTargetedRepoDocsResult(result jobResult) (string, string) {
+	if result.Passed && result.Verification.Passed {
+		return "none", "repo markdown dogfood evidence stayed inside existing document/retrieval runner surfaces"
+	}
+	if len(repoDocsBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Verification.Passed {
+		return "runner_execution_failure", "scenario verification passed, but the job did not complete successfully"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "repo markdown import or durable evidence did not satisfy the scenario contract"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible repo-docs evidence existed, but the assistant answer did not satisfy the scenario"
+	}
+	return "runner_capability_gap", "manual review required before any public surface promotion"
+}
+
+func classifyTargetedDocumentHistoryResult(result jobResult) (string, string) {
+	if isFinalAnswerOnlyValidationScenario(result.Scenario) {
+		if result.Passed && result.Verification.Passed {
+			return "none", "validation pressure stayed final-answer-only without bypassing the installed runner contract"
+		}
+		if result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1 {
+			return "skill_guidance", "validation pressure did not stay final-answer-only"
+		}
+		return "skill_guidance", "validation answer did not satisfy the document lifecycle no-tools contract"
+	}
+	if result.Passed && result.Verification.Passed {
+		if result.Scenario == documentHistoryNaturalScenarioID {
+			return "none", "natural document lifecycle intent completed through existing document/retrieval runner evidence while preserving provenance, freshness, privacy, and bypass boundaries"
+		}
+		return "none", "scripted document lifecycle control completed through existing document/retrieval runner evidence while preserving provenance, freshness, privacy, and bypass boundaries"
+	}
+	if len(documentHistoryInvariantFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Verification.Passed {
+		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
+	}
+	if result.Scenario == documentHistoryNaturalScenarioID {
+		return "ergonomics_gap", "natural document lifecycle intent did not complete the safe current-primitives workflow"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene", "fixture or durable evidence did not satisfy document lifecycle pressure"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance", "runner-visible evidence existed, but the assistant answer did not satisfy document lifecycle pressure"
+	}
+	return "runner_capability_gap", "manual review required before any document lifecycle surface promotion"
+}
+
+func classifyTargetedAgentChosenPathResult(result jobResult) (string, string) {
+	if result.Passed && result.Verification.Passed {
+		return "none", "current runner/skill behavior preserved path-selection invariants"
+	}
+	if len(agentChosenBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if isFinalAnswerOnlyValidationScenario(result.Scenario) &&
+		(result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1) {
+		return "skill_guidance_or_eval_coverage", "validation scenario did not stay final-answer-only"
+	}
+	if result.Verification.Passed {
+		return "runner_execution_failure", "scenario verification passed, but the job did not complete successfully"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "fixture or durable document evidence did not satisfy the path-selection contract"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible evidence existed, but the assistant answer did not satisfy the path-selection scenario"
+	}
+	return "runner_capability_gap", "manual review required before any agent-chosen path surface promotion"
+}
+
+func classifyTargetedPathTitleAutonomyResult(result jobResult) (string, string) {
+	if result.Passed && result.Verification.Passed {
+		return "none", "current runner/skill behavior handled path/title autonomy pressure"
+	}
+	if len(pathTitleBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if isFinalAnswerOnlyValidationScenario(result.Scenario) &&
+		(result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1) {
+		return "skill_guidance_or_eval_coverage", "validation pressure did not stay final-answer-only"
+	}
+	if result.Verification.Passed {
+		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "fixture or durable evidence did not satisfy path/title autonomy pressure"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible evidence existed, but the assistant answer did not satisfy path/title autonomy pressure"
+	}
+	return "runner_capability_gap", "manual review required before any constrained path/title autonomy promotion"
+}
