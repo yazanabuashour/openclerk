@@ -88,6 +88,8 @@ The following Beads epics track the revisit work:
 - `oc-l6su`: Re-audit high-touch successful workflows
   ([audit](high-touch-successful-workflows-ux-audit.md))
 - `oc-n959`: Update OpenClerk decision process for taste
+- `oc-b2wr`: Audit closed historical non-promotion decisions
+  ([audit](historical-non-promotion-follow-up-audit.md))
 
 These epics are docs and evaluation-design backlog only. They do not authorize
 runner actions, schema changes, storage migrations, skill behavior changes, or
@@ -125,3 +127,8 @@ Reports may mark safety pass and capability pass while still recording UX
 quality as taste debt. Committed reports should keep repo-relative paths and
 neutral placeholders such as `<run-root>`; raw logs and machine-local paths
 remain out of committed artifacts.
+
+The closed historical decision backfill is recorded in
+[`historical-non-promotion-follow-up-audit.md`](historical-non-promotion-follow-up-audit.md).
+It classifies past defer/reference/non-promotion outcomes against existing
+coverage and found no new comparison epics were needed.
