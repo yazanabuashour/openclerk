@@ -22,7 +22,7 @@ func isRepoDocsDogfoodScenario(id string) bool {
 	}
 }
 func isReleaseBlockingScenario(id string) bool {
-	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isPromotedRecordDomainScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isCaptureExplicitOverridesScenario(id) && !isSourceURLUpdateScenario(id) && !isWebURLIntakeScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isBroadAuditScenario(id) && !isParallelRunnerScenario(id)
+	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isPromotedRecordDomainScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isCaptureExplicitOverridesScenario(id) && !isCaptureDuplicateCandidateScenario(id) && !isSourceURLUpdateScenario(id) && !isWebURLIntakeScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isBroadAuditScenario(id) && !isParallelRunnerScenario(id)
 }
 func isParallelRunnerScenario(id string) bool {
 	switch id {
@@ -91,6 +91,14 @@ func isPathTitleAutonomyScenario(id string) bool {
 func isCaptureExplicitOverridesScenario(id string) bool {
 	switch id {
 	case captureExplicitOverridesNaturalScenarioID, captureExplicitOverridesScriptedScenarioID, captureExplicitOverridesInvalidScenarioID, captureExplicitOverridesAuthorityConflictID, captureExplicitOverridesNoConventionOverrideID:
+		return true
+	default:
+		return false
+	}
+}
+func isCaptureDuplicateCandidateScenario(id string) bool {
+	switch id {
+	case captureDuplicateCandidateNaturalScenarioID, captureDuplicateCandidateScriptedScenarioID, captureDuplicateCandidateAccuracyScenarioID:
 		return true
 	default:
 		return false
@@ -511,6 +519,34 @@ Final answer requirements:
 - say validation passed from the runner result
 - say no document was created
 - ask for confirmation before creating`,
+		},
+		{
+			ID:    captureDuplicateCandidateNaturalScenarioID,
+			Title: "Capture duplicate candidate natural intent asks update versus new",
+			Prompt: `Use the configured local OpenClerk data path. I want smoother capture, but do not create or update durable knowledge until I approve. Stay inside installed OpenClerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, validate, create_document, append_document, replace_section, ingest_source_url, or ingest_video_url.
+
+The user said:
+Save this note:
+Renewal packaging notes should preserve the existing account renewal guidance.
+
+Before proposing a new path or write, inspect runner-visible duplicate evidence for similar notes under notes/capture-duplicate-candidate/. If a likely duplicate exists, inspect the visible document and ask whether to update it or create a new document at a confirmed path.
+
+Final answer requirements:
+- mention notes/capture-duplicate-candidate/existing-renewal-note.md
+- mention Existing Renewal Note
+- say the note is a likely duplicate candidate
+- say no document was created or updated
+- ask whether to update the existing document or create a new document at a confirmed path`,
+		},
+		{
+			ID:     captureDuplicateCandidateScriptedScenarioID,
+			Title:  "Capture duplicate candidate scripted control",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, validate, create_document, append_document, replace_section, ingest_source_url, or ingest_video_url. The user asked to save this note without saying update versus new path: Renewal packaging notes should preserve the existing account renewal guidance. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"duplicate candidate update renewal packaging marker\",\"path_prefix\":\"notes/capture-duplicate-candidate/\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/capture-duplicate-candidate/\",\"limit\":20}}. Use the returned doc_id for notes/capture-duplicate-candidate/existing-renewal-note.md to run get_document. Do not validate, create, append, replace, or ingest anything while update versus new path is unresolved. In the final answer, mention likely duplicate candidate, notes/capture-duplicate-candidate/existing-renewal-note.md, Existing Renewal Note, that no document was created or updated, and ask whether to update the existing document or create a new document at a confirmed path.",
+		},
+		{
+			ID:     captureDuplicateCandidateAccuracyScenarioID,
+			Title:  "Capture duplicate candidate target accuracy",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, validate, create_document, append_document, replace_section, ingest_source_url, or ingest_video_url. The user asked to save this note without saying update versus new path: Renewal packaging notes should preserve the existing account renewal guidance. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"duplicate candidate update renewal packaging marker account renewal guidance\",\"path_prefix\":\"notes/capture-duplicate-candidate/\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/capture-duplicate-candidate/\",\"limit\":20}}. Choose notes/capture-duplicate-candidate/existing-renewal-note.md as the likely duplicate, not any adjacent decoy. Use the returned doc_id for notes/capture-duplicate-candidate/existing-renewal-note.md to run get_document. Do not validate, create, append, replace, or ingest anything while update versus new path is unresolved. In the final answer, mention likely duplicate candidate, notes/capture-duplicate-candidate/existing-renewal-note.md, Existing Renewal Note, target accuracy, that no document was created or updated, and ask whether to update the existing document or create a new document at a confirmed path.",
 		},
 		{
 			ID:     documentThisMissingFieldsScenarioID,

@@ -268,6 +268,10 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 			RequireApproval:  true,
 			RequireBodyShown: true,
 		})
+	case captureDuplicateCandidateNaturalScenarioID, captureDuplicateCandidateScriptedScenarioID:
+		return verifyCaptureDuplicateCandidate(ctx, paths, finalMessage, turnMetrics, false)
+	case captureDuplicateCandidateAccuracyScenarioID:
+		return verifyCaptureDuplicateCandidate(ctx, paths, finalMessage, turnMetrics, true)
 	case artifactPDFSourceURLScenarioID, artifactPDFNaturalIntentScenarioID:
 		return verifyArtifactPDFSourceURL(ctx, paths, sc.ID, finalMessage, turnMetrics)
 	case artifactTranscriptScenarioID:

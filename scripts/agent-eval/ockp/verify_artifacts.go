@@ -554,6 +554,9 @@ func pathTitleBypassFailures(turnMetrics metrics) []string {
 func captureExplicitOverridesBypassFailures(turnMetrics metrics) []string {
 	return populatedBypassFailures(turnMetrics)
 }
+func captureDuplicateCandidateBypassFailures(turnMetrics metrics) []string {
+	return populatedBypassFailures(turnMetrics)
+}
 func documentThisBypassFailures(turnMetrics metrics) []string {
 	return populatedBypassFailures(turnMetrics)
 }

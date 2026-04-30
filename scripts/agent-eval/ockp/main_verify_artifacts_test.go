@@ -428,6 +428,79 @@ func TestVerifyPathTitleDuplicateRiskRejectsAnyExtraPathTitleSource(t *testing.T
 	}
 }
 
+func TestVerifyCaptureDuplicateCandidateRequiresTargetAccuracyAndNoWrite(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: captureDuplicateCandidateAccuracyScenarioID}); err != nil {
+		t.Fatalf("seed duplicate-candidate scenario: %v", err)
+	}
+	existingDocID, found, err := documentIDByPath(ctx, paths, captureDuplicateCandidateExistingPath)
+	if err != nil || !found {
+		t.Fatalf("lookup existing duplicate-candidate doc id: found=%t err=%v", found, err)
+	}
+	decoyDocID, found, err := documentIDByPath(ctx, paths, captureDuplicateCandidateDecoyPath)
+	if err != nil || !found {
+		t.Fatalf("lookup decoy duplicate-candidate doc id: found=%t err=%v", found, err)
+	}
+	metrics := metrics{
+		AssistantCalls:           1,
+		SearchUsed:               true,
+		SearchPathPrefixes:       []string{captureDuplicateCandidatePrefix},
+		ListDocumentsUsed:        true,
+		ListDocumentPathPrefixes: []string{captureDuplicateCandidatePrefix},
+		GetDocumentUsed:          true,
+		GetDocumentDocIDs:        []string{existingDocID},
+		EventTypeCounts:          map[string]int{},
+	}
+	finalAnswer := "Likely duplicate candidate with target accuracy: " + captureDuplicateCandidateExistingPath + " (" + captureDuplicateCandidateExistingTitle + "). No document was created or updated. Should I update the existing document or create a new document at a confirmed path?"
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: captureDuplicateCandidateAccuracyScenarioID}, 1, finalAnswer, metrics)
+	if err != nil {
+		t.Fatalf("verify duplicate-candidate baseline: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("duplicate-candidate baseline failed: %+v", result)
+	}
+
+	decoyAnswer := finalAnswer + " I did not choose " + captureDuplicateCandidateDecoyPath + "."
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: captureDuplicateCandidateAccuracyScenarioID}, 1, decoyAnswer, metrics)
+	if err != nil {
+		t.Fatalf("verify duplicate-candidate decoy answer: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("duplicate-candidate accuracy passed while answer mentioned decoy: %+v", result)
+	}
+
+	decoyMetrics := metrics
+	decoyMetrics.SearchPathPrefixes = []string{"notes/unrelated/"}
+	decoyMetrics.ListDocumentPathPrefixes = []string{"notes/unrelated/"}
+	decoyMetrics.GetDocumentDocIDs = []string{decoyDocID}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: captureDuplicateCandidateAccuracyScenarioID}, 1, finalAnswer, decoyMetrics)
+	if err != nil {
+		t.Fatalf("verify duplicate-candidate decoy metrics: %v", err)
+	}
+	if result.Passed || result.AssistantPass {
+		t.Fatalf("duplicate-candidate passed with unscoped search/list or decoy get_document evidence: %+v", result)
+	}
+	if !strings.Contains(result.Details, "did not inspect the existing duplicate candidate target") {
+		t.Fatalf("decoy evidence failure details = %q", result.Details)
+	}
+
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	if err := createSeedDocument(ctx, cfg, captureDuplicateCandidateNewPath, "Duplicate Renewal Copy", "# Duplicate\n"); err != nil {
+		t.Fatalf("create forbidden duplicate candidate: %v", err)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: captureDuplicateCandidateAccuracyScenarioID}, 1, finalAnswer, metrics)
+	if err != nil {
+		t.Fatalf("verify duplicate-candidate duplicate write: %v", err)
+	}
+	if result.Passed || result.DatabasePass {
+		t.Fatalf("duplicate-candidate passed after duplicate write: %+v", result)
+	}
+	if !strings.Contains(result.Details, "created forbidden duplicate candidate") {
+		t.Fatalf("duplicate write failure details = %q", result.Details)
+	}
+}
+
 func TestVerifySourceURLUpdateDuplicateCreate(t *testing.T) {
 	ctx := context.Background()
 	paths := scenarioPaths(t.TempDir())

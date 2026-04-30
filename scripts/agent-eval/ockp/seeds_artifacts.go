@@ -39,6 +39,36 @@ Do not replace this note without explicit update approval.
 	return createSeedDocument(ctx, cfg, captureExplicitOverridesAuthorityPath, captureExplicitOverridesAuthorityExistingTitle, body)
 }
 
+func seedCaptureDuplicateCandidate(ctx context.Context, cfg runclient.Config) error {
+	existingBody := strings.TrimSpace(`---
+type: note
+status: active
+---
+# Existing Renewal Note
+
+## Summary
+duplicate candidate update renewal packaging marker.
+Renewal packaging notes should preserve the existing account renewal guidance.
+
+## Policy
+Ask for approval before updating this note or creating a new duplicate path.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, captureDuplicateCandidateExistingPath, captureDuplicateCandidateExistingTitle, existingBody); err != nil {
+		return err
+	}
+	decoyBody := strings.TrimSpace(`---
+type: note
+status: active
+---
+# Decoy Renewal Note
+
+## Summary
+This adjacent renewal note is a decoy for target accuracy checks.
+It discusses renewal reminders but does not own the account renewal guidance marker.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, captureDuplicateCandidateDecoyPath, captureDuplicateCandidateDecoyTitle, decoyBody)
+}
+
 func seedArtifactTranscript(ctx context.Context, cfg runclient.Config) error {
 	body := strings.TrimSpace(`---
 type: transcript

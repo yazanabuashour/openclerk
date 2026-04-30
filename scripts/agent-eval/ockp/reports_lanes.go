@@ -14,6 +14,7 @@ func reportLane(ids []string) (string, bool) {
 	agentChosenPath := 0
 	pathTitleAutonomy := 0
 	captureExplicitOverrides := 0
+	captureDuplicateCandidate := 0
 	sourceURLUpdate := 0
 	webURLIntake := 0
 	documentThis := 0
@@ -63,6 +64,10 @@ func reportLane(ids []string) (string, bool) {
 		}
 		if isCaptureExplicitOverridesScenario(id) {
 			captureExplicitOverrides++
+			continue
+		}
+		if isCaptureDuplicateCandidateScenario(id) {
+			captureDuplicateCandidate++
 			continue
 		}
 		if isSourceURLUpdateScenario(id) {
@@ -133,6 +138,9 @@ func reportLane(ids []string) (string, bool) {
 	if captureExplicitOverrides > 0 && captureExplicitOverrides+validation == len(ids) {
 		return captureExplicitOverridesLaneName, false
 	}
+	if captureDuplicateCandidate > 0 && captureDuplicateCandidate+validation == len(ids) {
+		return captureDuplicateCandidateLaneName, false
+	}
 	if sourceURLUpdate > 0 && sourceURLUpdate+validation == len(ids) {
 		return sourceURLUpdateLaneName, false
 	}
@@ -187,6 +195,9 @@ func reportLane(ids []string) (string, bool) {
 	if captureExplicitOverrides > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
+	if captureDuplicateCandidate > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
 	if sourceURLUpdate > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
@@ -238,6 +249,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == captureExplicitOverridesLaneName {
 		return "explicit-overrides capture rows report natural explicit override intent, scripted validation control, invalid explicit value rejection, authority conflict handling, no convention override, no-bypass controls, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"
+	}
+	if lane == captureDuplicateCandidateLaneName {
+		return "duplicate-candidate capture rows report runner-visible search/list/get evidence, update-versus-new-path clarification, target accuracy, no duplicate write, approval-before-write, no-bypass controls, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"
 	}
 	if lane == artifactIngestionLaneName {
 		return "artifact ingestion rows report tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, fixture preflight, and final classification"
