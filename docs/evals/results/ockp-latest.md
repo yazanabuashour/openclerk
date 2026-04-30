@@ -44,6 +44,7 @@ full release-gate replacements.
 | Document-this intake pressure | `docs/evals/results/ockp-document-this-intake-pressure.md` | Targeted document-this intake lane covers missing-field clarification, explicit create/override, duplicate candidates, existing updates, and synthesis freshness |
 | Document artifact candidate generation | `docs/evals/results/ockp-document-artifact-candidate-generation.md`; follow-up `docs/evals/results/ockp-document-artifact-candidate-ergonomics.md` | Quality lane and refreshed ergonomics scorecard support the existing propose-before-create skill policy; no runner/schema/storage/API/direct-create behavior promoted |
 | Duplicate-candidate capture | `docs/evals/results/ockp-capture-duplicate-candidate-update.md`; follow-up `docs/evals/results/ockp-capture-duplicate-candidate-guidance-hardening.md` | Original lane promoted skill-policy clarification; focused hardening made the natural row pass with path-filtered search/list/get evidence while preserving no-write and approval boundaries |
+| Low-risk capture | `docs/evals/results/ockp-capture-low-risk-ceremony.md`; follow-up `docs/evals/results/ockp-capture-low-risk-guidance-hardening.md` | Original ceremony lane exposed an ergonomics gap in the natural row; focused guidance hardening made natural, scripted, duplicate-check, and no-bypass controls pass while keeping the surface to skill policy over existing `openclerk document` and `openclerk retrieval` JSON actions |
 
 ## Interpretation
 

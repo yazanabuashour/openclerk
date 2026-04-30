@@ -321,7 +321,7 @@ func captureLowRiskPromotion(decision string) string {
 	case "defer_for_guidance_or_eval_repair":
 		return "low-risk capture promotion deferred pending guidance, harness, report, or eval repair"
 	default:
-		return "keep low-risk capture as reference evidence; no implementation bead, runner action, schema, storage, public API, skill behavior, or product behavior change"
+		return "keep low-risk capture as reference evidence for product implementation; focused skill-policy guidance hardening was applied with no implementation bead, runner action, schema, storage, public API, direct-create, hidden-autofiling, or product behavior change"
 	}
 }
 

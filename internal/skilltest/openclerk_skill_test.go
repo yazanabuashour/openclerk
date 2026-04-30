@@ -153,6 +153,8 @@ func TestOpenClerkSkillDescriptionContainsBootstrapNoToolsGuard(t *testing.T) {
 		"MCP",
 		"legacy or source-built paths",
 		"unsupported transports",
+		"backend variants",
+		"module-cache inspection",
 		"this description is complete",
 		"respond with exactly one no-tools assistant answer",
 		"openclerk document",
@@ -286,6 +288,58 @@ func TestOpenClerkSkillGuidesSaveThisNotePolicy(t *testing.T) {
 	} {
 		if strings.Contains(strings.ToLower(proposalSection), forbidden) {
 			t.Fatalf("save-this-note guidance contains promotion language %q", forbidden)
+		}
+	}
+}
+
+func TestOpenClerkSkillGuidesLowRiskCapturePolicy(t *testing.T) {
+	t.Parallel()
+
+	content, err := os.ReadFile(openClerkSkillPath(t))
+	if err != nil {
+		t.Fatalf("read skill: %v", err)
+	}
+	text := string(content)
+	proposalSection := markdownSection(text, "## Propose-Before-Create Candidate Documents", "## Document Tasks")
+	if proposalSection == "" {
+		t.Fatal("missing propose-before-create section")
+	}
+	normalized := strings.Join(strings.Fields(proposalSection), " ")
+	for _, want := range []string{
+		"routine low-risk note capture",
+		`"save this low-risk note"`,
+		"explicit note body but no path or title",
+		"valid runner-backed propose-before-create work",
+		"Derive the path and title from the supplied content",
+		"notes/candidates/<slug-from-title>.md",
+		"Validate the candidate",
+		"answer with `Path:`, `Title:`, and `Body preview:`",
+		"validation result",
+		"no-write statement",
+		"approval request",
+		"Do not answer with only validation status",
+		"the candidate path, title, and body preview must be visible",
+		"workflow is incomplete even when validation passed",
+		"low-risk duplicate checks",
+		"do not treat the missing update-versus-new choice as a no-tools missing-field rejection",
+		"use retrieval `search`, document `list_documents`, and `get_document`",
+		"report the likely target path and title",
+		"no document was created or updated",
+		"update the existing target or create a new document at a confirmed path",
+	} {
+		if !strings.Contains(normalized, want) {
+			t.Fatalf("low-risk capture guidance missing %q", want)
+		}
+	}
+	for _, forbidden := range []string{
+		"runner action",
+		"schema",
+		"public API",
+		"storage migration",
+		"direct-create shortcut",
+	} {
+		if strings.Contains(strings.ToLower(proposalSection), forbidden) {
+			t.Fatalf("low-risk capture guidance contains promotion language %q", forbidden)
 		}
 	}
 }

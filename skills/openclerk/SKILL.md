@@ -1,6 +1,6 @@
 ---
 name: OpenClerk
-description: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner. Bootstrap no-tools rule - if required fields are missing, if required retrieval, source, or video fields are missing, if document path, title, or body is missing and no faithful propose-before-create candidate or duplicate-risk check can be formed from explicit user content, if limit is negative such as limit -3, or if asked to bypass the runner with SQLite, raw vault/file/repo inspection, HTTP, MCP, legacy or source-built paths, unsupported transports, backend variants, module-cache inspection, rg --files, find, ls, direct vault inspection, or repo search, this description is complete; Do not open this skill file, run commands, use tools, or call the runner; respond with exactly one no-tools assistant answer to name the missing fields and ask the user to provide them, or reject invalid/unsupported workflow. For valid work, use only openclerk document or openclerk retrieval JSON.
+description: Use installed openclerk JSON runner. Bootstrap no-tools rule - if required fields are missing; if document path, title, or body is missing and no faithful propose-before-create candidate or duplicate-risk check can be formed from explicit user content; if limit is negative such as limit -3; or if asked to bypass the runner with SQLite, HTTP, MCP, legacy or source-built paths, unsupported transports, backend variants, module-cache inspection, rg --files, find, ls, direct vault inspection, or repo search, this description is complete. Do not open this skill file, run commands, use tools, or call the runner; respond with exactly one no-tools assistant answer to name the missing fields, ask the user to provide them, or reject invalid/unsupported workflow. Otherwise open this skill. Valid work uses only openclerk document or openclerk retrieval JSON. Low-risk proposals run openclerk document validate and answer with Path, Title, Body preview, validation, no-write, approval.
 license: MIT
 compatibility: Requires local filesystem access and an installed openclerk binary on PATH.
 ---
@@ -84,6 +84,12 @@ Required-field rules:
 - Document create/validate needs `document.path`, `document.title`, and
   `document.body` unless the propose-before-create policy can produce a
   faithful candidate from explicit user content.
+- A request with explicit note body content and missing path/title is not a
+  no-tools missing-field case when the propose-before-create policy can derive
+  a faithful candidate.
+- A request with explicit note body content and unresolved duplicate
+  update-versus-new intent is not a no-tools missing-field case. Use
+  runner-visible duplicate checks before validating or writing.
 - Requests that refer to missing prior context, such as "the links we
   discussed" or "that artifact", lack preservable body/source content.
 - New PDF source URL ingestion needs `source.url`, `source.path_hint`, and
@@ -125,6 +131,32 @@ creating anything. For bare prior-context requests such as "save this note from
 what we discussed last week", use the no-tools rule: ask for the actual note
 content plus any path, title, or placement preferences, and do not invent a
 path, title, or body.
+
+For routine low-risk note capture, such as "save this low-risk note" with
+explicit note body but no path or title, treat the request as valid
+runner-backed propose-before-create work. Derive the path and title from the
+supplied content, using `notes/candidates/<slug-from-title>.md` when no path is
+given. Use the content subject for the title and slug, not request-framing
+words such as "save", "capture", or "note". For example, "Support handoff
+should note the owner..." becomes title `Support Handoff` and path
+`notes/candidates/support-handoff.md`, not a sentence-length slug or a title
+ending in `Note`. Validate the candidate through `openclerk document`
+`action: "validate"`; do not rely on reasoning-only validation. Then answer
+with `Path:`, `Title:`, and `Body preview:` before the validation result,
+no-write statement, and approval request. The body preview for note-like
+captures includes the faithful `type: note` frontmatter, `# <Title>` heading,
+and supplied body text. Do not answer with only validation status or only an
+approval prompt; the candidate path, title, and body preview must be visible
+before any durable write is approved. If the body preview is missing from the
+final answer, the workflow is incomplete even when validation passed.
+
+For low-risk duplicate checks, do not treat the missing update-versus-new
+choice as a no-tools missing-field rejection. When explicit note content exists
+and duplicate risk is plausible or requested, use retrieval `search`, document
+`list_documents`, and `get_document` for the likely target before answering.
+Then report the likely target path and title, say no document was created or
+updated, and ask whether to update the existing target or create a new document
+at a confirmed path.
 
 For candidate proposals:
 
