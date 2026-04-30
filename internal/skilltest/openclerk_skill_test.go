@@ -344,6 +344,63 @@ func TestOpenClerkSkillGuidesLowRiskCapturePolicy(t *testing.T) {
 	}
 }
 
+func TestOpenClerkSkillGuidesDocumentTheseLinksPolicy(t *testing.T) {
+	t.Parallel()
+
+	content, err := os.ReadFile(openClerkSkillPath(t))
+	if err != nil {
+		t.Fatalf("read skill: %v", err)
+	}
+	text := string(content)
+	proposalSection := markdownSection(text, "## Propose-Before-Create Candidate Documents", "## Document Tasks")
+	if proposalSection == "" {
+		t.Fatal("missing propose-before-create section")
+	}
+	normalized := strings.Join(strings.Fields(proposalSection), " ")
+	for _, want := range []string{
+		`"document these links" requests`,
+		"explicit public web URLs",
+		"missing `source.path_hint` values or synthesis placement",
+		"valid placement-proposal work",
+		"Do not fetch, validate, create, append, or replace",
+		"`sources/candidates/<slug-from-label-or-url>.md`",
+		"`synthesis/<shared-topic-or-url-set>.md`",
+		"no source or synthesis document was created",
+		"approval before any durable source fetch or synthesis write",
+		"`ingest_source_url` with `source_type: \"web\"`",
+		"approved `source.path_hint`",
+		"citation evidence",
+		"PDF and other artifact URLs still require the existing source and asset path hints",
+		"Validate a source-linked synthesis candidate",
+		"single-line `source_refs`",
+		"`## Sources`",
+		"`## Freshness`",
+		"document-these-links duplicate checks",
+		"use retrieval `search`, document `list_documents`, and `get_document`",
+		"existing source or synthesis paths",
+		"search/list/get evidence",
+		"update the existing placement or create new confirmed paths",
+		"Do not call `validate`, `ingest_source_url`, `create_document`, `append_document`, or `replace_section`",
+		"update-versus-new placement is unresolved",
+	} {
+		if !strings.Contains(normalized, want) {
+			t.Fatalf("document-these-links guidance missing %q", want)
+		}
+	}
+	for _, forbidden := range []string{
+		"runner action",
+		"schema",
+		"public API",
+		"storage migration",
+		"direct-create shortcut",
+		"hidden autofiling",
+	} {
+		if strings.Contains(strings.ToLower(proposalSection), forbidden) {
+			t.Fatalf("document-these-links guidance contains promotion language %q", forbidden)
+		}
+	}
+}
+
 func TestOpenClerkSkillDescriptionDoesNotSuppressDuplicateRiskChecks(t *testing.T) {
 	t.Parallel()
 
@@ -354,6 +411,7 @@ func TestOpenClerkSkillDescriptionDoesNotSuppressDuplicateRiskChecks(t *testing.
 	description := frontmatterDescription(string(content))
 	for _, want := range []string{
 		"faithful propose-before-create candidate or duplicate-risk check",
+		"public-link placement proposal",
 		"explicit user content",
 		"this description is complete",
 		"openclerk document",

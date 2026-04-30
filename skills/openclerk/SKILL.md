@@ -1,6 +1,6 @@
 ---
 name: OpenClerk
-description: Use installed openclerk JSON runner. Bootstrap no-tools rule - if required fields are missing; if document path, title, or body is missing and no faithful propose-before-create candidate or duplicate-risk check can be formed from explicit user content; if limit is negative such as limit -3; or if asked to bypass the runner with SQLite, HTTP, MCP, legacy or source-built paths, unsupported transports, backend variants, module-cache inspection, rg --files, find, ls, direct vault inspection, or repo search, this description is complete. Do not open this skill file, run commands, use tools, or call the runner; respond with exactly one no-tools assistant answer to name the missing fields, ask the user to provide them, or reject invalid/unsupported workflow. Otherwise open this skill. Valid work uses only openclerk document or openclerk retrieval JSON. Low-risk proposals run openclerk document validate and answer with Path, Title, Body preview, validation, no-write, approval.
+description: Use installed openclerk JSON runner. Bootstrap no-tools rule - if required fields are missing; if document path, title, or body is missing and no faithful propose-before-create candidate or duplicate-risk check or public-link placement proposal can be formed from explicit user content; if limit is negative such as limit -3; or if asked to bypass the runner with SQLite, HTTP, MCP, legacy or source-built paths, unsupported transports, backend variants, module-cache inspection, rg --files, find, ls, direct vault inspection, or repo search, this description is complete. Do not open this skill file, run commands, use tools, or call the runner; respond with exactly one no-tools assistant answer to name the missing fields, ask the user to provide them, or reject invalid/unsupported workflow. Otherwise open this skill. Valid work uses only openclerk document or openclerk retrieval JSON. Low-risk proposals run openclerk document validate and answer with Path, Title, Body preview, validation, no-write, approval.
 license: MIT
 compatibility: Requires local filesystem access and an installed openclerk binary on PATH.
 ---
@@ -90,6 +90,10 @@ Required-field rules:
 - A request with explicit note body content and unresolved duplicate
   update-versus-new intent is not a no-tools missing-field case. Use
   runner-visible duplicate checks before validating or writing.
+- A "document these links" request with explicit public web URLs and omitted
+  `source.path_hint` or synthesis placement is not a no-tools missing-field
+  case when the document-these-links placement policy can propose safe
+  source and synthesis paths before any fetch or write.
 - Requests that refer to missing prior context, such as "the links we
   discussed" or "that artifact", lack preservable body/source content.
 - New PDF source URL ingestion needs `source.url`, `source.path_hint`, and
@@ -158,6 +162,40 @@ Then report the likely target path and title, say no document was created or
 updated, and ask whether to update the existing target or create a new document
 at a confirmed path.
 
+For "document these links" requests with explicit public web URLs but missing
+`source.path_hint` values or synthesis placement, treat the request as valid
+placement-proposal work. Do not fetch, validate, create, append, or replace
+while placement is unapproved. Propose one source path per public web URL using
+`sources/candidates/<slug-from-label-or-url>.md`, plus a synthesis path using
+`synthesis/<shared-topic-or-url-set>.md` when the user asks for a combined
+document. State that no source or synthesis document was created and ask for
+approval before any durable source fetch or synthesis write.
+
+After source paths are approved for public web URLs, use `openclerk document`
+`ingest_source_url` with `source_type: "web"` and the approved
+`source.path_hint`; report citation evidence such as `doc_id`, `chunk_id`, or
+returned citations. PDF and other artifact URLs still require the existing
+source and asset path hints before ingestion. Do not fetch URLs with browser,
+HTTP, filesystem, or other non-runner tools.
+
+After source intent is clear but synthesis creation is not approved, use
+retrieval `search`, document `list_documents`, and `get_document` to inspect
+source evidence and existing synthesis candidates. Validate a source-linked
+synthesis candidate with single-line `source_refs`, `## Sources`, and
+`## Freshness`; state that no synthesis document was created and ask for
+approval before creating it.
+
+For document-these-links duplicate checks, do not treat the missing
+update-versus-new choice as a no-tools rejection. When duplicate source or
+synthesis placement is plausible or requested, use retrieval `search`, document
+`list_documents`, and `get_document` for likely source and synthesis targets
+before answering. Then report the existing source or synthesis paths, summarize
+the search/list/get evidence, say no source or synthesis document was created
+or updated, and ask whether to update the existing placement or create new
+confirmed paths. Do not call `validate`, `ingest_source_url`,
+`create_document`, `append_document`, or `replace_section` while duplicate
+update-versus-new placement is unresolved.
+
 For candidate proposals:
 
 1. Preserve explicit user path, title, body, type, and naming instructions.
@@ -189,7 +227,8 @@ For candidate proposals:
 
 Use no-tools clarification instead of proposing when actual body content is
 missing, the durable artifact type is unclear, the request is only a bare URL
-or source artifact without source-ingestion hints, the candidate would require
+or source artifact without source-ingestion hints and the document-these-links
+policy cannot form a safe placement proposal, the candidate would require
 network fetching outside `ingest_source_url`, or confidence is too low to
 preserve a faithful body.
 
