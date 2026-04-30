@@ -1,6 +1,6 @@
 ---
 name: OpenClerk
-description: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner. Bootstrap no-tools rule - if required fields are missing, if required retrieval, source, or video fields are missing, if document path, title, or body is missing and no faithful propose-before-create candidate can be formed from explicit user content, if a numeric limit is negative such as limit -3, or if the user asks to bypass the runner with SQLite, raw vault/file/repo inspection, HTTP, MCP, legacy or source-built paths, unsupported transports, backend variants, module-cache inspection, rg --files, find, ls, direct vault inspection, or repo search, this description is complete; Do not open this skill file, run commands, use tools, or call the runner; respond with exactly one no-tools assistant answer to name the missing fields and ask the user to provide them, or reject the invalid/unsupported workflow. For valid work, use only openclerk document or openclerk retrieval JSON.
+description: Use OpenClerk for local-first knowledge-plane tasks through the installed openclerk JSON runner. Bootstrap no-tools rule - if required fields are missing, if required retrieval, source, or video fields are missing, if document path, title, or body is missing and no faithful propose-before-create candidate or duplicate-risk check can be formed from explicit user content, if limit is negative such as limit -3, or if asked to bypass the runner with SQLite, raw vault/file/repo inspection, HTTP, MCP, legacy or source-built paths, unsupported transports, backend variants, module-cache inspection, rg --files, find, ls, direct vault inspection, or repo search, this description is complete; Do not open this skill file, run commands, use tools, or call the runner; respond with exactly one no-tools assistant answer to name the missing fields and ask the user to provide them, or reject invalid/unsupported workflow. For valid work, use only openclerk document or openclerk retrieval JSON.
 license: MIT
 compatibility: Requires local filesystem access and an installed openclerk binary on PATH.
 ---
@@ -128,14 +128,23 @@ For candidate proposals:
    `type: note` frontmatter for note-like candidates.
 4. Validate the candidate with `openclerk document` `action: "validate"` before
    presenting it. Validation is not a durable write.
-5. When duplicate risk is requested or plausible, use runner-visible `search`
-   and `list_documents` before proposing; inspect an existing `doc_id` only
-   when needed. If a likely duplicate is visible, ask whether to update it or
-   create a new confirmed path.
-6. Final answers for proposals show `Path:`, `Title:`, and `Body preview:`,
+5. When duplicate risk is requested or plausible, treat it as valid
+   runner-backed capture work. Before validating or proposing a new candidate
+   path, run runner-visible retrieval `search` and document `list_documents`.
+   If the user or candidate context gives a likely collection or path prefix,
+   include that `path_prefix` in the retrieval search and use the same prefix
+   for `list_documents`. When a likely duplicate is visible, run
+   `get_document` for that target, present the likely target path and title,
+   briefly summarize the search/list/get evidence, state that no document was
+   created or updated, and ask whether to update the existing target or create
+   a new document at a confirmed path.
+6. Do not call `validate`, `create_document`, `append_document`, or
+   `replace_section` while duplicate update-versus-new-path intent is
+   unresolved.
+7. Final answers for proposals show `Path:`, `Title:`, and `Body preview:`,
    report validation or duplicate-check results, state that no document was
    created, and ask for approval before any durable write.
-7. Do not call `create_document`, `append_document`, or `replace_section` until
+8. Do not call `create_document`, `append_document`, or `replace_section` until
    the user approves the target and write.
 
 Use no-tools clarification instead of proposing when actual body content is

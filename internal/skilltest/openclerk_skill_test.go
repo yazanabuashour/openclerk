@@ -199,6 +199,75 @@ func TestOpenClerkSkillRejectsPollutedPopulatedVaultEvidence(t *testing.T) {
 	}
 }
 
+func TestOpenClerkSkillGuidesDuplicateCandidateClarification(t *testing.T) {
+	t.Parallel()
+
+	content, err := os.ReadFile(openClerkSkillPath(t))
+	if err != nil {
+		t.Fatalf("read skill: %v", err)
+	}
+	text := string(content)
+	proposalSection := markdownSection(text, "## Propose-Before-Create Candidate Documents", "## Document Tasks")
+	if proposalSection == "" {
+		t.Fatal("missing propose-before-create section")
+	}
+	normalized := strings.Join(strings.Fields(proposalSection), " ")
+	for _, want := range []string{
+		"duplicate risk is requested or plausible",
+		"valid runner-backed capture work",
+		"retrieval `search`",
+		"document `list_documents`",
+		"include that `path_prefix` in the retrieval search",
+		"use the same prefix for `list_documents`",
+		"`get_document`",
+		"likely target path and title",
+		"search/list/get evidence",
+		"no document was created or updated",
+		"update the existing target or create a new document at a confirmed path",
+		"Do not call `validate`, `create_document`, `append_document`, or `replace_section`",
+		"update-versus-new-path intent is unresolved",
+	} {
+		if !strings.Contains(normalized, want) {
+			t.Fatalf("propose-before-create guidance missing %q", want)
+		}
+	}
+	for _, forbidden := range []string{
+		"new runner action",
+		"schema",
+		"public API",
+		"storage migration",
+		"direct-create shortcut",
+	} {
+		if strings.Contains(strings.ToLower(proposalSection), forbidden) {
+			t.Fatalf("duplicate-candidate guidance contains promotion language %q", forbidden)
+		}
+	}
+}
+
+func TestOpenClerkSkillDescriptionDoesNotSuppressDuplicateRiskChecks(t *testing.T) {
+	t.Parallel()
+
+	content, err := os.ReadFile(openClerkSkillPath(t))
+	if err != nil {
+		t.Fatalf("read skill: %v", err)
+	}
+	description := frontmatterDescription(string(content))
+	for _, want := range []string{
+		"faithful propose-before-create candidate or duplicate-risk check",
+		"explicit user content",
+		"this description is complete",
+		"openclerk document",
+		"openclerk retrieval",
+	} {
+		if !strings.Contains(description, want) {
+			t.Fatalf("SKILL.md description missing %q: %s", want, description)
+		}
+	}
+	if len([]rune(description)) > 1024 {
+		t.Fatalf("description length = %d, want <= 1024", len([]rune(description)))
+	}
+}
+
 func openClerkSkillPath(t *testing.T) string {
 	t.Helper()
 	return filepath.Join(openClerkSkillDir(t), "SKILL.md")
@@ -239,4 +308,17 @@ func shouldSkipLinkTarget(target string) bool {
 		strings.HasPrefix(target, "#") ||
 		strings.Contains(target, "://") ||
 		filepath.IsAbs(target)
+}
+
+func markdownSection(content string, startHeading string, endHeading string) string {
+	start := strings.Index(content, startHeading)
+	if start == -1 {
+		return ""
+	}
+	rest := content[start:]
+	end := strings.Index(rest, endHeading)
+	if end == -1 {
+		return rest
+	}
+	return rest[:end]
 }

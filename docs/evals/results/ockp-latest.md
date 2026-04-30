@@ -43,7 +43,7 @@ full release-gate replacements.
 | Populated-vault synthetic pressure | `docs/evals/results/ockp-populated-vault-targeted.md`; follow-up `docs/evals/results/ockp-populated-vault-guidance-hardening.md` | Targeted run completed freshness/conflict and synthesis-update pressure; focused follow-up resolved the heterogeneous polluted-evidence guidance failure, with no runner capability gap or product/API promotion |
 | Document-this intake pressure | `docs/evals/results/ockp-document-this-intake-pressure.md` | Targeted document-this intake lane covers missing-field clarification, explicit create/override, duplicate candidates, existing updates, and synthesis freshness |
 | Document artifact candidate generation | `docs/evals/results/ockp-document-artifact-candidate-generation.md`; follow-up `docs/evals/results/ockp-document-artifact-candidate-ergonomics.md` | Quality lane and refreshed ergonomics scorecard support the existing propose-before-create skill policy; no runner/schema/storage/API/direct-create behavior promoted |
-| Duplicate-candidate capture | `docs/evals/results/ockp-capture-duplicate-candidate-update.md` | Targeted lane found an ergonomics gap in natural update-versus-new capture while scripted search/list/get and target-accuracy controls preserved no-write and approval boundaries; follow-up surface design promoted |
+| Duplicate-candidate capture | `docs/evals/results/ockp-capture-duplicate-candidate-update.md`; follow-up `docs/evals/results/ockp-capture-duplicate-candidate-guidance-hardening.md` | Original lane promoted skill-policy clarification; focused hardening made the natural row pass with path-filtered search/list/get evidence while preserving no-write and approval boundaries |
 
 ## Interpretation
 
