@@ -92,6 +92,37 @@ runner-only access, and approval-before-write remain intact. In particular, a
 successful but ceremonial eval pass can justify more evaluation or design work,
 but not a runner action, schema, storage, or skill behavior change by itself.
 
+## Non-Promotion Follow-Up Loop
+
+After any defer, keep-as-reference, or other non-promotion outcome, state which
+follow-up category applies:
+
+- **No need:** the current OpenClerk surface is sufficient, and the evaluated
+  capability does not represent a valid unresolved user need.
+- **Need exists, evaluated shape is wrong:** the user need remains real, but
+  the tested surface should not advance.
+- **Need exists, candidate comparison required:** the user need remains real,
+  and the next step is a Beads comparison epic with ADR, POC, Eval, and
+  Decision children.
+- **Candidate selected for future promotion evidence:** candidate comparison
+  has selected a shape for later targeted promotion evidence, but has not
+  authorized implementation.
+
+When a real capability, ergonomics, safety, auditability, or workflow gap
+remains, create or propose the comparison epic before handoff. The comparison
+should normally evaluate 2-3 plausible candidate surfaces unless the decision
+documents why only one shape is viable. Its Decision child must choose the best
+candidate, combine useful behaviors where appropriate, defer or kill the track,
+or record `none viable yet`.
+
+This loop creates audit, design, and eval backlog only. Implementation remains
+blocked until a later accepted decision names the exact OpenClerk runner
+action, skill behavior, schema, storage behavior, or public interface and its
+gates. Candidate comparison must preserve authority, citations, provenance,
+freshness, local-first operation, duplicate handling, runner-only access,
+approval-before-write, public-source and synthetic-fixture boundaries, and
+rejection of lower-level bypasses.
+
 ## Intake Ladder
 
 Use the post-`oc-v1ed` intake ladder when evaluating URL, source, and artifact
@@ -268,7 +299,10 @@ Future POCs for deferred capabilities must follow this pattern:
 7. Record targeted evidence under `docs/evals/results/` using repo-relative
    paths and `<run-root>` placeholders.
 8. End with an explicit decision: promote, defer, kill, or keep as reference.
-9. If promoted, file a separate implementation Bead that names the exact
+9. For defer, keep-as-reference, or another non-promotion outcome, record the
+   applicable non-promotion follow-up category and file or propose a comparison
+   epic when the need remains valid.
+10. If promoted, file a separate implementation Bead that names the exact
    surface and gates.
 
 This keeps capability pressure measurable without letting interesting reference

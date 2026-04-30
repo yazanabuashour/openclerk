@@ -58,6 +58,27 @@ backlog, but it does not authorize runner actions, storage migrations, schema
 changes, public APIs, or skill behavior changes without targeted eval evidence
 and an explicit promotion decision.
 
+## Non-Promotion Follow-Up Loop
+
+Taste debt and non-promotion outcomes are not dead ends when the user need is
+real. A defer, keep-as-reference, or other non-promotion decision should state
+whether there is no remaining need, or whether the evaluated shape failed while
+the underlying OpenClerk need remains valid.
+
+When the need remains valid, create or propose a Beads comparison epic before
+handoff. The epic should normally include ADR, POC, Eval, and Decision children
+and compare 2-3 plausible candidate surfaces unless the decision documents why
+only one shape is viable. The Decision child must choose the best candidate,
+combine useful behaviors where appropriate, defer or kill the track, or record
+`none viable yet`.
+
+This loop creates audit, design, and eval backlog only. It does not authorize
+runner actions, storage migrations, schema changes, public APIs, skill behavior
+changes, or durable writes. Candidate comparison must preserve authority,
+citations, provenance, freshness, local-first operation, duplicate handling,
+runner-only access, approval-before-write, public-source and synthetic-fixture
+boundaries, and rejection of lower-level bypasses.
+
 ## Tracker Backlog
 
 The following Beads epics track the revisit work:
