@@ -212,6 +212,10 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedCaptureDuplicateCandidate(ctx, cfg); err != nil {
 			return err
 		}
+	case captureSaveThisNoteDuplicateScenarioID:
+		if err := seedCaptureSaveThisNoteDuplicate(ctx, cfg); err != nil {
+			return err
+		}
 	case artifactTranscriptScenarioID:
 		if err := seedArtifactTranscript(ctx, cfg); err != nil {
 			return err

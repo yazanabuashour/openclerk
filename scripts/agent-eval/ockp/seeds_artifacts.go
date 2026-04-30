@@ -65,8 +65,25 @@ status: active
 ## Summary
 This adjacent renewal note is a decoy for target accuracy checks.
 It discusses renewal reminders but does not own the account renewal guidance marker.
-`) + "\n"
+	`) + "\n"
 	return createSeedDocument(ctx, cfg, captureDuplicateCandidateDecoyPath, captureDuplicateCandidateDecoyTitle, decoyBody)
+}
+
+func seedCaptureSaveThisNoteDuplicate(ctx context.Context, cfg runclient.Config) error {
+	body := strings.TrimSpace(`---
+type: note
+status: active
+---
+# Existing Release Readiness Note
+
+## Summary
+save this note duplicate release readiness marker.
+Release readiness notes should preserve rollback owners, support handoff, and next-morning metrics review.
+
+## Policy
+Ask for approval before updating this note or creating a new duplicate path.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, captureSaveThisNoteDuplicatePath, captureSaveThisNoteDuplicateTitle, body)
 }
 
 func seedArtifactTranscript(ctx context.Context, cfg runclient.Config) error {

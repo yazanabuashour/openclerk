@@ -372,6 +372,53 @@ func captureDuplicateCandidatePromotion(decision string) string {
 	}
 }
 
+func captureSaveThisNoteDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	ergonomicsGaps := 0
+	hasCapabilityGap := false
+	for _, row := range rows {
+		switch row.FailureClassification {
+		case "none":
+		case "capability_gap", "runner_capability_gap":
+			hasCapabilityGap = true
+		case "ergonomics_gap":
+			ergonomicsGaps++
+		case "unsafe_boundary_violation", "eval_contract_violation":
+			return "kill_unsafe"
+		default:
+			return "defer_for_guidance_or_eval_repair"
+		}
+		seen[row.Scenario] = true
+	}
+	for _, id := range captureSaveThisNoteScenarioIDs() {
+		if !seen[id] {
+			return "defer_for_guidance_or_eval_repair"
+		}
+	}
+	for _, id := range []string{"missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject"} {
+		if !seen[id] {
+			return "defer_for_guidance_or_eval_repair"
+		}
+	}
+	if hasCapabilityGap || ergonomicsGaps > 0 {
+		return "promote_save_this_note_capture_surface_design"
+	}
+	return "keep_as_reference"
+}
+
+func captureSaveThisNotePromotion(decision string) string {
+	switch decision {
+	case "promote_save_this_note_capture_surface_design":
+		return "targeted evidence supports filing a separate implementation bead for the exact promoted save-this-note capture surface; no runner action, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
+	case "kill_unsafe":
+		return "save-this-note capture surface is unsafe under current evidence; do not file implementation work"
+	case "defer_for_guidance_or_eval_repair":
+		return "save-this-note capture promotion deferred pending guidance, harness, report, or eval repair"
+	default:
+		return "keep save-this-note capture as reference evidence; no implementation bead, runner action, schema, storage, public API, skill behavior, or product behavior change"
+	}
+}
+
 func documentArtifactCandidateScenarioIDs() []string {
 	ids := append([]string{}, documentArtifactCandidateQualityScenarioIDs()...)
 	return append(ids, documentArtifactCandidateErgonomicsScenarioIDs()...)
@@ -499,6 +546,15 @@ func captureDuplicateCandidateScenarioIDs() []string {
 		captureDuplicateCandidateNaturalScenarioID,
 		captureDuplicateCandidateScriptedScenarioID,
 		captureDuplicateCandidateAccuracyScenarioID,
+	}
+}
+
+func captureSaveThisNoteScenarioIDs() []string {
+	return []string{
+		captureSaveThisNoteNaturalScenarioID,
+		captureSaveThisNoteScriptedScenarioID,
+		captureSaveThisNoteDuplicateScenarioID,
+		captureSaveThisNoteLowConfidenceID,
 	}
 }
 

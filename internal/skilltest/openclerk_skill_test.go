@@ -233,6 +233,7 @@ func TestOpenClerkSkillGuidesDuplicateCandidateClarification(t *testing.T) {
 	}
 	for _, forbidden := range []string{
 		"new runner action",
+		"runner action",
 		"schema",
 		"public API",
 		"storage migration",
@@ -240,6 +241,51 @@ func TestOpenClerkSkillGuidesDuplicateCandidateClarification(t *testing.T) {
 	} {
 		if strings.Contains(strings.ToLower(proposalSection), forbidden) {
 			t.Fatalf("duplicate-candidate guidance contains promotion language %q", forbidden)
+		}
+	}
+}
+
+func TestOpenClerkSkillGuidesSaveThisNotePolicy(t *testing.T) {
+	t.Parallel()
+
+	content, err := os.ReadFile(openClerkSkillPath(t))
+	if err != nil {
+		t.Fatalf("read skill: %v", err)
+	}
+	text := string(content)
+	proposalSection := markdownSection(text, "## Propose-Before-Create Candidate Documents", "## Document Tasks")
+	if proposalSection == "" {
+		t.Fatal("missing propose-before-create section")
+	}
+	normalized := strings.Join(strings.Fields(proposalSection), " ")
+	for _, want := range []string{
+		`"save this note" requests with explicit note content but no path or title`,
+		"derive a faithful note candidate from the supplied content",
+		"validate it",
+		"show the candidate",
+		"state that no document was created",
+		"ask for approval before creating anything",
+		"bare prior-context requests",
+		"save this note from what we discussed last week",
+		"use the no-tools rule",
+		"ask for the actual note content plus any path, title, or placement preferences",
+		"do not invent a path, title, or body",
+		"notes/candidates/<slug-from-title>.md",
+		"Final answers for proposals show `Path:`, `Title:`, and `Body preview:`",
+	} {
+		if !strings.Contains(normalized, want) {
+			t.Fatalf("save-this-note guidance missing %q", want)
+		}
+	}
+	for _, forbidden := range []string{
+		"runner action",
+		"schema",
+		"public API",
+		"storage migration",
+		"direct-create shortcut",
+	} {
+		if strings.Contains(strings.ToLower(proposalSection), forbidden) {
+			t.Fatalf("save-this-note guidance contains promotion language %q", forbidden)
 		}
 	}
 }

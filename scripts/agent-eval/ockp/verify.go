@@ -272,6 +272,30 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyCaptureDuplicateCandidate(ctx, paths, finalMessage, turnMetrics, false)
 	case captureDuplicateCandidateAccuracyScenarioID:
 		return verifyCaptureDuplicateCandidate(ctx, paths, finalMessage, turnMetrics, true)
+	case captureSaveThisNoteNaturalScenarioID:
+		return verifyDocumentArtifactCandidateProposal(ctx, paths, finalMessage, turnMetrics, documentArtifactCandidateExpectation{
+			Path:             captureSaveThisNoteNaturalPath,
+			Title:            captureSaveThisNoteTitle,
+			RequiredBody:     []string{"type: note", "# Release Readiness Note", captureSaveThisNoteBodyText},
+			RequireValidate:  true,
+			RequireNoCreate:  true,
+			RequireApproval:  true,
+			RequireBodyShown: true,
+		})
+	case captureSaveThisNoteScriptedScenarioID:
+		return verifyDocumentArtifactCandidateProposal(ctx, paths, finalMessage, turnMetrics, documentArtifactCandidateExpectation{
+			Path:             captureSaveThisNotePath,
+			Title:            captureSaveThisNoteTitle,
+			RequiredBody:     []string{"type: note", "# Release Readiness Note", captureSaveThisNoteBodyText},
+			RequireValidate:  true,
+			RequireNoCreate:  true,
+			RequireApproval:  true,
+			RequireBodyShown: true,
+		})
+	case captureSaveThisNoteDuplicateScenarioID:
+		return verifyCaptureSaveThisNoteDuplicate(ctx, paths, finalMessage, turnMetrics)
+	case captureSaveThisNoteLowConfidenceID:
+		return verifyCaptureSaveThisNoteLowConfidence(ctx, paths, finalMessage, turnMetrics)
 	case artifactPDFSourceURLScenarioID, artifactPDFNaturalIntentScenarioID:
 		return verifyArtifactPDFSourceURL(ctx, paths, sc.ID, finalMessage, turnMetrics)
 	case artifactTranscriptScenarioID:

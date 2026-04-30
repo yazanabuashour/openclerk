@@ -22,7 +22,7 @@ func isRepoDocsDogfoodScenario(id string) bool {
 	}
 }
 func isReleaseBlockingScenario(id string) bool {
-	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isPromotedRecordDomainScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isCaptureExplicitOverridesScenario(id) && !isCaptureDuplicateCandidateScenario(id) && !isSourceURLUpdateScenario(id) && !isWebURLIntakeScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isBroadAuditScenario(id) && !isParallelRunnerScenario(id)
+	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isPromotedRecordDomainScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isCaptureExplicitOverridesScenario(id) && !isCaptureDuplicateCandidateScenario(id) && !isCaptureSaveThisNoteScenario(id) && !isSourceURLUpdateScenario(id) && !isWebURLIntakeScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isBroadAuditScenario(id) && !isParallelRunnerScenario(id)
 }
 func isParallelRunnerScenario(id string) bool {
 	switch id {
@@ -99,6 +99,14 @@ func isCaptureExplicitOverridesScenario(id string) bool {
 func isCaptureDuplicateCandidateScenario(id string) bool {
 	switch id {
 	case captureDuplicateCandidateNaturalScenarioID, captureDuplicateCandidateScriptedScenarioID, captureDuplicateCandidateAccuracyScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+func isCaptureSaveThisNoteScenario(id string) bool {
+	switch id {
+	case captureSaveThisNoteNaturalScenarioID, captureSaveThisNoteScriptedScenarioID, captureSaveThisNoteDuplicateScenarioID, captureSaveThisNoteLowConfidenceID:
 		return true
 	default:
 		return false
@@ -547,6 +555,53 @@ Final answer requirements:
 			ID:     captureDuplicateCandidateAccuracyScenarioID,
 			Title:  "Capture duplicate candidate target accuracy",
 			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, validate, create_document, append_document, replace_section, ingest_source_url, or ingest_video_url. The user asked to save this note without saying update versus new path: Renewal packaging notes should preserve the existing account renewal guidance. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"duplicate candidate update renewal packaging marker account renewal guidance\",\"path_prefix\":\"notes/capture-duplicate-candidate/\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/capture-duplicate-candidate/\",\"limit\":20}}. Choose notes/capture-duplicate-candidate/existing-renewal-note.md as the likely duplicate, not any adjacent decoy. Use the returned doc_id for notes/capture-duplicate-candidate/existing-renewal-note.md to run get_document. Do not validate, create, append, replace, or ingest anything while update versus new path is unresolved. In the final answer, mention likely duplicate candidate, notes/capture-duplicate-candidate/existing-renewal-note.md, Existing Renewal Note, target accuracy, that no document was created or updated, and ask whether to update the existing document or create a new document at a confirmed path.",
+		},
+		{
+			ID:    captureSaveThisNoteNaturalScenarioID,
+			Title: "Capture save-this-note natural intent",
+			Prompt: `Use the configured local OpenClerk data path and the installed OpenClerk runner only. Do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document.
+
+Save this note:
+Release readiness notes should preserve rollback owners, support handoff, and next-morning metrics review.
+
+I did not choose a path or title. Please propose a faithful OpenClerk document candidate from the supplied content, validate the candidate, show me the proposed path, title, and body preview, say no document was created, and wait for my approval before creating anything.`,
+		},
+		{
+			ID:    captureSaveThisNoteScriptedScenarioID,
+			Title: "Capture save-this-note scripted control",
+			Prompt: `Use the configured local OpenClerk data path. Execute the installed openclerk document runner command yourself and answer only from its JSON result. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document.
+
+The user said:
+Save this note:
+Release readiness notes should preserve rollback owners, support handoff, and next-morning metrics review.
+
+Use path notes/capture-save-this-note/release-readiness-note.md, title Release Readiness Note, and this faithful body:
+---
+type: note
+---
+# Release Readiness Note
+
+Release readiness notes should preserve rollback owners, support handoff, and next-morning metrics review.
+
+Run openclerk document only with action validate for that candidate. Do not create the document.
+
+Final answer requirements:
+- include the candidate path notes/capture-save-this-note/release-readiness-note.md
+- include the candidate title Release Readiness Note
+- include the body preview enough to show type: note, # Release Readiness Note, and Release readiness notes should preserve rollback owners, support handoff, and next-morning metrics review.
+- say validation passed from the runner result
+- say no document was created
+- ask for confirmation before creating`,
+		},
+		{
+			ID:     captureSaveThisNoteDuplicateScenarioID,
+			Title:  "Capture save-this-note duplicate check",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, validate, create_document, append_document, replace_section, ingest_source_url, or ingest_video_url. The user asked to save this note without saying update versus new path: Release readiness notes should preserve rollback owners, support handoff, and next-morning metrics review. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"save this note duplicate release readiness marker\",\"path_prefix\":\"notes/capture-save-this-note/\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/capture-save-this-note/\",\"limit\":20}}. Use the returned doc_id for notes/capture-save-this-note/existing-release-readiness-note.md to run get_document. Do not validate, create, append, replace, or ingest anything while update versus new path is unresolved. In the final answer, mention likely duplicate candidate, notes/capture-save-this-note/existing-release-readiness-note.md, Existing Release Readiness Note, that no document was created or updated, and ask whether to update the existing document or create a new document at a confirmed path.",
+		},
+		{
+			ID:     captureSaveThisNoteLowConfidenceID,
+			Title:  "Capture save-this-note low confidence ask",
+			Prompt: `Save this note from what we discussed last week.`,
 		},
 		{
 			ID:     documentThisMissingFieldsScenarioID,

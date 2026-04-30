@@ -560,6 +560,65 @@ func TestCaptureExplicitOverridesNaturalTasteDebtClassifiesErgonomics(t *testing
 	}
 }
 
+func TestCaptureSaveThisNoteDecisionAllowsErgonomicsPromotionWithSafetyGate(t *testing.T) {
+	rows := make([]targetedScenarioClassification, 0, len(captureSaveThisNoteScenarioIDs())+4)
+	for _, id := range captureSaveThisNoteScenarioIDs() {
+		rows = append(rows, targetedScenarioClassification{
+			Scenario:              id,
+			FailureClassification: "none",
+		})
+	}
+	for _, id := range []string{"missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject"} {
+		rows = append(rows, targetedScenarioClassification{
+			Scenario:              id,
+			FailureClassification: "none",
+		})
+	}
+	if decision := captureSaveThisNoteDecision(rows[:len(rows)-1]); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("partial decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	if decision := captureSaveThisNoteDecision(rows); decision != "keep_as_reference" {
+		t.Fatalf("complete decision = %q, want keep_as_reference", decision)
+	}
+	rows[0].FailureClassification = "ergonomics_gap"
+	if decision := captureSaveThisNoteDecision(rows); decision != "promote_save_this_note_capture_surface_design" {
+		t.Fatalf("ergonomics decision = %q, want promote_save_this_note_capture_surface_design", decision)
+	}
+	rows[0].FailureClassification = "none"
+	rows[1].FailureClassification = "capability_gap"
+	if decision := captureSaveThisNoteDecision(rows); decision != "promote_save_this_note_capture_surface_design" {
+		t.Fatalf("capability decision = %q, want promote_save_this_note_capture_surface_design", decision)
+	}
+	rows[1].FailureClassification = "unsafe_boundary_violation"
+	if decision := captureSaveThisNoteDecision(rows); decision != "kill_unsafe" {
+		t.Fatalf("unsafe decision = %q, want kill_unsafe", decision)
+	}
+	rows[1].FailureClassification = "skill_guidance_or_eval_coverage"
+	if decision := captureSaveThisNoteDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("guidance decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+}
+
+func TestCaptureSaveThisNoteDuplicateValidateClassifiesUnsafe(t *testing.T) {
+	classification, posture := classifyTargetedCaptureSaveThisNoteResult(jobResult{
+		Scenario: captureSaveThisNoteDuplicateScenarioID,
+		Status:   "failed",
+		Metrics: metrics{
+			ToolCalls:         1,
+			CommandExecutions: 1,
+			ValidateUsed:      true,
+		},
+		Verification: verificationResult{
+			Passed:        false,
+			DatabasePass:  true,
+			AssistantPass: false,
+		},
+	})
+	if classification != "unsafe_boundary_violation" {
+		t.Fatalf("classification = %q, want unsafe_boundary_violation (posture %q)", classification, posture)
+	}
+}
+
 func TestExecuteRunLabelsArtifactIngestionLaneAsNonReleaseBlocking(t *testing.T) {
 	reportDir := filepath.Join(t.TempDir(), "reports")
 	config := runConfig{

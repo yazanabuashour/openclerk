@@ -118,6 +118,14 @@ If the user provides a public web URL plus the required source path hint, use
 `ingest_source_url` instead of proposing a candidate; no separate approval is
 needed before the runner fetches the URL.
 
+For "save this note" requests with explicit note content but no path or title,
+derive a faithful note candidate from the supplied content, validate it, show
+the candidate, state that no document was created, and ask for approval before
+creating anything. For bare prior-context requests such as "save this note from
+what we discussed last week", use the no-tools rule: ask for the actual note
+content plus any path, title, or placement preferences, and do not invent a
+path, title, or body.
+
 For candidate proposals:
 
 1. Preserve explicit user path, title, body, type, and naming instructions.

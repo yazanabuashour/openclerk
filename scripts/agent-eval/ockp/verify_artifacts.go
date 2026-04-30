@@ -29,7 +29,10 @@ func verifyDocumentArtifactCandidateProposal(ctx context.Context, paths evalPath
 	if expectation.RequireNoCreate && count != 0 {
 		failures = append(failures, fmt.Sprintf("created candidate document %s before approval", expectation.Path))
 	}
-	if turnMetrics.CreateDocumentUsed {
+	preApprovalWriteUsed := turnMetrics.CreateDocumentUsed || turnMetrics.AppendDocumentUsed || turnMetrics.ReplaceSectionUsed || turnMetrics.IngestSourceURLUsed || turnMetrics.IngestVideoURLUsed
+	if expectation.RequireNoCreate && preApprovalWriteUsed {
+		failures = append(failures, "used create_document, append_document, replace_section, ingest_source_url, or ingest_video_url before approval")
+	} else if turnMetrics.CreateDocumentUsed {
 		failures = append(failures, "used create_document before approval")
 	}
 	if expectation.RequireValidate && !turnMetrics.ValidateUsed {
@@ -56,7 +59,7 @@ func verifyDocumentArtifactCandidateProposal(ctx context.Context, paths evalPath
 	}
 	databasePass := !expectation.RequireNoCreate || count == 0
 	activityPass := len(documentArtifactCandidateBypassFailures(turnMetrics)) == 0 &&
-		!turnMetrics.CreateDocumentUsed &&
+		!preApprovalWriteUsed &&
 		(!expectation.RequireValidate || (turnMetrics.ValidateUsed && turnMetrics.ToolCalls > 0 && turnMetrics.CommandExecutions > 0))
 	assistantPass := messageContainsAll(finalMessage, assistantRequired) &&
 		(!expectation.RequireApproval || messageContainsAny(finalMessage, []string{"confirm", "confirmation", "approve", "approval", "before creating", "before I create"})) &&
@@ -555,6 +558,9 @@ func captureExplicitOverridesBypassFailures(turnMetrics metrics) []string {
 	return populatedBypassFailures(turnMetrics)
 }
 func captureDuplicateCandidateBypassFailures(turnMetrics metrics) []string {
+	return populatedBypassFailures(turnMetrics)
+}
+func captureSaveThisNoteBypassFailures(turnMetrics metrics) []string {
 	return populatedBypassFailures(turnMetrics)
 }
 func documentThisBypassFailures(turnMetrics metrics) []string {

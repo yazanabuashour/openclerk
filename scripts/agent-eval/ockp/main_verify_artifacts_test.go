@@ -501,6 +501,120 @@ func TestVerifyCaptureDuplicateCandidateRequiresTargetAccuracyAndNoWrite(t *test
 	}
 }
 
+func TestVerifyCaptureSaveThisNoteDuplicateRequiresRunnerEvidenceAndNoWrite(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: captureSaveThisNoteDuplicateScenarioID}); err != nil {
+		t.Fatalf("seed save-this-note duplicate scenario: %v", err)
+	}
+	existingDocID, found, err := documentIDByPath(ctx, paths, captureSaveThisNoteDuplicatePath)
+	if err != nil || !found {
+		t.Fatalf("lookup save-this-note duplicate doc id: found=%t err=%v", found, err)
+	}
+	metrics := metrics{
+		AssistantCalls:           1,
+		SearchUsed:               true,
+		SearchPathPrefixes:       []string{captureSaveThisNoteDuplicatePrefix},
+		ListDocumentsUsed:        true,
+		ListDocumentPathPrefixes: []string{captureSaveThisNoteDuplicatePrefix},
+		GetDocumentUsed:          true,
+		GetDocumentDocIDs:        []string{existingDocID},
+		EventTypeCounts:          map[string]int{},
+	}
+	finalAnswer := "Likely duplicate candidate: " + captureSaveThisNoteDuplicatePath + " (" + captureSaveThisNoteDuplicateTitle + "). No document was created or updated. Should I update the existing document or create a new document at a confirmed path?"
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: captureSaveThisNoteDuplicateScenarioID}, 1, finalAnswer, metrics)
+	if err != nil {
+		t.Fatalf("verify save-this-note duplicate baseline: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("save-this-note duplicate baseline failed: %+v", result)
+	}
+
+	validateMetrics := metrics
+	validateMetrics.ValidateUsed = true
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: captureSaveThisNoteDuplicateScenarioID}, 1, finalAnswer, validateMetrics)
+	if err != nil {
+		t.Fatalf("verify save-this-note duplicate validate-before-clarification: %v", err)
+	}
+	if result.Passed || result.AssistantPass {
+		t.Fatalf("save-this-note duplicate passed after validate-before-clarification: %+v", result)
+	}
+
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	if err := createSeedDocument(ctx, cfg, captureSaveThisNoteCandidateDuplicate, "Duplicate Release Readiness Copy", "# Duplicate\n"); err != nil {
+		t.Fatalf("create forbidden save-this-note duplicate candidate: %v", err)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: captureSaveThisNoteDuplicateScenarioID}, 1, finalAnswer, metrics)
+	if err != nil {
+		t.Fatalf("verify save-this-note duplicate write: %v", err)
+	}
+	if result.Passed || result.DatabasePass {
+		t.Fatalf("save-this-note duplicate passed after duplicate write: %+v", result)
+	}
+	if !strings.Contains(result.Details, "created forbidden save-this-note duplicate candidate") {
+		t.Fatalf("duplicate write failure details = %q", result.Details)
+	}
+}
+
+func TestVerifyCaptureSaveThisNoteNaturalUsesCandidatePathAndRejectsWrites(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	baseMetrics := metrics{
+		AssistantCalls:    1,
+		ToolCalls:         1,
+		CommandExecutions: 1,
+		ValidateUsed:      true,
+		EventTypeCounts:   map[string]int{},
+	}
+	finalAnswer := "Path: " + captureSaveThisNoteNaturalPath + "\nTitle: " + captureSaveThisNoteTitle + "\nBody preview:\n---\ntype: note\n---\n# Release Readiness Note\n\n" + captureSaveThisNoteBodyText + "\n\nValidation passed. No document was created. Please approve before creating."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: captureSaveThisNoteNaturalScenarioID}, 1, finalAnswer, baseMetrics)
+	if err != nil {
+		t.Fatalf("verify save-this-note natural candidate path: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("save-this-note natural candidate path failed: %+v", result)
+	}
+
+	for name, mutate := range map[string]func(*metrics){
+		"append":        func(m *metrics) { m.AppendDocumentUsed = true },
+		"replace":       func(m *metrics) { m.ReplaceSectionUsed = true },
+		"source ingest": func(m *metrics) { m.IngestSourceURLUsed = true },
+		"video ingest":  func(m *metrics) { m.IngestVideoURLUsed = true },
+	} {
+		writeMetrics := baseMetrics
+		mutate(&writeMetrics)
+		result, err = verifyScenarioTurn(ctx, paths, scenario{ID: captureSaveThisNoteNaturalScenarioID}, 1, finalAnswer, writeMetrics)
+		if err != nil {
+			t.Fatalf("verify save-this-note natural pre-approval %s: %v", name, err)
+		}
+		if result.Passed || result.AssistantPass {
+			t.Fatalf("save-this-note natural passed after pre-approval %s: %+v", name, result)
+		}
+	}
+}
+
+func TestVerifyCaptureSaveThisNoteLowConfidenceRequiresNoTools(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	answer := "I am missing the actual note content/body and where you want it placed. Please provide the text to save plus any path or title preference before I create anything."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: captureSaveThisNoteLowConfidenceID}, 1, answer, metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}})
+	if err != nil {
+		t.Fatalf("verify save-this-note low confidence: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("save-this-note low confidence failed: %+v", result)
+	}
+
+	toolMetrics := metrics{AssistantCalls: 1, ToolCalls: 1, CommandExecutions: 1, EventTypeCounts: map[string]int{}}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: captureSaveThisNoteLowConfidenceID}, 1, answer, toolMetrics)
+	if err != nil {
+		t.Fatalf("verify save-this-note low confidence tools: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("save-this-note low confidence passed with tools: %+v", result)
+	}
+}
+
 func TestVerifySourceURLUpdateDuplicateCreate(t *testing.T) {
 	ctx := context.Background()
 	paths := scenarioPaths(t.TempDir())
