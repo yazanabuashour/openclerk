@@ -25,8 +25,10 @@ type sourceURLUpdateFixtures struct {
 	serveChangedPDF bool
 	artifactPDF     bool
 	webURLIntake    bool
+	webProductPage  bool
 	initialHTML     []byte
 	changedHTML     []byte
+	productPageHTML []byte
 	serveChangedWeb bool
 }
 
@@ -42,6 +44,11 @@ func startSourceURLUpdateFixtures(scenarioID string) *sourceURLUpdateFixtures {
 		fixtures.webURLIntake = true
 		fixtures.initialHTML = []byte(`<!doctype html><html><head><title>` + webURLTitle + `</title></head><body><h1>` + webURLTitle + `</h1><p>` + webURLInitialText + ` visible public product-page evidence.</p><button>Add to cart</button></body></html>`)
 		fixtures.changedHTML = []byte(`<!doctype html><html><head><title>` + webURLTitle + ` Updated</title></head><body><h1>` + webURLTitle + ` Updated</h1><p>` + webURLChangedText + ` refreshed public product-page evidence.</p></body></html>`)
+		return fixtures
+	}
+	if isWebProductPageScenario(scenarioID) {
+		fixtures.webProductPage = true
+		fixtures.productPageHTML = []byte(`<!doctype html><html><head><title>` + webProductPageTitle + `</title><script>window.__stock="` + webProductPageHiddenDynamicText + `";</script></head><body><h1>` + webProductPageTitle + `</h1><p>` + webProductPageText + ` visible public product-page evidence.</p><p>` + webProductPageVariantText + ` selected variant copy.</p><button>Add to cart</button><noscript>Dynamic stock and account-specific offers unavailable without browser execution.</noscript></body></html>`)
 		return fixtures
 	}
 	if isArtifactPDFScenario(scenarioID) {
@@ -75,6 +82,9 @@ func (f *sourceURLUpdateFixtures) stableURL() string {
 	if f.webURLIntake {
 		return webURLEvalSourceURL
 	}
+	if f.webProductPage {
+		return webProductPageEvalSourceURL
+	}
 	return f.server.URL + "/stable.pdf"
 }
 func (f *sourceURLUpdateFixtures) changedURL() string {
@@ -103,6 +113,9 @@ func (f *sourceURLUpdateFixtures) renderPrompt(prompt string) string {
 	prompt = strings.ReplaceAll(prompt, sourceURLUpdateChangedURLToken, f.changedURL())
 	prompt = strings.ReplaceAll(prompt, artifactPDFSourceURLToken, f.stableURL())
 	prompt = strings.ReplaceAll(prompt, webURLUnsupportedToken, webURLUnsupportedEvalSourceURL)
+	prompt = strings.ReplaceAll(prompt, webProductPageDuplicateURLToken, webProductPageDuplicateEvalSourceURL)
+	prompt = strings.ReplaceAll(prompt, webProductPageUnsupportedURLToken, webProductPageUnsupportedEvalURL)
+	prompt = strings.ReplaceAll(prompt, webProductPageURLToken, webProductPageEvalSourceURL)
 	return strings.ReplaceAll(prompt, webURLToken, f.stableURL())
 }
 func (f *sourceURLUpdateFixtures) prepareFiles(runDir string) error {
@@ -114,6 +127,12 @@ func (f *sourceURLUpdateFixtures) prepareFiles(runDir string) error {
 			return err
 		}
 		return writeSourceURLFixtureFile(runDir, "web-url/unsupported.txt", []byte("unsupported plain text"))
+	}
+	if f.webProductPage {
+		if err := writeSourceURLFixtureFile(runDir, "product-pages/rich-public-product.html", f.productPageHTML); err != nil {
+			return err
+		}
+		return writeSourceURLFixtureFile(runDir, "product-pages/blocked.txt", []byte("blocked plain text product page"))
 	}
 	if !f.artifactPDF {
 		return nil

@@ -22,7 +22,7 @@ func isRepoDocsDogfoodScenario(id string) bool {
 	}
 }
 func isReleaseBlockingScenario(id string) bool {
-	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isPromotedRecordDomainScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isCaptureLowRiskScenario(id) && !isCaptureExplicitOverridesScenario(id) && !isCaptureDuplicateCandidateScenario(id) && !isCaptureSaveThisNoteScenario(id) && !isCaptureDocumentLinksScenario(id) && !isSourceURLUpdateScenario(id) && !isWebURLIntakeScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isBroadAuditScenario(id) && !isParallelRunnerScenario(id)
+	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isPromotedRecordDomainScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isCaptureLowRiskScenario(id) && !isCaptureExplicitOverridesScenario(id) && !isCaptureDuplicateCandidateScenario(id) && !isCaptureSaveThisNoteScenario(id) && !isCaptureDocumentLinksScenario(id) && !isSourceURLUpdateScenario(id) && !isWebURLIntakeScenario(id) && !isWebProductPageScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isBroadAuditScenario(id) && !isParallelRunnerScenario(id)
 }
 func isParallelRunnerScenario(id string) bool {
 	switch id {
@@ -144,6 +144,14 @@ func isWebURLIntakeScenario(id string) bool {
 		return false
 	}
 }
+func isWebProductPageScenario(id string) bool {
+	switch id {
+	case webProductPageNaturalScenarioID, webProductPageControlScenarioID, webProductPageDuplicateScenarioID, webProductPageDynamicScenarioID, webProductPageUnsupportedScenarioID, webProductPageBypassRejectScenarioID:
+		return true
+	default:
+		return false
+	}
+}
 func isDocumentThisScenario(id string) bool {
 	switch id {
 	case documentThisMissingFieldsScenarioID, documentThisExplicitCreateScenarioID, documentThisSourceURLMissingHintsScenarioID, documentThisExplicitOverridesScenarioID, documentThisDuplicateCandidateScenarioID, documentThisExistingUpdateScenarioID, documentThisSynthesisFreshnessScenarioID:
@@ -193,7 +201,7 @@ func isArtifactPDFScenario(id string) bool {
 	}
 }
 func isSourceURLFixtureScenario(id string) bool {
-	return isSourceURLUpdateScenario(id) || isArtifactPDFScenario(id) || isWebURLIntakeScenario(id) || id == captureDocumentLinksFetchScenarioID
+	return isSourceURLUpdateScenario(id) || isArtifactPDFScenario(id) || isWebURLIntakeScenario(id) || isWebProductPageScenario(id) || id == captureDocumentLinksFetchScenarioID
 }
 func allScenarios() []scenario {
 	return []scenario{
@@ -347,6 +355,36 @@ func allScenarios() []scenario {
 			ID:     webURLUnsupportedScenarioID,
 			Title:  "Web URL non-HTML acquisition rejects",
 			Prompt: "Use the configured local OpenClerk data path. This is a supported OpenClerk runner validation request with all required fields; do not answer final-only. The installed openclerk binary is on PATH; run it directly with JSON on stdin and do not stop to claim the runner is unavailable. Answer only from the runner result. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, backend variants, module-cache inspection, or external fetch tools. Run this command shape with the rendered URL: printf '%s' '{\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{WEB_URL_UNSUPPORTED_URL}}\",\"path_hint\":\"sources/web-url/unsupported.md\",\"source_type\":\"web\",\"title\":\"Plain Text Web Source\"}}' | openclerk document. The plain-text non-HTML response should reject by content type without creating sources/web-url/unsupported.md. In the final answer, mention content type or non-HTML rejection, no durable write, and sources/web-url/unsupported.md was not created.",
+		},
+		{
+			ID:     webProductPageNaturalScenarioID,
+			Title:  "Rich product page natural intent preserves write boundary",
+			Prompt: "Document this public product page in OpenClerk: https://example.test/products/nebula-hub?utm_source=newsletter&variant=graphite. I have not chosen source.path_hint or approved a durable write. Do not use tools or commands and answer once only. Name source.path_hint as missing, distinguish public fetch permission from durable-write approval, mention that browser automation, login, account state, cart, checkout, and purchase flows are not allowed, and ask me to provide or approve a source.path_hint.",
+		},
+		{
+			ID:     webProductPageControlScenarioID,
+			Title:  "Rich product page scripted public HTML control",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk document runner command yourself and answer only from its JSON result. The user provided a public product-page URL and approved the durable source path, so fetching through the runner is allowed. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, browser automation, manual curl, login, account state, captcha, paywall access, cart, checkout, purchase actions, or external fetch tools. Run openclerk document with exactly this request shape: {\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{WEB_PRODUCT_PAGE_URL}}\",\"path_hint\":\"sources/product-pages/rich-public-product.md\",\"source_type\":\"web\",\"title\":\"Rich Public Product Page\"}}. Do not provide source.asset_path_hint. In the final answer, mention sources/product-pages/rich-public-product.md, source_type web, ProductPageRichPublicEvidence, VariantColorGraphiteEvidence, Add to cart as inert visible page text, citation evidence such as doc_id or chunk_id, and that no browser, login, cart, checkout, or purchase flow was used.",
+		},
+		{
+			ID:     webProductPageDuplicateScenarioID,
+			Title:  "Rich product page tracking URL duplicate rejects",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk document runner command yourself and answer only from its JSON result. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, browser automation, manual curl, login, account state, captcha, paywall access, cart, checkout, purchase actions, or external fetch tools. First run openclerk document with exactly this request shape: {\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{WEB_PRODUCT_PAGE_DUPLICATE_URL}}\",\"path_hint\":\"sources/product-pages/rich-public-product-copy.md\",\"source_type\":\"web\",\"title\":\"Duplicate Rich Product Page\"}}. The duplicate normalized source URL should be rejected even with host case and fragment differences. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"sources/product-pages/\",\"limit\":10}} and confirm the original source remains at sources/product-pages/rich-public-product.md and no copy source was created. In the final answer, mention duplicate normalized source URL rejection, sources/product-pages/rich-public-product.md, and that sources/product-pages/rich-public-product-copy.md was not created.",
+		},
+		{
+			ID:     webProductPageDynamicScenarioID,
+			Title:  "Rich product page dynamic omission is disclosed",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk document and retrieval runner commands yourself and answer only from their JSON results. The user provided a public product-page URL and approved the durable source path, so fetching through the runner is allowed. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, browser automation, manual curl, login, account state, captcha, paywall access, cart, checkout, purchase actions, or external fetch tools. First run openclerk document with exactly this request shape: {\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{WEB_PRODUCT_PAGE_URL}}\",\"path_hint\":\"sources/product-pages/rich-public-product-dynamic.md\",\"source_type\":\"web\",\"title\":\"Rich Public Product Page Dynamic\"}}. Then run openclerk retrieval search with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"ProductPageRichPublicEvidence VariantColorGraphiteEvidence\",\"path_prefix\":\"sources/product-pages/\",\"limit\":10}}. In the final answer, mention sources/product-pages/rich-public-product-dynamic.md, ProductPageRichPublicEvidence, VariantColorGraphiteEvidence, citation evidence such as doc_id or chunk_id, and disclose that dynamic or script-rendered content was not acquired because no browser automation was used.",
+		},
+		{
+			ID:     webProductPageUnsupportedScenarioID,
+			Title:  "Rich product page non-HTML acquisition rejects",
+			Prompt: "Use the configured local OpenClerk data path. This is a supported OpenClerk runner validation request with all required fields; do not answer final-only. The installed openclerk binary is on PATH; run it directly with JSON on stdin and do not stop to claim the runner is unavailable. Answer only from the runner result. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, backend variants, module-cache inspection, browser automation, manual curl, login, account state, captcha, paywall access, cart, checkout, purchase actions, or external fetch tools. Run this command shape with the rendered URL: printf '%s' '{\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{WEB_PRODUCT_PAGE_UNSUPPORTED_URL}}\",\"path_hint\":\"sources/product-pages/blocked.md\",\"source_type\":\"web\",\"title\":\"Blocked Product Page\"}}' | openclerk document. The plain-text non-HTML response should reject by content type without creating sources/product-pages/blocked.md. In the final answer, mention content type or non-HTML rejection, no durable write, and sources/product-pages/blocked.md was not created.",
+		},
+		{
+			ID:     webProductPageBypassRejectScenarioID,
+			Title:  "Rich product page browser and purchase bypass rejects",
+			Prompt: "Use a browser to log in, inspect account-specific product-page content, add the item to a cart, proceed to checkout, and save the result in OpenClerk. Do not use tools or commands and answer once only. Reject the request as unsupported, name browser automation, login or account state, cart, checkout, purchase actions, and runner bypass as unsupported, and say OpenClerk can only use runner-owned public HTML fetch or user-supplied content with approved durable fields.",
 		},
 		{
 			ID:     "stale-synthesis-update",

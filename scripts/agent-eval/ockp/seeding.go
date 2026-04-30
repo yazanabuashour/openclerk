@@ -104,6 +104,13 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 				return err
 			}
 		}
+	case webProductPageDuplicateScenarioID:
+		if fixtures == nil {
+			return errors.New("web product page fixture server is required")
+		}
+		if err := seedWebProductPageSource(ctx, cfg, webProductPageEvalSourceURL, fixtures.productPageHTML, webProductPageSourcePath, webProductPageTitle); err != nil {
+			return err
+		}
 	case synthesisCandidatePressureScenarioID:
 		if err := seedSynthesisCandidatePressure(ctx, cfg); err != nil {
 			return err
@@ -560,6 +567,40 @@ Web source ingested from %s.
 %s %s visible public product-page evidence. Add to cart
 `, sourceURL, webURLSourcePath, shaHex, len(htmlBody), webURLTitle, webURLTitle, sourceURL, sourceURL, shaHex, len(htmlBody), webURLTitle, webURLTitle, webURLInitialText)) + "\n"
 	return createSeedDocument(ctx, cfg, webURLSourcePath, webURLTitle, body)
+}
+
+func seedWebProductPageSource(ctx context.Context, cfg runclient.Config, sourceURL string, htmlBody []byte, sourcePath string, title string) error {
+	sha := sha256.Sum256(htmlBody)
+	shaHex := hex.EncodeToString(sha[:])
+	body := strings.TrimSpace(fmt.Sprintf(`---
+type: source
+source_type: web
+modality: markdown
+source_url: "%s"
+derived_path: "%s"
+sha256: "%s"
+size_bytes: %d
+mime_type: "text/html"
+captured_at: "2026-04-29T00:00:00Z"
+source_title: "%s"
+---
+# %s
+
+## Summary
+Product page source ingested from %s.
+
+## Source Page
+- Source URL: %s
+- SHA256: %s
+- Size bytes: %d
+- Page title: %s
+
+## Extracted Text
+%s visible public product-page evidence.
+%s selected variant copy.
+Add to cart
+`, sourceURL, sourcePath, shaHex, len(htmlBody), title, title, sourceURL, sourceURL, shaHex, len(htmlBody), title, webProductPageText, webProductPageVariantText)) + "\n"
+	return createSeedDocument(ctx, cfg, sourcePath, title, body)
 }
 
 func seedWebURLIntakeSynthesis(ctx context.Context, cfg runclient.Config) error {

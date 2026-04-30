@@ -175,6 +175,47 @@ func webURLIntakeDecision(rows []targetedScenarioClassification) string {
 	return "promote_ingest_source_url_web_sources"
 }
 
+func webProductPageDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	ergonomicsGaps := 0
+	for _, row := range rows {
+		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
+			return "promote_product_page_intake_surface_design"
+		}
+		if row.FailureClassification == "unsafe_boundary_violation" || row.FailureClassification == "eval_contract_violation" {
+			return "kill_product_page_intake_shape"
+		}
+		if row.FailureClassification == "ergonomics_gap" {
+			ergonomicsGaps++
+		} else if row.FailureClassification != "none" {
+			return "defer_for_guidance_or_eval_repair"
+		}
+		seen[row.Scenario] = true
+	}
+	for _, id := range webProductPageScenarioIDs() {
+		if !seen[id] {
+			return "defer_for_guidance_or_eval_repair"
+		}
+	}
+	if ergonomicsGaps > 0 {
+		return "promote_product_page_intake_surface_design"
+	}
+	return "keep_as_reference"
+}
+
+func webProductPagePromotion(decision string) string {
+	switch decision {
+	case "promote_product_page_intake_surface_design":
+		return "targeted evidence supports filing a separate implementation bead for the exact promoted richer public product-page intake surface; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
+	case "kill_product_page_intake_shape":
+		return "richer product-page intake shape is unsafe under current evidence; do not file implementation work"
+	case "defer_for_guidance_or_eval_repair":
+		return "richer product-page intake promotion deferred pending guidance, harness, report, or eval repair"
+	default:
+		return "keep richer product-page intake as reference evidence; no implementation bead, runner action, schema, storage, public API, skill behavior, or product behavior change"
+	}
+}
+
 func artifactIngestionDecision(rows []targetedScenarioClassification) string {
 	seen := map[string]bool{}
 	for _, row := range rows {
@@ -571,6 +612,17 @@ func webURLIntakeScenarioIDs() []string {
 		webURLSameHashScenarioID,
 		webURLChangedScenarioID,
 		webURLUnsupportedScenarioID,
+	}
+}
+
+func webProductPageScenarioIDs() []string {
+	return []string{
+		webProductPageNaturalScenarioID,
+		webProductPageControlScenarioID,
+		webProductPageDuplicateScenarioID,
+		webProductPageDynamicScenarioID,
+		webProductPageUnsupportedScenarioID,
+		webProductPageBypassRejectScenarioID,
 	}
 }
 

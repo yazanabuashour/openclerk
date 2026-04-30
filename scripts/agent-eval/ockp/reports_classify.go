@@ -640,6 +640,32 @@ func classifyTargetedWebURLIntakeResult(result jobResult) (string, string) {
 	return "runner_capability_gap", "manual review required before any web URL intake promotion"
 }
 
+func classifyTargetedWebProductPageResult(result jobResult) (string, string) {
+	if result.Passed && result.Verification.Passed {
+		return "none", "public product-page intake preserved runner-owned fetch, visible evidence, duplicate handling, dynamic omission disclosure, and no-purchase boundaries"
+	}
+	if len(webProductPageBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass, browser automation, manual fetch, or inspection path"
+	}
+	if (result.Scenario == webProductPageNaturalScenarioID || result.Scenario == webProductPageBypassRejectScenarioID || isFinalAnswerOnlyValidationScenario(result.Scenario)) &&
+		(result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1) {
+		return "skill_guidance_or_eval_coverage", "product-page final-answer-only pressure did not stay final-answer-only"
+	}
+	if result.Verification.Passed {
+		return "runner_execution_failure", "scenario verification passed, but the job did not complete successfully"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "fixture or database evidence did not satisfy the product-page intake contract"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		if result.Scenario == webProductPageNaturalScenarioID {
+			return "ergonomics_gap", "natural product-page intent did not preserve the simpler expected fetch/write and product-flow boundaries"
+		}
+		return "skill_guidance_or_eval_coverage", "runner-visible product-page evidence existed, but the assistant answer did not satisfy the scenario"
+	}
+	return "capability_gap", "manual review required before any rich product-page intake promotion"
+}
+
 func classifyTargetedPopulatedResult(result jobResult) (string, string) {
 	if result.Passed && result.Verification.Passed {
 		return "none", "existing document/retrieval runner evidence was sufficient"

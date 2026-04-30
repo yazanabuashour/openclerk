@@ -15,6 +15,11 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 			t.Fatalf("scenarioIDs missing %q in %v", want, scenarioIDs())
 		}
 	}
+	for _, want := range webProductPageScenarioIDs() {
+		if !ids[want] {
+			t.Fatalf("scenarioIDs missing web product-page scenario %q in %v", want, scenarioIDs())
+		}
+	}
 }
 
 func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
@@ -70,6 +75,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	for _, id := range []string{sourceURLUpdateDuplicateScenarioID, sourceURLUpdateSameSHAScenarioID, sourceURLUpdateChangedScenarioID, sourceURLUpdateConflictScenarioID} {
 		if defaultIDs[id] {
 			t.Fatalf("default selected scenarios included targeted source URL update scenario %q", id)
+		}
+	}
+	for _, id := range webProductPageScenarioIDs() {
+		if defaultIDs[id] {
+			t.Fatalf("default selected scenarios included targeted web product-page scenario %q", id)
 		}
 	}
 	for _, id := range []string{documentThisMissingFieldsScenarioID, documentThisExplicitCreateScenarioID, documentThisSourceURLMissingHintsScenarioID, documentThisExplicitOverridesScenarioID, documentThisDuplicateCandidateScenarioID, documentThisExistingUpdateScenarioID, documentThisSynthesisFreshnessScenarioID} {
@@ -171,6 +181,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	lane, releaseBlocking = reportLane(selected)
 	if lane != sourceURLUpdateLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, sourceURLUpdateLaneName)
+	}
+	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(append(webProductPageScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject"), ",")})
+	lane, releaseBlocking = reportLane(selected)
+	if lane != webProductPageLaneName || releaseBlocking {
+		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, webProductPageLaneName)
 	}
 	selected = selectedScenarioIDs(runConfig{Scenario: documentThisMissingFieldsScenarioID + "," + documentThisExplicitCreateScenarioID + "," + documentThisSourceURLMissingHintsScenarioID + "," + documentThisExplicitOverridesScenarioID + "," + documentThisDuplicateCandidateScenarioID + "," + documentThisExistingUpdateScenarioID + "," + documentThisSynthesisFreshnessScenarioID})
 	lane, releaseBlocking = reportLane(selected)

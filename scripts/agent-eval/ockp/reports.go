@@ -91,7 +91,7 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	if releaseBlocking {
 		return nil
 	}
-	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != promotedRecordDomainLaneName && lane != parallelRunnerLaneName && lane != documentHistoryLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != captureLowRiskLaneName && lane != captureExplicitOverridesLaneName && lane != captureDuplicateCandidateLaneName && lane != captureSaveThisNoteLaneName && lane != captureDocumentLinksLaneName && lane != sourceURLUpdateLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName && lane != broadAuditLaneName {
+	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != promotedRecordDomainLaneName && lane != parallelRunnerLaneName && lane != documentHistoryLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != captureLowRiskLaneName && lane != captureExplicitOverridesLaneName && lane != captureDuplicateCandidateLaneName && lane != captureSaveThisNoteLaneName && lane != captureDocumentLinksLaneName && lane != sourceURLUpdateLaneName && lane != webProductPageLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName && lane != broadAuditLaneName {
 		return nil
 	}
 	summary := targetedLaneSummary{
@@ -154,6 +154,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		case webURLIntakeLaneName:
 			include = isWebURLIntakeScenario(result.Scenario)
 			classification, posture = classifyTargetedWebURLIntakeResult(result)
+		case webProductPageLaneName:
+			include = isWebProductPageScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
+			classification, posture = classifyTargetedWebProductPageResult(result)
 		case documentThisLaneName:
 			include = isDocumentThisScenario(result.Scenario)
 			classification, posture = classifyTargetedDocumentThisResult(result)
@@ -249,6 +252,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	case webURLIntakeLaneName:
 		summary.Decision = webURLIntakeDecision(summary.ScenarioClassifications)
 		summary.Promotion = "promote ingest_source_url web source handling; same runner action, source.source_type extension, no external acquisition tools"
+	case webProductPageLaneName:
+		summary.Decision = webProductPageDecision(summary.ScenarioClassifications)
+		summary.Promotion = webProductPagePromotion(summary.Decision)
 	case documentThisLaneName:
 		summary.Decision = "evaluate_for_oc_99z"
 		summary.Promotion = "no promoted runner action, schema, migration, skill behavior, storage API, product behavior, or public OpenClerk interface from this eval"

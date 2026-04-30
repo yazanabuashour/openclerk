@@ -215,6 +215,14 @@ func classifyCommand(command string, m *metrics) {
 		m.LegacyRunnerUsage = true
 		addEvidence(&m.LegacyRunnerEvidence)
 	}
+	if strings.Contains(lower, "curl ") || strings.Contains(lower, "wget ") || strings.Contains(lower, "http ") || strings.Contains(lower, "httpie ") {
+		m.ManualHTTPFetch = true
+		addEvidence(&m.ManualHTTPFetchEvidence)
+	}
+	if strings.Contains(lower, "playwright") || strings.Contains(lower, "puppeteer") || strings.Contains(lower, "selenium") || strings.Contains(lower, "browser-use") {
+		m.BrowserAutomation = true
+		addEvidence(&m.BrowserAutomationEvidence)
+	}
 	classifySearchCommand(actionText, m)
 	if commandContainsAction(actionText, "ingest_source_url") {
 		m.IngestSourceURLUsed = true

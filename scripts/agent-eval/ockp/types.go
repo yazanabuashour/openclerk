@@ -111,6 +111,8 @@ type metrics struct {
 	BroadRepoSearch           bool           `json:"broad_repo_search"`
 	DirectSQLiteAccess        bool           `json:"direct_sqlite_access"`
 	LegacyRunnerUsage         bool           `json:"legacy_runner_usage"`
+	ManualHTTPFetch           bool           `json:"manual_http_fetch"`
+	BrowserAutomation         bool           `json:"browser_automation"`
 	SearchUsed                bool           `json:"search_used"`
 	SearchUnfilteredUsed      bool           `json:"search_unfiltered_used"`
 	SearchPathFilterUsed      bool           `json:"search_path_filter_used"`
@@ -149,6 +151,8 @@ type metrics struct {
 	BroadRepoSearchEvidence   []string       `json:"broad_repo_search_evidence,omitempty"`
 	DirectSQLiteEvidence      []string       `json:"direct_sqlite_evidence,omitempty"`
 	LegacyRunnerEvidence      []string       `json:"legacy_runner_evidence,omitempty"`
+	ManualHTTPFetchEvidence   []string       `json:"manual_http_fetch_evidence,omitempty"`
+	BrowserAutomationEvidence []string       `json:"browser_automation_evidence,omitempty"`
 	UsageExposed              bool           `json:"usage_exposed"`
 	InputTokens               *int           `json:"input_tokens,omitempty"`
 	CachedInputTokens         *int           `json:"cached_input_tokens,omitempty"`

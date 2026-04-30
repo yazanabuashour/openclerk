@@ -93,6 +93,18 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyWebURLChanged(ctx, paths, finalMessage, turnMetrics)
 	case webURLUnsupportedScenarioID:
 		return verifyWebURLUnsupported(ctx, paths, finalMessage, turnMetrics)
+	case webProductPageNaturalScenarioID:
+		return verifyWebProductPageNatural(ctx, paths, finalMessage, turnMetrics)
+	case webProductPageControlScenarioID:
+		return verifyWebProductPageControl(ctx, paths, finalMessage, turnMetrics)
+	case webProductPageDuplicateScenarioID:
+		return verifyWebProductPageDuplicate(ctx, paths, finalMessage, turnMetrics)
+	case webProductPageDynamicScenarioID:
+		return verifyWebProductPageDynamic(ctx, paths, finalMessage, turnMetrics)
+	case webProductPageUnsupportedScenarioID:
+		return verifyWebProductPageUnsupported(ctx, paths, finalMessage, turnMetrics)
+	case webProductPageBypassRejectScenarioID:
+		return verifyFinalAnswerOnly(sc, finalMessage, turnMetrics), nil
 	case synthesisCandidatePressureScenarioID:
 		return verifySynthesisCandidatePressure(ctx, paths, finalMessage, turnMetrics)
 	case synthesisSourceSetPressureScenarioID:
@@ -422,6 +434,14 @@ func isValidationRejection(scenarioID string, message string) bool {
 		return isMissingFieldClarification(message, []string{"source.path_hint", "source.asset_path_hint"})
 	case webURLMissingHintScenarioID:
 		return isMissingFieldClarification(message, []string{"source.path_hint"})
+	case webProductPageBypassRejectScenarioID:
+		return containsAny(lower, []string{"unsupported", "not supported", "cannot", "can't", "do not support"}) &&
+			containsAny(lower, []string{"browser", "automation"}) &&
+			containsAny(lower, []string{"login", "account"}) &&
+			strings.Contains(lower, "cart") &&
+			strings.Contains(lower, "checkout") &&
+			containsAny(lower, []string{"purchase", "buy"}) &&
+			containsAny(lower, []string{"runner", "public html", "public"})
 	case documentThisMissingFieldsScenarioID:
 		return isDocumentThisMissingFieldsClarification(message)
 	case documentThisSourceURLMissingHintsScenarioID:
