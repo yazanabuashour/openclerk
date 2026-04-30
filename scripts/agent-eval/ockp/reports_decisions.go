@@ -218,6 +218,45 @@ func webURLIntakeDecision(rows []targetedScenarioClassification) string {
 	return "promote_ingest_source_url_web_sources"
 }
 
+func webURLStaleRepairDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	ergonomicsGaps := 0
+	for _, row := range rows {
+		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
+			return "promote_web_url_stale_repair_surface_design"
+		}
+		if row.FailureClassification == "ergonomics_gap" {
+			ergonomicsGaps++
+		} else if row.FailureClassification != "none" {
+			return "defer_for_guidance_or_eval_repair"
+		}
+		seen[row.Scenario] = true
+	}
+	for _, id := range webURLStaleRepairScenarioIDs() {
+		if !seen[id] {
+			return "defer_for_guidance_or_eval_repair"
+		}
+	}
+	if ergonomicsGaps >= 2 {
+		return "promote_web_url_stale_repair_surface_design"
+	}
+	if ergonomicsGaps > 0 {
+		return "defer_for_guidance_or_eval_repair"
+	}
+	return "keep_as_reference"
+}
+
+func webURLStaleRepairPromotion(decision string) string {
+	switch decision {
+	case "promote_web_url_stale_repair_surface_design":
+		return "targeted evidence supports filing a separate implementation bead for a web URL stale repair surface; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
+	case "defer_for_guidance_or_eval_repair":
+		return "web URL stale repair promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation bead unless a later decision promotes"
+	default:
+		return "keep web URL stale repair as reference pressure over existing ingest_source_url, document, and retrieval primitives; no runner action, schema, storage, public API, skill behavior, or product behavior change"
+	}
+}
+
 func webProductPageDecision(rows []targetedScenarioClassification) string {
 	seen := map[string]bool{}
 	ergonomicsGaps := 0
@@ -655,6 +694,13 @@ func webURLIntakeScenarioIDs() []string {
 		webURLSameHashScenarioID,
 		webURLChangedScenarioID,
 		webURLUnsupportedScenarioID,
+	}
+}
+
+func webURLStaleRepairScenarioIDs() []string {
+	return []string{
+		webURLStaleRepairNaturalScenarioID,
+		webURLStaleRepairScriptedScenarioID,
 	}
 }
 

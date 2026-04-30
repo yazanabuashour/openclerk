@@ -176,6 +176,114 @@ func verifyWebURLChanged(ctx context.Context, paths evalPaths, finalMessage stri
 	}, nil
 }
 
+func verifyWebURLStaleRepair(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics, scripted bool) (verificationResult, error) {
+	doc, found, err := documentByPath(ctx, paths, webURLSourcePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	sourceDocID, sourceDocIDFound, err := documentIDByPath(ctx, paths, webURLSourcePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	sourceCount, err := exactDocumentCount(ctx, paths, webURLSourcePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	duplicateCount, err := exactDocumentCount(ctx, paths, webURLDuplicatePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	synthesis, synthesisFound, err := documentByPath(ctx, paths, webURLSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projection, err := firstSynthesisProjection(ctx, paths, docIDOrEmpty(synthesis))
+	if err != nil {
+		return verificationResult{}, err
+	}
+
+	failures := webURLBypassFailures(turnMetrics)
+	if !found || doc == nil {
+		failures = append(failures, "missing web URL source document")
+	} else {
+		failures = append(failures, missingRequired(doc.Body, []string{"source_type: web", "source_url:", webURLChangedText})...)
+		if strings.Contains(doc.Body, webURLInitialText) && !strings.Contains(doc.Body, webURLChangedText) {
+			failures = append(failures, "web URL source still contains only initial evidence")
+		}
+	}
+	if sourceCount != 1 {
+		failures = append(failures, fmt.Sprintf("expected one stable web URL source, got %d", sourceCount))
+	}
+	if duplicateCount != 0 {
+		failures = append(failures, "created duplicate web source "+webURLDuplicatePath)
+	}
+	if !sourceDocIDFound || sourceDocID == "" {
+		failures = append(failures, "missing web URL source doc_id")
+	}
+	if !synthesisFound || synthesis == nil {
+		failures = append(failures, "missing web URL synthesis document")
+	}
+	if projection == nil || projection.Freshness != "stale" || !strings.Contains(projection.Details["stale_source_refs"], webURLSourcePath) {
+		failures = append(failures, fmt.Sprintf("expected stale synthesis projection for %s, got %+v", webURLSourcePath, projection))
+	}
+	duplicateCreateChecked := !scripted || turnMetrics.IngestSourceURLCreateUsed && stringValuesInclude(turnMetrics.IngestSourceURLPathHints, webURLDuplicatePath)
+	secondUpdateChecked := !scripted || turnMetrics.IngestSourceURLUpdateCount >= 2
+	if !turnMetrics.IngestSourceURLUsed || !turnMetrics.IngestSourceURLUpdateUsed || !duplicateCreateChecked || !secondUpdateChecked {
+		failures = append(failures, "agent did not exercise ingest_source_url duplicate create, update mode, and second no-op update")
+	}
+	if !turnMetrics.SearchUsed || !turnMetrics.ListDocumentsUsed || !turnMetrics.GetDocumentUsed {
+		failures = append(failures, "agent did not search/list/get runner-visible stale repair evidence")
+	}
+	expectedProvenanceRefs := []string{}
+	if sourceDocIDFound && sourceDocID != "" {
+		expectedProvenanceRefs = append(expectedProvenanceRefs, sourceDocID)
+	}
+	if synthesisFound && synthesis != nil && synthesis.DocID != "" {
+		expectedProvenanceRefs = append(expectedProvenanceRefs, "synthesis:"+synthesis.DocID)
+	}
+	inspectedExpectedProvenanceRefs := len(expectedProvenanceRefs) > 0 && provenanceEventRefIDsInclude(turnMetrics.ProvenanceEventRefIDs, expectedProvenanceRefs...)
+	if !turnMetrics.ProjectionStatesUsed || !turnMetrics.ProvenanceEventsUsed || !inspectedExpectedProvenanceRefs {
+		failures = append(failures, "agent did not inspect projection_states and provenance_events for the source and synthesis projection refs")
+	}
+	if scripted && !messageContainsAny(finalMessage, []string{"same-hash", "no-op", "no op", "unchanged"}) {
+		failures = append(failures, "scripted final answer did not report the same-hash/no-op boundary")
+	}
+	if scripted && !messageContainsAny(finalMessage, []string{"duplicate", "already", "rejected", "normalized"}) {
+		failures = append(failures, "scripted final answer did not report duplicate rejection")
+	}
+	if scripted && !messageContainsAny(finalMessage, []string{"not created", "was not created", "no copy", "no duplicate"}) {
+		failures = append(failures, "scripted final answer did not report no duplicate source was created")
+	}
+
+	assistantPass := messageContainsAll(finalMessage, []string{webURLSourcePath, webURLSynthesisPath}) &&
+		messageContainsAny(finalMessage, []string{"changed", "refreshed", "updated"}) &&
+		messageContainsAny(finalMessage, []string{webURLChangedText, "changed evidence"}) &&
+		messageContainsAny(finalMessage, []string{"stale", "projection", "freshness"}) &&
+		messageContainsAny(finalMessage, []string{"provenance", "source_updated", "freshness"}) &&
+		messageContainsAny(finalMessage, []string{"no browser", "without browser", "manual acquisition", "no manual", "runner-owned", "runner owned"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report changed web update, stale synthesis impact, provenance/freshness, and no-browser/no-manual boundaries")
+	}
+
+	databasePass := found && doc != nil && sourceCount == 1 && duplicateCount == 0 &&
+		synthesisFound && synthesis != nil &&
+		strings.Contains(doc.Body, webURLChangedText) &&
+		projection != nil && projection.Freshness == "stale" &&
+		strings.Contains(projection.Details["stale_source_refs"], webURLSourcePath)
+	activityPass := len(webURLBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.IngestSourceURLUsed && turnMetrics.IngestSourceURLUpdateUsed &&
+		duplicateCreateChecked && secondUpdateChecked &&
+		turnMetrics.SearchUsed && turnMetrics.ListDocumentsUsed && turnMetrics.GetDocumentUsed &&
+		turnMetrics.ProjectionStatesUsed && turnMetrics.ProvenanceEventsUsed && inspectedExpectedProvenanceRefs
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{webURLSourcePath, webURLDuplicatePath, webURLSynthesisPath},
+	}, nil
+}
+
 func verifyWebURLUnsupported(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
 	count, err := exactDocumentCount(ctx, paths, "sources/web-url/unsupported.md")
 	if err != nil {

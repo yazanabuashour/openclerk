@@ -1008,6 +1008,93 @@ func TestExecuteRunLabelsSynthesisCompileLaneAsNonReleaseBlocking(t *testing.T) 
 	}
 }
 
+func TestExecuteRunLabelsWebURLStaleRepairLaneAsNonReleaseBlocking(t *testing.T) {
+	reportDir := filepath.Join(t.TempDir(), "reports")
+	scenarioIDs := append(webURLStaleRepairScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject")
+	config := runConfig{
+		Parallel:   1,
+		Variant:    productionVariant,
+		Scenario:   strings.Join(scenarioIDs, ","),
+		RunRoot:    filepath.Join(t.TempDir(), "run"),
+		ReportDir:  reportDir,
+		ReportName: "ockp-web-url-stale-repair-ceremony-test",
+		RepoRoot:   ".",
+		CodexBin:   "codex",
+		CacheMode:  cacheModeIsolated,
+	}
+	err := executeRun(context.Background(), config, &strings.Builder{}, func(_ context.Context, _ runConfig, job evalJob, _ cacheConfig) jobResult {
+		now := time.Now().UTC()
+		resultMetrics := metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}}
+		if job.Scenario.ID == webURLStaleRepairNaturalScenarioID {
+			resultMetrics = metrics{AssistantCalls: 7, ToolCalls: 30, CommandExecutions: 30, EventTypeCounts: map[string]int{}}
+		}
+		if job.Scenario.ID == webURLStaleRepairScriptedScenarioID {
+			resultMetrics = metrics{AssistantCalls: 5, ToolCalls: 18, CommandExecutions: 18, EventTypeCounts: map[string]int{}}
+		}
+		return jobResult{
+			Variant:       job.Variant,
+			Scenario:      job.Scenario.ID,
+			ScenarioTitle: job.Scenario.Title,
+			Status:        "completed",
+			Passed:        true,
+			Metrics:       resultMetrics,
+			Verification:  verificationResult{Passed: true, DatabasePass: true, AssistantPass: true},
+			StartedAt:     now,
+			CompletedAt:   &now,
+		}
+	})
+	if err != nil {
+		t.Fatalf("execute web URL stale repair run: %v", err)
+	}
+	content, err := os.ReadFile(filepath.Join(reportDir, "ockp-web-url-stale-repair-ceremony-test.json"))
+	if err != nil {
+		t.Fatalf("read JSON report: %v", err)
+	}
+	var report report
+	if err := json.Unmarshal(content, &report); err != nil {
+		t.Fatalf("decode JSON report: %v", err)
+	}
+	if report.Metadata.Lane != webURLStaleRepairLaneName || report.Metadata.ReleaseBlocking {
+		t.Fatalf("web URL stale repair lane metadata = %q/%t, want %q/false", report.Metadata.Lane, report.Metadata.ReleaseBlocking, webURLStaleRepairLaneName)
+	}
+	if report.TargetedLaneSummary == nil {
+		t.Fatal("web URL stale repair report missing targeted lane summary")
+	}
+	if report.TargetedLaneSummary.Decision != "keep_as_reference" {
+		t.Fatalf("decision = %q, want keep_as_reference", report.TargetedLaneSummary.Decision)
+	}
+	classifications := map[string]targetedScenarioClassification{}
+	for _, row := range report.TargetedLaneSummary.ScenarioClassifications {
+		classifications[row.Scenario] = row
+	}
+	if classifications[webURLStaleRepairNaturalScenarioID].PromptSpecificity != "natural-user-intent" {
+		t.Fatalf("natural prompt specificity = %q, want natural-user-intent", classifications[webURLStaleRepairNaturalScenarioID].PromptSpecificity)
+	}
+	if classifications[webURLStaleRepairScriptedScenarioID].PromptSpecificity != "scripted-control" {
+		t.Fatalf("scripted prompt specificity = %q, want scripted-control", classifications[webURLStaleRepairScriptedScenarioID].PromptSpecificity)
+	}
+	if classifications["negative-limit-reject"].EvidencePosture != "validation control stayed final-answer-only" {
+		t.Fatalf("negative-limit evidence posture = %q, want validation posture", classifications["negative-limit-reject"].EvidencePosture)
+	}
+	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-web-url-stale-repair-ceremony-test.md"))
+	if err != nil {
+		t.Fatalf("read markdown report: %v", err)
+	}
+	for _, want := range []string{
+		"Lane: `" + webURLStaleRepairLaneName + "`",
+		"Release blocking: `false`",
+		"Decision: `keep_as_reference`",
+		"Prompt specificity",
+		"Guidance dependence",
+		"Safety risks",
+		"validation control stayed final-answer-only",
+	} {
+		if !strings.Contains(string(markdown), want) {
+			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
+		}
+	}
+}
+
 func TestExecuteRunLabelsMemoryRouterRevisitLaneAsNonReleaseBlocking(t *testing.T) {
 	reportDir := filepath.Join(t.TempDir(), "reports")
 	scenarioIDs := append(memoryRouterRevisitScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject")
@@ -1121,6 +1208,39 @@ func TestSynthesisCompileDecisionRequiresRepeatedErgonomicsPressure(t *testing.T
 	}
 	rows[0].FailureClassification = "skill_guidance_or_eval_coverage"
 	if decision := synthesisCompileDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("guidance decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+}
+
+func TestWebURLStaleRepairDecisionRequiresRepeatedEvidence(t *testing.T) {
+	rows := make([]targetedScenarioClassification, 0, len(webURLStaleRepairScenarioIDs()))
+	for _, id := range webURLStaleRepairScenarioIDs() {
+		rows = append(rows, targetedScenarioClassification{
+			Scenario:              id,
+			FailureClassification: "none",
+		})
+	}
+	if decision := webURLStaleRepairDecision(rows[:len(rows)-1]); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("partial decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	if decision := webURLStaleRepairDecision(rows); decision != "keep_as_reference" {
+		t.Fatalf("complete passing decision = %q, want keep_as_reference", decision)
+	}
+	rows[0].FailureClassification = "ergonomics_gap"
+	if decision := webURLStaleRepairDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("single ergonomics decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	rows[1].FailureClassification = "ergonomics_gap"
+	if decision := webURLStaleRepairDecision(rows); decision != "promote_web_url_stale_repair_surface_design" {
+		t.Fatalf("repeated ergonomics decision = %q, want promote_web_url_stale_repair_surface_design", decision)
+	}
+	rows[0].FailureClassification = "capability_gap"
+	rows[1].FailureClassification = "none"
+	if decision := webURLStaleRepairDecision(rows); decision != "promote_web_url_stale_repair_surface_design" {
+		t.Fatalf("capability decision = %q, want promote_web_url_stale_repair_surface_design", decision)
+	}
+	rows[0].FailureClassification = "skill_guidance_or_eval_coverage"
+	if decision := webURLStaleRepairDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
 		t.Fatalf("guidance decision = %q, want defer_for_guidance_or_eval_repair", decision)
 	}
 }

@@ -92,14 +92,14 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedSourceURLUpdateSynthesis(ctx, cfg); err != nil {
 			return err
 		}
-	case webURLDuplicateScenarioID, webURLSameHashScenarioID, webURLChangedScenarioID:
+	case webURLDuplicateScenarioID, webURLSameHashScenarioID, webURLChangedScenarioID, webURLStaleRepairNaturalScenarioID, webURLStaleRepairScriptedScenarioID:
 		if fixtures == nil {
 			return errors.New("web URL intake fixture server is required")
 		}
 		if err := seedWebURLIntakeSource(ctx, cfg, fixtures.stableURL(), fixtures.initialHTML); err != nil {
 			return err
 		}
-		if sc.ID == webURLSameHashScenarioID || sc.ID == webURLChangedScenarioID {
+		if sc.ID == webURLSameHashScenarioID || sc.ID == webURLChangedScenarioID || isWebURLStaleRepairScenario(sc.ID) {
 			if err := seedWebURLIntakeSynthesis(ctx, cfg); err != nil {
 				return err
 			}

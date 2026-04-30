@@ -295,6 +295,10 @@ func promptSpecificity(scenarioID string) string {
 		return "scripted-control"
 	case artifactPDFNaturalIntentScenarioID:
 		return "natural-user-intent"
+	case webURLStaleRepairNaturalScenarioID:
+		return "natural-user-intent"
+	case webURLStaleRepairScriptedScenarioID:
+		return "scripted-control"
 	case videoYouTubeNaturalIntentScenarioID:
 		return "natural-user-intent"
 	case videoYouTubeScriptedTranscriptControlID:
@@ -648,6 +652,43 @@ func classifyTargetedWebURLIntakeResult(result jobResult) (string, string) {
 		return "skill_guidance_or_eval_coverage", "runner-visible evidence existed, but the assistant answer did not satisfy the scenario"
 	}
 	return "runner_capability_gap", "manual review required before any web URL intake promotion"
+}
+
+func classifyTargetedWebURLStaleRepairResult(result jobResult) (string, string) {
+	if isFinalAnswerOnlyValidationScenario(result.Scenario) {
+		if result.Passed && result.Verification.Passed {
+			return "none", "validation control stayed final-answer-only"
+		}
+		if result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1 {
+			return "skill_guidance_or_eval_coverage", "validation pressure did not stay final-answer-only"
+		}
+		return "skill_guidance_or_eval_coverage", "validation answer did not satisfy the rejection contract"
+	}
+	if result.Passed && result.Verification.Passed {
+		return "none", "current document/retrieval workflow preserved runner-owned public fetch, duplicate/no-op behavior, stale synthesis visibility, provenance/freshness, and no-browser boundaries"
+	}
+	if len(webURLBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Metrics.CreateDocumentUsed || result.Metrics.ReplaceSectionUsed || result.Metrics.AppendDocumentUsed {
+		return "eval_contract_violation", "stale repair ceremony wrote or repaired synthesis instead of inspecting dependent stale impact"
+	}
+	if result.Verification.Passed {
+		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
+	}
+	if result.Scenario == webURLStaleRepairScriptedScenarioID && !result.Verification.DatabasePass {
+		return "capability_gap", "scripted current-primitives control could not safely express web URL stale repair evidence"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "fixture or database evidence did not satisfy the web URL stale repair contract"
+	}
+	if result.Scenario == webURLStaleRepairNaturalScenarioID && !result.Verification.Passed {
+		return "ergonomics_gap", "natural web URL stale repair intent did not complete the safe current-primitives workflow"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible stale repair evidence existed, but the assistant answer or required runner steps did not satisfy the scenario"
+	}
+	return "ergonomics_gap", "manual review required before any web URL stale repair surface promotion"
 }
 
 func classifyTargetedWebProductPageResult(result jobResult) (string, string) {

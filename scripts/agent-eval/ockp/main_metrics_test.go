@@ -22,6 +22,9 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"search\",\"search\":{\"text\":\"runner\",\"path_prefix\":\"notes/rag/\"}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"search\",\"search\":{\"text\":\"runner\",\"metadata_key\":\"rag_scope\",\"metadata_value\":\"active-policy\"}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"search\",\"search\":{\"text\":\"runner\",\"tag\":\"runner\"}}' | openclerk retrieval"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"ingest_source_url\",\"source\":{\"url\":\"https://example.test/product\",\"path_hint\":\"sources/web-url/product-page-copy.md\"}}' | openclerk document"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"ingest_source_url\",\"source\":{\"url\":\"https://example.test/product\",\"path_hint\":\"sources/web-url/product-page.md\",\"mode\":\"update\"}}' | openclerk document"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"ingest_source_url\",\"source\":{\"url\":\"https://example.test/product\",\"path_hint\":\"sources/web-url/product-page.md\",\"mode\":\"update\"}}' | openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\",\"metadata_key\":\"tag\",\"metadata_value\":\"runner\",\"tag\":\"runner\"}}' | openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"get_document\",\"doc_id\":\"doc_1\"}' | openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"replace_section\",\"doc_id\":\"doc_1\",\"heading\":\"Summary\",\"content\":\"updated\"}' | openclerk document"}}`,
@@ -48,7 +51,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	if parsed.sessionID != "session-123" || parsed.finalMessage != "done" {
 		t.Fatalf("parsed = %+v", parsed)
 	}
-	if parsed.metrics.ToolCalls != 23 || parsed.metrics.CommandExecutions != 23 || parsed.metrics.AssistantCalls != 1 {
+	if parsed.metrics.ToolCalls != 26 || parsed.metrics.CommandExecutions != 26 || parsed.metrics.AssistantCalls != 1 {
 		t.Fatalf("metrics = %+v", parsed.metrics)
 	}
 	if !parsed.metrics.BroadRepoSearch {
@@ -88,6 +91,12 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	}
 	if !containsAllStrings(parsed.metrics.SearchTagFilters, []string{"runner"}) {
 		t.Fatalf("expected search tag filter in %+v", parsed.metrics)
+	}
+	if !parsed.metrics.IngestSourceURLCreateUsed || !parsed.metrics.IngestSourceURLUpdateUsed || parsed.metrics.IngestSourceURLUpdateCount != 2 {
+		t.Fatalf("expected source URL create and two updates in %+v", parsed.metrics)
+	}
+	if !containsAllStrings(parsed.metrics.IngestSourceURLPathHints, []string{"sources/web-url/product-page-copy.md", "sources/web-url/product-page.md"}) {
+		t.Fatalf("expected source URL path hints in %+v", parsed.metrics)
 	}
 	if !containsAllStrings(parsed.metrics.ListTagFilters, []string{"runner"}) {
 		t.Fatalf("expected list tag filter in %+v", parsed.metrics)

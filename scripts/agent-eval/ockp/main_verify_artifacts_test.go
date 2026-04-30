@@ -799,6 +799,125 @@ func TestVerifySourceURLUpdateChangedPDFRequiresStaleProjection(t *testing.T) {
 	}
 }
 
+func TestVerifyWebURLStaleRepairRequiresFreshnessAndBoundaries(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	runDir := t.TempDir()
+	fixtures := startSourceURLUpdateFixtures(webURLStaleRepairScriptedScenarioID)
+	defer fixtures.Close()
+	if err := fixtures.prepareFiles(runDir); err != nil {
+		t.Fatalf("prepare web URL fixture files: %v", err)
+	}
+	t.Setenv(evalSourceFixtureRootEnv, evalSourceFixtureRoot(runDir))
+	if err := seedScenarioWithFixtures(ctx, paths, scenario{ID: webURLStaleRepairScriptedScenarioID}, fixtures); err != nil {
+		t.Fatalf("seed web URL stale repair scenario: %v", err)
+	}
+	if err := fixtures.prepareForAgent(runDir, webURLStaleRepairScriptedScenarioID); err != nil {
+		t.Fatalf("prepare changed web URL fixture: %v", err)
+	}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	if _, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestSourceURL,
+		Source: runner.SourceURLInput{
+			URL:        webURLEvalSourceURL,
+			PathHint:   webURLSourcePath,
+			SourceType: "web",
+			Mode:       "update",
+		},
+	}); err != nil {
+		t.Fatalf("changed web URL update: %v", err)
+	}
+	sourceDocID, sourceDocIDFound, err := documentIDByPath(ctx, paths, webURLSourcePath)
+	if err != nil {
+		t.Fatalf("get source doc id: %v", err)
+	}
+	if !sourceDocIDFound {
+		t.Fatal("missing source doc id")
+	}
+	synthesisDocID, synthesisDocIDFound, err := documentIDByPath(ctx, paths, webURLSynthesisPath)
+	if err != nil {
+		t.Fatalf("get synthesis doc id: %v", err)
+	}
+	if !synthesisDocIDFound {
+		t.Fatal("missing synthesis doc id")
+	}
+	metrics := metrics{
+		AssistantCalls:             1,
+		IngestSourceURLUsed:        true,
+		IngestSourceURLCreateUsed:  true,
+		IngestSourceURLUpdateUsed:  true,
+		IngestSourceURLUpdateCount: 2,
+		IngestSourceURLPathHints:   []string{webURLDuplicatePath, webURLSourcePath, webURLSourcePath},
+		ListDocumentsUsed:          true,
+		GetDocumentUsed:            true,
+		SearchUsed:                 true,
+		ProvenanceEventsUsed:       true,
+		ProvenanceEventRefIDs:      []string{sourceDocID, "synthesis:" + synthesisDocID},
+		ProjectionStatesUsed:       true,
+		EventTypeCounts:            map[string]int{},
+	}
+	answer := "Duplicate normalized source URL was rejected and " + webURLDuplicatePath + " was not created. Changed web update refreshed " + webURLSourcePath + " with " + webURLChangedText + "; the second same-hash update was a no-op. " + webURLSynthesisPath + " now has stale synthesis projection freshness with provenance evidence. No browser or manual acquisition was used."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: webURLStaleRepairScriptedScenarioID}, 1, answer, metrics)
+	if err != nil {
+		t.Fatalf("verify web URL stale repair: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("web URL stale repair verification failed: %+v", result)
+	}
+
+	missingProjectionMetrics := metrics
+	missingProjectionMetrics.ProjectionStatesUsed = false
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: webURLStaleRepairScriptedScenarioID}, 1, answer, missingProjectionMetrics)
+	if err != nil {
+		t.Fatalf("verify missing projection_states: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("web URL stale repair passed without projection_states: %+v", result)
+	}
+
+	oneUpdateMetrics := metrics
+	oneUpdateMetrics.IngestSourceURLCreateUsed = false
+	oneUpdateMetrics.IngestSourceURLUpdateCount = 1
+	oneUpdateMetrics.IngestSourceURLPathHints = []string{webURLSourcePath}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: webURLStaleRepairScriptedScenarioID}, 1, answer, oneUpdateMetrics)
+	if err != nil {
+		t.Fatalf("verify one update: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("web URL stale repair passed without duplicate create and second no-op update: %+v", result)
+	}
+
+	wrongProvenanceMetrics := metrics
+	wrongProvenanceMetrics.ProvenanceEventRefIDs = []string{sourceDocID}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: webURLStaleRepairScriptedScenarioID}, 1, answer, wrongProvenanceMetrics)
+	if err != nil {
+		t.Fatalf("verify wrong provenance refs: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("web URL stale repair passed without expected provenance refs: %+v", result)
+	}
+
+	weakAnswer := webURLSourcePath + " changed and " + webURLSynthesisPath + " is stale."
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: webURLStaleRepairScriptedScenarioID}, 1, weakAnswer, metrics)
+	if err != nil {
+		t.Fatalf("verify weak answer: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("web URL stale repair passed with weak final answer: %+v", result)
+	}
+
+	if err := createSeedDocument(ctx, cfg, webURLDuplicatePath, "Duplicate Web URL", "# Duplicate\n"); err != nil {
+		t.Fatalf("create duplicate web URL doc: %v", err)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: webURLStaleRepairScriptedScenarioID}, 1, answer, metrics)
+	if err != nil {
+		t.Fatalf("verify duplicate web URL doc: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("web URL stale repair passed after duplicate source write: %+v", result)
+	}
+}
+
 func TestVerifySourceURLUpdatePathHintConflict(t *testing.T) {
 	ctx := context.Background()
 	paths := scenarioPaths(t.TempDir())

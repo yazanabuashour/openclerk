@@ -106,6 +106,10 @@ const (
 	webURLChangedText           = "WebURLIntakeChangedEvidence"
 	webURLTitle                 = "Web URL Intake Product Page"
 
+	webURLStaleRepairLaneName           = "high-touch-web-url-stale-repair-ceremony"
+	webURLStaleRepairNaturalScenarioID  = "high-touch-web-url-stale-repair-natural-intent"
+	webURLStaleRepairScriptedScenarioID = "high-touch-web-url-stale-repair-scripted-control"
+
 	webProductPageLaneName               = "web-product-page-rich-public-intake"
 	webProductPageNaturalScenarioID      = "web-product-page-rich-natural-intent"
 	webProductPageControlScenarioID      = "web-product-page-rich-scripted-control"

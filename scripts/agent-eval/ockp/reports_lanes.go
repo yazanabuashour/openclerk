@@ -21,6 +21,7 @@ func reportLane(ids []string) (string, bool) {
 	captureDocumentLinks := 0
 	sourceURLUpdate := 0
 	webURLIntake := 0
+	webURLStaleRepair := 0
 	webProductPage := 0
 	documentThis := 0
 	documentArtifactCandidate := 0
@@ -97,6 +98,10 @@ func reportLane(ids []string) (string, bool) {
 		}
 		if isWebURLIntakeScenario(id) {
 			webURLIntake++
+			continue
+		}
+		if isWebURLStaleRepairScenario(id) {
+			webURLStaleRepair++
 			continue
 		}
 		if isWebProductPageScenario(id) {
@@ -184,6 +189,9 @@ func reportLane(ids []string) (string, bool) {
 	if webURLIntake > 0 && webURLIntake+validation == len(ids) {
 		return webURLIntakeLaneName, false
 	}
+	if webURLStaleRepair > 0 && webURLStaleRepair+validation == len(ids) {
+		return webURLStaleRepairLaneName, false
+	}
 	if webProductPage > 0 && webProductPage+validation == len(ids) {
 		return webProductPageLaneName, false
 	}
@@ -256,6 +264,9 @@ func reportLane(ids []string) (string, bool) {
 	if webURLIntake > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
+	if webURLStaleRepair > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
 	if webProductPage > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
@@ -325,6 +336,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == webURLIntakeLaneName {
 		return "web URL intake rows report missing path-hint handling, web create, duplicate URL rejection, no-op update, changed-source stale synthesis evidence, unsupported acquisition rejection, and final classification"
+	}
+	if lane == webURLStaleRepairLaneName {
+		return "high-touch web URL stale repair rows report natural refresh intent, scripted update-mode control, duplicate/no-op behavior, changed-source freshness evidence, dependent synthesis stale visibility, provenance/freshness, no browser/manual acquisition, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and separate safety/capability/UX classification"
 	}
 	if lane == webProductPageLaneName {
 		return "rich public product-page rows report natural product-page intent, approved public HTML fetch control, tracking/variant duplicate normalization, visible text fidelity, dynamic omission disclosure, blocked or non-HTML rejection, no-browser/no-login/no-cart/no-checkout/no-purchase controls, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"

@@ -226,8 +226,12 @@ func classifyCommand(command string, m *metrics) {
 	classifySearchCommand(actionText, m)
 	if commandContainsAction(actionText, "ingest_source_url") {
 		m.IngestSourceURLUsed = true
+		m.IngestSourceURLPathHints = append(m.IngestSourceURLPathHints, actionFieldValues(actionText, "ingest_source_url", "path_hint")...)
 		if actionHasFieldValue(actionText, "ingest_source_url", "mode", "update") {
 			m.IngestSourceURLUpdateUsed = true
+			m.IngestSourceURLUpdateCount++
+		} else {
+			m.IngestSourceURLCreateUsed = true
 		}
 	}
 	if commandContainsAction(actionText, "ingest_video_url") {
@@ -474,7 +478,10 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.SearchTagFilterUsed = out.SearchTagFilterUsed || current.SearchTagFilterUsed
 		out.SearchTagFilters = append(out.SearchTagFilters, current.SearchTagFilters...)
 		out.IngestSourceURLUsed = out.IngestSourceURLUsed || current.IngestSourceURLUsed
+		out.IngestSourceURLCreateUsed = out.IngestSourceURLCreateUsed || current.IngestSourceURLCreateUsed
 		out.IngestSourceURLUpdateUsed = out.IngestSourceURLUpdateUsed || current.IngestSourceURLUpdateUsed
+		out.IngestSourceURLUpdateCount += current.IngestSourceURLUpdateCount
+		out.IngestSourceURLPathHints = append(out.IngestSourceURLPathHints, current.IngestSourceURLPathHints...)
 		out.IngestVideoURLUsed = out.IngestVideoURLUsed || current.IngestVideoURLUsed
 		out.IngestVideoURLUpdateUsed = out.IngestVideoURLUpdateUsed || current.IngestVideoURLUpdateUsed
 		out.SourcePDFDownloadFailure = out.SourcePDFDownloadFailure || current.SourcePDFDownloadFailure

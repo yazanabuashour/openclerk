@@ -22,7 +22,7 @@ func isRepoDocsDogfoodScenario(id string) bool {
 	}
 }
 func isReleaseBlockingScenario(id string) bool {
-	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isPromotedRecordDomainScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isCaptureLowRiskScenario(id) && !isCaptureExplicitOverridesScenario(id) && !isCaptureDuplicateCandidateScenario(id) && !isTaggingScenario(id) && !isCaptureSaveThisNoteScenario(id) && !isCaptureDocumentLinksScenario(id) && !isSourceURLUpdateScenario(id) && !isWebURLIntakeScenario(id) && !isWebProductPageScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isBroadAuditScenario(id) && !isParallelRunnerScenario(id)
+	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isPromotedRecordDomainScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isCaptureLowRiskScenario(id) && !isCaptureExplicitOverridesScenario(id) && !isCaptureDuplicateCandidateScenario(id) && !isTaggingScenario(id) && !isCaptureSaveThisNoteScenario(id) && !isCaptureDocumentLinksScenario(id) && !isSourceURLUpdateScenario(id) && !isWebURLIntakeScenario(id) && !isWebURLStaleRepairScenario(id) && !isWebProductPageScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isBroadAuditScenario(id) && !isParallelRunnerScenario(id)
 }
 func isParallelRunnerScenario(id string) bool {
 	switch id {
@@ -155,6 +155,14 @@ func isWebURLIntakeScenario(id string) bool {
 		return false
 	}
 }
+func isWebURLStaleRepairScenario(id string) bool {
+	switch id {
+	case webURLStaleRepairNaturalScenarioID, webURLStaleRepairScriptedScenarioID:
+		return true
+	default:
+		return false
+	}
+}
 func isWebProductPageScenario(id string) bool {
 	switch id {
 	case webProductPageNaturalScenarioID, webProductPageControlScenarioID, webProductPageDuplicateScenarioID, webProductPageDynamicScenarioID, webProductPageUnsupportedScenarioID, webProductPageBypassRejectScenarioID:
@@ -212,7 +220,7 @@ func isArtifactPDFScenario(id string) bool {
 	}
 }
 func isSourceURLFixtureScenario(id string) bool {
-	return isSourceURLUpdateScenario(id) || isArtifactPDFScenario(id) || isWebURLIntakeScenario(id) || isWebProductPageScenario(id) || id == captureDocumentLinksFetchScenarioID
+	return isSourceURLUpdateScenario(id) || isArtifactPDFScenario(id) || isWebURLIntakeScenario(id) || isWebURLStaleRepairScenario(id) || isWebProductPageScenario(id) || id == captureDocumentLinksFetchScenarioID
 }
 func allScenarios() []scenario {
 	return []scenario{
@@ -366,6 +374,16 @@ func allScenarios() []scenario {
 			ID:     webURLUnsupportedScenarioID,
 			Title:  "Web URL non-HTML acquisition rejects",
 			Prompt: "Use the configured local OpenClerk data path. This is a supported OpenClerk runner validation request with all required fields; do not answer final-only. The installed openclerk binary is on PATH; run it directly with JSON on stdin and do not stop to claim the runner is unavailable. Answer only from the runner result. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, backend variants, module-cache inspection, or external fetch tools. Run this command shape with the rendered URL: printf '%s' '{\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{WEB_URL_UNSUPPORTED_URL}}\",\"path_hint\":\"sources/web-url/unsupported.md\",\"source_type\":\"web\",\"title\":\"Plain Text Web Source\"}}' | openclerk document. The plain-text non-HTML response should reject by content type without creating sources/web-url/unsupported.md. In the final answer, mention content type or non-HTML rejection, no durable write, and sources/web-url/unsupported.md was not created.",
+		},
+		{
+			ID:     webURLStaleRepairNaturalScenarioID,
+			Title:  "High-touch web URL stale repair natural intent",
+			Prompt: "Use the configured local OpenClerk data path. The public product-page source behind sources/web-url/product-page.md has changed. Refresh that source through OpenClerk, then explain whether synthesis/web-url-product-page.md is now stale and why. Keep the existing source and synthesis paths, preserve runner-owned public fetch and durable-write boundaries, and answer only from OpenClerk document/retrieval runner JSON. Stay inside installed OpenClerk document and retrieval runner JSON; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, browser automation, manual curl, or external fetch tools. Do not repair the synthesis. In the final answer, mention sources/web-url/product-page.md, refreshed changed evidence, synthesis/web-url-product-page.md, stale dependent synthesis impact, provenance or freshness evidence, no duplicate source, same-hash/no-op boundary if observed, and that no browser or manual acquisition was used.",
+		},
+		{
+			ID:     webURLStaleRepairScriptedScenarioID,
+			Title:  "High-touch web URL stale repair scripted control",
+			Prompt: "Use the configured local OpenClerk data path. The web URL fixture changed before this turn. Execute the installed openclerk document and retrieval runner commands yourself and answer only from their JSON results. Use only installed OpenClerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, browser automation, manual curl, or external fetch tools. First run openclerk document with exactly this request shape to verify duplicate handling: {\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{WEB_URL_INTAKE_URL}}\",\"path_hint\":\"sources/web-url/product-page-copy.md\",\"source_type\":\"web\",\"title\":\"Duplicate Product Page\"}}. The duplicate normalized source URL should reject without creating sources/web-url/product-page-copy.md. Then run openclerk document with exactly this update request shape: {\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{WEB_URL_INTAKE_URL}}\",\"mode\":\"update\",\"source_type\":\"web\",\"path_hint\":\"sources/web-url/product-page.md\"}}. Then run the same update request once more to verify the same-hash no-op boundary after refresh. Search for WebURLIntakeChangedEvidence with path_prefix sources/. List documents with path_prefix sources/web-url/ and synthesis/. Use get_document for sources/web-url/product-page.md and synthesis/web-url-product-page.md. Inspect provenance_events for ref_kind source and the source doc_id. Inspect projection_states for projection synthesis with ref_kind document and the synthesis doc_id. Inspect provenance_events for ref_kind projection and ref_id synthesis:SYNTHESIS_DOC_ID. Do not repair the synthesis. In the final answer, mention duplicate rejection, sources/web-url/product-page-copy.md was not created, changed web update, second same-hash no-op, sources/web-url/product-page.md, refreshed changed evidence, synthesis/web-url-product-page.md, stale synthesis projection, provenance/freshness evidence, and no browser or manual acquisition.",
 		},
 		{
 			ID:     webProductPageNaturalScenarioID,
