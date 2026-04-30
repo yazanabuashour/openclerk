@@ -92,6 +92,29 @@ runner-only access, and approval-before-write remain intact. In particular, a
 successful but ceremonial eval pass can justify more evaluation or design work,
 but not a runner action, schema, storage, or skill behavior change by itself.
 
+## Intake Ladder
+
+Use the post-`oc-v1ed` intake ladder when evaluating URL, source, and artifact
+workflows. The ladder keeps fetch permission separate from durable-write
+approval:
+
+1. Public HTTP/HTTPS source URLs may be fetched and inspected only through the
+   installed runner surface, currently `openclerk document`
+   `ingest_source_url` for PDF and public HTML/web-page sources.
+2. The runner owns normalization, duplicate source URL checks, canonical source
+   note creation, citation/search evidence, provenance, and freshness
+   visibility.
+3. Durable writes require a complete runner request or an approved candidate
+   workflow. Missing path hints, asset hints, body content, or target identity
+   still clarify before writing.
+4. Private URLs, authenticated access, account state, captcha, paywall access,
+   cart state, checkout, purchases, browser automation, direct acquisition,
+   direct vault writes, direct SQLite, source-built runners, HTTP/MCP bypasses,
+   and unsupported transports reject or defer.
+
+The audit applying this ladder to URL and artifact intake is recorded in
+[`post-oc-v1ed-url-artifact-intake-audit.md`](post-oc-v1ed-url-artifact-intake-audit.md).
+
 ## Required Invariants
 
 Every candidate must preserve the current AgentOps invariants:
