@@ -5,6 +5,9 @@
 Implemented eval-design framing for `oc-3k38`, `oc-tyzm`, `oc-mjt2`,
 and `oc-8drq`.
 
+The next candidate eval-to-decision epics are tracked in
+[`docs/architecture/next-eval-candidate-pipeline.md`](../architecture/next-eval-candidate-pipeline.md).
+
 This document defines future targeted eval pressure only. It does not add
 runner actions, schemas, storage behavior, parser pipelines, public APIs,
 skill behavior, eval harness scenarios, release-blocking gates, or

@@ -5,6 +5,9 @@
 Implemented eval-design framing for `oc-14gv`, `oc-zjd3`, `oc-nvub`,
 `oc-j9yl`, and `oc-3bvy`.
 
+The next candidate eval-to-decision epics are tracked in
+[`docs/architecture/next-eval-candidate-pipeline.md`](../architecture/next-eval-candidate-pipeline.md).
+
 This document defines future targeted eval pressure only. It does not add
 runner actions, schemas, storage behavior, public APIs, skill behavior, eval
 harness scenarios, release-blocking gates, or implementation authorization.

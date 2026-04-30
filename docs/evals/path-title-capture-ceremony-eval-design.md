@@ -5,6 +5,9 @@
 Implemented eval-design framing for `oc-18oo`, `oc-mjpz`, `oc-k6eb`,
 `oc-qjhm`, and `oc-zf3o`.
 
+The next candidate eval-to-decision epics are tracked in
+[`docs/architecture/next-eval-candidate-pipeline.md`](../architecture/next-eval-candidate-pipeline.md).
+
 This document defines future targeted eval pressure only. It does not add
 runner actions, schemas, storage behavior, public APIs, skill behavior, eval
 harness scenarios, release-blocking gates, or implementation authorization.
