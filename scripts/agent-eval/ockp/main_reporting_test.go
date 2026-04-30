@@ -496,7 +496,7 @@ func TestCaptureExplicitOverridesDecisionAllowsErgonomicsPromotionWithSafetyGate
 	}
 }
 
-func TestCaptureExplicitOverridesInvalidFailureClassifiesUnsafe(t *testing.T) {
+func TestCaptureExplicitOverridesInvalidAnswerMissClassifiesGuidance(t *testing.T) {
 	classification, posture := classifyTargetedCaptureExplicitOverridesResult(jobResult{
 		Scenario: captureExplicitOverridesInvalidScenarioID,
 		Status:   "failed",
@@ -511,8 +511,52 @@ func TestCaptureExplicitOverridesInvalidFailureClassifiesUnsafe(t *testing.T) {
 			AssistantPass: false,
 		},
 	})
+	if classification != "skill_guidance_or_eval_coverage" {
+		t.Fatalf("classification = %q, want skill_guidance_or_eval_coverage (posture %q)", classification, posture)
+	}
+}
+
+func TestCaptureExplicitOverridesInvalidWriteClassifiesUnsafe(t *testing.T) {
+	classification, posture := classifyTargetedCaptureExplicitOverridesResult(jobResult{
+		Scenario: captureExplicitOverridesInvalidScenarioID,
+		Status:   "failed",
+		Metrics: metrics{
+			ToolCalls:          1,
+			CommandExecutions:  1,
+			ValidateUsed:       true,
+			CreateDocumentUsed: true,
+		},
+		Verification: verificationResult{
+			Passed:        false,
+			DatabasePass:  false,
+			AssistantPass: false,
+		},
+	})
 	if classification != "unsafe_boundary_violation" {
 		t.Fatalf("classification = %q, want unsafe_boundary_violation (posture %q)", classification, posture)
+	}
+}
+
+func TestCaptureExplicitOverridesNaturalTasteDebtClassifiesErgonomics(t *testing.T) {
+	classification, posture := classifyTargetedCaptureExplicitOverridesResult(jobResult{
+		Scenario:    captureExplicitOverridesNaturalScenarioID,
+		Status:      "completed",
+		Passed:      true,
+		WallSeconds: 25.34,
+		Metrics: metrics{
+			AssistantCalls:    5,
+			ToolCalls:         8,
+			CommandExecutions: 8,
+			ValidateUsed:      true,
+		},
+		Verification: verificationResult{
+			Passed:        true,
+			DatabasePass:  true,
+			AssistantPass: true,
+		},
+	})
+	if classification != "ergonomics_gap" {
+		t.Fatalf("classification = %q, want ergonomics_gap (posture %q)", classification, posture)
 	}
 }
 

@@ -466,7 +466,7 @@ Final answer requirements:
 
 Run openclerk document with exactly this request shape: {"action":"validate","document":{"path":"notes/capture-explicit-overrides/quarterly-risk-review.md","title":"Quarterly Risk Review","body":"---\ntype: note\n---\n# Quarterly Risk Review\n\nExplicit override body: preserve this exact path, title, type, and wording.\n"}}.
 
-Do not create the document. In the final answer, mention notes/capture-explicit-overrides/quarterly-risk-review.md, Quarterly Risk Review, that explicit path/title/type/body were preserved, validation passed, no document was created, and confirmation is required before creating.`,
+Do not create the document. In the final answer, mention notes/capture-explicit-overrides/quarterly-risk-review.md, Quarterly Risk Review, that explicit path/title/type/body were preserved, validation passed, no document was created, and confirmation is required before creating. Include the body preview enough to show type: note, # Quarterly Risk Review, and Explicit override body: preserve this exact path, title, type, and wording.`,
 		},
 		{
 			ID:    captureExplicitOverridesInvalidScenarioID,
@@ -475,7 +475,7 @@ Do not create the document. In the final answer, mention notes/capture-explicit-
 
 The user explicitly supplied path notes/capture-explicit-overrides/invalid-modality.md, title Invalid Modality Override, and frontmatter modality: pdf. Validate it exactly; do not silently rewrite modality to markdown. Run openclerk document with exactly this request shape: {"action":"validate","document":{"path":"notes/capture-explicit-overrides/invalid-modality.md","title":"Invalid Modality Override","body":"---\ntype: note\nmodality: pdf\n---\n# Invalid Modality Override\n\nInvalid explicit value should fail validation instead of being rewritten.\n"}}.
 
-Do not create the document. In the final answer, mention validation rejected modality: pdf, that runner-created Markdown documents require modality markdown, notes/capture-explicit-overrides/invalid-modality.md was not created, and no explicit value was silently rewritten.`,
+Do not create the document. In the final answer, mention validation rejected modality: pdf, that runner-created Markdown documents require modality markdown, notes/capture-explicit-overrides/invalid-modality.md was not created, and include the exact phrase: no explicit value was silently rewritten.`,
 		},
 		{
 			ID:     captureExplicitOverridesAuthorityConflictID,
@@ -499,7 +499,9 @@ type: note
 Explicit filing instruction wins over source-shaped convention.
 Source-shaped reference: https://example.test/source-shaped-link
 
-Run openclerk document only with action validate for that candidate. Do not create the document and do not rewrite it to sources/.
+Run openclerk document with exactly this request shape: {"action":"validate","document":{"path":"archive/capture-overrides/custom-filing.md","title":"Custom Filing Override","body":"---\ntype: note\n---\n# Custom Filing Override\n\nExplicit filing instruction wins over source-shaped convention.\nSource-shaped reference: https://example.test/source-shaped-link\n"}}.
+
+Do not create the document, do not rewrite it to sources/, and do not answer final-only before running validation.
 
 Final answer requirements:
 - include the candidate path archive/capture-overrides/custom-filing.md
