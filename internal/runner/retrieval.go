@@ -65,6 +65,7 @@ func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, n
 			PathPrefix:    normalized.Search.PathPrefix,
 			MetadataKey:   normalized.Search.MetadataKey,
 			MetadataValue: normalized.Search.MetadataValue,
+			Tag:           normalized.Search.Tag,
 			Limit:         normalized.Search.Limit,
 			Cursor:        normalized.Search.Cursor,
 		})
@@ -285,6 +286,9 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		if strings.TrimSpace(request.Search.Text) == "" {
 			return normalizedRetrievalTaskRequest{}, "search.text is required"
 		}
+		if rejection := normalizeSearchTagFilter(&normalized.Search); rejection != "" {
+			return normalizedRetrievalTaskRequest{}, rejection
+		}
 		return normalized, ""
 	case RetrievalTaskActionDocumentLinks:
 		if normalized.DocID == "" {
@@ -343,4 +347,26 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 	default:
 		return normalizedRetrievalTaskRequest{}, fmt.Sprintf("unsupported retrieval task action %q", action)
 	}
+}
+
+func normalizeSearchTagFilter(search *SearchOptions) string {
+	return normalizeTagFilter("search", search.Tag, search.tagProvided, &search.MetadataKey, &search.MetadataValue, &search.Tag)
+}
+
+func normalizeTagFilter(fieldPrefix string, tag string, tagProvided bool, metadataKey *string, metadataValue *string, normalizedTag *string) string {
+	trimmedTag := strings.TrimSpace(tag)
+	if trimmedTag == "" && (tagProvided || tag != "") {
+		return fieldPrefix + ".tag must be non-empty"
+	}
+	if trimmedTag == "" {
+		*normalizedTag = ""
+		return ""
+	}
+	if strings.TrimSpace(*metadataKey) != "" || strings.TrimSpace(*metadataValue) != "" {
+		return fieldPrefix + ".tag cannot be combined with metadata_key or metadata_value"
+	}
+	*metadataKey = "tag"
+	*metadataValue = trimmedTag
+	*normalizedTag = ""
+	return ""
 }

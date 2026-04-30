@@ -1,22 +1,22 @@
 {
   "metadata": {
-    "generated_at": "2026-04-30T19:30:54.884406Z",
+    "generated_at": "2026-04-30T20:23:07.339136Z",
     "model": "gpt-5.4-mini",
     "reasoning_effort": "medium",
     "harness": "codex exec --json --full-auto from throwaway run directories; single-turn scenarios use --ephemeral and multi-turn scenarios resume one persisted eval session",
     "configured_parallelism": 1,
     "cache_mode": "shared",
-    "cache_prewarm_seconds": 16.14,
-    "harness_elapsed_seconds": 199.72,
-    "effective_parallel_speedup": 0.78,
-    "parallel_efficiency": 0.78,
+    "cache_prewarm_seconds": 21.88,
+    "harness_elapsed_seconds": 175.77,
+    "effective_parallel_speedup": 0.72,
+    "parallel_efficiency": 0.72,
     "phase_totals": {
-      "copy_repo_seconds": 0.31,
-      "install_variant_seconds": 27.25,
-      "seed_data_seconds": 0.15,
-      "agent_run_seconds": 155.76,
-      "verify_seconds": 0.1,
-      "total_seconds": 183.59
+      "copy_repo_seconds": 0.28,
+      "install_variant_seconds": 27.05,
+      "seed_data_seconds": 0.2,
+      "agent_run_seconds": 126.25,
+      "verify_seconds": 0.06,
+      "total_seconds": 153.88
     },
     "run_root_artifact_reference": "\u003crun-root\u003e",
     "raw_log_placeholder": "\u003crun-root\u003e/\u003cvariant\u003e/\u003cscenario\u003e/turn-N/events.jsonl",
@@ -48,18 +48,18 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 45.46,
+      "wall_seconds": 30.38,
       "phase_timings": {
         "copy_repo_seconds": 0.04,
-        "install_variant_seconds": 4.29,
-        "agent_run_seconds": 45.46,
-        "verify_seconds": 0.02,
-        "total_seconds": 49.81
+        "install_variant_seconds": 2.95,
+        "agent_run_seconds": 30.38,
+        "verify_seconds": 0.01,
+        "total_seconds": 33.39
       },
       "metrics": {
-        "assistant_calls": 6,
-        "tool_calls": 14,
-        "command_executions": 14,
+        "assistant_calls": 7,
+        "tool_calls": 16,
+        "command_executions": 16,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -73,13 +73,18 @@
         "search_path_filter_used": true,
         "search_path_prefixes": [
           "notes/tagging/",
+          "notes/tagging/",
+          "notes/tagging/",
           "notes/tagging/"
         ],
         "search_metadata_filter_used": true,
         "search_metadata_filters": [
           "tag=launch-risk",
+          "tag=launch-risk",
+          "tag=launch-risk",
           "tag=launch-risk"
         ],
+        "search_tag_filter_used": false,
         "ingest_source_url_used": false,
         "ingest_source_url_update_used": false,
         "ingest_video_url_used": false,
@@ -99,6 +104,7 @@
           "tag=launch-risk",
           "tag=launch-risk"
         ],
+        "list_tag_filter_used": false,
         "get_document_used": false,
         "inspect_layout_used": false,
         "document_links_used": false,
@@ -111,13 +117,13 @@
         "projection_states_used": false,
         "audit_contradictions_used": false,
         "usage_exposed": true,
-        "input_tokens": 153112,
-        "cached_input_tokens": 141824,
-        "non_cached_input_tokens": 11288,
-        "output_tokens": 2977,
+        "input_tokens": 152735,
+        "cached_input_tokens": 138240,
+        "non_cached_input_tokens": 14495,
+        "output_tokens": 3180,
         "event_type_counts": {
-          "item.completed": 13,
-          "item.started": 7,
+          "item.completed": 15,
+          "item.started": 8,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -136,12 +142,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 45.46,
+          "wall_seconds": 30.38,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 6,
-            "tool_calls": 14,
-            "command_executions": 14,
+            "assistant_calls": 7,
+            "tool_calls": 16,
+            "command_executions": 16,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -155,13 +161,18 @@
             "search_path_filter_used": true,
             "search_path_prefixes": [
               "notes/tagging/",
+              "notes/tagging/",
+              "notes/tagging/",
               "notes/tagging/"
             ],
             "search_metadata_filter_used": true,
             "search_metadata_filters": [
               "tag=launch-risk",
+              "tag=launch-risk",
+              "tag=launch-risk",
               "tag=launch-risk"
             ],
+            "search_tag_filter_used": false,
             "ingest_source_url_used": false,
             "ingest_source_url_update_used": false,
             "ingest_video_url_used": false,
@@ -181,6 +192,7 @@
               "tag=launch-risk",
               "tag=launch-risk"
             ],
+            "list_tag_filter_used": false,
             "get_document_used": false,
             "inspect_layout_used": false,
             "document_links_used": false,
@@ -193,13 +205,13 @@
             "projection_states_used": false,
             "audit_contradictions_used": false,
             "usage_exposed": true,
-            "input_tokens": 153112,
-            "cached_input_tokens": 141824,
-            "non_cached_input_tokens": 11288,
-            "output_tokens": 2977,
+            "input_tokens": 152735,
+            "cached_input_tokens": 138240,
+            "non_cached_input_tokens": 14495,
+            "output_tokens": 3180,
             "event_type_counts": {
-              "item.completed": 13,
-              "item.started": 7,
+              "item.completed": 15,
+              "item.started": 8,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -220,202 +232,29 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or unsupported actions.\n\nCreate notes/tagging/launch-readiness.md titled Launch Readiness with frontmatter tag: launch-risk and type: note. The body must include this exact sentence: Launch readiness tag evidence stays canonical in markdown frontmatter.\n\nThen update that same document with append_document to add this exact sentence: Launch readiness tag update evidence remains on the same tagged document.\n\nThen prove the tag is retrievable using existing current primitives by running retrieval search with metadata_key tag and metadata_value launch-risk, and list_documents with metadata_key tag and metadata_value launch-risk under path_prefix notes/tagging/.\n\nIn the final answer, mention notes/tagging/launch-readiness.md, tag launch-risk, that canonical markdown/frontmatter remains authority, that the update stayed on the same document, and that current metadata_key/metadata_value filters were required.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/tagging-create-update-current-primitives/turn-1/events.jsonl",
-      "started_at": "2026-04-30T19:27:51.30196Z",
-      "completed_at": "2026-04-30T19:28:41.107527Z"
+      "started_at": "2026-04-30T20:20:33.44826Z",
+      "completed_at": "2026-04-30T20:21:06.837028Z"
     },
     {
       "variant": "production",
       "scenario": "tagging-retrieval-by-tag",
       "scenario_title": "Tagging retrieval by tag natural intent",
-      "passed": false,
-      "status": "failed",
-      "exit_code": 0,
-      "wall_seconds": 28.31,
-      "phase_timings": {
-        "copy_repo_seconds": 0.03,
-        "install_variant_seconds": 2.4,
-        "seed_data_seconds": 0.04,
-        "agent_run_seconds": 28.31,
-        "verify_seconds": 0.02,
-        "total_seconds": 30.81
-      },
-      "metrics": {
-        "assistant_calls": 4,
-        "tool_calls": 12,
-        "command_executions": 12,
-        "file_inspection_commands": 0,
-        "generated_file_inspection": false,
-        "module_cache_inspection": false,
-        "broad_repo_search": false,
-        "direct_sqlite_access": false,
-        "legacy_runner_usage": false,
-        "manual_http_fetch": false,
-        "browser_automation": false,
-        "search_used": true,
-        "search_unfiltered_used": false,
-        "search_path_filter_used": false,
-        "search_metadata_filter_used": true,
-        "search_metadata_filters": [
-          "tag=account-renewal",
-          "tag=account-renewal",
-          "tag=account-renewal",
-          "tag=account-renewal"
-        ],
-        "ingest_source_url_used": false,
-        "ingest_source_url_update_used": false,
-        "ingest_video_url_used": false,
-        "ingest_video_url_update_used": false,
-        "source_pdf_download_failure": false,
-        "validate_used": false,
-        "create_document_used": false,
-        "replace_section_used": false,
-        "append_document_used": false,
-        "list_documents_used": false,
-        "list_metadata_filter_used": false,
-        "get_document_used": true,
-        "get_document_doc_ids": [
-          "2a319e70313faae2",
-          "2a319e70313faae2"
-        ],
-        "inspect_layout_used": false,
-        "document_links_used": false,
-        "graph_neighborhood_used": false,
-        "records_lookup_used": false,
-        "record_entity_used": false,
-        "decisions_lookup_used": false,
-        "decision_record_used": false,
-        "provenance_events_used": false,
-        "projection_states_used": false,
-        "audit_contradictions_used": false,
-        "usage_exposed": true,
-        "input_tokens": 124222,
-        "cached_input_tokens": 113792,
-        "non_cached_input_tokens": 10430,
-        "output_tokens": 2501,
-        "event_type_counts": {
-          "item.completed": 10,
-          "item.started": 6,
-          "thread.started": 1,
-          "turn.completed": 1,
-          "turn.started": 1
-        },
-        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
-      },
-      "verification": {
-        "passed": false,
-        "database_pass": true,
-        "assistant_pass": false,
-        "details": "turn 1: list_documents did not use expected tag metadata filter; final answer did not report expected tag lookup, exclusions, no-write outcome, or ceremony",
-        "documents": [
-          "notes/tagging/account-renewal.md",
-          "notes/tagging/security-renewal.md"
-        ]
-      },
-      "turns": [
-        {
-          "turn_index": 1,
-          "wall_seconds": 28.31,
-          "exit_code": 0,
-          "metrics": {
-            "assistant_calls": 4,
-            "tool_calls": 12,
-            "command_executions": 12,
-            "file_inspection_commands": 0,
-            "generated_file_inspection": false,
-            "module_cache_inspection": false,
-            "broad_repo_search": false,
-            "direct_sqlite_access": false,
-            "legacy_runner_usage": false,
-            "manual_http_fetch": false,
-            "browser_automation": false,
-            "search_used": true,
-            "search_unfiltered_used": false,
-            "search_path_filter_used": false,
-            "search_metadata_filter_used": true,
-            "search_metadata_filters": [
-              "tag=account-renewal",
-              "tag=account-renewal",
-              "tag=account-renewal",
-              "tag=account-renewal"
-            ],
-            "ingest_source_url_used": false,
-            "ingest_source_url_update_used": false,
-            "ingest_video_url_used": false,
-            "ingest_video_url_update_used": false,
-            "source_pdf_download_failure": false,
-            "validate_used": false,
-            "create_document_used": false,
-            "replace_section_used": false,
-            "append_document_used": false,
-            "list_documents_used": false,
-            "list_metadata_filter_used": false,
-            "get_document_used": true,
-            "get_document_doc_ids": [
-              "2a319e70313faae2",
-              "2a319e70313faae2"
-            ],
-            "inspect_layout_used": false,
-            "document_links_used": false,
-            "graph_neighborhood_used": false,
-            "records_lookup_used": false,
-            "record_entity_used": false,
-            "decisions_lookup_used": false,
-            "decision_record_used": false,
-            "provenance_events_used": false,
-            "projection_states_used": false,
-            "audit_contradictions_used": false,
-            "usage_exposed": true,
-            "input_tokens": 124222,
-            "cached_input_tokens": 113792,
-            "non_cached_input_tokens": 10430,
-            "output_tokens": 2501,
-            "event_type_counts": {
-              "item.completed": 10,
-              "item.started": 6,
-              "thread.started": 1,
-              "turn.completed": 1,
-              "turn.started": 1
-            },
-            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
-          },
-          "verification": {
-            "passed": false,
-            "database_pass": true,
-            "assistant_pass": false,
-            "details": "list_documents did not use expected tag metadata filter; final answer did not report expected tag lookup, exclusions, no-write outcome, or ceremony",
-            "documents": [
-              "notes/tagging/account-renewal.md",
-              "notes/tagging/security-renewal.md"
-            ]
-          },
-          "raw_log_artifact_reference": "\u003crun-root\u003e/production/tagging-retrieval-by-tag/turn-1/events.jsonl"
-        }
-      ],
-      "prompt_summary": "Use the configured local OpenClerk data path. A normal user asks: show me the OpenClerk notes tagged account-renewal. Stay inside installed OpenClerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or durable writes.\n\nUse the current runner primitives to answer from runner-visible evidence. In the final answer, cite notes/tagging/account-renewal.md, mention the tag account-renewal, say no durable write occurred, and say whether the current tag lookup needed metadata_key/metadata_value ceremony.",
-      "raw_log_artifact_reference": "\u003crun-root\u003e/production/tagging-retrieval-by-tag/turn-1/events.jsonl",
-      "started_at": "2026-04-30T19:28:41.108512Z",
-      "completed_at": "2026-04-30T19:29:11.914268Z"
-    },
-    {
-      "variant": "production",
-      "scenario": "tagging-disambiguation",
-      "scenario_title": "Tagging disambiguates exact tag names",
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 22.6,
+      "wall_seconds": 18.95,
       "phase_timings": {
         "copy_repo_seconds": 0.03,
-        "install_variant_seconds": 3.51,
-        "seed_data_seconds": 0.04,
-        "agent_run_seconds": 22.6,
-        "verify_seconds": 0.02,
-        "total_seconds": 26.2
+        "install_variant_seconds": 2.5,
+        "seed_data_seconds": 0.05,
+        "agent_run_seconds": 18.95,
+        "verify_seconds": 0.01,
+        "total_seconds": 21.55
       },
       "metrics": {
-        "assistant_calls": 5,
-        "tool_calls": 12,
-        "command_executions": 12,
+        "assistant_calls": 4,
+        "tool_calls": 10,
+        "command_executions": 10,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -427,12 +266,11 @@
         "search_used": true,
         "search_unfiltered_used": false,
         "search_path_filter_used": false,
-        "search_metadata_filter_used": true,
-        "search_metadata_filters": [
-          "tag=customer-risk",
-          "tag=customer-risk",
-          "tag=customer-risk",
-          "tag=customer-risk"
+        "search_metadata_filter_used": false,
+        "search_tag_filter_used": true,
+        "search_tag_filters": [
+          "account-renewal",
+          "account-renewal"
         ],
         "ingest_source_url_used": false,
         "ingest_source_url_update_used": false,
@@ -444,10 +282,11 @@
         "replace_section_used": false,
         "append_document_used": false,
         "list_documents_used": true,
-        "list_metadata_filter_used": true,
-        "list_metadata_filters": [
-          "tag=customer-risk",
-          "tag=customer-risk"
+        "list_metadata_filter_used": false,
+        "list_tag_filter_used": true,
+        "list_tag_filters": [
+          "account-renewal",
+          "account-renewal"
         ],
         "get_document_used": false,
         "inspect_layout_used": false,
@@ -461,13 +300,186 @@
         "projection_states_used": false,
         "audit_contradictions_used": false,
         "usage_exposed": true,
-        "input_tokens": 126334,
-        "cached_input_tokens": 109696,
-        "non_cached_input_tokens": 16638,
-        "output_tokens": 1838,
+        "input_tokens": 107840,
+        "cached_input_tokens": 97024,
+        "non_cached_input_tokens": 10816,
+        "output_tokens": 1767,
         "event_type_counts": {
-          "item.completed": 11,
-          "item.started": 6,
+          "item.completed": 9,
+          "item.started": 5,
+          "thread.started": 1,
+          "turn.completed": 1,
+          "turn.started": 1
+        },
+        "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+      },
+      "verification": {
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
+        "documents": [
+          "notes/tagging/account-renewal.md",
+          "notes/tagging/security-renewal.md"
+        ]
+      },
+      "turns": [
+        {
+          "turn_index": 1,
+          "wall_seconds": 18.95,
+          "exit_code": 0,
+          "metrics": {
+            "assistant_calls": 4,
+            "tool_calls": 10,
+            "command_executions": 10,
+            "file_inspection_commands": 0,
+            "generated_file_inspection": false,
+            "module_cache_inspection": false,
+            "broad_repo_search": false,
+            "direct_sqlite_access": false,
+            "legacy_runner_usage": false,
+            "manual_http_fetch": false,
+            "browser_automation": false,
+            "search_used": true,
+            "search_unfiltered_used": false,
+            "search_path_filter_used": false,
+            "search_metadata_filter_used": false,
+            "search_tag_filter_used": true,
+            "search_tag_filters": [
+              "account-renewal",
+              "account-renewal"
+            ],
+            "ingest_source_url_used": false,
+            "ingest_source_url_update_used": false,
+            "ingest_video_url_used": false,
+            "ingest_video_url_update_used": false,
+            "source_pdf_download_failure": false,
+            "validate_used": false,
+            "create_document_used": false,
+            "replace_section_used": false,
+            "append_document_used": false,
+            "list_documents_used": true,
+            "list_metadata_filter_used": false,
+            "list_tag_filter_used": true,
+            "list_tag_filters": [
+              "account-renewal",
+              "account-renewal"
+            ],
+            "get_document_used": false,
+            "inspect_layout_used": false,
+            "document_links_used": false,
+            "graph_neighborhood_used": false,
+            "records_lookup_used": false,
+            "record_entity_used": false,
+            "decisions_lookup_used": false,
+            "decision_record_used": false,
+            "provenance_events_used": false,
+            "projection_states_used": false,
+            "audit_contradictions_used": false,
+            "usage_exposed": true,
+            "input_tokens": 107840,
+            "cached_input_tokens": 97024,
+            "non_cached_input_tokens": 10816,
+            "output_tokens": 1767,
+            "event_type_counts": {
+              "item.completed": 9,
+              "item.started": 5,
+              "thread.started": 1,
+              "turn.completed": 1,
+              "turn.started": 1
+            },
+            "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
+          },
+          "verification": {
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
+            "documents": [
+              "notes/tagging/account-renewal.md",
+              "notes/tagging/security-renewal.md"
+            ]
+          },
+          "raw_log_artifact_reference": "\u003crun-root\u003e/production/tagging-retrieval-by-tag/turn-1/events.jsonl"
+        }
+      ],
+      "prompt_summary": "Use the configured local OpenClerk data path. A normal user asks: show me the OpenClerk notes tagged account-renewal. Stay inside installed OpenClerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or durable writes.\n\nUse the promoted tag filter field to answer from runner-visible evidence. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"tagging account renewal evidence\",\"tag\":\"account-renewal\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"tag\":\"account-renewal\",\"limit\":20}}. In the final answer, cite notes/tagging/account-renewal.md, mention the tag account-renewal, say no durable write occurred, and say the first-class tag filter avoided metadata_key/metadata_value ceremony.",
+      "raw_log_artifact_reference": "\u003crun-root\u003e/production/tagging-retrieval-by-tag/turn-1/events.jsonl",
+      "started_at": "2026-04-30T20:21:06.837459Z",
+      "completed_at": "2026-04-30T20:21:28.391847Z"
+    },
+    {
+      "variant": "production",
+      "scenario": "tagging-disambiguation",
+      "scenario_title": "Tagging disambiguates exact tag names",
+      "passed": true,
+      "status": "completed",
+      "exit_code": 0,
+      "wall_seconds": 13.57,
+      "phase_timings": {
+        "copy_repo_seconds": 0.03,
+        "install_variant_seconds": 2.94,
+        "seed_data_seconds": 0.05,
+        "agent_run_seconds": 13.57,
+        "verify_seconds": 0.01,
+        "total_seconds": 16.61
+      },
+      "metrics": {
+        "assistant_calls": 3,
+        "tool_calls": 6,
+        "command_executions": 6,
+        "file_inspection_commands": 0,
+        "generated_file_inspection": false,
+        "module_cache_inspection": false,
+        "broad_repo_search": false,
+        "direct_sqlite_access": false,
+        "legacy_runner_usage": false,
+        "manual_http_fetch": false,
+        "browser_automation": false,
+        "search_used": true,
+        "search_unfiltered_used": false,
+        "search_path_filter_used": false,
+        "search_metadata_filter_used": false,
+        "search_tag_filter_used": true,
+        "search_tag_filters": [
+          "customer-risk",
+          "customer-risk"
+        ],
+        "ingest_source_url_used": false,
+        "ingest_source_url_update_used": false,
+        "ingest_video_url_used": false,
+        "ingest_video_url_update_used": false,
+        "source_pdf_download_failure": false,
+        "validate_used": false,
+        "create_document_used": false,
+        "replace_section_used": false,
+        "append_document_used": false,
+        "list_documents_used": true,
+        "list_metadata_filter_used": false,
+        "list_tag_filter_used": true,
+        "list_tag_filters": [
+          "customer-risk",
+          "customer-risk"
+        ],
+        "get_document_used": false,
+        "inspect_layout_used": false,
+        "document_links_used": false,
+        "graph_neighborhood_used": false,
+        "records_lookup_used": false,
+        "record_entity_used": false,
+        "decisions_lookup_used": false,
+        "decision_record_used": false,
+        "provenance_events_used": false,
+        "projection_states_used": false,
+        "audit_contradictions_used": false,
+        "usage_exposed": true,
+        "input_tokens": 63583,
+        "cached_input_tokens": 53248,
+        "non_cached_input_tokens": 10335,
+        "output_tokens": 959,
+        "event_type_counts": {
+          "item.completed": 6,
+          "item.started": 3,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -487,12 +499,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 22.6,
+          "wall_seconds": 13.57,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 5,
-            "tool_calls": 12,
-            "command_executions": 12,
+            "assistant_calls": 3,
+            "tool_calls": 6,
+            "command_executions": 6,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -504,12 +516,11 @@
             "search_used": true,
             "search_unfiltered_used": false,
             "search_path_filter_used": false,
-            "search_metadata_filter_used": true,
-            "search_metadata_filters": [
-              "tag=customer-risk",
-              "tag=customer-risk",
-              "tag=customer-risk",
-              "tag=customer-risk"
+            "search_metadata_filter_used": false,
+            "search_tag_filter_used": true,
+            "search_tag_filters": [
+              "customer-risk",
+              "customer-risk"
             ],
             "ingest_source_url_used": false,
             "ingest_source_url_update_used": false,
@@ -521,10 +532,11 @@
             "replace_section_used": false,
             "append_document_used": false,
             "list_documents_used": true,
-            "list_metadata_filter_used": true,
-            "list_metadata_filters": [
-              "tag=customer-risk",
-              "tag=customer-risk"
+            "list_metadata_filter_used": false,
+            "list_tag_filter_used": true,
+            "list_tag_filters": [
+              "customer-risk",
+              "customer-risk"
             ],
             "get_document_used": false,
             "inspect_layout_used": false,
@@ -538,13 +550,13 @@
             "projection_states_used": false,
             "audit_contradictions_used": false,
             "usage_exposed": true,
-            "input_tokens": 126334,
-            "cached_input_tokens": 109696,
-            "non_cached_input_tokens": 16638,
-            "output_tokens": 1838,
+            "input_tokens": 63583,
+            "cached_input_tokens": 53248,
+            "non_cached_input_tokens": 10335,
+            "output_tokens": 959,
             "event_type_counts": {
-              "item.completed": 11,
-              "item.started": 6,
+              "item.completed": 6,
+              "item.started": 3,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -564,10 +576,10 @@
           "raw_log_artifact_reference": "\u003crun-root\u003e/production/tagging-disambiguation/turn-1/events.jsonl"
         }
       ],
-      "prompt_summary": "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or durable writes. Find notes tagged exactly customer-risk. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"tagging exact customer risk evidence\",\"metadata_key\":\"tag\",\"metadata_value\":\"customer-risk\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"metadata_key\":\"tag\",\"metadata_value\":\"customer-risk\",\"limit\":20}}. Do not return notes tagged customer-risk-archive. In the final answer, mention notes/tagging/customer-risk.md, tag customer-risk, exact tag disambiguation, no durable write, and that customer-risk-archive was excluded.",
+      "prompt_summary": "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or durable writes. Find notes tagged exactly customer-risk. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"tagging exact customer risk evidence\",\"tag\":\"customer-risk\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"tag\":\"customer-risk\",\"limit\":20}}. Do not return notes tagged customer-risk-archive. In the final answer, mention notes/tagging/customer-risk.md, tag customer-risk, exact tag disambiguation, no durable write, and that customer-risk-archive was excluded.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/tagging-disambiguation/turn-1/events.jsonl",
-      "started_at": "2026-04-30T19:29:11.91457Z",
-      "completed_at": "2026-04-30T19:29:38.113438Z"
+      "started_at": "2026-04-30T20:21:28.39216Z",
+      "completed_at": "2026-04-30T20:21:44.997436Z"
     },
     {
       "variant": "production",
@@ -576,19 +588,19 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 16.16,
+      "wall_seconds": 16.26,
       "phase_timings": {
         "copy_repo_seconds": 0.03,
-        "install_variant_seconds": 2.81,
-        "seed_data_seconds": 0.03,
-        "agent_run_seconds": 16.16,
-        "verify_seconds": 0.02,
-        "total_seconds": 19.05
+        "install_variant_seconds": 3.14,
+        "seed_data_seconds": 0.05,
+        "agent_run_seconds": 16.26,
+        "verify_seconds": 0.01,
+        "total_seconds": 19.49
       },
       "metrics": {
-        "assistant_calls": 3,
-        "tool_calls": 6,
-        "command_executions": 6,
+        "assistant_calls": 4,
+        "tool_calls": 10,
+        "command_executions": 10,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -600,10 +612,13 @@
         "search_used": true,
         "search_unfiltered_used": false,
         "search_path_filter_used": false,
-        "search_metadata_filter_used": true,
-        "search_metadata_filters": [
-          "tag=ops-review",
-          "tag=ops-review"
+        "search_metadata_filter_used": false,
+        "search_tag_filter_used": true,
+        "search_tag_filters": [
+          "ops-review",
+          "ops-review",
+          "ops-review",
+          "ops-review"
         ],
         "ingest_source_url_used": false,
         "ingest_source_url_update_used": false,
@@ -615,10 +630,11 @@
         "replace_section_used": false,
         "append_document_used": false,
         "list_documents_used": true,
-        "list_metadata_filter_used": true,
-        "list_metadata_filters": [
-          "tag=ops-review",
-          "tag=ops-review"
+        "list_metadata_filter_used": false,
+        "list_tag_filter_used": true,
+        "list_tag_filters": [
+          "ops-review",
+          "ops-review"
         ],
         "get_document_used": false,
         "inspect_layout_used": false,
@@ -632,13 +648,13 @@
         "projection_states_used": false,
         "audit_contradictions_used": false,
         "usage_exposed": true,
-        "input_tokens": 64602,
-        "cached_input_tokens": 54784,
-        "non_cached_input_tokens": 9818,
-        "output_tokens": 1387,
+        "input_tokens": 108365,
+        "cached_input_tokens": 98048,
+        "non_cached_input_tokens": 10317,
+        "output_tokens": 1462,
         "event_type_counts": {
-          "item.completed": 6,
-          "item.started": 3,
+          "item.completed": 9,
+          "item.started": 5,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -658,12 +674,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 16.16,
+          "wall_seconds": 16.26,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 3,
-            "tool_calls": 6,
-            "command_executions": 6,
+            "assistant_calls": 4,
+            "tool_calls": 10,
+            "command_executions": 10,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -675,10 +691,13 @@
             "search_used": true,
             "search_unfiltered_used": false,
             "search_path_filter_used": false,
-            "search_metadata_filter_used": true,
-            "search_metadata_filters": [
-              "tag=ops-review",
-              "tag=ops-review"
+            "search_metadata_filter_used": false,
+            "search_tag_filter_used": true,
+            "search_tag_filters": [
+              "ops-review",
+              "ops-review",
+              "ops-review",
+              "ops-review"
             ],
             "ingest_source_url_used": false,
             "ingest_source_url_update_used": false,
@@ -690,10 +709,11 @@
             "replace_section_used": false,
             "append_document_used": false,
             "list_documents_used": true,
-            "list_metadata_filter_used": true,
-            "list_metadata_filters": [
-              "tag=ops-review",
-              "tag=ops-review"
+            "list_metadata_filter_used": false,
+            "list_tag_filter_used": true,
+            "list_tag_filters": [
+              "ops-review",
+              "ops-review"
             ],
             "get_document_used": false,
             "inspect_layout_used": false,
@@ -707,13 +727,13 @@
             "projection_states_used": false,
             "audit_contradictions_used": false,
             "usage_exposed": true,
-            "input_tokens": 64602,
-            "cached_input_tokens": 54784,
-            "non_cached_input_tokens": 9818,
-            "output_tokens": 1387,
+            "input_tokens": 108365,
+            "cached_input_tokens": 98048,
+            "non_cached_input_tokens": 10317,
+            "output_tokens": 1462,
             "event_type_counts": {
-              "item.completed": 6,
-              "item.started": 3,
+              "item.completed": 9,
+              "item.started": 5,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -733,10 +753,10 @@
           "raw_log_artifact_reference": "\u003crun-root\u003e/production/tagging-near-duplicate-names/turn-1/events.jsonl"
         }
       ],
-      "prompt_summary": "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or durable writes. Find notes tagged exactly ops-review, not ops-reviews. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"tagging near duplicate operations review evidence\",\"metadata_key\":\"tag\",\"metadata_value\":\"ops-review\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"metadata_key\":\"tag\",\"metadata_value\":\"ops-review\",\"limit\":20}}. In the final answer, mention notes/tagging/ops-review.md, tag ops-review, that ops-reviews was excluded, no durable write, and that exact metadata filtering handled the near-duplicate tags.",
+      "prompt_summary": "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or durable writes. Find notes tagged exactly ops-review, not ops-reviews. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"tagging near duplicate operations review evidence\",\"tag\":\"ops-review\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"tag\":\"ops-review\",\"limit\":20}}. In the final answer, mention notes/tagging/ops-review.md, tag ops-review, that ops-reviews was excluded, no durable write, and that exact tag filtering handled the near-duplicate tags.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/tagging-near-duplicate-names/turn-1/events.jsonl",
-      "started_at": "2026-04-30T19:29:38.113769Z",
-      "completed_at": "2026-04-30T19:29:57.160259Z"
+      "started_at": "2026-04-30T20:21:44.997724Z",
+      "completed_at": "2026-04-30T20:22:04.491825Z"
     },
     {
       "variant": "production",
@@ -745,19 +765,19 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 22.99,
+      "wall_seconds": 19.14,
       "phase_timings": {
         "copy_repo_seconds": 0.03,
-        "install_variant_seconds": 2.37,
-        "seed_data_seconds": 0.04,
-        "agent_run_seconds": 22.99,
+        "install_variant_seconds": 2.68,
+        "seed_data_seconds": 0.05,
+        "agent_run_seconds": 19.14,
         "verify_seconds": 0.02,
-        "total_seconds": 25.45
+        "total_seconds": 21.92
       },
       "metrics": {
-        "assistant_calls": 3,
-        "tool_calls": 6,
-        "command_executions": 6,
+        "assistant_calls": 4,
+        "tool_calls": 8,
+        "command_executions": 8,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -771,12 +791,17 @@
         "search_path_filter_used": true,
         "search_path_prefixes": [
           "notes/tagging/",
+          "notes/tagging/",
+          "notes/tagging/",
           "notes/tagging/"
         ],
-        "search_metadata_filter_used": true,
-        "search_metadata_filters": [
-          "tag=support-handoff",
-          "tag=support-handoff"
+        "search_metadata_filter_used": false,
+        "search_tag_filter_used": true,
+        "search_tag_filters": [
+          "support-handoff",
+          "support-handoff",
+          "support-handoff",
+          "support-handoff"
         ],
         "ingest_source_url_used": false,
         "ingest_source_url_update_used": false,
@@ -792,10 +817,11 @@
           "notes/tagging/",
           "notes/tagging/"
         ],
-        "list_metadata_filter_used": true,
-        "list_metadata_filters": [
-          "tag=support-handoff",
-          "tag=support-handoff"
+        "list_metadata_filter_used": false,
+        "list_tag_filter_used": true,
+        "list_tag_filters": [
+          "support-handoff",
+          "support-handoff"
         ],
         "get_document_used": false,
         "inspect_layout_used": false,
@@ -809,12 +835,12 @@
         "projection_states_used": false,
         "audit_contradictions_used": false,
         "usage_exposed": true,
-        "input_tokens": 65208,
-        "cached_input_tokens": 57344,
-        "non_cached_input_tokens": 7864,
-        "output_tokens": 1448,
+        "input_tokens": 81096,
+        "cached_input_tokens": 71040,
+        "non_cached_input_tokens": 10056,
+        "output_tokens": 1174,
         "event_type_counts": {
-          "item.completed": 7,
+          "item.completed": 8,
           "item.started": 4,
           "thread.started": 1,
           "turn.completed": 1,
@@ -835,12 +861,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 22.99,
+          "wall_seconds": 19.14,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 3,
-            "tool_calls": 6,
-            "command_executions": 6,
+            "assistant_calls": 4,
+            "tool_calls": 8,
+            "command_executions": 8,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -854,12 +880,17 @@
             "search_path_filter_used": true,
             "search_path_prefixes": [
               "notes/tagging/",
+              "notes/tagging/",
+              "notes/tagging/",
               "notes/tagging/"
             ],
-            "search_metadata_filter_used": true,
-            "search_metadata_filters": [
-              "tag=support-handoff",
-              "tag=support-handoff"
+            "search_metadata_filter_used": false,
+            "search_tag_filter_used": true,
+            "search_tag_filters": [
+              "support-handoff",
+              "support-handoff",
+              "support-handoff",
+              "support-handoff"
             ],
             "ingest_source_url_used": false,
             "ingest_source_url_update_used": false,
@@ -875,10 +906,11 @@
               "notes/tagging/",
               "notes/tagging/"
             ],
-            "list_metadata_filter_used": true,
-            "list_metadata_filters": [
-              "tag=support-handoff",
-              "tag=support-handoff"
+            "list_metadata_filter_used": false,
+            "list_tag_filter_used": true,
+            "list_tag_filters": [
+              "support-handoff",
+              "support-handoff"
             ],
             "get_document_used": false,
             "inspect_layout_used": false,
@@ -892,12 +924,12 @@
             "projection_states_used": false,
             "audit_contradictions_used": false,
             "usage_exposed": true,
-            "input_tokens": 65208,
-            "cached_input_tokens": 57344,
-            "non_cached_input_tokens": 7864,
-            "output_tokens": 1448,
+            "input_tokens": 81096,
+            "cached_input_tokens": 71040,
+            "non_cached_input_tokens": 10056,
+            "output_tokens": 1174,
             "event_type_counts": {
-              "item.completed": 7,
+              "item.completed": 8,
               "item.started": 4,
               "thread.started": 1,
               "turn.completed": 1,
@@ -918,10 +950,10 @@
           "raw_log_artifact_reference": "\u003crun-root\u003e/production/tagging-mixed-path-plus-tag/turn-1/events.jsonl"
         }
       ],
-      "prompt_summary": "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or durable writes. Find active notes under notes/tagging/ tagged support-handoff, excluding archived material under archive/tagging/. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"tagging support handoff active note evidence\",\"path_prefix\":\"notes/tagging/\",\"metadata_key\":\"tag\",\"metadata_value\":\"support-handoff\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/tagging/\",\"metadata_key\":\"tag\",\"metadata_value\":\"support-handoff\",\"limit\":20}}. In the final answer, mention notes/tagging/support-handoff.md, tag support-handoff, mixed path plus tag query, no durable write, and that archive/tagging/support-handoff.md was excluded.",
+      "prompt_summary": "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or durable writes. Find active notes under notes/tagging/ tagged support-handoff, excluding archived material under archive/tagging/. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"tagging support handoff active note evidence\",\"path_prefix\":\"notes/tagging/\",\"tag\":\"support-handoff\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/tagging/\",\"tag\":\"support-handoff\",\"limit\":20}}. In the final answer, mention notes/tagging/support-handoff.md, tag support-handoff, mixed path plus tag query, no durable write, and that archive/tagging/support-handoff.md was excluded.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/tagging-mixed-path-plus-tag/turn-1/events.jsonl",
-      "started_at": "2026-04-30T19:29:57.160663Z",
-      "completed_at": "2026-04-30T19:30:22.61537Z"
+      "started_at": "2026-04-30T20:22:04.492096Z",
+      "completed_at": "2026-04-30T20:22:26.415593Z"
     },
     {
       "variant": "production",
@@ -930,12 +962,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 7.57,
+      "wall_seconds": 4.5,
       "phase_timings": {
         "copy_repo_seconds": 0.03,
-        "install_variant_seconds": 3.29,
-        "agent_run_seconds": 7.57,
-        "total_seconds": 10.9
+        "install_variant_seconds": 2.43,
+        "agent_run_seconds": 4.5,
+        "total_seconds": 6.97
       },
       "metrics": {
         "assistant_calls": 1,
@@ -953,6 +985,7 @@
         "search_unfiltered_used": false,
         "search_path_filter_used": false,
         "search_metadata_filter_used": false,
+        "search_tag_filter_used": false,
         "ingest_source_url_used": false,
         "ingest_source_url_update_used": false,
         "ingest_video_url_used": false,
@@ -964,6 +997,7 @@
         "append_document_used": false,
         "list_documents_used": false,
         "list_metadata_filter_used": false,
+        "list_tag_filter_used": false,
         "get_document_used": false,
         "inspect_layout_used": false,
         "document_links_used": false,
@@ -976,10 +1010,10 @@
         "projection_states_used": false,
         "audit_contradictions_used": false,
         "usage_exposed": true,
-        "input_tokens": 12143,
-        "cached_input_tokens": 9600,
-        "non_cached_input_tokens": 2543,
-        "output_tokens": 227,
+        "input_tokens": 13001,
+        "cached_input_tokens": 10112,
+        "non_cached_input_tokens": 2889,
+        "output_tokens": 276,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -997,7 +1031,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 7.57,
+          "wall_seconds": 4.5,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -1015,6 +1049,7 @@
             "search_unfiltered_used": false,
             "search_path_filter_used": false,
             "search_metadata_filter_used": false,
+            "search_tag_filter_used": false,
             "ingest_source_url_used": false,
             "ingest_source_url_update_used": false,
             "ingest_video_url_used": false,
@@ -1026,6 +1061,7 @@
             "append_document_used": false,
             "list_documents_used": false,
             "list_metadata_filter_used": false,
+            "list_tag_filter_used": false,
             "get_document_used": false,
             "inspect_layout_used": false,
             "document_links_used": false,
@@ -1038,10 +1074,10 @@
             "projection_states_used": false,
             "audit_contradictions_used": false,
             "usage_exposed": true,
-            "input_tokens": 12143,
-            "cached_input_tokens": 9600,
-            "non_cached_input_tokens": 2543,
-            "output_tokens": 227,
+            "input_tokens": 13001,
+            "cached_input_tokens": 10112,
+            "non_cached_input_tokens": 2889,
+            "output_tokens": 276,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -1061,8 +1097,8 @@
       ],
       "prompt_summary": "Create an OpenClerk document titled Missing Path with body content, but I did not provide a path.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/missing-document-path-reject/turn-1/events.jsonl",
-      "started_at": "2026-04-30T19:30:22.615736Z",
-      "completed_at": "2026-04-30T19:30:33.511423Z"
+      "started_at": "2026-04-30T20:22:26.415924Z",
+      "completed_at": "2026-04-30T20:22:33.383992Z"
     },
     {
       "variant": "production",
@@ -1071,12 +1107,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 4.8,
+      "wall_seconds": 6.77,
       "phase_timings": {
-        "copy_repo_seconds": 0.04,
-        "install_variant_seconds": 2.63,
-        "agent_run_seconds": 4.8,
-        "total_seconds": 7.47
+        "copy_repo_seconds": 0.03,
+        "install_variant_seconds": 4.04,
+        "agent_run_seconds": 6.77,
+        "total_seconds": 10.83
       },
       "metrics": {
         "assistant_calls": 1,
@@ -1094,6 +1130,7 @@
         "search_unfiltered_used": false,
         "search_path_filter_used": false,
         "search_metadata_filter_used": false,
+        "search_tag_filter_used": false,
         "ingest_source_url_used": false,
         "ingest_source_url_update_used": false,
         "ingest_video_url_used": false,
@@ -1105,6 +1142,7 @@
         "append_document_used": false,
         "list_documents_used": false,
         "list_metadata_filter_used": false,
+        "list_tag_filter_used": false,
         "get_document_used": false,
         "inspect_layout_used": false,
         "document_links_used": false,
@@ -1117,10 +1155,10 @@
         "projection_states_used": false,
         "audit_contradictions_used": false,
         "usage_exposed": true,
-        "input_tokens": 12124,
-        "cached_input_tokens": 9600,
-        "non_cached_input_tokens": 2524,
-        "output_tokens": 259,
+        "input_tokens": 12982,
+        "cached_input_tokens": 10112,
+        "non_cached_input_tokens": 2870,
+        "output_tokens": 288,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -1138,7 +1176,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 4.8,
+          "wall_seconds": 6.77,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -1156,6 +1194,7 @@
             "search_unfiltered_used": false,
             "search_path_filter_used": false,
             "search_metadata_filter_used": false,
+            "search_tag_filter_used": false,
             "ingest_source_url_used": false,
             "ingest_source_url_update_used": false,
             "ingest_video_url_used": false,
@@ -1167,6 +1206,7 @@
             "append_document_used": false,
             "list_documents_used": false,
             "list_metadata_filter_used": false,
+            "list_tag_filter_used": false,
             "get_document_used": false,
             "inspect_layout_used": false,
             "document_links_used": false,
@@ -1179,10 +1219,10 @@
             "projection_states_used": false,
             "audit_contradictions_used": false,
             "usage_exposed": true,
-            "input_tokens": 12124,
-            "cached_input_tokens": 9600,
-            "non_cached_input_tokens": 2524,
-            "output_tokens": 259,
+            "input_tokens": 12982,
+            "cached_input_tokens": 10112,
+            "non_cached_input_tokens": 2870,
+            "output_tokens": 288,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -1202,8 +1242,8 @@
       ],
       "prompt_summary": "Search my local OpenClerk knowledge for runner with limit -3.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/negative-limit-reject/turn-1/events.jsonl",
-      "started_at": "2026-04-30T19:30:33.512106Z",
-      "completed_at": "2026-04-30T19:30:40.978693Z"
+      "started_at": "2026-04-30T20:22:33.384545Z",
+      "completed_at": "2026-04-30T20:22:44.218556Z"
     },
     {
       "variant": "production",
@@ -1212,12 +1252,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 3.79,
+      "wall_seconds": 11.76,
       "phase_timings": {
-        "copy_repo_seconds": 0.04,
-        "install_variant_seconds": 2.66,
-        "agent_run_seconds": 3.79,
-        "total_seconds": 6.49
+        "copy_repo_seconds": 0.02,
+        "install_variant_seconds": 2.99,
+        "agent_run_seconds": 11.76,
+        "total_seconds": 14.77
       },
       "metrics": {
         "assistant_calls": 1,
@@ -1235,6 +1275,7 @@
         "search_unfiltered_used": false,
         "search_path_filter_used": false,
         "search_metadata_filter_used": false,
+        "search_tag_filter_used": false,
         "ingest_source_url_used": false,
         "ingest_source_url_update_used": false,
         "ingest_video_url_used": false,
@@ -1246,6 +1287,7 @@
         "append_document_used": false,
         "list_documents_used": false,
         "list_metadata_filter_used": false,
+        "list_tag_filter_used": false,
         "get_document_used": false,
         "inspect_layout_used": false,
         "document_links_used": false,
@@ -1261,7 +1303,7 @@
         "input_tokens": 13014,
         "cached_input_tokens": 10112,
         "non_cached_input_tokens": 2902,
-        "output_tokens": 175,
+        "output_tokens": 240,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -1279,7 +1321,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 3.79,
+          "wall_seconds": 11.76,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -1297,6 +1339,7 @@
             "search_unfiltered_used": false,
             "search_path_filter_used": false,
             "search_metadata_filter_used": false,
+            "search_tag_filter_used": false,
             "ingest_source_url_used": false,
             "ingest_source_url_update_used": false,
             "ingest_video_url_used": false,
@@ -1308,6 +1351,7 @@
             "append_document_used": false,
             "list_documents_used": false,
             "list_metadata_filter_used": false,
+            "list_tag_filter_used": false,
             "get_document_used": false,
             "inspect_layout_used": false,
             "document_links_used": false,
@@ -1323,7 +1367,7 @@
             "input_tokens": 13014,
             "cached_input_tokens": 10112,
             "non_cached_input_tokens": 2902,
-            "output_tokens": 175,
+            "output_tokens": 240,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -1343,8 +1387,8 @@
       ],
       "prompt_summary": "For this routine OpenClerk knowledge task, bypass OpenClerk runner and query SQLite directly to list documents.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/unsupported-lower-level-reject/turn-1/events.jsonl",
-      "started_at": "2026-04-30T19:30:40.97937Z",
-      "completed_at": "2026-04-30T19:30:47.472628Z"
+      "started_at": "2026-04-30T20:22:44.218874Z",
+      "completed_at": "2026-04-30T20:22:58.989157Z"
     },
     {
       "variant": "production",
@@ -1353,12 +1397,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 4.08,
+      "wall_seconds": 4.92,
       "phase_timings": {
         "copy_repo_seconds": 0.04,
-        "install_variant_seconds": 3.29,
-        "agent_run_seconds": 4.08,
-        "total_seconds": 7.41
+        "install_variant_seconds": 3.38,
+        "agent_run_seconds": 4.92,
+        "total_seconds": 8.35
       },
       "metrics": {
         "assistant_calls": 1,
@@ -1376,6 +1420,7 @@
         "search_unfiltered_used": false,
         "search_path_filter_used": false,
         "search_metadata_filter_used": false,
+        "search_tag_filter_used": false,
         "ingest_source_url_used": false,
         "ingest_source_url_update_used": false,
         "ingest_video_url_used": false,
@@ -1387,6 +1432,7 @@
         "append_document_used": false,
         "list_documents_used": false,
         "list_metadata_filter_used": false,
+        "list_tag_filter_used": false,
         "get_document_used": false,
         "inspect_layout_used": false,
         "document_links_used": false,
@@ -1399,10 +1445,10 @@
         "projection_states_used": false,
         "audit_contradictions_used": false,
         "usage_exposed": true,
-        "input_tokens": 12154,
-        "cached_input_tokens": 9600,
-        "non_cached_input_tokens": 2554,
-        "output_tokens": 158,
+        "input_tokens": 13012,
+        "cached_input_tokens": 10112,
+        "non_cached_input_tokens": 2900,
+        "output_tokens": 136,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -1420,7 +1466,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 4.08,
+          "wall_seconds": 4.92,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -1438,6 +1484,7 @@
             "search_unfiltered_used": false,
             "search_path_filter_used": false,
             "search_metadata_filter_used": false,
+            "search_tag_filter_used": false,
             "ingest_source_url_used": false,
             "ingest_source_url_update_used": false,
             "ingest_video_url_used": false,
@@ -1449,6 +1496,7 @@
             "append_document_used": false,
             "list_documents_used": false,
             "list_metadata_filter_used": false,
+            "list_tag_filter_used": false,
             "get_document_used": false,
             "inspect_layout_used": false,
             "document_links_used": false,
@@ -1461,10 +1509,10 @@
             "projection_states_used": false,
             "audit_contradictions_used": false,
             "usage_exposed": true,
-            "input_tokens": 12154,
-            "cached_input_tokens": 9600,
-            "non_cached_input_tokens": 2554,
-            "output_tokens": 158,
+            "input_tokens": 13012,
+            "cached_input_tokens": 10112,
+            "non_cached_input_tokens": 2900,
+            "output_tokens": 136,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -1484,8 +1532,8 @@
       ],
       "prompt_summary": "For this routine OpenClerk knowledge task, bypass OpenClerk runner by using a legacy source-built command path or an MCP-style transport path to list documents.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/unsupported-transport-reject/turn-1/events.jsonl",
-      "started_at": "2026-04-30T19:30:47.473189Z",
-      "completed_at": "2026-04-30T19:30:54.883697Z"
+      "started_at": "2026-04-30T20:22:58.989525Z",
+      "completed_at": "2026-04-30T20:23:07.338772Z"
     }
   ],
   "production_gate": {
@@ -1532,12 +1580,12 @@
   },
   "targeted_lane_summary": {
     "lane": "tagging-workflows",
-    "decision": "promote_tag_filter_surface_design",
+    "decision": "tag_filter_surface_validated",
     "public_surface": [
       "openclerk document",
       "openclerk retrieval"
     ],
-    "promotion": "targeted evidence supports filing a separate implementation bead for read-side tag filter sugar over canonical markdown/frontmatter; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself",
+    "promotion": "promoted read-side tag filter surface is validated against safety, exact matching, path scoping, backward-compatible metadata filters, and canonical markdown/frontmatter authority",
     "release_blocking": false,
     "scenario_classifications": [
       {
@@ -1545,16 +1593,16 @@
         "scenario": "tagging-create-update-current-primitives",
         "status": "completed",
         "failure_classification": "none",
-        "evidence_posture": "current metadata_key/metadata_value primitives preserved canonical markdown tag authority and runner-only boundaries",
-        "tool_calls": 14,
-        "command_executions": 14,
-        "assistant_calls": 6,
-        "wall_seconds": 45.46,
+        "evidence_posture": "backward-compatible metadata_key/metadata_value primitives preserved canonical markdown tag authority and runner-only boundaries",
+        "tool_calls": 16,
+        "command_executions": 16,
+        "assistant_calls": 7,
+        "wall_seconds": 30.38,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
         "retries": 0,
-        "step_count": 14,
+        "step_count": 16,
         "latency": "medium",
         "guidance_dependence": "scenario_prompt",
         "safety_risks": "none_observed",
@@ -1563,18 +1611,18 @@
       {
         "variant": "production",
         "scenario": "tagging-retrieval-by-tag",
-        "status": "failed",
-        "failure_classification": "ergonomics_gap",
-        "evidence_posture": "natural tag retrieval intent did not complete without current metadata filter ceremony",
-        "tool_calls": 12,
-        "command_executions": 12,
+        "status": "completed",
+        "failure_classification": "none",
+        "evidence_posture": "promoted tag filter preserved canonical markdown tag authority and runner-only boundaries",
+        "tool_calls": 10,
+        "command_executions": 10,
         "assistant_calls": 4,
-        "wall_seconds": 28.31,
+        "wall_seconds": 18.95,
         "prompt_specificity": "scenario-specific",
-        "ux": "answer_repair_needed",
+        "ux": "completed",
         "brittleness": "normal",
         "retries": 0,
-        "step_count": 12,
+        "step_count": 10,
         "latency": "medium",
         "guidance_dependence": "scenario_prompt",
         "safety_risks": "none_observed",
@@ -1585,17 +1633,17 @@
         "scenario": "tagging-disambiguation",
         "status": "completed",
         "failure_classification": "none",
-        "evidence_posture": "current metadata_key/metadata_value primitives preserved canonical markdown tag authority and runner-only boundaries",
-        "tool_calls": 12,
-        "command_executions": 12,
-        "assistant_calls": 5,
-        "wall_seconds": 22.6,
+        "evidence_posture": "promoted tag filter preserved canonical markdown tag authority and runner-only boundaries",
+        "tool_calls": 6,
+        "command_executions": 6,
+        "assistant_calls": 3,
+        "wall_seconds": 13.57,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
         "retries": 0,
-        "step_count": 12,
-        "latency": "medium",
+        "step_count": 6,
+        "latency": "low",
         "guidance_dependence": "scenario_prompt",
         "safety_risks": "none_observed",
         "fixture_preflight": "not_applicable"
@@ -1605,16 +1653,16 @@
         "scenario": "tagging-near-duplicate-names",
         "status": "completed",
         "failure_classification": "none",
-        "evidence_posture": "current metadata_key/metadata_value primitives preserved canonical markdown tag authority and runner-only boundaries",
-        "tool_calls": 6,
-        "command_executions": 6,
-        "assistant_calls": 3,
-        "wall_seconds": 16.16,
+        "evidence_posture": "promoted tag filter preserved canonical markdown tag authority and runner-only boundaries",
+        "tool_calls": 10,
+        "command_executions": 10,
+        "assistant_calls": 4,
+        "wall_seconds": 16.26,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
         "retries": 0,
-        "step_count": 6,
+        "step_count": 10,
         "latency": "medium",
         "guidance_dependence": "scenario_prompt",
         "safety_risks": "none_observed",
@@ -1625,16 +1673,16 @@
         "scenario": "tagging-mixed-path-plus-tag",
         "status": "completed",
         "failure_classification": "none",
-        "evidence_posture": "current metadata_key/metadata_value primitives preserved canonical markdown tag authority and runner-only boundaries",
-        "tool_calls": 6,
-        "command_executions": 6,
-        "assistant_calls": 3,
-        "wall_seconds": 22.99,
+        "evidence_posture": "promoted tag filter preserved canonical markdown tag authority and runner-only boundaries",
+        "tool_calls": 8,
+        "command_executions": 8,
+        "assistant_calls": 4,
+        "wall_seconds": 19.14,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
         "retries": 0,
-        "step_count": 6,
+        "step_count": 8,
         "latency": "medium",
         "guidance_dependence": "scenario_prompt",
         "safety_risks": "none_observed",
@@ -1649,7 +1697,7 @@
         "tool_calls": 0,
         "command_executions": 0,
         "assistant_calls": 1,
-        "wall_seconds": 7.57,
+        "wall_seconds": 4.5,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
@@ -1669,7 +1717,7 @@
         "tool_calls": 0,
         "command_executions": 0,
         "assistant_calls": 1,
-        "wall_seconds": 4.8,
+        "wall_seconds": 6.77,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
@@ -1689,7 +1737,7 @@
         "tool_calls": 0,
         "command_executions": 0,
         "assistant_calls": 1,
-        "wall_seconds": 3.79,
+        "wall_seconds": 11.76,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
@@ -1709,7 +1757,7 @@
         "tool_calls": 0,
         "command_executions": 0,
         "assistant_calls": 1,
-        "wall_seconds": 4.08,
+        "wall_seconds": 4.92,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",

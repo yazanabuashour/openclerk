@@ -776,3 +776,92 @@ func TestValidationRejectionDoesNotCreateRuntimeFiles(t *testing.T) {
 		t.Fatalf("data dir exists after validation rejection: %v", err)
 	}
 }
+
+func TestDocumentTaskListTagFilter(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "notes/tagging/support-handoff.md", "Support Handoff", strings.TrimSpace(`---
+tag: support-handoff
+---
+# Support Handoff
+
+## Summary
+Support handoff tag list evidence belongs under active notes.
+`)+"\n")
+	createDocument(t, ctx, config, "archive/tagging/support-handoff.md", "Archived Support Handoff", strings.TrimSpace(`---
+tag: support-handoff
+---
+# Archived Support Handoff
+
+## Summary
+Archived support handoff tag list evidence must be excluded by path prefix.
+`)+"\n")
+	createDocument(t, ctx, config, "notes/tagging/support-handoffs.md", "Support Handoffs", strings.TrimSpace(`---
+tag: support-handoffs
+---
+# Support Handoffs
+
+## Summary
+Plural support handoffs tag list evidence must not match singular support-handoff.
+`)+"\n")
+
+	list, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List: runner.DocumentListOptions{
+			PathPrefix: "notes/tagging/",
+			Tag:        " support-handoff ",
+			Limit:      20,
+		},
+	})
+	if err != nil {
+		t.Fatalf("list tag: %v", err)
+	}
+	if len(list.Documents) != 1 || list.Documents[0].Path != "notes/tagging/support-handoff.md" {
+		t.Fatalf("list tag result = %+v", list.Documents)
+	}
+
+	backCompat, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List: runner.DocumentListOptions{
+			MetadataKey:   "tag",
+			MetadataValue: "support-handoff",
+			Limit:         20,
+		},
+	})
+	if err != nil {
+		t.Fatalf("list metadata tag: %v", err)
+	}
+	if len(backCompat.Documents) != 2 {
+		t.Fatalf("backward-compatible metadata tag result = %+v", backCompat.Documents)
+	}
+
+	mixed, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List: runner.DocumentListOptions{
+			Tag:           "support-handoff",
+			MetadataKey:   "tag",
+			MetadataValue: "support-handoff",
+		},
+	})
+	if err != nil {
+		t.Fatalf("mixed tag list validation: %v", err)
+	}
+	if !mixed.Rejected || mixed.RejectionReason != "list.tag cannot be combined with metadata_key or metadata_value" {
+		t.Fatalf("mixed list result = %+v", mixed)
+	}
+
+	empty, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List: runner.DocumentListOptions{
+			Tag: " ",
+		},
+	})
+	if err != nil {
+		t.Fatalf("empty tag list validation: %v", err)
+	}
+	if !empty.Rejected || empty.RejectionReason != "list.tag must be non-empty" {
+		t.Fatalf("empty list result = %+v", empty)
+	}
+}

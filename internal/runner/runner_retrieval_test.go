@@ -693,3 +693,144 @@ func TestRetrievalTaskTypedRecordValidation(t *testing.T) {
 		t.Fatalf("negative decision result = %+v", negativeDecision)
 	}
 }
+
+func TestRetrievalTaskSearchTagFilter(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "notes/tagging/account-renewal.md", "Account Renewal", strings.TrimSpace(`---
+tag: account-renewal
+---
+# Account Renewal
+
+## Summary
+Renewal tag search evidence belongs to account renewal.
+`)+"\n")
+	createDocument(t, ctx, config, "notes/tagging/security-renewal.md", "Security Renewal", strings.TrimSpace(`---
+tag: renewal
+---
+# Security Renewal
+
+## Summary
+Renewal tag search evidence belongs to security renewal.
+`)+"\n")
+	createDocument(t, ctx, config, "notes/tagging/ops-review.md", "Ops Review", strings.TrimSpace(`---
+tag: ops-review
+---
+# Ops Review
+
+## Summary
+Near duplicate tag evidence belongs to singular ops review.
+`)+"\n")
+	createDocument(t, ctx, config, "notes/tagging/ops-reviews.md", "Ops Reviews", strings.TrimSpace(`---
+tag: ops-reviews
+---
+# Ops Reviews
+
+## Summary
+Near duplicate tag evidence belongs to plural ops reviews.
+`)+"\n")
+	createDocument(t, ctx, config, "archive/tagging/account-renewal.md", "Archived Account Renewal", strings.TrimSpace(`---
+tag: account-renewal
+---
+# Archived Account Renewal
+
+## Summary
+Archived renewal tag search evidence must be excluded by path prefix.
+`)+"\n")
+
+	search, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
+			Text:  "Renewal tag search evidence",
+			Tag:   " account-renewal ",
+			Limit: 10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("search tag: %v", err)
+	}
+	if search.Search == nil || !searchResultContainsPath(search.Search.Hits, "notes/tagging/account-renewal.md") {
+		t.Fatalf("search tag result = %+v", search.Search)
+	}
+	if searchResultContainsPath(search.Search.Hits, "notes/tagging/security-renewal.md") {
+		t.Fatalf("search tag included wrong tag result: %+v", search.Search.Hits)
+	}
+
+	nearDuplicate, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
+			Text:  "Near duplicate tag evidence",
+			Tag:   "ops-review",
+			Limit: 10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("near duplicate tag search: %v", err)
+	}
+	if nearDuplicate.Search == nil ||
+		!searchResultContainsPath(nearDuplicate.Search.Hits, "notes/tagging/ops-review.md") ||
+		searchResultContainsPath(nearDuplicate.Search.Hits, "notes/tagging/ops-reviews.md") {
+		t.Fatalf("near duplicate tag result = %+v", nearDuplicate.Search)
+	}
+
+	scoped, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
+			Text:       "renewal tag search evidence",
+			PathPrefix: "notes/tagging/",
+			Tag:        "account-renewal",
+			Limit:      10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("scoped tag search: %v", err)
+	}
+	if scoped.Search == nil ||
+		!searchResultContainsPath(scoped.Search.Hits, "notes/tagging/account-renewal.md") ||
+		searchResultContainsPath(scoped.Search.Hits, "archive/tagging/account-renewal.md") {
+		t.Fatalf("scoped tag result = %+v", scoped.Search)
+	}
+
+	mixed, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
+			Text:          "renewal",
+			Tag:           "account-renewal",
+			MetadataKey:   "tag",
+			MetadataValue: "account-renewal",
+		},
+	})
+	if err != nil {
+		t.Fatalf("mixed tag search validation: %v", err)
+	}
+	if !mixed.Rejected || mixed.RejectionReason != "search.tag cannot be combined with metadata_key or metadata_value" {
+		t.Fatalf("mixed tag result = %+v", mixed)
+	}
+
+	empty, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
+			Text: "renewal",
+			Tag:  " ",
+		},
+	})
+	if err != nil {
+		t.Fatalf("empty tag search validation: %v", err)
+	}
+	if !empty.Rejected || empty.RejectionReason != "search.tag must be non-empty" {
+		t.Fatalf("empty tag result = %+v", empty)
+	}
+}
+
+func searchResultContainsPath(hits []runner.SearchHit, path string) bool {
+	for _, hit := range hits {
+		for _, citation := range hit.Citations {
+			if citation.Path == path {
+				return true
+			}
+		}
+	}
+	return false
+}

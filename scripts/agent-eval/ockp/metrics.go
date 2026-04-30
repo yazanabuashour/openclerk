@@ -346,6 +346,7 @@ func classifySearchCommand(actionText string, m *metrics) {
 		}
 		hasPathFilter := strings.Contains(part, `"path_prefix":`)
 		hasMetadataFilter := strings.Contains(part, `"metadata_key":`) || strings.Contains(part, `"metadata_value":`)
+		hasTagFilter := strings.Contains(part, `"tag":`)
 		if hasPathFilter {
 			m.SearchPathFilterUsed = true
 			m.SearchPathPrefixes = append(m.SearchPathPrefixes, fieldValueFromCompactedAction(part, "path_prefix"))
@@ -358,7 +359,13 @@ func classifySearchCommand(actionText string, m *metrics) {
 				m.SearchMetadataFilters = append(m.SearchMetadataFilters, key+"="+value)
 			}
 		}
-		if !hasPathFilter && !hasMetadataFilter {
+		if hasTagFilter {
+			m.SearchTagFilterUsed = true
+			if value := fieldValueFromCompactedAction(part, "tag"); value != "" {
+				m.SearchTagFilters = append(m.SearchTagFilters, value)
+			}
+		}
+		if !hasPathFilter && !hasMetadataFilter && !hasTagFilter {
 			m.SearchUnfilteredUsed = true
 		}
 	}
@@ -375,12 +382,19 @@ func classifyListDocumentsCommand(actionText string, m *metrics) {
 			part = part[:next]
 		}
 		hasMetadataFilter := strings.Contains(part, `"metadata_key":`) || strings.Contains(part, `"metadata_value":`)
+		hasTagFilter := strings.Contains(part, `"tag":`)
 		if hasMetadataFilter {
 			m.ListMetadataFilterUsed = true
 			key := fieldValueFromCompactedAction(part, "metadata_key")
 			value := fieldValueFromCompactedAction(part, "metadata_value")
 			if key != "" || value != "" {
 				m.ListMetadataFilters = append(m.ListMetadataFilters, key+"="+value)
+			}
+		}
+		if hasTagFilter {
+			m.ListTagFilterUsed = true
+			if value := fieldValueFromCompactedAction(part, "tag"); value != "" {
+				m.ListTagFilters = append(m.ListTagFilters, value)
 			}
 		}
 	}
@@ -457,6 +471,8 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.SearchPathPrefixes = append(out.SearchPathPrefixes, current.SearchPathPrefixes...)
 		out.SearchMetadataFilterUsed = out.SearchMetadataFilterUsed || current.SearchMetadataFilterUsed
 		out.SearchMetadataFilters = append(out.SearchMetadataFilters, current.SearchMetadataFilters...)
+		out.SearchTagFilterUsed = out.SearchTagFilterUsed || current.SearchTagFilterUsed
+		out.SearchTagFilters = append(out.SearchTagFilters, current.SearchTagFilters...)
 		out.IngestSourceURLUsed = out.IngestSourceURLUsed || current.IngestSourceURLUsed
 		out.IngestSourceURLUpdateUsed = out.IngestSourceURLUpdateUsed || current.IngestSourceURLUpdateUsed
 		out.IngestVideoURLUsed = out.IngestVideoURLUsed || current.IngestVideoURLUsed
@@ -470,6 +486,8 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.ListDocumentPathPrefixes = append(out.ListDocumentPathPrefixes, current.ListDocumentPathPrefixes...)
 		out.ListMetadataFilterUsed = out.ListMetadataFilterUsed || current.ListMetadataFilterUsed
 		out.ListMetadataFilters = append(out.ListMetadataFilters, current.ListMetadataFilters...)
+		out.ListTagFilterUsed = out.ListTagFilterUsed || current.ListTagFilterUsed
+		out.ListTagFilters = append(out.ListTagFilters, current.ListTagFilters...)
 		out.GetDocumentUsed = out.GetDocumentUsed || current.GetDocumentUsed
 		out.GetDocumentDocIDs = append(out.GetDocumentDocIDs, current.GetDocumentDocIDs...)
 		out.InspectLayoutUsed = out.InspectLayoutUsed || current.InspectLayoutUsed

@@ -181,13 +181,15 @@ func taggingDecision(rows []targetedScenarioClassification) string {
 	if ergonomicsGaps > 0 {
 		return "promote_tag_filter_surface_design"
 	}
-	return "keep_as_reference"
+	return "tag_filter_surface_validated"
 }
 
 func taggingPromotion(decision string) string {
 	switch decision {
 	case "promote_tag_filter_surface_design":
 		return "targeted evidence supports filing a separate implementation bead for read-side tag filter sugar over canonical markdown/frontmatter; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
+	case "tag_filter_surface_validated":
+		return "promoted read-side tag filter surface is validated against safety, exact matching, path scoping, backward-compatible metadata filters, and canonical markdown/frontmatter authority"
 	case "kill_tagging_surface_shape":
 		return "first-class tagging shape is unsafe under current evidence; do not file implementation work"
 	case "defer_for_guidance_or_eval_repair":

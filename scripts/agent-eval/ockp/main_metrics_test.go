@@ -21,7 +21,8 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"search\",\"search\":{\"text\":\"runner\"}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"search\",\"search\":{\"text\":\"runner\",\"path_prefix\":\"notes/rag/\"}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"search\",\"search\":{\"text\":\"runner\",\"metadata_key\":\"rag_scope\",\"metadata_value\":\"active-policy\"}}' | openclerk retrieval"}}`,
-		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\",\"metadata_key\":\"tag\",\"metadata_value\":\"runner\"}}' | openclerk document"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"search\",\"search\":{\"text\":\"runner\",\"tag\":\"runner\"}}' | openclerk retrieval"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\",\"metadata_key\":\"tag\",\"metadata_value\":\"runner\",\"tag\":\"runner\"}}' | openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"get_document\",\"doc_id\":\"doc_1\"}' | openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"replace_section\",\"doc_id\":\"doc_1\",\"heading\":\"Summary\",\"content\":\"updated\"}' | openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"append_document\",\"doc_id\":\"doc_1\",\"content\":\"updated\"}' | openclerk document"}}`,
@@ -47,7 +48,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	if parsed.sessionID != "session-123" || parsed.finalMessage != "done" {
 		t.Fatalf("parsed = %+v", parsed)
 	}
-	if parsed.metrics.ToolCalls != 22 || parsed.metrics.CommandExecutions != 22 || parsed.metrics.AssistantCalls != 1 {
+	if parsed.metrics.ToolCalls != 23 || parsed.metrics.CommandExecutions != 23 || parsed.metrics.AssistantCalls != 1 {
 		t.Fatalf("metrics = %+v", parsed.metrics)
 	}
 	if !parsed.metrics.BroadRepoSearch {
@@ -85,6 +86,12 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	if !containsAllStrings(parsed.metrics.SearchMetadataFilters, []string{"rag_scope=active-policy"}) {
 		t.Fatalf("expected search metadata filter in %+v", parsed.metrics)
 	}
+	if !containsAllStrings(parsed.metrics.SearchTagFilters, []string{"runner"}) {
+		t.Fatalf("expected search tag filter in %+v", parsed.metrics)
+	}
+	if !containsAllStrings(parsed.metrics.ListTagFilters, []string{"runner"}) {
+		t.Fatalf("expected list tag filter in %+v", parsed.metrics)
+	}
 	if !containsAllStrings(parsed.metrics.GetDocumentDocIDs, []string{"doc_1"}) {
 		t.Fatalf("expected get document doc id in %+v", parsed.metrics)
 	}
@@ -93,8 +100,10 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		"search_unfiltered":      parsed.metrics.SearchUnfilteredUsed,
 		"search_path_filter":     parsed.metrics.SearchPathFilterUsed,
 		"search_metadata_filter": parsed.metrics.SearchMetadataFilterUsed,
+		"search_tag_filter":      parsed.metrics.SearchTagFilterUsed,
 		"list_documents":         parsed.metrics.ListDocumentsUsed,
 		"list_metadata_filter":   parsed.metrics.ListMetadataFilterUsed,
+		"list_tag_filter":        parsed.metrics.ListTagFilterUsed,
 		"get_document":           parsed.metrics.GetDocumentUsed,
 		"replace_section":        parsed.metrics.ReplaceSectionUsed,
 		"append_document":        parsed.metrics.AppendDocumentUsed,

@@ -119,6 +119,8 @@ type metrics struct {
 	SearchPathPrefixes        []string       `json:"search_path_prefixes,omitempty"`
 	SearchMetadataFilterUsed  bool           `json:"search_metadata_filter_used"`
 	SearchMetadataFilters     []string       `json:"search_metadata_filters,omitempty"`
+	SearchTagFilterUsed       bool           `json:"search_tag_filter_used"`
+	SearchTagFilters          []string       `json:"search_tag_filters,omitempty"`
 	IngestSourceURLUsed       bool           `json:"ingest_source_url_used"`
 	IngestSourceURLUpdateUsed bool           `json:"ingest_source_url_update_used"`
 	IngestVideoURLUsed        bool           `json:"ingest_video_url_used"`
@@ -132,6 +134,8 @@ type metrics struct {
 	ListDocumentPathPrefixes  []string       `json:"list_document_path_prefixes,omitempty"`
 	ListMetadataFilterUsed    bool           `json:"list_metadata_filter_used"`
 	ListMetadataFilters       []string       `json:"list_metadata_filters,omitempty"`
+	ListTagFilterUsed         bool           `json:"list_tag_filter_used"`
+	ListTagFilters            []string       `json:"list_tag_filters,omitempty"`
 	GetDocumentUsed           bool           `json:"get_document_used"`
 	GetDocumentDocIDs         []string       `json:"get_document_doc_ids,omitempty"`
 	InspectLayoutUsed         bool           `json:"inspect_layout_used"`

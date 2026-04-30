@@ -99,6 +99,40 @@ func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 		t.Fatalf("search result = %+v", searchResult)
 	}
 
+	taggedRequest := `{"action":"create_document","document":{"path":"notes/tagged-runner.md","title":"Tagged Runner","body":"---\ntag: runner-tag\n---\n# Tagged Runner\n\n## Summary\nTagged runner evidence.\n"}}`
+	var taggedCreate runner.DocumentTaskResult
+	code, stderr = runJSON(t, []string{"document", "--db", dbPath}, taggedRequest, &taggedCreate)
+	if code != 0 {
+		t.Fatalf("create tagged exit = %d stderr=%s", code, stderr)
+	}
+	tagSearchRequest := `{"action":"search","search":{"text":"Tagged runner evidence","tag":"runner-tag","limit":10}}`
+	var tagSearchResult runner.RetrievalTaskResult
+	code, stderr = runJSON(t, []string{"retrieval", "--db", dbPath}, tagSearchRequest, &tagSearchResult)
+	if code != 0 {
+		t.Fatalf("tag search exit = %d stderr=%s", code, stderr)
+	}
+	if tagSearchResult.Search == nil || len(tagSearchResult.Search.Hits) != 1 || tagSearchResult.Search.Hits[0].Citations[0].Path != "notes/tagged-runner.md" {
+		t.Fatalf("tag search result = %+v", tagSearchResult.Search)
+	}
+	tagListRequest := `{"action":"list_documents","list":{"path_prefix":"notes/","tag":"runner-tag","limit":20}}`
+	var tagListResult runner.DocumentTaskResult
+	code, stderr = runJSON(t, []string{"document", "--db", dbPath}, tagListRequest, &tagListResult)
+	if code != 0 {
+		t.Fatalf("tag list exit = %d stderr=%s", code, stderr)
+	}
+	if len(tagListResult.Documents) != 1 || tagListResult.Documents[0].Path != "notes/tagged-runner.md" {
+		t.Fatalf("tag list result = %+v", tagListResult.Documents)
+	}
+	emptyTagRequest := `{"action":"search","search":{"text":"runner","tag":""}}`
+	var emptyTagResult runner.RetrievalTaskResult
+	code, stderr = runJSON(t, []string{"retrieval", "--db", dbPath}, emptyTagRequest, &emptyTagResult)
+	if code != 0 {
+		t.Fatalf("empty tag exit = %d stderr=%s", code, stderr)
+	}
+	if !emptyTagResult.Rejected || emptyTagResult.RejectionReason != "search.tag must be non-empty" {
+		t.Fatalf("empty tag result = %+v", emptyTagResult)
+	}
+
 	serviceRequest := `{"action":"create_document","document":{"path":"records/services/openclerk-runner.md","title":"OpenClerk runner","body":"---\nservice_id: openclerk-runner\nservice_name: OpenClerk runner\nservice_status: active\nservice_owner: runner\nservice_interface: JSON runner\n---\n# OpenClerk runner\n\n## Summary\nProduction service.\n"}}`
 	var serviceCreate runner.DocumentTaskResult
 	code, stderr = runJSON(t, []string{"document", "--db", dbPath}, serviceRequest, &serviceCreate)
@@ -214,6 +248,8 @@ func TestRunnerErrors(t *testing.T) {
 		{name: "bad json", args: []string{"document"}, input: `{`, want: 1, stderr: "decode document request"},
 		{name: "multiple json", args: []string{"document"}, input: `{} {}`, want: 1, stderr: "multiple JSON values"},
 		{name: "unknown json field", args: []string{"document"}, input: `{"action":"validate","extra":true}`, want: 1, stderr: "unknown field"},
+		{name: "unknown list json field", args: []string{"document"}, input: `{"action":"list_documents","list":{"path_prefix":"notes/","tga":"account-renewal"}}`, want: 1, stderr: "unknown field"},
+		{name: "unknown search json field", args: []string{"retrieval"}, input: `{"action":"search","search":{"text":"renewal","tga":"account-renewal"}}`, want: 1, stderr: "unknown field"},
 		{name: "unexpected arg", args: []string{"retrieval", "extra"}, input: `{}`, want: 2, stderr: "unexpected positional arguments"},
 		{name: "retired embedding provider flag", args: []string{"document", "--embedding-provider", "local"}, input: `{}`, want: 2, stderr: "embedding-provider"},
 	}

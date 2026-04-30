@@ -1,7 +1,11 @@
 // Package runner executes task-shaped OpenClerk JSON requests.
 package runner
 
-import "time"
+import (
+	"bytes"
+	"encoding/json"
+	"time"
+)
 
 const (
 	DocumentTaskActionValidate        = "validate"
@@ -119,8 +123,11 @@ type DocumentListOptions struct {
 	PathPrefix    string `json:"path_prefix,omitempty"`
 	MetadataKey   string `json:"metadata_key,omitempty"`
 	MetadataValue string `json:"metadata_value,omitempty"`
+	Tag           string `json:"tag,omitempty"`
 	Limit         int    `json:"limit,omitempty"`
 	Cursor        string `json:"cursor,omitempty"`
+
+	tagProvided bool
 }
 
 type DocumentTaskResult struct {
@@ -159,8 +166,51 @@ type SearchOptions struct {
 	PathPrefix    string `json:"path_prefix,omitempty"`
 	MetadataKey   string `json:"metadata_key,omitempty"`
 	MetadataValue string `json:"metadata_value,omitempty"`
+	Tag           string `json:"tag,omitempty"`
 	Limit         int    `json:"limit,omitempty"`
 	Cursor        string `json:"cursor,omitempty"`
+
+	tagProvided bool
+}
+
+func (options *DocumentListOptions) UnmarshalJSON(data []byte) error {
+	type documentListOptionsAlias DocumentListOptions
+	var decoded struct {
+		documentListOptionsAlias
+		Tag *string `json:"tag"`
+	}
+	if err := decodeStrictJSON(data, &decoded); err != nil {
+		return err
+	}
+	*options = DocumentListOptions(decoded.documentListOptionsAlias)
+	if decoded.Tag != nil {
+		options.Tag = *decoded.Tag
+		options.tagProvided = true
+	}
+	return nil
+}
+
+func (options *SearchOptions) UnmarshalJSON(data []byte) error {
+	type searchOptionsAlias SearchOptions
+	var decoded struct {
+		searchOptionsAlias
+		Tag *string `json:"tag"`
+	}
+	if err := decodeStrictJSON(data, &decoded); err != nil {
+		return err
+	}
+	*options = SearchOptions(decoded.searchOptionsAlias)
+	if decoded.Tag != nil {
+		options.Tag = *decoded.Tag
+		options.tagProvided = true
+	}
+	return nil
+}
+
+func decodeStrictJSON(data []byte, value any) error {
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	return decoder.Decode(value)
 }
 
 type RecordLookupOptions struct {

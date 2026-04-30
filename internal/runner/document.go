@@ -72,6 +72,7 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 			PathPrefix:    normalized.List.PathPrefix,
 			MetadataKey:   normalized.List.MetadataKey,
 			MetadataValue: normalized.List.MetadataValue,
+			Tag:           normalized.List.Tag,
 			Limit:         normalized.List.Limit,
 			Cursor:        normalized.List.Cursor,
 		})
@@ -264,6 +265,9 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		}
 		return normalized, ""
 	case DocumentTaskActionList:
+		if rejection := normalizeDocumentListTagFilter(&normalized.List); rejection != "" {
+			return normalizedDocumentTaskRequest{}, rejection
+		}
 		return normalized, ""
 	case DocumentTaskActionGet:
 		if normalized.DocID == "" {
@@ -293,6 +297,10 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 	default:
 		return normalizedDocumentTaskRequest{}, fmt.Sprintf("unsupported document task action %q", action)
 	}
+}
+
+func normalizeDocumentListTagFilter(list *DocumentListOptions) string {
+	return normalizeTagFilter("list", list.Tag, list.tagProvided, &list.MetadataKey, &list.MetadataValue, &list.Tag)
 }
 
 func trimSourceURLInput(input SourceURLInput) SourceURLInput {

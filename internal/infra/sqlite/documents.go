@@ -13,6 +13,11 @@ import (
 )
 
 func (s *Store) Search(ctx context.Context, query domain.SearchQuery) (domain.SearchResult, error) {
+	normalized, err := normalizeSearchQuery(query)
+	if err != nil {
+		return domain.SearchResult{}, err
+	}
+	query = normalized
 	if strings.TrimSpace(query.Text) == "" {
 		return domain.SearchResult{}, domain.ValidationError("search text is required", nil)
 	}
@@ -30,6 +35,11 @@ func (s *Store) Search(ctx context.Context, query domain.SearchQuery) (domain.Se
 }
 
 func (s *Store) ListDocuments(ctx context.Context, query domain.DocumentListQuery) (domain.DocumentListResult, error) {
+	normalized, err := normalizeDocumentListQuery(query)
+	if err != nil {
+		return domain.DocumentListResult{}, err
+	}
+	query = normalized
 	if (query.MetadataKey == "") != (query.MetadataValue == "") {
 		return domain.DocumentListResult{}, domain.ValidationError("metadataKey and metadataValue must be provided together", nil)
 	}
@@ -98,6 +108,40 @@ LIMIT ? OFFSET ?`
 		documents = documents[:limit]
 	}
 	return domain.DocumentListResult{Documents: documents, PageInfo: pageInfo}, nil
+}
+
+func normalizeSearchQuery(query domain.SearchQuery) (domain.SearchQuery, error) {
+	tag := strings.TrimSpace(query.Tag)
+	if tag == "" {
+		if query.Tag != "" {
+			return domain.SearchQuery{}, domain.ValidationError("tag must be non-empty", nil)
+		}
+		return query, nil
+	}
+	if strings.TrimSpace(query.MetadataKey) != "" || strings.TrimSpace(query.MetadataValue) != "" {
+		return domain.SearchQuery{}, domain.ValidationError("tag cannot be combined with metadataKey or metadataValue", nil)
+	}
+	query.Tag = tag
+	query.MetadataKey = "tag"
+	query.MetadataValue = tag
+	return query, nil
+}
+
+func normalizeDocumentListQuery(query domain.DocumentListQuery) (domain.DocumentListQuery, error) {
+	tag := strings.TrimSpace(query.Tag)
+	if tag == "" {
+		if query.Tag != "" {
+			return domain.DocumentListQuery{}, domain.ValidationError("tag must be non-empty", nil)
+		}
+		return query, nil
+	}
+	if strings.TrimSpace(query.MetadataKey) != "" || strings.TrimSpace(query.MetadataValue) != "" {
+		return domain.DocumentListQuery{}, domain.ValidationError("tag cannot be combined with metadataKey or metadataValue", nil)
+	}
+	query.Tag = tag
+	query.MetadataKey = "tag"
+	query.MetadataValue = tag
+	return query, nil
 }
 
 func (s *Store) CreateDocument(ctx context.Context, input domain.CreateDocumentInput) (domain.Document, error) {

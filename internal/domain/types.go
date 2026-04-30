@@ -68,6 +68,7 @@ type SearchQuery struct {
 	PathPrefix    string
 	MetadataKey   string
 	MetadataValue string
+	Tag           string
 }
 
 type SearchHit struct {
@@ -89,6 +90,7 @@ type DocumentListQuery struct {
 	PathPrefix    string
 	MetadataKey   string
 	MetadataValue string
+	Tag           string
 	Limit         int
 	Cursor        string
 }

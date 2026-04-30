@@ -204,6 +204,10 @@ For candidate proposals:
 3. Keep the body faithful. Do not add facts, citations, source claims, security
    claims, or network-fetched content not supplied by the user. Include
    `type: note` frontmatter for note-like candidates.
+   If the user explicitly supplies frontmatter tags, preserve those tags
+   exactly. If tags are not explicit and sensible tags would help retrieval,
+   the agent may propose `tag: <value>` in the visible body preview before
+   approval. The runner does not infer or add tags itself.
 4. Validate the candidate with `openclerk document` `action: "validate"` before
    presenting it. Validation is not a durable write.
 5. When duplicate risk is requested or plausible, treat it as valid
@@ -252,6 +256,7 @@ Common request shapes:
 {"action":"ingest_video_url","video":{"url":"https://youtube.example.test/watch?v=demo","path_hint":"sources/video-youtube/demo.md","title":"Demo Video Transcript","transcript":{"text":"Supplied transcript text.","policy":"supplied","origin":"user_supplied_transcript","language":"en","captured_at":"2026-04-27T00:00:00Z"}}}
 {"action":"ingest_video_url","video":{"url":"https://youtube.example.test/watch?v=demo","mode":"update","transcript":{"text":"Updated supplied transcript text.","policy":"supplied","origin":"user_supplied_transcript"}}}
 {"action":"list_documents","list":{"path_prefix":"notes/","limit":20}}
+{"action":"list_documents","list":{"path_prefix":"notes/","tag":"account-renewal","limit":20}}
 {"action":"get_document","doc_id":"doc_id_from_json"}
 {"action":"append_document","doc_id":"doc_id_from_json","content":"## Decisions\nUse the OpenClerk runner."}
 {"action":"replace_section","doc_id":"doc_id_from_json","heading":"Decisions","content":"Use the OpenClerk runner for routine local knowledge tasks."}
@@ -265,7 +270,7 @@ A `source` has `url`, `path_hint`, optional `asset_path_hint`, optional
 `title`, optional `mode` (`create` default, or `update`), and optional
 `source_type` (`pdf` or `web`). A `video` has `url`,
 `path_hint`, optional `asset_path_hint`, optional `title`, optional `mode`, and
-`transcript`. A `list` may include `path_prefix`, `metadata_key`,
+`transcript`. A `list` may include `path_prefix`, `tag`, `metadata_key`,
 `metadata_value`, `limit`, and `cursor`.
 
 Validation rejections are JSON results with `rejected: true` and
@@ -337,6 +342,7 @@ Common request shapes:
 ```json
 {"action":"search","search":{"text":"architecture","limit":10}}
 {"action":"search","search":{"text":"architecture","path_prefix":"notes/","metadata_key":"status","metadata_value":"active","limit":10}}
+{"action":"search","search":{"text":"renewal","tag":"account-renewal","limit":10}}
 {"action":"document_links","doc_id":"doc_id_from_json"}
 {"action":"graph_neighborhood","doc_id":"doc_id_from_json","limit":10}
 {"action":"records_lookup","records":{"text":"OpenClerk runner","limit":10}}
@@ -364,6 +370,14 @@ for markdown relationships; records, services, and decisions lookup for
 promoted-domain projections; provenance for derivation history; and projection
 states for freshness. Canonical markdown remains authoritative over derived
 service, record, decision, and synthesis projections.
+
+For tag-shaped retrieval, prefer `search.tag` or `list.tag` over spelling the
+same lookup as `metadata_key: "tag"` plus `metadata_value`. The `tag` field is
+a single exact scalar frontmatter filter over canonical Markdown authority; it
+does not imply stemming, fuzzy matching, aliases, taxonomy lookup, or multi-tag
+intersection. Existing metadata filters remain valid for compatibility and
+non-tag metadata, but do not combine `tag` with `metadata_key` or
+`metadata_value` in one request.
 
 ## Answering From Results
 
