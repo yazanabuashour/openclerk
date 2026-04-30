@@ -268,6 +268,28 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 			RequireApproval:  true,
 			RequireBodyShown: true,
 		})
+	case captureLowRiskNaturalScenarioID:
+		return verifyDocumentArtifactCandidateProposal(ctx, paths, finalMessage, turnMetrics, documentArtifactCandidateExpectation{
+			Path:             captureLowRiskNaturalPath,
+			Title:            captureLowRiskTitle,
+			RequiredBody:     []string{"type: note", "# Support Handoff", captureLowRiskBodyText},
+			RequireValidate:  true,
+			RequireNoCreate:  true,
+			RequireApproval:  true,
+			RequireBodyShown: true,
+		})
+	case captureLowRiskScriptedScenarioID:
+		return verifyDocumentArtifactCandidateProposal(ctx, paths, finalMessage, turnMetrics, documentArtifactCandidateExpectation{
+			Path:             captureLowRiskPath,
+			Title:            captureLowRiskTitle,
+			RequiredBody:     []string{"type: note", "# Support Handoff", captureLowRiskBodyText},
+			RequireValidate:  true,
+			RequireNoCreate:  true,
+			RequireApproval:  true,
+			RequireBodyShown: true,
+		})
+	case captureLowRiskDuplicateScenarioID:
+		return verifyCaptureLowRiskDuplicate(ctx, paths, finalMessage, turnMetrics)
 	case captureDuplicateCandidateNaturalScenarioID, captureDuplicateCandidateScriptedScenarioID:
 		return verifyCaptureDuplicateCandidate(ctx, paths, finalMessage, turnMetrics, false)
 	case captureDuplicateCandidateAccuracyScenarioID:

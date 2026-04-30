@@ -501,6 +501,61 @@ func TestVerifyCaptureDuplicateCandidateRequiresTargetAccuracyAndNoWrite(t *test
 	}
 }
 
+func TestVerifyCaptureLowRiskDuplicateRequiresRunnerEvidenceAndNoWrite(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: captureLowRiskDuplicateScenarioID}); err != nil {
+		t.Fatalf("seed low-risk duplicate scenario: %v", err)
+	}
+	existingDocID, found, err := documentIDByPath(ctx, paths, captureLowRiskDuplicatePath)
+	if err != nil || !found {
+		t.Fatalf("lookup low-risk duplicate doc id: found=%t err=%v", found, err)
+	}
+	metrics := metrics{
+		AssistantCalls:           1,
+		SearchUsed:               true,
+		SearchPathPrefixes:       []string{captureLowRiskDuplicatePrefix},
+		ListDocumentsUsed:        true,
+		ListDocumentPathPrefixes: []string{captureLowRiskDuplicatePrefix},
+		GetDocumentUsed:          true,
+		GetDocumentDocIDs:        []string{existingDocID},
+		EventTypeCounts:          map[string]int{},
+	}
+	finalAnswer := "Likely duplicate candidate: " + captureLowRiskDuplicatePath + " (" + captureLowRiskDuplicateTitle + "). No document was created or updated. Should I update the existing document or create a new document at a confirmed path?"
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: captureLowRiskDuplicateScenarioID}, 1, finalAnswer, metrics)
+	if err != nil {
+		t.Fatalf("verify low-risk duplicate baseline: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("low-risk duplicate baseline failed: %+v", result)
+	}
+
+	validateMetrics := metrics
+	validateMetrics.ValidateUsed = true
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: captureLowRiskDuplicateScenarioID}, 1, finalAnswer, validateMetrics)
+	if err != nil {
+		t.Fatalf("verify low-risk duplicate validate-before-clarification: %v", err)
+	}
+	if result.Passed || result.AssistantPass {
+		t.Fatalf("low-risk duplicate passed after validate-before-clarification: %+v", result)
+	}
+
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	if err := createSeedDocument(ctx, cfg, captureLowRiskCandidateDuplicate, "Duplicate Support Handoff Copy", "# Duplicate\n"); err != nil {
+		t.Fatalf("create forbidden low-risk duplicate candidate: %v", err)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: captureLowRiskDuplicateScenarioID}, 1, finalAnswer, metrics)
+	if err != nil {
+		t.Fatalf("verify low-risk duplicate write: %v", err)
+	}
+	if result.Passed || result.DatabasePass {
+		t.Fatalf("low-risk duplicate passed after duplicate write: %+v", result)
+	}
+	if !strings.Contains(result.Details, "created forbidden low-risk duplicate candidate") {
+		t.Fatalf("duplicate write failure details = %q", result.Details)
+	}
+}
+
 func TestVerifyCaptureSaveThisNoteDuplicateRequiresRunnerEvidenceAndNoWrite(t *testing.T) {
 	ctx := context.Background()
 	paths := scenarioPaths(t.TempDir())

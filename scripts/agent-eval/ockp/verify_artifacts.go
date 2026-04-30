@@ -554,6 +554,9 @@ func agentChosenBypassFailures(turnMetrics metrics) []string {
 func pathTitleBypassFailures(turnMetrics metrics) []string {
 	return populatedBypassFailures(turnMetrics)
 }
+func captureLowRiskBypassFailures(turnMetrics metrics) []string {
+	return populatedBypassFailures(turnMetrics)
+}
 func captureExplicitOverridesBypassFailures(turnMetrics metrics) []string {
 	return populatedBypassFailures(turnMetrics)
 }

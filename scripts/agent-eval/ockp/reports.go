@@ -91,7 +91,7 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	if releaseBlocking {
 		return nil
 	}
-	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != promotedRecordDomainLaneName && lane != parallelRunnerLaneName && lane != documentHistoryLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != captureExplicitOverridesLaneName && lane != captureDuplicateCandidateLaneName && lane != captureSaveThisNoteLaneName && lane != sourceURLUpdateLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName && lane != broadAuditLaneName {
+	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != promotedRecordDomainLaneName && lane != parallelRunnerLaneName && lane != documentHistoryLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != captureLowRiskLaneName && lane != captureExplicitOverridesLaneName && lane != captureDuplicateCandidateLaneName && lane != captureSaveThisNoteLaneName && lane != sourceURLUpdateLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName && lane != broadAuditLaneName {
 		return nil
 	}
 	summary := targetedLaneSummary{
@@ -133,6 +133,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		case pathTitleAutonomyLaneName:
 			include = isPathTitleAutonomyScenario(result.Scenario)
 			classification, posture = classifyTargetedPathTitleAutonomyResult(result)
+		case captureLowRiskLaneName:
+			include = isCaptureLowRiskScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
+			classification, posture = classifyTargetedCaptureLowRiskResult(result)
 		case captureExplicitOverridesLaneName:
 			include = isCaptureExplicitOverridesScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
 			classification, posture = classifyTargetedCaptureExplicitOverridesResult(result)
@@ -222,6 +225,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	case pathTitleAutonomyLaneName:
 		summary.Decision = "evaluate_for_oc_iat"
 		summary.Promotion = "no promoted runner action, schema, migration, skill behavior, storage API, product behavior, or public OpenClerk interface from this eval"
+	case captureLowRiskLaneName:
+		summary.Decision = captureLowRiskDecision(summary.ScenarioClassifications)
+		summary.Promotion = captureLowRiskPromotion(summary.Decision)
 	case captureExplicitOverridesLaneName:
 		summary.Decision = captureExplicitOverridesDecision(summary.ScenarioClassifications)
 		summary.Promotion = captureExplicitOverridesPromotion(summary.Decision)

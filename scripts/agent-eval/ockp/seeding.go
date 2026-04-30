@@ -208,6 +208,10 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedCaptureExplicitOverridesAuthorityConflict(ctx, cfg); err != nil {
 			return err
 		}
+	case captureLowRiskDuplicateScenarioID:
+		if err := seedCaptureLowRiskDuplicate(ctx, cfg); err != nil {
+			return err
+		}
 	case captureDuplicateCandidateNaturalScenarioID, captureDuplicateCandidateScriptedScenarioID, captureDuplicateCandidateAccuracyScenarioID:
 		if err := seedCaptureDuplicateCandidate(ctx, cfg); err != nil {
 			return err

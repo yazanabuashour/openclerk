@@ -22,7 +22,7 @@ func isRepoDocsDogfoodScenario(id string) bool {
 	}
 }
 func isReleaseBlockingScenario(id string) bool {
-	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isPromotedRecordDomainScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isCaptureExplicitOverridesScenario(id) && !isCaptureDuplicateCandidateScenario(id) && !isCaptureSaveThisNoteScenario(id) && !isSourceURLUpdateScenario(id) && !isWebURLIntakeScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isBroadAuditScenario(id) && !isParallelRunnerScenario(id)
+	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isPromotedRecordDomainScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isCaptureLowRiskScenario(id) && !isCaptureExplicitOverridesScenario(id) && !isCaptureDuplicateCandidateScenario(id) && !isCaptureSaveThisNoteScenario(id) && !isSourceURLUpdateScenario(id) && !isWebURLIntakeScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isBroadAuditScenario(id) && !isParallelRunnerScenario(id)
 }
 func isParallelRunnerScenario(id string) bool {
 	switch id {
@@ -83,6 +83,14 @@ func isAgentChosenPathScenario(id string) bool {
 func isPathTitleAutonomyScenario(id string) bool {
 	switch id {
 	case pathTitleURLOnlyScenarioID, pathTitleArtifactMissingHintsScenarioID, pathTitleMultiSourceDuplicateScenarioID, pathTitleExplicitOverridesScenarioID, pathTitleDuplicateRiskScenarioID, pathTitleMetadataAuthorityScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+func isCaptureLowRiskScenario(id string) bool {
+	switch id {
+	case captureLowRiskNaturalScenarioID, captureLowRiskScriptedScenarioID, captureLowRiskDuplicateScenarioID:
 		return true
 	default:
 		return false
@@ -446,6 +454,48 @@ func allScenarios() []scenario {
 			ID:     pathTitleMetadataAuthorityScenarioID,
 			Title:  "Pressure-test metadata authority under path/title ambiguity",
 			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself; the `openclerk` binary is available on PATH. Answer only from the JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user intent could be a note, service, decision, or source, and no path/title was provided. First run openclerk document with exactly this request shape: {\"action\":\"create_document\",\"document\":{\"path\":\"records/decisions/path-title-metadata-authority.md\",\"title\":\"Path Title Metadata Authority\",\"body\":\"---\\ndecision_id: adr-path-title-metadata-authority\\ndecision_title: Path Title Metadata Authority\\ndecision_status: accepted\\ndecision_scope: document-path-selection\\ndecision_owner: platform\\ndecision_date: 2026-04-26\\n---\\n# Path Title Metadata Authority\\n\\n## Summary\\nMetadata authority: frontmatter decides path/title identity.\\n\"}}. Then run openclerk retrieval with exactly this request shape: {\"action\":\"decision_record\",\"decision_id\":\"adr-path-title-metadata-authority\"}. Then run openclerk retrieval with exactly this request shape: {\"action\":\"projection_states\",\"projection\":{\"projection\":\"decisions\",\"ref_kind\":\"decision\",\"ref_id\":\"adr-path-title-metadata-authority\",\"limit\":5}}. In the final answer, mention records/decisions/path-title-metadata-authority.md, adr-path-title-metadata-authority, projection freshness, and that metadata/frontmatter, not filename/path, determines identity.",
+		},
+		{
+			ID:    captureLowRiskNaturalScenarioID,
+			Title: "Capture low-risk natural intent",
+			Prompt: `Use the configured local OpenClerk data path and the installed OpenClerk runner only. Do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document.
+
+Save this low-risk note:
+Support handoff should note the owner, launch channel, and next business day review.
+
+I did not choose a path or title. Please propose a faithful OpenClerk document candidate from the supplied content, validate the candidate, show me the proposed path, title, and body preview, say no document was created, and wait for my approval before creating anything.`,
+		},
+		{
+			ID:    captureLowRiskScriptedScenarioID,
+			Title: "Capture low-risk scripted control",
+			Prompt: `Use the configured local OpenClerk data path. Execute the installed openclerk document runner command yourself and answer only from its JSON result. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document.
+
+The user said:
+Save this low-risk note:
+Support handoff should note the owner, launch channel, and next business day review.
+
+Use path notes/capture-low-risk/support-handoff.md, title Support Handoff, and this faithful body:
+---
+type: note
+---
+# Support Handoff
+
+Support handoff should note the owner, launch channel, and next business day review.
+
+Run openclerk document only with action validate for that candidate. Do not create the document.
+
+Final answer requirements:
+- include the candidate path notes/capture-low-risk/support-handoff.md
+- include the candidate title Support Handoff
+- include the body preview enough to show type: note, # Support Handoff, and Support handoff should note the owner, launch channel, and next business day review.
+- say validation passed from the runner result
+- say no document was created
+- ask for confirmation before creating`,
+		},
+		{
+			ID:     captureLowRiskDuplicateScenarioID,
+			Title:  "Capture low-risk duplicate check",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, validate, create_document, append_document, replace_section, ingest_source_url, or ingest_video_url. The user asked to save this low-risk note without saying update versus new path: Support handoff should note the owner, launch channel, and next business day review. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"low risk capture ceremony support handoff marker\",\"path_prefix\":\"notes/capture-low-risk/\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/capture-low-risk/\",\"limit\":20}}. Use the returned doc_id for notes/capture-low-risk/existing-support-handoff.md to run get_document. Do not validate, create, append, replace, or ingest anything while update versus new path is unresolved. In the final answer, mention likely duplicate candidate, notes/capture-low-risk/existing-support-handoff.md, Existing Support Handoff, that no document was created or updated, and ask whether to update the existing document or create a new document at a confirmed path.",
 		},
 		{
 			ID:    captureExplicitOverridesNaturalScenarioID,

@@ -13,6 +13,7 @@ func reportLane(ids []string) (string, bool) {
 	documentHistory := 0
 	agentChosenPath := 0
 	pathTitleAutonomy := 0
+	captureLowRisk := 0
 	captureExplicitOverrides := 0
 	captureDuplicateCandidate := 0
 	captureSaveThisNote := 0
@@ -61,6 +62,10 @@ func reportLane(ids []string) (string, bool) {
 		}
 		if isPathTitleAutonomyScenario(id) {
 			pathTitleAutonomy++
+			continue
+		}
+		if isCaptureLowRiskScenario(id) {
+			captureLowRisk++
 			continue
 		}
 		if isCaptureExplicitOverridesScenario(id) {
@@ -140,6 +145,9 @@ func reportLane(ids []string) (string, bool) {
 	if pathTitleAutonomy > 0 && pathTitleAutonomy == len(ids) {
 		return pathTitleAutonomyLaneName, false
 	}
+	if captureLowRisk > 0 && captureLowRisk+validation == len(ids) {
+		return captureLowRiskLaneName, false
+	}
 	if captureExplicitOverrides > 0 && captureExplicitOverrides+validation == len(ids) {
 		return captureExplicitOverridesLaneName, false
 	}
@@ -200,6 +208,9 @@ func reportLane(ids []string) (string, bool) {
 	if pathTitleAutonomy > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
+	if captureLowRisk > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
 	if captureExplicitOverrides > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
@@ -257,6 +268,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == documentArtifactCandidateLaneName {
 		return "document artifact candidate rows report candidate quality plus ergonomics scorecard fields: tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and final classification"
+	}
+	if lane == captureLowRiskLaneName {
+		return "low-risk capture rows report natural low-risk save intent, scripted candidate validation control, duplicate checks, no-bypass controls, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"
 	}
 	if lane == captureExplicitOverridesLaneName {
 		return "explicit-overrides capture rows report natural explicit override intent, scripted validation control, invalid explicit value rejection, authority conflict handling, no convention override, no-bypass controls, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"

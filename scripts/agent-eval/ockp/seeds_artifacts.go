@@ -39,6 +39,23 @@ Do not replace this note without explicit update approval.
 	return createSeedDocument(ctx, cfg, captureExplicitOverridesAuthorityPath, captureExplicitOverridesAuthorityExistingTitle, body)
 }
 
+func seedCaptureLowRiskDuplicate(ctx context.Context, cfg runclient.Config) error {
+	body := strings.TrimSpace(`---
+type: note
+status: active
+---
+# Existing Support Handoff
+
+## Summary
+low risk capture ceremony support handoff marker.
+Support handoff should note the owner, launch channel, and next business day review.
+
+## Policy
+Ask for approval before updating this note or creating a new duplicate path.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, captureLowRiskDuplicatePath, captureLowRiskDuplicateTitle, body)
+}
+
 func seedCaptureDuplicateCandidate(ctx context.Context, cfg runclient.Config) error {
 	existingBody := strings.TrimSpace(`---
 type: note
