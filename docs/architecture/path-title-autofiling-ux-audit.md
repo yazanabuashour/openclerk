@@ -65,15 +65,17 @@ fields or an approved candidate workflow.
 
 ## Eval-Design Follow-Ups
 
-The following follow-up Beads were filed from this audit:
+The following follow-up Beads were filed from this audit. Their consolidated
+future eval-design framing is
+[`../evals/path-title-capture-ceremony-eval-design.md`](../evals/path-title-capture-ceremony-eval-design.md).
 
-| Bead | Flow | Eval-design question |
-| --- | --- | --- |
-| `oc-zf3o` | Document these links | Should OpenClerk propose source or synthesis paths for public links before write instead of asking for `source.path_hint` immediately? |
-| `oc-qjhm` | Save this note | Does the current candidate path/title/body proposal handle natural note capture without unnecessary missing-field friction? |
-| `oc-k6eb` | Duplicate candidate update vs new path | Can duplicate-risk wording be smoother while preserving runner-visible lookup and no duplicate writes? |
-| `oc-mjpz` | Explicit overrides in smoother autofiling | Do future smoother flows preserve explicit path/title/type/body instructions and fail validation instead of silently rewriting them? |
-| `oc-18oo` | Low-risk capture ceremony | Is approval-before-create still the right UX for low-risk capture, or is it ceremonial despite passing safety checks? |
+| Bead | Flow | Eval-design question | Design |
+| --- | --- | --- | --- |
+| `oc-zf3o` | Document these links | Should OpenClerk propose source or synthesis paths for public links before write instead of asking for `source.path_hint` immediately? | [`path-title-capture-ceremony-eval-design.md`](../evals/path-title-capture-ceremony-eval-design.md) |
+| `oc-qjhm` | Save this note | Does the current candidate path/title/body proposal handle natural note capture without unnecessary missing-field friction? | [`path-title-capture-ceremony-eval-design.md`](../evals/path-title-capture-ceremony-eval-design.md) |
+| `oc-k6eb` | Duplicate candidate update vs new path | Can duplicate-risk wording be smoother while preserving runner-visible lookup and no duplicate writes? | [`path-title-capture-ceremony-eval-design.md`](../evals/path-title-capture-ceremony-eval-design.md) |
+| `oc-mjpz` | Explicit overrides in smoother autofiling | Do future smoother flows preserve explicit path/title/type/body instructions and fail validation instead of silently rewriting them? | [`path-title-capture-ceremony-eval-design.md`](../evals/path-title-capture-ceremony-eval-design.md) |
+| `oc-18oo` | Low-risk capture ceremony | Is approval-before-create still the right UX for low-risk capture, or is it ceremonial despite passing safety checks? | [`path-title-capture-ceremony-eval-design.md`](../evals/path-title-capture-ceremony-eval-design.md) |
 
 These follow-ups are eval/design scoped. They do not authorize implementation.
 Any future behavior change still needs targeted eval evidence and an explicit

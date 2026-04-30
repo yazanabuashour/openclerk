@@ -49,16 +49,23 @@ The remaining gaps are eval/design backlog, not implementation approval:
 
 - **Local file artifact intake:** clarify whether local files should stay as
   user-supplied content/candidate documents, require explicit asset policy, or
-  need future source ingestion evidence.
+  need future source ingestion evidence. See `oc-8drq` in
+  [`../evals/url-artifact-intake-future-eval-design.md`](../evals/url-artifact-intake-future-eval-design.md).
 - **Native media acquisition:** evaluate video/audio transcript acquisition
   options, privacy policy, dependency policy, transcript provenance, citation
-  mapping, and update/freshness behavior before any promoted surface.
+  mapping, and update/freshness behavior before any promoted surface. See
+  `oc-mjt2` in
+  [`../evals/url-artifact-intake-future-eval-design.md`](../evals/url-artifact-intake-future-eval-design.md).
 - **Richer public product-page cases:** test public HTML pages with tracking
   parameters, blocked or non-HTML responses, dynamic content omissions, and
-  visible-text fidelity without browser automation or purchase flows.
+  visible-text fidelity without browser automation or purchase flows. See
+  `oc-tyzm` in
+  [`../evals/url-artifact-intake-future-eval-design.md`](../evals/url-artifact-intake-future-eval-design.md).
 - **Unsupported artifact kinds:** design eval pressure for images, slide decks,
   emails, exported chats, forms, and other artifacts to decide whether existing
-  candidate/document workflows are acceptable or overly ceremonial.
+  candidate/document workflows are acceptable or overly ceremonial. See
+  `oc-3k38` in
+  [`../evals/url-artifact-intake-future-eval-design.md`](../evals/url-artifact-intake-future-eval-design.md).
 
 These gaps should produce future eval-design beads only. Implementation beads
 remain inappropriate until targeted evidence and a promotion decision name an
