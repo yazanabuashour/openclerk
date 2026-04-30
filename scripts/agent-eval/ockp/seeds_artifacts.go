@@ -22,6 +22,23 @@ The pricing model note already captures packaging tiers and renewal notes.
 `) + "\n"
 	return createSeedDocument(ctx, cfg, candidateDuplicateExistingPath, "Existing Pricing Model Note", body)
 }
+
+func seedCaptureExplicitOverridesAuthorityConflict(ctx context.Context, cfg runclient.Config) error {
+	body := strings.TrimSpace(`---
+type: note
+status: active
+---
+# Existing Authority Note
+
+## Summary
+capture explicit overrides authority conflict marker: existing runner-visible authority owns this path.
+
+## Policy
+Do not replace this note without explicit update approval.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, captureExplicitOverridesAuthorityPath, captureExplicitOverridesAuthorityExistingTitle, body)
+}
+
 func seedArtifactTranscript(ctx context.Context, cfg runclient.Config) error {
 	body := strings.TrimSpace(`---
 type: transcript

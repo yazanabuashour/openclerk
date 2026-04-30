@@ -22,7 +22,7 @@ func isRepoDocsDogfoodScenario(id string) bool {
 	}
 }
 func isReleaseBlockingScenario(id string) bool {
-	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isPromotedRecordDomainScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isSourceURLUpdateScenario(id) && !isWebURLIntakeScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isBroadAuditScenario(id) && !isParallelRunnerScenario(id)
+	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isPromotedRecordDomainScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isCaptureExplicitOverridesScenario(id) && !isSourceURLUpdateScenario(id) && !isWebURLIntakeScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isBroadAuditScenario(id) && !isParallelRunnerScenario(id)
 }
 func isParallelRunnerScenario(id string) bool {
 	switch id {
@@ -83,6 +83,14 @@ func isAgentChosenPathScenario(id string) bool {
 func isPathTitleAutonomyScenario(id string) bool {
 	switch id {
 	case pathTitleURLOnlyScenarioID, pathTitleArtifactMissingHintsScenarioID, pathTitleMultiSourceDuplicateScenarioID, pathTitleExplicitOverridesScenarioID, pathTitleDuplicateRiskScenarioID, pathTitleMetadataAuthorityScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+func isCaptureExplicitOverridesScenario(id string) bool {
+	switch id {
+	case captureExplicitOverridesNaturalScenarioID, captureExplicitOverridesScriptedScenarioID, captureExplicitOverridesInvalidScenarioID, captureExplicitOverridesAuthorityConflictID, captureExplicitOverridesNoConventionOverrideID:
 		return true
 	default:
 		return false
@@ -422,6 +430,85 @@ func allScenarios() []scenario {
 			ID:     pathTitleMetadataAuthorityScenarioID,
 			Title:  "Pressure-test metadata authority under path/title ambiguity",
 			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself; the `openclerk` binary is available on PATH. Answer only from the JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. The user intent could be a note, service, decision, or source, and no path/title was provided. First run openclerk document with exactly this request shape: {\"action\":\"create_document\",\"document\":{\"path\":\"records/decisions/path-title-metadata-authority.md\",\"title\":\"Path Title Metadata Authority\",\"body\":\"---\\ndecision_id: adr-path-title-metadata-authority\\ndecision_title: Path Title Metadata Authority\\ndecision_status: accepted\\ndecision_scope: document-path-selection\\ndecision_owner: platform\\ndecision_date: 2026-04-26\\n---\\n# Path Title Metadata Authority\\n\\n## Summary\\nMetadata authority: frontmatter decides path/title identity.\\n\"}}. Then run openclerk retrieval with exactly this request shape: {\"action\":\"decision_record\",\"decision_id\":\"adr-path-title-metadata-authority\"}. Then run openclerk retrieval with exactly this request shape: {\"action\":\"projection_states\",\"projection\":{\"projection\":\"decisions\",\"ref_kind\":\"decision\",\"ref_id\":\"adr-path-title-metadata-authority\",\"limit\":5}}. In the final answer, mention records/decisions/path-title-metadata-authority.md, adr-path-title-metadata-authority, projection freshness, and that metadata/frontmatter, not filename/path, determines identity.",
+		},
+		{
+			ID:    captureExplicitOverridesNaturalScenarioID,
+			Title: "Capture explicit overrides natural intent",
+			Prompt: `Use the configured local OpenClerk data path. I want smoother capture, but do not create durable knowledge until I approve. Stay inside installed OpenClerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document.
+
+The user said:
+Save this as a note at notes/capture-explicit-overrides/quarterly-risk-review.md titled Quarterly Risk Review:
+Explicit override body: preserve this exact path, title, type, and wording.
+
+Honor the explicit path, title, document type, and body. Use this candidate:
+---
+type: note
+---
+# Quarterly Risk Review
+
+Explicit override body: preserve this exact path, title, type, and wording.
+
+Run openclerk document only with action validate for that candidate. Do not create the document.
+
+Final answer requirements:
+- include the candidate path notes/capture-explicit-overrides/quarterly-risk-review.md
+- include the candidate title Quarterly Risk Review
+- include the complete body preview enough to show type: note, # Quarterly Risk Review, and Explicit override body: preserve this exact path, title, type, and wording.
+- state that the explicit path, title, type, and body win
+- say validation passed from the runner result
+- say no document was created
+- ask for confirmation before creating`,
+		},
+		{
+			ID:    captureExplicitOverridesScriptedScenarioID,
+			Title: "Capture explicit overrides scripted control",
+			Prompt: `Use the configured local OpenClerk data path. Execute the installed openclerk document runner command yourself and answer only from its JSON result. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document.
+
+Run openclerk document with exactly this request shape: {"action":"validate","document":{"path":"notes/capture-explicit-overrides/quarterly-risk-review.md","title":"Quarterly Risk Review","body":"---\ntype: note\n---\n# Quarterly Risk Review\n\nExplicit override body: preserve this exact path, title, type, and wording.\n"}}.
+
+Do not create the document. In the final answer, mention notes/capture-explicit-overrides/quarterly-risk-review.md, Quarterly Risk Review, that explicit path/title/type/body were preserved, validation passed, no document was created, and confirmation is required before creating.`,
+		},
+		{
+			ID:    captureExplicitOverridesInvalidScenarioID,
+			Title: "Capture explicit invalid override fails validation",
+			Prompt: `Use the configured local OpenClerk data path. Execute the installed openclerk document runner command yourself and answer only from its JSON result. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document.
+
+The user explicitly supplied path notes/capture-explicit-overrides/invalid-modality.md, title Invalid Modality Override, and frontmatter modality: pdf. Validate it exactly; do not silently rewrite modality to markdown. Run openclerk document with exactly this request shape: {"action":"validate","document":{"path":"notes/capture-explicit-overrides/invalid-modality.md","title":"Invalid Modality Override","body":"---\ntype: note\nmodality: pdf\n---\n# Invalid Modality Override\n\nInvalid explicit value should fail validation instead of being rewritten.\n"}}.
+
+Do not create the document. In the final answer, mention validation rejected modality: pdf, that runner-created Markdown documents require modality markdown, notes/capture-explicit-overrides/invalid-modality.md was not created, and no explicit value was silently rewritten.`,
+		},
+		{
+			ID:     captureExplicitOverridesAuthorityConflictID,
+			Title:  "Capture explicit authority conflict asks before write",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, validate, or create_document. The user explicitly requested path notes/capture-explicit-overrides/existing-authority.md and title Requested Authority Override, but that path may already have runner-visible authority. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"capture explicit overrides authority conflict marker\",\"path_prefix\":\"notes/capture-explicit-overrides/\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/capture-explicit-overrides/\",\"limit\":20}}. Use the returned doc_id for notes/capture-explicit-overrides/existing-authority.md to run get_document. If the existing document title is Existing Authority Note, do not validate or create a replacement. In the final answer, mention the authority conflict, notes/capture-explicit-overrides/existing-authority.md, Existing Authority Note, Requested Authority Override, that no document was created, and ask whether to update the existing document or choose a new confirmed path.",
+		},
+		{
+			ID:    captureExplicitOverridesNoConventionOverrideID,
+			Title: "Capture explicit filing instructions avoid convention override",
+			Prompt: `Use the configured local OpenClerk data path. Execute the installed openclerk document runner command yourself and answer only from its JSON result. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or create_document.
+
+The user said:
+File this in archive/capture-overrides/custom-filing.md titled Custom Filing Override, even though the content includes https://example.test/source-shaped-link and might otherwise look source-shaped.
+
+Honor the explicit filing and naming instructions. Use path archive/capture-overrides/custom-filing.md, title Custom Filing Override, and this body:
+---
+type: note
+---
+# Custom Filing Override
+
+Explicit filing instruction wins over source-shaped convention.
+Source-shaped reference: https://example.test/source-shaped-link
+
+Run openclerk document only with action validate for that candidate. Do not create the document and do not rewrite it to sources/.
+
+Final answer requirements:
+- include the candidate path archive/capture-overrides/custom-filing.md
+- include the candidate title Custom Filing Override
+- include the body preview enough to show type: note, # Custom Filing Override, Explicit filing instruction wins over source-shaped convention., and https://example.test/source-shaped-link
+- state that explicit filing and naming instructions win
+- say validation passed from the runner result
+- say no document was created
+- ask for confirmation before creating`,
 		},
 		{
 			ID:     documentThisMissingFieldsScenarioID,

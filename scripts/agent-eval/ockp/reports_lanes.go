@@ -13,6 +13,7 @@ func reportLane(ids []string) (string, bool) {
 	documentHistory := 0
 	agentChosenPath := 0
 	pathTitleAutonomy := 0
+	captureExplicitOverrides := 0
 	sourceURLUpdate := 0
 	webURLIntake := 0
 	documentThis := 0
@@ -58,6 +59,10 @@ func reportLane(ids []string) (string, bool) {
 		}
 		if isPathTitleAutonomyScenario(id) {
 			pathTitleAutonomy++
+			continue
+		}
+		if isCaptureExplicitOverridesScenario(id) {
+			captureExplicitOverrides++
 			continue
 		}
 		if isSourceURLUpdateScenario(id) {
@@ -125,6 +130,9 @@ func reportLane(ids []string) (string, bool) {
 	if pathTitleAutonomy > 0 && pathTitleAutonomy == len(ids) {
 		return pathTitleAutonomyLaneName, false
 	}
+	if captureExplicitOverrides > 0 && captureExplicitOverrides+validation == len(ids) {
+		return captureExplicitOverridesLaneName, false
+	}
 	if sourceURLUpdate > 0 && sourceURLUpdate+validation == len(ids) {
 		return sourceURLUpdateLaneName, false
 	}
@@ -176,6 +184,9 @@ func reportLane(ids []string) (string, bool) {
 	if pathTitleAutonomy > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
+	if captureExplicitOverrides > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
 	if sourceURLUpdate > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
@@ -224,6 +235,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == documentArtifactCandidateLaneName {
 		return "document artifact candidate rows report candidate quality plus ergonomics scorecard fields: tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and final classification"
+	}
+	if lane == captureExplicitOverridesLaneName {
+		return "explicit-overrides capture rows report natural explicit override intent, scripted validation control, invalid explicit value rejection, authority conflict handling, no convention override, no-bypass controls, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"
 	}
 	if lane == artifactIngestionLaneName {
 		return "artifact ingestion rows report tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, fixture preflight, and final classification"

@@ -204,6 +204,10 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedDocumentArtifactCandidateDuplicate(ctx, cfg); err != nil {
 			return err
 		}
+	case captureExplicitOverridesAuthorityConflictID:
+		if err := seedCaptureExplicitOverridesAuthorityConflict(ctx, cfg); err != nil {
+			return err
+		}
 	case artifactTranscriptScenarioID:
 		if err := seedArtifactTranscript(ctx, cfg); err != nil {
 			return err

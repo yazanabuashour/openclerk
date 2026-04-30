@@ -244,6 +244,30 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyDocumentArtifactCandidateDuplicateRisk(ctx, paths, finalMessage, turnMetrics)
 	case candidateErgonomicsLowConfidenceNaturalID:
 		return verifyDocumentArtifactCandidateLowConfidence(ctx, paths, finalMessage, turnMetrics)
+	case captureExplicitOverridesNaturalScenarioID, captureExplicitOverridesScriptedScenarioID:
+		return verifyDocumentArtifactCandidateProposal(ctx, paths, finalMessage, turnMetrics, documentArtifactCandidateExpectation{
+			Path:             captureExplicitOverridesPath,
+			Title:            captureExplicitOverridesTitle,
+			RequiredBody:     []string{"type: note", "# Quarterly Risk Review", "Explicit override body: preserve this exact path, title, type, and wording."},
+			RequireValidate:  true,
+			RequireNoCreate:  true,
+			RequireApproval:  true,
+			RequireBodyShown: true,
+		})
+	case captureExplicitOverridesInvalidScenarioID:
+		return verifyCaptureExplicitOverridesInvalid(ctx, paths, finalMessage, turnMetrics)
+	case captureExplicitOverridesAuthorityConflictID:
+		return verifyCaptureExplicitOverridesAuthorityConflict(ctx, paths, finalMessage, turnMetrics)
+	case captureExplicitOverridesNoConventionOverrideID:
+		return verifyDocumentArtifactCandidateProposal(ctx, paths, finalMessage, turnMetrics, documentArtifactCandidateExpectation{
+			Path:             captureExplicitOverridesArchivePath,
+			Title:            captureExplicitOverridesArchiveTitle,
+			RequiredBody:     []string{"type: note", "# Custom Filing Override", "Explicit filing instruction wins over source-shaped convention.", "https://example.test/source-shaped-link"},
+			RequireValidate:  true,
+			RequireNoCreate:  true,
+			RequireApproval:  true,
+			RequireBodyShown: true,
+		})
 	case artifactPDFSourceURLScenarioID, artifactPDFNaturalIntentScenarioID:
 		return verifyArtifactPDFSourceURL(ctx, paths, sc.ID, finalMessage, turnMetrics)
 	case artifactTranscriptScenarioID:

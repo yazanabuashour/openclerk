@@ -91,7 +91,7 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	if releaseBlocking {
 		return nil
 	}
-	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != promotedRecordDomainLaneName && lane != parallelRunnerLaneName && lane != documentHistoryLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != sourceURLUpdateLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName && lane != broadAuditLaneName {
+	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != promotedRecordDomainLaneName && lane != parallelRunnerLaneName && lane != documentHistoryLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != captureExplicitOverridesLaneName && lane != sourceURLUpdateLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName && lane != broadAuditLaneName {
 		return nil
 	}
 	summary := targetedLaneSummary{
@@ -133,6 +133,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		case pathTitleAutonomyLaneName:
 			include = isPathTitleAutonomyScenario(result.Scenario)
 			classification, posture = classifyTargetedPathTitleAutonomyResult(result)
+		case captureExplicitOverridesLaneName:
+			include = isCaptureExplicitOverridesScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
+			classification, posture = classifyTargetedCaptureExplicitOverridesResult(result)
 		case sourceURLUpdateLaneName:
 			include = isSourceURLUpdateScenario(result.Scenario)
 			classification, posture = classifyTargetedSourceURLUpdateResult(result)
@@ -213,6 +216,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	case pathTitleAutonomyLaneName:
 		summary.Decision = "evaluate_for_oc_iat"
 		summary.Promotion = "no promoted runner action, schema, migration, skill behavior, storage API, product behavior, or public OpenClerk interface from this eval"
+	case captureExplicitOverridesLaneName:
+		summary.Decision = captureExplicitOverridesDecision(summary.ScenarioClassifications)
+		summary.Promotion = captureExplicitOverridesPromotion(summary.Decision)
 	case sourceURLUpdateLaneName:
 		summary.Decision = "keep_existing_update_mode"
 		summary.Promotion = "targeted AgentOps evidence for existing ingest_source_url source.mode update behavior; no new runner action, schema, storage API, or transport"
