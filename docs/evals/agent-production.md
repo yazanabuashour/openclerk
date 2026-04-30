@@ -126,6 +126,11 @@ taste debt. That outcome supports follow-up audit, design, or eval work, but it
 does not authorize implementation without targeted evidence and an explicit
 promotion decision naming the exact surface and gates.
 
+Companion eval-design follow-ups for completed-but-high-touch workflows are
+recorded in
+[`high-touch-successful-workflows-ceremony-eval-design.md`](high-touch-successful-workflows-ceremony-eval-design.md).
+They are future targeted pressure designs, not production-gate scenarios.
+
 Committed reports must continue to use repo-relative paths and neutral
 placeholders such as `<run-root>` for raw logs. This template guidance does not
 require a generated report JSON field, harness schema change, runner action, or

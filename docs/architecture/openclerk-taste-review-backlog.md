@@ -65,6 +65,7 @@ The following Beads epics track the revisit work:
 - `oc-fbqy`: Re-audit post-oc-v1ed URL and artifact intake UX
 - `oc-4rxs`: Re-audit path, title, and autofiling UX
 - `oc-l6su`: Re-audit high-touch successful workflows
+  ([audit](high-touch-successful-workflows-ux-audit.md))
 - `oc-n959`: Update OpenClerk decision process for taste
 
 These epics are docs and evaluation-design backlog only. They do not authorize
@@ -90,7 +91,8 @@ Re-audit high-touch successful workflows where natural rows passed but stayed
 expensive or ceremonial. Initial candidates include synthesis maintenance,
 document lifecycle review and rollback, graph semantics, memory/router
 revisit, promoted record lookup, document-this synthesis freshness, and the
-`web-url-changed-stale` scenario.
+`web-url-changed-stale` scenario. The `oc-l6su` audit is recorded in
+[`high-touch-successful-workflows-ux-audit.md`](high-touch-successful-workflows-ux-audit.md).
 
 Update process docs so future eval reports can separately record:
 
