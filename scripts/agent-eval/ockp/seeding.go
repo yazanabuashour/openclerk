@@ -220,6 +220,14 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedCaptureSaveThisNoteDuplicate(ctx, cfg); err != nil {
 			return err
 		}
+	case captureDocumentLinksSynthesisScenarioID:
+		if err := seedCaptureDocumentLinksSources(ctx, cfg); err != nil {
+			return err
+		}
+	case captureDocumentLinksDuplicateScenarioID:
+		if err := seedCaptureDocumentLinksDuplicate(ctx, cfg); err != nil {
+			return err
+		}
 	case artifactTranscriptScenarioID:
 		if err := seedArtifactTranscript(ctx, cfg); err != nil {
 			return err
@@ -366,6 +374,68 @@ func sourceTitleFromPath(path string) string {
 	}
 	return strings.Join(parts, " ")
 }
+
+func seedCaptureDocumentLinksSources(ctx context.Context, cfg runclient.Config) error {
+	firstBody := strings.TrimSpace(`---
+type: source
+status: active
+source_url: https://example.test/openclerk-runner-guidance
+---
+# Runner Guidance Link
+
+## Summary
+Document-these-links public evidence says source path hints must be confirmed before durable source writes.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, captureDocumentLinksSourcePath, captureDocumentLinksSourceTitle, firstBody); err != nil {
+		return err
+	}
+	secondBody := strings.TrimSpace(`---
+type: source
+status: active
+source_url: https://example.test/openclerk-freshness-guidance
+---
+# Freshness Guidance Link
+
+## Summary
+Document-these-links public evidence says synthesis placement should be proposed only after source intent is clear.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, captureDocumentLinksSecondSourcePath, captureDocumentLinksSecondSourceTitle, secondBody)
+}
+
+func seedCaptureDocumentLinksDuplicate(ctx context.Context, cfg runclient.Config) error {
+	sourceBody := strings.TrimSpace(`---
+type: source
+status: active
+source_url: https://example.test/openclerk-runner-guidance
+---
+# Existing Runner Guidance Link
+
+## Summary
+document these links placement runner guidance marker: existing public source evidence already covers runner guidance.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, captureDocumentLinksDuplicateSourcePath, captureDocumentLinksDuplicateSourceTitle, sourceBody); err != nil {
+		return err
+	}
+	synthesisBody := strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: sources/document-these-links/existing-runner-guidance.md
+---
+# Document These Links Placement
+
+## Summary
+Existing synthesis candidate for document-these-links placement.
+
+## Sources
+- sources/document-these-links/existing-runner-guidance.md
+
+## Freshness
+Checked existing source placement before duplicate capture.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, captureDocumentLinksSynthesisPath, captureDocumentLinksSynthesisTitle, synthesisBody)
+}
+
 func seedParallelRunnerReads(ctx context.Context, cfg runclient.Config) error {
 	if err := createSeedDocument(ctx, cfg, parallelRunnerDocPath, "Parallel Runner Read Contract", "# Parallel Runner Read Contract\n\n## Summary\nParallel runner safe read contract evidence says resolve_paths, list_documents, retrieval search, service lookup, decision lookup, provenance, and projection reads may run concurrently without raw SQLite runtime_config or upsert failures.\n"); err != nil {
 		return err

@@ -566,6 +566,9 @@ func captureDuplicateCandidateBypassFailures(turnMetrics metrics) []string {
 func captureSaveThisNoteBypassFailures(turnMetrics metrics) []string {
 	return populatedBypassFailures(turnMetrics)
 }
+func captureDocumentLinksBypassFailures(turnMetrics metrics) []string {
+	return populatedBypassFailures(turnMetrics)
+}
 func documentThisBypassFailures(turnMetrics metrics) []string {
 	return populatedBypassFailures(turnMetrics)
 }

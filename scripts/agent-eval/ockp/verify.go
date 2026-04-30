@@ -318,6 +318,14 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyCaptureSaveThisNoteDuplicate(ctx, paths, finalMessage, turnMetrics)
 	case captureSaveThisNoteLowConfidenceID:
 		return verifyCaptureSaveThisNoteLowConfidence(ctx, paths, finalMessage, turnMetrics)
+	case captureDocumentLinksNaturalScenarioID:
+		return verifyCaptureDocumentLinksNatural(ctx, paths, finalMessage, turnMetrics)
+	case captureDocumentLinksFetchScenarioID:
+		return verifyCaptureDocumentLinksFetch(ctx, paths, finalMessage, turnMetrics)
+	case captureDocumentLinksSynthesisScenarioID:
+		return verifyCaptureDocumentLinksSynthesis(ctx, paths, finalMessage, turnMetrics)
+	case captureDocumentLinksDuplicateScenarioID:
+		return verifyCaptureDocumentLinksDuplicate(ctx, paths, finalMessage, turnMetrics)
 	case artifactPDFSourceURLScenarioID, artifactPDFNaturalIntentScenarioID:
 		return verifyArtifactPDFSourceURL(ctx, paths, sc.ID, finalMessage, turnMetrics)
 	case artifactTranscriptScenarioID:

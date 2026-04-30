@@ -17,6 +17,7 @@ func reportLane(ids []string) (string, bool) {
 	captureExplicitOverrides := 0
 	captureDuplicateCandidate := 0
 	captureSaveThisNote := 0
+	captureDocumentLinks := 0
 	sourceURLUpdate := 0
 	webURLIntake := 0
 	documentThis := 0
@@ -78,6 +79,10 @@ func reportLane(ids []string) (string, bool) {
 		}
 		if isCaptureSaveThisNoteScenario(id) {
 			captureSaveThisNote++
+			continue
+		}
+		if isCaptureDocumentLinksScenario(id) {
+			captureDocumentLinks++
 			continue
 		}
 		if isSourceURLUpdateScenario(id) {
@@ -157,6 +162,9 @@ func reportLane(ids []string) (string, bool) {
 	if captureSaveThisNote > 0 && captureSaveThisNote+validation == len(ids) {
 		return captureSaveThisNoteLaneName, false
 	}
+	if captureDocumentLinks > 0 && captureDocumentLinks+validation == len(ids) {
+		return captureDocumentLinksLaneName, false
+	}
 	if sourceURLUpdate > 0 && sourceURLUpdate+validation == len(ids) {
 		return sourceURLUpdateLaneName, false
 	}
@@ -220,6 +228,9 @@ func reportLane(ids []string) (string, bool) {
 	if captureSaveThisNote > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
+	if captureDocumentLinks > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
 	if sourceURLUpdate > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
@@ -280,6 +291,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == captureSaveThisNoteLaneName {
 		return "save-this-note capture rows report natural save intent, scripted candidate validation control, duplicate checks, low-confidence clarification, no-bypass controls, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"
+	}
+	if lane == captureDocumentLinksLaneName {
+		return "document-these-links placement rows report natural public-link placement intent, approved source fetch control, synthesis placement proposal, duplicate source/synthesis handling, no-bypass controls, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"
 	}
 	if lane == artifactIngestionLaneName {
 		return "artifact ingestion rows report tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, fixture preflight, and final classification"

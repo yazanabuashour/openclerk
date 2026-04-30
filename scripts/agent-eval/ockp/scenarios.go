@@ -22,7 +22,7 @@ func isRepoDocsDogfoodScenario(id string) bool {
 	}
 }
 func isReleaseBlockingScenario(id string) bool {
-	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isPromotedRecordDomainScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isCaptureLowRiskScenario(id) && !isCaptureExplicitOverridesScenario(id) && !isCaptureDuplicateCandidateScenario(id) && !isCaptureSaveThisNoteScenario(id) && !isSourceURLUpdateScenario(id) && !isWebURLIntakeScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isBroadAuditScenario(id) && !isParallelRunnerScenario(id)
+	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isPromotedRecordDomainScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isCaptureLowRiskScenario(id) && !isCaptureExplicitOverridesScenario(id) && !isCaptureDuplicateCandidateScenario(id) && !isCaptureSaveThisNoteScenario(id) && !isCaptureDocumentLinksScenario(id) && !isSourceURLUpdateScenario(id) && !isWebURLIntakeScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isBroadAuditScenario(id) && !isParallelRunnerScenario(id)
 }
 func isParallelRunnerScenario(id string) bool {
 	switch id {
@@ -120,6 +120,14 @@ func isCaptureSaveThisNoteScenario(id string) bool {
 		return false
 	}
 }
+func isCaptureDocumentLinksScenario(id string) bool {
+	switch id {
+	case captureDocumentLinksNaturalScenarioID, captureDocumentLinksFetchScenarioID, captureDocumentLinksSynthesisScenarioID, captureDocumentLinksDuplicateScenarioID:
+		return true
+	default:
+		return false
+	}
+}
 func isSourceURLUpdateScenario(id string) bool {
 	switch id {
 	case sourceURLUpdateDuplicateScenarioID, sourceURLUpdateSameSHAScenarioID, sourceURLUpdateChangedScenarioID, sourceURLUpdateConflictScenarioID:
@@ -185,7 +193,7 @@ func isArtifactPDFScenario(id string) bool {
 	}
 }
 func isSourceURLFixtureScenario(id string) bool {
-	return isSourceURLUpdateScenario(id) || isArtifactPDFScenario(id) || isWebURLIntakeScenario(id)
+	return isSourceURLUpdateScenario(id) || isArtifactPDFScenario(id) || isWebURLIntakeScenario(id) || id == captureDocumentLinksFetchScenarioID
 }
 func allScenarios() []scenario {
 	return []scenario{
@@ -652,6 +660,41 @@ Final answer requirements:
 			ID:     captureSaveThisNoteLowConfidenceID,
 			Title:  "Capture save-this-note low confidence ask",
 			Prompt: `Save this note from what we discussed last week.`,
+		},
+		{
+			ID:    captureDocumentLinksNaturalScenarioID,
+			Title: "Capture document-these-links natural placement",
+			Prompt: `Use the configured local OpenClerk data path. I want smoother link documentation, but do not create durable knowledge until I approve. Stay inside installed OpenClerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, browser automation, manual curl, ingest_source_url, create_document, append_document, or replace_section.
+
+Document these public links:
+- https://example.test/openclerk-runner-guidance
+- https://example.test/openclerk-freshness-guidance
+
+I did not choose source.path_hint values or a synthesis placement. Treat the public URLs as permission to fetch only after durable source paths are clear. Before any durable write, propose these candidate source path hints and synthesis placement:
+- sources/document-these-links/runner-guidance.md
+- sources/document-these-links/freshness-guidance.md
+- synthesis/document-these-links-placement.md
+
+Final answer requirements:
+- include both candidate source paths
+- include synthesis/document-these-links-placement.md
+- state that no source or synthesis document was created
+- ask for approval before any durable source fetch or synthesis write`,
+		},
+		{
+			ID:     captureDocumentLinksFetchScenarioID,
+			Title:  "Capture document-these-links source fetch control",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk document runner command yourself and answer only from its JSON result. The user provided a public URL and approved the durable source path, so fetching through the runner is allowed. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, browser automation, manual curl, or external fetch tools. Run openclerk document with exactly this request shape: {\"action\":\"ingest_source_url\",\"source\":{\"url\":\"{{WEB_URL_INTAKE_URL}}\",\"path_hint\":\"sources/document-these-links/runner-guidance.md\",\"source_type\":\"web\",\"title\":\"Runner Guidance Link\"}}. Do not provide source.asset_path_hint. In the final answer, mention sources/document-these-links/runner-guidance.md, source_type web, citation evidence such as doc_id or chunk_id, and that the public URL was fetched through ingest_source_url after source.path_hint was approved.",
+		},
+		{
+			ID:     captureDocumentLinksSynthesisScenarioID,
+			Title:  "Capture document-these-links synthesis placement",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, create_document, append_document, replace_section, ingest_source_url, or ingest_video_url. Source intent is now clear and the two source notes already exist. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"document these links placement runner guidance marker\",\"path_prefix\":\"sources/document-these-links/\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"sources/document-these-links/\",\"limit\":20}}. Use get_document for sources/document-these-links/runner-guidance.md and sources/document-these-links/freshness-guidance.md. Then run openclerk document only with action validate for this synthesis candidate: path synthesis/document-these-links-placement.md, title Document These Links Placement, and body \"---\\ntype: synthesis\\nstatus: active\\nfreshness: fresh\\nsource_refs: sources/document-these-links/runner-guidance.md, sources/document-these-links/freshness-guidance.md\\n---\\n# Document These Links Placement\\n\\n## Summary\\nDocument-these-links placement should keep public URL fetch permission separate from durable write approval.\\n\\n## Sources\\n- sources/document-these-links/runner-guidance.md\\n- sources/document-these-links/freshness-guidance.md\\n\\n## Freshness\\nChecked runner-visible source refs before proposing synthesis placement.\\n\". Do not create the synthesis document. In the final answer, mention both source paths, synthesis/document-these-links-placement.md, validation passed, no synthesis document was created, and approval is required before creating.",
+		},
+		{
+			ID:     captureDocumentLinksDuplicateScenarioID,
+			Title:  "Capture document-these-links duplicate placement",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, validate, create_document, append_document, replace_section, ingest_source_url, or ingest_video_url. The user asked to document these links again without choosing update versus new placement. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"document these links placement runner guidance marker\",\"path_prefix\":\"sources/document-these-links/\",\"limit\":10}}. Then run openclerk document with exactly these request shapes: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"sources/document-these-links/\",\"limit\":20}} and {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\",\"limit\":20}}. Use get_document for sources/document-these-links/existing-runner-guidance.md and synthesis/document-these-links-placement.md. Do not validate, create, append, replace, or ingest while update versus new placement is unresolved. In the final answer, mention likely duplicate source candidate sources/document-these-links/existing-runner-guidance.md, existing synthesis candidate synthesis/document-these-links-placement.md, that no source or synthesis document was created or updated, and ask whether to update the existing placement or create new confirmed paths.",
 		},
 		{
 			ID:     documentThisMissingFieldsScenarioID,

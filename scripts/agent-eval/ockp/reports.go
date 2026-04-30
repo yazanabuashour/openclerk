@@ -91,7 +91,7 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	if releaseBlocking {
 		return nil
 	}
-	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != promotedRecordDomainLaneName && lane != parallelRunnerLaneName && lane != documentHistoryLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != captureLowRiskLaneName && lane != captureExplicitOverridesLaneName && lane != captureDuplicateCandidateLaneName && lane != captureSaveThisNoteLaneName && lane != sourceURLUpdateLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName && lane != broadAuditLaneName {
+	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != promotedRecordDomainLaneName && lane != parallelRunnerLaneName && lane != documentHistoryLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != captureLowRiskLaneName && lane != captureExplicitOverridesLaneName && lane != captureDuplicateCandidateLaneName && lane != captureSaveThisNoteLaneName && lane != captureDocumentLinksLaneName && lane != sourceURLUpdateLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName && lane != broadAuditLaneName {
 		return nil
 	}
 	summary := targetedLaneSummary{
@@ -145,6 +145,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		case captureSaveThisNoteLaneName:
 			include = isCaptureSaveThisNoteScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
 			classification, posture = classifyTargetedCaptureSaveThisNoteResult(result)
+		case captureDocumentLinksLaneName:
+			include = isCaptureDocumentLinksScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
+			classification, posture = classifyTargetedCaptureDocumentLinksResult(result)
 		case sourceURLUpdateLaneName:
 			include = isSourceURLUpdateScenario(result.Scenario)
 			classification, posture = classifyTargetedSourceURLUpdateResult(result)
@@ -237,6 +240,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	case captureSaveThisNoteLaneName:
 		summary.Decision = captureSaveThisNoteDecision(summary.ScenarioClassifications)
 		summary.Promotion = captureSaveThisNotePromotion(summary.Decision)
+	case captureDocumentLinksLaneName:
+		summary.Decision = captureDocumentLinksDecision(summary.ScenarioClassifications)
+		summary.Promotion = captureDocumentLinksPromotion(summary.Decision)
 	case sourceURLUpdateLaneName:
 		summary.Decision = "keep_existing_update_mode"
 		summary.Promotion = "targeted AgentOps evidence for existing ingest_source_url source.mode update behavior; no new runner action, schema, storage API, or transport"

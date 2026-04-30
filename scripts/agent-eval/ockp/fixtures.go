@@ -38,7 +38,7 @@ func startSourceURLUpdateFixtures(scenarioID string) *sourceURLUpdateFixtures {
 		initialPDF: minimalEvalPDF("Source URL Update Stable", "OpenClerk Eval", sourceURLUpdateInitialText),
 		changedPDF: minimalEvalPDF("Source URL Update Changed", "OpenClerk Eval", sourceURLUpdateChangedText),
 	}
-	if isWebURLIntakeScenario(scenarioID) {
+	if isWebURLIntakeScenario(scenarioID) || scenarioID == captureDocumentLinksFetchScenarioID {
 		fixtures.webURLIntake = true
 		fixtures.initialHTML = []byte(`<!doctype html><html><head><title>` + webURLTitle + `</title></head><body><h1>` + webURLTitle + `</h1><p>` + webURLInitialText + ` visible public product-page evidence.</p><button>Add to cart</button></body></html>`)
 		fixtures.changedHTML = []byte(`<!doctype html><html><head><title>` + webURLTitle + ` Updated</title></head><body><h1>` + webURLTitle + ` Updated</h1><p>` + webURLChangedText + ` refreshed public product-page evidence.</p></body></html>`)
