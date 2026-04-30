@@ -251,6 +251,7 @@ func classifyCommand(command string, m *metrics) {
 	if commandContainsAction(actionText, "list_documents") {
 		m.ListDocumentsUsed = true
 		m.ListDocumentPathPrefixes = append(m.ListDocumentPathPrefixes, actionFieldValues(actionText, "list_documents", "path_prefix")...)
+		classifyListDocumentsCommand(actionText, m)
 	}
 	if commandContainsAction(actionText, "get_document") {
 		m.GetDocumentUsed = true
@@ -362,6 +363,28 @@ func classifySearchCommand(actionText string, m *metrics) {
 		}
 	}
 }
+func classifyListDocumentsCommand(actionText string, m *metrics) {
+	compacted := strings.Join(strings.Fields(actionText), "")
+	const marker = `"action":"list_documents"`
+	if !strings.Contains(compacted, marker) {
+		return
+	}
+	parts := strings.Split(compacted, marker)
+	for _, part := range parts[1:] {
+		if next := strings.Index(part, `"action":"`); next >= 0 {
+			part = part[:next]
+		}
+		hasMetadataFilter := strings.Contains(part, `"metadata_key":`) || strings.Contains(part, `"metadata_value":`)
+		if hasMetadataFilter {
+			m.ListMetadataFilterUsed = true
+			key := fieldValueFromCompactedAction(part, "metadata_key")
+			value := fieldValueFromCompactedAction(part, "metadata_value")
+			if key != "" || value != "" {
+				m.ListMetadataFilters = append(m.ListMetadataFilters, key+"="+value)
+			}
+		}
+	}
+}
 func fieldValueFromCompactedAction(part string, field string) string {
 	fieldMarker := `"` + field + `":"`
 	valueStart := strings.Index(part, fieldMarker)
@@ -445,6 +468,8 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.AppendDocumentUsed = out.AppendDocumentUsed || current.AppendDocumentUsed
 		out.ListDocumentsUsed = out.ListDocumentsUsed || current.ListDocumentsUsed
 		out.ListDocumentPathPrefixes = append(out.ListDocumentPathPrefixes, current.ListDocumentPathPrefixes...)
+		out.ListMetadataFilterUsed = out.ListMetadataFilterUsed || current.ListMetadataFilterUsed
+		out.ListMetadataFilters = append(out.ListMetadataFilters, current.ListMetadataFilters...)
 		out.GetDocumentUsed = out.GetDocumentUsed || current.GetDocumentUsed
 		out.GetDocumentDocIDs = append(out.GetDocumentDocIDs, current.GetDocumentDocIDs...)
 		out.InspectLayoutUsed = out.InspectLayoutUsed || current.InspectLayoutUsed

@@ -156,6 +156,47 @@ func documentArtifactCandidateDecision(rows []targetedScenarioClassification) st
 	return "promote_propose_before_create_skill_policy"
 }
 
+func taggingDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	ergonomicsGaps := 0
+	for _, row := range rows {
+		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
+			return "promote_tag_filter_surface_design"
+		}
+		if row.FailureClassification == "unsafe_boundary_violation" || row.FailureClassification == "eval_contract_violation" {
+			return "kill_tagging_surface_shape"
+		}
+		if row.FailureClassification == "ergonomics_gap" {
+			ergonomicsGaps++
+		} else if row.FailureClassification != "none" {
+			return "defer_for_guidance_or_eval_repair"
+		}
+		seen[row.Scenario] = true
+	}
+	for _, id := range taggingScenarioIDs() {
+		if !seen[id] {
+			return "defer_for_guidance_or_eval_repair"
+		}
+	}
+	if ergonomicsGaps > 0 {
+		return "promote_tag_filter_surface_design"
+	}
+	return "keep_as_reference"
+}
+
+func taggingPromotion(decision string) string {
+	switch decision {
+	case "promote_tag_filter_surface_design":
+		return "targeted evidence supports filing a separate implementation bead for read-side tag filter sugar over canonical markdown/frontmatter; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
+	case "kill_tagging_surface_shape":
+		return "first-class tagging shape is unsafe under current evidence; do not file implementation work"
+	case "defer_for_guidance_or_eval_repair":
+		return "first-class tagging promotion deferred pending guidance, harness, report, or eval repair"
+	default:
+		return "keep tagging as reference evidence over existing metadata_key/metadata_value primitives; no implementation bead, runner action, schema, storage, public API, skill behavior, or product behavior change"
+	}
+}
+
 func webURLIntakeDecision(rows []targetedScenarioClassification) string {
 	seen := map[string]bool{}
 	for _, row := range rows {

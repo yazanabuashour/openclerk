@@ -22,7 +22,7 @@ func isRepoDocsDogfoodScenario(id string) bool {
 	}
 }
 func isReleaseBlockingScenario(id string) bool {
-	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isPromotedRecordDomainScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isCaptureLowRiskScenario(id) && !isCaptureExplicitOverridesScenario(id) && !isCaptureDuplicateCandidateScenario(id) && !isCaptureSaveThisNoteScenario(id) && !isCaptureDocumentLinksScenario(id) && !isSourceURLUpdateScenario(id) && !isWebURLIntakeScenario(id) && !isWebProductPageScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isBroadAuditScenario(id) && !isParallelRunnerScenario(id)
+	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isPromotedRecordDomainScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isCaptureLowRiskScenario(id) && !isCaptureExplicitOverridesScenario(id) && !isCaptureDuplicateCandidateScenario(id) && !isTaggingScenario(id) && !isCaptureSaveThisNoteScenario(id) && !isCaptureDocumentLinksScenario(id) && !isSourceURLUpdateScenario(id) && !isWebURLIntakeScenario(id) && !isWebProductPageScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isBroadAuditScenario(id) && !isParallelRunnerScenario(id)
 }
 func isParallelRunnerScenario(id string) bool {
 	switch id {
@@ -111,6 +111,17 @@ func isCaptureDuplicateCandidateScenario(id string) bool {
 	default:
 		return false
 	}
+}
+func isTaggingScenario(id string) bool {
+	switch id {
+	case taggingCreateUpdateScenarioID, taggingRetrievalScenarioID, taggingDisambiguationScenarioID, taggingNearDuplicateScenarioID, taggingMixedPathScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+func taggingScenarioIDs() []string {
+	return []string{taggingCreateUpdateScenarioID, taggingRetrievalScenarioID, taggingDisambiguationScenarioID, taggingNearDuplicateScenarioID, taggingMixedPathScenarioID}
 }
 func isCaptureSaveThisNoteScenario(id string) bool {
 	switch id {
@@ -651,6 +662,41 @@ Final answer requirements:
 			ID:     captureDuplicateCandidateAccuracyScenarioID,
 			Title:  "Capture duplicate candidate target accuracy",
 			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, validate, create_document, append_document, replace_section, ingest_source_url, or ingest_video_url. The user asked to save this note without saying update versus new path: Renewal packaging notes should preserve the existing account renewal guidance. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"duplicate candidate update renewal packaging marker account renewal guidance\",\"path_prefix\":\"notes/capture-duplicate-candidate/\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/capture-duplicate-candidate/\",\"limit\":20}}. Choose notes/capture-duplicate-candidate/existing-renewal-note.md as the likely duplicate, not any adjacent decoy. Use the returned doc_id for notes/capture-duplicate-candidate/existing-renewal-note.md to run get_document. Do not validate, create, append, replace, or ingest anything while update versus new path is unresolved. In the final answer, mention likely duplicate candidate, notes/capture-duplicate-candidate/existing-renewal-note.md, Existing Renewal Note, target accuracy, that no document was created or updated, and ask whether to update the existing document or create a new document at a confirmed path.",
+		},
+		{
+			ID:    taggingCreateUpdateScenarioID,
+			Title: "Tagging create and update through current primitives",
+			Prompt: `Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or unsupported actions.
+
+Create notes/tagging/launch-readiness.md titled Launch Readiness with frontmatter tag: launch-risk and type: note. The body must include this exact sentence: Launch readiness tag evidence stays canonical in markdown frontmatter.
+
+Then update that same document with append_document to add this exact sentence: Launch readiness tag update evidence remains on the same tagged document.
+
+Then prove the tag is retrievable using existing current primitives by running retrieval search with metadata_key tag and metadata_value launch-risk, and list_documents with metadata_key tag and metadata_value launch-risk under path_prefix notes/tagging/.
+
+In the final answer, mention notes/tagging/launch-readiness.md, tag launch-risk, that canonical markdown/frontmatter remains authority, that the update stayed on the same document, and that current metadata_key/metadata_value filters were required.`,
+		},
+		{
+			ID:    taggingRetrievalScenarioID,
+			Title: "Tagging retrieval by tag natural intent",
+			Prompt: `Use the configured local OpenClerk data path. A normal user asks: show me the OpenClerk notes tagged account-renewal. Stay inside installed OpenClerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or durable writes.
+
+Use the current runner primitives to answer from runner-visible evidence. In the final answer, cite notes/tagging/account-renewal.md, mention the tag account-renewal, say no durable write occurred, and say whether the current tag lookup needed metadata_key/metadata_value ceremony.`,
+		},
+		{
+			ID:     taggingDisambiguationScenarioID,
+			Title:  "Tagging disambiguates exact tag names",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or durable writes. Find notes tagged exactly customer-risk. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"tagging exact customer risk evidence\",\"metadata_key\":\"tag\",\"metadata_value\":\"customer-risk\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"metadata_key\":\"tag\",\"metadata_value\":\"customer-risk\",\"limit\":20}}. Do not return notes tagged customer-risk-archive. In the final answer, mention notes/tagging/customer-risk.md, tag customer-risk, exact tag disambiguation, no durable write, and that customer-risk-archive was excluded.",
+		},
+		{
+			ID:     taggingNearDuplicateScenarioID,
+			Title:  "Tagging handles near-duplicate tag names",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or durable writes. Find notes tagged exactly ops-review, not ops-reviews. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"tagging near duplicate operations review evidence\",\"metadata_key\":\"tag\",\"metadata_value\":\"ops-review\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"metadata_key\":\"tag\",\"metadata_value\":\"ops-review\",\"limit\":20}}. In the final answer, mention notes/tagging/ops-review.md, tag ops-review, that ops-reviews was excluded, no durable write, and that exact metadata filtering handled the near-duplicate tags.",
+		},
+		{
+			ID:     taggingMixedPathScenarioID,
+			Title:  "Tagging combines path prefix and tag filters",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or durable writes. Find active notes under notes/tagging/ tagged support-handoff, excluding archived material under archive/tagging/. First run openclerk retrieval with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"tagging support handoff active note evidence\",\"path_prefix\":\"notes/tagging/\",\"metadata_key\":\"tag\",\"metadata_value\":\"support-handoff\",\"limit\":10}}. Then run openclerk document with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/tagging/\",\"metadata_key\":\"tag\",\"metadata_value\":\"support-handoff\",\"limit\":20}}. In the final answer, mention notes/tagging/support-handoff.md, tag support-handoff, mixed path plus tag query, no durable write, and that archive/tagging/support-handoff.md was excluded.",
 		},
 		{
 			ID:    captureSaveThisNoteNaturalScenarioID,

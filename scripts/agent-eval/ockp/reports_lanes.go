@@ -16,6 +16,7 @@ func reportLane(ids []string) (string, bool) {
 	captureLowRisk := 0
 	captureExplicitOverrides := 0
 	captureDuplicateCandidate := 0
+	tagging := 0
 	captureSaveThisNote := 0
 	captureDocumentLinks := 0
 	sourceURLUpdate := 0
@@ -76,6 +77,10 @@ func reportLane(ids []string) (string, bool) {
 		}
 		if isCaptureDuplicateCandidateScenario(id) {
 			captureDuplicateCandidate++
+			continue
+		}
+		if isTaggingScenario(id) {
+			tagging++
 			continue
 		}
 		if isCaptureSaveThisNoteScenario(id) {
@@ -164,6 +169,9 @@ func reportLane(ids []string) (string, bool) {
 	if captureDuplicateCandidate > 0 && captureDuplicateCandidate+validation == len(ids) {
 		return captureDuplicateCandidateLaneName, false
 	}
+	if tagging > 0 && tagging+validation == len(ids) {
+		return taggingLaneName, false
+	}
 	if captureSaveThisNote > 0 && captureSaveThisNote+validation == len(ids) {
 		return captureSaveThisNoteLaneName, false
 	}
@@ -233,6 +241,9 @@ func reportLane(ids []string) (string, bool) {
 	if captureDuplicateCandidate > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
+	if tagging > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
 	if captureSaveThisNote > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
@@ -299,6 +310,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == captureDuplicateCandidateLaneName {
 		return "duplicate-candidate capture rows report runner-visible search/list/get evidence, update-versus-new-path clarification, target accuracy, no duplicate write, approval-before-write, no-bypass controls, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"
+	}
+	if lane == taggingLaneName {
+		return "tagging rows report tagged create/update, retrieval by tag, exact tag disambiguation, near-duplicate tag exclusion, mixed path-plus-tag queries, metadata_key/metadata_value ceremony, no-bypass controls, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and separate safety/capability/UX classification"
 	}
 	if lane == captureSaveThisNoteLaneName {
 		return "save-this-note capture rows report natural save intent, scripted candidate validation control, duplicate checks, low-confidence clarification, no-bypass controls, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"

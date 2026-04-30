@@ -223,6 +223,10 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedCaptureDuplicateCandidate(ctx, cfg); err != nil {
 			return err
 		}
+	case taggingRetrievalScenarioID, taggingDisambiguationScenarioID, taggingNearDuplicateScenarioID, taggingMixedPathScenarioID:
+		if err := seedTaggingWorkflows(ctx, cfg); err != nil {
+			return err
+		}
 	case captureSaveThisNoteDuplicateScenarioID:
 		if err := seedCaptureSaveThisNoteDuplicate(ctx, cfg); err != nil {
 			return err

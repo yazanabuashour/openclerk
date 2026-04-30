@@ -21,7 +21,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"search\",\"search\":{\"text\":\"runner\"}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"search\",\"search\":{\"text\":\"runner\",\"path_prefix\":\"notes/rag/\"}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"search\",\"search\":{\"text\":\"runner\",\"metadata_key\":\"rag_scope\",\"metadata_value\":\"active-policy\"}}' | openclerk retrieval"}}`,
-		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\"}}' | openclerk document"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\",\"metadata_key\":\"tag\",\"metadata_value\":\"runner\"}}' | openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"get_document\",\"doc_id\":\"doc_1\"}' | openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"replace_section\",\"doc_id\":\"doc_1\",\"heading\":\"Summary\",\"content\":\"updated\"}' | openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"append_document\",\"doc_id\":\"doc_1\",\"content\":\"updated\"}' | openclerk document"}}`,
@@ -76,6 +76,9 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	if !containsAllStrings(parsed.metrics.ListDocumentPathPrefixes, []string{"synthesis/"}) {
 		t.Fatalf("expected list document path prefix in %+v", parsed.metrics)
 	}
+	if !containsAllStrings(parsed.metrics.ListMetadataFilters, []string{"tag=runner"}) {
+		t.Fatalf("expected list document metadata filter in %+v", parsed.metrics)
+	}
 	if !containsAllStrings(parsed.metrics.SearchPathPrefixes, []string{"notes/rag/"}) {
 		t.Fatalf("expected search path prefix in %+v", parsed.metrics)
 	}
@@ -91,6 +94,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		"search_path_filter":     parsed.metrics.SearchPathFilterUsed,
 		"search_metadata_filter": parsed.metrics.SearchMetadataFilterUsed,
 		"list_documents":         parsed.metrics.ListDocumentsUsed,
+		"list_metadata_filter":   parsed.metrics.ListMetadataFilterUsed,
 		"get_document":           parsed.metrics.GetDocumentUsed,
 		"replace_section":        parsed.metrics.ReplaceSectionUsed,
 		"append_document":        parsed.metrics.AppendDocumentUsed,

@@ -306,6 +306,16 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyCaptureDuplicateCandidate(ctx, paths, finalMessage, turnMetrics, false)
 	case captureDuplicateCandidateAccuracyScenarioID:
 		return verifyCaptureDuplicateCandidate(ctx, paths, finalMessage, turnMetrics, true)
+	case taggingCreateUpdateScenarioID:
+		return verifyTaggingCreateUpdate(ctx, paths, finalMessage, turnMetrics)
+	case taggingRetrievalScenarioID:
+		return verifyTaggingRetrieval(ctx, paths, finalMessage, turnMetrics)
+	case taggingDisambiguationScenarioID:
+		return verifyTaggingDisambiguation(ctx, paths, finalMessage, turnMetrics)
+	case taggingNearDuplicateScenarioID:
+		return verifyTaggingNearDuplicate(ctx, paths, finalMessage, turnMetrics)
+	case taggingMixedPathScenarioID:
+		return verifyTaggingMixedPath(ctx, paths, finalMessage, turnMetrics)
 	case captureSaveThisNoteNaturalScenarioID:
 		return verifyDocumentArtifactCandidateProposal(ctx, paths, finalMessage, turnMetrics, documentArtifactCandidateExpectation{
 			Path:             captureSaveThisNoteNaturalPath,

@@ -130,6 +130,8 @@ type metrics struct {
 	AppendDocumentUsed        bool           `json:"append_document_used"`
 	ListDocumentsUsed         bool           `json:"list_documents_used"`
 	ListDocumentPathPrefixes  []string       `json:"list_document_path_prefixes,omitempty"`
+	ListMetadataFilterUsed    bool           `json:"list_metadata_filter_used"`
+	ListMetadataFilters       []string       `json:"list_metadata_filters,omitempty"`
 	GetDocumentUsed           bool           `json:"get_document_used"`
 	GetDocumentDocIDs         []string       `json:"get_document_doc_ids,omitempty"`
 	InspectLayoutUsed         bool           `json:"inspect_layout_used"`

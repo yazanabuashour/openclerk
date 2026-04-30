@@ -91,7 +91,7 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	if releaseBlocking {
 		return nil
 	}
-	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != promotedRecordDomainLaneName && lane != parallelRunnerLaneName && lane != documentHistoryLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != captureLowRiskLaneName && lane != captureExplicitOverridesLaneName && lane != captureDuplicateCandidateLaneName && lane != captureSaveThisNoteLaneName && lane != captureDocumentLinksLaneName && lane != sourceURLUpdateLaneName && lane != webProductPageLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName && lane != broadAuditLaneName {
+	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != promotedRecordDomainLaneName && lane != parallelRunnerLaneName && lane != documentHistoryLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != captureLowRiskLaneName && lane != captureExplicitOverridesLaneName && lane != captureDuplicateCandidateLaneName && lane != taggingLaneName && lane != captureSaveThisNoteLaneName && lane != captureDocumentLinksLaneName && lane != sourceURLUpdateLaneName && lane != webProductPageLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName && lane != broadAuditLaneName {
 		return nil
 	}
 	summary := targetedLaneSummary{
@@ -142,6 +142,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		case captureDuplicateCandidateLaneName:
 			include = isCaptureDuplicateCandidateScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
 			classification, posture = classifyTargetedCaptureDuplicateCandidateResult(result)
+		case taggingLaneName:
+			include = isTaggingScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
+			classification, posture = classifyTargetedTaggingResult(result)
 		case captureSaveThisNoteLaneName:
 			include = isCaptureSaveThisNoteScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
 			classification, posture = classifyTargetedCaptureSaveThisNoteResult(result)
@@ -240,6 +243,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	case captureDuplicateCandidateLaneName:
 		summary.Decision = captureDuplicateCandidateDecision(summary.ScenarioClassifications)
 		summary.Promotion = captureDuplicateCandidatePromotion(summary.Decision)
+	case taggingLaneName:
+		summary.Decision = taggingDecision(summary.ScenarioClassifications)
+		summary.Promotion = taggingPromotion(summary.Decision)
 	case captureSaveThisNoteLaneName:
 		summary.Decision = captureSaveThisNoteDecision(summary.ScenarioClassifications)
 		summary.Promotion = captureSaveThisNotePromotion(summary.Decision)
