@@ -105,3 +105,12 @@ violation kills the candidate shape.
 
 Reports record safety pass, capability pass, and UX quality separately from
 failure classification.
+
+## Follow-Up Diagnosis
+
+The first targeted result for this lane is historical evidence, not a
+product-surface kill. The failure diagnosis in
+[`docs/architecture/compile-synthesis-candidate-evidence-failure-diagnosis.md`](../architecture/compile-synthesis-candidate-evidence-failure-diagnosis.md)
+records the `none_viable_yet` outcome as repairable eval-prompt and
+answer-contract setup debt, keeps `compile_synthesis` non-promoted, and selects
+repaired targeted evidence as the next step.
