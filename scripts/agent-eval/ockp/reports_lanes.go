@@ -12,6 +12,7 @@ func reportLane(ids []string) (string, bool) {
 	parallelRunner := 0
 	documentHistory := 0
 	highTouchDocumentLifecycle := 0
+	documentLifecycleRollbackCandidate := 0
 	agentChosenPath := 0
 	pathTitleAutonomy := 0
 	captureLowRisk := 0
@@ -66,6 +67,10 @@ func reportLane(ids []string) (string, bool) {
 		}
 		if isHighTouchDocumentLifecycleScenario(id) {
 			highTouchDocumentLifecycle++
+			continue
+		}
+		if isDocumentLifecycleRollbackCandidateScenario(id) {
+			documentLifecycleRollbackCandidate++
 			continue
 		}
 		if isAgentChosenPathScenario(id) {
@@ -182,6 +187,9 @@ func reportLane(ids []string) (string, bool) {
 	if highTouchDocumentLifecycle > 0 && highTouchDocumentLifecycle+validation == len(ids) {
 		return highTouchDocumentLifecycleLaneName, false
 	}
+	if documentLifecycleRollbackCandidate > 0 && documentLifecycleRollbackCandidate+validation == len(ids) {
+		return documentLifecycleRollbackCandidateLaneName, false
+	}
 	if agentChosenPath > 0 && agentChosenPath+validation == len(ids) {
 		return agentChosenPathLaneName, false
 	}
@@ -267,6 +275,9 @@ func reportLane(ids []string) (string, bool) {
 		return populatedMixedLaneName, releaseBlocking
 	}
 	if highTouchDocumentLifecycle > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
+	if documentLifecycleRollbackCandidate > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
 	if agentChosenPath > 0 {
@@ -356,6 +367,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == highTouchDocumentLifecycleLaneName {
 		return "high-touch document lifecycle ceremony rows report natural lifecycle review and rollback intent, scripted history/provenance/freshness control, rollback target accuracy, privacy-safe summaries, no raw private diffs in committed artifacts, no-bypass controls, tool count, command count, assistant calls, wall time, prompt specificity, retries, latency, brittleness, guidance dependence, safety risks, and separate safety/capability/UX classification"
+	}
+	if lane == documentLifecycleRollbackCandidateLaneName {
+		return "document lifecycle rollback candidate rows compare current primitives, guidance-only repair, and an eval-only candidate response contract, while reporting target identity, source evidence, before/after summaries, restore reason, provenance refs, projection freshness, write status, privacy/no-diff boundaries, validation/no-bypass boundaries, authority limits, tool count, command count, assistant calls, wall time, prompt specificity, retries, latency, brittleness, guidance dependence, safety risks, safety pass, capability pass, and UX quality"
 	}
 	if lane == documentArtifactCandidateLaneName {
 		return "document artifact candidate rows report candidate quality plus ergonomics scorecard fields: tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and final classification"

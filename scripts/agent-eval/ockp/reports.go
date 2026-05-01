@@ -91,7 +91,7 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	if releaseBlocking {
 		return nil
 	}
-	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != promotedRecordDomainLaneName && lane != parallelRunnerLaneName && lane != documentHistoryLaneName && lane != highTouchDocumentLifecycleLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != captureLowRiskLaneName && lane != captureExplicitOverridesLaneName && lane != captureDuplicateCandidateLaneName && lane != taggingLaneName && lane != captureSaveThisNoteLaneName && lane != captureDocumentLinksLaneName && lane != sourceURLUpdateLaneName && lane != webURLIntakeLaneName && lane != webURLStaleRepairLaneName && lane != webURLStaleImpactLaneName && lane != webProductPageLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName && lane != highTouchCompileSynthesisLaneName && lane != compileSynthesisCandidateLaneName && lane != broadAuditLaneName {
+	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != promotedRecordDomainLaneName && lane != parallelRunnerLaneName && lane != documentHistoryLaneName && lane != highTouchDocumentLifecycleLaneName && lane != documentLifecycleRollbackCandidateLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != captureLowRiskLaneName && lane != captureExplicitOverridesLaneName && lane != captureDuplicateCandidateLaneName && lane != taggingLaneName && lane != captureSaveThisNoteLaneName && lane != captureDocumentLinksLaneName && lane != sourceURLUpdateLaneName && lane != webURLIntakeLaneName && lane != webURLStaleRepairLaneName && lane != webURLStaleImpactLaneName && lane != webProductPageLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName && lane != highTouchCompileSynthesisLaneName && lane != compileSynthesisCandidateLaneName && lane != broadAuditLaneName {
 		return nil
 	}
 	summary := targetedLaneSummary{
@@ -130,6 +130,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		case highTouchDocumentLifecycleLaneName:
 			include = isHighTouchDocumentLifecycleScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
 			classification, posture = classifyTargetedHighTouchDocumentLifecycleResult(result)
+		case documentLifecycleRollbackCandidateLaneName:
+			include = isDocumentLifecycleRollbackCandidateScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
+			classification, posture = classifyTargetedDocumentLifecycleRollbackCandidateResult(result)
 		case agentChosenPathLaneName:
 			include = isAgentChosenPathScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
 			classification, posture = classifyTargetedAgentChosenPathResult(result)
@@ -249,6 +252,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	case highTouchDocumentLifecycleLaneName:
 		summary.Decision = highTouchDocumentLifecycleDecision(summary.ScenarioClassifications)
 		summary.Promotion = highTouchDocumentLifecyclePromotion(summary.Decision)
+	case documentLifecycleRollbackCandidateLaneName:
+		summary.Decision = documentLifecycleRollbackCandidateDecision(summary.ScenarioClassifications)
+		summary.Promotion = documentLifecycleRollbackCandidatePromotion(summary.Decision)
 	case agentChosenPathLaneName:
 		summary.Decision = agentChosenPathDecision(summary.ScenarioClassifications)
 		summary.Promotion = "no promoted runner action, schema, migration, storage API, product behavior, public OpenClerk interface, or change to missing-path clarification"

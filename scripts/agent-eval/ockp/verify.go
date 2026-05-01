@@ -153,6 +153,12 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyDocumentHistoryRestore(ctx, paths, finalMessage, turnMetrics)
 	case highTouchDocumentLifecycleScriptedScenarioID:
 		return verifyHighTouchDocumentLifecycleScripted(ctx, paths, finalMessage, turnMetrics)
+	case documentLifecycleRollbackCurrentScenarioID:
+		return verifyHighTouchDocumentLifecycleScripted(ctx, paths, finalMessage, turnMetrics)
+	case documentLifecycleRollbackGuidanceScenarioID:
+		return verifyHighTouchDocumentLifecycleScripted(ctx, paths, finalMessage, turnMetrics)
+	case documentLifecycleRollbackResponseScenarioID:
+		return verifyDocumentLifecycleRollbackResponseCandidate(ctx, paths, finalMessage, turnMetrics)
 	case documentHistoryInspectScenarioID:
 		return verifyDocumentHistoryInspection(ctx, paths, finalMessage, turnMetrics)
 	case documentHistoryDiffScenarioID:

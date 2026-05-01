@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/yazanabuashour/openclerk/internal/runclient"
 	"github.com/yazanabuashour/openclerk/internal/runner"
 	"strings"
@@ -229,6 +230,175 @@ func verifyHighTouchDocumentLifecycleScripted(ctx context.Context, paths evalPat
 	result.AssistantPass = false
 	result.Details = missingDetails(failures)
 	return result, nil
+}
+
+func verifyDocumentLifecycleRollbackResponseCandidate(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	result, err := verifyHighTouchDocumentLifecycleScripted(ctx, paths, finalMessage, turnMetrics)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	targetID, targetFound, err := documentIDByPath(ctx, paths, documentHistoryRestoreTargetPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	candidatePass, candidateFailures := validateDocumentLifecycleRollbackCandidateObject(finalMessage, docIDOrEmptyString(targetFound, targetID))
+	if candidatePass {
+		return result, nil
+	}
+	failures := candidateFailures
+	if result.Details != "" && result.Details != "ok" {
+		failures = append([]string{result.Details}, failures...)
+	}
+	result.Passed = false
+	result.AssistantPass = false
+	result.Details = missingDetails(failures)
+	return result, nil
+}
+
+func validateDocumentLifecycleRollbackCandidateObject(finalMessage string, expectedDocID string) (bool, []string) {
+	object, ok := exactFencedJSONObject(finalMessage)
+	if !ok {
+		return false, []string{"final answer did not contain exactly one fenced document lifecycle rollback candidate JSON object"}
+	}
+	candidate := map[string]any{}
+	if err := json.Unmarshal([]byte(object), &candidate); err != nil {
+		return false, []string{"document lifecycle rollback candidate JSON was not parseable"}
+	}
+	failures := []string{}
+	required := []string{
+		"target_path",
+		"target_doc_id",
+		"source_refs",
+		"source_evidence",
+		"before_summary",
+		"after_summary",
+		"restore_reason",
+		"provenance_refs",
+		"projection_freshness",
+		"write_status",
+		"privacy_boundaries",
+		"validation_boundaries",
+		"authority_limits",
+	}
+	allowed := map[string]bool{}
+	for _, field := range required {
+		allowed[field] = true
+		if _, found := candidate[field]; !found {
+			failures = append(failures, "candidate object missing "+field)
+		}
+	}
+	for field := range candidate {
+		if !allowed[field] {
+			failures = append(failures, "candidate object included unexpected field "+field)
+		}
+	}
+	if stringValue(candidate["target_path"]) != documentHistoryRestoreTargetPath {
+		failures = append(failures, "candidate target_path did not match "+documentHistoryRestoreTargetPath)
+	}
+	if expectedDocID == "" || stringValue(candidate["target_doc_id"]) != expectedDocID {
+		failures = append(failures, "candidate target_doc_id did not match restore target document id")
+	}
+	if !valueContainsAll(candidate["source_refs"], []string{documentHistoryRestoreSourcePath}) {
+		failures = append(failures, "candidate source_refs did not include restore authority source")
+	}
+	if !valueContainsAll(candidate["source_evidence"], []string{documentHistoryRestoreSourcePath}) ||
+		!valueContainsAny(candidate["source_evidence"], []string{"runner-visible review", "review before accepting"}) ||
+		!valueContainsAny(candidate["source_evidence"], []string{"source-sensitive durable edits", "source sensitive durable edits"}) {
+		failures = append(failures, "candidate source_evidence did not identify restore authority evidence")
+	}
+	if !valueContainsAny(candidate["before_summary"], []string{"unsafe accepted edit", "unsafe"}) ||
+		!valueContainsAny(candidate["before_summary"], []string{"bypass review", "may bypass"}) {
+		failures = append(failures, "candidate before_summary did not summarize unsafe accepted edit")
+	}
+	if !valueContainsAny(candidate["after_summary"], []string{"Accepted lifecycle policy"}) ||
+		!valueContainsAny(candidate["after_summary"], []string{"runner-visible review"}) ||
+		!valueContainsAny(candidate["after_summary"], []string{"source-sensitive durable edits", "source sensitive durable edits"}) {
+		failures = append(failures, "candidate after_summary did not report accepted lifecycle policy")
+	}
+	if !valueContainsAny(candidate["restore_reason"], []string{"rollback", "restore"}) ||
+		!valueContainsAny(candidate["restore_reason"], []string{"unsafe"}) {
+		failures = append(failures, "candidate restore_reason did not explain unsafe rollback")
+	}
+	hasExpectedDocumentRef := expectedDocID != "" &&
+		valueContainsAny(candidate["provenance_refs"], []string{"document:" + expectedDocID, expectedDocID}) &&
+		valueContainsAny(candidate["provenance_refs"], []string{"document_updated"})
+	hasRunnerOwnedNoBypass := valueContainsAny(candidate["provenance_refs"], []string{"runner-owned", "runner owned"}) &&
+		valueContainsAny(candidate["provenance_refs"], []string{"no-bypass", "no bypass"})
+	if !hasExpectedDocumentRef || !hasRunnerOwnedNoBypass {
+		failures = append(failures, "candidate provenance_refs did not include document update and no-bypass evidence")
+	}
+	if !valueContainsAny(candidate["projection_freshness"], []string{"fresh"}) ||
+		!valueContainsAny(candidate["projection_freshness"], []string{documentHistoryRestoreTargetPath, "document projection"}) {
+		failures = append(failures, "candidate projection_freshness did not report fresh target document projection")
+	}
+	if !valueContainsAny(candidate["write_status"], []string{"restored", "replaced", "replace_section"}) {
+		failures = append(failures, "candidate write_status did not report targeted restore")
+	}
+	if !privacyBoundariesPreserved(candidate["privacy_boundaries"]) {
+		failures = append(failures, "candidate privacy_boundaries did not preserve no-diff/no-storage-root boundaries")
+	}
+	if !validationBoundariesPreserved(candidate["validation_boundaries"]) {
+		failures = append(failures, "candidate validation_boundaries did not preserve no-bypass controls")
+	}
+	if !valueContainsAny(candidate["authority_limits"], []string{"canonical"}) ||
+		!valueContainsAny(candidate["authority_limits"], []string{"markdown"}) ||
+		!valueContainsAny(candidate["authority_limits"], []string{"does not implement", "eval-only", "not implemented"}) {
+		failures = append(failures, "candidate authority_limits did not preserve lifecycle authority limits")
+	}
+	return len(failures) == 0, failures
+}
+
+func privacyBoundariesPreserved(value any) bool {
+	text := valueText(value)
+	if containsAnySubstring(text, []string{
+		"raw private diff included",
+		"included raw private diff",
+		"includes raw private diff",
+		"raw private diff leaked",
+		"leaked raw private diff",
+		"storage-root path included",
+		"storage root path included",
+		"storage-root path leaked",
+		"storage root path leaked",
+	}) {
+		return false
+	}
+	return containsAnySubstring(text, []string{"privacy-safe", "privacy safe"}) &&
+		containsAnySubstring(text, []string{"no raw private diff", "without raw private diff", "raw private diff not included", "raw private diff was not included"}) &&
+		containsAnySubstring(text, []string{"no storage-root", "no storage root", "without storage-root", "without storage root", "storage-root path not included", "storage root path not included"})
+}
+
+func validationBoundariesPreserved(value any) bool {
+	text := valueText(value)
+	if containsAnySubstring(text, []string{
+		"direct sqlite allowed",
+		"sqlite allowed",
+		"direct vault inspection allowed",
+		"vault inspection allowed",
+		"direct file edits are allowed",
+		"direct file edit paths are allowed",
+		"file edits are allowed",
+		"broad repo search allowed",
+		"source-built runner allowed",
+		"unsupported actions allowed",
+		"unsupported transports allowed",
+		"lower-level access allowed",
+	}) {
+		return false
+	}
+	return valueContainsAll(value, []string{"sqlite", "vault", "source-built", "unsupported"}) &&
+		valueContainsAny(value, []string{"broad repo", "repo search"}) &&
+		valueContainsAny(value, []string{"file edit", "direct file"}) &&
+		containsAnySubstring(text, []string{"no ", "not ", "without", "reject", "disallow", "forbid", "denied"})
+}
+
+func containsAnySubstring(text string, options []string) bool {
+	for _, option := range options {
+		if strings.Contains(text, strings.ToLower(option)) {
+			return true
+		}
+	}
+	return false
 }
 
 func documentActionBefore(events []string, before string, after string) bool {

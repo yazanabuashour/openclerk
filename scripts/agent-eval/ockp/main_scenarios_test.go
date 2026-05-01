@@ -40,6 +40,11 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 			t.Fatalf("scenarioIDs missing compile synthesis candidate scenario %q in %v", want, scenarioIDs())
 		}
 	}
+	for _, want := range documentLifecycleRollbackCandidateScenarioIDs() {
+		if !ids[want] {
+			t.Fatalf("scenarioIDs missing document lifecycle rollback candidate scenario %q in %v", want, scenarioIDs())
+		}
+	}
 	for _, want := range webURLStaleImpactScenarioIDs() {
 		if !ids[want] {
 			t.Fatalf("scenarioIDs missing web URL stale impact scenario %q in %v", want, scenarioIDs())
@@ -155,6 +160,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	for _, id := range compileSynthesisCandidateScenarioIDs() {
 		if defaultIDs[id] {
 			t.Fatalf("default selected scenarios included targeted compile synthesis candidate scenario %q", id)
+		}
+	}
+	for _, id := range documentLifecycleRollbackCandidateScenarioIDs() {
+		if defaultIDs[id] {
+			t.Fatalf("default selected scenarios included targeted document lifecycle rollback candidate scenario %q", id)
 		}
 	}
 	for _, id := range graphSemanticsRevisitScenarioIDs() {
@@ -286,6 +296,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	lane, releaseBlocking = reportLane(selected)
 	if lane != compileSynthesisCandidateLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, compileSynthesisCandidateLaneName)
+	}
+	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(append(documentLifecycleRollbackCandidateScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject"), ",")})
+	lane, releaseBlocking = reportLane(selected)
+	if lane != documentLifecycleRollbackCandidateLaneName || releaseBlocking {
+		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, documentLifecycleRollbackCandidateLaneName)
 	}
 	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(append(graphSemanticsRevisitScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject"), ",")})
 	lane, releaseBlocking = reportLane(selected)

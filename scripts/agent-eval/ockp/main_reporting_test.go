@@ -1270,6 +1270,106 @@ func TestExecuteRunLabelsCompileSynthesisCandidateLaneAsNonReleaseBlocking(t *te
 	}
 }
 
+func TestExecuteRunLabelsDocumentLifecycleRollbackCandidateLaneAsNonReleaseBlocking(t *testing.T) {
+	reportDir := filepath.Join(t.TempDir(), "reports")
+	scenarioIDs := append(documentLifecycleRollbackCandidateScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject")
+	config := runConfig{
+		Parallel:   1,
+		Variant:    productionVariant,
+		Scenario:   strings.Join(scenarioIDs, ","),
+		RunRoot:    filepath.Join(t.TempDir(), "run"),
+		ReportDir:  reportDir,
+		ReportName: "ockp-document-lifecycle-rollback-candidate-evidence-test",
+		RepoRoot:   ".",
+		CodexBin:   "codex",
+		CacheMode:  cacheModeIsolated,
+	}
+	err := executeRun(context.Background(), config, &strings.Builder{}, func(_ context.Context, _ runConfig, job evalJob, _ cacheConfig) jobResult {
+		now := time.Now().UTC()
+		resultMetrics := metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}}
+		verification := verificationResult{Passed: true, DatabasePass: true, AssistantPass: true}
+		passed := true
+		if job.Scenario.ID == documentLifecycleRollbackCurrentScenarioID {
+			resultMetrics = metrics{AssistantCalls: 7, ToolCalls: 22, CommandExecutions: 22, EventTypeCounts: map[string]int{}}
+		}
+		if job.Scenario.ID == documentLifecycleRollbackGuidanceScenarioID {
+			resultMetrics = metrics{AssistantCalls: 10, ToolCalls: 40, CommandExecutions: 40, EventTypeCounts: map[string]int{}}
+			verification = verificationResult{Passed: false, DatabasePass: true, AssistantPass: false, Details: "answer contract incomplete"}
+			passed = false
+		}
+		if job.Scenario.ID == documentLifecycleRollbackResponseScenarioID {
+			resultMetrics = metrics{AssistantCalls: 5, ToolCalls: 20, CommandExecutions: 20, EventTypeCounts: map[string]int{}}
+		}
+		return jobResult{
+			Variant:       job.Variant,
+			Scenario:      job.Scenario.ID,
+			ScenarioTitle: job.Scenario.Title,
+			Status:        "completed",
+			Passed:        passed,
+			Metrics:       resultMetrics,
+			Verification:  verification,
+			StartedAt:     now,
+			CompletedAt:   &now,
+		}
+	})
+	if err != nil {
+		t.Fatalf("execute document lifecycle rollback candidate run: %v", err)
+	}
+	content, err := os.ReadFile(filepath.Join(reportDir, "ockp-document-lifecycle-rollback-candidate-evidence-test.json"))
+	if err != nil {
+		t.Fatalf("read JSON report: %v", err)
+	}
+	var report report
+	if err := json.Unmarshal(content, &report); err != nil {
+		t.Fatalf("decode JSON report: %v", err)
+	}
+	if report.Metadata.Lane != documentLifecycleRollbackCandidateLaneName || report.Metadata.ReleaseBlocking {
+		t.Fatalf("document lifecycle rollback candidate lane metadata = %q/%t, want %q/false", report.Metadata.Lane, report.Metadata.ReleaseBlocking, documentLifecycleRollbackCandidateLaneName)
+	}
+	if report.TargetedLaneSummary == nil {
+		t.Fatal("document lifecycle rollback candidate report missing targeted lane summary")
+	}
+	if report.TargetedLaneSummary.Decision != "promote_lifecycle_rollback_candidate_contract" {
+		t.Fatalf("decision = %q, want promote_lifecycle_rollback_candidate_contract", report.TargetedLaneSummary.Decision)
+	}
+	classifications := map[string]targetedScenarioClassification{}
+	for _, row := range report.TargetedLaneSummary.ScenarioClassifications {
+		classifications[row.Scenario] = row
+	}
+	if classifications[documentLifecycleRollbackGuidanceScenarioID].FailureClassification != "ergonomics_gap" {
+		t.Fatalf("guidance-only classification = %q, want ergonomics_gap", classifications[documentLifecycleRollbackGuidanceScenarioID].FailureClassification)
+	}
+	if classifications[documentLifecycleRollbackGuidanceScenarioID].UXQuality != "taste_debt" {
+		t.Fatalf("guidance-only UX quality = %q, want taste_debt", classifications[documentLifecycleRollbackGuidanceScenarioID].UXQuality)
+	}
+	if classifications[documentLifecycleRollbackResponseScenarioID].PromptSpecificity != "candidate-response-contract" {
+		t.Fatalf("candidate prompt specificity = %q, want candidate-response-contract", classifications[documentLifecycleRollbackResponseScenarioID].PromptSpecificity)
+	}
+	if classifications[documentLifecycleRollbackResponseScenarioID].SafetyPass != "pass" || classifications[documentLifecycleRollbackResponseScenarioID].CapabilityPass != "pass" {
+		t.Fatalf("candidate pass fields = safety %q capability %q, want pass/pass", classifications[documentLifecycleRollbackResponseScenarioID].SafetyPass, classifications[documentLifecycleRollbackResponseScenarioID].CapabilityPass)
+	}
+	if classifications[documentLifecycleRollbackResponseScenarioID].UXQuality != "candidate_contract_complete" {
+		t.Fatalf("candidate UX quality = %q, want candidate_contract_complete", classifications[documentLifecycleRollbackResponseScenarioID].UXQuality)
+	}
+	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-document-lifecycle-rollback-candidate-evidence-test.md"))
+	if err != nil {
+		t.Fatalf("read markdown report: %v", err)
+	}
+	for _, want := range []string{
+		"Lane: `" + documentLifecycleRollbackCandidateLaneName + "`",
+		"Release blocking: `false`",
+		"Decision: `promote_lifecycle_rollback_candidate_contract`",
+		"Safety pass",
+		"Capability pass",
+		"UX quality",
+		"validation control stayed final-answer-only",
+	} {
+		if !strings.Contains(string(markdown), want) {
+			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
+		}
+	}
+}
+
 func TestExecuteRunLabelsWebURLStaleRepairLaneAsNonReleaseBlocking(t *testing.T) {
 	reportDir := filepath.Join(t.TempDir(), "reports")
 	scenarioIDs := append(webURLStaleRepairScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject")
@@ -1666,6 +1766,41 @@ func TestCompileSynthesisCandidateDecisionPromotesOnlyWhenGuidanceStillHasDebt(t
 	}
 }
 
+func TestDocumentLifecycleRollbackCandidateDecisionPromotesOnlyWhenGuidanceStillHasDebt(t *testing.T) {
+	rows := make([]targetedScenarioClassification, 0, len(documentLifecycleRollbackCandidateScenarioIDs()))
+	for _, id := range documentLifecycleRollbackCandidateScenarioIDs() {
+		rows = append(rows, targetedScenarioClassification{
+			Scenario:              id,
+			FailureClassification: "none",
+			SafetyPass:            "pass",
+		})
+	}
+	if decision := documentLifecycleRollbackCandidateDecision(rows[:len(rows)-1]); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("partial decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	if decision := documentLifecycleRollbackCandidateDecision(rows); decision != "defer_guidance_only_current_primitives_sufficient" {
+		t.Fatalf("guidance-pass decision = %q, want defer_guidance_only_current_primitives_sufficient", decision)
+	}
+	rows[1].FailureClassification = "ergonomics_gap"
+	if decision := documentLifecycleRollbackCandidateDecision(rows); decision != "promote_lifecycle_rollback_candidate_contract" {
+		t.Fatalf("candidate decision = %q, want promote_lifecycle_rollback_candidate_contract", decision)
+	}
+	rows[2].FailureClassification = "skill_guidance_or_eval_coverage"
+	if decision := documentLifecycleRollbackCandidateDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("candidate repair decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	rows[2].FailureClassification = "none"
+	rows[0].FailureClassification = "capability_gap"
+	if decision := documentLifecycleRollbackCandidateDecision(rows); decision != "none_viable_yet" {
+		t.Fatalf("capability decision = %q, want none_viable_yet", decision)
+	}
+	rows[0].FailureClassification = "none"
+	rows[2].FailureClassification = "eval_contract_violation"
+	if decision := documentLifecycleRollbackCandidateDecision(rows); decision != "kill_lifecycle_rollback_candidate" {
+		t.Fatalf("safety decision = %q, want kill_lifecycle_rollback_candidate", decision)
+	}
+}
+
 func TestWebURLStaleRepairDecisionRequiresRepeatedEvidence(t *testing.T) {
 	rows := make([]targetedScenarioClassification, 0, len(webURLStaleRepairScenarioIDs()))
 	for _, id := range webURLStaleRepairScenarioIDs() {
@@ -1950,6 +2085,15 @@ func TestDocumentHistoryPromptSpecificityLabelsNaturalAndScriptedRows(t *testing
 	}
 	if got := promptSpecificity(webURLStaleImpactResponseCandidateScenarioID); got != "candidate-response-contract" {
 		t.Fatalf("candidate stale impact prompt specificity = %q, want candidate-response-contract", got)
+	}
+	if got := promptSpecificity(documentLifecycleRollbackCurrentScenarioID); got != "scripted-control" {
+		t.Fatalf("current-primitives lifecycle rollback prompt specificity = %q, want scripted-control", got)
+	}
+	if got := promptSpecificity(documentLifecycleRollbackGuidanceScenarioID); got != "natural-user-intent" {
+		t.Fatalf("guidance-only lifecycle rollback prompt specificity = %q, want natural-user-intent", got)
+	}
+	if got := promptSpecificity(documentLifecycleRollbackResponseScenarioID); got != "candidate-response-contract" {
+		t.Fatalf("candidate lifecycle rollback prompt specificity = %q, want candidate-response-contract", got)
 	}
 	for _, id := range []string{
 		documentHistoryInspectScenarioID,

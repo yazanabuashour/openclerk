@@ -147,7 +147,7 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedSourceSensitiveConflict(ctx, cfg); err != nil {
 			return err
 		}
-	case documentHistoryNaturalScenarioID, highTouchDocumentLifecycleNaturalScenarioID, highTouchDocumentLifecycleScriptedScenarioID:
+	case documentHistoryNaturalScenarioID, highTouchDocumentLifecycleNaturalScenarioID, highTouchDocumentLifecycleScriptedScenarioID, documentLifecycleRollbackCurrentScenarioID, documentLifecycleRollbackGuidanceScenarioID, documentLifecycleRollbackResponseScenarioID:
 		if err := seedDocumentHistoryRestore(ctx, cfg); err != nil {
 			return err
 		}
