@@ -307,7 +307,11 @@ func (s *Store) updatePDFSourceURL(ctx context.Context, input domain.SourceURLIn
 	sha := sha256.Sum256(download.Body)
 	shaHex := hex.EncodeToString(sha[:])
 	if strings.TrimSpace(document.Metadata["sha256"]) == shaHex {
-		return s.sourceIngestionResultFromDocument(ctx, document)
+		result, err := s.sourceIngestionResultFromDocument(ctx, document)
+		if err != nil {
+			return domain.SourceIngestionResult{}, err
+		}
+		return s.withSourceURLUpdateImpact(ctx, result, sourceURL, shaHex, shaHex, false)
 	}
 
 	tempAssetPath := assetAbsPath + ".openclerk-update-" + hashID("asset", sourceURL, shaHex)
@@ -348,7 +352,7 @@ func (s *Store) updatePDFSourceURL(ctx context.Context, input domain.SourceURLIn
 	if err := validateIngestedSource(updated, sourceURL, sourcePath, assetPath, assetAbsPath); err != nil {
 		return domain.SourceIngestionResult{}, s.restoreSourceAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, err)
 	}
-	return domain.SourceIngestionResult{
+	result := domain.SourceIngestionResult{
 		DocID:       updated.DocID,
 		SourcePath:  sourcePath,
 		SourceURL:   sourceURL,
@@ -362,7 +366,8 @@ func (s *Store) updatePDFSourceURL(ctx context.Context, input domain.SourceURLIn
 		PageCount:   extracted.Pages,
 		CapturedAt:  capturedAt,
 		PDFMetadata: extracted.Metadata,
-	}, nil
+	}
+	return s.withSourceURLUpdateImpact(ctx, result, sourceURL, strings.TrimSpace(document.Metadata["sha256"]), shaHex, true)
 }
 
 func (s *Store) updateWebSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string, document domain.Document) (domain.SourceIngestionResult, error) {
@@ -386,7 +391,11 @@ func (s *Store) updateWebSourceURL(ctx context.Context, input domain.SourceURLIn
 	sha := sha256.Sum256(download.Body)
 	shaHex := hex.EncodeToString(sha[:])
 	if strings.TrimSpace(document.Metadata["sha256"]) == shaHex {
-		return s.sourceIngestionResultFromDocument(ctx, document)
+		result, err := s.sourceIngestionResultFromDocument(ctx, document)
+		if err != nil {
+			return domain.SourceIngestionResult{}, err
+		}
+		return s.withSourceURLUpdateImpact(ctx, result, sourceURL, shaHex, shaHex, false)
 	}
 	extracted, err := extractWebPage(download.Body)
 	if err != nil {
@@ -414,7 +423,7 @@ func (s *Store) updateWebSourceURL(ctx context.Context, input domain.SourceURLIn
 	if err := validateIngestedSource(updated, sourceURL, sourcePath, "", ""); err != nil {
 		return domain.SourceIngestionResult{}, s.restoreSourceNote(ctx, sourcePath, sourceAbsPath, oldBody, err)
 	}
-	return domain.SourceIngestionResult{
+	result := domain.SourceIngestionResult{
 		DocID:       updated.DocID,
 		SourcePath:  sourcePath,
 		SourceURL:   sourceURL,
@@ -425,7 +434,150 @@ func (s *Store) updateWebSourceURL(ctx context.Context, input domain.SourceURLIn
 		SizeBytes:   int64(len(download.Body)),
 		MIMEType:    download.MIMEType,
 		CapturedAt:  capturedAt,
-	}, nil
+	}
+	return s.withSourceURLUpdateImpact(ctx, result, sourceURL, strings.TrimSpace(document.Metadata["sha256"]), shaHex, true)
+}
+
+func (s *Store) withSourceURLUpdateImpact(ctx context.Context, result domain.SourceIngestionResult, sourceURL string, previousSHA string, newSHA string, changed bool) (domain.SourceIngestionResult, error) {
+	result.UpdateStatus = "no_op"
+	if changed {
+		result.UpdateStatus = "changed"
+	}
+	result.NormalizedSourceURL = sourceURL
+	result.SourceDocID = result.DocID
+	result.PreviousSHA256 = previousSHA
+	result.NewSHA256 = newSHA
+	result.Changed = changed
+	result.DuplicateStatus = "existing_source_matched_no_duplicate_created"
+	result.SynthesisRepaired = false
+
+	if !changed {
+		result.StaleDependents = []domain.SourceStaleDependent{}
+		result.ProjectionRefs = []domain.SourceProjectionRef{}
+		result.ProvenanceRefs = []domain.SourceProvenanceRef{}
+		result.NoRepairWarning = "Source refresh detected no content change; no synthesis repair was performed."
+		return result, nil
+	}
+
+	cursor := ""
+	for {
+		projections, err := s.ListProjectionStates(ctx, domain.ProjectionStateQuery{Projection: "synthesis", Limit: 100, Cursor: cursor})
+		if err != nil {
+			return domain.SourceIngestionResult{}, err
+		}
+		for _, projection := range projections.Projections {
+			staleRefs := splitPathList(projection.Details["stale_source_refs"])
+			if !strings.EqualFold(projection.Freshness, "stale") || !sourcePathListContains(staleRefs, result.SourcePath) {
+				continue
+			}
+			dependentPath := strings.TrimSpace(projection.Details["synthesis_path"])
+			result.StaleDependents = append(result.StaleDependents, domain.SourceStaleDependent{
+				Path:            dependentPath,
+				DocID:           projection.RefID,
+				Projection:      projection.Projection,
+				Freshness:       projection.Freshness,
+				StaleSourceRefs: staleRefs,
+			})
+			result.ProjectionRefs = append(result.ProjectionRefs, domain.SourceProjectionRef{
+				Projection: projection.Projection,
+				RefKind:    projection.RefKind,
+				RefID:      projection.RefID,
+				Freshness:  projection.Freshness,
+				SourceRef:  projection.SourceRef,
+			})
+		}
+		if !projections.PageInfo.HasMore {
+			break
+		}
+		cursor = projections.PageInfo.NextCursor
+	}
+	sort.Slice(result.StaleDependents, func(i, j int) bool {
+		return result.StaleDependents[i].Path < result.StaleDependents[j].Path
+	})
+	sort.Slice(result.ProjectionRefs, func(i, j int) bool {
+		if result.ProjectionRefs[i].Projection != result.ProjectionRefs[j].Projection {
+			return result.ProjectionRefs[i].Projection < result.ProjectionRefs[j].Projection
+		}
+		return result.ProjectionRefs[i].RefID < result.ProjectionRefs[j].RefID
+	})
+
+	provenanceRefs, err := s.sourceURLUpdateProvenanceRefs(ctx, result.DocID, previousSHA, newSHA, result.ProjectionRefs)
+	if err != nil {
+		return domain.SourceIngestionResult{}, err
+	}
+	result.ProvenanceRefs = provenanceRefs
+	if len(result.StaleDependents) == 0 {
+		result.NoRepairWarning = "Source refresh did not repair dependent synthesis automatically."
+		return result, nil
+	}
+	paths := make([]string, 0, len(result.StaleDependents))
+	for _, dependent := range result.StaleDependents {
+		if dependent.Path != "" {
+			paths = append(paths, dependent.Path)
+		}
+	}
+	result.NoRepairWarning = "Source refresh did not repair dependent synthesis: " + strings.Join(paths, ", ")
+	return result, nil
+}
+
+func (s *Store) sourceURLUpdateProvenanceRefs(ctx context.Context, sourceDocID string, previousSHA string, newSHA string, projections []domain.SourceProjectionRef) ([]domain.SourceProvenanceRef, error) {
+	refs := []domain.SourceProvenanceRef{}
+	sourceEvents, err := s.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{RefKind: "source", RefID: sourceDocID, Limit: 20})
+	if err != nil {
+		return nil, err
+	}
+	for _, event := range sourceEvents.Events {
+		if event.EventType != "source_updated" ||
+			event.Details["previous_sha256"] != previousSHA ||
+			event.Details["new_sha256"] != newSHA {
+			continue
+		}
+		refs = append(refs, sourceProvenanceRef(event))
+		break
+	}
+
+	if len(projections) == 0 {
+		return refs, nil
+	}
+	for _, projection := range projections {
+		projectionEvents, err := s.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{RefKind: "projection", RefID: projection.Projection + ":" + projection.RefID, Limit: 20})
+		if err != nil {
+			return nil, err
+		}
+		for _, event := range projectionEvents.Events {
+			if event.EventType != "projection_invalidated" {
+				continue
+			}
+			refs = append(refs, sourceProvenanceRef(event))
+			break
+		}
+	}
+	sort.Slice(refs, func(i, j int) bool {
+		if refs[i].EventType != refs[j].EventType {
+			return refs[i].EventType < refs[j].EventType
+		}
+		return refs[i].RefID < refs[j].RefID
+	})
+	return refs, nil
+}
+
+func sourcePathListContains(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+	return false
+}
+
+func sourceProvenanceRef(event domain.ProvenanceEvent) domain.SourceProvenanceRef {
+	return domain.SourceProvenanceRef{
+		EventID:   event.EventID,
+		EventType: event.EventType,
+		RefKind:   event.RefKind,
+		RefID:     event.RefID,
+		SourceRef: event.SourceRef,
+	}
 }
 
 func (s *Store) sourceDocumentByURL(ctx context.Context, sourceURL string) (domain.Document, error) {

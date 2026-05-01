@@ -87,19 +87,55 @@ type SourcePDFMetadata struct {
 }
 
 type SourceIngestionResult struct {
-	DocID       string            `json:"doc_id"`
-	SourcePath  string            `json:"source_path"`
-	SourceURL   string            `json:"source_url"`
-	SourceType  string            `json:"source_type"`
-	AssetPath   string            `json:"asset_path,omitempty"`
-	DerivedPath string            `json:"derived_path"`
-	Citations   []Citation        `json:"citations,omitempty"`
-	SHA256      string            `json:"sha256"`
-	SizeBytes   int64             `json:"size_bytes"`
-	MIMEType    string            `json:"mime_type"`
-	PageCount   int               `json:"page_count"`
-	CapturedAt  time.Time         `json:"captured_at"`
-	PDFMetadata SourcePDFMetadata `json:"pdf_metadata,omitempty"`
+	DocID               string                  `json:"doc_id"`
+	SourcePath          string                  `json:"source_path"`
+	SourceURL           string                  `json:"source_url"`
+	SourceType          string                  `json:"source_type"`
+	AssetPath           string                  `json:"asset_path,omitempty"`
+	DerivedPath         string                  `json:"derived_path"`
+	Citations           []Citation              `json:"citations,omitempty"`
+	SHA256              string                  `json:"sha256"`
+	SizeBytes           int64                   `json:"size_bytes"`
+	MIMEType            string                  `json:"mime_type"`
+	PageCount           int                     `json:"page_count"`
+	CapturedAt          time.Time               `json:"captured_at"`
+	PDFMetadata         SourcePDFMetadata       `json:"pdf_metadata,omitempty"`
+	UpdateStatus        string                  `json:"update_status,omitempty"`
+	NormalizedSourceURL string                  `json:"normalized_source_url,omitempty"`
+	SourceDocID         string                  `json:"source_doc_id,omitempty"`
+	PreviousSHA256      string                  `json:"previous_sha256,omitempty"`
+	NewSHA256           string                  `json:"new_sha256,omitempty"`
+	Changed             *bool                   `json:"changed,omitempty"`
+	DuplicateStatus     string                  `json:"duplicate_status,omitempty"`
+	StaleDependents     *[]SourceStaleDependent `json:"stale_dependents,omitempty"`
+	ProjectionRefs      *[]SourceProjectionRef  `json:"projection_refs,omitempty"`
+	ProvenanceRefs      *[]SourceProvenanceRef  `json:"provenance_refs,omitempty"`
+	SynthesisRepaired   *bool                   `json:"synthesis_repaired,omitempty"`
+	NoRepairWarning     string                  `json:"no_repair_warning,omitempty"`
+}
+
+type SourceStaleDependent struct {
+	Path            string   `json:"path"`
+	DocID           string   `json:"doc_id"`
+	Projection      string   `json:"projection"`
+	Freshness       string   `json:"freshness"`
+	StaleSourceRefs []string `json:"stale_source_refs,omitempty"`
+}
+
+type SourceProjectionRef struct {
+	Projection string `json:"projection"`
+	RefKind    string `json:"ref_kind"`
+	RefID      string `json:"ref_id"`
+	Freshness  string `json:"freshness"`
+	SourceRef  string `json:"source_ref,omitempty"`
+}
+
+type SourceProvenanceRef struct {
+	EventID   string `json:"event_id"`
+	EventType string `json:"event_type"`
+	RefKind   string `json:"ref_kind"`
+	RefID     string `json:"ref_id"`
+	SourceRef string `json:"source_ref,omitempty"`
 }
 
 type VideoIngestionResult struct {

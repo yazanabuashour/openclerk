@@ -2,7 +2,7 @@
 
 ## Status
 
-Promoted for future implementation evidence: `promote_stale_impact_update_response_candidate`.
+Promoted and implemented by `oc-oj0y`: `promote_stale_impact_update_response_candidate`.
 
 `oc-i62h` repaired the eval-only candidate answer contract from `oc-dabz`. The targeted eval now shows that the selected stale-impact update response candidate can preserve safety and capability while reducing the answer-contract ambiguity that made current primitives too ceremonial.
 
@@ -34,7 +34,7 @@ The promoted candidate does not authorize automatic synthesis repair, private ac
 
 Pass. Current primitives safely expressed the workflow, and the candidate contract row completed with database and assistant verification passing.
 
-The runner already exposes enough underlying evidence to support the future response enrichment:
+The runner already exposed enough underlying evidence to support the response enrichment:
 
 - source refresh through existing `ingest_source_url` update mode
 - stable source path and source doc identity
@@ -60,17 +60,17 @@ The candidate contract completed:
 - 39.24 seconds wall time.
 - Structured candidate response contract completed with `candidate_contract_complete`.
 
-The result does not prove the future implementation will reduce command count by itself; it proves the response shape can carry the stale-impact evidence safely and explicitly, which is the next implementation surface to evaluate.
+The result did not prove the implementation would reduce command count by itself; it proved the response shape could carry the stale-impact evidence safely and explicitly.
 
 ## Promoted Candidate
 
-Future implementation should enrich the existing `openclerk document` `ingest_source_url` update response when `source.mode: "update"` is used. The request remains backward-compatible:
+The implementation enriches the existing `openclerk document` `ingest_source_url` update response when `source.mode: "update"` is used. The request remains backward-compatible:
 
 ```json
 {"action":"ingest_source_url","source":{"url":"<public-web-url>","mode":"update","source_type":"web","path_hint":"sources/web-url/product-page.md"}}
 ```
 
-The future response candidate should add stale-impact fields without changing existing create/update behavior:
+The update response adds stale-impact fields without changing existing create/update behavior:
 
 - `update_status`
 - `normalized_source_url`
@@ -103,4 +103,4 @@ Failure modes to preserve:
 
 ## Decision
 
-Create exactly one implementation Bead for future response enrichment on existing `ingest_source_url` update mode. Do not implement the product behavior in `oc-i62h`.
+Implementation Bead `oc-oj0y` carries the promoted response enrichment on existing `ingest_source_url` update mode. Product behavior was not implemented in `oc-i62h`.

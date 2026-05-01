@@ -142,19 +142,55 @@ type SourcePDFMetadata struct {
 }
 
 type SourceIngestionResult struct {
-	DocID       string
-	SourcePath  string
-	SourceURL   string
-	SourceType  string
-	AssetPath   string
-	DerivedPath string
-	Citations   []Citation
-	SHA256      string
-	SizeBytes   int64
-	MIMEType    string
-	PageCount   int
-	CapturedAt  time.Time
-	PDFMetadata SourcePDFMetadata
+	DocID               string
+	SourcePath          string
+	SourceURL           string
+	SourceType          string
+	AssetPath           string
+	DerivedPath         string
+	Citations           []Citation
+	SHA256              string
+	SizeBytes           int64
+	MIMEType            string
+	PageCount           int
+	CapturedAt          time.Time
+	PDFMetadata         SourcePDFMetadata
+	UpdateStatus        string
+	NormalizedSourceURL string
+	SourceDocID         string
+	PreviousSHA256      string
+	NewSHA256           string
+	Changed             bool
+	DuplicateStatus     string
+	StaleDependents     []SourceStaleDependent
+	ProjectionRefs      []SourceProjectionRef
+	ProvenanceRefs      []SourceProvenanceRef
+	SynthesisRepaired   bool
+	NoRepairWarning     string
+}
+
+type SourceStaleDependent struct {
+	Path            string
+	DocID           string
+	Projection      string
+	Freshness       string
+	StaleSourceRefs []string
+}
+
+type SourceProjectionRef struct {
+	Projection string
+	RefKind    string
+	RefID      string
+	Freshness  string
+	SourceRef  string
+}
+
+type SourceProvenanceRef struct {
+	EventID   string
+	EventType string
+	RefKind   string
+	RefID     string
+	SourceRef string
 }
 
 type VideoIngestionResult struct {

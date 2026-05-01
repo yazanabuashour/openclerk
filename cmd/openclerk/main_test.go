@@ -198,6 +198,67 @@ func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 	}
 }
 
+func TestRunnerDocumentSourceURLUpdateStaleImpactJSON(t *testing.T) {
+	fixtureRoot := t.TempDir()
+	fixturePath := filepath.Join(fixtureRoot, "web", "runner-product.html")
+	if err := os.MkdirAll(filepath.Dir(fixturePath), 0o755); err != nil {
+		t.Fatalf("mkdir web fixture: %v", err)
+	}
+	if err := os.WriteFile(fixturePath, []byte(`<!doctype html><html><head><title>Runner Web Title</title></head><body><h1>Runner Web Title</h1><p>Initial CLI runner evidence.</p></body></html>`), 0o644); err != nil {
+		t.Fatalf("write web fixture: %v", err)
+	}
+	t.Setenv("OPENCLERK_EVAL_SOURCE_FIXTURE_ROOT", fixtureRoot)
+
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	sourceURL := "http://openclerk-eval.local/web/runner-product.html"
+	createRequest := `{"action":"ingest_source_url","source":{"url":"` + sourceURL + `","path_hint":"sources/web/cli-runner-product.md"}}`
+	var createResult runner.DocumentTaskResult
+	code, stderr := runJSON(t, []string{"document", "--db", dbPath}, createRequest, &createResult)
+	if code != 0 {
+		t.Fatalf("create source exit = %d stderr=%s", code, stderr)
+	}
+	if createResult.Ingestion == nil || createResult.Ingestion.UpdateStatus != "" {
+		t.Fatalf("create ingestion = %+v", createResult.Ingestion)
+	}
+
+	createSynthesisRequest := `{"action":"create_document","document":{"path":"synthesis/cli-web-runner.md","title":"CLI Web Runner Synthesis","body":"---\ntype: synthesis\nsource_refs: sources/web/cli-runner-product.md\n---\n# CLI Web Runner Synthesis\n\n## Summary\nInitial CLI runner evidence.\n"}}`
+	var synthesisResult runner.DocumentTaskResult
+	code, stderr = runJSON(t, []string{"document", "--db", dbPath}, createSynthesisRequest, &synthesisResult)
+	if code != 0 {
+		t.Fatalf("create synthesis exit = %d stderr=%s", code, stderr)
+	}
+
+	if err := os.WriteFile(fixturePath, []byte(`<!doctype html><html><head><title>Runner Web Title Updated</title></head><body><h1>Runner Web Title Updated</h1><p>Updated CLI runner evidence.</p></body></html>`), 0o644); err != nil {
+		t.Fatalf("write updated web fixture: %v", err)
+	}
+	updateRequest := `{"action":"ingest_source_url","source":{"url":"` + sourceURL + `","path_hint":"sources/web/cli-runner-product.md","source_type":"web","mode":"update"}}`
+	var stdout bytes.Buffer
+	var stderrBuffer bytes.Buffer
+	code = run([]string{"document", "--db", dbPath}, strings.NewReader(updateRequest), &stdout, &stderrBuffer)
+	if code != 0 {
+		t.Fatalf("update source exit = %d stderr=%s", code, stderrBuffer.String())
+	}
+	var updateResult runner.DocumentTaskResult
+	if err := json.Unmarshal(stdout.Bytes(), &updateResult); err != nil {
+		t.Fatalf("decode update stdout %q: %v", stdout.String(), err)
+	}
+	if updateResult.Ingestion == nil ||
+		updateResult.Ingestion.UpdateStatus != "changed" ||
+		updateResult.Ingestion.NormalizedSourceURL != sourceURL ||
+		updateResult.Ingestion.SourceDocID != createResult.Ingestion.DocID ||
+		updateResult.Ingestion.PreviousSHA256 != createResult.Ingestion.SHA256 ||
+		updateResult.Ingestion.NewSHA256 == createResult.Ingestion.SHA256 ||
+		updateResult.Ingestion.Changed == nil || !*updateResult.Ingestion.Changed ||
+		updateResult.Ingestion.SynthesisRepaired == nil || *updateResult.Ingestion.SynthesisRepaired {
+		t.Fatalf("update ingestion = %+v", updateResult.Ingestion)
+	}
+	for _, want := range []string{`"update_status":"changed"`, `"normalized_source_url":"` + sourceURL + `"`, `"source_doc_id":"`, `"previous_sha256":"`, `"new_sha256":"`, `"changed":true`, `"stale_dependents":[`, `"projection_refs":[`, `"provenance_refs":[`, `"synthesis_repaired":false`, `"no_repair_warning":"`} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Fatalf("update stdout missing %s: %s", want, stdout.String())
+		}
+	}
+}
+
 func TestRunnerValidationRejectionDoesNotCreateDatabase(t *testing.T) {
 	t.Parallel()
 

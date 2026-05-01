@@ -373,6 +373,125 @@ func TestDocumentTaskRejectsInvalidVideoURLIngestBeforeRuntimeFiles(t *testing.T
 	}
 }
 
+func TestDocumentTaskIngestSourceURLUpdateStaleImpactResponse(t *testing.T) {
+	fixtureRoot := t.TempDir()
+	fixturePath := filepath.Join(fixtureRoot, "web", "runner-product.html")
+	if err := os.MkdirAll(filepath.Dir(fixturePath), 0o755); err != nil {
+		t.Fatalf("mkdir web fixture: %v", err)
+	}
+	if err := os.WriteFile(fixturePath, []byte(`<!doctype html><html><head><title>Runner Web Title</title></head><body><h1>Runner Web Title</h1><p>Initial runner evidence.</p></body></html>`), 0o644); err != nil {
+		t.Fatalf("write web fixture: %v", err)
+	}
+	t.Setenv("OPENCLERK_EVAL_SOURCE_FIXTURE_ROOT", fixtureRoot)
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	sourceURL := "http://openclerk-eval.local/web/runner-product.html"
+	created, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestSourceURL,
+		Source: runner.SourceURLInput{
+			URL:      sourceURL,
+			PathHint: "sources/web/runner-product.md",
+		},
+	})
+	if err != nil {
+		t.Fatalf("create web source: %v", err)
+	}
+	if created.Ingestion == nil || created.Ingestion.UpdateStatus != "" {
+		t.Fatalf("create ingestion = %+v", created.Ingestion)
+	}
+	createJSON, err := json.Marshal(created.Ingestion)
+	if err != nil {
+		t.Fatalf("marshal create ingestion: %v", err)
+	}
+	if strings.Contains(string(createJSON), "update_status") {
+		t.Fatalf("create ingestion leaked update fields: %s", createJSON)
+	}
+
+	if _, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionCreate,
+		Document: runner.DocumentInput{
+			Path:  "synthesis/web-runner.md",
+			Title: "Web Runner Synthesis",
+			Body:  "---\ntype: synthesis\nsource_refs: sources/web/runner-product.md\n---\n# Web Runner Synthesis\n\n## Summary\nInitial runner evidence.\n",
+		},
+	}); err != nil {
+		t.Fatalf("create synthesis: %v", err)
+	}
+
+	same, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestSourceURL,
+		Source: runner.SourceURLInput{
+			URL:  sourceURL,
+			Mode: "update",
+		},
+	})
+	if err != nil {
+		t.Fatalf("same web update: %v", err)
+	}
+	if same.Ingestion == nil ||
+		same.Ingestion.UpdateStatus != "no_op" ||
+		same.Ingestion.NormalizedSourceURL != sourceURL ||
+		same.Ingestion.SourceDocID != created.Ingestion.DocID ||
+		same.Ingestion.PreviousSHA256 != created.Ingestion.SHA256 ||
+		same.Ingestion.NewSHA256 != created.Ingestion.SHA256 ||
+		same.Ingestion.Changed == nil || *same.Ingestion.Changed ||
+		same.Ingestion.SynthesisRepaired == nil || *same.Ingestion.SynthesisRepaired ||
+		same.Ingestion.StaleDependents == nil || len(*same.Ingestion.StaleDependents) != 0 ||
+		same.Ingestion.ProjectionRefs == nil || len(*same.Ingestion.ProjectionRefs) != 0 ||
+		same.Ingestion.ProvenanceRefs == nil || len(*same.Ingestion.ProvenanceRefs) != 0 {
+		t.Fatalf("same update ingestion = %+v", same.Ingestion)
+	}
+
+	if err := os.WriteFile(fixturePath, []byte(`<!doctype html><html><head><title>Runner Web Title Updated</title></head><body><h1>Runner Web Title Updated</h1><p>Updated runner evidence.</p></body></html>`), 0o644); err != nil {
+		t.Fatalf("write updated web fixture: %v", err)
+	}
+	changed, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestSourceURL,
+		Source: runner.SourceURLInput{
+			URL:        sourceURL,
+			PathHint:   "sources/web/runner-product.md",
+			SourceType: "web",
+			Mode:       "update",
+		},
+	})
+	if err != nil {
+		t.Fatalf("changed web update: %v", err)
+	}
+	if changed.Ingestion == nil ||
+		changed.Ingestion.UpdateStatus != "changed" ||
+		changed.Ingestion.NormalizedSourceURL != sourceURL ||
+		changed.Ingestion.SourceDocID != created.Ingestion.DocID ||
+		changed.Ingestion.PreviousSHA256 != created.Ingestion.SHA256 ||
+		changed.Ingestion.NewSHA256 == created.Ingestion.SHA256 ||
+		changed.Ingestion.Changed == nil || !*changed.Ingestion.Changed ||
+		changed.Ingestion.SynthesisRepaired == nil || *changed.Ingestion.SynthesisRepaired ||
+		changed.Ingestion.StaleDependents == nil || len(*changed.Ingestion.StaleDependents) != 1 ||
+		changed.Ingestion.ProjectionRefs == nil || len(*changed.Ingestion.ProjectionRefs) == 0 ||
+		changed.Ingestion.ProvenanceRefs == nil || !runnerSourceProvenanceRefsInclude(*changed.Ingestion.ProvenanceRefs, "source_updated") ||
+		!strings.Contains(changed.Ingestion.NoRepairWarning, "synthesis/web-runner.md") {
+		t.Fatalf("changed update ingestion = %+v", changed.Ingestion)
+	}
+	updateJSON, err := json.Marshal(changed.Ingestion)
+	if err != nil {
+		t.Fatalf("marshal changed ingestion: %v", err)
+	}
+	for _, want := range []string{`"update_status":"changed"`, `"normalized_source_url":"` + sourceURL + `"`, `"source_doc_id":"`, `"previous_sha256":"`, `"new_sha256":"`, `"changed":true`, `"stale_dependents":[`, `"projection_refs":[`, `"provenance_refs":[`, `"synthesis_repaired":false`, `"no_repair_warning":"`} {
+		if !strings.Contains(string(updateJSON), want) {
+			t.Fatalf("changed ingestion JSON missing %s: %s", want, updateJSON)
+		}
+	}
+}
+
+func runnerSourceProvenanceRefsInclude(refs []runner.SourceProvenanceRef, eventType string) bool {
+	for _, ref := range refs {
+		if ref.EventType == eventType {
+			return true
+		}
+	}
+	return false
+}
+
 func TestDocumentTaskIngestSourceURLPDF(t *testing.T) {
 	t.Parallel()
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"github.com/yazanabuashour/openclerk/internal/domain"
 	"io"
 	"net/http"
@@ -200,6 +201,7 @@ func TestIngestSourceURLUpdateMode(t *testing.T) {
 	if same.DocID != created.DocID || same.SourcePath != created.SourcePath || same.AssetPath != created.AssetPath || same.SHA256 != created.SHA256 || len(same.Citations) == 0 {
 		t.Fatalf("same PDF update result = %+v, want existing ingestion result", same)
 	}
+	requireNoOpSourceUpdateImpact(t, same, created.SourceURL, created.DocID, created.SHA256)
 	afterSourceEvents, err := store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{RefKind: "source", RefID: created.DocID, Limit: 20})
 	if err != nil {
 		t.Fatalf("source events after no-op: %v", err)
@@ -228,6 +230,7 @@ func TestIngestSourceURLUpdateMode(t *testing.T) {
 	if changed.DocID != created.DocID || changed.SourcePath != created.SourcePath || changed.AssetPath != created.AssetPath || changed.SHA256 == created.SHA256 {
 		t.Fatalf("changed update = %+v, created = %+v", changed, created)
 	}
+	requireChangedSourceUpdateImpact(t, changed, created.SourceURL, created.DocID, created.SHA256, changed.SHA256, "synthesis/runner.md", "sources/runner-ingest.md")
 	updatedDoc, err := store.GetDocument(ctx, created.DocID)
 	if err != nil {
 		t.Fatalf("get updated source: %v", err)
@@ -335,6 +338,13 @@ func TestIngestSourceURLWebCreateAndUpdateMode(t *testing.T) {
 	if !errors.As(err, &appErr) || appErr.Status != 409 || appErr.Code != "already_exists" {
 		t.Fatalf("duplicate web create error = %v, want already_exists 409", err)
 	}
+	duplicateDocs, err := store.ListDocuments(ctx, domain.DocumentListQuery{PathPrefix: "sources/web/runner-product-copy.md", Limit: 10})
+	if err != nil {
+		t.Fatalf("list duplicate copy path: %v", err)
+	}
+	if len(duplicateDocs.Documents) != 0 {
+		t.Fatalf("duplicate create wrote copy path: %+v", duplicateDocs.Documents)
+	}
 	_, err = store.IngestSourceURL(ctx, domain.SourceURLInput{
 		URL:        created.SourceURL,
 		SourceType: "pdf",
@@ -362,6 +372,7 @@ func TestIngestSourceURLWebCreateAndUpdateMode(t *testing.T) {
 	if same.DocID != created.DocID || same.SourcePath != created.SourcePath || same.AssetPath != "" || same.SHA256 != created.SHA256 || same.SourceType != "web" {
 		t.Fatalf("same web update result = %+v, want existing ingestion result", same)
 	}
+	requireNoOpSourceUpdateImpact(t, same, created.SourceURL, created.DocID, created.SHA256)
 	afterSourceEvents, err := store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{RefKind: "source", RefID: created.DocID, Limit: 20})
 	if err != nil {
 		t.Fatalf("source events after no-op: %v", err)
@@ -390,6 +401,7 @@ func TestIngestSourceURLWebCreateAndUpdateMode(t *testing.T) {
 	if changed.DocID != created.DocID || changed.SourcePath != created.SourcePath || changed.AssetPath != "" || changed.SHA256 == created.SHA256 {
 		t.Fatalf("changed web update = %+v, created = %+v", changed, created)
 	}
+	requireChangedSourceUpdateImpact(t, changed, created.SourceURL, created.DocID, created.SHA256, changed.SHA256, "synthesis/web-runner.md", "sources/web/runner-product.md")
 	updatedDoc, err := store.GetDocument(ctx, created.DocID)
 	if err != nil {
 		t.Fatalf("get updated web source: %v", err)
@@ -424,6 +436,77 @@ func TestIngestSourceURLWebCreateAndUpdateMode(t *testing.T) {
 	projection := requireSynthesisProjection(t, ctx, store, docIDForPath("synthesis/web-runner.md"))
 	if projection.Freshness != "stale" || projection.Details["stale_source_refs"] != "sources/web/runner-product.md" {
 		t.Fatalf("synthesis projection after web source update = %+v", projection)
+	}
+}
+
+func TestIngestSourceURLUpdateImpactPagesSynthesisProjections(t *testing.T) {
+	initialHTML := `<!doctype html><html><head><title>Paged Source</title></head><body><h1>Paged Source</h1><p>Initial paged source evidence.</p></body></html>`
+	updatedHTML := `<!doctype html><html><head><title>Paged Source Updated</title></head><body><h1>Paged Source Updated</h1><p>Updated paged source evidence.</p></body></html>`
+	fixtureRoot := t.TempDir()
+	fixturePath := filepath.Join(fixtureRoot, "web", "paged-source.html")
+	if err := os.MkdirAll(filepath.Dir(fixturePath), 0o755); err != nil {
+		t.Fatalf("mkdir web fixture: %v", err)
+	}
+	if err := os.WriteFile(fixturePath, []byte(initialHTML), 0o644); err != nil {
+		t.Fatalf("write web fixture: %v", err)
+	}
+	t.Setenv(evalSourceFixtureRootEnv, fixtureRoot)
+
+	ctx := context.Background()
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+	clock := testClock()
+	store.now = func() time.Time {
+		return clock
+	}
+
+	sourceURL := "http://openclerk-eval.local/web/paged-source.html"
+	created, err := store.IngestSourceURL(ctx, domain.SourceURLInput{
+		URL:      sourceURL,
+		PathHint: "sources/web/paged-source.md",
+	})
+	if err != nil {
+		t.Fatalf("create web source URL: %v", err)
+	}
+	clock = clock.Add(time.Minute)
+	const synthesisCount = 105
+	for i := 0; i < synthesisCount; i++ {
+		if _, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+			Path:  fmt.Sprintf("synthesis/paged-%03d.md", i),
+			Title: fmt.Sprintf("Paged Synthesis %03d", i),
+			Body:  synthesisBody("sources/web/paged-source.md", "Initial paged source evidence."),
+		}); err != nil {
+			t.Fatalf("create synthesis %03d: %v", i, err)
+		}
+	}
+
+	if err := os.WriteFile(fixturePath, []byte(updatedHTML), 0o644); err != nil {
+		t.Fatalf("write updated web fixture: %v", err)
+	}
+	clock = clock.Add(time.Minute)
+	changed, err := store.IngestSourceURL(ctx, domain.SourceURLInput{
+		URL:        sourceURL,
+		SourceType: "web",
+		Mode:       "update",
+	})
+	if err != nil {
+		t.Fatalf("changed web update: %v", err)
+	}
+	if changed.UpdateStatus != "changed" || changed.DocID != created.DocID {
+		t.Fatalf("changed update = %+v, created = %+v", changed, created)
+	}
+	if len(changed.StaleDependents) != synthesisCount || len(changed.ProjectionRefs) != synthesisCount {
+		t.Fatalf("paged stale impact counts: dependents=%d projections=%d, want %d", len(changed.StaleDependents), len(changed.ProjectionRefs), synthesisCount)
+	}
+	if len(changed.ProvenanceRefs) <= synthesisCount {
+		t.Fatalf("paged provenance refs = %d, want source update plus %d projection invalidations: %+v", len(changed.ProvenanceRefs), synthesisCount, changed.ProvenanceRefs)
+	}
+	if !sourceImpactHasStaleDependent(changed.StaleDependents, "synthesis/paged-104.md", "sources/web/paged-source.md") {
+		t.Fatalf("stale dependents missing final paged synthesis: %+v", changed.StaleDependents)
 	}
 }
 
@@ -797,4 +880,86 @@ func TestIngestSourceURLUpdateRollbackRestoresPreviousState(t *testing.T) {
 	if len(search.Hits) != 0 {
 		t.Fatalf("new evidence indexed after rollback: %+v", search.Hits)
 	}
+}
+
+func requireNoOpSourceUpdateImpact(t *testing.T, result domain.SourceIngestionResult, sourceURL string, sourceDocID string, sha string) {
+	t.Helper()
+	if result.UpdateStatus != "no_op" ||
+		result.NormalizedSourceURL != sourceURL ||
+		result.SourceDocID != sourceDocID ||
+		result.PreviousSHA256 != sha ||
+		result.NewSHA256 != sha ||
+		result.Changed ||
+		result.SynthesisRepaired {
+		t.Fatalf("no-op update impact = %+v", result)
+	}
+	if result.DuplicateStatus != "existing_source_matched_no_duplicate_created" {
+		t.Fatalf("duplicate status = %q", result.DuplicateStatus)
+	}
+	if len(result.StaleDependents) != 0 || len(result.ProjectionRefs) != 0 || len(result.ProvenanceRefs) != 0 {
+		t.Fatalf("no-op update reported stale-impact churn: dependents=%+v projections=%+v provenance=%+v", result.StaleDependents, result.ProjectionRefs, result.ProvenanceRefs)
+	}
+	if !strings.Contains(result.NoRepairWarning, "no content change") || !strings.Contains(result.NoRepairWarning, "no synthesis repair") {
+		t.Fatalf("no-op warning = %q", result.NoRepairWarning)
+	}
+}
+
+func requireChangedSourceUpdateImpact(t *testing.T, result domain.SourceIngestionResult, sourceURL string, sourceDocID string, previousSHA string, newSHA string, synthesisPath string, sourcePath string) {
+	t.Helper()
+	if result.UpdateStatus != "changed" ||
+		result.NormalizedSourceURL != sourceURL ||
+		result.SourceDocID != sourceDocID ||
+		result.PreviousSHA256 != previousSHA ||
+		result.NewSHA256 != newSHA ||
+		!result.Changed ||
+		result.SynthesisRepaired {
+		t.Fatalf("changed update impact = %+v", result)
+	}
+	if result.DuplicateStatus != "existing_source_matched_no_duplicate_created" {
+		t.Fatalf("duplicate status = %q", result.DuplicateStatus)
+	}
+	if !sourceImpactHasStaleDependent(result.StaleDependents, synthesisPath, sourcePath) {
+		t.Fatalf("stale dependents = %+v, want %s stale on %s", result.StaleDependents, synthesisPath, sourcePath)
+	}
+	if !sourceImpactHasProjectionRef(result.ProjectionRefs, "synthesis", docIDForPath(synthesisPath)) {
+		t.Fatalf("projection refs = %+v, want synthesis %s", result.ProjectionRefs, docIDForPath(synthesisPath))
+	}
+	if !sourceImpactHasProvenanceRef(result.ProvenanceRefs, "source_updated", sourceDocID) ||
+		!sourceImpactHasProvenanceRef(result.ProvenanceRefs, "projection_invalidated", "synthesis:"+docIDForPath(synthesisPath)) {
+		t.Fatalf("provenance refs = %+v", result.ProvenanceRefs)
+	}
+	if !strings.Contains(result.NoRepairWarning, synthesisPath) || !strings.Contains(result.NoRepairWarning, "did not repair") {
+		t.Fatalf("no-repair warning = %q", result.NoRepairWarning)
+	}
+}
+
+func sourceImpactHasStaleDependent(dependents []domain.SourceStaleDependent, synthesisPath string, sourcePath string) bool {
+	for _, dependent := range dependents {
+		if dependent.Path == synthesisPath &&
+			dependent.DocID == docIDForPath(synthesisPath) &&
+			dependent.Projection == "synthesis" &&
+			dependent.Freshness == "stale" &&
+			sourcePathListContains(dependent.StaleSourceRefs, sourcePath) {
+			return true
+		}
+	}
+	return false
+}
+
+func sourceImpactHasProjectionRef(refs []domain.SourceProjectionRef, projection string, refID string) bool {
+	for _, ref := range refs {
+		if ref.Projection == projection && ref.RefID == refID && ref.Freshness == "stale" {
+			return true
+		}
+	}
+	return false
+}
+
+func sourceImpactHasProvenanceRef(refs []domain.SourceProvenanceRef, eventType string, refID string) bool {
+	for _, ref := range refs {
+		if ref.EventType == eventType && ref.RefID == refID {
+			return true
+		}
+	}
+	return false
 }

@@ -66,7 +66,7 @@ func toSearchResult(result domain.SearchResult) SearchResult {
 }
 
 func toSourceIngestionResult(result domain.SourceIngestionResult) SourceIngestionResult {
-	return SourceIngestionResult{
+	converted := SourceIngestionResult{
 		DocID:       result.DocID,
 		SourcePath:  result.SourcePath,
 		SourceURL:   result.SourceURL,
@@ -81,6 +81,68 @@ func toSourceIngestionResult(result domain.SourceIngestionResult) SourceIngestio
 		CapturedAt:  result.CapturedAt,
 		PDFMetadata: SourcePDFMetadata(result.PDFMetadata),
 	}
+	if result.UpdateStatus != "" {
+		changed := result.Changed
+		synthesisRepaired := result.SynthesisRepaired
+		staleDependents := toSourceStaleDependents(result.StaleDependents)
+		projectionRefs := toSourceProjectionRefs(result.ProjectionRefs)
+		provenanceRefs := toSourceProvenanceRefs(result.ProvenanceRefs)
+		converted.UpdateStatus = result.UpdateStatus
+		converted.NormalizedSourceURL = result.NormalizedSourceURL
+		converted.SourceDocID = result.SourceDocID
+		converted.PreviousSHA256 = result.PreviousSHA256
+		converted.NewSHA256 = result.NewSHA256
+		converted.Changed = &changed
+		converted.DuplicateStatus = result.DuplicateStatus
+		converted.StaleDependents = &staleDependents
+		converted.ProjectionRefs = &projectionRefs
+		converted.ProvenanceRefs = &provenanceRefs
+		converted.SynthesisRepaired = &synthesisRepaired
+		converted.NoRepairWarning = result.NoRepairWarning
+	}
+	return converted
+}
+
+func toSourceStaleDependents(dependents []domain.SourceStaleDependent) []SourceStaleDependent {
+	result := make([]SourceStaleDependent, 0, len(dependents))
+	for _, dependent := range dependents {
+		result = append(result, SourceStaleDependent{
+			Path:            dependent.Path,
+			DocID:           dependent.DocID,
+			Projection:      dependent.Projection,
+			Freshness:       dependent.Freshness,
+			StaleSourceRefs: append([]string(nil), dependent.StaleSourceRefs...),
+		})
+	}
+	return result
+}
+
+func toSourceProjectionRefs(refs []domain.SourceProjectionRef) []SourceProjectionRef {
+	result := make([]SourceProjectionRef, 0, len(refs))
+	for _, ref := range refs {
+		result = append(result, SourceProjectionRef{
+			Projection: ref.Projection,
+			RefKind:    ref.RefKind,
+			RefID:      ref.RefID,
+			Freshness:  ref.Freshness,
+			SourceRef:  ref.SourceRef,
+		})
+	}
+	return result
+}
+
+func toSourceProvenanceRefs(refs []domain.SourceProvenanceRef) []SourceProvenanceRef {
+	result := make([]SourceProvenanceRef, 0, len(refs))
+	for _, ref := range refs {
+		result = append(result, SourceProvenanceRef{
+			EventID:   ref.EventID,
+			EventType: ref.EventType,
+			RefKind:   ref.RefKind,
+			RefID:     ref.RefID,
+			SourceRef: ref.SourceRef,
+		})
+	}
+	return result
 }
 
 func toVideoIngestionResult(result domain.VideoIngestionResult) VideoIngestionResult {
