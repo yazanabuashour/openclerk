@@ -126,6 +126,45 @@ func documentHistoryDecision(rows []targetedScenarioClassification) string {
 	return "keep_as_reference"
 }
 
+func highTouchDocumentLifecycleDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	ergonomicsGaps := 0
+	for _, row := range rows {
+		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
+			return "promote_document_lifecycle_surface_design"
+		}
+		if row.FailureClassification == "ergonomics_gap" {
+			ergonomicsGaps++
+		} else if row.FailureClassification != "none" {
+			return "defer_for_guidance_or_eval_repair"
+		}
+		seen[row.Scenario] = true
+	}
+	for _, id := range highTouchDocumentLifecycleScenarioIDs() {
+		if !seen[id] {
+			return "defer_for_guidance_or_eval_repair"
+		}
+	}
+	if ergonomicsGaps >= 2 {
+		return "promote_document_lifecycle_surface_design"
+	}
+	if ergonomicsGaps > 0 {
+		return "defer_for_guidance_or_eval_repair"
+	}
+	return "keep_as_reference"
+}
+
+func highTouchDocumentLifecyclePromotion(decision string) string {
+	switch decision {
+	case "promote_document_lifecycle_surface_design":
+		return "targeted evidence supports filing a separate implementation bead for the exact promoted document lifecycle surface; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
+	case "defer_for_guidance_or_eval_repair":
+		return "document lifecycle ceremony promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation bead unless a later decision promotes"
+	default:
+		return "keep high-touch document lifecycle ceremony as reference pressure over existing document and retrieval primitives; no promoted history, diff, review, restore, rollback, schema, migration, storage behavior, public API, or skill behavior change"
+	}
+}
+
 func documentArtifactCandidateDecision(rows []targetedScenarioClassification) string {
 	seen := map[string]bool{}
 	seenErgonomics := false
@@ -801,6 +840,13 @@ func documentHistoryScenarioIDs() []string {
 		documentHistoryRestoreScenarioID,
 		documentHistoryPendingScenarioID,
 		documentHistoryStaleScenarioID,
+	}
+}
+
+func highTouchDocumentLifecycleScenarioIDs() []string {
+	return []string{
+		highTouchDocumentLifecycleNaturalScenarioID,
+		highTouchDocumentLifecycleScriptedScenarioID,
 	}
 }
 

@@ -280,6 +280,53 @@ func TestVerifyDocumentHistoryReviewScenarios(t *testing.T) {
 		t.Fatalf("restore pressure passed without list_documents: %+v", result)
 	}
 
+	highTouchScriptedPaths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, highTouchScriptedPaths, scenario{ID: highTouchDocumentLifecycleScriptedScenarioID}); err != nil {
+		t.Fatalf("seed high-touch scripted lifecycle pressure: %v", err)
+	}
+	replaceSeedSection(t, ctx, highTouchScriptedPaths, documentHistoryRestoreTargetPath, "Summary", "Accepted lifecycle policy: runner-visible review before accepting source-sensitive durable edits.")
+	targetID, targetFound, err := documentIDByPath(ctx, highTouchScriptedPaths, documentHistoryRestoreTargetPath)
+	if err != nil {
+		t.Fatalf("resolve restore target id: %v", err)
+	}
+	if !targetFound {
+		t.Fatal("restore target id not found")
+	}
+	highTouchScriptedMetrics := commonMetrics
+	highTouchScriptedMetrics.ListDocumentPathPrefixes = []string{documentHistoryDiffListPrefix}
+	highTouchScriptedMetrics.GetDocumentDocIDs = []string{targetID}
+	highTouchScriptedMetrics.DocumentActionEvents = []string{
+		"search",
+		"list_documents:" + documentHistoryDiffListPrefix,
+		"get_document:" + targetID,
+		"replace_section:" + targetID,
+		"provenance_events:" + targetID,
+		"projection_states:" + targetID,
+	}
+	result, err = verifyScenarioTurn(ctx, highTouchScriptedPaths, scenario{ID: highTouchDocumentLifecycleScriptedScenarioID}, 1, restoreAnswer, highTouchScriptedMetrics)
+	if err != nil {
+		t.Fatalf("verify high-touch scripted lifecycle pressure: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("high-touch scripted lifecycle pressure failed: %+v", result)
+	}
+	lateGetMetrics := highTouchScriptedMetrics
+	lateGetMetrics.DocumentActionEvents = []string{
+		"search",
+		"list_documents:" + documentHistoryDiffListPrefix,
+		"replace_section:" + targetID,
+		"get_document:" + targetID,
+		"provenance_events:" + targetID,
+		"projection_states:" + targetID,
+	}
+	result, err = verifyScenarioTurn(ctx, highTouchScriptedPaths, scenario{ID: highTouchDocumentLifecycleScriptedScenarioID}, 1, restoreAnswer, lateGetMetrics)
+	if err != nil {
+		t.Fatalf("verify high-touch scripted lifecycle pressure with late get: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("high-touch scripted lifecycle pressure passed with get after replace: %+v", result)
+	}
+
 	pendingPaths := scenarioPaths(t.TempDir())
 	if err := seedScenario(ctx, pendingPaths, scenario{ID: documentHistoryPendingScenarioID}); err != nil {
 		t.Fatalf("seed pending review: %v", err)

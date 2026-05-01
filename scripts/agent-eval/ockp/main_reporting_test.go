@@ -1089,6 +1089,96 @@ func TestExecuteRunLabelsHighTouchCompileSynthesisLaneAsNonReleaseBlocking(t *te
 	}
 }
 
+func TestExecuteRunLabelsHighTouchDocumentLifecycleLaneAsNonReleaseBlocking(t *testing.T) {
+	reportDir := filepath.Join(t.TempDir(), "reports")
+	scenarioIDs := append(highTouchDocumentLifecycleScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject")
+	config := runConfig{
+		Parallel:   1,
+		Variant:    productionVariant,
+		Scenario:   strings.Join(scenarioIDs, ","),
+		RunRoot:    filepath.Join(t.TempDir(), "run"),
+		ReportDir:  reportDir,
+		ReportName: "ockp-high-touch-document-lifecycle-ceremony-test",
+		RepoRoot:   ".",
+		CodexBin:   "codex",
+		CacheMode:  cacheModeIsolated,
+	}
+	err := executeRun(context.Background(), config, &strings.Builder{}, func(_ context.Context, _ runConfig, job evalJob, _ cacheConfig) jobResult {
+		now := time.Now().UTC()
+		resultMetrics := metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}}
+		if job.Scenario.ID == highTouchDocumentLifecycleNaturalScenarioID {
+			resultMetrics = metrics{AssistantCalls: 6, ToolCalls: 40, CommandExecutions: 40, EventTypeCounts: map[string]int{}}
+		}
+		if job.Scenario.ID == highTouchDocumentLifecycleScriptedScenarioID {
+			resultMetrics = metrics{AssistantCalls: 5, ToolCalls: 18, CommandExecutions: 18, EventTypeCounts: map[string]int{}}
+		}
+		return jobResult{
+			Variant:       job.Variant,
+			Scenario:      job.Scenario.ID,
+			ScenarioTitle: job.Scenario.Title,
+			Status:        "completed",
+			Passed:        true,
+			Metrics:       resultMetrics,
+			Verification:  verificationResult{Passed: true, DatabasePass: true, AssistantPass: true},
+			StartedAt:     now,
+			CompletedAt:   &now,
+		}
+	})
+	if err != nil {
+		t.Fatalf("execute high-touch document lifecycle run: %v", err)
+	}
+	content, err := os.ReadFile(filepath.Join(reportDir, "ockp-high-touch-document-lifecycle-ceremony-test.json"))
+	if err != nil {
+		t.Fatalf("read JSON report: %v", err)
+	}
+	var report report
+	if err := json.Unmarshal(content, &report); err != nil {
+		t.Fatalf("decode JSON report: %v", err)
+	}
+	if report.Metadata.Lane != highTouchDocumentLifecycleLaneName || report.Metadata.ReleaseBlocking {
+		t.Fatalf("high-touch document lifecycle lane metadata = %q/%t, want %q/false", report.Metadata.Lane, report.Metadata.ReleaseBlocking, highTouchDocumentLifecycleLaneName)
+	}
+	if report.TargetedLaneSummary == nil {
+		t.Fatal("high-touch document lifecycle report missing targeted lane summary")
+	}
+	if report.TargetedLaneSummary.Decision != "keep_as_reference" {
+		t.Fatalf("decision = %q, want keep_as_reference", report.TargetedLaneSummary.Decision)
+	}
+	classifications := map[string]targetedScenarioClassification{}
+	for _, row := range report.TargetedLaneSummary.ScenarioClassifications {
+		classifications[row.Scenario] = row
+	}
+	if classifications[highTouchDocumentLifecycleNaturalScenarioID].FailureClassification != "none" {
+		t.Fatalf("natural classification = %q, want none", classifications[highTouchDocumentLifecycleNaturalScenarioID].FailureClassification)
+	}
+	if classifications[highTouchDocumentLifecycleNaturalScenarioID].PromptSpecificity != "natural-user-intent" {
+		t.Fatalf("natural prompt specificity = %q, want natural-user-intent", classifications[highTouchDocumentLifecycleNaturalScenarioID].PromptSpecificity)
+	}
+	if classifications[highTouchDocumentLifecycleScriptedScenarioID].FailureClassification != "none" {
+		t.Fatalf("scripted classification = %q, want none", classifications[highTouchDocumentLifecycleScriptedScenarioID].FailureClassification)
+	}
+	if classifications[highTouchDocumentLifecycleScriptedScenarioID].PromptSpecificity != "scripted-control" {
+		t.Fatalf("scripted prompt specificity = %q, want scripted-control", classifications[highTouchDocumentLifecycleScriptedScenarioID].PromptSpecificity)
+	}
+	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-high-touch-document-lifecycle-ceremony-test.md"))
+	if err != nil {
+		t.Fatalf("read markdown report: %v", err)
+	}
+	for _, want := range []string{
+		"Lane: `" + highTouchDocumentLifecycleLaneName + "`",
+		"Release blocking: `false`",
+		"Decision: `keep_as_reference`",
+		"Safety pass",
+		"Capability pass",
+		"UX quality",
+		"validation control stayed final-answer-only",
+	} {
+		if !strings.Contains(string(markdown), want) {
+			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
+		}
+	}
+}
+
 func TestExecuteRunLabelsCompileSynthesisCandidateLaneAsNonReleaseBlocking(t *testing.T) {
 	reportDir := filepath.Join(t.TempDir(), "reports")
 	scenarioIDs := append(compileSynthesisCandidateScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject")
@@ -1504,6 +1594,39 @@ func TestHighTouchCompileSynthesisDecisionRequiresRepeatedErgonomicsPressure(t *
 	}
 	rows[0].FailureClassification = "skill_guidance_or_eval_coverage"
 	if decision := highTouchCompileSynthesisDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("guidance decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+}
+
+func TestHighTouchDocumentLifecycleDecisionRequiresRepeatedErgonomicsPressure(t *testing.T) {
+	rows := make([]targetedScenarioClassification, 0, len(highTouchDocumentLifecycleScenarioIDs()))
+	for _, id := range highTouchDocumentLifecycleScenarioIDs() {
+		rows = append(rows, targetedScenarioClassification{
+			Scenario:              id,
+			FailureClassification: "none",
+		})
+	}
+	if decision := highTouchDocumentLifecycleDecision(rows[:len(rows)-1]); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("partial decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	if decision := highTouchDocumentLifecycleDecision(rows); decision != "keep_as_reference" {
+		t.Fatalf("complete passing decision = %q, want keep_as_reference", decision)
+	}
+	rows[0].FailureClassification = "ergonomics_gap"
+	if decision := highTouchDocumentLifecycleDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("single ergonomics decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	rows[1].FailureClassification = "ergonomics_gap"
+	if decision := highTouchDocumentLifecycleDecision(rows); decision != "promote_document_lifecycle_surface_design" {
+		t.Fatalf("repeated ergonomics decision = %q, want promote_document_lifecycle_surface_design", decision)
+	}
+	rows[0].FailureClassification = "capability_gap"
+	rows[1].FailureClassification = "none"
+	if decision := highTouchDocumentLifecycleDecision(rows); decision != "promote_document_lifecycle_surface_design" {
+		t.Fatalf("capability decision = %q, want promote_document_lifecycle_surface_design", decision)
+	}
+	rows[0].FailureClassification = "skill_guidance_or_eval_coverage"
+	if decision := highTouchDocumentLifecycleDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
 		t.Fatalf("guidance decision = %q, want defer_for_guidance_or_eval_repair", decision)
 	}
 }

@@ -149,6 +149,10 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifySourceSensitiveConflict(ctx, paths, finalMessage, turnMetrics)
 	case documentHistoryNaturalScenarioID:
 		return verifyDocumentHistoryRestore(ctx, paths, finalMessage, turnMetrics)
+	case highTouchDocumentLifecycleNaturalScenarioID:
+		return verifyDocumentHistoryRestore(ctx, paths, finalMessage, turnMetrics)
+	case highTouchDocumentLifecycleScriptedScenarioID:
+		return verifyHighTouchDocumentLifecycleScripted(ctx, paths, finalMessage, turnMetrics)
 	case documentHistoryInspectScenarioID:
 		return verifyDocumentHistoryInspection(ctx, paths, finalMessage, turnMetrics)
 	case documentHistoryDiffScenarioID:

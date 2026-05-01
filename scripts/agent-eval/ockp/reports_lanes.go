@@ -11,6 +11,7 @@ func reportLane(ids []string) (string, bool) {
 	promotedRecordDomain := 0
 	parallelRunner := 0
 	documentHistory := 0
+	highTouchDocumentLifecycle := 0
 	agentChosenPath := 0
 	pathTitleAutonomy := 0
 	captureLowRisk := 0
@@ -61,6 +62,10 @@ func reportLane(ids []string) (string, bool) {
 		}
 		if isDocumentHistoryScenario(id) {
 			documentHistory++
+			continue
+		}
+		if isHighTouchDocumentLifecycleScenario(id) {
+			highTouchDocumentLifecycle++
 			continue
 		}
 		if isAgentChosenPathScenario(id) {
@@ -174,6 +179,9 @@ func reportLane(ids []string) (string, bool) {
 	if documentHistory > 0 && documentHistory+validation == len(ids) {
 		return documentHistoryLaneName, false
 	}
+	if highTouchDocumentLifecycle > 0 && highTouchDocumentLifecycle+validation == len(ids) {
+		return highTouchDocumentLifecycleLaneName, false
+	}
 	if agentChosenPath > 0 && agentChosenPath+validation == len(ids) {
 		return agentChosenPathLaneName, false
 	}
@@ -256,6 +264,9 @@ func reportLane(ids []string) (string, bool) {
 		return populatedMixedLaneName, releaseBlocking
 	}
 	if documentHistory > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
+	if highTouchDocumentLifecycle > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
 	if agentChosenPath > 0 {
@@ -342,6 +353,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == documentHistoryLaneName {
 		return "document lifecycle rows report natural intent, scripted current-primitives controls, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, privacy handling, and capability/ergonomics classification"
+	}
+	if lane == highTouchDocumentLifecycleLaneName {
+		return "high-touch document lifecycle ceremony rows report natural lifecycle review and rollback intent, scripted history/provenance/freshness control, rollback target accuracy, privacy-safe summaries, no raw private diffs in committed artifacts, no-bypass controls, tool count, command count, assistant calls, wall time, prompt specificity, retries, latency, brittleness, guidance dependence, safety risks, and separate safety/capability/UX classification"
 	}
 	if lane == documentArtifactCandidateLaneName {
 		return "document artifact candidate rows report candidate quality plus ergonomics scorecard fields: tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and final classification"

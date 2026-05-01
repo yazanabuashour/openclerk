@@ -141,6 +141,7 @@ type metrics struct {
 	ListTagFilters             []string       `json:"list_tag_filters,omitempty"`
 	GetDocumentUsed            bool           `json:"get_document_used"`
 	GetDocumentDocIDs          []string       `json:"get_document_doc_ids,omitempty"`
+	DocumentActionEvents       []string       `json:"document_action_events,omitempty"`
 	InspectLayoutUsed          bool           `json:"inspect_layout_used"`
 	DocumentLinksUsed          bool           `json:"document_links_used"`
 	GraphNeighborhoodUsed      bool           `json:"graph_neighborhood_used"`

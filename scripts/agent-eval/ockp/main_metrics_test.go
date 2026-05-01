@@ -104,6 +104,9 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	if !containsAllStrings(parsed.metrics.GetDocumentDocIDs, []string{"doc_1"}) {
 		t.Fatalf("expected get document doc id in %+v", parsed.metrics)
 	}
+	if !containsAllStrings(parsed.metrics.DocumentActionEvents, []string{"get_document:doc_1", "replace_section:doc_1"}) {
+		t.Fatalf("expected ordered document action events in %+v", parsed.metrics)
+	}
 	for name, used := range map[string]bool{
 		"search":                 parsed.metrics.SearchUsed,
 		"search_unfiltered":      parsed.metrics.SearchUnfilteredUsed,

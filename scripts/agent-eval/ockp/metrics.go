@@ -223,6 +223,7 @@ func classifyCommand(command string, m *metrics) {
 		m.BrowserAutomation = true
 		addEvidence(&m.BrowserAutomationEvidence)
 	}
+	m.DocumentActionEvents = append(m.DocumentActionEvents, orderedRunnerActionEvents(actionText)...)
 	classifySearchCommand(actionText, m)
 	if commandContainsAction(actionText, "ingest_source_url") {
 		m.IngestSourceURLUsed = true
@@ -335,6 +336,53 @@ func actionHasFieldValue(actionText string, action string, field string, value s
 		}
 	}
 	return false
+}
+func orderedRunnerActionEvents(actionText string) []string {
+	compacted := strings.Join(strings.Fields(actionText), "")
+	const marker = `"action":"`
+	events := []string{}
+	for offset := 0; offset < len(compacted); {
+		index := strings.Index(compacted[offset:], marker)
+		if index < 0 {
+			break
+		}
+		actionStart := offset + index + len(marker)
+		actionEndRelative := strings.Index(compacted[actionStart:], `"`)
+		if actionEndRelative < 0 {
+			break
+		}
+		actionEnd := actionStart + actionEndRelative
+		action := compacted[actionStart:actionEnd]
+		segmentEnd := len(compacted)
+		if next := strings.Index(compacted[actionEnd:], marker); next >= 0 {
+			segmentEnd = actionEnd + next
+		}
+		if event := runnerActionEvent(action, compacted[actionEnd:segmentEnd]); event != "" {
+			events = append(events, event)
+		}
+		offset = segmentEnd
+	}
+	return events
+}
+func runnerActionEvent(action string, segment string) string {
+	switch action {
+	case "search", "inspect_layout":
+		return action
+	case "list_documents":
+		return actionWithOptionalValue(action, fieldValueFromCompactedAction(segment, "path_prefix"))
+	case "get_document", "replace_section", "append_document", "create_document":
+		return actionWithOptionalValue(action, fieldValueFromCompactedAction(segment, "doc_id"))
+	case "provenance_events", "projection_states":
+		return actionWithOptionalValue(action, fieldValueFromCompactedAction(segment, "ref_id"))
+	default:
+		return ""
+	}
+}
+func actionWithOptionalValue(action string, value string) string {
+	if value == "" {
+		return action
+	}
+	return action + ":" + value
 }
 func classifySearchCommand(actionText string, m *metrics) {
 	compacted := strings.Join(strings.Fields(actionText), "")
@@ -497,6 +545,7 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.ListTagFilters = append(out.ListTagFilters, current.ListTagFilters...)
 		out.GetDocumentUsed = out.GetDocumentUsed || current.GetDocumentUsed
 		out.GetDocumentDocIDs = append(out.GetDocumentDocIDs, current.GetDocumentDocIDs...)
+		out.DocumentActionEvents = append(out.DocumentActionEvents, current.DocumentActionEvents...)
 		out.InspectLayoutUsed = out.InspectLayoutUsed || current.InspectLayoutUsed
 		out.DocumentLinksUsed = out.DocumentLinksUsed || current.DocumentLinksUsed
 		out.GraphNeighborhoodUsed = out.GraphNeighborhoodUsed || current.GraphNeighborhoodUsed

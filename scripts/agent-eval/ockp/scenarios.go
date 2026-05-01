@@ -22,7 +22,7 @@ func isRepoDocsDogfoodScenario(id string) bool {
 	}
 }
 func isReleaseBlockingScenario(id string) bool {
-	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isPromotedRecordDomainScenario(id) && !isDocumentHistoryScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isCaptureLowRiskScenario(id) && !isCaptureExplicitOverridesScenario(id) && !isCaptureDuplicateCandidateScenario(id) && !isTaggingScenario(id) && !isCaptureSaveThisNoteScenario(id) && !isCaptureDocumentLinksScenario(id) && !isSourceURLUpdateScenario(id) && !isWebURLIntakeScenario(id) && !isWebURLStaleRepairScenario(id) && !isWebURLStaleImpactScenario(id) && !isWebProductPageScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isHighTouchCompileSynthesisScenario(id) && !isCompileSynthesisCandidateScenario(id) && !isBroadAuditScenario(id) && !isParallelRunnerScenario(id)
+	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isPromotedRecordDomainScenario(id) && !isDocumentHistoryScenario(id) && !isHighTouchDocumentLifecycleScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isCaptureLowRiskScenario(id) && !isCaptureExplicitOverridesScenario(id) && !isCaptureDuplicateCandidateScenario(id) && !isTaggingScenario(id) && !isCaptureSaveThisNoteScenario(id) && !isCaptureDocumentLinksScenario(id) && !isSourceURLUpdateScenario(id) && !isWebURLIntakeScenario(id) && !isWebURLStaleRepairScenario(id) && !isWebURLStaleImpactScenario(id) && !isWebProductPageScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isHighTouchCompileSynthesisScenario(id) && !isCompileSynthesisCandidateScenario(id) && !isBroadAuditScenario(id) && !isParallelRunnerScenario(id)
 }
 func isParallelRunnerScenario(id string) bool {
 	switch id {
@@ -67,6 +67,14 @@ func isBroadAuditScenario(id string) bool {
 func isDocumentHistoryScenario(id string) bool {
 	switch id {
 	case documentHistoryNaturalScenarioID, documentHistoryInspectScenarioID, documentHistoryDiffScenarioID, documentHistoryRestoreScenarioID, documentHistoryPendingScenarioID, documentHistoryStaleScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+func isHighTouchDocumentLifecycleScenario(id string) bool {
+	switch id {
+	case highTouchDocumentLifecycleNaturalScenarioID, highTouchDocumentLifecycleScriptedScenarioID:
 		return true
 	default:
 		return false
@@ -462,6 +470,16 @@ func allScenarios() []scenario {
 			ID:     documentHistoryNaturalScenarioID,
 			Title:  "Resolve document lifecycle rollback from natural intent",
 			Prompt: "Use the configured local OpenClerk data path. I think the history-review note accepted an unsafe lifecycle policy. Use the installed OpenClerk runner only to find the relevant source-backed evidence, restore the bad accepted summary if needed, and tell me what changed. Do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Preserve citations or source refs, provenance, projection freshness, and privacy: do not print raw private diffs or storage-root paths in the final answer.",
+		},
+		{
+			ID:     highTouchDocumentLifecycleNaturalScenarioID,
+			Title:  "High-touch document lifecycle natural intent",
+			Prompt: "Use the configured local OpenClerk data path. The history-review restore target appears to have accepted an unsafe lifecycle summary. Use only installed OpenClerk document and retrieval runner JSON to review the source-backed lifecycle evidence, roll back the unsafe accepted summary to the accepted policy if needed, and explain the result. Preserve rollback target accuracy, source refs or citations, provenance, projection freshness, and privacy-safe summaries. Do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, raw private diffs, or storage-root paths in the final answer.",
+		},
+		{
+			ID:     highTouchDocumentLifecycleScriptedScenarioID,
+			Title:  "High-touch document lifecycle scripted control",
+			Prompt: "Use the configured local OpenClerk data path. Execute the installed openclerk document and retrieval runner commands yourself and answer only from their JSON results. Use only installed OpenClerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, raw private diffs, or storage-root paths. First run retrieval search with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"restore authority history review evidence\",\"limit\":10}}. Then run document list_documents with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"notes/history-review/\",\"limit\":10}}. Use get_document for notes/history-review/restore-target.md before editing. The target currently contains an unsafe accepted edit. Restore only the Summary section of notes/history-review/restore-target.md to this exact sentence: Accepted lifecycle policy: runner-visible review before accepting source-sensitive durable edits. Then inspect provenance_events for ref_kind document and the target doc_id, and projection_states for ref_kind document and the target doc_id. In the final answer, mention notes/history-review/restore-target.md, sources/history-review/restore-authority.md, the restore/rollback reason, provenance, projection freshness, source evidence, privacy-safe summary handling, and that no raw private diff was included.",
 		},
 		{
 			ID:     documentHistoryInspectScenarioID,

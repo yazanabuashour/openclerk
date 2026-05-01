@@ -198,6 +198,52 @@ func verifyDocumentHistoryRestore(ctx context.Context, paths evalPaths, finalMes
 	}, nil
 }
 
+func verifyHighTouchDocumentLifecycleScripted(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	result, err := verifyDocumentHistoryRestore(ctx, paths, finalMessage, turnMetrics)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	targetID, targetFound, err := documentIDByPath(ctx, paths, documentHistoryRestoreTargetPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := []string{}
+	if !targetFound {
+		failures = append(failures, "missing "+documentHistoryRestoreTargetPath)
+	}
+	failures = append(failures, invalidRunnerPathFailures("list_documents path_prefix", turnMetrics.ListDocumentPathPrefixes)...)
+	failures = append(failures, exactRunnerPathFailures("list_documents path_prefix", turnMetrics.ListDocumentPathPrefixes, documentHistoryDiffListPrefix)...)
+	if targetFound && !containsAllStrings(turnMetrics.GetDocumentDocIDs, []string{targetID}) {
+		failures = append(failures, "agent did not get restore target before editing")
+	}
+	if targetFound && !documentActionBefore(turnMetrics.DocumentActionEvents, "get_document:"+targetID, "replace_section:"+targetID) {
+		failures = append(failures, "get_document for restore target did not precede replace_section")
+	}
+	if len(failures) == 0 {
+		return result, nil
+	}
+	if result.Details != "" && result.Details != "ok" {
+		failures = append([]string{result.Details}, failures...)
+	}
+	result.Passed = false
+	result.AssistantPass = false
+	result.Details = missingDetails(failures)
+	return result, nil
+}
+
+func documentActionBefore(events []string, before string, after string) bool {
+	beforeIndex := -1
+	for index, event := range events {
+		if event == before && beforeIndex < 0 {
+			beforeIndex = index
+		}
+		if event == after {
+			return beforeIndex >= 0 && beforeIndex < index
+		}
+	}
+	return false
+}
+
 func verifyDocumentHistoryPendingReview(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
 	targetBody, targetFound, err := documentBodyByPath(ctx, paths, documentHistoryPendingTargetPath)
 	if err != nil {
