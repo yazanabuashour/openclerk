@@ -40,6 +40,11 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 			t.Fatalf("scenarioIDs missing high-touch relationship-record scenario %q in %v", want, scenarioIDs())
 		}
 	}
+	for _, want := range highTouchMemoryRouterRecallScenarioIDs() {
+		if !ids[want] {
+			t.Fatalf("scenarioIDs missing high-touch memory/router recall scenario %q in %v", want, scenarioIDs())
+		}
+	}
 	for _, want := range relationshipRecordCandidateScenarioIDs() {
 		if !ids[want] {
 			t.Fatalf("scenarioIDs missing relationship-record candidate scenario %q in %v", want, scenarioIDs())
@@ -85,6 +90,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	for _, id := range highTouchRelationshipRecordScenarioIDs() {
 		if defaultIDs[id] {
 			t.Fatalf("default selected scenarios included targeted high-touch relationship-record scenario %q", id)
+		}
+	}
+	for _, id := range highTouchMemoryRouterRecallScenarioIDs() {
+		if defaultIDs[id] {
+			t.Fatalf("default selected scenarios included targeted high-touch memory/router recall scenario %q", id)
 		}
 	}
 	for _, id := range relationshipRecordCandidateScenarioIDs() {
@@ -316,6 +326,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	lane, releaseBlocking = reportLane(selected)
 	if lane != highTouchRelationshipRecordLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, highTouchRelationshipRecordLaneName)
+	}
+	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(append(highTouchMemoryRouterRecallScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject"), ",")})
+	lane, releaseBlocking = reportLane(selected)
+	if lane != highTouchMemoryRouterRecallLaneName || releaseBlocking {
+		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, highTouchMemoryRouterRecallLaneName)
 	}
 	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(append(relationshipRecordCandidateScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject"), ",")})
 	lane, releaseBlocking = reportLane(selected)

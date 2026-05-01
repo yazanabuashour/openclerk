@@ -1854,6 +1854,39 @@ func TestHighTouchRelationshipRecordDecisionRequiresRepeatedErgonomicsPressure(t
 	}
 }
 
+func TestHighTouchMemoryRouterRecallDecisionRequiresRepeatedErgonomicsPressure(t *testing.T) {
+	rows := make([]targetedScenarioClassification, 0, len(highTouchMemoryRouterRecallScenarioIDs()))
+	for _, id := range highTouchMemoryRouterRecallScenarioIDs() {
+		rows = append(rows, targetedScenarioClassification{
+			Scenario:              id,
+			FailureClassification: "none",
+		})
+	}
+	if decision := highTouchMemoryRouterRecallDecision(rows[:len(rows)-1]); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("partial decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	if decision := highTouchMemoryRouterRecallDecision(rows); decision != "keep_as_reference" {
+		t.Fatalf("complete passing decision = %q, want keep_as_reference", decision)
+	}
+	rows[0].FailureClassification = "ergonomics_gap"
+	if decision := highTouchMemoryRouterRecallDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("single ergonomics decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	rows[1].FailureClassification = "ergonomics_gap"
+	if decision := highTouchMemoryRouterRecallDecision(rows); decision != "promote_memory_router_recall_surface_design" {
+		t.Fatalf("repeated ergonomics decision = %q, want promote_memory_router_recall_surface_design", decision)
+	}
+	rows[0].FailureClassification = "capability_gap"
+	rows[1].FailureClassification = "none"
+	if decision := highTouchMemoryRouterRecallDecision(rows); decision != "promote_memory_router_recall_surface_design" {
+		t.Fatalf("capability decision = %q, want promote_memory_router_recall_surface_design", decision)
+	}
+	rows[0].FailureClassification = "skill_guidance_or_eval_coverage"
+	if decision := highTouchMemoryRouterRecallDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("guidance decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+}
+
 func TestCompileSynthesisCandidateDecisionPromotesOnlyWhenGuidanceStillHasDebt(t *testing.T) {
 	rows := make([]targetedScenarioClassification, 0, len(compileSynthesisCandidateScenarioIDs()))
 	for _, id := range compileSynthesisCandidateScenarioIDs() {
@@ -2144,6 +2177,23 @@ func TestMemoryRouterRevisitClassifiesNaturalDatabaseFailureAsDataHygiene(t *tes
 	}
 }
 
+func TestHighTouchMemoryRouterRecallClassifiesNaturalDatabaseFailureAsDataHygiene(t *testing.T) {
+	classification, posture := classifyTargetedHighTouchMemoryRouterRecallResult(jobResult{
+		Scenario: highTouchMemoryRouterRecallNaturalScenarioID,
+		Status:   "failed",
+		Passed:   false,
+		Verification: verificationResult{
+			Passed:        false,
+			DatabasePass:  false,
+			AssistantPass: false,
+		},
+		Metrics: metrics{EventTypeCounts: map[string]int{}},
+	})
+	if classification != "data_hygiene_or_fixture_gap" {
+		t.Fatalf("classification = %q, want data_hygiene_or_fixture_gap; posture = %q", classification, posture)
+	}
+}
+
 func TestMemoryRouterRevisitAnswerContractAcceptsEquivalentWording(t *testing.T) {
 	answer := "Search found the relevant memory/router source paths. Temporal status is current for the canonical docs. The promotion path is durable markdown with source evidence, feedback weight remains advisory, and routing uses existing runner actions. Provenance and projection freshness were inspected. This shows neither a capability gap nor an ergonomics gap; current primitives can express the workflow safely, the UX is acceptable, and the decision is keep memory/router reference/deferred with no remember/recall or autonomous routing surface."
 	if !memoryRouterRevisitAnswerPass(answer, true) {
@@ -2158,6 +2208,18 @@ func TestMemoryRouterRevisitAnswerContractAcceptsEquivalentWording(t *testing.T)
 	missingSourceEvidence := "Search found the relevant memory/router docs. Temporal status is current for the canonical docs. The promotion path is durable markdown, feedback weight remains advisory, and routing uses existing runner actions. Provenance and projection freshness were inspected. This shows neither a capability gap nor an ergonomics gap; current primitives can express the workflow safely, the UX is acceptable, and the decision is keep memory/router reference/deferred with no remember/recall or autonomous routing surface."
 	if memoryRouterRevisitAnswerPass(missingSourceEvidence, true) {
 		t.Fatalf("answer without source refs or citation evidence passed")
+	}
+}
+
+func TestHighTouchMemoryRouterRecallAnswerContractAcceptsEquivalentWording(t *testing.T) {
+	answer := "Search plus list_documents and get_document found the memory/router source paths. Temporal status is current because canonical docs over stale session observations win. The promotion path is durable canonical markdown with source refs, feedback weight remains advisory, and routing rationale uses existing AgentOps document and retrieval actions. Provenance and synthesis projection freshness were inspected. Local-first no-bypass boundaries held. This shows neither a capability gap nor an ergonomics gap; current primitives can express the workflow safely, the UX is acceptable, and the decision is keep memory/router recall reference/deferred with no remember/recall, memory transport, or autonomous routing surface."
+	if !highTouchMemoryRouterRecallAnswerPass(answer, true) {
+		t.Fatalf("equivalent scripted wording did not pass")
+	}
+
+	missingRouteRationale := "Search plus list_documents and get_document found the memory/router source paths. Temporal status is current because canonical docs over stale session observations win. The promotion path is durable canonical markdown with source refs, feedback weight remains advisory, and routing uses existing AgentOps document and retrieval actions. Provenance and synthesis projection freshness were inspected. Local-first no-bypass boundaries held. This shows neither a capability gap nor an ergonomics gap; current primitives can express the workflow safely, the UX is acceptable, and the decision is keep memory/router recall reference/deferred with no remember/recall, memory transport, or autonomous routing surface."
+	if highTouchMemoryRouterRecallAnswerPass(missingRouteRationale, true) {
+		t.Fatalf("answer without explicit routing rationale passed")
 	}
 }
 

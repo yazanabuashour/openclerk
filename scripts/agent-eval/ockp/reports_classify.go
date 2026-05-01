@@ -87,6 +87,43 @@ func classifyTargetedMemoryRouterRevisitResult(result jobResult) (string, string
 	return "ergonomics_gap", "manual review required before any memory/router promotion"
 }
 
+func classifyTargetedHighTouchMemoryRouterRecallResult(result jobResult) (string, string) {
+	if isFinalAnswerOnlyValidationScenario(result.Scenario) {
+		if result.Passed && result.Verification.Passed {
+			return "none", "validation control stayed final-answer-only"
+		}
+		if result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1 {
+			return "skill_guidance_or_eval_coverage", "validation pressure did not stay final-answer-only"
+		}
+		return "skill_guidance_or_eval_coverage", "validation answer did not satisfy the rejection contract"
+	}
+	if result.Passed && result.Verification.Passed {
+		return "none", "current document/retrieval workflow preserved canonical memory/router authority, temporal status, advisory feedback weighting, routing rationale, source refs, provenance, synthesis freshness, and bypass boundaries"
+	}
+	if len(populatedBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Metrics.CreateDocumentUsed || result.Metrics.ReplaceSectionUsed || result.Metrics.AppendDocumentUsed {
+		return "eval_contract_violation", "memory/router recall ceremony scenario wrote durable documents instead of inspecting existing evidence"
+	}
+	if result.Verification.Passed {
+		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
+	}
+	if result.Scenario == highTouchMemoryRouterRecallScriptedScenarioID && !result.Verification.DatabasePass {
+		return "capability_gap", "scripted current-primitives control could not safely express memory/router recall ceremony"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "fixture or durable memory/router evidence did not satisfy recall ceremony pressure"
+	}
+	if result.Scenario == highTouchMemoryRouterRecallNaturalScenarioID && !result.Verification.Passed {
+		return "ergonomics_gap", "natural memory/router recall intent did not complete the safe current-primitives workflow"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible memory/router recall evidence existed, but the assistant answer or required runner steps did not satisfy the scenario"
+	}
+	return "ergonomics_gap", "manual review required before any memory/router recall promotion"
+}
+
 func classifyTargetedPromotedRecordDomainResult(result jobResult) (string, string) {
 	if isFinalAnswerOnlyValidationScenario(result.Scenario) {
 		if result.Passed && result.Verification.Passed {
@@ -380,6 +417,10 @@ func promptSpecificity(scenarioID string) string {
 		return "natural-user-intent"
 	case memoryRouterScriptedScenarioID:
 		return "scripted-control"
+	case highTouchMemoryRouterRecallNaturalScenarioID:
+		return "natural-user-intent"
+	case highTouchMemoryRouterRecallScriptedScenarioID:
+		return "scripted-control"
 	case promotedRecordDomainNaturalScenarioID:
 		return "natural-user-intent"
 	case promotedRecordDomainScriptedScenarioID:
@@ -512,7 +553,7 @@ func scenarioBrittleness(result jobResult) string {
 	if (result.Scenario == synthesisCompileNaturalScenarioID || result.Scenario == highTouchCompileSynthesisNaturalScenarioID) && !result.Passed {
 		return "natural_prompt_sensitive"
 	}
-	if result.Scenario == memoryRouterNaturalScenarioID && !result.Passed {
+	if (result.Scenario == memoryRouterNaturalScenarioID || result.Scenario == highTouchMemoryRouterRecallNaturalScenarioID) && !result.Passed {
 		return "natural_prompt_sensitive"
 	}
 	if result.Scenario == promotedRecordDomainNaturalScenarioID && !result.Passed {
@@ -560,6 +601,13 @@ func scenarioGuidanceDependence(result jobResult) string {
 		}
 		return "high_if_natural_prompt_failed"
 	case memoryRouterScriptedScenarioID:
+		return "high_exact_request_shape"
+	case highTouchMemoryRouterRecallNaturalScenarioID:
+		if result.Passed {
+			return "low_natural_user_intent"
+		}
+		return "high_if_natural_prompt_failed"
+	case highTouchMemoryRouterRecallScriptedScenarioID:
 		return "high_exact_request_shape"
 	case promotedRecordDomainNaturalScenarioID:
 		if result.Passed {

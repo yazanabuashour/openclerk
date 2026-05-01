@@ -8,6 +8,7 @@ func reportLane(ids []string) (string, bool) {
 	repoDocs := 0
 	graphSemanticsRevisit := 0
 	memoryRouterRevisit := 0
+	highTouchMemoryRouterRecall := 0
 	promotedRecordDomain := 0
 	highTouchRelationshipRecord := 0
 	relationshipRecordCandidate := 0
@@ -53,6 +54,10 @@ func reportLane(ids []string) (string, bool) {
 		}
 		if isMemoryRouterRevisitScenario(id) {
 			memoryRouterRevisit++
+			continue
+		}
+		if isHighTouchMemoryRouterRecallScenario(id) {
+			highTouchMemoryRouterRecall++
 			continue
 		}
 		if isPromotedRecordDomainScenario(id) {
@@ -185,6 +190,9 @@ func reportLane(ids []string) (string, bool) {
 	if memoryRouterRevisit > 0 && memoryRouterRevisit+validation == len(ids) {
 		return memoryRouterRevisitLaneName, false
 	}
+	if highTouchMemoryRouterRecall > 0 && highTouchMemoryRouterRecall+validation == len(ids) {
+		return highTouchMemoryRouterRecallLaneName, false
+	}
 	if promotedRecordDomain > 0 && promotedRecordDomain+validation == len(ids) {
 		return promotedRecordDomainLaneName, false
 	}
@@ -279,6 +287,9 @@ func reportLane(ids []string) (string, bool) {
 		return populatedMixedLaneName, releaseBlocking
 	}
 	if memoryRouterRevisit > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
+	if highTouchMemoryRouterRecall > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
 	if promotedRecordDomain > 0 {
@@ -377,6 +388,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == memoryRouterRevisitLaneName {
 		return "memory and autonomous router revisit rows report natural memory/router intent, scripted current-primitives control, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"
+	}
+	if lane == highTouchMemoryRouterRecallLaneName {
+		return "high-touch memory/router recall ceremony rows report natural temporal recall and routing intent, scripted current-primitives control, canonical markdown memory authority, current canonical docs over stale session observations, advisory feedback weighting, routing rationale, source refs, provenance, synthesis freshness, no-bypass controls, tool count, command count, assistant calls, wall time, prompt specificity, retries, latency, brittleness, guidance dependence, safety risks, and separate safety/capability/UX classification"
 	}
 	if lane == promotedRecordDomainLaneName {
 		return "promoted record domain expansion rows report natural record-domain intent, scripted current-primitives control, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"

@@ -233,6 +233,41 @@ func verifyMemoryRouterRevisit(ctx context.Context, paths evalPaths, finalMessag
 	}, nil
 }
 
+func verifyHighTouchMemoryRouterRecall(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics, scripted bool) (verificationResult, error) {
+	base, err := verifyMemoryRouterRevisit(ctx, paths, finalMessage, turnMetrics, scripted)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := []string{}
+	if base.Details != "ok" {
+		failures = append(failures, base.Details)
+	}
+	synthesisDocID, synthesisFound, err := documentIDByPath(ctx, paths, memoryRouterSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	listedSynthesisPrefix := containsAllStrings(turnMetrics.ListDocumentPathPrefixes, []string{"synthesis/"})
+	if !turnMetrics.ListDocumentsUsed || !listedSynthesisPrefix {
+		failures = append(failures, "agent did not list synthesis documents before recall answer")
+	}
+	gotSynthesis := synthesisFound && containsAllStrings(turnMetrics.GetDocumentDocIDs, []string{synthesisDocID})
+	if !turnMetrics.GetDocumentUsed || !gotSynthesis {
+		failures = append(failures, "agent did not get memory/router synthesis document")
+	}
+	assistantPass := highTouchMemoryRouterRecallAnswerPass(finalMessage, scripted)
+	if !assistantPass {
+		failures = append(failures, "final answer did not cover canonical docs over stale session observations, routing rationale, list/get evidence, local-first/no-bypass boundaries, and capability/UX posture")
+	}
+	activityPass := listedSynthesisPrefix && gotSynthesis
+	return verificationResult{
+		Passed:        base.DatabasePass && base.AssistantPass && assistantPass && activityPass,
+		DatabasePass:  base.DatabasePass && synthesisFound,
+		AssistantPass: base.AssistantPass && assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     base.Documents,
+	}, nil
+}
+
 func verifyPromotedRecordDomainExpansion(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics, scripted bool) (verificationResult, error) {
 	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	search, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{

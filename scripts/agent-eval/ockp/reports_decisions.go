@@ -70,6 +70,44 @@ func memoryRouterRevisitDecision(rows []targetedScenarioClassification) string {
 	return "keep_as_reference"
 }
 
+func highTouchMemoryRouterRecallDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	ergonomicsGaps := 0
+	for _, row := range rows {
+		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
+			return "promote_memory_router_recall_surface_design"
+		}
+		if row.FailureClassification == "ergonomics_gap" {
+			ergonomicsGaps++
+		} else if row.FailureClassification != "none" {
+			return "defer_for_guidance_or_eval_repair"
+		}
+		seen[row.Scenario] = true
+	}
+	for _, id := range highTouchMemoryRouterRecallScenarioIDs() {
+		if !seen[id] {
+			return "defer_for_guidance_or_eval_repair"
+		}
+	}
+	if ergonomicsGaps >= 2 {
+		return "promote_memory_router_recall_surface_design"
+	}
+	if ergonomicsGaps > 0 {
+		return "defer_for_guidance_or_eval_repair"
+	}
+	return "keep_as_reference"
+}
+
+func highTouchMemoryRouterRecallPromotion(decision string) string {
+	if decision == "promote_memory_router_recall_surface_design" {
+		return "promotion would require a separate implementation bead naming the exact memory/router recall surface, request/response shape, compatibility expectations, failure modes, and gates"
+	}
+	if decision == "defer_for_guidance_or_eval_repair" {
+		return "memory/router recall ceremony promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation bead unless a later decision promotes"
+	}
+	return "targeted memory/router recall ceremony evidence only; no remember/recall action, memory transport, autonomous router API, schema, migration, storage behavior, or public API change from this eval"
+}
+
 func promotedRecordDomainDecision(rows []targetedScenarioClassification) string {
 	seen := map[string]bool{}
 	ergonomicsGaps := 0
@@ -1137,6 +1175,13 @@ func memoryRouterRevisitScenarioIDs() []string {
 	return []string{
 		memoryRouterNaturalScenarioID,
 		memoryRouterScriptedScenarioID,
+	}
+}
+
+func highTouchMemoryRouterRecallScenarioIDs() []string {
+	return []string{
+		highTouchMemoryRouterRecallNaturalScenarioID,
+		highTouchMemoryRouterRecallScriptedScenarioID,
 	}
 }
 

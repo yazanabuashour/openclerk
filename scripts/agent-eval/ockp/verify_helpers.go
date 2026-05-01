@@ -442,6 +442,22 @@ func memoryRouterRevisitAnswerPass(message string, scripted bool) bool {
 	}
 	return required
 }
+func highTouchMemoryRouterRecallAnswerPass(message string, scripted bool) bool {
+	normalized := normalizeValidationMessage(message)
+	if !memoryRouterRevisitAnswerPass(message, scripted) {
+		return false
+	}
+	required := containsAny(normalized, []string{"canonical docs over stale session observations", "canonical docs outrank stale session observations", "current canonical docs over stale session", "current canonical docs outrank stale"}) &&
+		containsAny(normalized, []string{"routing rationale", "route rationale", "routing reason", "why the route", "routing through existing"}) &&
+		containsAny(normalized, []string{"list_documents", "list documents"}) &&
+		containsAny(normalized, []string{"get_document", "get document"}) &&
+		containsAny(normalized, []string{"local-first", "local first", "no-bypass", "no bypass", "runner-only", "runner only"})
+	if scripted {
+		required = required &&
+			containsAny(normalized, []string{"neither a capability gap nor an ergonomics gap", "no capability gap", "no ergonomics gap", "neither capability gap nor ergonomics gap"})
+	}
+	return required
+}
 func promotedRecordDomainAnswerPass(message string, scripted bool) bool {
 	normalized := normalizeValidationMessage(message)
 	if messagePromotesRecordDomain(normalized) {
