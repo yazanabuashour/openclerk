@@ -66,6 +66,11 @@ evidence"` found no existing follow-up, so follow-up `oc-ghcs` was filed to
 collect repeated natural-intent ergonomics evidence if the need recurs. It is
 not an implementation bead.
 
+The `oc-ghcs` checkpoint is recorded in
+[`docs/architecture/compile-synthesis-repeated-ergonomics-checkpoint.md`](compile-synthesis-repeated-ergonomics-checkpoint.md).
+It found no recurring trigger beyond `oc-ghcs` itself, ran no new targeted
+eval, and closed with no implementation bead.
+
 ## Compatibility
 
 Existing behavior remains unchanged:
