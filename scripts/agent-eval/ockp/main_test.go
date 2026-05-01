@@ -326,7 +326,7 @@ func TestVerifyDocumentHistoryReviewScenarios(t *testing.T) {
 	}
 	sourceListMetrics := highTouchScriptedMetrics
 	sourceListMetrics.ListDocumentPathPrefixes = []string{documentHistoryDiffListPrefix, "sources/history-review/"}
-	for _, scenarioID := range []string{documentLifecycleRollbackCurrentScenarioID, documentLifecycleRollbackGuidanceScenarioID} {
+	for _, scenarioID := range []string{documentLifecycleRollbackCurrentScenarioID, documentLifecycleRollbackGuidanceScenarioID, documentLifecycleRollbackResponseScenarioID} {
 		result, err = verifyScenarioTurn(ctx, highTouchScriptedPaths, scenario{ID: scenarioID}, 1, restoreAnswer, sourceListMetrics)
 		if err != nil {
 			t.Fatalf("verify lifecycle rollback source-prefix rejection for %s: %v", scenarioID, err)

@@ -9,9 +9,8 @@ decision_owner: platform
 
 ## Status
 
-Accepted: defer the narrow lifecycle review/rollback candidate because the
-repaired targeted evidence still needs guidance repair before promotion can be
-trusted.
+Accepted: defer the narrow lifecycle review/rollback candidate because
+guidance-only current primitives satisfied the repaired targeted evidence.
 
 This decision does not add a runner action, schema, migration, storage
 behavior, public API, public OpenClerk interface, product behavior, or shipped
@@ -27,7 +26,7 @@ Evidence:
 ## Decision
 
 Do not promote the narrow lifecycle review/rollback candidate contract from
-this evidence. Record `defer_for_guidance_or_eval_repair`.
+this evidence. Record `defer_guidance_only_current_primitives_sufficient`.
 
 Safety pass: pass. The targeted run observed no broad repo search, direct
 SQLite, direct vault inspection, direct file edits, source-built runner usage,
@@ -37,49 +36,45 @@ leakage, or unsafe authority escalation in the selected rows. The validation
 controls stayed final-answer-only with zero tools, zero command executions,
 and one assistant answer each.
 
-Capability pass: mixed. The current-primitives control passed with
-classification `none` after 18 tools/commands, 7 assistant calls, and 39.08
-wall seconds. The eval-only response-candidate row passed with classification
-`none` after 22 tools/commands, 7 assistant calls, and 33.68 wall seconds. The
-guidance-only natural row failed capability after 50 tools/commands, 9
-assistant calls, and 84.70 wall seconds because the target was not restored to
-the accepted lifecycle policy.
+Capability pass: pass. The current-primitives control passed with
+classification `none` after 16 tools/commands, 5 assistant calls, and 45.47
+wall seconds. The guidance-only natural row passed with classification `none`
+after 26 tools/commands, 7 assistant calls, and 35.00 wall seconds. The
+eval-only response-candidate row passed with classification `none` after 16
+tools/commands, 6 assistant calls, and 27.68 wall seconds.
 
-UX quality: not acceptable as promotion evidence. A normal user would expect a
-simpler lifecycle rollback surface than a 50 command natural-guidance attempt,
-but the repaired evidence cannot yet prove the candidate should be promoted
-because the guidance-only row failed durable restore rather than completing
-with cleanly classified ergonomics or answer-contract taste debt. The
-candidate JSON contract passed, and the current-primitives control passed, but
-promotion requires the guidance-only comparison row to produce reliable
-comparison evidence.
+UX quality: acceptable for this targeted pressure. A normal user would still
+prefer a simpler lifecycle rollback surface, but this repaired evidence does
+not prove candidate promotion because the guidance-only natural row completed
+the safe durable restore with current `openclerk document` and `openclerk
+retrieval` primitives. The candidate JSON contract also passed, but it does
+not justify promotion while guidance-only current primitives are sufficient in
+the same evidence run.
 
-Non-promotion category: need exists, but the evaluated evidence shape needs
-further guidance repair. The candidate remains viable enough for another
-targeted evidence pass, but not for implementation authorization.
+Non-promotion category: no need under this repaired targeted evidence. Keep
+the candidate deferred pending stronger repeated ergonomics evidence.
 
 ## Follow-Up
 
 No implementation bead is authorized by this decision.
 
 The original `oc-cez4` decision filed `oc-cez4.1` to repair the path-prefix
-verifier mismatch. `oc-cez4.1` succeeded at that repair: the regenerated
-current-primitives and response-candidate rows used only
-`notes/history-review/` list prefixes and no longer failed on
-`sources/history-review/` list usage.
+verifier mismatch. `oc-cez4.1` succeeded at that repair and filed
+`oc-cez4.1.1` for the remaining guidance-only durable-restore gap. The
+`oc-cez4.1.1` repaired run resolved that gap: all three lifecycle candidate
+rows passed, and each used only `notes/history-review/` list prefixes.
 
-After the repaired run, `bd search "lifecycle rollback guidance durable
-restore"`, `bd search "document lifecycle rollback natural guidance"`, `bd
-search "restore target was not restored"`, and `bd search
-"document-lifecycle-rollback-candidate-evidence"` found no existing matching
-follow-up for the remaining guidance-only durable-restore gap. Follow-up
-`oc-cez4.1.1` was filed to repair that row before any future promotion
-decision.
-
-The follow-up must keep scope to eval or guidance repair. It must rerun the
-targeted evidence and then either promote an exact future contract, defer,
-kill, or record `none_viable_yet`. It must not file an implementation bead
-unless a later promotion decision explicitly authorizes implementation.
+No implementation bead is authorized. `bd search "lifecycle rollback repeated
+ergonomics"`, `bd search "document lifecycle rollback guidance sufficient"`,
+`bd search "review_lifecycle_rollback promotion"`, and `bd search "lifecycle
+rollback candidate deferred"` found no existing matching follow-up.
+Follow-up `oc-v5k6` was filed to compare lifecycle rollback candidate surfaces
+after the guidance-only pass. It must compare current `openclerk document` and
+`openclerk retrieval` guidance, an eval-only structured response contract, and
+a narrow `review_lifecycle_rollback` runner action if still plausible, then
+choose the best shape, combine useful behaviors if appropriate, defer, kill,
+or record `none viable yet`. It must not authorize implementation unless a
+later promotion decision explicitly does so.
 
 ## Compatibility
 
