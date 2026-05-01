@@ -72,6 +72,10 @@ const (
 	promotedRecordDomainEntityType         = "policy"
 	promotedRecordDomainSearchText         = "Promoted record domain expansion policy marker AgentOps escalation policy owner platform status active review cadence monthly citations"
 
+	highTouchRelationshipRecordLaneName           = "high-touch-relationship-record-ceremony"
+	highTouchRelationshipRecordNaturalScenarioID  = "high-touch-relationship-record-natural-intent"
+	highTouchRelationshipRecordScriptedScenarioID = "high-touch-relationship-record-scripted-control"
+
 	configuredLayoutScenarioID = "configured-layout-explain"
 	invalidLayoutScenarioID    = "invalid-layout-visible"
 

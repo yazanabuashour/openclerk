@@ -69,6 +69,10 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyPromotedRecordDomainExpansion(ctx, paths, finalMessage, turnMetrics, false)
 	case promotedRecordDomainScriptedScenarioID:
 		return verifyPromotedRecordDomainExpansion(ctx, paths, finalMessage, turnMetrics, true)
+	case highTouchRelationshipRecordNaturalScenarioID:
+		return verifyHighTouchRelationshipRecordCeremony(ctx, paths, finalMessage, turnMetrics, false)
+	case highTouchRelationshipRecordScriptedScenarioID:
+		return verifyHighTouchRelationshipRecordCeremony(ctx, paths, finalMessage, turnMetrics, true)
 	case configuredLayoutScenarioID:
 		return verifyConfiguredLayoutScenario(ctx, paths, finalMessage, turnMetrics)
 	case invalidLayoutScenarioID:

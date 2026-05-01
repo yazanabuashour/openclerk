@@ -1179,6 +1179,96 @@ func TestExecuteRunLabelsHighTouchDocumentLifecycleLaneAsNonReleaseBlocking(t *t
 	}
 }
 
+func TestExecuteRunLabelsHighTouchRelationshipRecordLaneAsNonReleaseBlocking(t *testing.T) {
+	reportDir := filepath.Join(t.TempDir(), "reports")
+	scenarioIDs := append(highTouchRelationshipRecordScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject")
+	config := runConfig{
+		Parallel:   1,
+		Variant:    productionVariant,
+		Scenario:   strings.Join(scenarioIDs, ","),
+		RunRoot:    filepath.Join(t.TempDir(), "run"),
+		ReportDir:  reportDir,
+		ReportName: "ockp-high-touch-relationship-record-ceremony-test",
+		RepoRoot:   ".",
+		CodexBin:   "codex",
+		CacheMode:  cacheModeIsolated,
+	}
+	err := executeRun(context.Background(), config, &strings.Builder{}, func(_ context.Context, _ runConfig, job evalJob, _ cacheConfig) jobResult {
+		now := time.Now().UTC()
+		resultMetrics := metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}}
+		if job.Scenario.ID == highTouchRelationshipRecordNaturalScenarioID {
+			resultMetrics = metrics{AssistantCalls: 5, ToolCalls: 36, CommandExecutions: 36, EventTypeCounts: map[string]int{}}
+		}
+		if job.Scenario.ID == highTouchRelationshipRecordScriptedScenarioID {
+			resultMetrics = metrics{AssistantCalls: 7, ToolCalls: 28, CommandExecutions: 28, EventTypeCounts: map[string]int{}}
+		}
+		return jobResult{
+			Variant:       job.Variant,
+			Scenario:      job.Scenario.ID,
+			ScenarioTitle: job.Scenario.Title,
+			Status:        "completed",
+			Passed:        true,
+			Metrics:       resultMetrics,
+			Verification:  verificationResult{Passed: true, DatabasePass: true, AssistantPass: true},
+			StartedAt:     now,
+			CompletedAt:   &now,
+		}
+	})
+	if err != nil {
+		t.Fatalf("execute high-touch relationship-record run: %v", err)
+	}
+	content, err := os.ReadFile(filepath.Join(reportDir, "ockp-high-touch-relationship-record-ceremony-test.json"))
+	if err != nil {
+		t.Fatalf("read JSON report: %v", err)
+	}
+	var report report
+	if err := json.Unmarshal(content, &report); err != nil {
+		t.Fatalf("decode JSON report: %v", err)
+	}
+	if report.Metadata.Lane != highTouchRelationshipRecordLaneName || report.Metadata.ReleaseBlocking {
+		t.Fatalf("high-touch relationship-record lane metadata = %q/%t, want %q/false", report.Metadata.Lane, report.Metadata.ReleaseBlocking, highTouchRelationshipRecordLaneName)
+	}
+	if report.TargetedLaneSummary == nil {
+		t.Fatal("high-touch relationship-record report missing targeted lane summary")
+	}
+	if report.TargetedLaneSummary.Decision != "keep_as_reference" {
+		t.Fatalf("decision = %q, want keep_as_reference", report.TargetedLaneSummary.Decision)
+	}
+	classifications := map[string]targetedScenarioClassification{}
+	for _, row := range report.TargetedLaneSummary.ScenarioClassifications {
+		classifications[row.Scenario] = row
+	}
+	if classifications[highTouchRelationshipRecordNaturalScenarioID].FailureClassification != "none" {
+		t.Fatalf("natural classification = %q, want none", classifications[highTouchRelationshipRecordNaturalScenarioID].FailureClassification)
+	}
+	if classifications[highTouchRelationshipRecordNaturalScenarioID].PromptSpecificity != "natural-user-intent" {
+		t.Fatalf("natural prompt specificity = %q, want natural-user-intent", classifications[highTouchRelationshipRecordNaturalScenarioID].PromptSpecificity)
+	}
+	if classifications[highTouchRelationshipRecordScriptedScenarioID].FailureClassification != "none" {
+		t.Fatalf("scripted classification = %q, want none", classifications[highTouchRelationshipRecordScriptedScenarioID].FailureClassification)
+	}
+	if classifications[highTouchRelationshipRecordScriptedScenarioID].PromptSpecificity != "scripted-control" {
+		t.Fatalf("scripted prompt specificity = %q, want scripted-control", classifications[highTouchRelationshipRecordScriptedScenarioID].PromptSpecificity)
+	}
+	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-high-touch-relationship-record-ceremony-test.md"))
+	if err != nil {
+		t.Fatalf("read markdown report: %v", err)
+	}
+	for _, want := range []string{
+		"Lane: `" + highTouchRelationshipRecordLaneName + "`",
+		"Release blocking: `false`",
+		"Decision: `keep_as_reference`",
+		"Safety pass",
+		"Capability pass",
+		"UX quality",
+		"validation control stayed final-answer-only",
+	} {
+		if !strings.Contains(string(markdown), want) {
+			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
+		}
+	}
+}
+
 func TestExecuteRunLabelsCompileSynthesisCandidateLaneAsNonReleaseBlocking(t *testing.T) {
 	reportDir := filepath.Join(t.TempDir(), "reports")
 	scenarioIDs := append(compileSynthesisCandidateScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject")
@@ -1727,6 +1817,39 @@ func TestHighTouchDocumentLifecycleDecisionRequiresRepeatedErgonomicsPressure(t 
 	}
 	rows[0].FailureClassification = "skill_guidance_or_eval_coverage"
 	if decision := highTouchDocumentLifecycleDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("guidance decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+}
+
+func TestHighTouchRelationshipRecordDecisionRequiresRepeatedErgonomicsPressure(t *testing.T) {
+	rows := make([]targetedScenarioClassification, 0, len(highTouchRelationshipRecordScenarioIDs()))
+	for _, id := range highTouchRelationshipRecordScenarioIDs() {
+		rows = append(rows, targetedScenarioClassification{
+			Scenario:              id,
+			FailureClassification: "none",
+		})
+	}
+	if decision := highTouchRelationshipRecordDecision(rows[:len(rows)-1]); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("partial decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	if decision := highTouchRelationshipRecordDecision(rows); decision != "keep_as_reference" {
+		t.Fatalf("complete passing decision = %q, want keep_as_reference", decision)
+	}
+	rows[0].FailureClassification = "ergonomics_gap"
+	if decision := highTouchRelationshipRecordDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("single ergonomics decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	rows[1].FailureClassification = "ergonomics_gap"
+	if decision := highTouchRelationshipRecordDecision(rows); decision != "promote_relationship_record_surface_design" {
+		t.Fatalf("repeated ergonomics decision = %q, want promote_relationship_record_surface_design", decision)
+	}
+	rows[0].FailureClassification = "capability_gap"
+	rows[1].FailureClassification = "none"
+	if decision := highTouchRelationshipRecordDecision(rows); decision != "promote_relationship_record_surface_design" {
+		t.Fatalf("capability decision = %q, want promote_relationship_record_surface_design", decision)
+	}
+	rows[0].FailureClassification = "skill_guidance_or_eval_coverage"
+	if decision := highTouchRelationshipRecordDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
 		t.Fatalf("guidance decision = %q, want defer_for_guidance_or_eval_repair", decision)
 	}
 }

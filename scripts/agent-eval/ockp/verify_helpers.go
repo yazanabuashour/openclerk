@@ -474,6 +474,29 @@ func promotedRecordDomainAnswerPass(message string, scripted bool) bool {
 		containsAny(normalized, []string{"express", "safely express", "can express", "workflow safely"}) &&
 		containsAny(normalized, []string{"acceptable", "ux acceptable", "current ux"})
 }
+func relationshipRecordCeremonyAnswerPass(message string, scripted bool) bool {
+	normalized := normalizeValidationMessage(message)
+	if !graphSemanticsRevisitAnswerPass(message, scripted) || !promotedRecordDomainAnswerPass(message, scripted) {
+		return false
+	}
+	requiredEvidence := containsAny(normalized, []string{"relationship", "relationship-shaped", "markdown relationship"}) &&
+		containsAny(normalized, []string{"record", "promoted-record", "records_lookup"}) &&
+		containsAny(normalized, []string{"graph_neighborhood", "graph neighborhood"}) &&
+		containsAny(normalized, []string{"record_entity", "record entity"}) &&
+		containsAny(normalized, []string{"graph projection", "graph freshness"}) &&
+		containsAny(normalized, []string{"records projection", "records freshness"}) &&
+		containsAny(normalized, []string{"combined", "relationship/record", "relationship and record"}) &&
+		containsAny(normalized, []string{"reference", "defer", "deferred", "not promote", "do not promote", "not promoted", "keep"})
+	if !requiredEvidence {
+		return false
+	}
+	if !scripted {
+		return true
+	}
+	return containsAny(normalized, []string{"current primitives can express", "current document/retrieval primitives can express", "existing primitives can express", "combined workflow safely", "express the combined workflow safely"}) &&
+		containsAny(normalized, []string{"ux", "user experience"}) &&
+		containsAny(normalized, []string{"acceptable", "not acceptable", "unacceptable"})
+}
 func messagePromotesRecordDomain(normalized string) bool {
 	promotionPhrases := []string{
 		"decision: promote",

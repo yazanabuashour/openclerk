@@ -98,6 +98,44 @@ func promotedRecordDomainDecision(rows []targetedScenarioClassification) string 
 	return "keep_as_reference"
 }
 
+func highTouchRelationshipRecordDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	ergonomicsGaps := 0
+	for _, row := range rows {
+		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
+			return "promote_relationship_record_surface_design"
+		}
+		if row.FailureClassification == "ergonomics_gap" {
+			ergonomicsGaps++
+		} else if row.FailureClassification != "none" {
+			return "defer_for_guidance_or_eval_repair"
+		}
+		seen[row.Scenario] = true
+	}
+	for _, id := range highTouchRelationshipRecordScenarioIDs() {
+		if !seen[id] {
+			return "defer_for_guidance_or_eval_repair"
+		}
+	}
+	if ergonomicsGaps >= 2 {
+		return "promote_relationship_record_surface_design"
+	}
+	if ergonomicsGaps > 0 {
+		return "defer_for_guidance_or_eval_repair"
+	}
+	return "keep_as_reference"
+}
+
+func highTouchRelationshipRecordPromotion(decision string) string {
+	if decision == "promote_relationship_record_surface_design" {
+		return "targeted evidence supports filing a separate implementation bead for the exact promoted relationship-record lookup surface; no runner action, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
+	}
+	if decision == "defer_for_guidance_or_eval_repair" {
+		return "relationship-record ceremony promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation bead unless a later decision promotes"
+	}
+	return "keep high-touch relationship-record ceremony as reference pressure over existing document and retrieval primitives; no semantic-label graph layer, policy-specific record surface, combined lookup action, schema, migration, storage behavior, public API, or skill behavior change"
+}
+
 func documentHistoryDecision(rows []targetedScenarioClassification) string {
 	seen := map[string]bool{}
 	ergonomicsGaps := 0
@@ -1042,6 +1080,13 @@ func promotedRecordDomainScenarioIDs() []string {
 	return []string{
 		promotedRecordDomainNaturalScenarioID,
 		promotedRecordDomainScriptedScenarioID,
+	}
+}
+
+func highTouchRelationshipRecordScenarioIDs() []string {
+	return []string{
+		highTouchRelationshipRecordNaturalScenarioID,
+		highTouchRelationshipRecordScriptedScenarioID,
 	}
 }
 

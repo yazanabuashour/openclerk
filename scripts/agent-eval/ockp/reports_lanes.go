@@ -9,6 +9,7 @@ func reportLane(ids []string) (string, bool) {
 	graphSemanticsRevisit := 0
 	memoryRouterRevisit := 0
 	promotedRecordDomain := 0
+	highTouchRelationshipRecord := 0
 	parallelRunner := 0
 	documentHistory := 0
 	highTouchDocumentLifecycle := 0
@@ -55,6 +56,10 @@ func reportLane(ids []string) (string, bool) {
 		}
 		if isPromotedRecordDomainScenario(id) {
 			promotedRecordDomain++
+			continue
+		}
+		if isHighTouchRelationshipRecordScenario(id) {
+			highTouchRelationshipRecord++
 			continue
 		}
 		if isParallelRunnerScenario(id) {
@@ -178,6 +183,9 @@ func reportLane(ids []string) (string, bool) {
 	if promotedRecordDomain > 0 && promotedRecordDomain+validation == len(ids) {
 		return promotedRecordDomainLaneName, false
 	}
+	if highTouchRelationshipRecord > 0 && highTouchRelationshipRecord+validation == len(ids) {
+		return highTouchRelationshipRecordLaneName, false
+	}
 	if parallelRunner > 0 && parallelRunner == len(ids) {
 		return parallelRunnerLaneName, false
 	}
@@ -266,6 +274,9 @@ func reportLane(ids []string) (string, bool) {
 		return populatedMixedLaneName, releaseBlocking
 	}
 	if promotedRecordDomain > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
+	if highTouchRelationshipRecord > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
 	if parallelRunner > 0 {
@@ -358,6 +369,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == promotedRecordDomainLaneName {
 		return "promoted record domain expansion rows report natural record-domain intent, scripted current-primitives control, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"
+	}
+	if lane == highTouchRelationshipRecordLaneName {
+		return "high-touch relationship-record ceremony rows report natural combined relationship and record lookup intent, scripted current-primitives control, canonical markdown relationship authority, links/backlinks, graph freshness, record citations, provenance, records freshness, no-bypass controls, tool count, command count, assistant calls, wall time, prompt specificity, retries, latency, brittleness, guidance dependence, safety risks, and separate safety/capability/UX classification"
 	}
 	if lane == parallelRunnerLaneName {
 		return "parallel runner rows report fresh startup and safe-read command UX, tool count, command count, assistant calls, wall time, guidance dependence, safety risks, and raw SQLite/runtime_config/upsert failure absence"

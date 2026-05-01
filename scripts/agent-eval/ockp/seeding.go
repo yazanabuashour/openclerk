@@ -57,6 +57,13 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedPromotedRecordDomainExpansion(ctx, cfg); err != nil {
 			return err
 		}
+	case highTouchRelationshipRecordNaturalScenarioID, highTouchRelationshipRecordScriptedScenarioID:
+		if err := seedGraphSemanticsReference(ctx, cfg); err != nil {
+			return err
+		}
+		if err := seedPromotedRecordDomainExpansion(ctx, cfg); err != nil {
+			return err
+		}
 	case configuredLayoutScenarioID:
 		if err := seedConfiguredLayoutScenario(ctx, cfg); err != nil {
 			return err
