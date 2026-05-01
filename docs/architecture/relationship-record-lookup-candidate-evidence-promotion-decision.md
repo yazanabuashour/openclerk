@@ -75,6 +75,11 @@ follow-up, so non-implementation follow-up `oc-hp3m` was filed to collect
 repeated relationship-record ergonomics evidence. No implementation bead is
 authorized.
 
+Follow-up checkpoint
+[`docs/architecture/relationship-record-repeated-ergonomics-checkpoint.md`](relationship-record-repeated-ergonomics-checkpoint.md)
+closed `oc-hp3m` with no new eval run, no implementation bead, and no
+promotion because no repeated post-repair trigger was present.
+
 Future promotion remains blocked unless later targeted evidence shows:
 
 - current primitives and the eval-only response candidate pass safety and
