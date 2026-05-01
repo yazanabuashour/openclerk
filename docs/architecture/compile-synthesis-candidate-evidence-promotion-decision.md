@@ -9,8 +9,8 @@ decision_owner: platform
 
 ## Status
 
-Accepted: record `none_viable_yet` for the narrow `compile_synthesis`
-candidate evidence lane.
+Accepted: defer the narrow `compile_synthesis` candidate because guidance-only
+current primitives satisfied the repaired targeted evidence.
 
 This decision does not add a runner action, schema, migration, storage
 behavior, public API, public OpenClerk interface, product behavior, or shipped
@@ -20,58 +20,51 @@ Evidence:
 
 - [`docs/evals/compile-synthesis-candidate-evidence.md`](../evals/compile-synthesis-candidate-evidence.md)
 - [`docs/evals/results/ockp-compile-synthesis-candidate-evidence.md`](../evals/results/ockp-compile-synthesis-candidate-evidence.md)
+- [`docs/architecture/compile-synthesis-candidate-evidence-failure-diagnosis.md`](compile-synthesis-candidate-evidence-failure-diagnosis.md)
 - [`docs/architecture/compile-synthesis-ceremony-candidate-comparison-decision.md`](compile-synthesis-ceremony-candidate-comparison-decision.md)
-- [`docs/evals/results/ockp-high-touch-compile-synthesis-ceremony.md`](../evals/results/ockp-high-touch-compile-synthesis-ceremony.md)
 
 ## Decision
 
 Do not promote the narrow `compile_synthesis` candidate contract from this
-evidence. Record `none_viable_yet`.
+evidence. Record `defer_guidance_only_current_primitives_sufficient`.
 
-Safety pass: pass. The targeted run observed no broad repo search, direct
-SQLite, direct vault inspection, direct file edits, source-built runner usage,
-module-cache inspection, HTTP/MCP bypass, unsupported transport, backend
-variant, `inspect_layout`, repo-doc import, or unsupported action usage in the
-selected rows. The validation controls stayed final-answer-only with zero
-tools, zero command executions, and one assistant answer each.
+Safety pass: pass. The repaired targeted run observed no broad repo search,
+direct SQLite, direct vault inspection, direct file edits, source-built runner
+usage, module-cache inspection, HTTP/MCP bypass, unsupported transport,
+backend variant, `inspect_layout`, repo-doc import, or unsupported action
+usage in the selected rows. The validation controls stayed final-answer-only
+with zero tools, zero command executions, and one assistant answer each.
 
-Capability pass: fail for the selected candidate evidence. The scripted
-current-primitives control failed with `capability_gap` after 52 tools/commands,
-10 assistant calls, and 78.29 wall seconds because the resulting synthesis
-missed the required compile-synthesis decision, existing-action sufficiency,
-current source, and superseded source evidence. The eval-only candidate row
-also failed with `capability_gap` after 36 tools/commands, 10 assistant calls,
-and 64.44 wall seconds because the synthesis body missed the same required
-evidence and the candidate object did not report fresh synthesis projection
-freshness.
+Capability pass: pass. The current-primitives control completed with
+classification `none` after 18 tools/commands, 5 assistant calls, and 37.06
+wall seconds. The guidance-only natural row completed with classification
+`none` after 30 tools/commands, 6 assistant calls, and 48.04 wall seconds. The
+eval-only response candidate completed with classification `none` after 20
+tools/commands, 5 assistant calls, and 37.33 wall seconds.
 
-UX quality: not acceptable. The guidance-only natural row failed with
-`ergonomics_gap` after 40 tools/commands, 8 assistant calls, and 63.56 wall
-seconds. Durable synthesis evidence passed, but the row missed the required
-synthesis projection provenance ref. The candidate row did not repair this
-ergonomics debt with a viable contract.
+UX quality: acceptable for this targeted pressure. The guidance-only natural
+row preserved source authority, source refs, provenance/freshness checks,
+duplicate prevention, write status, and no-bypass boundaries without proving
+new ergonomics debt. The response-candidate row also passed, but it does not
+justify promotion because current primitives plus guidance were sufficient in
+the same repaired evidence run.
 
 ## Follow-Up
 
 No implementation bead is authorized by this decision.
 
-The remaining need is real, but the selected shape did not produce promotable
-evidence. `bd search "compile_synthesis candidate"`, `bd search "compile
-synthesis candidate evidence"`, and `bd search "none viable compile synthesis"`
-found no existing follow-up outside `oc-kn79`, so follow-up `oc-27ft` was
-filed to diagnose and repair the evidence path before any further promotion
-attempt.
+The repaired evidence supports keeping `compile_synthesis` deferred/reference
+only. Future promotion would require stronger repeated evidence that natural
+guidance over current `openclerk document` and `openclerk retrieval` primitives
+leaves meaningful ergonomics or answer-contract debt while the candidate
+contract still preserves safety and capability.
 
-The follow-up should compare:
-
-- whether this lane needs prompt or harness repair over current primitives
-- whether the eval-only candidate contract is too strict or poorly shaped
-- whether the compile-synthesis simplification track should stay killed or
-  deferred until a different candidate exists
-
-Any later promotion must rerun targeted evidence and name exact request and
-response fields, compatibility expectations, failure modes, validation
-behavior, and gates.
+`bd search "compile_synthesis repeated ergonomics"`, `bd search "compile
+synthesis guidance-only current primitives"`, `bd search "compile_synthesis
+candidate promotion evidence"`, and `bd search "compile synthesis ergonomics
+evidence"` found no existing follow-up, so follow-up `oc-ghcs` was filed to
+collect repeated natural-intent ergonomics evidence if the need recurs. It is
+not an implementation bead.
 
 ## Compatibility
 

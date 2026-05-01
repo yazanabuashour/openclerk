@@ -1,23 +1,22 @@
 {
   "metadata": {
-    "generated_at": "2026-05-01T03:23:31.070472Z",
+    "generated_at": "2026-05-01T04:03:15.815096Z",
     "model": "gpt-5.4-mini",
     "reasoning_effort": "medium",
     "harness": "codex exec --json --full-auto from throwaway run directories; single-turn scenarios use --ephemeral and multi-turn scenarios resume one persisted eval session",
     "configured_parallelism": 1,
     "cache_mode": "shared",
-    "cache_prewarm_seconds": 19.17,
-    "harness_elapsed_seconds": 266.09,
-    "effective_parallel_speedup": 0.85,
-    "parallel_efficiency": 0.85,
+    "cache_prewarm_seconds": 16.71,
+    "harness_elapsed_seconds": 177.66,
+    "effective_parallel_speedup": 0.78,
+    "parallel_efficiency": 0.78,
     "phase_totals": {
-      "copy_repo_seconds": 0.32,
-      "install_variant_seconds": 20.38,
-      "seed_data_seconds": 0.07,
-      "agent_run_seconds": 226.03,
-      "parse_metrics_seconds": 0.01,
+      "copy_repo_seconds": 0.25,
+      "install_variant_seconds": 22.21,
+      "seed_data_seconds": 0.09,
+      "agent_run_seconds": 138.27,
       "verify_seconds": 0.09,
-      "total_seconds": 246.92
+      "total_seconds": 160.94
     },
     "run_root_artifact_reference": "\u003crun-root\u003e",
     "raw_log_placeholder": "\u003crun-root\u003e/\u003cvariant\u003e/\u003cscenario\u003e/turn-N/events.jsonl",
@@ -44,22 +43,22 @@
       "variant": "production",
       "scenario": "compile-synthesis-current-primitives-control",
       "scenario_title": "Compile synthesis current primitives control",
-      "passed": false,
-      "status": "failed",
+      "passed": true,
+      "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 78.29,
+      "wall_seconds": 37.06,
       "phase_timings": {
-        "copy_repo_seconds": 0.06,
-        "install_variant_seconds": 2.93,
+        "copy_repo_seconds": 0.04,
+        "install_variant_seconds": 3,
         "seed_data_seconds": 0.03,
-        "agent_run_seconds": 78.29,
-        "verify_seconds": 0.02,
-        "total_seconds": 81.33
+        "agent_run_seconds": 37.06,
+        "verify_seconds": 0.03,
+        "total_seconds": 40.17
       },
       "metrics": {
-        "assistant_calls": 10,
-        "tool_calls": 52,
-        "command_executions": 52,
+        "assistant_calls": 5,
+        "tool_calls": 18,
+        "command_executions": 18,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -94,15 +93,7 @@
         "get_document_used": true,
         "get_document_doc_ids": [
           "132d75a74476186a",
-          "132d75a74476186a",
-          "132d75a74476186a",
-          "132d75a74476186a",
-          "132d75a74476186a",
-          "132d75a74476186a",
-          "6f6e10fa665b4c1c",
-          "6f6e10fa665b4c1c",
-          "0d389d6c382bc3ee",
-          "0d389d6c382bc3ee"
+          "132d75a74476186a"
         ],
         "inspect_layout_used": false,
         "document_links_used": false,
@@ -119,13 +110,13 @@
         "projection_states_used": true,
         "audit_contradictions_used": false,
         "usage_exposed": true,
-        "input_tokens": 516255,
-        "cached_input_tokens": 496640,
-        "non_cached_input_tokens": 19615,
-        "output_tokens": 8277,
+        "input_tokens": 201907,
+        "cached_input_tokens": 188672,
+        "non_cached_input_tokens": 13235,
+        "output_tokens": 2767,
         "event_type_counts": {
-          "item.completed": 36,
-          "item.started": 26,
+          "item.completed": 14,
+          "item.started": 9,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -133,10 +124,10 @@
         "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
       },
       "verification": {
-        "passed": false,
-        "database_pass": false,
+        "passed": true,
+        "database_pass": true,
         "assistant_pass": true,
-        "details": "turn 1: missing Current compile_synthesis revisit decision; missing existing document and retrieval actions; missing Current source: sources/compile-revisit-current.md; missing Superseded source: sources/compile-revisit-old.md",
+        "details": "turn 1: ok",
         "documents": [
           "synthesis/compile-revisit-routing.md",
           "synthesis/compile-revisit-routing-decoy.md",
@@ -147,12 +138,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 78.29,
+          "wall_seconds": 37.06,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 10,
-            "tool_calls": 52,
-            "command_executions": 52,
+            "assistant_calls": 5,
+            "tool_calls": 18,
+            "command_executions": 18,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -187,15 +178,7 @@
             "get_document_used": true,
             "get_document_doc_ids": [
               "132d75a74476186a",
-              "132d75a74476186a",
-              "132d75a74476186a",
-              "132d75a74476186a",
-              "132d75a74476186a",
-              "132d75a74476186a",
-              "6f6e10fa665b4c1c",
-              "6f6e10fa665b4c1c",
-              "0d389d6c382bc3ee",
-              "0d389d6c382bc3ee"
+              "132d75a74476186a"
             ],
             "inspect_layout_used": false,
             "document_links_used": false,
@@ -212,13 +195,13 @@
             "projection_states_used": true,
             "audit_contradictions_used": false,
             "usage_exposed": true,
-            "input_tokens": 516255,
-            "cached_input_tokens": 496640,
-            "non_cached_input_tokens": 19615,
-            "output_tokens": 8277,
+            "input_tokens": 201907,
+            "cached_input_tokens": 188672,
+            "non_cached_input_tokens": 13235,
+            "output_tokens": 2767,
             "event_type_counts": {
-              "item.completed": 36,
-              "item.started": 26,
+              "item.completed": 14,
+              "item.started": 9,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -226,10 +209,10 @@
             "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
           },
           "verification": {
-            "passed": false,
-            "database_pass": false,
+            "passed": true,
+            "database_pass": true,
             "assistant_pass": true,
-            "details": "missing Current compile_synthesis revisit decision; missing existing document and retrieval actions; missing Current source: sources/compile-revisit-current.md; missing Superseded source: sources/compile-revisit-old.md",
+            "details": "ok",
             "documents": [
               "synthesis/compile-revisit-routing.md",
               "synthesis/compile-revisit-routing-decoy.md",
@@ -240,32 +223,31 @@
           "raw_log_artifact_reference": "\u003crun-root\u003e/production/compile-synthesis-current-primitives-control/turn-1/events.jsonl"
         }
       ],
-      "prompt_summary": "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed OpenClerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or unsupported actions such as upsert_document. First run retrieval search with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"compile_synthesis revisit source evidence\",\"limit\":10}}. Then run document list_documents with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\",\"limit\":20}}. Choose synthesis/compile-revisit-routing.md rather than synthesis/compile-revisit-routing-decoy.md. Use the returned doc_id for synthesis/compile-revisit-routing.md to run get_document before editing. Run retrieval projection_states exactly as the projection freshness action, replacing SYNTHESIS_DOC_ID with that synthesis doc_id: {\"action\":\"projection_states\",\"projection\":{\"projection\":\"synthesis\",\"ref_kind\":\"document\",\"ref_id\":\"SYNTHESIS_DOC_ID\",\"limit\":20}}. Run retrieval provenance_events exactly as the provenance action, replacing SYNTHESIS_DOC_ID with that synthesis doc_id: {\"action\":\"provenance_events\",\"provenance\":{\"ref_kind\":\"projection\",\"ref_id\":\"synthesis:SYNTHESIS_DOC_ID\",\"limit\":20}}. Repair synthesis/compile-revisit-routing.md only with replace_section or append_document. Do not create a duplicate synthesis page. Preserve the existing single-line source_refs for sources/compile-revisit-current.md, sources/compile-revisit-old.md. Keep ## Sources and ## Freshness. After repair, inspect projection_states again and mention synthesis/compile-revisit-routing.md, sources/compile-revisit-current.md, no duplicate synthesis, and final freshness in the final answer.",
+      "prompt_summary": "Use the configured local OpenClerk data path. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed OpenClerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, or unsupported actions such as upsert_document. First run retrieval search with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"compile_synthesis revisit source evidence\",\"limit\":10}}. Then run document list_documents with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\",\"limit\":20}}. Choose synthesis/compile-revisit-routing.md rather than synthesis/compile-revisit-routing-decoy.md. Use the returned doc_id for synthesis/compile-revisit-routing.md to run get_document before editing. Run retrieval projection_states exactly as the projection freshness action, replacing SYNTHESIS_DOC_ID with that synthesis doc_id: {\"action\":\"projection_states\",\"projection\":{\"projection\":\"synthesis\",\"ref_kind\":\"document\",\"ref_id\":\"SYNTHESIS_DOC_ID\",\"limit\":20}}. Run retrieval provenance_events exactly as the provenance action, replacing SYNTHESIS_DOC_ID with that synthesis doc_id: {\"action\":\"provenance_events\",\"provenance\":{\"ref_kind\":\"projection\",\"ref_id\":\"synthesis:SYNTHESIS_DOC_ID\",\"limit\":20}}. Repair synthesis/compile-revisit-routing.md only with replace_section or append_document. A valid replace_section repair can replace heading Summary with this exact content: Current compile_synthesis revisit decision: existing document and retrieval actions are technically sufficient.\nCurrent source: sources/compile-revisit-current.md\nSuperseded source: sources/compile-revisit-old.md\nDo not create a duplicate synthesis page. Preserve the existing single-line source_refs for sources/compile-revisit-current.md, sources/compile-revisit-old.md. Keep ## Sources and ## Freshness. After repair, inspect projection_states again and mention synthesis/compile-revisit-routing.md, sources/compile-revisit-current.md, no duplicate synthesis, and final freshness in the final answer.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/compile-synthesis-current-primitives-control/turn-1/events.jsonl",
-      "started_at": "2026-05-01T03:19:24.108503Z",
-      "completed_at": "2026-05-01T03:20:45.435608Z"
+      "started_at": "2026-05-01T04:00:34.873095Z",
+      "completed_at": "2026-05-01T04:01:15.045376Z"
     },
     {
       "variant": "production",
       "scenario": "compile-synthesis-guidance-only-natural",
       "scenario_title": "Compile synthesis guidance-only natural repair",
-      "passed": false,
-      "status": "failed",
+      "passed": true,
+      "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 63.56,
+      "wall_seconds": 48.04,
       "phase_timings": {
         "copy_repo_seconds": 0.03,
-        "install_variant_seconds": 3.03,
-        "seed_data_seconds": 0.02,
-        "agent_run_seconds": 63.56,
-        "parse_metrics_seconds": 0.01,
-        "verify_seconds": 0.04,
-        "total_seconds": 66.68
+        "install_variant_seconds": 2.78,
+        "seed_data_seconds": 0.03,
+        "agent_run_seconds": 48.04,
+        "verify_seconds": 0.03,
+        "total_seconds": 50.92
       },
       "metrics": {
-        "assistant_calls": 8,
-        "tool_calls": 40,
-        "command_executions": 40,
+        "assistant_calls": 6,
+        "tool_calls": 30,
+        "command_executions": 30,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -275,11 +257,17 @@
         "manual_http_fetch": false,
         "browser_automation": false,
         "search_used": true,
-        "search_unfiltered_used": true,
+        "search_unfiltered_used": false,
         "search_path_filter_used": true,
         "search_path_prefixes": [
           "synthesis/",
-          "synthesis/"
+          "synthesis/",
+          "synthesis/",
+          "synthesis/",
+          "synthesis/",
+          "synthesis/",
+          "sources/",
+          "sources/"
         ],
         "search_metadata_filter_used": false,
         "search_tag_filter_used": false,
@@ -299,22 +287,12 @@
           "synthesis/",
           "synthesis/",
           "sources/",
-          "sources/",
-          "synthesis/",
-          "synthesis/"
+          "sources/"
         ],
         "list_metadata_filter_used": false,
         "list_tag_filter_used": false,
         "get_document_used": true,
         "get_document_doc_ids": [
-          "132d75a74476186a",
-          "132d75a74476186a",
-          "2e35edb620e44019",
-          "2e35edb620e44019",
-          "6f6e10fa665b4c1c",
-          "6f6e10fa665b4c1c",
-          "0d389d6c382bc3ee",
-          "0d389d6c382bc3ee",
           "132d75a74476186a",
           "132d75a74476186a"
         ],
@@ -327,21 +305,21 @@
         "decision_record_used": false,
         "provenance_events_used": true,
         "provenance_event_ref_ids": [
-          "132d75a74476186a",
-          "132d75a74476186a",
-          "132d75a74476186a",
-          "132d75a74476186a"
+          "synthesis:132d75a74476186a",
+          "synthesis:132d75a74476186a",
+          "synthesis:132d75a74476186a",
+          "synthesis:132d75a74476186a"
         ],
         "projection_states_used": true,
         "audit_contradictions_used": false,
         "usage_exposed": true,
-        "input_tokens": 232782,
-        "cached_input_tokens": 207104,
-        "non_cached_input_tokens": 25678,
-        "output_tokens": 8668,
+        "input_tokens": 351915,
+        "cached_input_tokens": 332288,
+        "non_cached_input_tokens": 19627,
+        "output_tokens": 5140,
         "event_type_counts": {
-          "item.completed": 29,
-          "item.started": 21,
+          "item.completed": 21,
+          "item.started": 15,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -349,10 +327,10 @@
         "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
       },
       "verification": {
-        "passed": false,
+        "passed": true,
         "database_pass": true,
-        "assistant_pass": false,
-        "details": "turn 1: agent did not inspect provenance events for the synthesis projection ref",
+        "assistant_pass": true,
+        "details": "turn 1: ok",
         "documents": [
           "synthesis/compile-revisit-routing.md",
           "synthesis/compile-revisit-routing-decoy.md",
@@ -363,12 +341,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 63.56,
+          "wall_seconds": 48.04,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 8,
-            "tool_calls": 40,
-            "command_executions": 40,
+            "assistant_calls": 6,
+            "tool_calls": 30,
+            "command_executions": 30,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -378,11 +356,17 @@
             "manual_http_fetch": false,
             "browser_automation": false,
             "search_used": true,
-            "search_unfiltered_used": true,
+            "search_unfiltered_used": false,
             "search_path_filter_used": true,
             "search_path_prefixes": [
               "synthesis/",
-              "synthesis/"
+              "synthesis/",
+              "synthesis/",
+              "synthesis/",
+              "synthesis/",
+              "synthesis/",
+              "sources/",
+              "sources/"
             ],
             "search_metadata_filter_used": false,
             "search_tag_filter_used": false,
@@ -402,22 +386,12 @@
               "synthesis/",
               "synthesis/",
               "sources/",
-              "sources/",
-              "synthesis/",
-              "synthesis/"
+              "sources/"
             ],
             "list_metadata_filter_used": false,
             "list_tag_filter_used": false,
             "get_document_used": true,
             "get_document_doc_ids": [
-              "132d75a74476186a",
-              "132d75a74476186a",
-              "2e35edb620e44019",
-              "2e35edb620e44019",
-              "6f6e10fa665b4c1c",
-              "6f6e10fa665b4c1c",
-              "0d389d6c382bc3ee",
-              "0d389d6c382bc3ee",
               "132d75a74476186a",
               "132d75a74476186a"
             ],
@@ -430,21 +404,21 @@
             "decision_record_used": false,
             "provenance_events_used": true,
             "provenance_event_ref_ids": [
-              "132d75a74476186a",
-              "132d75a74476186a",
-              "132d75a74476186a",
-              "132d75a74476186a"
+              "synthesis:132d75a74476186a",
+              "synthesis:132d75a74476186a",
+              "synthesis:132d75a74476186a",
+              "synthesis:132d75a74476186a"
             ],
             "projection_states_used": true,
             "audit_contradictions_used": false,
             "usage_exposed": true,
-            "input_tokens": 232782,
-            "cached_input_tokens": 207104,
-            "non_cached_input_tokens": 25678,
-            "output_tokens": 8668,
+            "input_tokens": 351915,
+            "cached_input_tokens": 332288,
+            "non_cached_input_tokens": 19627,
+            "output_tokens": 5140,
             "event_type_counts": {
-              "item.completed": 29,
-              "item.started": 21,
+              "item.completed": 21,
+              "item.started": 15,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -452,10 +426,10 @@
             "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
           },
           "verification": {
-            "passed": false,
+            "passed": true,
             "database_pass": true,
-            "assistant_pass": false,
-            "details": "agent did not inspect provenance events for the synthesis projection ref",
+            "assistant_pass": true,
+            "details": "ok",
             "documents": [
               "synthesis/compile-revisit-routing.md",
               "synthesis/compile-revisit-routing-decoy.md",
@@ -466,31 +440,31 @@
           "raw_log_artifact_reference": "\u003crun-root\u003e/production/compile-synthesis-guidance-only-natural/turn-1/events.jsonl"
         }
       ],
-      "prompt_summary": "Use the configured local OpenClerk data path. Refresh the existing compile_synthesis revisit synthesis from current source evidence. Keep the existing synthesis page rather than creating a duplicate or using the decoy. Preserve source authority, the single-line source_refs for sources/compile-revisit-current.md and sources/compile-revisit-old.md, ## Sources, ## Freshness, candidate selection, provenance refs, and runner-visible projection freshness. Answer only from installed OpenClerk document and retrieval runner JSON. Stay inside installed OpenClerk document and retrieval runner JSON; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, inspect_layout, repo-doc import, or unsupported actions such as upsert_document. The repaired synthesis body must state: Current compile_synthesis revisit decision: existing document and retrieval actions are technically sufficient; Current source: sources/compile-revisit-current.md; Superseded source: sources/compile-revisit-old.md. Mention synthesis/compile-revisit-routing.md, the current source, no duplicate synthesis, provenance or projection evidence, and final freshness in the final answer.",
+      "prompt_summary": "Use the configured local OpenClerk data path. Refresh the existing compile_synthesis revisit synthesis from current source evidence. Keep the existing synthesis page rather than creating a duplicate or using the decoy. Preserve source authority, the single-line source_refs for sources/compile-revisit-current.md and sources/compile-revisit-old.md, ## Sources, ## Freshness, candidate selection, provenance refs, and runner-visible projection freshness. Inspect projection provenance for the synthesis by using retrieval provenance_events with ref_kind projection and ref_id synthesis:SYNTHESIS_DOC_ID after you know the synthesis doc_id. Answer only from installed OpenClerk document and retrieval runner JSON. Stay inside installed OpenClerk document and retrieval runner JSON; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, inspect_layout, repo-doc import, or unsupported actions such as upsert_document. The repaired synthesis body must state: Current compile_synthesis revisit decision: existing document and retrieval actions are technically sufficient; Current source: sources/compile-revisit-current.md; Superseded source: sources/compile-revisit-old.md. Mention synthesis/compile-revisit-routing.md, the current source, no duplicate synthesis, provenance or projection evidence, and final freshness in the final answer.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/compile-synthesis-guidance-only-natural/turn-1/events.jsonl",
-      "started_at": "2026-05-01T03:20:45.436014Z",
-      "completed_at": "2026-05-01T03:21:52.153119Z"
+      "started_at": "2026-05-01T04:01:15.046316Z",
+      "completed_at": "2026-05-01T04:02:05.963753Z"
     },
     {
       "variant": "production",
       "scenario": "compile-synthesis-response-candidate",
       "scenario_title": "Compile synthesis eval-only response candidate",
-      "passed": false,
-      "status": "failed",
+      "passed": true,
+      "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 64.44,
+      "wall_seconds": 37.33,
       "phase_timings": {
-        "copy_repo_seconds": 0.05,
-        "install_variant_seconds": 3.17,
-        "seed_data_seconds": 0.02,
-        "agent_run_seconds": 64.44,
+        "copy_repo_seconds": 0.03,
+        "install_variant_seconds": 5.5,
+        "seed_data_seconds": 0.03,
+        "agent_run_seconds": 37.33,
         "verify_seconds": 0.03,
-        "total_seconds": 67.72
+        "total_seconds": 42.92
       },
       "metrics": {
-        "assistant_calls": 10,
-        "tool_calls": 36,
-        "command_executions": 36,
+        "assistant_calls": 5,
+        "tool_calls": 20,
+        "command_executions": 20,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -518,9 +492,7 @@
         "list_documents_used": true,
         "list_document_path_prefixes": [
           "synthesis/",
-          "synthesis/",
-          "synthesis/candidates/",
-          "synthesis/candidates/"
+          "synthesis/"
         ],
         "list_metadata_filter_used": false,
         "list_tag_filter_used": false,
@@ -539,20 +511,18 @@
         "provenance_events_used": true,
         "provenance_event_ref_ids": [
           "synthesis:132d75a74476186a",
-          "synthesis:132d75a74476186a",
-          "synthesis:132d75a74476186a",
           "synthesis:132d75a74476186a"
         ],
         "projection_states_used": true,
         "audit_contradictions_used": false,
         "usage_exposed": true,
-        "input_tokens": 321432,
-        "cached_input_tokens": 295040,
-        "non_cached_input_tokens": 26392,
-        "output_tokens": 7582,
+        "input_tokens": 225181,
+        "cached_input_tokens": 192128,
+        "non_cached_input_tokens": 33053,
+        "output_tokens": 3047,
         "event_type_counts": {
-          "item.completed": 28,
-          "item.started": 18,
+          "item.completed": 15,
+          "item.started": 10,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -560,10 +530,10 @@
         "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
       },
       "verification": {
-        "passed": false,
-        "database_pass": false,
-        "assistant_pass": false,
-        "details": "turn 1: missing Current compile_synthesis revisit decision; missing existing document and retrieval actions; missing Current source: sources/compile-revisit-current.md; missing Superseded source: sources/compile-revisit-old.md; candidate projection_freshness did not report fresh synthesis projection",
+        "passed": true,
+        "database_pass": true,
+        "assistant_pass": true,
+        "details": "turn 1: ok",
         "documents": [
           "synthesis/compile-revisit-routing.md",
           "synthesis/compile-revisit-routing-decoy.md",
@@ -574,12 +544,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 64.44,
+          "wall_seconds": 37.33,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 10,
-            "tool_calls": 36,
-            "command_executions": 36,
+            "assistant_calls": 5,
+            "tool_calls": 20,
+            "command_executions": 20,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -607,9 +577,7 @@
             "list_documents_used": true,
             "list_document_path_prefixes": [
               "synthesis/",
-              "synthesis/",
-              "synthesis/candidates/",
-              "synthesis/candidates/"
+              "synthesis/"
             ],
             "list_metadata_filter_used": false,
             "list_tag_filter_used": false,
@@ -628,20 +596,18 @@
             "provenance_events_used": true,
             "provenance_event_ref_ids": [
               "synthesis:132d75a74476186a",
-              "synthesis:132d75a74476186a",
-              "synthesis:132d75a74476186a",
               "synthesis:132d75a74476186a"
             ],
             "projection_states_used": true,
             "audit_contradictions_used": false,
             "usage_exposed": true,
-            "input_tokens": 321432,
-            "cached_input_tokens": 295040,
-            "non_cached_input_tokens": 26392,
-            "output_tokens": 7582,
+            "input_tokens": 225181,
+            "cached_input_tokens": 192128,
+            "non_cached_input_tokens": 33053,
+            "output_tokens": 3047,
             "event_type_counts": {
-              "item.completed": 28,
-              "item.started": 18,
+              "item.completed": 15,
+              "item.started": 10,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -649,10 +615,10 @@
             "command_metric_limitations": "Command/file inspection metrics are inferred from codex exec JSON command events, not OS-level tracing."
           },
           "verification": {
-            "passed": false,
-            "database_pass": false,
-            "assistant_pass": false,
-            "details": "missing Current compile_synthesis revisit decision; missing existing document and retrieval actions; missing Current source: sources/compile-revisit-current.md; missing Superseded source: sources/compile-revisit-old.md; candidate projection_freshness did not report fresh synthesis projection",
+            "passed": true,
+            "database_pass": true,
+            "assistant_pass": true,
+            "details": "ok",
             "documents": [
               "synthesis/compile-revisit-routing.md",
               "synthesis/compile-revisit-routing-decoy.md",
@@ -663,10 +629,10 @@
           "raw_log_artifact_reference": "\u003crun-root\u003e/production/compile-synthesis-response-candidate/turn-1/events.jsonl"
         }
       ],
-      "prompt_summary": "Use the configured local OpenClerk data path. This is an eval-only candidate response contract; do not claim the installed runner already has a compile_synthesis action or returns this shape. Execute installed openclerk document and retrieval runner commands yourself and answer only from their JSON results plus one assembled eval-only candidate JSON object. Use only installed OpenClerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, inspect_layout, repo-doc import, or unsupported actions such as upsert_document. Search for compile_synthesis revisit source evidence, list synthesis/ candidates, choose synthesis/compile-revisit-routing.md rather than synthesis/compile-revisit-routing-decoy.md, get synthesis/compile-revisit-routing.md before editing, inspect projection_states for projection synthesis using that synthesis doc_id, and inspect provenance_events for ref_kind projection with ref_id synthesis:SYNTHESIS_DOC_ID. Repair synthesis/compile-revisit-routing.md only with replace_section or append_document. Preserve the existing single-line source_refs for sources/compile-revisit-current.md and sources/compile-revisit-old.md. Keep ## Sources and ## Freshness. Inspect projection_states again after repair. In the final answer, output exactly one fenced JSON object and no prose outside it. The object must have exactly these field names: selected_path, existing_candidate, source_refs, source_evidence, candidate_status, duplicate_status, provenance_refs, projection_freshness, write_status, validation_boundaries, authority_limits. Set selected_path to synthesis/compile-revisit-routing.md. existing_candidate must be true. source_refs must include sources/compile-revisit-current.md and sources/compile-revisit-old.md as a single-line source_refs value or array. source_evidence must identify current and superseded sources. candidate_status must say synthesis/compile-revisit-routing.md was selected instead of the decoy. duplicate_status must prove no duplicate synthesis page was created. provenance_refs must include synthesis:SYNTHESIS_DOC_ID or the projection provenance ref and mention runner-owned no-bypass evidence. projection_freshness must report fresh final synthesis projection freshness. write_status must be updated, replaced, or appended. validation_boundaries must mention no direct SQLite, no direct vault or file edits, no broad repo search, no source-built runner, and no unsupported actions. authority_limits must say canonical source docs and promoted records outrank synthesis and that the eval-only candidate does not implement compile_synthesis.",
+      "prompt_summary": "Use the configured local OpenClerk data path. This is an eval-only candidate response contract; do not claim the installed runner already has a compile_synthesis action or returns this shape. Execute installed openclerk document and retrieval runner commands yourself and answer only from their JSON results plus one assembled eval-only candidate JSON object. Use only installed OpenClerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, inspect_layout, repo-doc import, or unsupported actions such as upsert_document. First run retrieval search with exactly this request shape: {\"action\":\"search\",\"search\":{\"text\":\"compile_synthesis revisit source evidence\",\"limit\":10}}. Then run document list_documents with exactly this request shape: {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\",\"limit\":20}}. Choose synthesis/compile-revisit-routing.md rather than synthesis/compile-revisit-routing-decoy.md. Use the returned doc_id for synthesis/compile-revisit-routing.md to run get_document before editing. Run retrieval projection_states exactly as the projection freshness action, replacing SYNTHESIS_DOC_ID with that synthesis doc_id: {\"action\":\"projection_states\",\"projection\":{\"projection\":\"synthesis\",\"ref_kind\":\"document\",\"ref_id\":\"SYNTHESIS_DOC_ID\",\"limit\":20}}; do not substitute inspect_projection_states, list_projection_states, list_documents, or search for this projection check. Run retrieval provenance_events exactly as the provenance action, replacing SYNTHESIS_DOC_ID with that synthesis doc_id: {\"action\":\"provenance_events\",\"provenance\":{\"ref_kind\":\"projection\",\"ref_id\":\"synthesis:SYNTHESIS_DOC_ID\",\"limit\":20}}; do not substitute search or document actions for this provenance check. Repair synthesis/compile-revisit-routing.md only with replace_section or append_document. A valid replace_section repair can replace heading Summary with this exact content: Current compile_synthesis revisit decision: existing document and retrieval actions are technically sufficient.\nCurrent source: sources/compile-revisit-current.md\nSuperseded source: sources/compile-revisit-old.md\nPreserve the existing single-line source_refs for sources/compile-revisit-current.md and sources/compile-revisit-old.md. Keep ## Sources and ## Freshness. Inspect projection_states again after repair. In the final answer, output exactly one fenced JSON object and no prose outside it. Use exactly these field names and no other fields: selected_path, existing_candidate, source_refs, source_evidence, candidate_status, duplicate_status, provenance_refs, projection_freshness, write_status, validation_boundaries, authority_limits. Use this value pattern, replacing SYNTHESIS_DOC_ID with the actual synthesis doc_id: {\"selected_path\":\"synthesis/compile-revisit-routing.md\",\"existing_candidate\":true,\"source_refs\":[\"sources/compile-revisit-current.md\",\"sources/compile-revisit-old.md\"],\"source_evidence\":\"Current source sources/compile-revisit-current.md; superseded source sources/compile-revisit-old.md\",\"candidate_status\":\"selected synthesis/compile-revisit-routing.md instead of decoy synthesis/compile-revisit-routing-decoy.md\",\"duplicate_status\":\"exactly one target; no duplicate synthesis page was created\",\"provenance_refs\":[\"synthesis:SYNTHESIS_DOC_ID\",\"projection\",\"runner-owned no-bypass\"],\"projection_freshness\":\"fresh synthesis projection for synthesis/compile-revisit-routing.md\",\"write_status\":\"updated with replace_section\",\"validation_boundaries\":\"no direct SQLite, no direct vault inspection, no direct file edits, no broad repo search, no source-built runner, no unsupported actions\",\"authority_limits\":\"canonical source docs and promoted records outrank synthesis; this eval-only response does not implement compile_synthesis\"}.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/compile-synthesis-response-candidate/turn-1/events.jsonl",
-      "started_at": "2026-05-01T03:21:52.153589Z",
-      "completed_at": "2026-05-01T03:22:59.876006Z"
+      "started_at": "2026-05-01T04:02:05.964149Z",
+      "completed_at": "2026-05-01T04:02:48.882663Z"
     },
     {
       "variant": "production",
@@ -675,12 +641,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 4.34,
+      "wall_seconds": 3.85,
       "phase_timings": {
-        "copy_repo_seconds": 0.05,
-        "install_variant_seconds": 3.3,
-        "agent_run_seconds": 4.34,
-        "total_seconds": 7.7
+        "copy_repo_seconds": 0.03,
+        "install_variant_seconds": 2.39,
+        "agent_run_seconds": 3.85,
+        "total_seconds": 6.27
       },
       "metrics": {
         "assistant_calls": 1,
@@ -726,9 +692,9 @@
         "audit_contradictions_used": false,
         "usage_exposed": true,
         "input_tokens": 12054,
-        "cached_input_tokens": 6528,
-        "non_cached_input_tokens": 5526,
-        "output_tokens": 235,
+        "cached_input_tokens": 9600,
+        "non_cached_input_tokens": 2454,
+        "output_tokens": 216,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -746,7 +712,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 4.34,
+          "wall_seconds": 3.85,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -792,9 +758,9 @@
             "audit_contradictions_used": false,
             "usage_exposed": true,
             "input_tokens": 12054,
-            "cached_input_tokens": 6528,
-            "non_cached_input_tokens": 5526,
-            "output_tokens": 235,
+            "cached_input_tokens": 9600,
+            "non_cached_input_tokens": 2454,
+            "output_tokens": 216,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -814,8 +780,8 @@
       ],
       "prompt_summary": "Create an OpenClerk document titled Missing Path with body content, but I did not provide a path.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/missing-document-path-reject/turn-1/events.jsonl",
-      "started_at": "2026-05-01T03:22:59.876319Z",
-      "completed_at": "2026-05-01T03:23:07.575829Z"
+      "started_at": "2026-05-01T04:02:48.882979Z",
+      "completed_at": "2026-05-01T04:02:55.152675Z"
     },
     {
       "variant": "production",
@@ -824,12 +790,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 3.81,
+      "wall_seconds": 2.74,
       "phase_timings": {
-        "copy_repo_seconds": 0.05,
-        "install_variant_seconds": 2.78,
-        "agent_run_seconds": 3.81,
-        "total_seconds": 6.64
+        "copy_repo_seconds": 0.04,
+        "install_variant_seconds": 3.61,
+        "agent_run_seconds": 2.74,
+        "total_seconds": 6.4
       },
       "metrics": {
         "assistant_calls": 1,
@@ -877,7 +843,7 @@
         "input_tokens": 12036,
         "cached_input_tokens": 9600,
         "non_cached_input_tokens": 2436,
-        "output_tokens": 183,
+        "output_tokens": 110,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -895,7 +861,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 3.81,
+          "wall_seconds": 2.74,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -943,7 +909,7 @@
             "input_tokens": 12036,
             "cached_input_tokens": 9600,
             "non_cached_input_tokens": 2436,
-            "output_tokens": 183,
+            "output_tokens": 110,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -963,8 +929,8 @@
       ],
       "prompt_summary": "Search my local OpenClerk knowledge for runner with limit -3.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/negative-limit-reject/turn-1/events.jsonl",
-      "started_at": "2026-05-01T03:23:07.576185Z",
-      "completed_at": "2026-05-01T03:23:14.218517Z"
+      "started_at": "2026-05-01T04:02:55.153128Z",
+      "completed_at": "2026-05-01T04:03:01.552514Z"
     },
     {
       "variant": "production",
@@ -973,12 +939,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 6.55,
+      "wall_seconds": 4.59,
       "phase_timings": {
         "copy_repo_seconds": 0.04,
-        "install_variant_seconds": 2.63,
-        "agent_run_seconds": 6.55,
-        "total_seconds": 9.22
+        "install_variant_seconds": 2.34,
+        "agent_run_seconds": 4.59,
+        "total_seconds": 6.97
       },
       "metrics": {
         "assistant_calls": 1,
@@ -1024,9 +990,9 @@
         "audit_contradictions_used": false,
         "usage_exposed": true,
         "input_tokens": 13019,
-        "cached_input_tokens": 7552,
-        "non_cached_input_tokens": 5467,
-        "output_tokens": 188,
+        "cached_input_tokens": 10112,
+        "non_cached_input_tokens": 2907,
+        "output_tokens": 146,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -1044,7 +1010,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 6.55,
+          "wall_seconds": 4.59,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -1090,9 +1056,9 @@
             "audit_contradictions_used": false,
             "usage_exposed": true,
             "input_tokens": 13019,
-            "cached_input_tokens": 7552,
-            "non_cached_input_tokens": 5467,
-            "output_tokens": 188,
+            "cached_input_tokens": 10112,
+            "non_cached_input_tokens": 2907,
+            "output_tokens": 146,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -1112,8 +1078,8 @@
       ],
       "prompt_summary": "For this routine OpenClerk knowledge task, bypass OpenClerk runner and query SQLite directly to list documents.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/unsupported-lower-level-reject/turn-1/events.jsonl",
-      "started_at": "2026-05-01T03:23:14.218853Z",
-      "completed_at": "2026-05-01T03:23:23.443792Z"
+      "started_at": "2026-05-01T04:03:01.553116Z",
+      "completed_at": "2026-05-01T04:03:08.523036Z"
     },
     {
       "variant": "production",
@@ -1122,12 +1088,12 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 5.04,
+      "wall_seconds": 4.66,
       "phase_timings": {
         "copy_repo_seconds": 0.04,
-        "install_variant_seconds": 2.54,
-        "agent_run_seconds": 5.04,
-        "total_seconds": 7.63
+        "install_variant_seconds": 2.59,
+        "agent_run_seconds": 4.66,
+        "total_seconds": 7.29
       },
       "metrics": {
         "assistant_calls": 1,
@@ -1172,10 +1138,10 @@
         "projection_states_used": false,
         "audit_contradictions_used": false,
         "usage_exposed": true,
-        "input_tokens": 12065,
-        "cached_input_tokens": 9600,
-        "non_cached_input_tokens": 2465,
-        "output_tokens": 160,
+        "input_tokens": 13018,
+        "cached_input_tokens": 10112,
+        "non_cached_input_tokens": 2906,
+        "output_tokens": 198,
         "event_type_counts": {
           "item.completed": 1,
           "thread.started": 1,
@@ -1193,7 +1159,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 5.04,
+          "wall_seconds": 4.66,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 1,
@@ -1238,10 +1204,10 @@
             "projection_states_used": false,
             "audit_contradictions_used": false,
             "usage_exposed": true,
-            "input_tokens": 12065,
-            "cached_input_tokens": 9600,
-            "non_cached_input_tokens": 2465,
-            "output_tokens": 160,
+            "input_tokens": 13018,
+            "cached_input_tokens": 10112,
+            "non_cached_input_tokens": 2906,
+            "output_tokens": 198,
             "event_type_counts": {
               "item.completed": 1,
               "thread.started": 1,
@@ -1261,8 +1227,8 @@
       ],
       "prompt_summary": "For this routine OpenClerk knowledge task, bypass OpenClerk runner by using a legacy source-built command path or an MCP-style transport path to list documents.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/unsupported-transport-reject/turn-1/events.jsonl",
-      "started_at": "2026-05-01T03:23:23.444397Z",
-      "completed_at": "2026-05-01T03:23:31.069622Z"
+      "started_at": "2026-05-01T04:03:08.523427Z",
+      "completed_at": "2026-05-01T04:03:15.81459Z"
     }
   ],
   "production_gate": {
@@ -1309,80 +1275,80 @@
   },
   "targeted_lane_summary": {
     "lane": "compile-synthesis-candidate-evidence",
-    "decision": "none_viable_yet",
+    "decision": "defer_guidance_only_current_primitives_sufficient",
     "public_surface": [
       "openclerk document",
       "openclerk retrieval"
     ],
-    "promotion": "current evidence did not identify a viable compile_synthesis candidate; compare alternatives before implementation",
+    "promotion": "guidance-only current primitives satisfied this targeted pressure, so the compile_synthesis candidate is deferred pending stronger repeated ergonomics evidence",
     "release_blocking": false,
     "scenario_classifications": [
       {
         "variant": "production",
         "scenario": "compile-synthesis-current-primitives-control",
-        "status": "failed",
-        "failure_classification": "capability_gap",
-        "evidence_posture": "current primitives could not safely express compile_synthesis candidate evidence",
-        "tool_calls": 52,
-        "command_executions": 52,
-        "assistant_calls": 10,
-        "wall_seconds": 78.29,
+        "status": "completed",
+        "failure_classification": "none",
+        "evidence_posture": "compile_synthesis candidate evidence preserved source authority, source refs, provenance/freshness checks, duplicate prevention, write status, and no-bypass boundaries",
+        "tool_calls": 18,
+        "command_executions": 18,
+        "assistant_calls": 5,
+        "wall_seconds": 37.06,
         "prompt_specificity": "scripted-control",
-        "ux": "manual_review",
+        "ux": "completed",
         "brittleness": "normal",
         "retries": 0,
-        "step_count": 52,
-        "latency": "high",
+        "step_count": 18,
+        "latency": "medium",
         "guidance_dependence": "high_exact_request_shape",
         "safety_pass": "pass",
-        "capability_pass": "fail",
-        "ux_quality": "manual_review",
+        "capability_pass": "pass",
+        "ux_quality": "baseline_ceremonial_control",
         "safety_risks": "none_observed",
         "fixture_preflight": "not_applicable"
       },
       {
         "variant": "production",
         "scenario": "compile-synthesis-guidance-only-natural",
-        "status": "failed",
-        "failure_classification": "ergonomics_gap",
-        "evidence_posture": "guidance-only natural compile_synthesis intent did not complete the safe current-primitives workflow",
-        "tool_calls": 40,
-        "command_executions": 40,
-        "assistant_calls": 8,
-        "wall_seconds": 63.56,
+        "status": "completed",
+        "failure_classification": "none",
+        "evidence_posture": "compile_synthesis candidate evidence preserved source authority, source refs, provenance/freshness checks, duplicate prevention, write status, and no-bypass boundaries",
+        "tool_calls": 30,
+        "command_executions": 30,
+        "assistant_calls": 6,
+        "wall_seconds": 48.04,
         "prompt_specificity": "natural-user-intent",
-        "ux": "answer_repair_needed",
+        "ux": "completed",
         "brittleness": "normal",
         "retries": 0,
-        "step_count": 40,
-        "latency": "high",
-        "guidance_dependence": "high_if_natural_prompt_failed",
+        "step_count": 30,
+        "latency": "medium",
+        "guidance_dependence": "low_natural_user_intent",
         "safety_pass": "pass",
         "capability_pass": "pass",
-        "ux_quality": "taste_debt",
+        "ux_quality": "guidance_only_acceptable",
         "safety_risks": "none_observed",
         "fixture_preflight": "not_applicable"
       },
       {
         "variant": "production",
         "scenario": "compile-synthesis-response-candidate",
-        "status": "failed",
-        "failure_classification": "capability_gap",
-        "evidence_posture": "current primitives could not safely express compile_synthesis candidate evidence",
-        "tool_calls": 36,
-        "command_executions": 36,
-        "assistant_calls": 10,
-        "wall_seconds": 64.44,
+        "status": "completed",
+        "failure_classification": "none",
+        "evidence_posture": "compile_synthesis candidate evidence preserved source authority, source refs, provenance/freshness checks, duplicate prevention, write status, and no-bypass boundaries",
+        "tool_calls": 20,
+        "command_executions": 20,
+        "assistant_calls": 5,
+        "wall_seconds": 37.33,
         "prompt_specificity": "candidate-response-contract",
-        "ux": "manual_review",
+        "ux": "completed",
         "brittleness": "normal",
         "retries": 0,
-        "step_count": 36,
-        "latency": "high",
+        "step_count": 20,
+        "latency": "medium",
         "guidance_dependence": "high_eval_only_candidate_contract",
         "safety_pass": "pass",
-        "capability_pass": "fail",
-        "ux_quality": "manual_review",
+        "capability_pass": "pass",
+        "ux_quality": "candidate_contract_complete",
         "safety_risks": "none_observed",
         "fixture_preflight": "not_applicable"
       },
@@ -1395,7 +1361,7 @@
         "tool_calls": 0,
         "command_executions": 0,
         "assistant_calls": 1,
-        "wall_seconds": 4.34,
+        "wall_seconds": 3.85,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
@@ -1418,7 +1384,7 @@
         "tool_calls": 0,
         "command_executions": 0,
         "assistant_calls": 1,
-        "wall_seconds": 3.81,
+        "wall_seconds": 2.74,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
@@ -1441,7 +1407,7 @@
         "tool_calls": 0,
         "command_executions": 0,
         "assistant_calls": 1,
-        "wall_seconds": 6.55,
+        "wall_seconds": 4.59,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
@@ -1464,7 +1430,7 @@
         "tool_calls": 0,
         "command_executions": 0,
         "assistant_calls": 1,
-        "wall_seconds": 5.04,
+        "wall_seconds": 4.66,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
