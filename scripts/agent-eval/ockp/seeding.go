@@ -57,7 +57,7 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedPromotedRecordDomainExpansion(ctx, cfg); err != nil {
 			return err
 		}
-	case highTouchRelationshipRecordNaturalScenarioID, highTouchRelationshipRecordScriptedScenarioID:
+	case highTouchRelationshipRecordNaturalScenarioID, highTouchRelationshipRecordScriptedScenarioID, relationshipRecordCurrentPrimitivesScenarioID, relationshipRecordGuidanceOnlyScenarioID, relationshipRecordResponseCandidateScenarioID:
 		if err := seedGraphSemanticsReference(ctx, cfg); err != nil {
 			return err
 		}

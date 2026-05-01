@@ -91,7 +91,7 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	if releaseBlocking {
 		return nil
 	}
-	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != promotedRecordDomainLaneName && lane != highTouchRelationshipRecordLaneName && lane != parallelRunnerLaneName && lane != documentHistoryLaneName && lane != highTouchDocumentLifecycleLaneName && lane != documentLifecycleRollbackCandidateLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != captureLowRiskLaneName && lane != captureExplicitOverridesLaneName && lane != captureDuplicateCandidateLaneName && lane != taggingLaneName && lane != captureSaveThisNoteLaneName && lane != captureDocumentLinksLaneName && lane != sourceURLUpdateLaneName && lane != webURLIntakeLaneName && lane != webURLStaleRepairLaneName && lane != webURLStaleImpactLaneName && lane != webProductPageLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName && lane != highTouchCompileSynthesisLaneName && lane != compileSynthesisCandidateLaneName && lane != broadAuditLaneName {
+	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != promotedRecordDomainLaneName && lane != highTouchRelationshipRecordLaneName && lane != relationshipRecordCandidateLaneName && lane != parallelRunnerLaneName && lane != documentHistoryLaneName && lane != highTouchDocumentLifecycleLaneName && lane != documentLifecycleRollbackCandidateLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != captureLowRiskLaneName && lane != captureExplicitOverridesLaneName && lane != captureDuplicateCandidateLaneName && lane != taggingLaneName && lane != captureSaveThisNoteLaneName && lane != captureDocumentLinksLaneName && lane != sourceURLUpdateLaneName && lane != webURLIntakeLaneName && lane != webURLStaleRepairLaneName && lane != webURLStaleImpactLaneName && lane != webProductPageLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName && lane != highTouchCompileSynthesisLaneName && lane != compileSynthesisCandidateLaneName && lane != broadAuditLaneName {
 		return nil
 	}
 	summary := targetedLaneSummary{
@@ -124,6 +124,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		case highTouchRelationshipRecordLaneName:
 			include = isHighTouchRelationshipRecordScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
 			classification, posture = classifyTargetedHighTouchRelationshipRecordResult(result)
+		case relationshipRecordCandidateLaneName:
+			include = isRelationshipRecordCandidateScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
+			classification, posture = classifyTargetedRelationshipRecordCandidateResult(result)
 		case parallelRunnerLaneName:
 			include = isParallelRunnerScenario(result.Scenario)
 			classification, posture = classifyTargetedParallelRunnerResult(result)
@@ -249,6 +252,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	case highTouchRelationshipRecordLaneName:
 		summary.Decision = highTouchRelationshipRecordDecision(summary.ScenarioClassifications)
 		summary.Promotion = highTouchRelationshipRecordPromotion(summary.Decision)
+	case relationshipRecordCandidateLaneName:
+		summary.Decision = relationshipRecordCandidateDecision(summary.ScenarioClassifications)
+		summary.Promotion = relationshipRecordCandidatePromotion(summary.Decision)
 	case parallelRunnerLaneName:
 		summary.Decision = "relax_skill_guidance_for_safe_parallel_reads"
 		summary.Promotion = "targeted parallel runner UX evidence for documented safe read/startup workflows; no public JSON schema, storage schema, or write-concurrency expansion"

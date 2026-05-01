@@ -73,6 +73,12 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyHighTouchRelationshipRecordCeremony(ctx, paths, finalMessage, turnMetrics, false)
 	case highTouchRelationshipRecordScriptedScenarioID:
 		return verifyHighTouchRelationshipRecordCeremony(ctx, paths, finalMessage, turnMetrics, true)
+	case relationshipRecordCurrentPrimitivesScenarioID:
+		return verifyHighTouchRelationshipRecordCeremony(ctx, paths, finalMessage, turnMetrics, true)
+	case relationshipRecordGuidanceOnlyScenarioID:
+		return verifyHighTouchRelationshipRecordCeremony(ctx, paths, finalMessage, turnMetrics, true)
+	case relationshipRecordResponseCandidateScenarioID:
+		return verifyRelationshipRecordResponseCandidate(ctx, paths, finalMessage, turnMetrics)
 	case configuredLayoutScenarioID:
 		return verifyConfiguredLayoutScenario(ctx, paths, finalMessage, turnMetrics)
 	case invalidLayoutScenarioID:

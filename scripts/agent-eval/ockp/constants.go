@@ -75,6 +75,10 @@ const (
 	highTouchRelationshipRecordLaneName           = "high-touch-relationship-record-ceremony"
 	highTouchRelationshipRecordNaturalScenarioID  = "high-touch-relationship-record-natural-intent"
 	highTouchRelationshipRecordScriptedScenarioID = "high-touch-relationship-record-scripted-control"
+	relationshipRecordCandidateLaneName           = "relationship-record-lookup-candidate-evidence"
+	relationshipRecordCurrentPrimitivesScenarioID = "relationship-record-current-primitives-control"
+	relationshipRecordGuidanceOnlyScenarioID      = "relationship-record-guidance-only-natural"
+	relationshipRecordResponseCandidateScenarioID = "relationship-record-response-candidate"
 
 	configuredLayoutScenarioID = "configured-layout-explain"
 	invalidLayoutScenarioID    = "invalid-layout-visible"

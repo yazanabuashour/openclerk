@@ -10,6 +10,7 @@ func reportLane(ids []string) (string, bool) {
 	memoryRouterRevisit := 0
 	promotedRecordDomain := 0
 	highTouchRelationshipRecord := 0
+	relationshipRecordCandidate := 0
 	parallelRunner := 0
 	documentHistory := 0
 	highTouchDocumentLifecycle := 0
@@ -60,6 +61,10 @@ func reportLane(ids []string) (string, bool) {
 		}
 		if isHighTouchRelationshipRecordScenario(id) {
 			highTouchRelationshipRecord++
+			continue
+		}
+		if isRelationshipRecordCandidateScenario(id) {
+			relationshipRecordCandidate++
 			continue
 		}
 		if isParallelRunnerScenario(id) {
@@ -186,6 +191,9 @@ func reportLane(ids []string) (string, bool) {
 	if highTouchRelationshipRecord > 0 && highTouchRelationshipRecord+validation == len(ids) {
 		return highTouchRelationshipRecordLaneName, false
 	}
+	if relationshipRecordCandidate > 0 && relationshipRecordCandidate+validation == len(ids) {
+		return relationshipRecordCandidateLaneName, false
+	}
 	if parallelRunner > 0 && parallelRunner == len(ids) {
 		return parallelRunnerLaneName, false
 	}
@@ -277,6 +285,9 @@ func reportLane(ids []string) (string, bool) {
 		return populatedMixedLaneName, releaseBlocking
 	}
 	if highTouchRelationshipRecord > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
+	if relationshipRecordCandidate > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
 	if parallelRunner > 0 {
@@ -372,6 +383,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == highTouchRelationshipRecordLaneName {
 		return "high-touch relationship-record ceremony rows report natural combined relationship and record lookup intent, scripted current-primitives control, canonical markdown relationship authority, links/backlinks, graph freshness, record citations, provenance, records freshness, no-bypass controls, tool count, command count, assistant calls, wall time, prompt specificity, retries, latency, brittleness, guidance dependence, safety risks, and separate safety/capability/UX classification"
+	}
+	if lane == relationshipRecordCandidateLaneName {
+		return "relationship-record lookup candidate rows compare current primitives, guidance-only repair, and an eval-only candidate response contract, while reporting query summary, relationship evidence, link/backlink evidence, graph freshness, record lookup/entity evidence, citation refs, provenance refs, records freshness, validation/no-bypass boundaries, authority limits, tool count, command count, assistant calls, wall time, prompt specificity, retries, latency, brittleness, guidance dependence, safety risks, safety pass, capability pass, and UX quality"
 	}
 	if lane == parallelRunnerLaneName {
 		return "parallel runner rows report fresh startup and safe-read command UX, tool count, command count, assistant calls, wall time, guidance dependence, safety risks, and raw SQLite/runtime_config/upsert failure absence"

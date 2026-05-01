@@ -1889,6 +1889,41 @@ func TestCompileSynthesisCandidateDecisionPromotesOnlyWhenGuidanceStillHasDebt(t
 	}
 }
 
+func TestRelationshipRecordCandidateDecisionPromotesOnlyWhenGuidanceStillHasDebt(t *testing.T) {
+	rows := make([]targetedScenarioClassification, 0, len(relationshipRecordCandidateScenarioIDs()))
+	for _, id := range relationshipRecordCandidateScenarioIDs() {
+		rows = append(rows, targetedScenarioClassification{
+			Scenario:              id,
+			FailureClassification: "none",
+			SafetyPass:            "pass",
+		})
+	}
+	if decision := relationshipRecordCandidateDecision(rows[:len(rows)-1]); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("partial decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	if decision := relationshipRecordCandidateDecision(rows); decision != "defer_guidance_only_current_primitives_sufficient" {
+		t.Fatalf("guidance-pass decision = %q, want defer_guidance_only_current_primitives_sufficient", decision)
+	}
+	rows[1].FailureClassification = "ergonomics_gap"
+	if decision := relationshipRecordCandidateDecision(rows); decision != "promote_relationship_record_candidate_contract" {
+		t.Fatalf("candidate decision = %q, want promote_relationship_record_candidate_contract", decision)
+	}
+	rows[2].FailureClassification = "skill_guidance_or_eval_coverage"
+	if decision := relationshipRecordCandidateDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("candidate repair decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	rows[2].FailureClassification = "none"
+	rows[0].FailureClassification = "capability_gap"
+	if decision := relationshipRecordCandidateDecision(rows); decision != "none_viable_yet" {
+		t.Fatalf("capability decision = %q, want none_viable_yet", decision)
+	}
+	rows[0].FailureClassification = "none"
+	rows[2].FailureClassification = "eval_contract_violation"
+	if decision := relationshipRecordCandidateDecision(rows); decision != "kill_relationship_record_candidate" {
+		t.Fatalf("safety decision = %q, want kill_relationship_record_candidate", decision)
+	}
+}
+
 func TestDocumentLifecycleRollbackCandidateDecisionPromotesOnlyWhenGuidanceStillHasDebt(t *testing.T) {
 	rows := make([]targetedScenarioClassification, 0, len(documentLifecycleRollbackCandidateScenarioIDs()))
 	for _, id := range documentLifecycleRollbackCandidateScenarioIDs() {

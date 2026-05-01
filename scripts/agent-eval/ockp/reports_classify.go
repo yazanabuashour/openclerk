@@ -161,6 +161,46 @@ func classifyTargetedHighTouchRelationshipRecordResult(result jobResult) (string
 	return "ergonomics_gap", "manual review required before any relationship-record lookup promotion"
 }
 
+func classifyTargetedRelationshipRecordCandidateResult(result jobResult) (string, string) {
+	if isFinalAnswerOnlyValidationScenario(result.Scenario) {
+		if result.Passed && result.Verification.Passed {
+			return "none", "validation control stayed final-answer-only"
+		}
+		if result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1 {
+			return "skill_guidance_or_eval_coverage", "validation pressure did not stay final-answer-only"
+		}
+		return "skill_guidance_or_eval_coverage", "validation answer did not satisfy the rejection contract"
+	}
+	if result.Passed && result.Verification.Passed {
+		return "none", "relationship-record candidate evidence preserved canonical relationship authority, links/backlinks, graph freshness, canonical record authority, citations, provenance, records freshness, eval-only response boundaries, and no-bypass controls"
+	}
+	if len(populatedBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Metrics.CreateDocumentUsed || result.Metrics.ReplaceSectionUsed || result.Metrics.AppendDocumentUsed {
+		return "eval_contract_violation", "relationship-record candidate scenario created or updated documents"
+	}
+	if result.Verification.Passed {
+		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
+	}
+	if (result.Scenario == relationshipRecordCurrentPrimitivesScenarioID || result.Scenario == relationshipRecordResponseCandidateScenarioID) && !result.Verification.DatabasePass {
+		return "capability_gap", "current primitives or candidate contract could not safely express relationship-record lookup evidence"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "fixture or durable relationship-record evidence did not satisfy candidate pressure"
+	}
+	if result.Scenario == relationshipRecordGuidanceOnlyScenarioID && !result.Verification.Passed {
+		return "ergonomics_gap", "guidance-only natural relationship-record lookup did not complete the safe current-primitives workflow"
+	}
+	if result.Scenario == relationshipRecordResponseCandidateScenarioID && result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible relationship-record evidence existed, but the candidate response fields were missing"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible relationship-record evidence existed, but the assistant answer or required runner steps did not satisfy the scenario"
+	}
+	return "ergonomics_gap", "manual review required before relationship-record candidate promotion"
+}
+
 func classifyTargetedArtifactIngestionResult(result jobResult) (string, string) {
 	if result.Passed && result.Verification.Passed {
 		return "none", "current document/retrieval runner evidence preserved artifact authority, citations, provenance, freshness, and bypass boundaries"
@@ -348,6 +388,12 @@ func promptSpecificity(scenarioID string) string {
 		return "natural-user-intent"
 	case highTouchRelationshipRecordScriptedScenarioID:
 		return "scripted-control"
+	case relationshipRecordCurrentPrimitivesScenarioID:
+		return "scripted-control"
+	case relationshipRecordGuidanceOnlyScenarioID:
+		return "natural-user-intent"
+	case relationshipRecordResponseCandidateScenarioID:
+		return "candidate-response-contract"
 	case documentHistoryNaturalScenarioID:
 		return "natural-user-intent"
 	case highTouchDocumentLifecycleNaturalScenarioID:
