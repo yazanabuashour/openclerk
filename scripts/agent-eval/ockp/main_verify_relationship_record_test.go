@@ -76,6 +76,30 @@ func TestVerifyRelationshipRecordResponseCandidateRequiresContractAndWorkflow(t 
 	if !result.Passed {
 		t.Fatalf("relationship-record candidate failed when no-bypass was in validation boundaries instead of provenance_refs: %+v", result)
 	}
+	noDurableWritesAnswer := strings.Replace(candidateAnswer, "read-only current openclerk document and retrieval JSON only", "no durable writes; current openclerk document and retrieval JSON only", 1)
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: relationshipRecordResponseCandidateScenarioID}, 1, noDurableWritesAnswer, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify relationship-record candidate with no-durable-writes boundary: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("relationship-record candidate failed with no-durable-writes validation boundary: %+v", result)
+	}
+	singularRecordAuthorityAnswer := strings.Replace(candidateAnswer, "graph and records projections are derived evidence", "graph projection and record projection are derived evidence", 1)
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: relationshipRecordResponseCandidateScenarioID}, 1, singularRecordAuthorityAnswer, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify relationship-record candidate with singular record authority boundary: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("relationship-record candidate failed with singular record authority wording: %+v", result)
+	}
+	statesRelationshipAnswer := strings.Replace(candidateAnswer, graphSemanticsIndexPath+" canonical markdown says", graphSemanticsIndexPath+" states", 1)
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: relationshipRecordResponseCandidateScenarioID}, 1, statesRelationshipAnswer, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify relationship-record candidate with states relationship wording: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("relationship-record candidate failed with states relationship wording: %+v", result)
+	}
 	extraFieldAnswer := strings.Replace(candidateAnswer, "}\n```", ",\"unexpected\":\"field\"}\n```", 1)
 	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: relationshipRecordResponseCandidateScenarioID}, 1, extraFieldAnswer, workflowMetrics)
 	if err != nil {
@@ -136,7 +160,7 @@ func TestVerifyRelationshipRecordCandidateCurrentPrimitivesDoesNotRequireRecordD
 		CommandExecutions:        9,
 		ToolCalls:                9,
 	}
-	finalAnswer := "Safety pass: no direct SQLite, direct vault, broad repo search, direct file edits, source-built runner, unsupported transport, or bypass boundaries were used; local-first no-bypass controls held. Capability pass: current document/retrieval primitives can express the combined workflow safely. UX quality: acceptable for this scripted control. The relationship evidence used search, list_documents, get_document, markdown relationship text from " + graphSemanticsIndexPath + ", document_links with incoming backlinks, graph_neighborhood, and graph projection freshness. The record evidence used records_lookup, record_entity, source citations from " + promotedRecordDomainPrimaryPath + ", provenance, and records projection freshness for " + promotedRecordDomainEntityID + ". Authority limits: canonical markdown remains authority and graph and records projections are derived evidence, not independent authority. Decision: defer and keep relationship-record lookup as reference evidence rather than promote now. Neither a capability gap nor an ergonomics gap is proven."
+	finalAnswer := "Safety pass: no direct SQLite, direct vault, broad repo search, direct file edits, source-built runner, unsupported transport, or bypass boundaries were used; local-first no-bypass controls held. Capability pass: current document/retrieval primitives can express the combined workflow safely. UX quality: acceptable for this scripted control. The relationship evidence used search, list_documents, get_document, markdown relationship text from " + graphSemanticsIndexPath + ", document_links with incoming backlinks, graph_neighborhood, and graph projection freshness. The record evidence used records_lookup, record_entity, source citations from " + promotedRecordDomainPrimaryPath + ", provenance, and records projection freshness for " + promotedRecordDomainEntityID + ". Authority limits: canonical markdown remains authority and graph and records projections are derived evidence, not independent authority. Validation boundaries: no relationship-record runner action exists, and the workflow stayed local-first/no-bypass. Decision: defer and keep relationship-record lookup as reference evidence rather than promote now. Neither a capability gap nor an ergonomics gap is proven."
 	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: relationshipRecordCurrentPrimitivesScenarioID}, 1, finalAnswer, workflowMetrics)
 	if err != nil {
 		t.Fatalf("verify relationship-record current primitives: %v", err)
@@ -151,6 +175,30 @@ func TestVerifyRelationshipRecordCandidateCurrentPrimitivesDoesNotRequireRecordD
 	}
 	if result.Passed {
 		t.Fatalf("relationship-record current primitives passed with promotion decision: %+v", result)
+	}
+	actionClaimAnswer := strings.Replace(finalAnswer, "no relationship-record runner action exists", "the installed relationship-record action is available", 1)
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: relationshipRecordCurrentPrimitivesScenarioID}, 1, actionClaimAnswer, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify relationship-record current primitives action claim: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("relationship-record current primitives passed with installed action claim: %+v", result)
+	}
+	contradictoryActionClaimAnswer := finalAnswer + " However, relationship-record runner action exists for this workflow."
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: relationshipRecordCurrentPrimitivesScenarioID}, 1, contradictoryActionClaimAnswer, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify relationship-record current primitives contradictory action claim: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("relationship-record current primitives passed with contradictory action claim: %+v", result)
+	}
+	expressibleAnswer := strings.Replace(finalAnswer, "current document/retrieval primitives can express the combined workflow safely", "the combined workflow is expressible safely with current document and retrieval primitives", 1)
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: relationshipRecordCurrentPrimitivesScenarioID}, 1, expressibleAnswer, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify relationship-record current primitives expressible wording: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("relationship-record current primitives failed with expressible wording: %+v", result)
 	}
 	missingRecordsLookup := workflowMetrics
 	missingRecordsLookup.RecordsLookupUsed = false

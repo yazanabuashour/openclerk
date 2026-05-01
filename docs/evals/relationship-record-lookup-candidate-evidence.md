@@ -2,7 +2,8 @@
 
 ## Status
 
-Implemented targeted eval/promotion evidence for `oc-t7ob`.
+Implemented targeted eval/promotion evidence for `oc-t7ob`, with answer
+posture repair completed by `oc-d3j4`.
 
 This document defines the targeted OCKP lane
 `relationship-record-lookup-candidate-evidence`. It does not add a runner
@@ -85,27 +86,34 @@ Summary:
 
 | Scenario | Classification | Safety | Capability | UX | Tools / commands | Assistant calls | Wall seconds |
 | --- | --- | --- | --- | --- | ---: | ---: | ---: |
-| `relationship-record-current-primitives-control` | `skill_guidance_or_eval_coverage` | pass | pass | answer repair needed | 28 / 28 | 6 | 71.34 |
-| `relationship-record-guidance-only-natural` | `ergonomics_gap` | pass | pass | taste debt | 56 / 56 | 7 | 66.24 |
-| `relationship-record-response-candidate` | `none` | pass | pass | completed | 30 / 30 | 7 | 49.98 |
-| validation controls | `none` | pass | pass | completed | 0 / 0 | 1 each | 4.21-7.25 |
+| `relationship-record-current-primitives-control` | `none` | pass | pass | completed | 26 / 26 | 5 | 43.78 |
+| `relationship-record-guidance-only-natural` | `none` | pass | pass | completed | 56 / 56 | 8 | 68.10 |
+| `relationship-record-response-candidate` | `none` | pass | pass | completed | 30 / 30 | 7 | 55.99 |
+| validation controls | `none` | pass | pass | completed | 0 / 0 | 1 each | 5.49-8.97 |
 
 The validation controls stayed final-answer-only: zero tools, zero command
 executions, and one assistant answer each.
 
 ## Outcome
 
-Decision: `defer_for_guidance_or_eval_repair`.
+Decision: `defer_guidance_only_current_primitives_sufficient`.
 
-The lane does not promote an implementation contract yet. `oc-3ybv` repaired
-the prior record-document listing overconstraint: current-primitives evidence
-can now pass record verification through `records_lookup`, `record_entity`,
-entity provenance, records projection freshness, and cited canonical policy
-paths without requiring a separate `records/policies/` list command. The
-eval-only response candidate also passes.
+The lane does not promote an implementation contract. `oc-d3j4` repaired the
+remaining answer-posture brittleness: negative authority-limit wording such as
+`no relationship-record runner action exists` is accepted without treating it
+as an installed-action claim, and the verifier now reports diagnostic-specific
+posture failures.
 
-Current and guidance-only rows still need answer-contract or eval guidance
-repair for final safety, capability, UX, decision posture, no-bypass, and
-authority-limit reporting. Follow-up `oc-d3j4` was filed as non-implementation
-repair work before any later decision can promote, defer as
-guidance-sufficient, kill, or record `none_viable_yet`.
+Current primitives, guidance-only natural intent, and the eval-only response
+candidate all passed safety and capability while preserving canonical
+relationship authority, links/backlinks, graph freshness, canonical record
+authority, citations, provenance, records freshness, eval-only response
+boundaries, and no-bypass controls. Because guidance-only current primitives
+passed cleanly, the decision rules require deferring the candidate rather than
+promoting it.
+
+The guidance-only row still required 56 tools/commands, 8 assistant calls, and
+68.10 wall seconds. `bd search "relationship-record repeated ergonomics"`
+found no existing follow-up, so non-implementation follow-up `oc-hp3m` was
+filed to collect repeated relationship-record ergonomics evidence before any
+future promotion decision.

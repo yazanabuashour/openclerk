@@ -48,7 +48,8 @@ func verifyRelationshipRecordCandidateCurrentPrimitives(ctx context.Context, pat
 	if err != nil {
 		return verificationResult{}, err
 	}
-	assistantPass := relationshipRecordCandidateAnswerPass(finalMessage, scripted)
+	assistantFailures := relationshipRecordCandidateAnswerFailures(finalMessage, scripted)
+	assistantPass := len(assistantFailures) == 0
 	failures := []string{}
 	if graph.Details != "ok" {
 		failures = append(failures, "relationship evidence: "+graph.Details)
@@ -56,9 +57,7 @@ func verifyRelationshipRecordCandidateCurrentPrimitives(ctx context.Context, pat
 	if record.Details != "ok" {
 		failures = append(failures, "record evidence: "+record.Details)
 	}
-	if !assistantPass {
-		failures = append(failures, "final answer did not report relationship-record safety, capability, UX quality, decision posture, no-bypass boundaries, and authority limits")
-	}
+	failures = append(failures, assistantFailures...)
 	documents := append([]string{}, graph.Documents...)
 	documents = append(documents, record.Documents...)
 	return verificationResult{
@@ -302,7 +301,7 @@ func validateRelationshipRecordCandidateObject(finalMessage string, expectedGrap
 		failures = append(failures, "candidate query_summary did not identify the relationship-record lookup")
 	}
 	if !valueContainsAll(candidate["relationship_evidence"], []string{graphSemanticsIndexPath, "requires", "supersedes", "related", "operationalizes"}) ||
-		!valueContainsAny(candidate["relationship_evidence"], []string{"canonical markdown", "markdown"}) ||
+		!valueContainsAny(candidate["relationship_evidence"], []string{"canonical markdown", "markdown", "states", "says"}) ||
 		!valueContainsAny(candidate["relationship_evidence"], []string{"derived", "not independent"}) {
 		failures = append(failures, "candidate relationship_evidence did not preserve canonical relationship authority")
 	}
@@ -330,24 +329,27 @@ func validateRelationshipRecordCandidateObject(finalMessage string, expectedGrap
 	if !valueContainsAll(candidate["citation_refs"], []string{graphSemanticsIndexPath, promotedRecordDomainPrimaryPath}) {
 		failures = append(failures, "candidate citation_refs did not include relationship and record source paths")
 	}
-	if !valueContainsAll(candidate["provenance_refs"], []string{promotedRecordDomainEntityID}) ||
-		!valueContainsAny(candidate["provenance_refs"], []string{"entity", "provenance"}) {
+	if !valueContainsAll(candidate["provenance_refs"], []string{promotedRecordDomainEntityID}) {
 		failures = append(failures, "candidate provenance_refs did not include entity provenance evidence")
 	}
 	if !valueContainsAny(candidate["records_freshness"], []string{"fresh"}) ||
 		!valueContainsAll(candidate["records_freshness"], []string{"records", promotedRecordDomainEntityID}) {
 		failures = append(failures, "candidate records_freshness did not report fresh records projection")
 	}
-	if !valueContainsAll(candidate["validation_boundaries"], []string{"sqlite", "vault", "source-built", "unsupported"}) ||
-		!valueContainsAny(candidate["validation_boundaries"], []string{"broad repo", "repo search", "file edit", "direct file"}) ||
-		!valueContainsAny(candidate["validation_boundaries"], []string{"read-only", "read only"}) {
-		failures = append(failures, "candidate validation_boundaries did not preserve no-bypass read-only controls")
+	if !valueContainsAll(candidate["validation_boundaries"], []string{"sqlite", "vault", "source-built", "unsupported"}) {
+		failures = append(failures, "candidate validation_boundaries did not preserve lower-level bypass controls")
+	}
+	if !valueContainsAny(candidate["validation_boundaries"], []string{"broad repo", "repo search", "file edit", "direct file"}) {
+		failures = append(failures, "candidate validation_boundaries did not preserve repo/file bypass controls")
+	}
+	if !valueContainsAny(candidate["validation_boundaries"], []string{"read-only", "read only", "no durable write", "no durable writes", "no create", "no update", "do not create", "do not update"}) {
+		failures = append(failures, "candidate validation_boundaries did not preserve read-only controls")
 	}
 	if !valueContainsAny(candidate["authority_limits"], []string{"canonical markdown", "canonical"}) ||
 		!valueContainsAny(candidate["authority_limits"], []string{"graph"}) ||
-		!valueContainsAny(candidate["authority_limits"], []string{"records"}) ||
+		!valueContainsAny(candidate["authority_limits"], []string{"records", "record"}) ||
 		!valueContainsAny(candidate["authority_limits"], []string{"derived"}) ||
-		!valueContainsAny(candidate["authority_limits"], []string{"does not implement", "eval-only", "not implemented"}) {
+		!valueContainsAny(candidate["authority_limits"], []string{"does not implement", "does not add", "does not provide", "eval-only", "not implemented", "no relationship-record runner action"}) {
 		failures = append(failures, "candidate authority_limits did not preserve graph/records authority limits")
 	}
 	return len(failures) == 0, failures

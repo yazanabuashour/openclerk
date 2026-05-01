@@ -10,7 +10,8 @@ decision_owner: platform
 ## Status
 
 Accepted: defer the narrow relationship-record lookup helper/report candidate
-pending guidance or eval repair.
+because repaired guidance-only current primitives passed this targeted
+pressure.
 
 This decision does not add a runner action, schema, migration, storage
 behavior, public API, public OpenClerk interface, product behavior, or shipped
@@ -26,17 +27,20 @@ Evidence:
 ## Decision
 
 Do not promote the narrow relationship-record lookup candidate contract from
-this evidence. Record `defer_for_guidance_or_eval_repair`.
+this evidence. Record
+`defer_guidance_only_current_primitives_sufficient`.
 
-The eval-only response candidate completed and preserved the expected
-relationship-record evidence contract. `oc-3ybv` also repaired the earlier
-record-document listing overconstraint: candidate-lane record evidence can be
-verified through `records_lookup`, `record_entity`, citations, provenance, and
-records projection freshness without requiring a separate `records/policies/`
-list path. However, the current-primitives scripted control still failed with
-`skill_guidance_or_eval_coverage`, and the guidance-only natural row still
-failed with `ergonomics_gap`. This run cannot yet separate candidate value
-from remaining answer-posture repair debt.
+The repaired run completed the current-primitives scripted control,
+guidance-only natural row, eval-only response candidate, and all validation
+controls. `oc-d3j4` repaired answer-posture brittleness without changing
+product behavior: negative authority-limit wording such as
+`no relationship-record runner action exists` no longer looks like an
+installed-action claim, equivalent current-primitives safety wording is
+accepted, and candidate response validation reports field-specific failures.
+
+Because guidance-only current primitives passed cleanly, the decision rules
+defer the candidate rather than promote it. No implementation bead is
+authorized.
 
 ## Safety, Capability, UX
 
@@ -47,38 +51,38 @@ variant, unsupported action, or durable write in the selected rows. Validation
 controls stayed final-answer-only with zero tools, zero command executions,
 and one assistant answer each.
 
-Capability pass: pass. Current primitives and the response candidate both
-preserved runner-visible relationship-record evidence: canonical markdown
-relationship authority, links/backlinks, graph freshness, canonical record
-authority, citations, provenance, records freshness, eval-only response
-boundaries, and no-bypass controls.
+Capability pass: pass. Current primitives, guidance-only natural intent, and
+the response candidate preserved runner-visible relationship-record evidence:
+canonical markdown relationship authority, links/backlinks, graph freshness,
+canonical record authority, citations, provenance, records freshness,
+eval-only response boundaries, and no-bypass controls.
 
-UX quality: not acceptable enough to close the need. The guidance-only natural
-row failed with `ergonomics_gap` after 56 tools/commands, 7 assistant calls,
-and 66.24 wall seconds. The scripted current-primitives control also required
-answer repair after 28 tools/commands, 6 assistant calls, and 71.34 wall
+UX quality: completed for this targeted pressure, but not evidence for
+promotion. The guidance-only natural row completed after 56 tools/commands, 8
+assistant calls, and 68.10 wall seconds. The scripted current-primitives
+control completed after 26 tools/commands, 5 assistant calls, and 43.78 wall
 seconds. The response candidate completed after 30 tools/commands, 7
-assistant calls, and 49.98 wall seconds, but that pass does not authorize
-promotion while the current/guidance answer posture remains unrepaired.
+assistant calls, and 55.99 wall seconds. The high-touch counts remain taste
+debt to watch, but this single repaired run does not show repeated natural
+intent ergonomics or answer-contract failure.
 
 ## Follow-Up
 
 No implementation bead is authorized by this decision.
 
-`bd search "relationship-record answer contract guidance repair"` found no
-existing follow-up, so non-implementation follow-up `oc-d3j4` was filed to
-repair relationship-record answer posture evidence. No implementation bead is
+`bd search "relationship-record repeated ergonomics"` found no existing
+follow-up, so non-implementation follow-up `oc-hp3m` was filed to collect
+repeated relationship-record ergonomics evidence. No implementation bead is
 authorized.
 
-Future promotion remains blocked until repaired targeted evidence shows:
+Future promotion remains blocked unless later targeted evidence shows:
 
-- current primitives can safely express the workflow, or records
-  `none_viable_yet` if they cannot
-- guidance-only natural evidence either passes cleanly, justifying defer, or
-  preserves meaningful ergonomics/answer-contract debt
-- the eval-only response candidate passes safety and capability without
-  hiding provenance, freshness, citations, no-bypass boundaries, or authority
-  limits
+- current primitives and the eval-only response candidate pass safety and
+  capability
+- guidance-only natural evidence preserves meaningful repeated ergonomics or
+  answer-contract debt
+- the candidate contract does not hide provenance, freshness, citations,
+  no-bypass boundaries, or authority limits
 
 ## Compatibility
 

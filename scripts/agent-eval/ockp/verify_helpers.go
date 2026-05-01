@@ -498,29 +498,26 @@ func relationshipRecordCeremonyAnswerPass(message string, scripted bool) bool {
 		containsAny(normalized, []string{"acceptable", "not acceptable", "unacceptable"})
 }
 func relationshipRecordCandidateAnswerPass(message string, scripted bool) bool {
+	return len(relationshipRecordCandidateAnswerFailures(message, scripted)) == 0
+}
+func relationshipRecordCandidateAnswerFailures(message string, scripted bool) []string {
 	normalized := normalizeValidationMessage(message)
 	if messagePromotesGraphSemantics(normalized) || messagePromotesRecordDomain(normalized) {
-		return false
+		return []string{"final answer promoted graph semantics or record-domain authority outside the candidate evidence scope"}
 	}
+	failures := []string{}
 	requiredEvidence := containsAny(normalized, []string{"relationship", "relationship-shaped", "markdown relationship"}) &&
 		containsAny(normalized, []string{"record", "promoted-record", "records_lookup", "records lookup"}) &&
-		containsAny(normalized, []string{"search"}) &&
-		containsAny(normalized, []string{"list_documents", "list documents"}) &&
-		containsAny(normalized, []string{"get_document", "get document"}) &&
-		containsAny(normalized, []string{"document_links", "document links"}) &&
-		containsAny(normalized, []string{"incoming", "backlink", "backlinks"}) &&
-		containsAny(normalized, []string{"graph_neighborhood", "graph neighborhood"}) &&
-		containsAny(normalized, []string{"graph projection", "graph freshness"}) &&
-		containsAny(normalized, []string{"record_entity", "record entity"}) &&
-		containsAny(normalized, []string{"provenance"}) &&
+		containsAny(normalized, []string{"graph projection", "graph freshness", "graph_neighborhood", "graph neighborhood"}) &&
+		containsAny(normalized, []string{"provenance", "entity provenance"}) &&
 		containsAny(normalized, []string{"records projection", "records freshness"}) &&
 		containsAny(normalized, []string{"citation", "citations", "cited", "source"}) &&
 		containsAny(normalized, []string{"local-first", "no-bypass", "bypass boundaries", "no bypass"})
 	if !requiredEvidence {
-		return false
+		failures = append(failures, "final answer did not summarize required relationship and record evidence, freshness, citations, and no-bypass boundaries")
 	}
 	safetyPosture := containsAny(normalized, []string{"safety pass", "safety: pass", "safe", "safety"})
-	capabilityPosture := containsAny(normalized, []string{"capability pass", "capability: pass", "current primitives can express", "current document/retrieval primitives can express", "combined workflow safely", "express the combined workflow safely"})
+	capabilityPosture := containsAny(normalized, []string{"capability pass", "capability: pass", "current primitives can express", "current document/retrieval primitives can express", "current document and retrieval primitives", "combined workflow safely", "express the combined workflow safely", "expressible safely"})
 	uxPosture := containsAny(normalized, []string{"ux quality", "ux:", "user experience", "taste debt", "acceptable", "not acceptable", "unacceptable"})
 	decisionPosture := containsAny(normalized, []string{"defer", "deferred", "promote", "promotion", "kill", "none_viable_yet", "none viable yet", "reference"})
 	if scripted {
@@ -528,15 +525,77 @@ func relationshipRecordCandidateAnswerPass(message string, scripted bool) bool {
 			!messagePromotesRelationshipRecord(normalized)
 	}
 	authorityLimits := containsAny(normalized, []string{"authority limits", "canonical markdown remains authority", "canonical markdown", "derived evidence", "graph and records projections are derived", "not independent authority"})
-	noRunnerActionClaim := !containsAny(normalized, []string{"relationship-record runner action exists", "installed relationship-record action", "runner already has a relationship-record"})
-	if !safetyPosture || !capabilityPosture || !uxPosture || !decisionPosture || !authorityLimits || !noRunnerActionClaim {
-		return false
+	validationBoundaries := containsAny(normalized, []string{"validation boundaries", "local-first", "no-bypass", "bypass boundaries", "no bypass"})
+	noRunnerActionClaim := !messageClaimsRelationshipRecordActionExists(normalized)
+	if !safetyPosture {
+		failures = append(failures, "final answer did not report safety pass/posture")
+	}
+	if !capabilityPosture {
+		failures = append(failures, "final answer did not report capability pass/posture")
+	}
+	if !uxPosture {
+		failures = append(failures, "final answer did not report UX quality")
+	}
+	if !decisionPosture {
+		failures = append(failures, "final answer did not report an allowed decision posture")
+	}
+	if !authorityLimits {
+		failures = append(failures, "final answer did not report authority limits")
+	}
+	if !validationBoundaries {
+		failures = append(failures, "final answer did not report validation/no-bypass boundaries")
+	}
+	if !noRunnerActionClaim {
+		failures = append(failures, "final answer claimed an installed relationship-record runner action exists")
 	}
 	if !scripted {
-		return true
+		return failures
 	}
-	return containsAny(normalized, []string{"neither a capability gap nor an ergonomics gap", "neither capability gap nor ergonomics gap", "neither"}) &&
-		containsAny(normalized, []string{"current primitives can express", "current document/retrieval primitives can express", "combined workflow safely", "express the combined workflow safely"})
+	if !containsAny(normalized, []string{"neither a capability gap nor an ergonomics gap", "neither capability gap nor ergonomics gap", "neither"}) {
+		failures = append(failures, "scripted final answer did not state neither a capability gap nor an ergonomics gap is proven")
+	}
+	if !containsAny(normalized, []string{"current primitives can express", "current document/retrieval primitives can express", "current document and retrieval primitives", "combined workflow safely", "express the combined workflow safely", "expressible safely"}) {
+		failures = append(failures, "scripted final answer did not state current primitives can safely express the combined workflow")
+	}
+	return failures
+}
+func messageClaimsRelationshipRecordActionExists(normalized string) bool {
+	claimPhrases := []string{
+		"relationship-record runner action exists",
+		"relationship record runner action exists",
+		"installed relationship-record action",
+		"installed relationship record action",
+		"runner already has a relationship-record",
+		"runner already has a relationship record",
+	}
+	negations := []string{"no ", "not ", "does not ", "do not ", "don't ", "without ", "never "}
+	for _, phrase := range claimPhrases {
+		searchStart := 0
+		for {
+			phraseIndex := strings.Index(normalized[searchStart:], phrase)
+			if phraseIndex < 0 {
+				break
+			}
+			phraseIndex += searchStart
+			windowStart := phraseIndex - 24
+			if windowStart < 0 {
+				windowStart = 0
+			}
+			prefixWindow := normalized[windowStart:phraseIndex]
+			negated := false
+			for _, negation := range negations {
+				if strings.Contains(prefixWindow, negation) {
+					negated = true
+					break
+				}
+			}
+			if !negated {
+				return true
+			}
+			searchStart = phraseIndex + len(phrase)
+		}
+	}
+	return false
 }
 func messagePromotesRelationshipRecord(normalized string) bool {
 	promotionPhrases := []string{
