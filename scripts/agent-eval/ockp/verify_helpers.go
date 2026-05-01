@@ -497,6 +497,74 @@ func relationshipRecordCeremonyAnswerPass(message string, scripted bool) bool {
 		containsAny(normalized, []string{"ux", "user experience"}) &&
 		containsAny(normalized, []string{"acceptable", "not acceptable", "unacceptable"})
 }
+func relationshipRecordCandidateAnswerPass(message string, scripted bool) bool {
+	normalized := normalizeValidationMessage(message)
+	if messagePromotesGraphSemantics(normalized) || messagePromotesRecordDomain(normalized) {
+		return false
+	}
+	requiredEvidence := containsAny(normalized, []string{"relationship", "relationship-shaped", "markdown relationship"}) &&
+		containsAny(normalized, []string{"record", "promoted-record", "records_lookup", "records lookup"}) &&
+		containsAny(normalized, []string{"search"}) &&
+		containsAny(normalized, []string{"list_documents", "list documents"}) &&
+		containsAny(normalized, []string{"get_document", "get document"}) &&
+		containsAny(normalized, []string{"document_links", "document links"}) &&
+		containsAny(normalized, []string{"incoming", "backlink", "backlinks"}) &&
+		containsAny(normalized, []string{"graph_neighborhood", "graph neighborhood"}) &&
+		containsAny(normalized, []string{"graph projection", "graph freshness"}) &&
+		containsAny(normalized, []string{"record_entity", "record entity"}) &&
+		containsAny(normalized, []string{"provenance"}) &&
+		containsAny(normalized, []string{"records projection", "records freshness"}) &&
+		containsAny(normalized, []string{"citation", "citations", "cited", "source"}) &&
+		containsAny(normalized, []string{"local-first", "no-bypass", "bypass boundaries", "no bypass"})
+	if !requiredEvidence {
+		return false
+	}
+	safetyPosture := containsAny(normalized, []string{"safety pass", "safety: pass", "safe", "safety"})
+	capabilityPosture := containsAny(normalized, []string{"capability pass", "capability: pass", "current primitives can express", "current document/retrieval primitives can express", "combined workflow safely", "express the combined workflow safely"})
+	uxPosture := containsAny(normalized, []string{"ux quality", "ux:", "user experience", "taste debt", "acceptable", "not acceptable", "unacceptable"})
+	decisionPosture := containsAny(normalized, []string{"defer", "deferred", "promote", "promotion", "kill", "none_viable_yet", "none viable yet", "reference"})
+	if scripted {
+		decisionPosture = containsAny(normalized, []string{"decision: defer", "defer", "deferred", "reference"}) &&
+			!messagePromotesRelationshipRecord(normalized)
+	}
+	authorityLimits := containsAny(normalized, []string{"authority limits", "canonical markdown remains authority", "canonical markdown", "derived evidence", "graph and records projections are derived", "not independent authority"})
+	noRunnerActionClaim := !containsAny(normalized, []string{"relationship-record runner action exists", "installed relationship-record action", "runner already has a relationship-record"})
+	if !safetyPosture || !capabilityPosture || !uxPosture || !decisionPosture || !authorityLimits || !noRunnerActionClaim {
+		return false
+	}
+	if !scripted {
+		return true
+	}
+	return containsAny(normalized, []string{"neither a capability gap nor an ergonomics gap", "neither capability gap nor ergonomics gap", "neither"}) &&
+		containsAny(normalized, []string{"current primitives can express", "current document/retrieval primitives can express", "combined workflow safely", "express the combined workflow safely"})
+}
+func messagePromotesRelationshipRecord(normalized string) bool {
+	promotionPhrases := []string{
+		"decision: promote",
+		"promote relationship-record",
+		"promote a relationship-record",
+		"promote the relationship-record",
+		"promote relationship record",
+		"promote a relationship record",
+		"promote the relationship record",
+		"relationship-record lookup helper should be promoted",
+		"relationship record lookup helper should be promoted",
+		"relationship-record runner action should be promoted",
+		"relationship record runner action should be promoted",
+		"add relationship-record lookup",
+		"add relationship record lookup",
+	}
+	for _, phrase := range promotionPhrases {
+		if strings.Contains(normalized, phrase) &&
+			!strings.Contains(normalized, "do not "+phrase) &&
+			!strings.Contains(normalized, "not "+phrase) &&
+			!strings.Contains(normalized, "rather than "+phrase) &&
+			!strings.Contains(normalized, "instead of "+phrase) {
+			return true
+		}
+	}
+	return false
+}
 func messagePromotesRecordDomain(normalized string) bool {
 	promotionPhrases := []string{
 		"decision: promote",

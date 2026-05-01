@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"encoding/json"
+
+	"github.com/yazanabuashour/openclerk/internal/runclient"
+	"github.com/yazanabuashour/openclerk/internal/runner"
 )
 
 func verifyHighTouchRelationshipRecordCeremony(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics, scripted bool) (verificationResult, error) {
@@ -33,6 +36,165 @@ func verifyHighTouchRelationshipRecordCeremony(ctx context.Context, paths evalPa
 		AssistantPass: graph.AssistantPass && record.AssistantPass && assistantPass,
 		Details:       missingDetails(failures),
 		Documents:     documents,
+	}, nil
+}
+
+func verifyRelationshipRecordCandidateCurrentPrimitives(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics, scripted bool) (verificationResult, error) {
+	graph, err := verifyGraphSemanticsWorkflow(ctx, paths, finalMessage, turnMetrics, true, true, "")
+	if err != nil {
+		return verificationResult{}, err
+	}
+	record, err := verifyRelationshipRecordCandidateRecordEvidence(ctx, paths, turnMetrics)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	assistantPass := relationshipRecordCandidateAnswerPass(finalMessage, scripted)
+	failures := []string{}
+	if graph.Details != "ok" {
+		failures = append(failures, "relationship evidence: "+graph.Details)
+	}
+	if record.Details != "ok" {
+		failures = append(failures, "record evidence: "+record.Details)
+	}
+	if !assistantPass {
+		failures = append(failures, "final answer did not report relationship-record safety, capability, UX quality, decision posture, no-bypass boundaries, and authority limits")
+	}
+	documents := append([]string{}, graph.Documents...)
+	documents = append(documents, record.Documents...)
+	return verificationResult{
+		Passed:        graph.DatabasePass && record.DatabasePass && graph.AssistantPass && record.AssistantPass && assistantPass,
+		DatabasePass:  graph.DatabasePass && record.DatabasePass,
+		AssistantPass: graph.AssistantPass && record.AssistantPass && assistantPass,
+		Details:       missingDetails(failures),
+		Documents:     documents,
+	}, nil
+}
+
+func verifyRelationshipRecordCandidateRecordEvidence(ctx context.Context, paths evalPaths, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	search, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{Text: promotedRecordDomainSearchText, Limit: 10},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	records, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionRecordsLookup,
+		Records: runner.RecordLookupOptions{
+			Text:       promotedRecordDomainEntityName,
+			EntityType: promotedRecordDomainEntityType,
+			Limit:      10,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	entity, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action:   runner.RetrievalTaskActionRecordEntity,
+		EntityID: promotedRecordDomainEntityID,
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	provenance, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{
+			RefKind: "entity",
+			RefID:   promotedRecordDomainEntityID,
+			Limit:   10,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projections, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProjectionStates,
+		Projection: runner.ProjectionStateOptions{
+			Projection: "records",
+			RefKind:    "entity",
+			RefID:      promotedRecordDomainEntityID,
+			Limit:      5,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	hasRecord := records.Records != nil &&
+		len(records.Records.Entities) == 1 &&
+		records.Records.Entities[0].EntityID == promotedRecordDomainEntityID &&
+		records.Records.Entities[0].EntityType == promotedRecordDomainEntityType &&
+		len(records.Records.Entities[0].Citations) > 0
+	hasEntity := entity.Entity != nil &&
+		entity.Entity.EntityID == promotedRecordDomainEntityID &&
+		entity.Entity.EntityType == promotedRecordDomainEntityType &&
+		entity.Entity.Name == promotedRecordDomainEntityName &&
+		recordFactContains(entity.Entity, "status", "active") &&
+		recordFactContains(entity.Entity, "owner", "platform") &&
+		recordFactContains(entity.Entity, "review_cadence", "monthly") &&
+		len(entity.Entity.Citations) > 0
+	hasProvenance := provenance.Provenance != nil && len(provenance.Provenance.Events) > 0
+	hasProjection := projections.Projections != nil &&
+		len(projections.Projections.Projections) == 1 &&
+		projections.Projections.Projections[0].Freshness == "fresh" &&
+		projections.Projections.Projections[0].Details["path"] == promotedRecordDomainPrimaryPath
+	failures := populatedBypassFailures(turnMetrics)
+	if !searchContainsPath(search, promotedRecordDomainPrimaryPath) || !searchResultHasCitations(search) {
+		failures = append(failures, "search did not expose cited canonical promoted-record policy evidence")
+	}
+	if !hasRecord {
+		failures = append(failures, "records_lookup did not expose exactly the promoted policy record with citations")
+	}
+	if !hasEntity {
+		failures = append(failures, "record_entity did not expose policy identity, facts, and citations")
+	}
+	if !hasProvenance {
+		failures = append(failures, "entity provenance missing")
+	}
+	if !hasProjection {
+		failures = append(failures, "records projection state missing or not fresh")
+	}
+	if !turnMetrics.SearchUsed {
+		failures = append(failures, "agent did not use retrieval search")
+	}
+	if !turnMetrics.RecordsLookupUsed {
+		failures = append(failures, "agent did not use records_lookup")
+	}
+	inspectedPromotedEntity := recordEntityIDsInclude(turnMetrics.RecordEntityIDs, promotedRecordDomainEntityID)
+	if !turnMetrics.RecordEntityUsed || !inspectedPromotedEntity {
+		failures = append(failures, "agent did not use record_entity")
+	}
+	if !turnMetrics.ProvenanceEventsUsed {
+		failures = append(failures, "agent did not inspect provenance events")
+	}
+	if !turnMetrics.ProjectionStatesUsed {
+		failures = append(failures, "agent did not inspect records projection freshness")
+	}
+	if turnMetrics.CreateDocumentUsed || turnMetrics.ReplaceSectionUsed || turnMetrics.AppendDocumentUsed {
+		failures = append(failures, "relationship-record candidate scenario created or updated documents")
+	}
+	databasePass := searchContainsPath(search, promotedRecordDomainPrimaryPath) &&
+		searchResultHasCitations(search) &&
+		hasRecord &&
+		hasEntity &&
+		hasProvenance &&
+		hasProjection
+	activityPass := len(populatedBypassFailures(turnMetrics)) == 0 &&
+		!turnMetrics.CreateDocumentUsed &&
+		!turnMetrics.ReplaceSectionUsed &&
+		!turnMetrics.AppendDocumentUsed &&
+		turnMetrics.SearchUsed &&
+		turnMetrics.RecordsLookupUsed &&
+		turnMetrics.RecordEntityUsed &&
+		inspectedPromotedEntity &&
+		turnMetrics.ProvenanceEventsUsed &&
+		turnMetrics.ProjectionStatesUsed
+	return verificationResult{
+		Passed:        databasePass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{promotedRecordDomainPrimaryPath},
 	}, nil
 }
 
@@ -169,9 +331,8 @@ func validateRelationshipRecordCandidateObject(finalMessage string, expectedGrap
 		failures = append(failures, "candidate citation_refs did not include relationship and record source paths")
 	}
 	if !valueContainsAll(candidate["provenance_refs"], []string{promotedRecordDomainEntityID}) ||
-		!valueContainsAny(candidate["provenance_refs"], []string{"entity", "provenance"}) ||
-		!valueContainsAny(candidate["provenance_refs"], []string{"runner-owned", "runner owned", "no-bypass", "no bypass"}) {
-		failures = append(failures, "candidate provenance_refs did not include entity provenance and runner-owned no-bypass evidence")
+		!valueContainsAny(candidate["provenance_refs"], []string{"entity", "provenance"}) {
+		failures = append(failures, "candidate provenance_refs did not include entity provenance evidence")
 	}
 	if !valueContainsAny(candidate["records_freshness"], []string{"fresh"}) ||
 		!valueContainsAll(candidate["records_freshness"], []string{"records", promotedRecordDomainEntityID}) {

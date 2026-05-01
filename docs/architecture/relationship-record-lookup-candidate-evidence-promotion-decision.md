@@ -29,10 +29,14 @@ Do not promote the narrow relationship-record lookup candidate contract from
 this evidence. Record `defer_for_guidance_or_eval_repair`.
 
 The eval-only response candidate completed and preserved the expected
-relationship-record evidence contract, but the current-primitives scripted
-control still failed with `skill_guidance_or_eval_coverage`. Because the
-control did not pass cleanly, this run cannot yet separate candidate value
-from repair debt in scenario guidance, answer contract, or verifier coverage.
+relationship-record evidence contract. `oc-3ybv` also repaired the earlier
+record-document listing overconstraint: candidate-lane record evidence can be
+verified through `records_lookup`, `record_entity`, citations, provenance, and
+records projection freshness without requiring a separate `records/policies/`
+list path. However, the current-primitives scripted control still failed with
+`skill_guidance_or_eval_coverage`, and the guidance-only natural row still
+failed with `ergonomics_gap`. This run cannot yet separate candidate value
+from remaining answer-posture repair debt.
 
 ## Safety, Capability, UX
 
@@ -50,20 +54,21 @@ authority, citations, provenance, records freshness, eval-only response
 boundaries, and no-bypass controls.
 
 UX quality: not acceptable enough to close the need. The guidance-only natural
-row failed with `ergonomics_gap` after 68 tools/commands, 10 assistant calls,
-and 99.72 wall seconds. The scripted current-primitives control also required
-answer repair after 62 tools/commands, 6 assistant calls, and 95.14 wall
-seconds. The response candidate completed after 42 tools/commands, 7
-assistant calls, and 92.48 wall seconds, but that pass does not authorize
-promotion while the control row remains unrepaired.
+row failed with `ergonomics_gap` after 56 tools/commands, 7 assistant calls,
+and 66.24 wall seconds. The scripted current-primitives control also required
+answer repair after 28 tools/commands, 6 assistant calls, and 71.34 wall
+seconds. The response candidate completed after 30 tools/commands, 7
+assistant calls, and 49.98 wall seconds, but that pass does not authorize
+promotion while the current/guidance answer posture remains unrepaired.
 
 ## Follow-Up
 
 No implementation bead is authorized by this decision.
 
-`bd search "relationship-record guidance eval repair candidate"` found no
-existing follow-up, so non-implementation follow-up `oc-3ybv` was filed to
-repair relationship-record candidate eval guidance evidence.
+`bd search "relationship-record answer contract guidance repair"` found no
+existing follow-up, so non-implementation follow-up `oc-d3j4` was filed to
+repair relationship-record answer posture evidence. No implementation bead is
+authorized.
 
 Future promotion remains blocked until repaired targeted evidence shows:
 
