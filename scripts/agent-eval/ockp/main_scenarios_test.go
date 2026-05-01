@@ -25,6 +25,11 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 			t.Fatalf("scenarioIDs missing web URL stale repair scenario %q in %v", want, scenarioIDs())
 		}
 	}
+	for _, want := range highTouchCompileSynthesisScenarioIDs() {
+		if !ids[want] {
+			t.Fatalf("scenarioIDs missing high-touch compile synthesis scenario %q in %v", want, scenarioIDs())
+		}
+	}
 	for _, want := range webURLStaleImpactScenarioIDs() {
 		if !ids[want] {
 			t.Fatalf("scenarioIDs missing web URL stale impact scenario %q in %v", want, scenarioIDs())
@@ -125,6 +130,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	for _, id := range synthesisCompileScenarioIDs() {
 		if defaultIDs[id] {
 			t.Fatalf("default selected scenarios included targeted synthesis compile scenario %q", id)
+		}
+	}
+	for _, id := range highTouchCompileSynthesisScenarioIDs() {
+		if defaultIDs[id] {
+			t.Fatalf("default selected scenarios included targeted high-touch compile synthesis scenario %q", id)
 		}
 	}
 	for _, id := range graphSemanticsRevisitScenarioIDs() {
@@ -241,6 +251,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	lane, releaseBlocking = reportLane(selected)
 	if lane != synthesisCompileLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, synthesisCompileLaneName)
+	}
+	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(append(highTouchCompileSynthesisScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject"), ",")})
+	lane, releaseBlocking = reportLane(selected)
+	if lane != highTouchCompileSynthesisLaneName || releaseBlocking {
+		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, highTouchCompileSynthesisLaneName)
 	}
 	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(append(graphSemanticsRevisitScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject"), ",")})
 	lane, releaseBlocking = reportLane(selected)

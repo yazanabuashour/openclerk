@@ -269,6 +269,58 @@ func TestVerifySourceSensitiveAuditRepairRequiresProvenanceFreshnessAndNoDuplica
 	}
 }
 
+func TestVerifyHighTouchCompileSynthesisNaturalRequiresProvenance(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: highTouchCompileSynthesisNaturalScenarioID}); err != nil {
+		t.Fatalf("seed high-touch compile synthesis scenario: %v", err)
+	}
+	replaceSeedSection(t, ctx, paths, synthesisCompilePath, "Summary", "Current compile_synthesis revisit decision: existing document and retrieval actions are technically sufficient.\n\nCurrent source: "+synthesisCompileCurrentSrc+"\n\nSuperseded source: "+synthesisCompileOldSrc)
+	synthesisDocID, found, err := documentIDByPath(ctx, paths, synthesisCompilePath)
+	if err != nil {
+		t.Fatalf("lookup synthesis doc id: %v", err)
+	}
+	if !found {
+		t.Fatalf("missing synthesis doc id for %s", synthesisCompilePath)
+	}
+	workflowMetrics := metrics{
+		AssistantCalls:       1,
+		SearchUsed:           true,
+		ListDocumentsUsed:    true,
+		GetDocumentUsed:      true,
+		ProjectionStatesUsed: true,
+		ReplaceSectionUsed:   true,
+		EventTypeCounts:      map[string]int{},
+		CommandExecutions:    5,
+		ToolCalls:            5,
+	}
+	finalAnswer := "Updated " + synthesisCompilePath + " from " + synthesisCompileCurrentSrc + "; projection freshness is fresh."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: highTouchCompileSynthesisNaturalScenarioID}, 1, finalAnswer, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify high-touch compile synthesis without provenance: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("high-touch compile synthesis passed without provenance events: %+v", result)
+	}
+	workflowMetrics.ProvenanceEventsUsed = true
+	workflowMetrics.ProvenanceEventRefIDs = []string{"unrelated-ref"}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: highTouchCompileSynthesisNaturalScenarioID}, 1, finalAnswer, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify high-touch compile synthesis with wrong provenance ref: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("high-touch compile synthesis passed without synthesis provenance ref: %+v", result)
+	}
+	workflowMetrics.ProvenanceEventRefIDs = []string{"synthesis:" + synthesisDocID}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: highTouchCompileSynthesisNaturalScenarioID}, 1, finalAnswer, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify high-touch compile synthesis with provenance: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("high-touch compile synthesis failed with provenance events: %+v", result)
+	}
+}
+
 func TestVerifySourceSensitiveConflictRequiresUnresolvedExplanationAndNoSynthesis(t *testing.T) {
 	ctx := context.Background()
 	paths := scenarioPaths(t.TempDir())

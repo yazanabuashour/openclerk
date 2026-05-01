@@ -29,6 +29,7 @@ func reportLane(ids []string) (string, bool) {
 	artifactIngestion := 0
 	videoYouTube := 0
 	synthesisCompile := 0
+	highTouchCompileSynthesis := 0
 	broadAudit := 0
 	validation := 0
 	releaseBlocking := false
@@ -133,6 +134,10 @@ func reportLane(ids []string) (string, bool) {
 			synthesisCompile++
 			continue
 		}
+		if isHighTouchCompileSynthesisScenario(id) {
+			highTouchCompileSynthesis++
+			continue
+		}
 		if isBroadAuditScenario(id) {
 			broadAudit++
 			continue
@@ -218,6 +223,9 @@ func reportLane(ids []string) (string, bool) {
 	if synthesisCompile > 0 && synthesisCompile+validation == len(ids) {
 		return synthesisCompileLaneName, false
 	}
+	if highTouchCompileSynthesis > 0 && highTouchCompileSynthesis+validation == len(ids) {
+		return highTouchCompileSynthesisLaneName, false
+	}
 	if broadAudit > 0 && broadAudit+validation == len(ids) {
 		return broadAuditLaneName, false
 	}
@@ -296,6 +304,9 @@ func reportLane(ids []string) (string, bool) {
 	if synthesisCompile > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
+	if highTouchCompileSynthesis > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
 	if broadAudit > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
@@ -362,6 +373,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == synthesisCompileLaneName {
 		return "synthesis compile revisit rows report natural compile intent, scripted current-primitives control, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"
+	}
+	if lane == highTouchCompileSynthesisLaneName {
+		return "high-touch compile synthesis ceremony rows report natural source-backed synthesis maintenance, scripted current-primitives control, source refs, Sources and Freshness sections, duplicate prevention, freshness/provenance visibility, no-bypass controls, tool count, command count, assistant calls, wall time, prompt specificity, retries, latency, brittleness, guidance dependence, safety risks, and separate safety/capability/UX classification"
 	}
 	if lane == broadAuditLaneName {
 		return "broad contradiction/audit revisit rows report natural audit intent, scripted current-primitives control, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"

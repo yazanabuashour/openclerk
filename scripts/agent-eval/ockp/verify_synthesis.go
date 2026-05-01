@@ -858,8 +858,12 @@ func verifySynthesisCompileRevisit(ctx context.Context, paths evalPaths, finalMe
 	if !turnMetrics.ProjectionStatesUsed {
 		failures = append(failures, "agent did not inspect synthesis projection freshness")
 	}
-	if requireProvenance && !turnMetrics.ProvenanceEventsUsed {
-		failures = append(failures, "agent did not inspect provenance events")
+	inspectedSynthesisProvenanceRef := !requireProvenance
+	if requireProvenance && docIDFound {
+		inspectedSynthesisProvenanceRef = provenanceEventRefIDsInclude(turnMetrics.ProvenanceEventRefIDs, "synthesis:"+docID)
+	}
+	if requireProvenance && (!turnMetrics.ProvenanceEventsUsed || !inspectedSynthesisProvenanceRef) {
+		failures = append(failures, "agent did not inspect provenance events for the synthesis projection ref")
 	}
 	if turnMetrics.CreateDocumentUsed {
 		failures = append(failures, "agent created a document instead of updating existing synthesis")
@@ -890,7 +894,7 @@ func verifySynthesisCompileRevisit(ctx context.Context, paths evalPaths, finalMe
 		turnMetrics.ListDocumentsUsed &&
 		turnMetrics.GetDocumentUsed &&
 		turnMetrics.ProjectionStatesUsed &&
-		(!requireProvenance || turnMetrics.ProvenanceEventsUsed) &&
+		(!requireProvenance || turnMetrics.ProvenanceEventsUsed && inspectedSynthesisProvenanceRef) &&
 		!turnMetrics.CreateDocumentUsed &&
 		(turnMetrics.ReplaceSectionUsed || turnMetrics.AppendDocumentUsed)
 	return verificationResult{

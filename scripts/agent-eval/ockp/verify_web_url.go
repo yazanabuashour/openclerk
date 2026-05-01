@@ -568,11 +568,6 @@ func falseValue(value any) bool {
 	}
 }
 
-func webURLSourceUpdatedEventHasSHAChange(events []runner.ProvenanceEvent) bool {
-	_, _, found := webURLSourceUpdatedSHAChange(events)
-	return found
-}
-
 func webURLSourceUpdatedSHAChange(events []runner.ProvenanceEvent) (string, string, bool) {
 	for _, event := range events {
 		if event.EventType != "source_updated" {

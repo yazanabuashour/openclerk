@@ -1008,6 +1008,87 @@ func TestExecuteRunLabelsSynthesisCompileLaneAsNonReleaseBlocking(t *testing.T) 
 	}
 }
 
+func TestExecuteRunLabelsHighTouchCompileSynthesisLaneAsNonReleaseBlocking(t *testing.T) {
+	reportDir := filepath.Join(t.TempDir(), "reports")
+	scenarioIDs := append(highTouchCompileSynthesisScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject")
+	config := runConfig{
+		Parallel:   1,
+		Variant:    productionVariant,
+		Scenario:   strings.Join(scenarioIDs, ","),
+		RunRoot:    filepath.Join(t.TempDir(), "run"),
+		ReportDir:  reportDir,
+		ReportName: "ockp-high-touch-compile-synthesis-ceremony-test",
+		RepoRoot:   ".",
+		CodexBin:   "codex",
+		CacheMode:  cacheModeIsolated,
+	}
+	err := executeRun(context.Background(), config, &strings.Builder{}, func(_ context.Context, _ runConfig, job evalJob, _ cacheConfig) jobResult {
+		now := time.Now().UTC()
+		resultMetrics := metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}}
+		if job.Scenario.ID == highTouchCompileSynthesisNaturalScenarioID {
+			resultMetrics = metrics{AssistantCalls: 6, ToolCalls: 18, CommandExecutions: 18, EventTypeCounts: map[string]int{}}
+		}
+		if job.Scenario.ID == highTouchCompileSynthesisScriptedScenarioID {
+			resultMetrics = metrics{AssistantCalls: 8, ToolCalls: 48, CommandExecutions: 48, EventTypeCounts: map[string]int{}}
+		}
+		return jobResult{
+			Variant:       job.Variant,
+			Scenario:      job.Scenario.ID,
+			ScenarioTitle: job.Scenario.Title,
+			Status:        "completed",
+			Passed:        true,
+			Metrics:       resultMetrics,
+			Verification:  verificationResult{Passed: true, DatabasePass: true, AssistantPass: true},
+			StartedAt:     now,
+			CompletedAt:   &now,
+		}
+	})
+	if err != nil {
+		t.Fatalf("execute high-touch compile synthesis run: %v", err)
+	}
+	content, err := os.ReadFile(filepath.Join(reportDir, "ockp-high-touch-compile-synthesis-ceremony-test.json"))
+	if err != nil {
+		t.Fatalf("read JSON report: %v", err)
+	}
+	var report report
+	if err := json.Unmarshal(content, &report); err != nil {
+		t.Fatalf("decode JSON report: %v", err)
+	}
+	if report.Metadata.Lane != highTouchCompileSynthesisLaneName || report.Metadata.ReleaseBlocking {
+		t.Fatalf("high-touch compile synthesis lane metadata = %q/%t, want %q/false", report.Metadata.Lane, report.Metadata.ReleaseBlocking, highTouchCompileSynthesisLaneName)
+	}
+	if report.TargetedLaneSummary == nil {
+		t.Fatal("high-touch compile synthesis report missing targeted lane summary")
+	}
+	if report.TargetedLaneSummary.Decision != "defer_compile_synthesis" {
+		t.Fatalf("decision = %q, want defer_compile_synthesis", report.TargetedLaneSummary.Decision)
+	}
+	classifications := map[string]targetedScenarioClassification{}
+	for _, row := range report.TargetedLaneSummary.ScenarioClassifications {
+		classifications[row.Scenario] = row
+	}
+	if classifications[highTouchCompileSynthesisNaturalScenarioID].FailureClassification != "none" {
+		t.Fatalf("natural classification = %q, want none", classifications[highTouchCompileSynthesisNaturalScenarioID].FailureClassification)
+	}
+	if classifications[highTouchCompileSynthesisScriptedScenarioID].FailureClassification != "none" {
+		t.Fatalf("scripted classification = %q, want none", classifications[highTouchCompileSynthesisScriptedScenarioID].FailureClassification)
+	}
+	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-high-touch-compile-synthesis-ceremony-test.md"))
+	if err != nil {
+		t.Fatalf("read markdown report: %v", err)
+	}
+	for _, want := range []string{
+		"Lane: `" + highTouchCompileSynthesisLaneName + "`",
+		"Release blocking: `false`",
+		"Decision: `defer_compile_synthesis`",
+		"validation control stayed final-answer-only",
+	} {
+		if !strings.Contains(string(markdown), want) {
+			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
+		}
+	}
+}
+
 func TestExecuteRunLabelsWebURLStaleRepairLaneAsNonReleaseBlocking(t *testing.T) {
 	reportDir := filepath.Join(t.TempDir(), "reports")
 	scenarioIDs := append(webURLStaleRepairScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject")
@@ -1299,6 +1380,39 @@ func TestSynthesisCompileDecisionRequiresRepeatedErgonomicsPressure(t *testing.T
 	}
 	rows[0].FailureClassification = "skill_guidance_or_eval_coverage"
 	if decision := synthesisCompileDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("guidance decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+}
+
+func TestHighTouchCompileSynthesisDecisionRequiresRepeatedErgonomicsPressure(t *testing.T) {
+	rows := make([]targetedScenarioClassification, 0, len(highTouchCompileSynthesisScenarioIDs()))
+	for _, id := range highTouchCompileSynthesisScenarioIDs() {
+		rows = append(rows, targetedScenarioClassification{
+			Scenario:              id,
+			FailureClassification: "none",
+		})
+	}
+	if decision := highTouchCompileSynthesisDecision(rows[:len(rows)-1]); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("partial decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	if decision := highTouchCompileSynthesisDecision(rows); decision != "defer_compile_synthesis" {
+		t.Fatalf("complete passing decision = %q, want defer_compile_synthesis", decision)
+	}
+	rows[0].FailureClassification = "ergonomics_gap"
+	if decision := highTouchCompileSynthesisDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("single ergonomics decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	rows[1].FailureClassification = "ergonomics_gap"
+	if decision := highTouchCompileSynthesisDecision(rows); decision != "promote_compile_synthesis_surface_design" {
+		t.Fatalf("repeated ergonomics decision = %q, want promote_compile_synthesis_surface_design", decision)
+	}
+	rows[0].FailureClassification = "capability_gap"
+	rows[1].FailureClassification = "none"
+	if decision := highTouchCompileSynthesisDecision(rows); decision != "promote_compile_synthesis_surface_design" {
+		t.Fatalf("capability decision = %q, want promote_compile_synthesis_surface_design", decision)
+	}
+	rows[0].FailureClassification = "skill_guidance_or_eval_coverage"
+	if decision := highTouchCompileSynthesisDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
 		t.Fatalf("guidance decision = %q, want defer_for_guidance_or_eval_repair", decision)
 	}
 }

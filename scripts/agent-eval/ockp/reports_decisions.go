@@ -427,6 +427,44 @@ func synthesisCompileDecision(rows []targetedScenarioClassification) string {
 	return "defer_compile_synthesis"
 }
 
+func highTouchCompileSynthesisDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	ergonomicsGaps := 0
+	for _, row := range rows {
+		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
+			return "promote_compile_synthesis_surface_design"
+		}
+		if row.FailureClassification == "ergonomics_gap" {
+			ergonomicsGaps++
+		} else if row.FailureClassification != "none" {
+			return "defer_for_guidance_or_eval_repair"
+		}
+		seen[row.Scenario] = true
+	}
+	for _, id := range highTouchCompileSynthesisScenarioIDs() {
+		if !seen[id] {
+			return "defer_for_guidance_or_eval_repair"
+		}
+	}
+	if ergonomicsGaps >= 2 {
+		return "promote_compile_synthesis_surface_design"
+	}
+	if ergonomicsGaps > 0 {
+		return "defer_for_guidance_or_eval_repair"
+	}
+	return "defer_compile_synthesis"
+}
+
+func highTouchCompileSynthesisPromotion(decision string) string {
+	if decision == "promote_compile_synthesis_surface_design" {
+		return "targeted evidence supports filing a separate implementation bead for the exact promoted compile_synthesis surface; no runner action, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
+	}
+	if decision == "defer_for_guidance_or_eval_repair" {
+		return "compile synthesis ceremony promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation bead unless a later decision promotes"
+	}
+	return "targeted evidence only; no compile_synthesis runner action, schema, migration, storage behavior, direct vault behavior, or public API change from this eval"
+}
+
 func broadAuditDecision(rows []targetedScenarioClassification) string {
 	seen := map[string]bool{}
 	ergonomicsGaps := 0
@@ -793,6 +831,13 @@ func synthesisCompileScenarioIDs() []string {
 	return []string{
 		synthesisCompileNaturalScenarioID,
 		synthesisCompileScriptedScenarioID,
+	}
+}
+
+func highTouchCompileSynthesisScenarioIDs() []string {
+	return []string{
+		highTouchCompileSynthesisNaturalScenarioID,
+		highTouchCompileSynthesisScriptedScenarioID,
 	}
 }
 

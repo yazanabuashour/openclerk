@@ -123,6 +123,10 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifySynthesisCompileRevisit(ctx, paths, finalMessage, turnMetrics, false)
 	case synthesisCompileScriptedScenarioID:
 		return verifySynthesisCompileRevisit(ctx, paths, finalMessage, turnMetrics, true)
+	case highTouchCompileSynthesisNaturalScenarioID:
+		return verifySynthesisCompileRevisit(ctx, paths, finalMessage, turnMetrics, true)
+	case highTouchCompileSynthesisScriptedScenarioID:
+		return verifySynthesisCompileRevisit(ctx, paths, finalMessage, turnMetrics, true)
 	case broadAuditNaturalScenarioID:
 		return verifyBroadContradictionAuditRevisit(ctx, paths, finalMessage, turnMetrics, false)
 	case broadAuditScriptedScenarioID:

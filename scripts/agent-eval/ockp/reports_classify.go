@@ -204,10 +204,10 @@ func classifyTargetedSynthesisCompileResult(result jobResult) (string, string) {
 	if result.Verification.Passed {
 		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
 	}
-	if result.Scenario == synthesisCompileScriptedScenarioID && !result.Verification.DatabasePass {
+	if (result.Scenario == synthesisCompileScriptedScenarioID || result.Scenario == highTouchCompileSynthesisScriptedScenarioID) && !result.Verification.DatabasePass {
 		return "capability_gap", "scripted current-primitives control could not safely repair source-linked synthesis"
 	}
-	if result.Scenario == synthesisCompileNaturalScenarioID && !result.Verification.Passed {
+	if (result.Scenario == synthesisCompileNaturalScenarioID || result.Scenario == highTouchCompileSynthesisNaturalScenarioID) && !result.Verification.Passed {
 		return "ergonomics_gap", "natural compile_synthesis revisit intent did not complete the safe current-primitives workflow"
 	}
 	if !result.Verification.DatabasePass {
@@ -309,9 +309,9 @@ func promptSpecificity(scenarioID string) string {
 		return "natural-user-intent"
 	case videoYouTubeScriptedTranscriptControlID:
 		return "scripted-control"
-	case synthesisCompileNaturalScenarioID:
+	case synthesisCompileNaturalScenarioID, highTouchCompileSynthesisNaturalScenarioID:
 		return "natural-user-intent"
-	case synthesisCompileScriptedScenarioID:
+	case synthesisCompileScriptedScenarioID, highTouchCompileSynthesisScriptedScenarioID:
 		return "scripted-control"
 	case broadAuditNaturalScenarioID:
 		return "natural-user-intent"
@@ -366,7 +366,7 @@ func scenarioBrittleness(result jobResult) string {
 	if result.Scenario == artifactPDFNaturalIntentScenarioID && !result.Passed {
 		return "natural_prompt_sensitive"
 	}
-	if result.Scenario == synthesisCompileNaturalScenarioID && !result.Passed {
+	if (result.Scenario == synthesisCompileNaturalScenarioID || result.Scenario == highTouchCompileSynthesisNaturalScenarioID) && !result.Passed {
 		return "natural_prompt_sensitive"
 	}
 	if result.Scenario == memoryRouterNaturalScenarioID && !result.Passed {
@@ -467,12 +467,12 @@ func scenarioGuidanceDependence(result jobResult) string {
 			return "moderate_user_language_with_required_hints"
 		}
 		return "high_if_natural_prompt_failed"
-	case synthesisCompileNaturalScenarioID:
+	case synthesisCompileNaturalScenarioID, highTouchCompileSynthesisNaturalScenarioID:
 		if result.Passed {
 			return "low_natural_user_intent"
 		}
 		return "high_if_natural_prompt_failed"
-	case synthesisCompileScriptedScenarioID:
+	case synthesisCompileScriptedScenarioID, highTouchCompileSynthesisScriptedScenarioID:
 		return "high_exact_request_shape"
 	case broadAuditNaturalScenarioID:
 		if result.Passed {
