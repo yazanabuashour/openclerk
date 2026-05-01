@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -291,7 +292,8 @@ func verifyWebURLStaleRepair(ctx context.Context, paths evalPaths, finalMessage 
 }
 
 func verifyWebURLStaleImpactResponseCandidate(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
-	base, err := verifyWebURLStaleRepair(ctx, paths, finalMessage, turnMetrics, true)
+	baseEvidenceMessage := "Duplicate normalized source URL was rejected and " + webURLDuplicatePath + " was not created. Changed web update refreshed " + webURLSourcePath + " with " + webURLChangedText + "; the second same-hash update was a no-op. " + webURLSynthesisPath + " now has stale synthesis projection freshness with provenance evidence. No browser or manual acquisition was used."
+	base, err := verifyWebURLStaleRepair(ctx, paths, baseEvidenceMessage, turnMetrics, true)
 	if err != nil {
 		return verificationResult{}, err
 	}
@@ -303,6 +305,10 @@ func verifyWebURLStaleImpactResponseCandidate(ctx context.Context, paths evalPat
 	if err != nil {
 		return verificationResult{}, err
 	}
+	synthesisDocID, synthesisDocIDFound, err := documentIDByPath(ctx, paths, webURLSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
 	var sourceEvents []runner.ProvenanceEvent
 	if sourceDocIDFound {
 		sourceEvents, err = sourceURLUpdateSourceEvents(ctx, paths, sourceDocID)
@@ -310,11 +316,37 @@ func verifyWebURLStaleImpactResponseCandidate(ctx context.Context, paths evalPat
 			return verificationResult{}, err
 		}
 	}
-	shaChange := webURLSourceUpdatedEventHasSHAChange(sourceEvents)
+	previousSourceSHA, newSourceSHA, shaChange := webURLSourceUpdatedSHAChange(sourceEvents)
 	if !shaChange {
 		failures = append(failures, "source update provenance missing previous/new SHA details")
 	}
-	candidateFields := []string{
+	candidatePass, candidateFailures := validateWebURLStaleImpactCandidateObject(finalMessage, sourceDocID, docIDOrEmptyString(sourceDocIDFound, sourceDocID), docIDOrEmptyString(synthesisDocIDFound, synthesisDocID), previousSourceSHA, newSourceSHA)
+	failures = append(failures, candidateFailures...)
+	databasePass := base.DatabasePass && shaChange
+	assistantPass := base.AssistantPass && candidatePass
+	return verificationResult{
+		Passed:        databasePass && assistantPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{webURLSourcePath, webURLDuplicatePath, webURLSynthesisPath},
+	}, nil
+}
+
+func docIDOrEmptyString(found bool, docID string) string {
+	if !found {
+		return ""
+	}
+	return docID
+}
+
+func validateWebURLStaleImpactCandidateObject(finalMessage string, sourceDocID string, expectedSourceDocID string, expectedSynthesisDocID string, expectedPreviousSHA string, expectedNewSHA string) (bool, []string) {
+	candidate, ok := extractWebURLStaleImpactCandidateObject(finalMessage)
+	if !ok {
+		return false, []string{"final answer did not contain exactly one fenced stale-impact candidate JSON object"}
+	}
+	failures := []string{}
+	required := []string{
 		"update_status",
 		"normalized_source_url",
 		"source_path",
@@ -329,26 +361,219 @@ func verifyWebURLStaleImpactResponseCandidate(ctx context.Context, paths evalPat
 		"synthesis_repaired",
 		"no_repair_warning",
 	}
-	if !messageContainsAll(finalMessage, candidateFields) ||
-		!messageContainsAll(finalMessage, []string{webURLSourcePath, webURLSynthesisPath}) ||
-		!messageContainsAny(finalMessage, []string{"false", "not repaired", "did not repair"}) {
-		failures = append(failures, "final answer did not report the stale-impact response candidate fields")
+	for _, field := range required {
+		if _, found := candidate[field]; !found {
+			failures = append(failures, "candidate object missing "+field)
+		}
 	}
-	databasePass := base.DatabasePass && shaChange
-	assistantPass := base.AssistantPass &&
-		messageContainsAll(finalMessage, candidateFields) &&
-		messageContainsAll(finalMessage, []string{webURLSourcePath, webURLSynthesisPath}) &&
-		messageContainsAny(finalMessage, []string{"false", "not repaired", "did not repair"})
-	return verificationResult{
-		Passed:        databasePass && assistantPass,
-		DatabasePass:  databasePass,
-		AssistantPass: assistantPass,
-		Details:       missingDetails(failures),
-		Documents:     []string{webURLSourcePath, webURLDuplicatePath, webURLSynthesisPath},
-	}, nil
+	if !containsAny(strings.ToLower(stringValue(candidate["update_status"])), []string{"changed", "updated", "refreshed"}) {
+		failures = append(failures, "candidate update_status did not report a changed update")
+	}
+	if !truthyValue(candidate["changed"]) {
+		failures = append(failures, "candidate changed was not true")
+	}
+	if stringValue(candidate["source_path"]) != webURLSourcePath {
+		failures = append(failures, "candidate source_path did not match "+webURLSourcePath)
+	}
+	if expectedSourceDocID != "" && stringValue(candidate["source_doc_id"]) != expectedSourceDocID {
+		failures = append(failures, "candidate source_doc_id did not match runner source doc_id")
+	}
+	normalizedURL := strings.ToLower(stringValue(candidate["normalized_source_url"]))
+	if normalizedURL == "" || !strings.Contains(normalizedURL, "product-page") {
+		failures = append(failures, "candidate normalized_source_url did not identify the product page")
+	}
+	previousSHA := strings.TrimSpace(stringValue(candidate["previous_sha256"]))
+	newSHA := strings.TrimSpace(stringValue(candidate["new_sha256"]))
+	if previousSHA == "" || newSHA == "" || previousSHA == newSHA {
+		failures = append(failures, "candidate previous_sha256/new_sha256 did not prove a changed hash")
+	}
+	if expectedPreviousSHA != "" && previousSHA != expectedPreviousSHA {
+		failures = append(failures, "candidate previous_sha256 did not match source_updated provenance")
+	}
+	if expectedNewSHA != "" && newSHA != expectedNewSHA {
+		failures = append(failures, "candidate new_sha256 did not match source_updated provenance")
+	}
+	if !valueContainsAll(candidate["duplicate_status"], []string{"reject"}) ||
+		!valueContainsAny(candidate["duplicate_status"], []string{"not created", "no copy", "no duplicate", "rejected_no_copy"}) {
+		failures = append(failures, "candidate duplicate_status did not prove duplicate rejection without copy")
+	}
+	if !valueContainsAll(candidate["stale_dependents"], []string{webURLSynthesisPath}) ||
+		!valueContainsAny(candidate["stale_dependents"], []string{"stale", "stale_source_refs", "projection"}) {
+		failures = append(failures, "candidate stale_dependents did not report stale dependent synthesis")
+	}
+	projectionRefOptions := []string{"synthesis:", "synthesis", "projection", webURLSynthesisPath}
+	if expectedSynthesisDocID != "" {
+		projectionRefOptions = append(projectionRefOptions, expectedSynthesisDocID)
+	}
+	if !valueContainsAny(candidate["projection_refs"], projectionRefOptions) {
+		failures = append(failures, "candidate projection_refs did not include synthesis projection evidence")
+	}
+	provenanceRefs := candidate["provenance_refs"]
+	sourceProvenanceOptions := []string{"source_updated"}
+	if sourceDocID != "" {
+		sourceProvenanceOptions = append(sourceProvenanceOptions, sourceDocID)
+	}
+	if !valueContainsAny(provenanceRefs, sourceProvenanceOptions) ||
+		!valueContainsAny(provenanceRefs, []string{"synthesis:", "projection"}) ||
+		!valueContainsAny(provenanceRefs, []string{"no_browser", "no browser", "no_manual", "no manual", "runner-owned", "runner owned"}) {
+		failures = append(failures, "candidate provenance_refs did not include source update, projection, and runner-owned no-browser/no-manual evidence")
+	}
+	if !falseValue(candidate["synthesis_repaired"]) {
+		failures = append(failures, "candidate synthesis_repaired was not false")
+	}
+	if !valueContainsAll(candidate["no_repair_warning"], []string{webURLSynthesisPath}) ||
+		!valueContainsAny(candidate["no_repair_warning"], []string{"did not repair", "not repaired", "no repair"}) {
+		failures = append(failures, "candidate no_repair_warning did not warn that synthesis remained unrepaired")
+	}
+	return len(failures) == 0, failures
+}
+
+func extractWebURLStaleImpactCandidateObject(message string) (map[string]any, bool) {
+	object, ok := exactFencedJSONObject(message)
+	if !ok {
+		return nil, false
+	}
+	candidate := map[string]any{}
+	if err := json.Unmarshal([]byte(object), &candidate); err != nil {
+		return nil, false
+	}
+	if _, found := candidate["update_status"]; !found {
+		return nil, false
+	}
+	return candidate, true
+}
+
+func exactFencedJSONObject(message string) (string, bool) {
+	trimmed := strings.TrimSpace(strings.ReplaceAll(message, "\r\n", "\n"))
+	if !strings.HasPrefix(trimmed, "```json\n") || !strings.HasSuffix(trimmed, "\n```") {
+		return "", false
+	}
+	inner := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(trimmed, "```json\n"), "\n```"))
+	if strings.Contains(inner, "```") {
+		return "", false
+	}
+	objects := jsonObjectsInText(inner)
+	if len(objects) != 1 || strings.TrimSpace(objects[0]) != inner {
+		return "", false
+	}
+	return inner, true
+}
+
+func jsonObjectsInText(text string) []string {
+	objects := []string{}
+	start := -1
+	depth := 0
+	inString := false
+	escaped := false
+	for i, r := range text {
+		if inString {
+			if escaped {
+				escaped = false
+				continue
+			}
+			if r == '\\' {
+				escaped = true
+				continue
+			}
+			if r == '"' {
+				inString = false
+			}
+			continue
+		}
+		if r == '"' {
+			inString = true
+			continue
+		}
+		if r == '{' {
+			if depth == 0 {
+				start = i
+			}
+			depth++
+			continue
+		}
+		if r == '}' && depth > 0 {
+			depth--
+			if depth == 0 && start >= 0 {
+				objects = append(objects, text[start:i+1])
+				start = -1
+			}
+		}
+	}
+	return objects
+}
+
+func stringValue(value any) string {
+	switch typed := value.(type) {
+	case string:
+		return strings.TrimSpace(typed)
+	case bool:
+		if typed {
+			return "true"
+		}
+		return "false"
+	case float64:
+		return fmt.Sprintf("%.0f", typed)
+	default:
+		return strings.TrimSpace(fmt.Sprintf("%v", typed))
+	}
+}
+
+func valueText(value any) string {
+	encoded, err := json.Marshal(value)
+	if err == nil {
+		return strings.ToLower(string(encoded))
+	}
+	return strings.ToLower(stringValue(value))
+}
+
+func valueContainsAll(value any, required []string) bool {
+	text := valueText(value)
+	for _, item := range required {
+		if !strings.Contains(text, strings.ToLower(item)) {
+			return false
+		}
+	}
+	return true
+}
+
+func valueContainsAny(value any, options []string) bool {
+	text := valueText(value)
+	for _, item := range options {
+		if strings.Contains(text, strings.ToLower(item)) {
+			return true
+		}
+	}
+	return false
+}
+
+func truthyValue(value any) bool {
+	switch typed := value.(type) {
+	case bool:
+		return typed
+	case string:
+		return strings.EqualFold(strings.TrimSpace(typed), "true")
+	default:
+		return false
+	}
+}
+
+func falseValue(value any) bool {
+	switch typed := value.(type) {
+	case bool:
+		return !typed
+	case string:
+		return strings.EqualFold(strings.TrimSpace(typed), "false")
+	default:
+		return false
+	}
 }
 
 func webURLSourceUpdatedEventHasSHAChange(events []runner.ProvenanceEvent) bool {
+	_, _, found := webURLSourceUpdatedSHAChange(events)
+	return found
+}
+
+func webURLSourceUpdatedSHAChange(events []runner.ProvenanceEvent) (string, string, bool) {
 	for _, event := range events {
 		if event.EventType != "source_updated" {
 			continue
@@ -356,10 +581,10 @@ func webURLSourceUpdatedEventHasSHAChange(events []runner.ProvenanceEvent) bool 
 		previous := strings.TrimSpace(event.Details["previous_sha256"])
 		next := strings.TrimSpace(event.Details["new_sha256"])
 		if previous != "" && next != "" && previous != next {
-			return true
+			return previous, next, true
 		}
 	}
-	return false
+	return "", "", false
 }
 
 func verifyWebURLUnsupported(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {

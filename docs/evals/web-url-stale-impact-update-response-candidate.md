@@ -8,7 +8,7 @@ The lane compares three shapes:
 
 - Current primitives control: explicit `ingest_source_url` update mode plus duplicate, no-op, changed-source, projection, provenance, and stale synthesis inspection.
 - Guidance-only natural repair: a natural stale-impact request with stronger guidance over the same current primitives.
-- Candidate response contract: an eval-only assembled response object that names the fields a future enriched update response might return.
+- Candidate response contract: an eval-only assembled JSON object that names and populates the fields a future enriched update response might return.
 
 ## Candidate Contract
 
@@ -18,7 +18,7 @@ The request remains the existing `openclerk document` action:
 {"action":"ingest_source_url","source":{"url":"<public-web-url>","mode":"update","source_type":"web","path_hint":"sources/web-url/product-page.md"}}
 ```
 
-The candidate response shape under evaluation adds stale-impact reporting fields:
+The candidate response shape under evaluation adds stale-impact reporting fields. The repaired candidate row requires the final answer to contain one parseable JSON object with these field names:
 
 - `update_status`
 - `normalized_source_url`
@@ -35,6 +35,17 @@ The candidate response shape under evaluation adds stale-impact reporting fields
 - `no_repair_warning`
 
 The candidate must keep source refresh distinct from synthesis repair. `synthesis_repaired` must remain `false` for this workflow, and the response must warn that refreshing the source did not repair `synthesis/web-url-product-page.md`.
+
+The verifier validates object values, not just field names. The object must show:
+
+- changed update status and `changed: true`
+- stable source path and source doc identity
+- previous/new SHA values that match `source_updated` provenance and differ
+- duplicate create rejection without `sources/web-url/product-page-copy.md`
+- stale dependent synthesis entry for `synthesis/web-url-product-page.md`
+- projection and provenance refs, including source update and synthesis projection evidence
+- runner-owned no-browser/no-manual acquisition evidence in provenance refs
+- no synthesis repair
 
 ## Harness Coverage
 
@@ -61,7 +72,7 @@ The lane reuses the existing web URL fixture and seeded documents:
 - `WebURLIntakeInitialEvidence`
 - `WebURLIntakeChangedEvidence`
 
-The verifier requires update mode, changed hash provenance, duplicate/no-op evidence, stale dependent synthesis visibility, `projection_states`, provenance/freshness inspection, no synthesis repair, no browser/manual/private acquisition, and final answer reporting of the candidate fields.
+The verifier requires update mode, changed hash provenance, duplicate/no-op evidence, stale dependent synthesis visibility, `projection_states`, provenance/freshness inspection, no synthesis repair, no browser/manual/private acquisition, and parseable candidate JSON values.
 
 ## Decision Rule
 

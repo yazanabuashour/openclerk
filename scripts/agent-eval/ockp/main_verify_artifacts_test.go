@@ -3,13 +3,15 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"github.com/yazanabuashour/openclerk/internal/runclient"
-	"github.com/yazanabuashour/openclerk/internal/runner"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/yazanabuashour/openclerk/internal/runclient"
+	"github.com/yazanabuashour/openclerk/internal/runner"
 )
 
 func TestExecuteRunDefersPartialDocumentArtifactCandidateLane(t *testing.T) {
@@ -841,6 +843,14 @@ func TestVerifyWebURLStaleRepairRequiresFreshnessAndBoundaries(t *testing.T) {
 	if !synthesisDocIDFound {
 		t.Fatal("missing synthesis doc id")
 	}
+	sourceEvents, err := sourceURLUpdateSourceEvents(ctx, paths, sourceDocID)
+	if err != nil {
+		t.Fatalf("get source provenance events: %v", err)
+	}
+	previousSourceSHA, newSourceSHA, sourceSHAChange := webURLSourceUpdatedSHAChange(sourceEvents)
+	if !sourceSHAChange {
+		t.Fatal("missing source_updated provenance SHA change")
+	}
 	metrics := metrics{
 		AssistantCalls:             1,
 		IngestSourceURLUsed:        true,
@@ -865,7 +875,7 @@ func TestVerifyWebURLStaleRepairRequiresFreshnessAndBoundaries(t *testing.T) {
 		t.Fatalf("web URL stale repair verification failed: %+v", result)
 	}
 
-	candidateAnswer := "Duplicate normalized source URL was rejected and " + webURLDuplicatePath + " was not created. Changed web update refreshed " + webURLSourcePath + " with " + webURLChangedText + "; the second same-hash update was a no-op. " + webURLSynthesisPath + " now has stale synthesis projection freshness with provenance evidence. No browser or manual acquisition was used. Candidate response: update_status changed; normalized_source_url is the runner-normalized public URL; source_path " + webURLSourcePath + "; source_doc_id " + sourceDocID + "; previous_sha256 old; new_sha256 new; changed true; duplicate_status rejected_no_copy; stale_dependents include " + webURLSynthesisPath + "; projection_refs include synthesis:" + synthesisDocID + "; provenance_refs include source_updated and projection freshness; synthesis_repaired false; no_repair_warning source refresh did not repair " + webURLSynthesisPath + "."
+	candidateAnswer := fmt.Sprintf("```json\n{\"update_status\":\"changed\",\"normalized_source_url\":\"http://openclerk-eval.local/web-url/product-page.html\",\"source_path\":\"%s\",\"source_doc_id\":\"%s\",\"previous_sha256\":\"%s\",\"new_sha256\":\"%s\",\"changed\":true,\"duplicate_status\":\"rejected_no_copy: %s was not created\",\"stale_dependents\":[{\"path\":\"%s\",\"freshness\":\"stale\",\"stale_source_refs\":[\"%s\"]}],\"projection_refs\":[\"synthesis:%s\"],\"provenance_refs\":[\"source_updated\",\"%s\",\"synthesis:%s\",\"runner_owned_no_browser_no_manual\"],\"synthesis_repaired\":false,\"no_repair_warning\":\"source refresh did not repair %s\"}\n```", webURLSourcePath, sourceDocID, previousSourceSHA, newSourceSHA, webURLDuplicatePath, webURLSynthesisPath, webURLSourcePath, synthesisDocID, sourceDocID, synthesisDocID, webURLSynthesisPath)
 	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: webURLStaleImpactResponseCandidateScenarioID}, 1, candidateAnswer, metrics)
 	if err != nil {
 		t.Fatalf("verify stale impact candidate: %v", err)
@@ -952,13 +962,77 @@ func TestVerifyWebURLStaleRepairRequiresFreshnessAndBoundaries(t *testing.T) {
 	if result.Passed {
 		t.Fatalf("stale impact candidate passed with weak final answer: %+v", result)
 	}
-	missingHashAnswer := strings.ReplaceAll(candidateAnswer, "previous_sha256 old; new_sha256 new; ", "")
+	missingHashAnswer := strings.ReplaceAll(candidateAnswer, fmt.Sprintf("\"previous_sha256\":\"%s\",\"new_sha256\":\"%s\",", previousSourceSHA, newSourceSHA), "")
 	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: webURLStaleImpactResponseCandidateScenarioID}, 1, missingHashAnswer, metrics)
 	if err != nil {
 		t.Fatalf("verify candidate missing hash fields: %v", err)
 	}
 	if result.Passed {
 		t.Fatalf("stale impact candidate passed without hash fields: %+v", result)
+	}
+	wrongHashAnswer := strings.ReplaceAll(candidateAnswer, fmt.Sprintf("\"previous_sha256\":\"%s\",\"new_sha256\":\"%s\"", previousSourceSHA, newSourceSHA), "\"previous_sha256\":\"old-sha\",\"new_sha256\":\"new-sha\"")
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: webURLStaleImpactResponseCandidateScenarioID}, 1, wrongHashAnswer, metrics)
+	if err != nil {
+		t.Fatalf("verify candidate wrong hash values: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("stale impact candidate passed with wrong hash values: %+v", result)
+	}
+	proseWrappedAnswer := "Candidate:\n" + candidateAnswer
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: webURLStaleImpactResponseCandidateScenarioID}, 1, proseWrappedAnswer, metrics)
+	if err != nil {
+		t.Fatalf("verify candidate prose-wrapped answer: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("stale impact candidate passed with prose outside JSON fence: %+v", result)
+	}
+	multipleObjectAnswer := strings.ReplaceAll(candidateAnswer, "\n```", "\n{\"update_status\":\"changed\"}\n```")
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: webURLStaleImpactResponseCandidateScenarioID}, 1, multipleObjectAnswer, metrics)
+	if err != nil {
+		t.Fatalf("verify candidate multiple JSON objects: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("stale impact candidate passed with multiple JSON objects: %+v", result)
+	}
+	missingStaleDependentAnswer := strings.ReplaceAll(candidateAnswer, fmt.Sprintf("\"stale_dependents\":[{\"path\":\"%s\",\"freshness\":\"stale\",\"stale_source_refs\":[\"%s\"]}]", webURLSynthesisPath, webURLSourcePath), "\"stale_dependents\":[]")
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: webURLStaleImpactResponseCandidateScenarioID}, 1, missingStaleDependentAnswer, metrics)
+	if err != nil {
+		t.Fatalf("verify candidate missing stale dependents: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("stale impact candidate passed without stale dependent values: %+v", result)
+	}
+	missingProjectionRefsAnswer := strings.ReplaceAll(candidateAnswer, fmt.Sprintf("\"projection_refs\":[\"synthesis:%s\"]", synthesisDocID), "\"projection_refs\":[]")
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: webURLStaleImpactResponseCandidateScenarioID}, 1, missingProjectionRefsAnswer, metrics)
+	if err != nil {
+		t.Fatalf("verify candidate missing projection refs: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("stale impact candidate passed without projection refs: %+v", result)
+	}
+	missingProvenanceRefsAnswer := strings.ReplaceAll(candidateAnswer, fmt.Sprintf("\"provenance_refs\":[\"source_updated\",\"%s\",\"synthesis:%s\",\"runner_owned_no_browser_no_manual\"]", sourceDocID, synthesisDocID), "\"provenance_refs\":[]")
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: webURLStaleImpactResponseCandidateScenarioID}, 1, missingProvenanceRefsAnswer, metrics)
+	if err != nil {
+		t.Fatalf("verify candidate missing provenance refs: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("stale impact candidate passed without provenance refs: %+v", result)
+	}
+	weakDuplicateAnswer := strings.ReplaceAll(candidateAnswer, "rejected_no_copy: "+webURLDuplicatePath+" was not created", "duplicate status unknown")
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: webURLStaleImpactResponseCandidateScenarioID}, 1, weakDuplicateAnswer, metrics)
+	if err != nil {
+		t.Fatalf("verify candidate weak duplicate value: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("stale impact candidate passed with weak duplicate value: %+v", result)
+	}
+	trueRepairAnswer := strings.ReplaceAll(candidateAnswer, "\"synthesis_repaired\":false", "\"synthesis_repaired\":true")
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: webURLStaleImpactResponseCandidateScenarioID}, 1, trueRepairAnswer, metrics)
+	if err != nil {
+		t.Fatalf("verify candidate repaired synthesis flag: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("stale impact candidate passed with synthesis_repaired true: %+v", result)
 	}
 
 	if err := createSeedDocument(ctx, cfg, webURLDuplicatePath, "Duplicate Web URL", "# Duplicate\n"); err != nil {

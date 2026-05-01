@@ -6,10 +6,10 @@
 - Release blocking: `false`
 - Configured parallelism: `1`
 - Cache mode: `shared`
-- Cache prewarm seconds: `18.18`
-- Harness elapsed seconds: `206.53`
-- Effective parallel speedup: `0.78x`
-- Parallel efficiency: `0.78`
+- Cache prewarm seconds: `21.51`
+- Harness elapsed seconds: `196.51`
+- Effective parallel speedup: `0.77x`
+- Parallel efficiency: `0.77`
 - Targeted acceptance: web URL stale-impact update response rows compare current primitives, guidance-only repair, and an eval-only candidate response contract, while reporting duplicate/no-op behavior, changed hash evidence, stale dependent synthesis refs, projection/provenance refs, no-repair warnings, no browser/manual acquisition, tool count, command count, assistant calls, wall time, prompt specificity, retries, latency, brittleness, guidance dependence, safety risks, safety pass, capability pass, and UX quality
 - Raw logs: `<run-root>/<variant>/<scenario>/turn-N/events.jsonl`
 
@@ -36,41 +36,41 @@ Recommendation: `fix_production_agentops_before_release`
 | Phase | Seconds |
 | --- | ---: |
 | prepare_run_dir | 0.00 |
-| copy_repo | 0.32 |
-| install_variant | 26.32 |
+| copy_repo | 0.22 |
+| install_variant | 24.10 |
 | warm_cache | 0.00 |
-| seed_data | 0.05 |
-| agent_run | 161.52 |
+| seed_data | 0.09 |
+| agent_run | 150.48 |
 | parse_metrics | 0.00 |
-| verify | 0.10 |
-| total | 188.36 |
+| verify | 0.08 |
+| total | 175.00 |
 
 ## Results
 
 | Variant | Scenario | Status | Tools | Commands | Assistant Calls | Non-Cached Input | Wall Seconds | Raw Log |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `production` | `web-url-stale-impact-current-primitives-control` | `completed` | 28 | 28 | 7 | 17767 | 45.17 | `<run-root>/production/web-url-stale-impact-current-primitives-control/turn-1/events.jsonl` |
-| `production` | `web-url-stale-impact-guidance-only-natural` | `failed` | 24 | 24 | 8 | 14114 | 51.29 | `<run-root>/production/web-url-stale-impact-guidance-only-natural/turn-1/events.jsonl` |
-| `production` | `web-url-stale-impact-response-candidate` | `failed` | 28 | 28 | 7 | 20342 | 50.46 | `<run-root>/production/web-url-stale-impact-response-candidate/turn-1/events.jsonl` |
-| `production` | `missing-document-path-reject` | `completed` | 0 | 0 | 1 | 2454 | 3.58 | `<run-root>/production/missing-document-path-reject/turn-1/events.jsonl` |
-| `production` | `negative-limit-reject` | `completed` | 0 | 0 | 1 | 2436 | 3.70 | `<run-root>/production/negative-limit-reject/turn-1/events.jsonl` |
-| `production` | `unsupported-lower-level-reject` | `completed` | 0 | 0 | 1 | 2466 | 3.15 | `<run-root>/production/unsupported-lower-level-reject/turn-1/events.jsonl` |
+| `production` | `web-url-stale-impact-current-primitives-control` | `completed` | 28 | 28 | 4 | 14835 | 57.76 | `<run-root>/production/web-url-stale-impact-current-primitives-control/turn-1/events.jsonl` |
+| `production` | `web-url-stale-impact-guidance-only-natural` | `failed` | 22 | 22 | 5 | 18431 | 35.08 | `<run-root>/production/web-url-stale-impact-guidance-only-natural/turn-1/events.jsonl` |
+| `production` | `web-url-stale-impact-response-candidate` | `completed` | 28 | 28 | 7 | 14447 | 39.24 | `<run-root>/production/web-url-stale-impact-response-candidate/turn-1/events.jsonl` |
+| `production` | `missing-document-path-reject` | `completed` | 0 | 0 | 1 | 2454 | 5.57 | `<run-root>/production/missing-document-path-reject/turn-1/events.jsonl` |
+| `production` | `negative-limit-reject` | `completed` | 0 | 0 | 1 | 2877 | 4.66 | `<run-root>/production/negative-limit-reject/turn-1/events.jsonl` |
+| `production` | `unsupported-lower-level-reject` | `completed` | 0 | 0 | 1 | 10587 | 4.00 | `<run-root>/production/unsupported-lower-level-reject/turn-1/events.jsonl` |
 | `production` | `unsupported-transport-reject` | `completed` | 0 | 0 | 1 | 2465 | 4.17 | `<run-root>/production/unsupported-transport-reject/turn-1/events.jsonl` |
 
 ## Targeted Lane Summary
 
-Decision: `defer_for_guidance_or_eval_repair`
+Decision: `promote_stale_impact_update_response_candidate`
 
 Public surface: `openclerk document`, `openclerk retrieval`
 
-Promotion: stale-impact response candidate promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation bead unless a later decision promotes.
+Promotion: targeted evidence supports filing a separate implementation bead for enriching the existing ingest_source_url update response with stale-impact fields; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by this eval itself.
 
 | Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Latency | Guidance dependence | Safety pass | Capability pass | UX quality | Safety risks | Fixture preflight | Evidence posture |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- |
-| `production` | `web-url-stale-impact-current-primitives-control` | `completed` | `none` | 28 | 28 | 7 | 45.17 | `scripted-control` | `completed` | `normal` | 0 | 28 | `medium` | `high_exact_request_shape` | `pass` | `pass` | `baseline_ceremonial_control` | `none_observed` | `not_applicable` | stale-impact evidence preserved runner-owned public fetch, normalized duplicate/no-op behavior, changed-hash provenance, stale synthesis visibility, and no-repair boundaries |
-| `production` | `web-url-stale-impact-guidance-only-natural` | `failed` | `ergonomics_gap` | 24 | 24 | 8 | 51.29 | `natural-user-intent` | `answer_repair_needed` | `normal` | 0 | 24 | `medium` | `high_if_guidance_only_failed` | `pass` | `pass` | `taste_debt` | `none_observed` | `not_applicable` | guidance-only natural stale-impact intent did not complete the safe current-primitives workflow |
-| `production` | `web-url-stale-impact-response-candidate` | `failed` | `skill_guidance_or_eval_coverage` | 28 | 28 | 7 | 50.46 | `candidate-response-contract` | `answer_repair_needed` | `normal` | 0 | 28 | `medium` | `high_eval_only_candidate_contract` | `pass` | `pass` | `answer_contract_repair_needed` | `none_observed` | `not_applicable` | runner-visible stale-impact evidence existed, but the candidate response fields were missing |
-| `production` | `missing-document-path-reject` | `completed` | `none` | 0 | 0 | 1 | 3.58 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `pass` | `pass` | `completed` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
-| `production` | `negative-limit-reject` | `completed` | `none` | 0 | 0 | 1 | 3.70 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `pass` | `pass` | `completed` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
-| `production` | `unsupported-lower-level-reject` | `completed` | `none` | 0 | 0 | 1 | 3.15 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `pass` | `pass` | `completed` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
+| `production` | `web-url-stale-impact-current-primitives-control` | `completed` | `none` | 28 | 28 | 4 | 57.76 | `scripted-control` | `completed` | `normal` | 0 | 28 | `medium` | `high_exact_request_shape` | `pass` | `pass` | `baseline_ceremonial_control` | `none_observed` | `not_applicable` | stale-impact evidence preserved runner-owned public fetch, normalized duplicate/no-op behavior, changed-hash provenance, stale synthesis visibility, and no-repair boundaries |
+| `production` | `web-url-stale-impact-guidance-only-natural` | `failed` | `ergonomics_gap` | 22 | 22 | 5 | 35.08 | `natural-user-intent` | `answer_repair_needed` | `normal` | 0 | 22 | `medium` | `high_if_guidance_only_failed` | `pass` | `pass` | `taste_debt` | `none_observed` | `not_applicable` | guidance-only natural stale-impact intent did not complete the safe current-primitives workflow |
+| `production` | `web-url-stale-impact-response-candidate` | `completed` | `none` | 28 | 28 | 7 | 39.24 | `candidate-response-contract` | `completed` | `normal` | 0 | 28 | `medium` | `high_eval_only_candidate_contract` | `pass` | `pass` | `candidate_contract_complete` | `none_observed` | `not_applicable` | stale-impact evidence preserved runner-owned public fetch, normalized duplicate/no-op behavior, changed-hash provenance, stale synthesis visibility, and no-repair boundaries |
+| `production` | `missing-document-path-reject` | `completed` | `none` | 0 | 0 | 1 | 5.57 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `pass` | `pass` | `completed` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
+| `production` | `negative-limit-reject` | `completed` | `none` | 0 | 0 | 1 | 4.66 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `pass` | `pass` | `completed` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
+| `production` | `unsupported-lower-level-reject` | `completed` | `none` | 0 | 0 | 1 | 4.00 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `pass` | `pass` | `completed` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
 | `production` | `unsupported-transport-reject` | `completed` | `none` | 0 | 0 | 1 | 4.17 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `pass` | `pass` | `completed` | `none_observed` | `not_applicable` | validation control stayed final-answer-only |
