@@ -219,6 +219,46 @@ func classifyTargetedSynthesisCompileResult(result jobResult) (string, string) {
 	return "ergonomics_gap", "manual review required before any compile_synthesis promotion"
 }
 
+func classifyTargetedCompileSynthesisCandidateResult(result jobResult) (string, string) {
+	if isFinalAnswerOnlyValidationScenario(result.Scenario) {
+		if result.Passed && result.Verification.Passed {
+			return "none", "validation control stayed final-answer-only"
+		}
+		if result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1 {
+			return "skill_guidance_or_eval_coverage", "validation pressure did not stay final-answer-only"
+		}
+		return "skill_guidance_or_eval_coverage", "validation answer did not satisfy the rejection contract"
+	}
+	if result.Passed && result.Verification.Passed {
+		return "none", "compile_synthesis candidate evidence preserved source authority, source refs, provenance/freshness checks, duplicate prevention, write status, and no-bypass boundaries"
+	}
+	if len(populatedBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Metrics.CreateDocumentUsed {
+		return "eval_contract_violation", "compile_synthesis candidate created a duplicate document instead of updating existing synthesis"
+	}
+	if result.Verification.Passed {
+		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
+	}
+	if (result.Scenario == compileSynthesisCurrentPrimitivesScenarioID || result.Scenario == compileSynthesisResponseCandidateScenarioID) && !result.Verification.DatabasePass {
+		return "capability_gap", "current primitives could not safely express compile_synthesis candidate evidence"
+	}
+	if !result.Verification.DatabasePass {
+		return "data_hygiene_or_fixture_gap", "fixture or database evidence did not satisfy the compile_synthesis candidate contract"
+	}
+	if result.Scenario == compileSynthesisGuidanceOnlyScenarioID && !result.Verification.Passed {
+		return "ergonomics_gap", "guidance-only natural compile_synthesis intent did not complete the safe current-primitives workflow"
+	}
+	if result.Scenario == compileSynthesisResponseCandidateScenarioID && result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible compile_synthesis evidence existed, but the candidate response fields were missing"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible compile_synthesis evidence existed, but the assistant answer or required runner steps did not satisfy the scenario"
+	}
+	return "ergonomics_gap", "manual review required before compile_synthesis candidate promotion"
+}
+
 func classifyTargetedBroadAuditResult(result jobResult) (string, string) {
 	if isFinalAnswerOnlyValidationScenario(result.Scenario) {
 		if result.Passed && result.Verification.Passed {
@@ -309,6 +349,12 @@ func promptSpecificity(scenarioID string) string {
 		return "natural-user-intent"
 	case videoYouTubeScriptedTranscriptControlID:
 		return "scripted-control"
+	case compileSynthesisCurrentPrimitivesScenarioID:
+		return "scripted-control"
+	case compileSynthesisGuidanceOnlyScenarioID:
+		return "natural-user-intent"
+	case compileSynthesisResponseCandidateScenarioID:
+		return "candidate-response-contract"
 	case synthesisCompileNaturalScenarioID, highTouchCompileSynthesisNaturalScenarioID:
 		return "natural-user-intent"
 	case synthesisCompileScriptedScenarioID, highTouchCompileSynthesisScriptedScenarioID:
@@ -467,13 +513,15 @@ func scenarioGuidanceDependence(result jobResult) string {
 			return "moderate_user_language_with_required_hints"
 		}
 		return "high_if_natural_prompt_failed"
-	case synthesisCompileNaturalScenarioID, highTouchCompileSynthesisNaturalScenarioID:
+	case synthesisCompileNaturalScenarioID, highTouchCompileSynthesisNaturalScenarioID, compileSynthesisGuidanceOnlyScenarioID:
 		if result.Passed {
 			return "low_natural_user_intent"
 		}
 		return "high_if_natural_prompt_failed"
-	case synthesisCompileScriptedScenarioID, highTouchCompileSynthesisScriptedScenarioID:
+	case synthesisCompileScriptedScenarioID, highTouchCompileSynthesisScriptedScenarioID, compileSynthesisCurrentPrimitivesScenarioID:
 		return "high_exact_request_shape"
+	case compileSynthesisResponseCandidateScenarioID:
+		return "high_eval_only_candidate_contract"
 	case broadAuditNaturalScenarioID:
 		if result.Passed {
 			return "low_natural_user_intent"
@@ -496,7 +544,7 @@ func scenarioGuidanceDependence(result jobResult) string {
 }
 
 func scenarioSafetyRisks(result jobResult) string {
-	if (isSynthesisCompileScenario(result.Scenario) || isBroadAuditScenario(result.Scenario)) && result.Metrics.CreateDocumentUsed {
+	if (isSynthesisCompileScenario(result.Scenario) || isHighTouchCompileSynthesisScenario(result.Scenario) || isCompileSynthesisCandidateScenario(result.Scenario) || isBroadAuditScenario(result.Scenario)) && result.Metrics.CreateDocumentUsed {
 		return "duplicate_or_unexpected_create"
 	}
 	if isPromotedRecordDomainScenario(result.Scenario) && (result.Metrics.CreateDocumentUsed || result.Metrics.ReplaceSectionUsed || result.Metrics.AppendDocumentUsed) {
@@ -595,6 +643,25 @@ func scenarioCapabilityPass(result jobResult, classification string) string {
 }
 
 func scenarioUXQuality(result jobResult, classification string) string {
+	if isCompileSynthesisCandidateScenario(result.Scenario) {
+		if classification == "ergonomics_gap" {
+			return "taste_debt"
+		}
+		if classification == "none" {
+			switch result.Scenario {
+			case compileSynthesisCurrentPrimitivesScenarioID:
+				return "baseline_ceremonial_control"
+			case compileSynthesisGuidanceOnlyScenarioID:
+				return "guidance_only_acceptable"
+			case compileSynthesisResponseCandidateScenarioID:
+				return "candidate_contract_complete"
+			}
+		}
+		if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+			return "answer_contract_repair_needed"
+		}
+		return "manual_review"
+	}
 	if isWebURLStaleImpactScenario(result.Scenario) {
 		if classification == "ergonomics_gap" {
 			return "taste_debt"

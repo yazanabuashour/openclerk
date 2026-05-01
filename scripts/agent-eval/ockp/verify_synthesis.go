@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -905,6 +906,214 @@ func verifySynthesisCompileRevisit(ctx context.Context, paths evalPaths, finalMe
 		Documents:     []string{synthesisCompilePath, synthesisCompileDecoyPath, synthesisCompileCurrentSrc, synthesisCompileOldSrc},
 	}, nil
 }
+
+func verifyCompileSynthesisResponseCandidate(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	body, found, err := documentBodyByPath(ctx, paths, synthesisCompilePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	exactCount, err := exactDocumentCount(ctx, paths, synthesisCompilePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	decoyCount, err := exactDocumentCount(ctx, paths, synthesisCompileDecoyPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	synthesisCount, err := documentCountWithPrefix(ctx, paths, "synthesis/")
+	if err != nil {
+		return verificationResult{}, err
+	}
+	docID, docIDFound, err := documentIDByPath(ctx, paths, synthesisCompilePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projection, err := firstSynthesisProjection(ctx, paths, docID)
+	if err != nil {
+		return verificationResult{}, err
+	}
+
+	required := []string{
+		"type: synthesis",
+		"status: active",
+		"freshness: fresh",
+		"Current compile_synthesis revisit decision",
+		"existing document and retrieval actions",
+		"Current source: " + synthesisCompileCurrentSrc,
+		"Superseded source: " + synthesisCompileOldSrc,
+		"## Sources",
+		"## Freshness",
+	}
+	sourceRefs := []string{synthesisCompileCurrentSrc, synthesisCompileOldSrc}
+	failures := populatedBypassFailures(turnMetrics)
+	if !found {
+		failures = append(failures, "missing "+synthesisCompilePath)
+	}
+	if exactCount != 1 {
+		failures = append(failures, fmt.Sprintf("expected one %s document, got %d", synthesisCompilePath, exactCount))
+	}
+	if decoyCount != 1 {
+		failures = append(failures, fmt.Sprintf("expected one %s decoy document, got %d", synthesisCompileDecoyPath, decoyCount))
+	}
+	if synthesisCount != 2 {
+		failures = append(failures, fmt.Sprintf("expected exactly target and decoy synthesis documents, got %d", synthesisCount))
+	}
+	if !docIDFound {
+		failures = append(failures, "missing document id for "+synthesisCompilePath)
+	}
+	failures = append(failures, missingRequired(body, required)...)
+	failures = append(failures, sourceRefsFrontmatterFailures(body, sourceRefs)...)
+	if projection == nil || projection.Freshness != "fresh" {
+		failures = append(failures, "synthesis projection is not fresh")
+	} else {
+		if !projectionDetailContains(projection.Details, "current_source_refs", synthesisCompileCurrentSrc) {
+			failures = append(failures, "synthesis projection missing current compile revisit source")
+		}
+		if !projectionDetailContains(projection.Details, "superseded_source_refs", synthesisCompileOldSrc) {
+			failures = append(failures, "synthesis projection missing superseded compile revisit source")
+		}
+	}
+	if !turnMetrics.SearchUsed {
+		failures = append(failures, "agent did not use retrieval search")
+	}
+	if !turnMetrics.ListDocumentsUsed {
+		failures = append(failures, "agent did not list synthesis candidates")
+	}
+	if !turnMetrics.GetDocumentUsed {
+		failures = append(failures, "agent did not get existing synthesis before update")
+	}
+	if !turnMetrics.ProjectionStatesUsed {
+		failures = append(failures, "agent did not inspect synthesis projection freshness")
+	}
+	inspectedSynthesisProvenanceRef := false
+	if docIDFound {
+		inspectedSynthesisProvenanceRef = provenanceEventRefIDsInclude(turnMetrics.ProvenanceEventRefIDs, "synthesis:"+docID)
+	}
+	if !turnMetrics.ProvenanceEventsUsed || !inspectedSynthesisProvenanceRef {
+		failures = append(failures, "agent did not inspect provenance events for the synthesis projection ref")
+	}
+	if turnMetrics.CreateDocumentUsed {
+		failures = append(failures, "agent created a document instead of updating existing synthesis")
+	}
+	if !turnMetrics.ReplaceSectionUsed && !turnMetrics.AppendDocumentUsed {
+		failures = append(failures, "agent did not update synthesis with replace_section or append_document")
+	}
+	candidatePass, candidateFailures := validateCompileSynthesisCandidateObject(finalMessage, docIDOrEmptyString(docIDFound, docID))
+	failures = append(failures, candidateFailures...)
+
+	databasePass := found &&
+		exactCount == 1 &&
+		decoyCount == 1 &&
+		synthesisCount == 2 &&
+		docIDFound &&
+		len(missingRequired(body, required)) == 0 &&
+		len(sourceRefsFrontmatterFailures(body, sourceRefs)) == 0 &&
+		projection != nil &&
+		projection.Freshness == "fresh" &&
+		projectionDetailContains(projection.Details, "current_source_refs", synthesisCompileCurrentSrc) &&
+		projectionDetailContains(projection.Details, "superseded_source_refs", synthesisCompileOldSrc)
+	activityPass := len(populatedBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.SearchUsed &&
+		turnMetrics.ListDocumentsUsed &&
+		turnMetrics.GetDocumentUsed &&
+		turnMetrics.ProjectionStatesUsed &&
+		turnMetrics.ProvenanceEventsUsed &&
+		inspectedSynthesisProvenanceRef &&
+		!turnMetrics.CreateDocumentUsed &&
+		(turnMetrics.ReplaceSectionUsed || turnMetrics.AppendDocumentUsed)
+	return verificationResult{
+		Passed:        databasePass && activityPass && candidatePass,
+		DatabasePass:  databasePass,
+		AssistantPass: activityPass && candidatePass,
+		Details:       missingDetails(failures),
+		Documents:     []string{synthesisCompilePath, synthesisCompileDecoyPath, synthesisCompileCurrentSrc, synthesisCompileOldSrc},
+	}, nil
+}
+
+func validateCompileSynthesisCandidateObject(finalMessage string, expectedDocID string) (bool, []string) {
+	object, ok := exactFencedJSONObject(finalMessage)
+	if !ok {
+		return false, []string{"final answer did not contain exactly one fenced compile synthesis candidate JSON object"}
+	}
+	candidate := map[string]any{}
+	if err := json.Unmarshal([]byte(object), &candidate); err != nil {
+		return false, []string{"compile synthesis candidate JSON was not parseable"}
+	}
+	failures := []string{}
+	required := []string{
+		"selected_path",
+		"existing_candidate",
+		"source_refs",
+		"source_evidence",
+		"candidate_status",
+		"duplicate_status",
+		"provenance_refs",
+		"projection_freshness",
+		"write_status",
+		"validation_boundaries",
+		"authority_limits",
+	}
+	allowed := map[string]bool{}
+	for _, field := range required {
+		allowed[field] = true
+		if _, found := candidate[field]; !found {
+			failures = append(failures, "candidate object missing "+field)
+		}
+	}
+	for field := range candidate {
+		if !allowed[field] {
+			failures = append(failures, "candidate object included unexpected field "+field)
+		}
+	}
+	if stringValue(candidate["selected_path"]) != synthesisCompilePath {
+		failures = append(failures, "candidate selected_path did not match "+synthesisCompilePath)
+	}
+	if !truthyValue(candidate["existing_candidate"]) {
+		failures = append(failures, "candidate existing_candidate was not true")
+	}
+	if !valueContainsAll(candidate["source_refs"], []string{synthesisCompileCurrentSrc, synthesisCompileOldSrc}) {
+		failures = append(failures, "candidate source_refs did not include current and old source refs")
+	}
+	if !valueContainsAll(candidate["source_evidence"], []string{synthesisCompileCurrentSrc, synthesisCompileOldSrc}) ||
+		!valueContainsAny(candidate["source_evidence"], []string{"current source", "current_source", `"current"`}) ||
+		!valueContainsAny(candidate["source_evidence"], []string{"superseded source", "superseded_source", `"superseded"`}) {
+		failures = append(failures, "candidate source_evidence did not identify current and superseded sources")
+	}
+	if !valueContainsAll(candidate["candidate_status"], []string{synthesisCompilePath}) ||
+		!valueContainsAny(candidate["candidate_status"], []string{"decoy", synthesisCompileDecoyPath}) ||
+		!valueContainsAny(candidate["candidate_status"], []string{"selected", "choose", "chosen"}) {
+		failures = append(failures, "candidate candidate_status did not prove target selection over decoy")
+	}
+	if !valueContainsAny(candidate["duplicate_status"], []string{"no duplicate", "not created", "single", "exactly one"}) {
+		failures = append(failures, "candidate duplicate_status did not prove no duplicate synthesis page")
+	}
+	hasExpectedProjectionRef := expectedDocID != "" &&
+		valueContainsAny(candidate["provenance_refs"], []string{"synthesis:" + expectedDocID}) &&
+		valueContainsAny(candidate["provenance_refs"], []string{"projection"})
+	hasRunnerOwnedNoBypass := valueContainsAny(candidate["provenance_refs"], []string{"runner-owned", "runner owned"}) &&
+		valueContainsAny(candidate["provenance_refs"], []string{"no-bypass", "no bypass"})
+	if !hasExpectedProjectionRef || !hasRunnerOwnedNoBypass {
+		failures = append(failures, "candidate provenance_refs did not include synthesis projection provenance evidence")
+	}
+	if !valueContainsAny(candidate["projection_freshness"], []string{"fresh"}) ||
+		!valueContainsAny(candidate["projection_freshness"], []string{synthesisCompilePath, "synthesis"}) {
+		failures = append(failures, "candidate projection_freshness did not report fresh synthesis projection")
+	}
+	if !valueContainsAny(candidate["write_status"], []string{"updated", "replaced", "appended"}) {
+		failures = append(failures, "candidate write_status did not report update/replace/append")
+	}
+	if !valueContainsAll(candidate["validation_boundaries"], []string{"sqlite", "vault", "source-built", "unsupported"}) ||
+		!valueContainsAny(candidate["validation_boundaries"], []string{"broad repo", "repo search", "file edit", "direct file"}) {
+		failures = append(failures, "candidate validation_boundaries did not preserve no-bypass controls")
+	}
+	if !valueContainsAny(candidate["authority_limits"], []string{"canonical"}) ||
+		!valueContainsAny(candidate["authority_limits"], []string{"promoted records", "records"}) ||
+		!valueContainsAny(candidate["authority_limits"], []string{"does not implement", "eval-only", "not implemented"}) {
+		failures = append(failures, "candidate authority_limits did not preserve synthesis authority limits")
+	}
+	return len(failures) == 0, failures
+}
+
 func verifyMTSynthesisDriftPressure(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
 	body, found, err := documentBodyByPath(ctx, paths, mtDriftSynthesisPath)
 	if err != nil {

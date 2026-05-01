@@ -119,7 +119,7 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedSynthesisSourceSetPressure(ctx, cfg); err != nil {
 			return err
 		}
-	case synthesisCompileNaturalScenarioID, synthesisCompileScriptedScenarioID, highTouchCompileSynthesisNaturalScenarioID, highTouchCompileSynthesisScriptedScenarioID:
+	case synthesisCompileNaturalScenarioID, synthesisCompileScriptedScenarioID, highTouchCompileSynthesisNaturalScenarioID, highTouchCompileSynthesisScriptedScenarioID, compileSynthesisCurrentPrimitivesScenarioID, compileSynthesisGuidanceOnlyScenarioID, compileSynthesisResponseCandidateScenarioID:
 		if err := seedSynthesisCompileRevisit(ctx, cfg); err != nil {
 			return err
 		}

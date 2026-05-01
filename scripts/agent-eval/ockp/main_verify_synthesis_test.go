@@ -321,6 +321,92 @@ func TestVerifyHighTouchCompileSynthesisNaturalRequiresProvenance(t *testing.T) 
 	}
 }
 
+func TestVerifyCompileSynthesisResponseCandidateRequiresContractAndWorkflow(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: compileSynthesisResponseCandidateScenarioID}); err != nil {
+		t.Fatalf("seed compile synthesis candidate scenario: %v", err)
+	}
+	replaceSeedSection(t, ctx, paths, synthesisCompilePath, "Summary", "Current compile_synthesis revisit decision: existing document and retrieval actions are technically sufficient.\n\nCurrent source: "+synthesisCompileCurrentSrc+"\n\nSuperseded source: "+synthesisCompileOldSrc)
+	synthesisDocID, found, err := documentIDByPath(ctx, paths, synthesisCompilePath)
+	if err != nil {
+		t.Fatalf("lookup synthesis doc id: %v", err)
+	}
+	if !found {
+		t.Fatalf("missing synthesis doc id for %s", synthesisCompilePath)
+	}
+	workflowMetrics := metrics{
+		AssistantCalls:        1,
+		SearchUsed:            true,
+		ListDocumentsUsed:     true,
+		GetDocumentUsed:       true,
+		ProjectionStatesUsed:  true,
+		ProvenanceEventsUsed:  true,
+		ProvenanceEventRefIDs: []string{"synthesis:" + synthesisDocID},
+		ReplaceSectionUsed:    true,
+		EventTypeCounts:       map[string]int{},
+		CommandExecutions:     6,
+		ToolCalls:             6,
+	}
+	candidateAnswer := "```json\n{\"selected_path\":\"" + synthesisCompilePath + "\",\"existing_candidate\":true,\"source_refs\":[\"" + synthesisCompileCurrentSrc + "\",\"" + synthesisCompileOldSrc + "\"],\"source_evidence\":\"Current source " + synthesisCompileCurrentSrc + "; superseded source " + synthesisCompileOldSrc + "\",\"candidate_status\":\"selected " + synthesisCompilePath + " instead of decoy " + synthesisCompileDecoyPath + "\",\"duplicate_status\":\"exactly one target; no duplicate synthesis page was created\",\"provenance_refs\":[\"synthesis:" + synthesisDocID + "\",\"projection\",\"runner-owned no-bypass\"],\"projection_freshness\":\"fresh synthesis projection for " + synthesisCompilePath + "\",\"write_status\":\"updated with replace_section\",\"validation_boundaries\":\"no direct SQLite, no direct vault inspection, no direct file edits, no broad repo search, no source-built runner, no unsupported actions\",\"authority_limits\":\"canonical source docs and promoted records outrank synthesis; this eval-only response does not implement compile_synthesis\"}\n```"
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: compileSynthesisResponseCandidateScenarioID}, 1, candidateAnswer, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify compile synthesis candidate: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("compile synthesis candidate failed: %+v", result)
+	}
+	proseWrappedAnswer := "Candidate:\n" + candidateAnswer
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: compileSynthesisResponseCandidateScenarioID}, 1, proseWrappedAnswer, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify prose-wrapped compile synthesis candidate: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("compile synthesis candidate passed with prose outside JSON fence: %+v", result)
+	}
+	missingProjectionAnswer := strings.Replace(candidateAnswer, "fresh synthesis projection", "synthesis state", 1)
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: compileSynthesisResponseCandidateScenarioID}, 1, missingProjectionAnswer, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify compile synthesis candidate missing projection freshness: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("compile synthesis candidate passed without projection freshness: %+v", result)
+	}
+	extraFieldAnswer := strings.Replace(candidateAnswer, "}\n```", ",\"unexpected\":\"field\"}\n```", 1)
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: compileSynthesisResponseCandidateScenarioID}, 1, extraFieldAnswer, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify compile synthesis candidate with extra field: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("compile synthesis candidate passed with an extra response field: %+v", result)
+	}
+	missingSourceRoleAnswer := strings.Replace(candidateAnswer, "superseded source "+synthesisCompileOldSrc, "older source "+synthesisCompileOldSrc, 1)
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: compileSynthesisResponseCandidateScenarioID}, 1, missingSourceRoleAnswer, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify compile synthesis candidate missing source role: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("compile synthesis candidate passed without both source roles: %+v", result)
+	}
+	weakProvenanceAnswer := strings.Replace(candidateAnswer, "\"provenance_refs\":[\"synthesis:"+synthesisDocID+"\",\"projection\",\"runner-owned no-bypass\"]", "\"provenance_refs\":[\"projection\"]", 1)
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: compileSynthesisResponseCandidateScenarioID}, 1, weakProvenanceAnswer, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify compile synthesis candidate with weak provenance refs: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("compile synthesis candidate passed without concrete provenance refs: %+v", result)
+	}
+	missingProvenanceMetrics := workflowMetrics
+	missingProvenanceMetrics.ProvenanceEventRefIDs = []string{"unrelated-ref"}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: compileSynthesisResponseCandidateScenarioID}, 1, candidateAnswer, missingProvenanceMetrics)
+	if err != nil {
+		t.Fatalf("verify compile synthesis candidate missing provenance metrics: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("compile synthesis candidate passed without synthesis provenance metrics: %+v", result)
+	}
+}
+
 func TestVerifySourceSensitiveConflictRequiresUnresolvedExplanationAndNoSynthesis(t *testing.T) {
 	ctx := context.Background()
 	paths := scenarioPaths(t.TempDir())

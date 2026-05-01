@@ -30,6 +30,7 @@ func reportLane(ids []string) (string, bool) {
 	videoYouTube := 0
 	synthesisCompile := 0
 	highTouchCompileSynthesis := 0
+	compileSynthesisCandidate := 0
 	broadAudit := 0
 	validation := 0
 	releaseBlocking := false
@@ -138,6 +139,10 @@ func reportLane(ids []string) (string, bool) {
 			highTouchCompileSynthesis++
 			continue
 		}
+		if isCompileSynthesisCandidateScenario(id) {
+			compileSynthesisCandidate++
+			continue
+		}
 		if isBroadAuditScenario(id) {
 			broadAudit++
 			continue
@@ -226,6 +231,9 @@ func reportLane(ids []string) (string, bool) {
 	if highTouchCompileSynthesis > 0 && highTouchCompileSynthesis+validation == len(ids) {
 		return highTouchCompileSynthesisLaneName, false
 	}
+	if compileSynthesisCandidate > 0 && compileSynthesisCandidate+validation == len(ids) {
+		return compileSynthesisCandidateLaneName, false
+	}
 	if broadAudit > 0 && broadAudit+validation == len(ids) {
 		return broadAuditLaneName, false
 	}
@@ -307,6 +315,9 @@ func reportLane(ids []string) (string, bool) {
 	if highTouchCompileSynthesis > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
+	if compileSynthesisCandidate > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
 	if broadAudit > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
@@ -376,6 +387,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == highTouchCompileSynthesisLaneName {
 		return "high-touch compile synthesis ceremony rows report natural source-backed synthesis maintenance, scripted current-primitives control, source refs, Sources and Freshness sections, duplicate prevention, freshness/provenance visibility, no-bypass controls, tool count, command count, assistant calls, wall time, prompt specificity, retries, latency, brittleness, guidance dependence, safety risks, and separate safety/capability/UX classification"
+	}
+	if lane == compileSynthesisCandidateLaneName {
+		return "compile synthesis candidate rows compare current primitives, guidance-only repair, and an eval-only candidate response contract, while reporting selected path, source refs, source evidence, candidate/duplicate status, provenance refs, projection freshness, write status, validation/no-bypass boundaries, authority limits, tool count, command count, assistant calls, wall time, prompt specificity, retries, latency, brittleness, guidance dependence, safety risks, safety pass, capability pass, and UX quality"
 	}
 	if lane == broadAuditLaneName {
 		return "broad contradiction/audit revisit rows report natural audit intent, scripted current-primitives control, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"

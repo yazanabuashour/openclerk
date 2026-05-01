@@ -1089,6 +1089,97 @@ func TestExecuteRunLabelsHighTouchCompileSynthesisLaneAsNonReleaseBlocking(t *te
 	}
 }
 
+func TestExecuteRunLabelsCompileSynthesisCandidateLaneAsNonReleaseBlocking(t *testing.T) {
+	reportDir := filepath.Join(t.TempDir(), "reports")
+	scenarioIDs := append(compileSynthesisCandidateScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject")
+	config := runConfig{
+		Parallel:   1,
+		Variant:    productionVariant,
+		Scenario:   strings.Join(scenarioIDs, ","),
+		RunRoot:    filepath.Join(t.TempDir(), "run"),
+		ReportDir:  reportDir,
+		ReportName: "ockp-compile-synthesis-candidate-evidence-test",
+		RepoRoot:   ".",
+		CodexBin:   "codex",
+		CacheMode:  cacheModeIsolated,
+	}
+	err := executeRun(context.Background(), config, &strings.Builder{}, func(_ context.Context, _ runConfig, job evalJob, _ cacheConfig) jobResult {
+		now := time.Now().UTC()
+		resultMetrics := metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}}
+		verification := verificationResult{Passed: true, DatabasePass: true, AssistantPass: true}
+		passed := true
+		if job.Scenario.ID == compileSynthesisGuidanceOnlyScenarioID {
+			resultMetrics = metrics{AssistantCalls: 6, ToolCalls: 24, CommandExecutions: 24, EventTypeCounts: map[string]int{}}
+			verification = verificationResult{Passed: false, DatabasePass: true, AssistantPass: false, Details: "answer contract incomplete"}
+			passed = false
+		}
+		if job.Scenario.ID == compileSynthesisResponseCandidateScenarioID {
+			resultMetrics = metrics{AssistantCalls: 4, ToolCalls: 18, CommandExecutions: 18, EventTypeCounts: map[string]int{}}
+		}
+		return jobResult{
+			Variant:       job.Variant,
+			Scenario:      job.Scenario.ID,
+			ScenarioTitle: job.Scenario.Title,
+			Status:        "completed",
+			Passed:        passed,
+			Metrics:       resultMetrics,
+			Verification:  verification,
+			StartedAt:     now,
+			CompletedAt:   &now,
+		}
+	})
+	if err != nil {
+		t.Fatalf("execute compile synthesis candidate run: %v", err)
+	}
+	content, err := os.ReadFile(filepath.Join(reportDir, "ockp-compile-synthesis-candidate-evidence-test.json"))
+	if err != nil {
+		t.Fatalf("read JSON report: %v", err)
+	}
+	var report report
+	if err := json.Unmarshal(content, &report); err != nil {
+		t.Fatalf("decode JSON report: %v", err)
+	}
+	if report.Metadata.Lane != compileSynthesisCandidateLaneName || report.Metadata.ReleaseBlocking {
+		t.Fatalf("compile synthesis candidate lane metadata = %q/%t, want %q/false", report.Metadata.Lane, report.Metadata.ReleaseBlocking, compileSynthesisCandidateLaneName)
+	}
+	if report.TargetedLaneSummary == nil {
+		t.Fatal("compile synthesis candidate report missing targeted lane summary")
+	}
+	if report.TargetedLaneSummary.Decision != "promote_compile_synthesis_candidate_contract" {
+		t.Fatalf("decision = %q, want promote_compile_synthesis_candidate_contract", report.TargetedLaneSummary.Decision)
+	}
+	classifications := map[string]targetedScenarioClassification{}
+	for _, row := range report.TargetedLaneSummary.ScenarioClassifications {
+		classifications[row.Scenario] = row
+	}
+	if classifications[compileSynthesisGuidanceOnlyScenarioID].FailureClassification != "ergonomics_gap" {
+		t.Fatalf("guidance-only classification = %q, want ergonomics_gap", classifications[compileSynthesisGuidanceOnlyScenarioID].FailureClassification)
+	}
+	if classifications[compileSynthesisResponseCandidateScenarioID].PromptSpecificity != "candidate-response-contract" {
+		t.Fatalf("candidate prompt specificity = %q, want candidate-response-contract", classifications[compileSynthesisResponseCandidateScenarioID].PromptSpecificity)
+	}
+	if classifications[compileSynthesisResponseCandidateScenarioID].SafetyPass != "pass" || classifications[compileSynthesisResponseCandidateScenarioID].CapabilityPass != "pass" {
+		t.Fatalf("candidate pass fields = safety %q capability %q, want pass/pass", classifications[compileSynthesisResponseCandidateScenarioID].SafetyPass, classifications[compileSynthesisResponseCandidateScenarioID].CapabilityPass)
+	}
+	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-compile-synthesis-candidate-evidence-test.md"))
+	if err != nil {
+		t.Fatalf("read markdown report: %v", err)
+	}
+	for _, want := range []string{
+		"Lane: `" + compileSynthesisCandidateLaneName + "`",
+		"Release blocking: `false`",
+		"Decision: `promote_compile_synthesis_candidate_contract`",
+		"Safety pass",
+		"Capability pass",
+		"UX quality",
+		"validation control stayed final-answer-only",
+	} {
+		if !strings.Contains(string(markdown), want) {
+			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
+		}
+	}
+}
+
 func TestExecuteRunLabelsWebURLStaleRepairLaneAsNonReleaseBlocking(t *testing.T) {
 	reportDir := filepath.Join(t.TempDir(), "reports")
 	scenarioIDs := append(webURLStaleRepairScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject")
@@ -1414,6 +1505,41 @@ func TestHighTouchCompileSynthesisDecisionRequiresRepeatedErgonomicsPressure(t *
 	rows[0].FailureClassification = "skill_guidance_or_eval_coverage"
 	if decision := highTouchCompileSynthesisDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
 		t.Fatalf("guidance decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+}
+
+func TestCompileSynthesisCandidateDecisionPromotesOnlyWhenGuidanceStillHasDebt(t *testing.T) {
+	rows := make([]targetedScenarioClassification, 0, len(compileSynthesisCandidateScenarioIDs()))
+	for _, id := range compileSynthesisCandidateScenarioIDs() {
+		rows = append(rows, targetedScenarioClassification{
+			Scenario:              id,
+			FailureClassification: "none",
+			SafetyPass:            "pass",
+		})
+	}
+	if decision := compileSynthesisCandidateDecision(rows[:len(rows)-1]); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("partial decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	if decision := compileSynthesisCandidateDecision(rows); decision != "defer_guidance_only_current_primitives_sufficient" {
+		t.Fatalf("guidance-pass decision = %q, want defer_guidance_only_current_primitives_sufficient", decision)
+	}
+	rows[1].FailureClassification = "ergonomics_gap"
+	if decision := compileSynthesisCandidateDecision(rows); decision != "promote_compile_synthesis_candidate_contract" {
+		t.Fatalf("candidate decision = %q, want promote_compile_synthesis_candidate_contract", decision)
+	}
+	rows[2].FailureClassification = "skill_guidance_or_eval_coverage"
+	if decision := compileSynthesisCandidateDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("candidate repair decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	rows[2].FailureClassification = "none"
+	rows[0].FailureClassification = "capability_gap"
+	if decision := compileSynthesisCandidateDecision(rows); decision != "none_viable_yet" {
+		t.Fatalf("capability decision = %q, want none_viable_yet", decision)
+	}
+	rows[0].FailureClassification = "none"
+	rows[2].FailureClassification = "eval_contract_violation"
+	if decision := compileSynthesisCandidateDecision(rows); decision != "kill_compile_synthesis_candidate" {
+		t.Fatalf("safety decision = %q, want kill_compile_synthesis_candidate", decision)
 	}
 }
 

@@ -91,7 +91,7 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	if releaseBlocking {
 		return nil
 	}
-	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != promotedRecordDomainLaneName && lane != parallelRunnerLaneName && lane != documentHistoryLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != captureLowRiskLaneName && lane != captureExplicitOverridesLaneName && lane != captureDuplicateCandidateLaneName && lane != taggingLaneName && lane != captureSaveThisNoteLaneName && lane != captureDocumentLinksLaneName && lane != sourceURLUpdateLaneName && lane != webURLIntakeLaneName && lane != webURLStaleRepairLaneName && lane != webURLStaleImpactLaneName && lane != webProductPageLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName && lane != highTouchCompileSynthesisLaneName && lane != broadAuditLaneName {
+	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != promotedRecordDomainLaneName && lane != parallelRunnerLaneName && lane != documentHistoryLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != captureLowRiskLaneName && lane != captureExplicitOverridesLaneName && lane != captureDuplicateCandidateLaneName && lane != taggingLaneName && lane != captureSaveThisNoteLaneName && lane != captureDocumentLinksLaneName && lane != sourceURLUpdateLaneName && lane != webURLIntakeLaneName && lane != webURLStaleRepairLaneName && lane != webURLStaleImpactLaneName && lane != webProductPageLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName && lane != highTouchCompileSynthesisLaneName && lane != compileSynthesisCandidateLaneName && lane != broadAuditLaneName {
 		return nil
 	}
 	summary := targetedLaneSummary{
@@ -184,6 +184,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		case highTouchCompileSynthesisLaneName:
 			include = isHighTouchCompileSynthesisScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
 			classification, posture = classifyTargetedSynthesisCompileResult(result)
+		case compileSynthesisCandidateLaneName:
+			include = isCompileSynthesisCandidateScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
+			classification, posture = classifyTargetedCompileSynthesisCandidateResult(result)
 		case broadAuditLaneName:
 			include = isBroadAuditScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
 			classification, posture = classifyTargetedBroadAuditResult(result)
@@ -304,6 +307,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	case highTouchCompileSynthesisLaneName:
 		summary.Decision = highTouchCompileSynthesisDecision(summary.ScenarioClassifications)
 		summary.Promotion = highTouchCompileSynthesisPromotion(summary.Decision)
+	case compileSynthesisCandidateLaneName:
+		summary.Decision = compileSynthesisCandidateDecision(summary.ScenarioClassifications)
+		summary.Promotion = compileSynthesisCandidatePromotion(summary.Decision)
 	case broadAuditLaneName:
 		summary.Decision = broadAuditDecision(summary.ScenarioClassifications)
 		summary.Promotion = "targeted broad contradiction/audit revisit evidence only; no broad semantic contradiction engine, audit runner action, schema, migration, storage behavior, or public API change from this eval"

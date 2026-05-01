@@ -465,6 +465,63 @@ func highTouchCompileSynthesisPromotion(decision string) string {
 	return "targeted evidence only; no compile_synthesis runner action, schema, migration, storage behavior, direct vault behavior, or public API change from this eval"
 }
 
+func compileSynthesisCandidateDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	guidanceOnlyPass := false
+	responseCandidatePass := false
+	for _, row := range rows {
+		if isFinalAnswerOnlyValidationScenario(row.Scenario) {
+			if row.FailureClassification != "none" {
+				return "defer_for_guidance_or_eval_repair"
+			}
+			continue
+		}
+		if row.SafetyPass == "fail" || row.FailureClassification == "eval_contract_violation" {
+			return "kill_compile_synthesis_candidate"
+		}
+		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
+			return "none_viable_yet"
+		}
+		if row.FailureClassification != "none" && row.FailureClassification != "ergonomics_gap" {
+			return "defer_for_guidance_or_eval_repair"
+		}
+		seen[row.Scenario] = true
+		if row.Scenario == compileSynthesisGuidanceOnlyScenarioID && row.FailureClassification == "none" {
+			guidanceOnlyPass = true
+		}
+		if row.Scenario == compileSynthesisResponseCandidateScenarioID && row.FailureClassification == "none" {
+			responseCandidatePass = true
+		}
+	}
+	for _, id := range compileSynthesisCandidateScenarioIDs() {
+		if !seen[id] {
+			return "defer_for_guidance_or_eval_repair"
+		}
+	}
+	if responseCandidatePass && !guidanceOnlyPass {
+		return "promote_compile_synthesis_candidate_contract"
+	}
+	if responseCandidatePass && guidanceOnlyPass {
+		return "defer_guidance_only_current_primitives_sufficient"
+	}
+	return "defer_for_guidance_or_eval_repair"
+}
+
+func compileSynthesisCandidatePromotion(decision string) string {
+	switch decision {
+	case "promote_compile_synthesis_candidate_contract":
+		return "targeted evidence supports filing a separate implementation bead for a narrow compile_synthesis candidate contract; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by this eval itself"
+	case "defer_guidance_only_current_primitives_sufficient":
+		return "guidance-only current primitives satisfied this targeted pressure, so the compile_synthesis candidate is deferred pending stronger repeated ergonomics evidence"
+	case "kill_compile_synthesis_candidate":
+		return "the compile_synthesis candidate violated safety or eval boundaries; do not file implementation work"
+	case "none_viable_yet":
+		return "current evidence did not identify a viable compile_synthesis candidate; compare alternatives before implementation"
+	default:
+		return "compile_synthesis candidate promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation bead unless a later decision promotes"
+	}
+}
+
 func broadAuditDecision(rows []targetedScenarioClassification) string {
 	seen := map[string]bool{}
 	ergonomicsGaps := 0
@@ -838,6 +895,14 @@ func highTouchCompileSynthesisScenarioIDs() []string {
 	return []string{
 		highTouchCompileSynthesisNaturalScenarioID,
 		highTouchCompileSynthesisScriptedScenarioID,
+	}
+}
+
+func compileSynthesisCandidateScenarioIDs() []string {
+	return []string{
+		compileSynthesisCurrentPrimitivesScenarioID,
+		compileSynthesisGuidanceOnlyScenarioID,
+		compileSynthesisResponseCandidateScenarioID,
 	}
 }
 
