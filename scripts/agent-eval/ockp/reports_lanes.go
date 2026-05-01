@@ -22,6 +22,7 @@ func reportLane(ids []string) (string, bool) {
 	sourceURLUpdate := 0
 	webURLIntake := 0
 	webURLStaleRepair := 0
+	webURLStaleImpact := 0
 	webProductPage := 0
 	documentThis := 0
 	documentArtifactCandidate := 0
@@ -102,6 +103,10 @@ func reportLane(ids []string) (string, bool) {
 		}
 		if isWebURLStaleRepairScenario(id) {
 			webURLStaleRepair++
+			continue
+		}
+		if isWebURLStaleImpactScenario(id) {
+			webURLStaleImpact++
 			continue
 		}
 		if isWebProductPageScenario(id) {
@@ -192,6 +197,9 @@ func reportLane(ids []string) (string, bool) {
 	if webURLStaleRepair > 0 && webURLStaleRepair+validation == len(ids) {
 		return webURLStaleRepairLaneName, false
 	}
+	if webURLStaleImpact > 0 && webURLStaleImpact+validation == len(ids) {
+		return webURLStaleImpactLaneName, false
+	}
 	if webProductPage > 0 && webProductPage+validation == len(ids) {
 		return webProductPageLaneName, false
 	}
@@ -267,6 +275,9 @@ func reportLane(ids []string) (string, bool) {
 	if webURLStaleRepair > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
+	if webURLStaleImpact > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
 	if webProductPage > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
@@ -339,6 +350,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == webURLStaleRepairLaneName {
 		return "high-touch web URL stale repair rows report natural refresh intent, scripted update-mode control, duplicate/no-op behavior, changed-source freshness evidence, dependent synthesis stale visibility, provenance/freshness, no browser/manual acquisition, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and separate safety/capability/UX classification"
+	}
+	if lane == webURLStaleImpactLaneName {
+		return "web URL stale-impact update response rows compare current primitives, guidance-only repair, and an eval-only candidate response contract, while reporting duplicate/no-op behavior, changed hash evidence, stale dependent synthesis refs, projection/provenance refs, no-repair warnings, no browser/manual acquisition, tool count, command count, assistant calls, wall time, prompt specificity, retries, latency, brittleness, guidance dependence, safety risks, safety pass, capability pass, and UX quality"
 	}
 	if lane == webProductPageLaneName {
 		return "rich public product-page rows report natural product-page intent, approved public HTML fetch control, tracking/variant duplicate normalization, visible text fidelity, dynamic omission disclosure, blocked or non-HTML rejection, no-browser/no-login/no-cart/no-checkout/no-purchase controls, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"

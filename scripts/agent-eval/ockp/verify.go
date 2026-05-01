@@ -97,6 +97,12 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyWebURLStaleRepair(ctx, paths, finalMessage, turnMetrics, false)
 	case webURLStaleRepairScriptedScenarioID:
 		return verifyWebURLStaleRepair(ctx, paths, finalMessage, turnMetrics, true)
+	case webURLStaleImpactCurrentPrimitivesScenarioID:
+		return verifyWebURLStaleRepair(ctx, paths, finalMessage, turnMetrics, true)
+	case webURLStaleImpactGuidanceOnlyScenarioID:
+		return verifyWebURLStaleRepair(ctx, paths, finalMessage, turnMetrics, true)
+	case webURLStaleImpactResponseCandidateScenarioID:
+		return verifyWebURLStaleImpactResponseCandidate(ctx, paths, finalMessage, turnMetrics)
 	case webProductPageNaturalScenarioID:
 		return verifyWebProductPageNatural(ctx, paths, finalMessage, turnMetrics)
 	case webProductPageControlScenarioID:

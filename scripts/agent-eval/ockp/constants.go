@@ -110,6 +110,11 @@ const (
 	webURLStaleRepairNaturalScenarioID  = "high-touch-web-url-stale-repair-natural-intent"
 	webURLStaleRepairScriptedScenarioID = "high-touch-web-url-stale-repair-scripted-control"
 
+	webURLStaleImpactLaneName                    = "web-url-stale-impact-update-response-candidate"
+	webURLStaleImpactCurrentPrimitivesScenarioID = "web-url-stale-impact-current-primitives-control"
+	webURLStaleImpactGuidanceOnlyScenarioID      = "web-url-stale-impact-guidance-only-natural"
+	webURLStaleImpactResponseCandidateScenarioID = "web-url-stale-impact-response-candidate"
+
 	webProductPageLaneName               = "web-product-page-rich-public-intake"
 	webProductPageNaturalScenarioID      = "web-product-page-rich-natural-intent"
 	webProductPageControlScenarioID      = "web-product-page-rich-scripted-control"

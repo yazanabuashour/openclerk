@@ -25,6 +25,11 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 			t.Fatalf("scenarioIDs missing web URL stale repair scenario %q in %v", want, scenarioIDs())
 		}
 	}
+	for _, want := range webURLStaleImpactScenarioIDs() {
+		if !ids[want] {
+			t.Fatalf("scenarioIDs missing web URL stale impact scenario %q in %v", want, scenarioIDs())
+		}
+	}
 }
 
 func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
@@ -90,6 +95,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	for _, id := range webURLStaleRepairScenarioIDs() {
 		if defaultIDs[id] {
 			t.Fatalf("default selected scenarios included targeted web URL stale repair scenario %q", id)
+		}
+	}
+	for _, id := range webURLStaleImpactScenarioIDs() {
+		if defaultIDs[id] {
+			t.Fatalf("default selected scenarios included targeted web URL stale impact scenario %q", id)
 		}
 	}
 	for _, id := range []string{documentThisMissingFieldsScenarioID, documentThisExplicitCreateScenarioID, documentThisSourceURLMissingHintsScenarioID, documentThisExplicitOverridesScenarioID, documentThisDuplicateCandidateScenarioID, documentThisExistingUpdateScenarioID, documentThisSynthesisFreshnessScenarioID} {
@@ -221,6 +231,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	lane, releaseBlocking = reportLane(selected)
 	if lane != webURLStaleRepairLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, webURLStaleRepairLaneName)
+	}
+	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(append(webURLStaleImpactScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject"), ",")})
+	lane, releaseBlocking = reportLane(selected)
+	if lane != webURLStaleImpactLaneName || releaseBlocking {
+		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, webURLStaleImpactLaneName)
 	}
 	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(append(synthesisCompileScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject"), ",")})
 	lane, releaseBlocking = reportLane(selected)

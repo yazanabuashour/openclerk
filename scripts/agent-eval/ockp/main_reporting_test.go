@@ -1095,6 +1095,97 @@ func TestExecuteRunLabelsWebURLStaleRepairLaneAsNonReleaseBlocking(t *testing.T)
 	}
 }
 
+func TestExecuteRunLabelsWebURLStaleImpactCandidateLaneAsNonReleaseBlocking(t *testing.T) {
+	reportDir := filepath.Join(t.TempDir(), "reports")
+	scenarioIDs := append(webURLStaleImpactScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject")
+	config := runConfig{
+		Parallel:   1,
+		Variant:    productionVariant,
+		Scenario:   strings.Join(scenarioIDs, ","),
+		RunRoot:    filepath.Join(t.TempDir(), "run"),
+		ReportDir:  reportDir,
+		ReportName: "ockp-web-url-stale-impact-update-response-candidate-test",
+		RepoRoot:   ".",
+		CodexBin:   "codex",
+		CacheMode:  cacheModeIsolated,
+	}
+	err := executeRun(context.Background(), config, &strings.Builder{}, func(_ context.Context, _ runConfig, job evalJob, _ cacheConfig) jobResult {
+		now := time.Now().UTC()
+		resultMetrics := metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}}
+		verification := verificationResult{Passed: true, DatabasePass: true, AssistantPass: true}
+		passed := true
+		if job.Scenario.ID == webURLStaleImpactGuidanceOnlyScenarioID {
+			resultMetrics = metrics{AssistantCalls: 6, ToolCalls: 24, CommandExecutions: 24, EventTypeCounts: map[string]int{}}
+			verification = verificationResult{Passed: false, DatabasePass: true, AssistantPass: false, Details: "answer contract incomplete"}
+			passed = false
+		}
+		if job.Scenario.ID == webURLStaleImpactResponseCandidateScenarioID {
+			resultMetrics = metrics{AssistantCalls: 4, ToolCalls: 18, CommandExecutions: 18, EventTypeCounts: map[string]int{}}
+		}
+		return jobResult{
+			Variant:       job.Variant,
+			Scenario:      job.Scenario.ID,
+			ScenarioTitle: job.Scenario.Title,
+			Status:        "completed",
+			Passed:        passed,
+			Metrics:       resultMetrics,
+			Verification:  verification,
+			StartedAt:     now,
+			CompletedAt:   &now,
+		}
+	})
+	if err != nil {
+		t.Fatalf("execute web URL stale impact run: %v", err)
+	}
+	content, err := os.ReadFile(filepath.Join(reportDir, "ockp-web-url-stale-impact-update-response-candidate-test.json"))
+	if err != nil {
+		t.Fatalf("read JSON report: %v", err)
+	}
+	var report report
+	if err := json.Unmarshal(content, &report); err != nil {
+		t.Fatalf("decode JSON report: %v", err)
+	}
+	if report.Metadata.Lane != webURLStaleImpactLaneName || report.Metadata.ReleaseBlocking {
+		t.Fatalf("web URL stale impact lane metadata = %q/%t, want %q/false", report.Metadata.Lane, report.Metadata.ReleaseBlocking, webURLStaleImpactLaneName)
+	}
+	if report.TargetedLaneSummary == nil {
+		t.Fatal("web URL stale impact report missing targeted lane summary")
+	}
+	if report.TargetedLaneSummary.Decision != "promote_stale_impact_update_response_candidate" {
+		t.Fatalf("decision = %q, want promote_stale_impact_update_response_candidate", report.TargetedLaneSummary.Decision)
+	}
+	classifications := map[string]targetedScenarioClassification{}
+	for _, row := range report.TargetedLaneSummary.ScenarioClassifications {
+		classifications[row.Scenario] = row
+	}
+	if classifications[webURLStaleImpactGuidanceOnlyScenarioID].FailureClassification != "ergonomics_gap" {
+		t.Fatalf("guidance-only classification = %q, want ergonomics_gap", classifications[webURLStaleImpactGuidanceOnlyScenarioID].FailureClassification)
+	}
+	if classifications[webURLStaleImpactResponseCandidateScenarioID].PromptSpecificity != "candidate-response-contract" {
+		t.Fatalf("candidate prompt specificity = %q, want candidate-response-contract", classifications[webURLStaleImpactResponseCandidateScenarioID].PromptSpecificity)
+	}
+	if classifications[webURLStaleImpactResponseCandidateScenarioID].SafetyPass != "pass" || classifications[webURLStaleImpactResponseCandidateScenarioID].CapabilityPass != "pass" {
+		t.Fatalf("candidate pass fields = safety %q capability %q, want pass/pass", classifications[webURLStaleImpactResponseCandidateScenarioID].SafetyPass, classifications[webURLStaleImpactResponseCandidateScenarioID].CapabilityPass)
+	}
+	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-web-url-stale-impact-update-response-candidate-test.md"))
+	if err != nil {
+		t.Fatalf("read markdown report: %v", err)
+	}
+	for _, want := range []string{
+		"Lane: `" + webURLStaleImpactLaneName + "`",
+		"Release blocking: `false`",
+		"Decision: `promote_stale_impact_update_response_candidate`",
+		"Safety pass",
+		"Capability pass",
+		"UX quality",
+		"validation control stayed final-answer-only",
+	} {
+		if !strings.Contains(string(markdown), want) {
+			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
+		}
+	}
+}
+
 func TestExecuteRunLabelsMemoryRouterRevisitLaneAsNonReleaseBlocking(t *testing.T) {
 	reportDir := filepath.Join(t.TempDir(), "reports")
 	scenarioIDs := append(memoryRouterRevisitScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject")
@@ -1242,6 +1333,42 @@ func TestWebURLStaleRepairDecisionRequiresRepeatedEvidence(t *testing.T) {
 	rows[0].FailureClassification = "skill_guidance_or_eval_coverage"
 	if decision := webURLStaleRepairDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
 		t.Fatalf("guidance decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+}
+
+func TestWebURLStaleImpactDecisionComparesGuidanceAndCandidate(t *testing.T) {
+	rows := make([]targetedScenarioClassification, 0, len(webURLStaleImpactScenarioIDs()))
+	for _, id := range webURLStaleImpactScenarioIDs() {
+		rows = append(rows, targetedScenarioClassification{
+			Scenario:              id,
+			FailureClassification: "none",
+			SafetyPass:            "pass",
+			CapabilityPass:        "pass",
+		})
+	}
+	if decision := webURLStaleImpactDecision(rows[:len(rows)-1]); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("partial decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	if decision := webURLStaleImpactDecision(rows); decision != "defer_guidance_only_current_primitives_sufficient" {
+		t.Fatalf("complete passing decision = %q, want defer_guidance_only_current_primitives_sufficient", decision)
+	}
+	rows[1].FailureClassification = "ergonomics_gap"
+	if decision := webURLStaleImpactDecision(rows); decision != "promote_stale_impact_update_response_candidate" {
+		t.Fatalf("guidance ergonomics decision = %q, want promote_stale_impact_update_response_candidate", decision)
+	}
+	rows[2].FailureClassification = "skill_guidance_or_eval_coverage"
+	if decision := webURLStaleImpactDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("candidate guidance decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	rows[2].FailureClassification = "none"
+	rows[2].SafetyPass = "fail"
+	if decision := webURLStaleImpactDecision(rows); decision != "kill_stale_impact_response_candidate" {
+		t.Fatalf("safety decision = %q, want kill_stale_impact_response_candidate", decision)
+	}
+	rows[2].SafetyPass = "pass"
+	rows[0].FailureClassification = "capability_gap"
+	if decision := webURLStaleImpactDecision(rows); decision != "none_viable_yet" {
+		t.Fatalf("capability decision = %q, want none_viable_yet", decision)
 	}
 }
 
@@ -1451,6 +1578,15 @@ func TestDocumentHistoryPromptSpecificityLabelsNaturalAndScriptedRows(t *testing
 	}
 	if got := promptSpecificity(broadAuditScriptedScenarioID); got != "scripted-control" {
 		t.Fatalf("scripted broad audit prompt specificity = %q, want scripted-control", got)
+	}
+	if got := promptSpecificity(webURLStaleImpactGuidanceOnlyScenarioID); got != "natural-user-intent" {
+		t.Fatalf("guidance-only stale impact prompt specificity = %q, want natural-user-intent", got)
+	}
+	if got := promptSpecificity(webURLStaleImpactCurrentPrimitivesScenarioID); got != "scripted-control" {
+		t.Fatalf("current-primitives stale impact prompt specificity = %q, want scripted-control", got)
+	}
+	if got := promptSpecificity(webURLStaleImpactResponseCandidateScenarioID); got != "candidate-response-contract" {
+		t.Fatalf("candidate stale impact prompt specificity = %q, want candidate-response-contract", got)
 	}
 	for _, id := range []string{
 		documentHistoryInspectScenarioID,

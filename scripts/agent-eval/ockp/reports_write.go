@@ -82,10 +82,10 @@ func writeMarkdownReport(path string, rep report) error {
 		fmt.Fprintf(&b, "Decision: `%s`\n\n", rep.TargetedLaneSummary.Decision)
 		fmt.Fprintf(&b, "Public surface: `%s`\n\n", strings.Join(rep.TargetedLaneSummary.PublicSurface, "`, `"))
 		fmt.Fprintf(&b, "Promotion: %s.\n\n", rep.TargetedLaneSummary.Promotion)
-		b.WriteString("| Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Latency | Guidance dependence | Safety risks | Fixture preflight | Evidence posture |\n")
-		b.WriteString("| --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | --- | --- | --- | --- | --- |\n")
+		b.WriteString("| Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Latency | Guidance dependence | Safety pass | Capability pass | UX quality | Safety risks | Fixture preflight | Evidence posture |\n")
+		b.WriteString("| --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- |\n")
 		for _, row := range rep.TargetedLaneSummary.ScenarioClassifications {
-			fmt.Fprintf(&b, "| `%s` | `%s` | `%s` | `%s` | %d | %d | %d | %.2f | `%s` | `%s` | `%s` | %d | %d | `%s` | `%s` | `%s` | `%s` | %s |\n",
+			fmt.Fprintf(&b, "| `%s` | `%s` | `%s` | `%s` | %d | %d | %d | %.2f | `%s` | `%s` | `%s` | %d | %d | `%s` | `%s` | `%s` | `%s` | `%s` | `%s` | `%s` | %s |\n",
 				row.Variant,
 				row.Scenario,
 				row.Status,
@@ -101,6 +101,9 @@ func writeMarkdownReport(path string, rep report) error {
 				row.StepCount,
 				row.Latency,
 				row.GuidanceDependence,
+				row.SafetyPass,
+				row.CapabilityPass,
+				row.UXQuality,
 				row.SafetyRisks,
 				row.FixturePreflight,
 				markdownCell(row.EvidencePosture),

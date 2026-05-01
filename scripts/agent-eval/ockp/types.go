@@ -221,6 +221,9 @@ type targetedScenarioClassification struct {
 	StepCount             int     `json:"step_count"`
 	Latency               string  `json:"latency,omitempty"`
 	GuidanceDependence    string  `json:"guidance_dependence,omitempty"`
+	SafetyPass            string  `json:"safety_pass,omitempty"`
+	CapabilityPass        string  `json:"capability_pass,omitempty"`
+	UXQuality             string  `json:"ux_quality,omitempty"`
 	SafetyRisks           string  `json:"safety_risks,omitempty"`
 	FixturePreflight      string  `json:"fixture_preflight,omitempty"`
 }

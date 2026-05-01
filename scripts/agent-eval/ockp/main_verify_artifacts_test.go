@@ -865,6 +865,15 @@ func TestVerifyWebURLStaleRepairRequiresFreshnessAndBoundaries(t *testing.T) {
 		t.Fatalf("web URL stale repair verification failed: %+v", result)
 	}
 
+	candidateAnswer := "Duplicate normalized source URL was rejected and " + webURLDuplicatePath + " was not created. Changed web update refreshed " + webURLSourcePath + " with " + webURLChangedText + "; the second same-hash update was a no-op. " + webURLSynthesisPath + " now has stale synthesis projection freshness with provenance evidence. No browser or manual acquisition was used. Candidate response: update_status changed; normalized_source_url is the runner-normalized public URL; source_path " + webURLSourcePath + "; source_doc_id " + sourceDocID + "; previous_sha256 old; new_sha256 new; changed true; duplicate_status rejected_no_copy; stale_dependents include " + webURLSynthesisPath + "; projection_refs include synthesis:" + synthesisDocID + "; provenance_refs include source_updated and projection freshness; synthesis_repaired false; no_repair_warning source refresh did not repair " + webURLSynthesisPath + "."
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: webURLStaleImpactResponseCandidateScenarioID}, 1, candidateAnswer, metrics)
+	if err != nil {
+		t.Fatalf("verify stale impact candidate: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("stale impact candidate verification failed: %+v", result)
+	}
+
 	missingProjectionMetrics := metrics
 	missingProjectionMetrics.ProjectionStatesUsed = false
 	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: webURLStaleRepairScriptedScenarioID}, 1, answer, missingProjectionMetrics)
@@ -873,6 +882,13 @@ func TestVerifyWebURLStaleRepairRequiresFreshnessAndBoundaries(t *testing.T) {
 	}
 	if result.Passed {
 		t.Fatalf("web URL stale repair passed without projection_states: %+v", result)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: webURLStaleImpactResponseCandidateScenarioID}, 1, candidateAnswer, missingProjectionMetrics)
+	if err != nil {
+		t.Fatalf("verify candidate missing projection_states: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("stale impact candidate passed without projection_states: %+v", result)
 	}
 
 	oneUpdateMetrics := metrics
@@ -886,6 +902,13 @@ func TestVerifyWebURLStaleRepairRequiresFreshnessAndBoundaries(t *testing.T) {
 	if result.Passed {
 		t.Fatalf("web URL stale repair passed without duplicate create and second no-op update: %+v", result)
 	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: webURLStaleImpactResponseCandidateScenarioID}, 1, candidateAnswer, oneUpdateMetrics)
+	if err != nil {
+		t.Fatalf("verify candidate missing duplicate/no-op: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("stale impact candidate passed without duplicate/no-op evidence: %+v", result)
+	}
 
 	wrongProvenanceMetrics := metrics
 	wrongProvenanceMetrics.ProvenanceEventRefIDs = []string{sourceDocID}
@@ -896,6 +919,23 @@ func TestVerifyWebURLStaleRepairRequiresFreshnessAndBoundaries(t *testing.T) {
 	if result.Passed {
 		t.Fatalf("web URL stale repair passed without expected provenance refs: %+v", result)
 	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: webURLStaleImpactResponseCandidateScenarioID}, 1, candidateAnswer, wrongProvenanceMetrics)
+	if err != nil {
+		t.Fatalf("verify candidate wrong provenance refs: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("stale impact candidate passed without expected provenance refs: %+v", result)
+	}
+
+	browserMetrics := metrics
+	browserMetrics.BrowserAutomation = true
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: webURLStaleImpactResponseCandidateScenarioID}, 1, candidateAnswer, browserMetrics)
+	if err != nil {
+		t.Fatalf("verify candidate browser bypass: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("stale impact candidate passed with browser automation: %+v", result)
+	}
 
 	weakAnswer := webURLSourcePath + " changed and " + webURLSynthesisPath + " is stale."
 	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: webURLStaleRepairScriptedScenarioID}, 1, weakAnswer, metrics)
@@ -904,6 +944,21 @@ func TestVerifyWebURLStaleRepairRequiresFreshnessAndBoundaries(t *testing.T) {
 	}
 	if result.Passed {
 		t.Fatalf("web URL stale repair passed with weak final answer: %+v", result)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: webURLStaleImpactResponseCandidateScenarioID}, 1, weakAnswer, metrics)
+	if err != nil {
+		t.Fatalf("verify candidate weak answer: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("stale impact candidate passed with weak final answer: %+v", result)
+	}
+	missingHashAnswer := strings.ReplaceAll(candidateAnswer, "previous_sha256 old; new_sha256 new; ", "")
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: webURLStaleImpactResponseCandidateScenarioID}, 1, missingHashAnswer, metrics)
+	if err != nil {
+		t.Fatalf("verify candidate missing hash fields: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("stale impact candidate passed without hash fields: %+v", result)
 	}
 
 	if err := createSeedDocument(ctx, cfg, webURLDuplicatePath, "Duplicate Web URL", "# Duplicate\n"); err != nil {
@@ -915,6 +970,62 @@ func TestVerifyWebURLStaleRepairRequiresFreshnessAndBoundaries(t *testing.T) {
 	}
 	if result.Passed {
 		t.Fatalf("web URL stale repair passed after duplicate source write: %+v", result)
+	}
+}
+
+func TestVerifyWebURLChangedRejectsRepairedSynthesis(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	runDir := t.TempDir()
+	fixtures := startSourceURLUpdateFixtures(webURLChangedScenarioID)
+	defer fixtures.Close()
+	if err := fixtures.prepareFiles(runDir); err != nil {
+		t.Fatalf("prepare web URL fixture files: %v", err)
+	}
+	t.Setenv(evalSourceFixtureRootEnv, evalSourceFixtureRoot(runDir))
+	if err := seedScenarioWithFixtures(ctx, paths, scenario{ID: webURLChangedScenarioID}, fixtures); err != nil {
+		t.Fatalf("seed web URL changed scenario: %v", err)
+	}
+	if err := fixtures.prepareForAgent(runDir, webURLChangedScenarioID); err != nil {
+		t.Fatalf("prepare changed web URL fixture: %v", err)
+	}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	if _, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestSourceURL,
+		Source: runner.SourceURLInput{
+			URL:        webURLEvalSourceURL,
+			PathHint:   webURLSourcePath,
+			SourceType: "web",
+			Mode:       "update",
+		},
+	}); err != nil {
+		t.Fatalf("changed web URL update: %v", err)
+	}
+	metrics := metrics{
+		AssistantCalls:            1,
+		IngestSourceURLUsed:       true,
+		IngestSourceURLUpdateUsed: true,
+		SearchUsed:                true,
+		ProjectionStatesUsed:      true,
+		EventTypeCounts:           map[string]int{},
+	}
+	answer := "Changed web update refreshed " + webURLSourcePath + "; " + webURLSynthesisPath + " now has a stale synthesis projection."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: webURLChangedScenarioID}, 1, answer, metrics)
+	if err != nil {
+		t.Fatalf("verify changed web URL: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("changed web URL verification failed: %+v", result)
+	}
+	if err := replaceScenarioSeedSection(ctx, cfg, webURLSynthesisPath, "Summary", "Repaired synthesis now depends on "+webURLChangedText+"."); err != nil {
+		t.Fatalf("repair web URL synthesis: %v", err)
+	}
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: webURLChangedScenarioID}, 1, answer, metrics)
+	if err != nil {
+		t.Fatalf("verify repaired changed web URL: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("changed web URL verification passed after synthesis repair: %+v", result)
 	}
 }
 

@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
+
+	"github.com/yazanabuashour/openclerk/internal/runner"
 )
 
 func verifyWebURLCreate(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
@@ -146,6 +148,8 @@ func verifyWebURLChanged(ctx context.Context, paths evalPaths, finalMessage stri
 	}
 	if !synthesisFound || synthesis == nil {
 		failures = append(failures, "missing web URL synthesis document")
+	} else if strings.Contains(synthesis.Body, webURLChangedText) {
+		failures = append(failures, "synthesis was repaired during stale-impact inspection")
 	}
 	if projection == nil || projection.Freshness != "stale" || !strings.Contains(projection.Details["stale_source_refs"], webURLSourcePath) {
 		failures = append(failures, fmt.Sprintf("expected stale synthesis projection for %s, got %+v", webURLSourcePath, projection))
@@ -164,6 +168,7 @@ func verifyWebURLChanged(ctx context.Context, paths evalPaths, finalMessage stri
 	}
 	databasePass := found && doc != nil && synthesisFound && synthesis != nil &&
 		strings.Contains(doc.Body, webURLChangedText) &&
+		!strings.Contains(synthesis.Body, webURLChangedText) &&
 		projection != nil && projection.Freshness == "stale" &&
 		strings.Contains(projection.Details["stale_source_refs"], webURLSourcePath)
 	activityPass := len(webURLBypassFailures(turnMetrics)) == 0 && turnMetrics.IngestSourceURLUpdateUsed && turnMetrics.SearchUsed && turnMetrics.ProjectionStatesUsed
@@ -268,6 +273,7 @@ func verifyWebURLStaleRepair(ctx context.Context, paths evalPaths, finalMessage 
 	databasePass := found && doc != nil && sourceCount == 1 && duplicateCount == 0 &&
 		synthesisFound && synthesis != nil &&
 		strings.Contains(doc.Body, webURLChangedText) &&
+		!strings.Contains(synthesis.Body, webURLChangedText) &&
 		projection != nil && projection.Freshness == "stale" &&
 		strings.Contains(projection.Details["stale_source_refs"], webURLSourcePath)
 	activityPass := len(webURLBypassFailures(turnMetrics)) == 0 &&
@@ -282,6 +288,78 @@ func verifyWebURLStaleRepair(ctx context.Context, paths evalPaths, finalMessage 
 		Details:       missingDetails(failures),
 		Documents:     []string{webURLSourcePath, webURLDuplicatePath, webURLSynthesisPath},
 	}, nil
+}
+
+func verifyWebURLStaleImpactResponseCandidate(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	base, err := verifyWebURLStaleRepair(ctx, paths, finalMessage, turnMetrics, true)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := []string{}
+	if base.Details != "" && base.Details != "ok" {
+		failures = append(failures, base.Details)
+	}
+	sourceDocID, sourceDocIDFound, err := documentIDByPath(ctx, paths, webURLSourcePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	var sourceEvents []runner.ProvenanceEvent
+	if sourceDocIDFound {
+		sourceEvents, err = sourceURLUpdateSourceEvents(ctx, paths, sourceDocID)
+		if err != nil {
+			return verificationResult{}, err
+		}
+	}
+	shaChange := webURLSourceUpdatedEventHasSHAChange(sourceEvents)
+	if !shaChange {
+		failures = append(failures, "source update provenance missing previous/new SHA details")
+	}
+	candidateFields := []string{
+		"update_status",
+		"normalized_source_url",
+		"source_path",
+		"source_doc_id",
+		"previous_sha256",
+		"new_sha256",
+		"changed",
+		"duplicate_status",
+		"stale_dependents",
+		"projection_refs",
+		"provenance_refs",
+		"synthesis_repaired",
+		"no_repair_warning",
+	}
+	if !messageContainsAll(finalMessage, candidateFields) ||
+		!messageContainsAll(finalMessage, []string{webURLSourcePath, webURLSynthesisPath}) ||
+		!messageContainsAny(finalMessage, []string{"false", "not repaired", "did not repair"}) {
+		failures = append(failures, "final answer did not report the stale-impact response candidate fields")
+	}
+	databasePass := base.DatabasePass && shaChange
+	assistantPass := base.AssistantPass &&
+		messageContainsAll(finalMessage, candidateFields) &&
+		messageContainsAll(finalMessage, []string{webURLSourcePath, webURLSynthesisPath}) &&
+		messageContainsAny(finalMessage, []string{"false", "not repaired", "did not repair"})
+	return verificationResult{
+		Passed:        databasePass && assistantPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{webURLSourcePath, webURLDuplicatePath, webURLSynthesisPath},
+	}, nil
+}
+
+func webURLSourceUpdatedEventHasSHAChange(events []runner.ProvenanceEvent) bool {
+	for _, event := range events {
+		if event.EventType != "source_updated" {
+			continue
+		}
+		previous := strings.TrimSpace(event.Details["previous_sha256"])
+		next := strings.TrimSpace(event.Details["new_sha256"])
+		if previous != "" && next != "" && previous != next {
+			return true
+		}
+	}
+	return false
 }
 
 func verifyWebURLUnsupported(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
@@ -313,5 +391,12 @@ func verifyWebURLUnsupported(ctx context.Context, paths evalPaths, finalMessage 
 }
 
 func webURLBypassFailures(turnMetrics metrics) []string {
-	return artifactIngestionBypassFailures(turnMetrics)
+	failures := artifactIngestionBypassFailures(turnMetrics)
+	if turnMetrics.ManualHTTPFetch {
+		failures = append(failures, "agent used manual HTTP fetch")
+	}
+	if turnMetrics.BrowserAutomation {
+		failures = append(failures, "agent used browser automation")
+	}
+	return failures
 }

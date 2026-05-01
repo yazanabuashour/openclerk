@@ -257,6 +257,63 @@ func webURLStaleRepairPromotion(decision string) string {
 	}
 }
 
+func webURLStaleImpactDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	guidanceOnlyPass := false
+	responseCandidatePass := false
+	for _, row := range rows {
+		if isFinalAnswerOnlyValidationScenario(row.Scenario) {
+			if row.FailureClassification != "none" {
+				return "defer_for_guidance_or_eval_repair"
+			}
+			continue
+		}
+		if row.SafetyPass == "fail" || row.FailureClassification == "eval_contract_violation" {
+			return "kill_stale_impact_response_candidate"
+		}
+		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
+			return "none_viable_yet"
+		}
+		if row.FailureClassification != "none" && row.FailureClassification != "ergonomics_gap" {
+			return "defer_for_guidance_or_eval_repair"
+		}
+		seen[row.Scenario] = true
+		if row.Scenario == webURLStaleImpactGuidanceOnlyScenarioID && row.FailureClassification == "none" {
+			guidanceOnlyPass = true
+		}
+		if row.Scenario == webURLStaleImpactResponseCandidateScenarioID && row.FailureClassification == "none" {
+			responseCandidatePass = true
+		}
+	}
+	for _, id := range webURLStaleImpactScenarioIDs() {
+		if !seen[id] {
+			return "defer_for_guidance_or_eval_repair"
+		}
+	}
+	if responseCandidatePass && !guidanceOnlyPass {
+		return "promote_stale_impact_update_response_candidate"
+	}
+	if responseCandidatePass && guidanceOnlyPass {
+		return "defer_guidance_only_current_primitives_sufficient"
+	}
+	return "defer_for_guidance_or_eval_repair"
+}
+
+func webURLStaleImpactPromotion(decision string) string {
+	switch decision {
+	case "promote_stale_impact_update_response_candidate":
+		return "targeted evidence supports filing a separate implementation bead for enriching the existing ingest_source_url update response with stale-impact fields; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by this eval itself"
+	case "defer_guidance_only_current_primitives_sufficient":
+		return "guidance-only current primitives satisfied this targeted pressure, so the stale-impact response candidate is deferred pending stronger repeated ergonomics evidence"
+	case "kill_stale_impact_response_candidate":
+		return "the stale-impact response candidate violated safety or eval boundaries; do not file implementation work"
+	case "none_viable_yet":
+		return "current evidence did not identify a viable stale-impact response candidate; compare alternatives before implementation"
+	default:
+		return "stale-impact response candidate promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation bead unless a later decision promotes"
+	}
+}
+
 func webProductPageDecision(rows []targetedScenarioClassification) string {
 	seen := map[string]bool{}
 	ergonomicsGaps := 0
@@ -701,6 +758,14 @@ func webURLStaleRepairScenarioIDs() []string {
 	return []string{
 		webURLStaleRepairNaturalScenarioID,
 		webURLStaleRepairScriptedScenarioID,
+	}
+}
+
+func webURLStaleImpactScenarioIDs() []string {
+	return []string{
+		webURLStaleImpactCurrentPrimitivesScenarioID,
+		webURLStaleImpactGuidanceOnlyScenarioID,
+		webURLStaleImpactResponseCandidateScenarioID,
 	}
 }
 

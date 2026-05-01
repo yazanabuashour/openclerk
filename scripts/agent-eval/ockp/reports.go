@@ -91,7 +91,7 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	if releaseBlocking {
 		return nil
 	}
-	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != promotedRecordDomainLaneName && lane != parallelRunnerLaneName && lane != documentHistoryLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != captureLowRiskLaneName && lane != captureExplicitOverridesLaneName && lane != captureDuplicateCandidateLaneName && lane != taggingLaneName && lane != captureSaveThisNoteLaneName && lane != captureDocumentLinksLaneName && lane != sourceURLUpdateLaneName && lane != webURLIntakeLaneName && lane != webURLStaleRepairLaneName && lane != webProductPageLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName && lane != broadAuditLaneName {
+	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != promotedRecordDomainLaneName && lane != parallelRunnerLaneName && lane != documentHistoryLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != captureLowRiskLaneName && lane != captureExplicitOverridesLaneName && lane != captureDuplicateCandidateLaneName && lane != taggingLaneName && lane != captureSaveThisNoteLaneName && lane != captureDocumentLinksLaneName && lane != sourceURLUpdateLaneName && lane != webURLIntakeLaneName && lane != webURLStaleRepairLaneName && lane != webURLStaleImpactLaneName && lane != webProductPageLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != videoYouTubeLaneName && lane != synthesisCompileLaneName && lane != broadAuditLaneName {
 		return nil
 	}
 	summary := targetedLaneSummary{
@@ -160,6 +160,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		case webURLStaleRepairLaneName:
 			include = isWebURLStaleRepairScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
 			classification, posture = classifyTargetedWebURLStaleRepairResult(result)
+		case webURLStaleImpactLaneName:
+			include = isWebURLStaleImpactScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
+			classification, posture = classifyTargetedWebURLStaleImpactResult(result)
 		case webProductPageLaneName:
 			include = isWebProductPageScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
 			classification, posture = classifyTargetedWebProductPageResult(result)
@@ -202,6 +205,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 			StepCount:             scenarioStepCount(result),
 			Latency:               scenarioLatency(result),
 			GuidanceDependence:    scenarioGuidanceDependence(result),
+			SafetyPass:            scenarioSafetyPass(result, classification),
+			CapabilityPass:        scenarioCapabilityPass(result, classification),
+			UXQuality:             scenarioUXQuality(result, classification),
 			SafetyRisks:           scenarioSafetyRisks(result),
 			FixturePreflight:      fixturePreflightStatus(result.FixturePreflight),
 		})
@@ -264,6 +270,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	case webURLStaleRepairLaneName:
 		summary.Decision = webURLStaleRepairDecision(summary.ScenarioClassifications)
 		summary.Promotion = webURLStaleRepairPromotion(summary.Decision)
+	case webURLStaleImpactLaneName:
+		summary.Decision = webURLStaleImpactDecision(summary.ScenarioClassifications)
+		summary.Promotion = webURLStaleImpactPromotion(summary.Decision)
 	case webProductPageLaneName:
 		summary.Decision = webProductPageDecision(summary.ScenarioClassifications)
 		summary.Promotion = webProductPagePromotion(summary.Decision)

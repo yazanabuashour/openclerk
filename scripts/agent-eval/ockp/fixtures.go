@@ -40,7 +40,7 @@ func startSourceURLUpdateFixtures(scenarioID string) *sourceURLUpdateFixtures {
 		initialPDF: minimalEvalPDF("Source URL Update Stable", "OpenClerk Eval", sourceURLUpdateInitialText),
 		changedPDF: minimalEvalPDF("Source URL Update Changed", "OpenClerk Eval", sourceURLUpdateChangedText),
 	}
-	if isWebURLIntakeScenario(scenarioID) || isWebURLStaleRepairScenario(scenarioID) || scenarioID == captureDocumentLinksFetchScenarioID {
+	if isWebURLIntakeScenario(scenarioID) || isWebURLStaleRepairScenario(scenarioID) || isWebURLStaleImpactScenario(scenarioID) || scenarioID == captureDocumentLinksFetchScenarioID {
 		fixtures.webURLIntake = true
 		fixtures.initialHTML = []byte(`<!doctype html><html><head><title>` + webURLTitle + `</title></head><body><h1>` + webURLTitle + `</h1><p>` + webURLInitialText + ` visible public product-page evidence.</p><button>Add to cart</button></body></html>`)
 		fixtures.changedHTML = []byte(`<!doctype html><html><head><title>` + webURLTitle + ` Updated</title></head><body><h1>` + webURLTitle + ` Updated</h1><p>` + webURLChangedText + ` refreshed public product-page evidence.</p></body></html>`)
@@ -91,7 +91,7 @@ func (f *sourceURLUpdateFixtures) changedURL() string {
 	return f.stableURL()
 }
 func (f *sourceURLUpdateFixtures) prepareForAgent(runDir string, scenarioID string) error {
-	if scenarioID == webURLChangedScenarioID || isWebURLStaleRepairScenario(scenarioID) {
+	if scenarioID == webURLChangedScenarioID || isWebURLStaleRepairScenario(scenarioID) || isWebURLStaleImpactScenario(scenarioID) {
 		f.mu.Lock()
 		f.serveChangedWeb = true
 		f.mu.Unlock()
