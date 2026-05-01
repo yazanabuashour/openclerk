@@ -310,6 +310,31 @@ func TestVerifyDocumentHistoryReviewScenarios(t *testing.T) {
 	if !result.Passed {
 		t.Fatalf("high-touch scripted lifecycle pressure failed: %+v", result)
 	}
+	result, err = verifyScenarioTurn(ctx, highTouchScriptedPaths, scenario{ID: documentLifecycleRollbackCurrentScenarioID}, 1, restoreAnswer, highTouchScriptedMetrics)
+	if err != nil {
+		t.Fatalf("verify lifecycle rollback current-primitives pressure: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("lifecycle rollback current-primitives pressure failed: %+v", result)
+	}
+	result, err = verifyScenarioTurn(ctx, highTouchScriptedPaths, scenario{ID: documentLifecycleRollbackGuidanceScenarioID}, 1, restoreAnswer, highTouchScriptedMetrics)
+	if err != nil {
+		t.Fatalf("verify lifecycle rollback guidance-only pressure: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("lifecycle rollback guidance-only pressure failed: %+v", result)
+	}
+	sourceListMetrics := highTouchScriptedMetrics
+	sourceListMetrics.ListDocumentPathPrefixes = []string{documentHistoryDiffListPrefix, "sources/history-review/"}
+	for _, scenarioID := range []string{documentLifecycleRollbackCurrentScenarioID, documentLifecycleRollbackGuidanceScenarioID} {
+		result, err = verifyScenarioTurn(ctx, highTouchScriptedPaths, scenario{ID: scenarioID}, 1, restoreAnswer, sourceListMetrics)
+		if err != nil {
+			t.Fatalf("verify lifecycle rollback source-prefix rejection for %s: %v", scenarioID, err)
+		}
+		if result.Passed {
+			t.Fatalf("lifecycle rollback scenario %s passed with sources/history-review/ list prefix: %+v", scenarioID, result)
+		}
+	}
 	lateGetMetrics := highTouchScriptedMetrics
 	lateGetMetrics.DocumentActionEvents = []string{
 		"search",
