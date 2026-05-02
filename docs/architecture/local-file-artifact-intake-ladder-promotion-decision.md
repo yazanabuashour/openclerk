@@ -25,6 +25,10 @@ Follow-up:
 
 - `oc-4leh`: compare local file artifact intake candidate surfaces after
   `oc-ijdk`
+- [`docs/architecture/local-file-artifact-intake-candidate-comparison-decision.md`](local-file-artifact-intake-candidate-comparison-decision.md):
+  completed the candidate-surface comparison for overlapping follow-ups
+  `oc-4leh` and `oc-vuyb`, selected the combined current-primitives path,
+  and filed `oc-ipjt` for duplicate/provenance guidance or eval repair.
 
 ## Evidence
 
@@ -99,6 +103,12 @@ enough to track: users can reasonably expect a simpler surface for local file
 artifact intake than a high-ceremony explicit asset policy path. Follow-up
 `oc-4leh` covers the required candidate-surface comparison before any future
 promotion.
+
+That comparison is now recorded in
+[`docs/architecture/local-file-artifact-intake-candidate-comparison-decision.md`](local-file-artifact-intake-candidate-comparison-decision.md).
+It does not authorize implementation. It selects current primitives plus
+duplicate/provenance repair and keeps future runner-owned local-file source
+intake deferred.
 
 Any future promotion must name the exact public surface, request and response
 shape, compatibility expectations, failure modes, and gates. It must preserve
