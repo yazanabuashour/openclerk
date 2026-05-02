@@ -50,6 +50,11 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 			t.Fatalf("scenarioIDs missing memory/router recall candidate scenario %q in %v", want, scenarioIDs())
 		}
 	}
+	for _, want := range memoryRouterRecallReportScenarioIDs() {
+		if !ids[want] {
+			t.Fatalf("scenarioIDs missing memory/router recall report scenario %q in %v", want, scenarioIDs())
+		}
+	}
 	for _, want := range relationshipRecordCandidateScenarioIDs() {
 		if !ids[want] {
 			t.Fatalf("scenarioIDs missing relationship-record candidate scenario %q in %v", want, scenarioIDs())
@@ -105,6 +110,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	for _, id := range memoryRouterRecallCandidateScenarioIDs() {
 		if defaultIDs[id] {
 			t.Fatalf("default selected scenarios included targeted memory/router recall candidate scenario %q", id)
+		}
+	}
+	for _, id := range memoryRouterRecallReportScenarioIDs() {
+		if defaultIDs[id] {
+			t.Fatalf("default selected scenarios included targeted memory/router recall report scenario %q", id)
 		}
 	}
 	for _, id := range relationshipRecordCandidateScenarioIDs() {
@@ -346,6 +356,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	lane, releaseBlocking = reportLane(selected)
 	if lane != memoryRouterRecallCandidateLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, memoryRouterRecallCandidateLaneName)
+	}
+	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(append(memoryRouterRecallReportScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject"), ",")})
+	lane, releaseBlocking = reportLane(selected)
+	if lane != memoryRouterRecallReportLaneName || releaseBlocking {
+		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, memoryRouterRecallReportLaneName)
 	}
 	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(append(relationshipRecordCandidateScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject"), ",")})
 	lane, releaseBlocking = reportLane(selected)

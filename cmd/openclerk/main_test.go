@@ -99,6 +99,16 @@ func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 		t.Fatalf("search result = %+v", searchResult)
 	}
 
+	recallRequest := `{"action":"memory_router_recall_report","memory_router_recall":{"query":"memory router temporal recall session promotion feedback weighting routing canonical docs","limit":10}}`
+	var recallResult runner.RetrievalTaskResult
+	code, stderr = runJSON(t, []string{"retrieval", "--db", dbPath}, recallRequest, &recallResult)
+	if code != 0 {
+		t.Fatalf("memory/router recall report exit = %d stderr=%s", code, stderr)
+	}
+	if recallResult.MemoryRouterRecall == nil || !strings.Contains(recallResult.MemoryRouterRecall.ValidationBoundaries, "missing evidence") {
+		t.Fatalf("memory/router recall report result = %+v", recallResult)
+	}
+
 	taggedRequest := `{"action":"create_document","document":{"path":"notes/tagged-runner.md","title":"Tagged Runner","body":"---\ntag: runner-tag\n---\n# Tagged Runner\n\n## Summary\nTagged runner evidence.\n"}}`
 	var taggedCreate runner.DocumentTaskResult
 	code, stderr = runJSON(t, []string{"document", "--db", dbPath}, taggedRequest, &taggedCreate)

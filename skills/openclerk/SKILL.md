@@ -116,6 +116,15 @@ router APIs, vector DBs, embeddings, graph memory, and new runner actions as
 unsupported only when the user asks you to use, implement, or rely on them as
 routine OpenClerk surfaces.
 
+For routine read-only memory/router recall report requests, use the promoted
+retrieval action `memory_router_recall_report` with `memory_router_recall.query`
+and a non-negative `memory_router_recall.limit`. It returns query summary,
+temporal status, canonical evidence refs, stale session status, advisory
+feedback weighting, routing rationale, provenance refs, synthesis freshness,
+validation boundaries, and authority limits. This action is read-only; it is
+not a memory transport, `remember`/`recall` action, autonomous router API,
+vector/embedding/graph memory surface, or write approval.
+
 ## Propose-Before-Create Candidate Documents
 
 When the user asks to "document this", "save this note", or otherwise create a

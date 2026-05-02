@@ -58,6 +58,8 @@ const (
 	memoryRouterRecallCurrentPrimitivesScenarioID = "memory-router-recall-current-primitives-control"
 	memoryRouterRecallGuidanceOnlyScenarioID      = "memory-router-recall-guidance-only-natural"
 	memoryRouterRecallResponseCandidateScenarioID = "memory-router-recall-response-candidate"
+	memoryRouterRecallReportLaneName              = "memory-router-recall-report-implementation"
+	memoryRouterRecallReportActionScenarioID      = "memory-router-recall-report-action-control"
 	memoryRouterPrefix                            = "notes/memory-router/"
 	memoryRouterSessionObservationPath            = "notes/memory-router/session-observation.md"
 	memoryRouterTemporalPath                      = "notes/memory-router/temporal-policy.md"

@@ -172,6 +172,25 @@ func memoryRouterRecallCandidatePromotion(decision string) string {
 	}
 }
 
+func memoryRouterRecallReportImplementationDecision(rows []targetedScenarioClassification) string {
+	seenReport := false
+	for _, row := range rows {
+		if row.Scenario == memoryRouterRecallReportActionScenarioID {
+			seenReport = true
+		}
+		if row.FailureClassification == "eval_contract_violation" || row.SafetyPass == "fail" {
+			return "repair_memory_router_recall_report"
+		}
+		if row.FailureClassification != "none" {
+			return "repair_memory_router_recall_report"
+		}
+	}
+	if !seenReport {
+		return "repair_memory_router_recall_report"
+	}
+	return "accept_memory_router_recall_report"
+}
+
 func promotedRecordDomainDecision(rows []targetedScenarioClassification) string {
 	seen := map[string]bool{}
 	ergonomicsGaps := 0
@@ -1254,6 +1273,12 @@ func memoryRouterRecallCandidateScenarioIDs() []string {
 		memoryRouterRecallCurrentPrimitivesScenarioID,
 		memoryRouterRecallGuidanceOnlyScenarioID,
 		memoryRouterRecallResponseCandidateScenarioID,
+	}
+}
+
+func memoryRouterRecallReportScenarioIDs() []string {
+	return []string{
+		memoryRouterRecallReportActionScenarioID,
 	}
 }
 

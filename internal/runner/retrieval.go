@@ -222,27 +222,37 @@ func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, n
 			Audit:   &audit,
 			Summary: auditContradictionsSummary(audit),
 		}, nil
+	case RetrievalTaskActionMemoryRouterRecall:
+		report, err := runMemoryRouterRecallReport(ctx, client, normalized.MemoryRouterRecall)
+		if err != nil {
+			return RetrievalTaskResult{}, err
+		}
+		return RetrievalTaskResult{
+			MemoryRouterRecall: &report,
+			Summary:            "returned memory/router recall report",
+		}, nil
 	default:
 		return RetrievalTaskResult{}, fmt.Errorf("unsupported retrieval task action %q", normalized.Action)
 	}
 }
 
 type normalizedRetrievalTaskRequest struct {
-	Action     string
-	Search     SearchOptions
-	DocID      string
-	ChunkID    string
-	NodeID     string
-	EntityID   string
-	ServiceID  string
-	DecisionID string
-	Records    RecordLookupOptions
-	Services   ServiceLookupOptions
-	Decisions  DecisionLookupOptions
-	Provenance ProvenanceEventOptions
-	Projection ProjectionStateOptions
-	Audit      AuditContradictionsOptions
-	Limit      int
+	Action             string
+	Search             SearchOptions
+	DocID              string
+	ChunkID            string
+	NodeID             string
+	EntityID           string
+	ServiceID          string
+	DecisionID         string
+	Records            RecordLookupOptions
+	Services           ServiceLookupOptions
+	Decisions          DecisionLookupOptions
+	Provenance         ProvenanceEventOptions
+	Projection         ProjectionStateOptions
+	Audit              AuditContradictionsOptions
+	MemoryRouterRecall MemoryRouterRecallOptions
+	Limit              int
 }
 
 func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetrievalTaskRequest, string) {
@@ -251,21 +261,22 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		action = RetrievalTaskActionValidate
 	}
 	normalized := normalizedRetrievalTaskRequest{
-		Action:     action,
-		Search:     request.Search,
-		DocID:      strings.TrimSpace(request.DocID),
-		ChunkID:    strings.TrimSpace(request.ChunkID),
-		NodeID:     strings.TrimSpace(request.NodeID),
-		EntityID:   strings.TrimSpace(request.EntityID),
-		ServiceID:  strings.TrimSpace(request.ServiceID),
-		DecisionID: strings.TrimSpace(request.DecisionID),
-		Records:    request.Records,
-		Services:   request.Services,
-		Decisions:  request.Decisions,
-		Provenance: request.Provenance,
-		Projection: request.Projection,
-		Audit:      request.Audit,
-		Limit:      request.Limit,
+		Action:             action,
+		Search:             request.Search,
+		DocID:              strings.TrimSpace(request.DocID),
+		ChunkID:            strings.TrimSpace(request.ChunkID),
+		NodeID:             strings.TrimSpace(request.NodeID),
+		EntityID:           strings.TrimSpace(request.EntityID),
+		ServiceID:          strings.TrimSpace(request.ServiceID),
+		DecisionID:         strings.TrimSpace(request.DecisionID),
+		Records:            request.Records,
+		Services:           request.Services,
+		Decisions:          request.Decisions,
+		Provenance:         request.Provenance,
+		Projection:         request.Projection,
+		Audit:              request.Audit,
+		MemoryRouterRecall: request.MemoryRouterRecall,
+		Limit:              request.Limit,
 	}
 
 	if request.Limit < 0 ||
@@ -275,7 +286,8 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		request.Decisions.Limit < 0 ||
 		request.Provenance.Limit < 0 ||
 		request.Projection.Limit < 0 ||
-		request.Audit.Limit < 0 {
+		request.Audit.Limit < 0 ||
+		request.MemoryRouterRecall.Limit < 0 {
 		return normalizedRetrievalTaskRequest{}, "limit must be greater than or equal to 0"
 	}
 
@@ -343,6 +355,9 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		if normalized.Audit.Mode != "plan_only" && normalized.Audit.Mode != "repair_existing" {
 			return normalizedRetrievalTaskRequest{}, "audit.mode must be plan_only or repair_existing"
 		}
+		return normalized, ""
+	case RetrievalTaskActionMemoryRouterRecall:
+		normalized.MemoryRouterRecall.Query = strings.TrimSpace(request.MemoryRouterRecall.Query)
 		return normalized, ""
 	default:
 		return normalizedRetrievalTaskRequest{}, fmt.Sprintf("unsupported retrieval task action %q", action)

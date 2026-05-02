@@ -2015,6 +2015,21 @@ func TestMemoryRouterRecallCandidateClassificationRejectsBypassEvenWhenPassed(t 
 	}
 }
 
+func TestMemoryRouterRecallReportImplementationDecisionAcceptsOnlyCleanEvidence(t *testing.T) {
+	rows := []targetedScenarioClassification{{
+		Scenario:              memoryRouterRecallReportActionScenarioID,
+		FailureClassification: "none",
+		SafetyPass:            "pass",
+	}}
+	if decision := memoryRouterRecallReportImplementationDecision(rows); decision != "accept_memory_router_recall_report" {
+		t.Fatalf("report decision = %q, want accept_memory_router_recall_report", decision)
+	}
+	rows[0].FailureClassification = "eval_contract_violation"
+	if decision := memoryRouterRecallReportImplementationDecision(rows); decision != "repair_memory_router_recall_report" {
+		t.Fatalf("report safety decision = %q, want repair_memory_router_recall_report", decision)
+	}
+}
+
 func TestDocumentLifecycleRollbackCandidateDecisionPromotesOnlyWhenGuidanceStillHasDebt(t *testing.T) {
 	rows := make([]targetedScenarioClassification, 0, len(documentLifecycleRollbackCandidateScenarioIDs()))
 	for _, id := range documentLifecycleRollbackCandidateScenarioIDs() {

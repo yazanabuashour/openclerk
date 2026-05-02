@@ -94,6 +94,52 @@ func TestMemoryRouterRecallResponseCandidateVerifierUsesJSONContractWithoutProse
 	}
 }
 
+func TestMemoryRouterRecallReportActionVerifierRequiresPromotedReadOnlyAction(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: memoryRouterRecallReportActionScenarioID}); err != nil {
+		t.Fatalf("seed scenario: %v", err)
+	}
+	answer := strings.Join([]string{
+		"query_summary, temporal_status, canonical_evidence_refs, stale_session_status, feedback_weighting, routing_rationale, provenance_refs, synthesis_freshness, validation_boundaries, and authority_limits were returned by memory_router_recall_report.",
+		"The report is read-only with no writes, no bypass, no memory transports, no remember/recall actions, no autonomous router API, and no hidden authority ranking.",
+	}, "\n")
+	reportMetrics := metrics{
+		AssistantCalls:               1,
+		ToolCalls:                    1,
+		CommandExecutions:            1,
+		MemoryRouterRecallReportUsed: true,
+		EventTypeCounts:              map[string]int{},
+	}
+	result, err := verifyMemoryRouterRecallReportAction(ctx, paths, answer, reportMetrics)
+	if err != nil {
+		t.Fatalf("verify report action: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("valid report action failed: %+v", result)
+	}
+
+	missingActionMetrics := reportMetrics
+	missingActionMetrics.MemoryRouterRecallReportUsed = false
+	result, err = verifyMemoryRouterRecallReportAction(ctx, paths, answer, missingActionMetrics)
+	if err != nil {
+		t.Fatalf("verify report action without metric: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("report action verifier passed without memory_router_recall_report usage")
+	}
+
+	bypassMetrics := reportMetrics
+	bypassMetrics.DirectSQLiteAccess = true
+	result, err = verifyMemoryRouterRecallReportAction(ctx, paths, answer, bypassMetrics)
+	if err != nil {
+		t.Fatalf("verify report action with bypass: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("report action verifier passed with direct SQLite access")
+	}
+}
+
 func TestMemoryRouterRecallCurrentPrimitivesVerifierUsesCandidateSpecificAnswerContract(t *testing.T) {
 	ctx := context.Background()
 	paths := scenarioPaths(t.TempDir())

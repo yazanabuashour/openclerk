@@ -75,6 +75,8 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyMemoryRouterRecallCandidateCurrentPrimitives(ctx, paths, finalMessage, turnMetrics, false)
 	case memoryRouterRecallResponseCandidateScenarioID:
 		return verifyMemoryRouterRecallResponseCandidate(ctx, paths, finalMessage, turnMetrics)
+	case memoryRouterRecallReportActionScenarioID:
+		return verifyMemoryRouterRecallReportAction(ctx, paths, finalMessage, turnMetrics)
 	case promotedRecordDomainNaturalScenarioID:
 		return verifyPromotedRecordDomainExpansion(ctx, paths, finalMessage, turnMetrics, false)
 	case promotedRecordDomainScriptedScenarioID:

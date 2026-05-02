@@ -38,6 +38,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"decision_record\",\"decision_id\":\"adr-runner\"}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"provenance_events\",\"provenance\":{\"ref_kind\":\"document\",\"ref_id\":\"doc_alpha\",\"limit\":10}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"projection_states\",\"projection\":{\"limit\":10}}' | openclerk retrieval"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"memory_router_recall_report\",\"memory_router_recall\":{\"query\":\"memory router\",\"limit\":10}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"/bin/zsh -lc \"printf '%s' '{\\\"action\\\":\\\"search\\\",\\\"search\\\":{\\\"text\\\":\\\"runner\\\"}}' | openclerk retrieval\""}}`,
 		`not json`,
 	}, "\n")
@@ -51,7 +52,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	if parsed.sessionID != "session-123" || parsed.finalMessage != "done" {
 		t.Fatalf("parsed = %+v", parsed)
 	}
-	if parsed.metrics.ToolCalls != 26 || parsed.metrics.CommandExecutions != 26 || parsed.metrics.AssistantCalls != 1 {
+	if parsed.metrics.ToolCalls != 27 || parsed.metrics.CommandExecutions != 27 || parsed.metrics.AssistantCalls != 1 {
 		t.Fatalf("metrics = %+v", parsed.metrics)
 	}
 	if !parsed.metrics.BroadRepoSearch {
@@ -128,6 +129,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		"decision_record":        parsed.metrics.DecisionRecordUsed,
 		"provenance_events":      parsed.metrics.ProvenanceEventsUsed,
 		"projection_states":      parsed.metrics.ProjectionStatesUsed,
+		"memory_router_recall":   parsed.metrics.MemoryRouterRecallReportUsed,
 	} {
 		if !used {
 			t.Fatalf("expected %s action metric in %+v", name, parsed.metrics)

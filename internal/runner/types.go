@@ -32,6 +32,7 @@ const (
 	RetrievalTaskActionProvenanceEvents    = "provenance_events"
 	RetrievalTaskActionProjectionStates    = "projection_states"
 	RetrievalTaskActionAuditContradictions = "audit_contradictions"
+	RetrievalTaskActionMemoryRouterRecall  = "memory_router_recall_report"
 )
 
 type DocumentTaskRequest struct {
@@ -180,21 +181,22 @@ type DocumentTaskResult struct {
 }
 
 type RetrievalTaskRequest struct {
-	Action     string                     `json:"action"`
-	Search     SearchOptions              `json:"search,omitempty"`
-	DocID      string                     `json:"doc_id,omitempty"`
-	ChunkID    string                     `json:"chunk_id,omitempty"`
-	NodeID     string                     `json:"node_id,omitempty"`
-	EntityID   string                     `json:"entity_id,omitempty"`
-	ServiceID  string                     `json:"service_id,omitempty"`
-	DecisionID string                     `json:"decision_id,omitempty"`
-	Records    RecordLookupOptions        `json:"records,omitempty"`
-	Services   ServiceLookupOptions       `json:"services,omitempty"`
-	Decisions  DecisionLookupOptions      `json:"decisions,omitempty"`
-	Provenance ProvenanceEventOptions     `json:"provenance,omitempty"`
-	Projection ProjectionStateOptions     `json:"projection,omitempty"`
-	Audit      AuditContradictionsOptions `json:"audit,omitempty"`
-	Limit      int                        `json:"limit,omitempty"`
+	Action             string                     `json:"action"`
+	Search             SearchOptions              `json:"search,omitempty"`
+	DocID              string                     `json:"doc_id,omitempty"`
+	ChunkID            string                     `json:"chunk_id,omitempty"`
+	NodeID             string                     `json:"node_id,omitempty"`
+	EntityID           string                     `json:"entity_id,omitempty"`
+	ServiceID          string                     `json:"service_id,omitempty"`
+	DecisionID         string                     `json:"decision_id,omitempty"`
+	Records            RecordLookupOptions        `json:"records,omitempty"`
+	Services           ServiceLookupOptions       `json:"services,omitempty"`
+	Decisions          DecisionLookupOptions      `json:"decisions,omitempty"`
+	Provenance         ProvenanceEventOptions     `json:"provenance,omitempty"`
+	Projection         ProjectionStateOptions     `json:"projection,omitempty"`
+	Audit              AuditContradictionsOptions `json:"audit,omitempty"`
+	MemoryRouterRecall MemoryRouterRecallOptions  `json:"memory_router_recall,omitempty"`
+	Limit              int                        `json:"limit,omitempty"`
 }
 
 type SearchOptions struct {
@@ -298,22 +300,41 @@ type AuditContradictionsOptions struct {
 	Limit         int    `json:"limit,omitempty"`
 }
 
+type MemoryRouterRecallOptions struct {
+	Query string `json:"query,omitempty"`
+	Limit int    `json:"limit,omitempty"`
+}
+
 type RetrievalTaskResult struct {
-	Rejected        bool                       `json:"rejected"`
-	RejectionReason string                     `json:"rejection_reason,omitempty"`
-	Search          *SearchResult              `json:"search,omitempty"`
-	Links           *DocumentLinks             `json:"links,omitempty"`
-	Graph           *GraphNeighborhood         `json:"graph,omitempty"`
-	Records         *RecordLookupResult        `json:"records,omitempty"`
-	Entity          *RecordEntity              `json:"entity,omitempty"`
-	Services        *ServiceLookupResult       `json:"services,omitempty"`
-	Service         *ServiceRecord             `json:"service,omitempty"`
-	Decisions       *DecisionLookupResult      `json:"decisions,omitempty"`
-	Decision        *DecisionRecord            `json:"decision,omitempty"`
-	Provenance      *ProvenanceEventList       `json:"provenance,omitempty"`
-	Projections     *ProjectionStateList       `json:"projections,omitempty"`
-	Audit           *AuditContradictionsResult `json:"audit,omitempty"`
-	Summary         string                     `json:"summary"`
+	Rejected           bool                       `json:"rejected"`
+	RejectionReason    string                     `json:"rejection_reason,omitempty"`
+	Search             *SearchResult              `json:"search,omitempty"`
+	Links              *DocumentLinks             `json:"links,omitempty"`
+	Graph              *GraphNeighborhood         `json:"graph,omitempty"`
+	Records            *RecordLookupResult        `json:"records,omitempty"`
+	Entity             *RecordEntity              `json:"entity,omitempty"`
+	Services           *ServiceLookupResult       `json:"services,omitempty"`
+	Service            *ServiceRecord             `json:"service,omitempty"`
+	Decisions          *DecisionLookupResult      `json:"decisions,omitempty"`
+	Decision           *DecisionRecord            `json:"decision,omitempty"`
+	Provenance         *ProvenanceEventList       `json:"provenance,omitempty"`
+	Projections        *ProjectionStateList       `json:"projections,omitempty"`
+	Audit              *AuditContradictionsResult `json:"audit,omitempty"`
+	MemoryRouterRecall *MemoryRouterRecallReport  `json:"memory_router_recall,omitempty"`
+	Summary            string                     `json:"summary"`
+}
+
+type MemoryRouterRecallReport struct {
+	QuerySummary          string   `json:"query_summary"`
+	TemporalStatus        string   `json:"temporal_status"`
+	CanonicalEvidenceRefs []string `json:"canonical_evidence_refs"`
+	StaleSessionStatus    string   `json:"stale_session_status"`
+	FeedbackWeighting     string   `json:"feedback_weighting"`
+	RoutingRationale      string   `json:"routing_rationale"`
+	ProvenanceRefs        []string `json:"provenance_refs"`
+	SynthesisFreshness    string   `json:"synthesis_freshness"`
+	ValidationBoundaries  string   `json:"validation_boundaries"`
+	AuthorityLimits       string   `json:"authority_limits"`
 }
 
 type AuditContradictionsResult struct {

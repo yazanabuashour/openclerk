@@ -648,6 +648,229 @@ func TestRetrievalTaskSearchLinksRecordsAndProvenance(t *testing.T) {
 	}
 }
 
+func TestRetrievalTaskMemoryRouterRecallReport(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	seedMemoryRouterRecallDocs(t, ctx, config)
+
+	before, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{Limit: 50},
+	})
+	if err != nil {
+		t.Fatalf("list before: %v", err)
+	}
+
+	result, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionMemoryRouterRecall,
+		MemoryRouterRecall: runner.MemoryRouterRecallOptions{
+			Query: "memory router temporal recall session promotion feedback weighting routing canonical docs",
+			Limit: 10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("memory/router recall report: %v", err)
+	}
+	if result.Rejected || result.MemoryRouterRecall == nil {
+		t.Fatalf("memory/router recall result = %+v", result)
+	}
+	report := result.MemoryRouterRecall
+	for _, value := range []string{
+		report.QuerySummary,
+		report.TemporalStatus,
+		report.StaleSessionStatus,
+		report.FeedbackWeighting,
+		report.RoutingRationale,
+		report.SynthesisFreshness,
+		report.ValidationBoundaries,
+		report.AuthorityLimits,
+	} {
+		if strings.TrimSpace(value) == "" {
+			t.Fatalf("empty report field in %+v", report)
+		}
+	}
+	for _, want := range []string{
+		"notes/memory-router/session-observation.md",
+		"notes/memory-router/temporal-policy.md",
+		"notes/memory-router/feedback-weighting.md",
+		"notes/memory-router/routing-policy.md",
+		"synthesis/memory-router-reference.md",
+	} {
+		if !containsString(report.CanonicalEvidenceRefs, want) {
+			t.Fatalf("canonical refs %v missing %q", report.CanonicalEvidenceRefs, want)
+		}
+	}
+	if len(report.ProvenanceRefs) == 0 || !strings.HasPrefix(report.ProvenanceRefs[0], "document:") {
+		t.Fatalf("provenance refs = %+v", report.ProvenanceRefs)
+	}
+	if !strings.Contains(report.SynthesisFreshness, "fresh synthesis projection") {
+		t.Fatalf("synthesis freshness = %q", report.SynthesisFreshness)
+	}
+	if strings.Contains(report.ValidationBoundaries, "missing evidence") {
+		t.Fatalf("unexpected missing evidence in validation boundaries: %q", report.ValidationBoundaries)
+	}
+
+	after, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{Limit: 50},
+	})
+	if err != nil {
+		t.Fatalf("list after: %v", err)
+	}
+	if len(after.Documents) != len(before.Documents) {
+		t.Fatalf("memory/router recall report mutated document count: before=%d after=%d", len(before.Documents), len(after.Documents))
+	}
+}
+
+func TestRetrievalTaskMemoryRouterRecallReportPagesUntilFixedEvidence(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	seedMemoryRouterRecallDocs(t, ctx, config)
+	for i := range 12 {
+		createDocument(
+			t,
+			ctx,
+			config,
+			fmt.Sprintf("notes/memory-router/000-extra-%02d.md", i),
+			fmt.Sprintf("Memory Router Extra %02d", i),
+			fmt.Sprintf("# Memory Router Extra %02d\n\n## Summary\nDistractor memory/router note.\n", i),
+		)
+	}
+	for i := range 24 {
+		createDocument(
+			t,
+			ctx,
+			config,
+			fmt.Sprintf("synthesis/000-extra-%02d.md", i),
+			fmt.Sprintf("Synthesis Extra %02d", i),
+			fmt.Sprintf("# Synthesis Extra %02d\n\n## Summary\nDistractor synthesis.\n", i),
+		)
+	}
+
+	result, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionMemoryRouterRecall,
+		MemoryRouterRecall: runner.MemoryRouterRecallOptions{
+			Query: "memory router temporal recall session promotion feedback weighting routing canonical docs",
+			Limit: 4,
+		},
+	})
+	if err != nil {
+		t.Fatalf("memory/router recall report with paged evidence: %v", err)
+	}
+	if result.Rejected || result.MemoryRouterRecall == nil {
+		t.Fatalf("paged evidence result = %+v", result)
+	}
+	report := result.MemoryRouterRecall
+	for _, want := range []string{
+		"notes/memory-router/session-observation.md",
+		"notes/memory-router/temporal-policy.md",
+		"notes/memory-router/feedback-weighting.md",
+		"notes/memory-router/routing-policy.md",
+		"synthesis/memory-router-reference.md",
+	} {
+		if !containsString(report.CanonicalEvidenceRefs, want) {
+			t.Fatalf("canonical refs %v missing %q", report.CanonicalEvidenceRefs, want)
+		}
+	}
+	if strings.Contains(report.ValidationBoundaries, "missing evidence") {
+		t.Fatalf("paged lookup reported missing evidence: %q", report.ValidationBoundaries)
+	}
+}
+
+func TestRetrievalTaskMemoryRouterRecallReportReportsMissingEvidence(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+
+	result, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionMemoryRouterRecall,
+		MemoryRouterRecall: runner.MemoryRouterRecallOptions{
+			Limit: 10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("memory/router recall report with missing evidence: %v", err)
+	}
+	if result.Rejected || result.MemoryRouterRecall == nil {
+		t.Fatalf("missing evidence result = %+v", result)
+	}
+	report := result.MemoryRouterRecall
+	if !containsString(report.CanonicalEvidenceRefs, "missing:notes/memory-router/session-observation.md") {
+		t.Fatalf("missing evidence refs = %+v", report.CanonicalEvidenceRefs)
+	}
+	if !strings.Contains(report.ValidationBoundaries, "missing evidence") {
+		t.Fatalf("validation boundaries = %q", report.ValidationBoundaries)
+	}
+}
+
+func TestRetrievalTaskMemoryRouterRecallReportRejectsNegativeLimit(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	result, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionMemoryRouterRecall,
+		MemoryRouterRecall: runner.MemoryRouterRecallOptions{
+			Limit: -3,
+		},
+	})
+	if err != nil {
+		t.Fatalf("negative memory/router recall limit: %v", err)
+	}
+	if !result.Rejected || result.RejectionReason != "limit must be greater than or equal to 0" {
+		t.Fatalf("negative limit result = %+v", result)
+	}
+}
+
+func seedMemoryRouterRecallDocs(t *testing.T, ctx context.Context, config runclient.Config) {
+	t.Helper()
+	createDocument(t, ctx, config, "notes/memory-router/session-observation.md", "Memory Router Session Observation", strings.TrimSpace(`---
+type: source
+status: active
+observed_at: 2026-04-22
+---
+# Memory Router Session Observation
+
+## Summary
+Session observation: a user asked whether memory routing should promote recall. Useful session material must be promoted only by writing canonical markdown with source refs.
+
+## Feedback
+Positive feedback weight 0.8 is advisory only and cannot hide stale canonical evidence.
+`)+"\n")
+	createDocument(t, ctx, config, "notes/memory-router/temporal-policy.md", "Temporal Recall Policy", "# Temporal Recall Policy\n\n## Summary\nCurrent canonical docs outrank stale session observations for memory/router recall.\n")
+	createDocument(t, ctx, config, "notes/memory-router/feedback-weighting.md", "Feedback Weighting", "# Feedback Weighting\n\n## Summary\nFeedback weighting is advisory only and cannot hide stale canonical evidence.\n")
+	createDocument(t, ctx, config, "notes/memory-router/routing-policy.md", "Routing Policy", "# Routing Policy\n\n## Summary\nRouting rationale uses existing AgentOps document and retrieval actions; no autonomous router API is authority.\n")
+	createDocument(t, ctx, config, "synthesis/memory-router-reference.md", "Memory Router Reference", strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: notes/memory-router/session-observation.md, notes/memory-router/temporal-policy.md, notes/memory-router/feedback-weighting.md, notes/memory-router/routing-policy.md
+---
+# Memory Router Reference
+
+## Summary
+Temporal status: current canonical docs outrank stale session observations.
+Session promotion path: durable canonical markdown with source refs.
+Feedback weighting: advisory only.
+Routing choice: existing AgentOps document and retrieval actions.
+Decision: implement read-only memory/router recall report.
+
+## Sources
+- notes/memory-router/session-observation.md
+- notes/memory-router/temporal-policy.md
+- notes/memory-router/feedback-weighting.md
+- notes/memory-router/routing-policy.md
+
+## Freshness
+Fresh synthesis projection expected for current source refs.
+`)+"\n")
+}
+
 func TestRetrievalTaskTypedRecordValidation(t *testing.T) {
 	t.Parallel()
 

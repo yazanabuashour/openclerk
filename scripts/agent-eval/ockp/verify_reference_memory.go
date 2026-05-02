@@ -356,6 +356,125 @@ func verifyMemoryRouterRecallResponseCandidate(ctx context.Context, paths evalPa
 	}, nil
 }
 
+func verifyMemoryRouterRecallReportAction(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	result, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionMemoryRouterRecall,
+		MemoryRouterRecall: runner.MemoryRouterRecallOptions{
+			Query: memoryRouterSearchText,
+			Limit: 10,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	report := result.MemoryRouterRecall
+	failures := []string{}
+	databaseFailures := []string{}
+	if result.Rejected || report == nil {
+		databaseFailures = append(databaseFailures, "memory_router_recall_report did not return a report")
+	}
+	if report != nil {
+		requiredStrings := []string{
+			report.QuerySummary,
+			report.TemporalStatus,
+			report.StaleSessionStatus,
+			report.FeedbackWeighting,
+			report.RoutingRationale,
+			report.SynthesisFreshness,
+			report.ValidationBoundaries,
+			report.AuthorityLimits,
+		}
+		for _, value := range requiredStrings {
+			if strings.TrimSpace(value) == "" {
+				databaseFailures = append(databaseFailures, "memory_router_recall report contains an empty string field")
+				break
+			}
+		}
+		for _, ref := range []string{
+			memoryRouterSessionObservationPath,
+			memoryRouterTemporalPath,
+			memoryRouterFeedbackPath,
+			memoryRouterRoutingPath,
+			memoryRouterSynthesisPath,
+		} {
+			if !containsAllStrings(report.CanonicalEvidenceRefs, []string{ref}) {
+				databaseFailures = append(databaseFailures, "memory_router_recall report missing canonical evidence ref "+ref)
+			}
+		}
+		if len(report.ProvenanceRefs) == 0 {
+			databaseFailures = append(databaseFailures, "memory_router_recall report missing provenance refs")
+		}
+		if !strings.Contains(report.SynthesisFreshness, "fresh synthesis projection") {
+			databaseFailures = append(databaseFailures, "memory_router_recall report missing fresh synthesis projection")
+		}
+		if strings.Contains(report.ValidationBoundaries, "missing evidence") {
+			databaseFailures = append(databaseFailures, "memory_router_recall report unexpectedly marked evidence missing")
+		}
+		if !strings.Contains(report.ValidationBoundaries, "no writes") ||
+			!strings.Contains(report.ValidationBoundaries, "no memory transports") ||
+			!strings.Contains(report.ValidationBoundaries, "no remember/recall actions") ||
+			!strings.Contains(report.ValidationBoundaries, "no autonomous router APIs") ||
+			!strings.Contains(report.ValidationBoundaries, "no hidden authority ranking") {
+			databaseFailures = append(databaseFailures, "memory_router_recall report missing validation boundaries")
+		}
+	}
+	failures = append(failures, databaseFailures...)
+	bypassFailures := memoryRouterRecallCandidateBypassFailures(turnMetrics)
+	failures = append(failures, bypassFailures...)
+	if turnMetrics.CreateDocumentUsed || turnMetrics.ReplaceSectionUsed || turnMetrics.AppendDocumentUsed {
+		failures = append(failures, "agent used a mutating document action")
+	}
+	if !turnMetrics.MemoryRouterRecallReportUsed {
+		failures = append(failures, "agent did not use memory_router_recall_report")
+	}
+	answerFields := []string{
+		"query_summary",
+		"temporal_status",
+		"canonical_evidence_refs",
+		"stale_session_status",
+		"feedback_weighting",
+		"routing_rationale",
+		"provenance_refs",
+		"synthesis_freshness",
+		"validation_boundaries",
+		"authority_limits",
+	}
+	answerLower := strings.ToLower(finalMessage)
+	for _, field := range answerFields {
+		if !strings.Contains(answerLower, field) {
+			failures = append(failures, "final answer missing "+field)
+		}
+	}
+	for _, boundary := range []string{"read-only", "no writes", "no bypass", "no memory transport", "no remember/recall", "no autonomous router", "no hidden authority"} {
+		if !strings.Contains(answerLower, boundary) {
+			failures = append(failures, "final answer missing boundary "+boundary)
+		}
+	}
+	assistantFailureDetails := missingDetails(failures)
+	databasePass := report != nil && len(databaseFailures) == 0
+	assistantPass := turnMetrics.MemoryRouterRecallReportUsed &&
+		!turnMetrics.CreateDocumentUsed &&
+		!turnMetrics.ReplaceSectionUsed &&
+		!turnMetrics.AppendDocumentUsed &&
+		len(bypassFailures) == 0 &&
+		!strings.Contains(assistantFailureDetails, "final answer missing") &&
+		!strings.Contains(assistantFailureDetails, "agent did not use")
+	return verificationResult{
+		Passed:        databasePass && assistantPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass,
+		Details:       missingDetails(failures),
+		Documents: []string{
+			memoryRouterSessionObservationPath,
+			memoryRouterTemporalPath,
+			memoryRouterFeedbackPath,
+			memoryRouterRoutingPath,
+			memoryRouterSynthesisPath,
+		},
+	}, nil
+}
+
 func verifyMemoryRouterReferenceEvidence(ctx context.Context, paths evalPaths, turnMetrics metrics) (verificationResult, error) {
 	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	sourceRefs := []string{

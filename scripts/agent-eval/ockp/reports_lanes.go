@@ -10,6 +10,7 @@ func reportLane(ids []string) (string, bool) {
 	memoryRouterRevisit := 0
 	highTouchMemoryRouterRecall := 0
 	memoryRouterRecallCandidate := 0
+	memoryRouterRecallReport := 0
 	promotedRecordDomain := 0
 	highTouchRelationshipRecord := 0
 	relationshipRecordCandidate := 0
@@ -63,6 +64,10 @@ func reportLane(ids []string) (string, bool) {
 		}
 		if isMemoryRouterRecallCandidateScenario(id) {
 			memoryRouterRecallCandidate++
+			continue
+		}
+		if isMemoryRouterRecallReportScenario(id) {
+			memoryRouterRecallReport++
 			continue
 		}
 		if isPromotedRecordDomainScenario(id) {
@@ -200,6 +205,9 @@ func reportLane(ids []string) (string, bool) {
 	}
 	if memoryRouterRecallCandidate > 0 && memoryRouterRecallCandidate+validation == len(ids) {
 		return memoryRouterRecallCandidateLaneName, false
+	}
+	if memoryRouterRecallReport > 0 && memoryRouterRecallReport+validation == len(ids) {
+		return memoryRouterRecallReportLaneName, false
 	}
 	if promotedRecordDomain > 0 && promotedRecordDomain+validation == len(ids) {
 		return promotedRecordDomainLaneName, false
@@ -405,6 +413,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == memoryRouterRecallCandidateLaneName {
 		return "memory/router recall candidate rows compare current primitives, guidance-only repair, and an eval-only candidate response contract, while reporting query summary, temporal status, canonical evidence refs, stale session status, feedback weighting, routing rationale, provenance refs, synthesis freshness, validation/no-bypass boundaries, authority limits, tool count, command count, assistant calls, wall time, prompt specificity, retries, latency, brittleness, guidance dependence, safety risks, safety pass, capability pass, and UX quality"
+	}
+	if lane == memoryRouterRecallReportLaneName {
+		return "memory/router recall report implementation rows verify the promoted read-only retrieval action, approved report fields, canonical evidence refs, provenance refs, synthesis freshness, validation boundaries, authority limits, no-write/no-bypass controls, tool count, command count, assistant calls, wall time, prompt specificity, retries, latency, brittleness, guidance dependence, safety risks, safety pass, capability pass, and UX quality"
 	}
 	if lane == promotedRecordDomainLaneName {
 		return "promoted record domain expansion rows report natural record-domain intent, scripted current-primitives control, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"
