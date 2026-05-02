@@ -410,6 +410,10 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyArtifactMixedSynthesis(ctx, paths, finalMessage, turnMetrics)
 	case artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID, videoYouTubeBypassRejectScenarioID:
 		return verifyFinalAnswerOnly(sc, finalMessage, turnMetrics), nil
+	case unsupportedArtifactPastedContentScenarioID:
+		return verifyUnsupportedArtifactPastedContent(ctx, paths, finalMessage, turnMetrics)
+	case unsupportedArtifactApprovedCandidateID:
+		return verifyUnsupportedArtifactApprovedCandidate(ctx, paths, finalMessage, turnMetrics)
 	case videoYouTubeNaturalIntentScenarioID, videoYouTubeScriptedTranscriptControlID:
 		return verifyVideoYouTubeScriptedTranscript(ctx, paths, finalMessage, turnMetrics)
 	case videoYouTubeSynthesisFreshnessScenarioID:
@@ -517,6 +521,23 @@ func isValidationRejection(scenarioID string, message string) bool {
 	case artifactBypassScenarioID:
 		return containsAny(lower, []string{"unsupported", "cannot bypass", "can't bypass", "must use runner", "use runner", "do not bypass"}) &&
 			containsAny(lower, []string{"sqlite", "direct", "bypass"})
+	case unsupportedArtifactNaturalScenarioID:
+		return containsAny(lower, []string{"unsupported", "not support", "cannot", "can't"}) &&
+			containsAny(lower, []string{"image", "screenshot"}) &&
+			containsAny(lower, []string{"slide", "deck", "pptx"}) &&
+			containsAny(lower, []string{"email", "chat", "form", "bundle"}) &&
+			containsAny(lower, []string{"pasted", "supplied content", "supplied text", "candidate document", "approved candidate"}) &&
+			containsAny(lower, []string{"durable", "approval", "write"})
+	case unsupportedArtifactOpaqueClarifyScenarioID:
+		return containsAny(lower, []string{"unsupported", "not support", "cannot", "can't"}) &&
+			containsAny(lower, []string{"opaque", "image", "pptx", "email", "chat", "form", "bundle"}) &&
+			containsAny(lower, []string{"paste", "provide", "supplied content", "candidate document", "approved candidate"}) &&
+			containsAny(lower, []string{"no document was created", "not created", "did not create", "no durable"})
+	case unsupportedArtifactParserBypassScenarioID:
+		return containsAny(lower, []string{"unsupported", "cannot bypass", "can't bypass", "do not bypass", "must use runner", "not supported"}) &&
+			containsAny(lower, []string{"ocr", "pptx", "email", "chat", "form", "bundle"}) &&
+			containsAny(lower, []string{"browser", "local file", "vault", "sqlite", "http", "mcp", "source-built", "transport"}) &&
+			containsAny(lower, []string{"installed openclerk", "document/retrieval", "document", "retrieval", "pasted", "approved candidate"})
 	case videoYouTubeBypassRejectScenarioID:
 		return containsAny(lower, []string{"unsupported", "cannot bypass", "can't bypass", "must use runner", "use runner", "do not bypass"}) &&
 			containsAny(lower, []string{"yt-dlp", "ffmpeg", "gemini", "transcript api", "sqlite", "vault", "external"})

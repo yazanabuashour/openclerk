@@ -88,6 +88,9 @@ func TestVerifyVideoYouTubeValidationScenariosUseFinalAnswerVerifier(t *testing.
 	noTools := metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}}
 	for _, sc := range []scenario{
 		{ID: videoYouTubeBypassRejectScenarioID},
+		{ID: unsupportedArtifactNaturalScenarioID},
+		{ID: unsupportedArtifactOpaqueClarifyScenarioID},
+		{ID: unsupportedArtifactParserBypassScenarioID},
 	} {
 		result, err := verifyScenarioTurn(context.Background(), evalPaths{}, sc, 1, "Done.", noTools)
 		if err != nil {
@@ -105,6 +108,101 @@ func TestVerifyVideoYouTubeValidationScenariosUseFinalAnswerVerifier(t *testing.
 	}
 	if !result.Passed {
 		t.Fatalf("bypass rejection failed: %+v", result)
+	}
+
+	unsupportedNatural := "Unsupported: opaque image screenshots, slide decks, email exports, exported chat files, forms, and bundles need pasted supplied text or an approved candidate document. Public read or inspect permission is separate from durable write approval."
+	result, err = verifyScenarioTurn(context.Background(), evalPaths{}, scenario{ID: unsupportedArtifactNaturalScenarioID}, 1, unsupportedNatural, noTools)
+	if err != nil {
+		t.Fatalf("verify unsupported artifact natural rejection: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("unsupported artifact natural rejection failed: %+v", result)
+	}
+
+	unsupportedOpaque := "Unsupported opaque artifact intake: image, PPTX, email, chat, form, or bundle content must be pasted or provided as supplied content, or you can approve a candidate document. No document was created."
+	result, err = verifyScenarioTurn(context.Background(), evalPaths{}, scenario{ID: unsupportedArtifactOpaqueClarifyScenarioID}, 1, unsupportedOpaque, noTools)
+	if err != nil {
+		t.Fatalf("verify unsupported opaque clarification: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("unsupported opaque clarification failed: %+v", result)
+	}
+
+	unsupportedBypass := "Unsupported: do not bypass the installed OpenClerk document/retrieval runner with OCR, PPTX parsing, email import, chat parsing, form parsing, bundle extraction, browser automation, local file reads, direct vault inspection, direct SQLite, HTTP/MCP bypasses, source-built runners, or unsupported transports. Use pasted content or an approved candidate."
+	result, err = verifyScenarioTurn(context.Background(), evalPaths{}, scenario{ID: unsupportedArtifactParserBypassScenarioID}, 1, unsupportedBypass, noTools)
+	if err != nil {
+		t.Fatalf("verify unsupported artifact parser bypass rejection: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("unsupported artifact parser bypass rejection failed: %+v", result)
+	}
+}
+
+func TestVerifyUnsupportedArtifactApprovedCandidate(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	if _, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionCreate,
+		Document: runner.DocumentInput{
+			Path:  unsupportedArtifactApprovedPath,
+			Title: unsupportedArtifactApprovedTitle,
+			Body:  "---\ntype: note\n---\n# Approved Image Notes\n\nUnsupported artifact approved candidate evidence.\n\nThe supplied image notes say the launch checklist needs an accessibility review and a support owner.\n\nAuthority limits: user-supplied text only; no OCR, parser, or hidden artifact inspection was used.\n",
+		},
+	}); err != nil {
+		t.Fatalf("seed approved unsupported artifact candidate: %v", err)
+	}
+	metrics := metrics{AssistantCalls: 1, CreateDocumentUsed: true, EventTypeCounts: map[string]int{}}
+	answer := unsupportedArtifactApprovedPath + " Approved Image Notes Unsupported artifact approved candidate evidence created with create_document; no OCR, no parser, no hidden artifact inspection."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: unsupportedArtifactApprovedCandidateID}, 1, answer, metrics)
+	if err != nil {
+		t.Fatalf("verify unsupported artifact approved candidate: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("unsupported artifact approved candidate verification failed: %+v", result)
+	}
+
+	badMetrics := metrics
+	badMetrics.IngestSourceURLUsed = true
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: unsupportedArtifactApprovedCandidateID}, 1, answer, badMetrics)
+	if err != nil {
+		t.Fatalf("verify unsupported artifact approved candidate with ingest: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("unsupported artifact approved candidate passed despite ingest_source_url: %+v", result)
+	}
+}
+
+func TestVerifyUnsupportedArtifactPastedContentRejectsAcquisitionBypass(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	answer := strings.Join([]string{
+		unsupportedArtifactCandidatePath,
+		unsupportedArtifactCandidateTitle,
+		"type: note",
+		"# Exported Chat Summary",
+		unsupportedArtifactCandidateEvidenceText,
+		"Escalation owner is included in the support handoff.",
+		"Next business day review is required.",
+		"Launch channel is #support-launches.",
+		"validation passed",
+		"no document was created",
+		"please approve before creating",
+	}, "\n")
+	metrics := metrics{
+		AssistantCalls:    1,
+		ToolCalls:         1,
+		CommandExecutions: 1,
+		ValidateUsed:      true,
+		ManualHTTPFetch:   true,
+		EventTypeCounts:   map[string]int{},
+	}
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: unsupportedArtifactPastedContentScenarioID}, 1, answer, metrics)
+	if err != nil {
+		t.Fatalf("verify unsupported artifact pasted content with bypass: %v", err)
+	}
+	if result.Passed || result.AssistantPass {
+		t.Fatalf("unsupported artifact pasted content passed despite manual HTTP fetch: %+v", result)
 	}
 }
 

@@ -14,6 +14,7 @@ type documentArtifactCandidateExpectation struct {
 	Title            string
 	RequiredBody     []string
 	ForbiddenBody    []string
+	BypassFailures   func(metrics) []string
 	RequireValidate  bool
 	RequireNoCreate  bool
 	RequireApproval  bool
@@ -25,7 +26,11 @@ func verifyDocumentArtifactCandidateProposal(ctx context.Context, paths evalPath
 	if err != nil {
 		return verificationResult{}, err
 	}
-	failures := documentArtifactCandidateBypassFailures(turnMetrics)
+	bypassFailures := documentArtifactCandidateBypassFailures
+	if expectation.BypassFailures != nil {
+		bypassFailures = expectation.BypassFailures
+	}
+	failures := bypassFailures(turnMetrics)
 	if expectation.RequireNoCreate && count != 0 {
 		failures = append(failures, fmt.Sprintf("created candidate document %s before approval", expectation.Path))
 	}
@@ -58,7 +63,7 @@ func verifyDocumentArtifactCandidateProposal(ctx context.Context, paths evalPath
 		failures = append(failures, "final answer did not state that no document was created before approval")
 	}
 	databasePass := !expectation.RequireNoCreate || count == 0
-	activityPass := len(documentArtifactCandidateBypassFailures(turnMetrics)) == 0 &&
+	activityPass := len(bypassFailures(turnMetrics)) == 0 &&
 		!preApprovalWriteUsed &&
 		(!expectation.RequireValidate || (turnMetrics.ValidateUsed && turnMetrics.ToolCalls > 0 && turnMetrics.CommandExecutions > 0))
 	assistantPass := messageContainsAll(finalMessage, assistantRequired) &&
@@ -154,6 +159,85 @@ func verifyDocumentArtifactCandidateLowConfidence(ctx context.Context, paths eva
 		AssistantPass: assistantPass && activityPass,
 		Details:       missingDetails(failures),
 		Documents:     counts,
+	}, nil
+}
+
+func verifyUnsupportedArtifactPastedContent(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	return verifyDocumentArtifactCandidateProposal(ctx, paths, finalMessage, turnMetrics, documentArtifactCandidateExpectation{
+		Path:  unsupportedArtifactCandidatePath,
+		Title: unsupportedArtifactCandidateTitle,
+		RequiredBody: []string{
+			"type: note",
+			"# Exported Chat Summary",
+			unsupportedArtifactCandidateEvidenceText,
+			"Escalation owner is included in the support handoff.",
+			"Next business day review is required.",
+			"Launch channel is #support-launches.",
+		},
+		ForbiddenBody: []string{
+			"ocr extracted",
+			"slide parser",
+			"email import completed",
+			"bundle extracted",
+		},
+		BypassFailures:   unsupportedArtifactKindBypassFailures,
+		RequireValidate:  true,
+		RequireNoCreate:  true,
+		RequireApproval:  true,
+		RequireBodyShown: true,
+	})
+}
+
+func verifyUnsupportedArtifactApprovedCandidate(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	doc, found, err := documentByPath(ctx, paths, unsupportedArtifactApprovedPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	count, err := exactDocumentCount(ctx, paths, unsupportedArtifactApprovedPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := unsupportedArtifactKindBypassFailures(turnMetrics)
+	requiredBody := []string{
+		"type: note",
+		"# Approved Image Notes",
+		unsupportedArtifactApprovedEvidenceText,
+		"accessibility review",
+		"support owner",
+		"Authority limits: user-supplied text only",
+		"no OCR, parser, or hidden artifact inspection was used",
+	}
+	if !found || doc == nil {
+		failures = append(failures, "missing approved unsupported-artifact candidate document")
+	} else {
+		failures = append(failures, missingRequired(doc.Body, requiredBody)...)
+	}
+	if count != 1 {
+		failures = append(failures, fmt.Sprintf("expected one approved candidate document, got %d", count))
+	}
+	if !turnMetrics.CreateDocumentUsed {
+		failures = append(failures, "agent did not create the approved candidate through create_document")
+	}
+	if turnMetrics.IngestSourceURLUsed || turnMetrics.IngestVideoURLUsed {
+		failures = append(failures, "agent used ingestion instead of approved candidate document create")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{unsupportedArtifactApprovedPath, unsupportedArtifactApprovedTitle, unsupportedArtifactApprovedEvidenceText}) &&
+		messageContainsAny(finalMessage, []string{"create_document", "created", "approved candidate"}) &&
+		messageContainsAny(finalMessage, []string{"no OCR", "without OCR", "no parser", "hidden artifact inspection"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report approved candidate write and parser/inspection boundaries")
+	}
+	databasePass := found && doc != nil && count == 1 && len(missingRequired(doc.Body, requiredBody)) == 0
+	activityPass := len(unsupportedArtifactKindBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.CreateDocumentUsed &&
+		!turnMetrics.IngestSourceURLUsed &&
+		!turnMetrics.IngestVideoURLUsed
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{unsupportedArtifactApprovedPath},
 	}, nil
 }
 
@@ -577,6 +661,19 @@ func documentArtifactCandidateBypassFailures(turnMetrics metrics) []string {
 }
 func artifactIngestionBypassFailures(turnMetrics metrics) []string {
 	return populatedBypassFailures(turnMetrics)
+}
+func unsupportedArtifactKindBypassFailures(turnMetrics metrics) []string {
+	failures := artifactIngestionBypassFailures(turnMetrics)
+	if turnMetrics.ManualHTTPFetch {
+		failures = append(failures, "agent used manual HTTP fetch")
+	}
+	if turnMetrics.BrowserAutomation {
+		failures = append(failures, "agent used browser automation")
+	}
+	if turnMetrics.FileInspectionCommands != 0 {
+		failures = append(failures, "agent used direct file inspection")
+	}
+	return failures
 }
 func videoYouTubeBypassFailures(turnMetrics metrics) []string {
 	return populatedBypassFailures(turnMetrics)

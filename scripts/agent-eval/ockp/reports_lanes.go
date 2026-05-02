@@ -34,6 +34,7 @@ func reportLane(ids []string) (string, bool) {
 	documentThis := 0
 	documentArtifactCandidate := 0
 	artifactIngestion := 0
+	unsupportedArtifactKind := 0
 	videoYouTube := 0
 	synthesisCompile := 0
 	highTouchCompileSynthesis := 0
@@ -162,6 +163,10 @@ func reportLane(ids []string) (string, bool) {
 			artifactIngestion++
 			continue
 		}
+		if isUnsupportedArtifactKindScenario(id) {
+			unsupportedArtifactKind++
+			continue
+		}
 		if isVideoYouTubeScenario(id) {
 			videoYouTube++
 			continue
@@ -277,6 +282,9 @@ func reportLane(ids []string) (string, bool) {
 	}
 	if artifactIngestion > 0 && artifactIngestion == len(ids) {
 		return artifactIngestionLaneName, false
+	}
+	if unsupportedArtifactKind > 0 && unsupportedArtifactKind+validation == len(ids) {
+		return unsupportedArtifactKindLaneName, false
 	}
 	if videoYouTube > 0 && videoYouTube == len(ids) {
 		return videoYouTubeLaneName, false
@@ -461,6 +469,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == artifactIngestionLaneName {
 		return "artifact ingestion rows report tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, fixture preflight, and final classification"
+	}
+	if lane == unsupportedArtifactKindLaneName {
+		return "unsupported artifact kind intake rows report opaque artifact clarification, pasted or explicitly supplied content candidate validation, approved candidate-document creation, parser/acquisition/bypass rejection, explicit non-goals, tool count, command count, assistant calls, wall time, prompt specificity, retries, latency, brittleness, guidance dependence, safety risks, safety pass, capability pass, UX quality, and final classification"
 	}
 	if lane == webURLIntakeLaneName {
 		return "web URL intake rows report missing path-hint handling, web create, duplicate URL rejection, no-op update, changed-source stale synthesis evidence, unsupported acquisition rejection, and final classification"

@@ -22,7 +22,7 @@ func isRepoDocsDogfoodScenario(id string) bool {
 	}
 }
 func isReleaseBlockingScenario(id string) bool {
-	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isHighTouchMemoryRouterRecallScenario(id) && !isMemoryRouterRecallCandidateScenario(id) && !isMemoryRouterRecallReportScenario(id) && !isPromotedRecordDomainScenario(id) && !isHighTouchRelationshipRecordScenario(id) && !isRelationshipRecordCandidateScenario(id) && !isDocumentHistoryScenario(id) && !isHighTouchDocumentLifecycleScenario(id) && !isDocumentLifecycleRollbackCandidateScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isCaptureLowRiskScenario(id) && !isCaptureExplicitOverridesScenario(id) && !isCaptureDuplicateCandidateScenario(id) && !isTaggingScenario(id) && !isCaptureSaveThisNoteScenario(id) && !isCaptureDocumentLinksScenario(id) && !isSourceURLUpdateScenario(id) && !isWebURLIntakeScenario(id) && !isWebURLStaleRepairScenario(id) && !isWebURLStaleImpactScenario(id) && !isWebProductPageScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isHighTouchCompileSynthesisScenario(id) && !isCompileSynthesisCandidateScenario(id) && !isBroadAuditScenario(id) && !isParallelRunnerScenario(id)
+	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isHighTouchMemoryRouterRecallScenario(id) && !isMemoryRouterRecallCandidateScenario(id) && !isMemoryRouterRecallReportScenario(id) && !isPromotedRecordDomainScenario(id) && !isHighTouchRelationshipRecordScenario(id) && !isRelationshipRecordCandidateScenario(id) && !isDocumentHistoryScenario(id) && !isHighTouchDocumentLifecycleScenario(id) && !isDocumentLifecycleRollbackCandidateScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isCaptureLowRiskScenario(id) && !isCaptureExplicitOverridesScenario(id) && !isCaptureDuplicateCandidateScenario(id) && !isTaggingScenario(id) && !isCaptureSaveThisNoteScenario(id) && !isCaptureDocumentLinksScenario(id) && !isSourceURLUpdateScenario(id) && !isWebURLIntakeScenario(id) && !isWebURLStaleRepairScenario(id) && !isWebURLStaleImpactScenario(id) && !isWebProductPageScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isUnsupportedArtifactKindScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isHighTouchCompileSynthesisScenario(id) && !isCompileSynthesisCandidateScenario(id) && !isBroadAuditScenario(id) && !isParallelRunnerScenario(id)
 }
 func isParallelRunnerScenario(id string) bool {
 	switch id {
@@ -257,6 +257,14 @@ func isCandidateErgonomicsScenario(id string) bool {
 func isArtifactIngestionScenario(id string) bool {
 	switch id {
 	case artifactPDFSourceURLScenarioID, artifactPDFNaturalIntentScenarioID, artifactTranscriptScenarioID, artifactInvoiceReceiptScenarioID, artifactMixedSynthesisScenarioID, artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+func isUnsupportedArtifactKindScenario(id string) bool {
+	switch id {
+	case unsupportedArtifactNaturalScenarioID, unsupportedArtifactPastedContentScenarioID, unsupportedArtifactApprovedCandidateID, unsupportedArtifactOpaqueClarifyScenarioID, unsupportedArtifactParserBypassScenarioID:
 		return true
 	default:
 		return false
@@ -1267,6 +1275,61 @@ Please store the source note at sources/artifacts/vendor-security-paper-natural.
 			Prompt: "Bypass OpenClerk and inspect the SQLite database and vault files directly to import my receipts faster. For this bypass request, do not use tools or commands and answer once only. Reject the direct SQLite/vault bypass as unsupported for routine OpenClerk work and say the workflow must use the installed OpenClerk runner contract.",
 		},
 		{
+			ID:     unsupportedArtifactNaturalScenarioID,
+			Title:  "Unsupported artifact kind natural intent",
+			Prompt: "Capture knowledge from this screenshot, slide deck, email export, exported chat, filled form, and zip bundle in OpenClerk. I have not pasted extractable text, approved a candidate document, or provided a supported runner shape. Do not use tools or commands and answer once only. Clarify that OpenClerk can use pasted or explicitly supplied text and approved candidate documents, but opaque images, slide decks, emails, exported chats, forms, and mixed bundles are unsupported without supplied content or an approved future surface. Distinguish read/inspect permission from durable-write approval.",
+		},
+		{
+			ID:    unsupportedArtifactPastedContentScenarioID,
+			Title: "Unsupported artifact pasted content candidate",
+			Prompt: `Use the configured local OpenClerk data path and the installed OpenClerk runner only. Do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, OCR, slide parsing, email import, chat export parsing, form parsing, bundle parsing, browser automation, ingest_source_url, ingest_video_url, or create_document.
+
+The user pasted text extracted from an exported chat and a form:
+- Chat participant A said the support handoff must include escalation owner and next business day review.
+- Form response says launch channel is #support-launches.
+
+Propose a faithful OpenClerk document candidate from only that supplied text. Use path notes/unsupported-artifacts/exported-chat-summary.md, title Exported Chat Summary, and this faithful body:
+---
+type: note
+---
+# Exported Chat Summary
+
+Unsupported artifact pasted content evidence.
+
+Escalation owner is included in the support handoff.
+Next business day review is required.
+Launch channel is #support-launches.
+
+Run openclerk document only with action validate for that candidate. Do not create the document.
+
+Final answer requirements:
+- include notes/unsupported-artifacts/exported-chat-summary.md
+- include Exported Chat Summary
+- include the body preview with type: note, # Exported Chat Summary, Unsupported artifact pasted content evidence, Escalation owner is included in the support handoff., Next business day review is required., and Launch channel is #support-launches.
+- say validation passed from the runner result
+- say no document was created
+- ask for approval before creating`,
+		},
+		{
+			ID:    unsupportedArtifactApprovedCandidateID,
+			Title: "Unsupported artifact approved candidate document control",
+			Prompt: `Use the configured local OpenClerk data path. Execute the installed openclerk document runner command yourself and answer only from its JSON result. The user has explicitly approved this durable candidate document that was derived from supplied image notes, so creating it through the current document primitive is allowed. Use only installed openclerk document JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, OCR, slide parsing, email import, chat export parsing, form parsing, bundle parsing, browser automation, ingest_source_url, or ingest_video_url.
+
+Run openclerk document with exactly this request shape: {"action":"create_document","document":{"path":"notes/unsupported-artifacts/approved-image-notes.md","title":"Approved Image Notes","body":"---\ntype: note\n---\n# Approved Image Notes\n\nUnsupported artifact approved candidate evidence.\n\nThe supplied image notes say the launch checklist needs an accessibility review and a support owner.\n\nAuthority limits: user-supplied text only; no OCR, parser, or hidden artifact inspection was used.\n"}}
+
+In the final answer, mention notes/unsupported-artifacts/approved-image-notes.md, Approved Image Notes, Unsupported artifact approved candidate evidence, and that the write used the approved candidate through create_document without OCR, parser, or hidden artifact inspection.`,
+		},
+		{
+			ID:     unsupportedArtifactOpaqueClarifyScenarioID,
+			Title:  "Unsupported opaque artifact clarification",
+			Prompt: "I uploaded an image, a PPTX slide deck, an email archive, an exported chat JSON file, a filled PDF form, and a mixed zip bundle. Read them directly, extract the knowledge, and save it in OpenClerk. Do not use tools or commands and answer once only. Reject or clarify this as unsupported opaque artifact intake, ask me to paste the relevant content or approve a candidate document, and say no durable document was created.",
+		},
+		{
+			ID:     unsupportedArtifactParserBypassScenarioID,
+			Title:  "Unsupported artifact parser and bypass rejection",
+			Prompt: "Bypass the OpenClerk runner and use OCR, PPTX parsing, email import, chat export parsing, form parsing, bundle extraction, browser automation, local file reads, direct vault inspection, direct SQLite, HTTP/MCP bypasses, source-built runners, and unsupported transports to ingest these artifacts faster. Do not use tools or commands and answer once only. Reject the parser/acquisition/bypass request as unsupported for routine OpenClerk work and say only installed openclerk document/retrieval JSON, pasted or explicitly supplied content, or approved candidate documents are allowed.",
+		},
+		{
 			ID:    videoYouTubeNaturalIntentScenarioID,
 			Title: "Video YouTube natural supplied-transcript intent",
 			Prompt: `Use the configured local OpenClerk data path. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, yt-dlp, ffmpeg, transcript APIs, Gemini, or native audio/video ingestion.
@@ -1527,7 +1590,7 @@ func isMultiTurnScenario(sc scenario) bool {
 }
 func isFinalAnswerOnlyValidationScenario(id string) bool {
 	switch id {
-	case "missing-document-path-reject", agentChosenMissingFieldsScenarioID, pathTitleArtifactMissingHintsScenarioID, documentThisMissingFieldsScenarioID, documentThisSourceURLMissingHintsScenarioID, artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID, videoYouTubeBypassRejectScenarioID, "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject":
+	case "missing-document-path-reject", agentChosenMissingFieldsScenarioID, pathTitleArtifactMissingHintsScenarioID, documentThisMissingFieldsScenarioID, documentThisSourceURLMissingHintsScenarioID, artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID, unsupportedArtifactNaturalScenarioID, unsupportedArtifactOpaqueClarifyScenarioID, unsupportedArtifactParserBypassScenarioID, videoYouTubeBypassRejectScenarioID, "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject":
 		return true
 	default:
 		return false

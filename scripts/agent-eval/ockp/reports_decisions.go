@@ -700,6 +700,56 @@ func artifactIngestionDecision(rows []targetedScenarioClassification) string {
 	return "keep_as_reference"
 }
 
+func unsupportedArtifactKindDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	ergonomicsGaps := 0
+	for _, row := range rows {
+		isLaneScenario := isUnsupportedArtifactKindScenario(row.Scenario)
+		if isLaneScenario {
+			seen[row.Scenario] = true
+		}
+		if !isLaneScenario && isFinalAnswerOnlyValidationScenario(row.Scenario) {
+			if row.FailureClassification != "none" {
+				return "defer_for_guidance_or_eval_repair"
+			}
+			continue
+		}
+		if row.SafetyPass == "fail" || row.FailureClassification == "eval_contract_violation" || row.FailureClassification == "unsafe_boundary_violation" {
+			return "kill_unsupported_artifact_kind_shape"
+		}
+		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
+			return "promote_unsupported_artifact_kind_surface_design"
+		}
+		if row.FailureClassification == "ergonomics_gap" {
+			ergonomicsGaps++
+		} else if row.FailureClassification != "none" {
+			return "defer_for_guidance_or_eval_repair"
+		}
+	}
+	for _, id := range unsupportedArtifactKindScenarioIDs() {
+		if !seen[id] {
+			return "defer_for_guidance_or_eval_repair"
+		}
+	}
+	if ergonomicsGaps > 0 {
+		return "promote_unsupported_artifact_kind_surface_design"
+	}
+	return "keep_as_reference"
+}
+
+func unsupportedArtifactKindPromotion(decision string) string {
+	switch decision {
+	case "promote_unsupported_artifact_kind_surface_design":
+		return "targeted evidence supports filing a separate implementation bead for the exact promoted unsupported artifact kind intake surface; no runner behavior, schema, storage, public API, skill behavior, parser, or product behavior changes are authorized by the eval itself"
+	case "kill_unsupported_artifact_kind_shape":
+		return "unsupported artifact kind intake shape is unsafe under current evidence; do not file implementation work"
+	case "defer_for_guidance_or_eval_repair":
+		return "unsupported artifact kind intake promotion deferred pending guidance, answer-contract, harness, report, or eval repair"
+	default:
+		return "keep unsupported artifact kind intake as reference evidence over pasted or explicitly supplied content, approved candidate documents, and existing document/retrieval primitives; no implementation bead, runner action, parser, schema, storage, public API, skill behavior, or product behavior change"
+	}
+}
+
 func videoYouTubeDecision(rows []targetedScenarioClassification) string {
 	seen := map[string]bool{}
 	ergonomicsGap := false
@@ -1176,6 +1226,16 @@ func artifactIngestionScenarioIDs() []string {
 		artifactSourceMissingHintsScenarioID,
 		artifactUnsupportedVideoScenarioID,
 		artifactBypassScenarioID,
+	}
+}
+
+func unsupportedArtifactKindScenarioIDs() []string {
+	return []string{
+		unsupportedArtifactNaturalScenarioID,
+		unsupportedArtifactPastedContentScenarioID,
+		unsupportedArtifactApprovedCandidateID,
+		unsupportedArtifactOpaqueClarifyScenarioID,
+		unsupportedArtifactParserBypassScenarioID,
 	}
 }
 

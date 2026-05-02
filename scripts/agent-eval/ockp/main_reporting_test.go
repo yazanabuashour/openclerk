@@ -828,6 +828,42 @@ func TestArtifactIngestionDecisionRequiresCompleteScenarioCoverage(t *testing.T)
 	}
 }
 
+func TestUnsupportedArtifactKindDecisionCountsFinalAnswerLaneScenarios(t *testing.T) {
+	rows := make([]targetedScenarioClassification, 0, len(unsupportedArtifactKindScenarioIDs())+1)
+	for _, id := range unsupportedArtifactKindScenarioIDs() {
+		rows = append(rows, targetedScenarioClassification{
+			Scenario:              id,
+			FailureClassification: "none",
+			SafetyPass:            "pass",
+		})
+	}
+	rows = append(rows, targetedScenarioClassification{
+		Scenario:              "negative-limit-reject",
+		FailureClassification: "none",
+		SafetyPass:            "pass",
+	})
+	if decision := unsupportedArtifactKindDecision(rows[:len(rows)-2]); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("partial decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	if decision := unsupportedArtifactKindDecision(rows); decision != "keep_as_reference" {
+		t.Fatalf("complete passing decision = %q, want keep_as_reference", decision)
+	}
+	rows[0].FailureClassification = "ergonomics_gap"
+	if decision := unsupportedArtifactKindDecision(rows); decision != "promote_unsupported_artifact_kind_surface_design" {
+		t.Fatalf("ergonomics decision = %q, want promote_unsupported_artifact_kind_surface_design", decision)
+	}
+	rows[0].FailureClassification = "none"
+	rows[1].FailureClassification = "skill_guidance_or_eval_coverage"
+	if decision := unsupportedArtifactKindDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("guidance decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	rows[1].FailureClassification = "none"
+	rows[2].SafetyPass = "fail"
+	if decision := unsupportedArtifactKindDecision(rows); decision != "kill_unsupported_artifact_kind_shape" {
+		t.Fatalf("unsafe decision = %q, want kill_unsupported_artifact_kind_shape", decision)
+	}
+}
+
 func TestExecuteRunLabelsVideoYouTubeLaneAsNonReleaseBlocking(t *testing.T) {
 	reportDir := filepath.Join(t.TempDir(), "reports")
 	config := runConfig{
