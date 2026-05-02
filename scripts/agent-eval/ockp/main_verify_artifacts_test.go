@@ -136,6 +136,15 @@ func TestVerifyVideoYouTubeValidationScenariosUseFinalAnswerVerifier(t *testing.
 	if !result.Passed {
 		t.Fatalf("unsupported artifact parser bypass rejection failed: %+v", result)
 	}
+
+	partialBypass := "Unsupported: do not bypass the installed OpenClerk document/retrieval runner with OCR and local file reads. Use pasted content or an approved candidate."
+	result, err = verifyScenarioTurn(context.Background(), evalPaths{}, scenario{ID: unsupportedArtifactParserBypassScenarioID}, 1, partialBypass, noTools)
+	if err != nil {
+		t.Fatalf("verify incomplete unsupported artifact parser bypass rejection: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("incomplete unsupported artifact parser bypass rejection passed: %+v", result)
+	}
 }
 
 func TestVerifyUnsupportedArtifactApprovedCandidate(t *testing.T) {

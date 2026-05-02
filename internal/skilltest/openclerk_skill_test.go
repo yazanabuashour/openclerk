@@ -155,18 +155,81 @@ func TestOpenClerkSkillDescriptionContainsBootstrapNoToolsGuard(t *testing.T) {
 		"unsupported transports",
 		"backend variants",
 		"module-cache inspection",
+		"rg --files",
+		"find",
+		"ls",
+		"opaque image/screenshot",
+		"slide deck/PPTX",
+		"email archive",
+		"exported chat",
+		"form",
+		"bundle",
+		"pasted/supplied content",
+		"OCR",
+		"PPTX parsing",
+		"email/chat/form/bundle parsing",
+		"local file reads",
+		"browser automation",
 		"this description is complete",
 		"respond with exactly one no-tools assistant answer",
 		"openclerk document",
 		"openclerk retrieval",
-		"rg --files",
-		"find",
-		"ls",
 		"direct vault inspection",
 		"repo search",
 	} {
 		if !strings.Contains(description, want) {
 			t.Fatalf("SKILL.md description missing %q: %s", want, description)
+		}
+	}
+}
+
+func TestOpenClerkSkillGuidesUnsupportedArtifactIntake(t *testing.T) {
+	t.Parallel()
+
+	content, err := os.ReadFile(openClerkSkillPath(t))
+	if err != nil {
+		t.Fatalf("read skill: %v", err)
+	}
+	text := string(content)
+	noToolsSection := markdownSection(text, "## No-Tools Handling Before Runners", "## Propose-Before-Create Candidate Documents")
+	if noToolsSection == "" {
+		t.Fatal("missing no-tools section")
+	}
+	proposalSection := markdownSection(text, "## Propose-Before-Create Candidate Documents", "## Document Tasks")
+	if proposalSection == "" {
+		t.Fatal("missing propose-before-create section")
+	}
+	combined := strings.Join(strings.Fields(noToolsSection+" "+proposalSection), " ")
+	for _, want := range []string{
+		"Unsupported opaque artifact rules",
+		"Opaque images or screenshots, slide decks or PPTX files, email archives, exported chats, forms, and mixed bundles",
+		"unsupported when the user has not pasted or explicitly supplied preservable text/body content",
+		"use one no-tools answer",
+		"ask for pasted or explicitly supplied content",
+		"approve a candidate-document workflow only when a faithful candidate can be formed from supplied content",
+		"Public read or inspect permission is not durable-write approval",
+		"durable writes gated on explicit approval",
+		"Do not claim parser truth, OCR results, hidden file inspection, attachment contents, or bundle contents",
+		"Parser and acquisition bypass rules",
+		"Reject requests to use OCR, PPTX parsing, email import or parsing, chat/form/bundle parsing or extraction, local file reads, browser automation, direct vault inspection, direct SQLite, HTTP/MCP bypasses, source-built runners",
+		"final-answer-only: no tools, no commands, no runner call",
+		"Opaque artifact references are not explicit supplied content",
+		"Do not propose a candidate from a screenshot, slide deck, PPTX, email archive, exported chat file, form, or bundle unless the user pasted or explicitly supplied the text to preserve",
+		"run `validate`, show `Path:`, `Title:`, and `Body preview:`",
+		"ask for approval before any durable write",
+	} {
+		if !strings.Contains(combined, want) {
+			t.Fatalf("unsupported artifact guidance missing %q", want)
+		}
+	}
+	for _, forbidden := range []string{
+		"schema change",
+		"public API",
+		"storage migration",
+		"direct-create shortcut",
+	} {
+		if strings.Contains(strings.ToLower(combined), forbidden) {
+			t.Fatalf("unsupported artifact guidance contains promotion language %q", forbidden)
 		}
 	}
 }
@@ -410,7 +473,7 @@ func TestOpenClerkSkillDescriptionDoesNotSuppressDuplicateRiskChecks(t *testing.
 	}
 	description := frontmatterDescription(string(content))
 	for _, want := range []string{
-		"faithful propose-before-create candidate or duplicate-risk check",
+		"faithful propose-before-create candidate, duplicate-risk check",
 		"public-link placement proposal",
 		"explicit user content",
 		"this description is complete",

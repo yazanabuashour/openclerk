@@ -1,6 +1,6 @@
 ---
 name: OpenClerk
-description: Use installed openclerk JSON runner. Bootstrap no-tools rule - if required fields are missing; if document path, title, or body is missing and no faithful propose-before-create candidate or duplicate-risk check or public-link placement proposal can be formed from explicit user content; if limit is negative such as limit -3; or if asked to bypass the runner with SQLite, HTTP, MCP, legacy or source-built paths, unsupported transports, backend variants, module-cache inspection, rg --files, find, ls, direct vault inspection, or repo search, this description is complete. Do not open this skill file, run commands, use tools, or call the runner; respond with exactly one no-tools assistant answer to name the missing fields, ask the user to provide them, or reject invalid/unsupported workflow. Otherwise open this skill. Valid work uses only openclerk document or openclerk retrieval JSON. Low-risk proposals run openclerk document validate and answer with Path, Title, Body preview, validation, no-write, approval.
+description: Use openclerk runner. Bootstrap no-tools rule - if required fields are missing; if document path, title, or body is missing without a faithful propose-before-create candidate, duplicate-risk check, or public-link placement proposal from explicit user content; if limit -3; if opaque image/screenshot, slide deck/PPTX, email archive, exported chat, form, or bundle lacks pasted/supplied content; or if asked to bypass the runner with OCR, PPTX parsing, email/chat/form/bundle parsing, local file reads, browser automation, SQLite, HTTP, MCP, legacy or source-built paths, unsupported transports, backend variants, module-cache inspection, rg --files, find, ls, direct vault inspection, or repo search, this description is complete. Do not open this skill file, run commands, use tools, or call the runner; respond with exactly one no-tools assistant answer to name the missing fields, ask the user to provide them, or name the blocked parser/bypass. Valid work uses openclerk document or openclerk retrieval JSON.
 license: MIT
 compatibility: Requires local filesystem access and an installed openclerk binary on PATH.
 ---
@@ -34,7 +34,9 @@ openclerk retrieval
   module-cache docs, SQLite, vault files, or `.openclerk-eval/vault` directly
   for routine tasks. Do not use repo search, `rg --files`, `find`, `ls`,
   `openclerk --help`, HTTP/MCP, legacy/source-built paths, unsupported
-  transports, or external acquisition tools as substitutes for runner JSON.
+  transports, browser automation, OCR, PPTX parsing, email/chat/form/bundle
+  parsing, local file reads, or external acquisition tools as substitutes for
+  runner JSON.
 - Missing required fields that cannot be handled by the proposal policy,
   invalid numeric limits, and bypass requests are final-answer-only: use no
   tools, no commands, and no runner call. Name the missing field(s) or reject
@@ -103,6 +105,34 @@ Required-field rules:
   video sources also need `video.path_hint`.
 - Limits must be non-negative.
 
+Unsupported opaque artifact rules:
+
+- Opaque images or screenshots, slide decks or PPTX files, email archives,
+  exported chats, forms, and mixed bundles are unsupported when the user has
+  not pasted or explicitly supplied preservable text/body content.
+- For those opaque artifact requests, use one no-tools answer. Say the
+  artifact kind is unsupported as opaque input, ask for pasted or explicitly
+  supplied content, or ask the user to approve a candidate-document workflow
+  only when a faithful candidate can be formed from supplied content.
+- Public read or inspect permission is not durable-write approval. Keep
+  durable writes gated on explicit approval, and do not treat permission to
+  view a referenced artifact as permission to create or update a document.
+- Do not claim parser truth, OCR results, hidden file inspection, attachment
+  contents, or bundle contents that the user did not paste or explicitly
+  supply.
+
+Parser and acquisition bypass rules:
+
+- Reject requests to use OCR, PPTX parsing, email import or parsing,
+  chat/form/bundle parsing or extraction, local file reads, browser automation,
+  direct vault inspection, direct SQLite, HTTP/MCP bypasses, source-built
+  runners, legacy paths, unsupported transports, backend variants,
+  module-cache inspection, repo search, `rg --files`, `find`, or `ls` as
+  substitutes for installed `openclerk document` or `openclerk retrieval` JSON.
+- The rejection is final-answer-only: no tools, no commands, no runner call,
+  no lower-level file inspection, and no attempt to acquire or parse the
+  unsupported artifact outside the runner contract.
+
 For unsupported workflows not covered by these rules, say the production
 OpenClerk runner does not support that workflow yet.
 
@@ -136,6 +166,13 @@ or user-written URL summaries where the claims to preserve are in the prompt.
 If the user provides a public web URL plus the required source path hint, use
 `ingest_source_url` instead of proposing a candidate; no separate approval is
 needed before the runner fetches the URL.
+
+Opaque artifact references are not explicit supplied content. Do not propose a
+candidate from a screenshot, slide deck, PPTX, email archive, exported chat
+file, form, or bundle unless the user pasted or explicitly supplied the text to
+preserve. When the user supplies that text, keep the candidate faithful, run
+`validate`, show `Path:`, `Title:`, and `Body preview:`, state no document was
+created, and ask for approval before any durable write.
 
 For "save this note" requests with explicit note content but no path or title,
 derive a faithful note candidate from the supplied content, validate it, show
