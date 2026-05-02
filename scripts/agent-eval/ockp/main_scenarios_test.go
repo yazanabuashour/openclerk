@@ -25,6 +25,11 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 			t.Fatalf("scenarioIDs missing unsupported artifact kind scenario %q in %v", want, scenarioIDs())
 		}
 	}
+	for _, want := range localFileArtifactScenarioIDs() {
+		if !ids[want] {
+			t.Fatalf("scenarioIDs missing local file artifact scenario %q in %v", want, scenarioIDs())
+		}
+	}
 	for _, want := range webURLStaleRepairScenarioIDs() {
 		if !ids[want] {
 			t.Fatalf("scenarioIDs missing web URL stale repair scenario %q in %v", want, scenarioIDs())
@@ -202,6 +207,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 			t.Fatalf("default selected scenarios included targeted unsupported artifact kind scenario %q", id)
 		}
 	}
+	for _, id := range localFileArtifactScenarioIDs() {
+		if defaultIDs[id] {
+			t.Fatalf("default selected scenarios included targeted local file artifact scenario %q", id)
+		}
+	}
 	for _, id := range videoYouTubeScenarioIDs() {
 		if defaultIDs[id] {
 			t.Fatalf("default selected scenarios included targeted video/YouTube scenario %q", id)
@@ -326,6 +336,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	lane, releaseBlocking = reportLane(selected)
 	if lane != unsupportedArtifactKindLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, unsupportedArtifactKindLaneName)
+	}
+	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(append(localFileArtifactScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject"), ",")})
+	lane, releaseBlocking = reportLane(selected)
+	if lane != localFileArtifactLaneName || releaseBlocking {
+		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, localFileArtifactLaneName)
 	}
 	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(videoYouTubeScenarioIDs(), ",")})
 	lane, releaseBlocking = reportLane(selected)

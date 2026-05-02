@@ -520,7 +520,7 @@ func preflightEvalContext(repoRoot string, repoDir string, runDir string, paths 
 		return err
 	}
 
-	cmd := exec.Command(codexBin, "debug", "prompt-input", "Use OpenClerk to list notes.")
+	cmd := exec.Command(codexBin, "debug", "prompt-input", "Use OpenClerk for a routine local-first knowledge-plane task. Search my local OpenClerk knowledge for runner with limit -3.")
 	cmd.Dir = repoDir
 	cmd.Env = evalEnv(runDir, paths, cache)
 	output, err := cmd.CombinedOutput()
@@ -535,8 +535,8 @@ func preflightEvalContext(repoRoot string, repoDir string, runDir string, paths 
 		!strings.Contains(rendered, ".agents/skills/openclerk/SKILL.md") {
 		return errors.New("rendered prompt does not point openclerk to an installed eval skill")
 	}
-	if !containsOpenClerkBootstrapRejectionGuidance(rendered) {
-		return errors.New("rendered prompt is missing openclerk bootstrap rejection guidance")
+	if missing := missingOpenClerkBootstrapRejectionGuidance(rendered); len(missing) != 0 {
+		return fmt.Errorf("rendered prompt is missing openclerk bootstrap rejection guidance: %s", strings.Join(missing, ", "))
 	}
 	if containsOpenClerkAgentsInstructions(rendered) {
 		return errors.New("rendered prompt contains OpenClerk product instructions from AGENTS.md")
@@ -547,25 +547,37 @@ func containsOpenClerkSkillDiscovery(rendered string) bool {
 	return strings.Contains(rendered, "- OpenClerk:") || strings.Contains(rendered, "- openclerk:")
 }
 func containsOpenClerkBootstrapRejectionGuidance(rendered string) bool {
+	return len(missingOpenClerkBootstrapRejectionGuidance(rendered)) == 0
+}
+func missingOpenClerkBootstrapRejectionGuidance(rendered string) []string {
 	lower := strings.ToLower(rendered)
-	return strings.Contains(rendered, openClerkBootstrapRejectionText) &&
-		strings.Contains(lower, "required") &&
-		strings.Contains(lower, "missing") &&
-		strings.Contains(lower, "document") &&
-		strings.Contains(lower, "faithful") &&
-		strings.Contains(lower, "explicit user content") &&
-		strings.Contains(lower, "source") &&
-		strings.Contains(lower, "negative") &&
-		strings.Contains(lower, "limit") &&
-		strings.Contains(lower, "sqlite") &&
-		strings.Contains(lower, "http") &&
-		strings.Contains(lower, "mcp") &&
-		strings.Contains(lower, "source-built") &&
-		strings.Contains(lower, "unsupported transport") &&
-		strings.Contains(lower, "bypass") &&
-		(strings.Contains(lower, "without tools") || strings.Contains(lower, "no-tools")) &&
-		strings.Contains(lower, "openclerk document") &&
-		strings.Contains(lower, "openclerk retrieval")
+	checks := map[string]bool{
+		openClerkBootstrapRejectionText: strings.Contains(lower, openClerkBootstrapRejectionText),
+		"required":                      strings.Contains(lower, "required"),
+		"missing":                       strings.Contains(lower, "missing"),
+		"document":                      strings.Contains(lower, "document"),
+		"faithful":                      strings.Contains(lower, "faithful"),
+		"explicit user content":         strings.Contains(lower, "explicit user content"),
+		"source":                        strings.Contains(lower, "source"),
+		"negative or limit -3":          strings.Contains(lower, "negative") || strings.Contains(lower, "limit -3"),
+		"limit":                         strings.Contains(lower, "limit"),
+		"sqlite":                        strings.Contains(lower, "sqlite"),
+		"http":                          strings.Contains(lower, "http"),
+		"mcp":                           strings.Contains(lower, "mcp"),
+		"source-built":                  strings.Contains(lower, "source-built"),
+		"unsupported transport":         strings.Contains(lower, "unsupported transport"),
+		"bypass":                        strings.Contains(lower, "bypass"),
+		"without tools or no-tools":     strings.Contains(lower, "without tools") || strings.Contains(lower, "no-tools"),
+		"openclerk document":            strings.Contains(lower, "openclerk document"),
+		"openclerk retrieval":           strings.Contains(lower, "openclerk retrieval"),
+	}
+	missing := []string{}
+	for name, ok := range checks {
+		if !ok {
+			missing = append(missing, name)
+		}
+	}
+	return missing
 }
 func containsOpenClerkAgentsInstructions(rendered string) bool {
 	const marker = "# AGENTS.md instructions"

@@ -241,6 +241,234 @@ func verifyUnsupportedArtifactApprovedCandidate(ctx context.Context, paths evalP
 	}, nil
 }
 
+func verifyLocalFileArtifactSuppliedCandidate(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	return verifyDocumentArtifactCandidateProposal(ctx, paths, finalMessage, turnMetrics, documentArtifactCandidateExpectation{
+		Path:  localFileArtifactCandidatePath,
+		Title: localFileArtifactCandidateTitle,
+		RequiredBody: []string{
+			"type: note",
+			"# Site Visit Notes",
+			localFileArtifactCandidateEvidenceText,
+			"The north entrance badge reader failed twice.",
+			"Facilities owner: Dana.",
+			"Follow-up is due Friday.",
+		},
+		ForbiddenBody: []string{
+			"ocr extracted",
+			"pdf parser",
+			"read from downloads",
+			"hidden artifact inspection",
+		},
+		BypassFailures:   localFileArtifactBypassFailures,
+		RequireValidate:  true,
+		RequireNoCreate:  true,
+		RequireApproval:  true,
+		RequireBodyShown: true,
+	})
+}
+
+func verifyLocalFileArtifactApprovedCandidate(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	doc, found, err := documentByPath(ctx, paths, localFileArtifactApprovedPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	count, err := exactDocumentCount(ctx, paths, localFileArtifactApprovedPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := localFileArtifactBypassFailures(turnMetrics)
+	requiredBody := []string{
+		"type: note",
+		"# Approved Site Visit",
+		localFileArtifactApprovedEvidenceText,
+		"north entrance badge reader failed twice",
+		"Facilities owner is Dana",
+		"Authority limits: user-supplied text only",
+		"no local file read, parser, OCR, or hidden artifact inspection was used",
+	}
+	if !found || doc == nil {
+		failures = append(failures, "missing approved local-file artifact candidate document")
+	} else {
+		failures = append(failures, missingRequired(doc.Body, requiredBody)...)
+	}
+	if count != 1 {
+		failures = append(failures, fmt.Sprintf("expected one approved candidate document, got %d", count))
+	}
+	if !turnMetrics.CreateDocumentUsed {
+		failures = append(failures, "agent did not create the approved candidate through create_document")
+	}
+	if turnMetrics.IngestSourceURLUsed || turnMetrics.IngestVideoURLUsed {
+		failures = append(failures, "agent used ingestion instead of approved candidate document create")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{localFileArtifactApprovedPath, localFileArtifactApprovedTitle, localFileArtifactApprovedEvidenceText}) &&
+		messageContainsAny(finalMessage, []string{"create_document", "created", "approved candidate"}) &&
+		messageContainsAny(finalMessage, []string{"no local file read", "without local file reads", "no parser", "no OCR", "hidden artifact inspection"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report approved candidate write and local-file/parser boundaries")
+	}
+	databasePass := found && doc != nil && count == 1 && len(missingRequired(doc.Body, requiredBody)) == 0
+	activityPass := len(localFileArtifactBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.CreateDocumentUsed &&
+		!turnMetrics.IngestSourceURLUsed &&
+		!turnMetrics.IngestVideoURLUsed
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{localFileArtifactApprovedPath},
+	}, nil
+}
+
+func verifyLocalFileArtifactExplicitAssetPolicy(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	doc, found, err := documentByPath(ctx, paths, localFileArtifactSourcePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	count, err := exactDocumentCount(ctx, paths, localFileArtifactSourcePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	search, err := artifactSearch(ctx, paths, localFileArtifactSourceEvidenceText)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := localFileArtifactBypassFailures(turnMetrics)
+	requiredBody := []string{
+		"type: source",
+		"source_type: local_file_supplied_text",
+		"asset_path: " + localFileArtifactAssetPath,
+		localFileArtifactSourceEvidenceText,
+		"north entrance badge reader failed twice",
+		"Facilities owner: Dana.",
+		"supplied text only",
+	}
+	if !found || doc == nil {
+		failures = append(failures, "missing local-file source document")
+	} else {
+		failures = append(failures, missingRequired(doc.Body, requiredBody)...)
+		if doc.Metadata["asset_path"] != localFileArtifactAssetPath {
+			failures = append(failures, fmt.Sprintf("expected asset_path metadata %q, got %q", localFileArtifactAssetPath, doc.Metadata["asset_path"]))
+		}
+		if doc.Metadata["source_type"] != "local_file_supplied_text" {
+			failures = append(failures, fmt.Sprintf("expected source_type metadata local_file_supplied_text, got %q", doc.Metadata["source_type"]))
+		}
+	}
+	if count != 1 {
+		failures = append(failures, fmt.Sprintf("expected one local-file source document, got %d", count))
+	}
+	if !searchContainsPath(search, localFileArtifactSourcePath) || !searchResultHasCitations(search) {
+		failures = append(failures, "local-file source search did not expose citation-bearing result")
+	}
+	if !turnMetrics.CreateDocumentUsed || !turnMetrics.SearchUsed || !containsAllStrings(turnMetrics.SearchPathPrefixes, []string{"sources/local-file-artifacts/"}) {
+		failures = append(failures, "agent did not create source document and retrieve it with path_prefix sources/local-file-artifacts/")
+	}
+	if turnMetrics.IngestSourceURLUsed || turnMetrics.IngestVideoURLUsed {
+		failures = append(failures, "agent used an ingestion action for local file artifact intake")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{localFileArtifactSourcePath, localFileArtifactAssetPath, "local_file_supplied_text"}) &&
+		messageContainsAny(finalMessage, []string{"citation", "citations", "doc_id", "chunk_id"}) &&
+		messageContainsAny(finalMessage, []string{"no direct local file read", "without direct local file read", "supplied text"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report source path, asset path, citation evidence, and no local-file-read boundary")
+	}
+	databasePass := found && doc != nil && count == 1 &&
+		doc.Metadata["asset_path"] == localFileArtifactAssetPath &&
+		doc.Metadata["source_type"] == "local_file_supplied_text" &&
+		len(missingRequired(doc.Body, requiredBody)) == 0 &&
+		searchContainsPath(search, localFileArtifactSourcePath) &&
+		searchResultHasCitations(search)
+	activityPass := len(localFileArtifactBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.CreateDocumentUsed &&
+		turnMetrics.SearchUsed &&
+		containsAllStrings(turnMetrics.SearchPathPrefixes, []string{"sources/local-file-artifacts/"}) &&
+		!turnMetrics.IngestSourceURLUsed &&
+		!turnMetrics.IngestVideoURLUsed
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{localFileArtifactSourcePath},
+	}, nil
+}
+
+func verifyLocalFileArtifactDuplicateProvenance(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	existing, found, err := documentByPath(ctx, paths, localFileArtifactDuplicatePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	existingCount, err := exactDocumentCount(ctx, paths, localFileArtifactDuplicatePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	candidateCount, err := exactDocumentCount(ctx, paths, localFileArtifactDuplicateCandidatePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	search, err := artifactSearch(ctx, paths, localFileArtifactDuplicateEvidenceText)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := localFileArtifactBypassFailures(turnMetrics)
+	requiredBody := []string{localFileArtifactDuplicateEvidenceText, "source_type: local_file_supplied_text", "asset_path:"}
+	bodyPass := false
+	inspectedExistingTarget := false
+	if !found || existing == nil {
+		failures = append(failures, "missing seeded duplicate local-file source document")
+	} else {
+		bodyFailures := missingRequired(existing.Body, requiredBody)
+		failures = append(failures, bodyFailures...)
+		bodyPass = len(bodyFailures) == 0
+		inspectedExistingTarget = containsAllStrings(turnMetrics.GetDocumentDocIDs, []string{existing.DocID}) &&
+			containsAllStrings(turnMetrics.ProvenanceEventRefIDs, []string{existing.DocID})
+	}
+	if existingCount != 1 {
+		failures = append(failures, fmt.Sprintf("expected one seeded duplicate source %s, got %d", localFileArtifactDuplicatePath, existingCount))
+	}
+	if candidateCount != 0 {
+		failures = append(failures, "created duplicate candidate "+localFileArtifactDuplicateCandidatePath)
+	}
+	if !searchContainsPath(search, localFileArtifactDuplicatePath) || !searchResultHasCitations(search) {
+		failures = append(failures, "duplicate local-file source search did not expose citation-bearing result")
+	}
+	if !turnMetrics.SearchUsed || !containsAllStrings(turnMetrics.SearchPathPrefixes, []string{"sources/local-file-artifacts/"}) {
+		failures = append(failures, "agent did not search duplicate evidence with path_prefix sources/local-file-artifacts/")
+	}
+	if !turnMetrics.ListDocumentsUsed || !containsAllStrings(turnMetrics.ListDocumentPathPrefixes, []string{"sources/local-file-artifacts/"}) {
+		failures = append(failures, "agent did not list duplicate candidates with path_prefix sources/local-file-artifacts/")
+	}
+	if !turnMetrics.GetDocumentUsed || !turnMetrics.ProvenanceEventsUsed || !inspectedExistingTarget {
+		failures = append(failures, "agent did not inspect search/list/get/provenance evidence for duplicate local-file artifact")
+	}
+	if turnMetrics.CreateDocumentUsed || turnMetrics.ReplaceSectionUsed || turnMetrics.AppendDocumentUsed || turnMetrics.IngestSourceURLUsed || turnMetrics.IngestVideoURLUsed {
+		failures = append(failures, "agent wrote or ingested while duplicate local-file placement was unresolved")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{localFileArtifactDuplicatePath, localFileArtifactDuplicateCandidatePath}) &&
+		messageContainsAny(finalMessage, []string{"duplicate", "existing", "already"}) &&
+		messageContainsAny(finalMessage, []string{"provenance", "source"}) &&
+		messageContainsAny(finalMessage, []string{"not created", "was not created", "no document was created", "did not create"}) &&
+		messageContainsAny(finalMessage, []string{"approval-before-write", "approval before write", "before writing", "before creating"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report duplicate evidence, provenance, no duplicate write, and approval-before-write")
+	}
+	databasePass := found && existing != nil && bodyPass && existingCount == 1 && candidateCount == 0 &&
+		searchContainsPath(search, localFileArtifactDuplicatePath) && searchResultHasCitations(search)
+	activityPass := len(localFileArtifactBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.SearchUsed && containsAllStrings(turnMetrics.SearchPathPrefixes, []string{"sources/local-file-artifacts/"}) &&
+		turnMetrics.ListDocumentsUsed && containsAllStrings(turnMetrics.ListDocumentPathPrefixes, []string{"sources/local-file-artifacts/"}) &&
+		turnMetrics.GetDocumentUsed && turnMetrics.ProvenanceEventsUsed && inspectedExistingTarget &&
+		!turnMetrics.CreateDocumentUsed && !turnMetrics.ReplaceSectionUsed && !turnMetrics.AppendDocumentUsed &&
+		!turnMetrics.IngestSourceURLUsed && !turnMetrics.IngestVideoURLUsed
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{localFileArtifactDuplicatePath, localFileArtifactDuplicateCandidatePath},
+	}, nil
+}
+
 type artifactPDFExpectation struct {
 	SourcePath string
 	AssetPath  string
@@ -674,6 +902,9 @@ func unsupportedArtifactKindBypassFailures(turnMetrics metrics) []string {
 		failures = append(failures, "agent used direct file inspection")
 	}
 	return failures
+}
+func localFileArtifactBypassFailures(turnMetrics metrics) []string {
+	return unsupportedArtifactKindBypassFailures(turnMetrics)
 }
 func videoYouTubeBypassFailures(turnMetrics metrics) []string {
 	return populatedBypassFailures(turnMetrics)

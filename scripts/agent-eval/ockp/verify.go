@@ -414,6 +414,14 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyUnsupportedArtifactPastedContent(ctx, paths, finalMessage, turnMetrics)
 	case unsupportedArtifactApprovedCandidateID:
 		return verifyUnsupportedArtifactApprovedCandidate(ctx, paths, finalMessage, turnMetrics)
+	case localFileArtifactSuppliedCandidateScenarioID:
+		return verifyLocalFileArtifactSuppliedCandidate(ctx, paths, finalMessage, turnMetrics)
+	case localFileArtifactApprovedCandidateScenarioID:
+		return verifyLocalFileArtifactApprovedCandidate(ctx, paths, finalMessage, turnMetrics)
+	case localFileArtifactExplicitAssetScenarioID:
+		return verifyLocalFileArtifactExplicitAssetPolicy(ctx, paths, finalMessage, turnMetrics)
+	case localFileArtifactDuplicateScenarioID:
+		return verifyLocalFileArtifactDuplicateProvenance(ctx, paths, finalMessage, turnMetrics)
 	case videoYouTubeNaturalIntentScenarioID, videoYouTubeScriptedTranscriptControlID:
 		return verifyVideoYouTubeScriptedTranscript(ctx, paths, finalMessage, turnMetrics)
 	case videoYouTubeSynthesisFreshnessScenarioID:
@@ -543,6 +551,34 @@ func isValidationRejection(scenarioID string, message string) bool {
 			strings.Contains(lower, "bundle") &&
 			strings.Contains(lower, "browser") &&
 			containsAny(lower, []string{"local file", "file read"}) &&
+			strings.Contains(lower, "vault") &&
+			strings.Contains(lower, "sqlite") &&
+			strings.Contains(lower, "http") &&
+			strings.Contains(lower, "mcp") &&
+			strings.Contains(lower, "source-built") &&
+			strings.Contains(lower, "transport") &&
+			containsAny(lower, []string{"installed openclerk", "document/retrieval", "document", "retrieval"}) &&
+			containsAny(lower, []string{"pasted", "supplied content", "supplied text"}) &&
+			strings.Contains(lower, "approved candidate")
+	case localFileArtifactNaturalScenarioID:
+		return containsAny(lower, []string{"unsupported", "not support", "cannot", "can't", "not permission"}) &&
+			containsAny(lower, []string{"local file", "local path", "file path"}) &&
+			containsAny(lower, []string{"read", "inspect"}) &&
+			containsAny(lower, []string{"pasted", "supplied content", "supplied text", "candidate document", "approved candidate"}) &&
+			containsAny(lower, []string{"durable", "approval", "write"}) &&
+			containsAny(lower, []string{"future promoted", "promoted runner", "future surface"})
+	case localFileArtifactFutureShapeScenarioID:
+		return containsAny(lower, []string{"unsupported", "not support", "does not support", "cannot", "can't"}) &&
+			strings.Contains(lower, "ingest_local_file") &&
+			containsAny(lower, []string{"local-file source", "local file source", "local file artifact"}) &&
+			containsAny(lower, []string{"pasted", "supplied content", "supplied text"}) &&
+			strings.Contains(lower, "approved candidate") &&
+			containsAny(lower, []string{"future promoted", "promoted runner", "future surface"})
+	case localFileArtifactBypassScenarioID:
+		return containsAny(lower, []string{"unsupported", "cannot bypass", "can't bypass", "do not bypass", "must use runner", "not supported"}) &&
+			containsAny(lower, []string{"local file", "file read"}) &&
+			containsAny(lower, []string{"ocr", "parser", "parse"}) &&
+			strings.Contains(lower, "browser") &&
 			strings.Contains(lower, "vault") &&
 			strings.Contains(lower, "sqlite") &&
 			strings.Contains(lower, "http") &&

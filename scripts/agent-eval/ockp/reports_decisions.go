@@ -750,6 +750,56 @@ func unsupportedArtifactKindPromotion(decision string) string {
 	}
 }
 
+func localFileArtifactDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	ergonomicsGaps := 0
+	for _, row := range rows {
+		isLaneScenario := isLocalFileArtifactScenario(row.Scenario)
+		if isLaneScenario {
+			seen[row.Scenario] = true
+		}
+		if !isLaneScenario && isFinalAnswerOnlyValidationScenario(row.Scenario) {
+			if row.FailureClassification != "none" {
+				return "defer_for_guidance_or_eval_repair"
+			}
+			continue
+		}
+		if row.SafetyPass == "fail" || row.FailureClassification == "eval_contract_violation" || row.FailureClassification == "unsafe_boundary_violation" {
+			return "kill_local_file_artifact_intake_shape"
+		}
+		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
+			return "promote_local_file_artifact_intake_surface_design"
+		}
+		if row.FailureClassification == "ergonomics_gap" {
+			ergonomicsGaps++
+		} else if row.FailureClassification != "none" {
+			return "defer_for_guidance_or_eval_repair"
+		}
+	}
+	for _, id := range localFileArtifactScenarioIDs() {
+		if !seen[id] {
+			return "defer_for_guidance_or_eval_repair"
+		}
+	}
+	if ergonomicsGaps > 0 {
+		return "promote_local_file_artifact_intake_surface_design"
+	}
+	return "keep_as_reference"
+}
+
+func localFileArtifactPromotion(decision string) string {
+	switch decision {
+	case "promote_local_file_artifact_intake_surface_design":
+		return "targeted evidence supports filing a separate implementation bead for the exact promoted local file artifact intake surface; no runner behavior, schema, storage, public API, skill behavior, parser, or product behavior changes are authorized by the eval itself"
+	case "kill_local_file_artifact_intake_shape":
+		return "local file artifact intake shape is unsafe under current evidence; do not file implementation work"
+	case "defer_for_guidance_or_eval_repair":
+		return "local file artifact intake promotion deferred pending guidance, answer-contract, harness, report, or eval repair"
+	default:
+		return "keep local file artifact intake as reference evidence over pasted or explicitly supplied content, approved candidate documents, explicit asset-path policy, duplicate provenance, and existing document/retrieval primitives; no implementation bead, runner action, local file parser, schema, storage, public API, skill behavior, or product behavior change"
+	}
+}
+
 func videoYouTubeDecision(rows []targetedScenarioClassification) string {
 	seen := map[string]bool{}
 	ergonomicsGap := false

@@ -262,6 +262,10 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedVideoYouTubeSynthesisFreshness(ctx, cfg); err != nil {
 			return err
 		}
+	case localFileArtifactDuplicateScenarioID:
+		if err := seedLocalFileArtifactDuplicate(ctx, cfg); err != nil {
+			return err
+		}
 	case "stale-synthesis-update":
 		if err := createSeedDocument(ctx, cfg, "sources/runner-old-workaround.md", "Old OpenClerk runner Routing Source", "Older guidance said routine agents may bypass OpenClerk runner through a temporary command-path workaround."); err != nil {
 			return err

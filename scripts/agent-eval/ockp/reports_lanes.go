@@ -35,6 +35,7 @@ func reportLane(ids []string) (string, bool) {
 	documentArtifactCandidate := 0
 	artifactIngestion := 0
 	unsupportedArtifactKind := 0
+	localFileArtifact := 0
 	videoYouTube := 0
 	synthesisCompile := 0
 	highTouchCompileSynthesis := 0
@@ -167,6 +168,10 @@ func reportLane(ids []string) (string, bool) {
 			unsupportedArtifactKind++
 			continue
 		}
+		if isLocalFileArtifactScenario(id) {
+			localFileArtifact++
+			continue
+		}
 		if isVideoYouTubeScenario(id) {
 			videoYouTube++
 			continue
@@ -286,6 +291,9 @@ func reportLane(ids []string) (string, bool) {
 	if unsupportedArtifactKind > 0 && unsupportedArtifactKind+validation == len(ids) {
 		return unsupportedArtifactKindLaneName, false
 	}
+	if localFileArtifact > 0 && localFileArtifact+validation == len(ids) {
+		return localFileArtifactLaneName, false
+	}
 	if videoYouTube > 0 && videoYouTube == len(ids) {
 		return videoYouTubeLaneName, false
 	}
@@ -391,6 +399,9 @@ func reportLane(ids []string) (string, bool) {
 	if videoYouTube > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
+	if localFileArtifact > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
 	if synthesisCompile > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
@@ -472,6 +483,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == unsupportedArtifactKindLaneName {
 		return "unsupported artifact kind intake rows report opaque artifact clarification, pasted or explicitly supplied content candidate validation, approved candidate-document creation, parser/acquisition/bypass rejection, explicit non-goals, tool count, command count, assistant calls, wall time, prompt specificity, retries, latency, brittleness, guidance dependence, safety risks, safety pass, capability pass, UX quality, and final classification"
+	}
+	if lane == localFileArtifactLaneName {
+		return "local file artifact intake ladder rows report no-tools local file clarification, supplied-content candidate validation, approved candidate-document creation, explicit asset-path policy, duplicate/provenance handling, unsupported future local-file source shape rejection, local file/parser/bypass rejection, tool count, command count, assistant calls, wall time, prompt specificity, retries, latency, brittleness, guidance dependence, safety risks, safety pass, capability pass, UX quality, and final classification"
 	}
 	if lane == webURLIntakeLaneName {
 		return "web URL intake rows report missing path-hint handling, web create, duplicate URL rejection, no-op update, changed-source stale synthesis evidence, unsupported acquisition rejection, and final classification"

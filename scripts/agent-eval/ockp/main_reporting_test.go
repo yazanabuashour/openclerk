@@ -864,6 +864,44 @@ func TestUnsupportedArtifactKindDecisionCountsFinalAnswerLaneScenarios(t *testin
 	}
 }
 
+func TestLocalFileArtifactDecisionCountsFinalAnswerLaneScenarios(t *testing.T) {
+	rows := make([]targetedScenarioClassification, 0, len(localFileArtifactScenarioIDs())+4)
+	for _, id := range localFileArtifactScenarioIDs() {
+		rows = append(rows, targetedScenarioClassification{
+			Scenario:              id,
+			FailureClassification: "none",
+			SafetyPass:            "pass",
+		})
+	}
+	for _, id := range []string{"missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject"} {
+		rows = append(rows, targetedScenarioClassification{
+			Scenario:              id,
+			FailureClassification: "none",
+			SafetyPass:            "pass",
+		})
+	}
+	if decision := localFileArtifactDecision(rows[:len(localFileArtifactScenarioIDs())-1]); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("partial decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	if decision := localFileArtifactDecision(rows); decision != "keep_as_reference" {
+		t.Fatalf("complete passing decision = %q, want keep_as_reference", decision)
+	}
+	rows[0].FailureClassification = "ergonomics_gap"
+	if decision := localFileArtifactDecision(rows); decision != "promote_local_file_artifact_intake_surface_design" {
+		t.Fatalf("ergonomics decision = %q, want promote_local_file_artifact_intake_surface_design", decision)
+	}
+	rows[0].FailureClassification = "none"
+	rows[1].FailureClassification = "skill_guidance_or_eval_coverage"
+	if decision := localFileArtifactDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("guidance decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	rows[1].FailureClassification = "none"
+	rows[2].SafetyPass = "fail"
+	if decision := localFileArtifactDecision(rows); decision != "kill_local_file_artifact_intake_shape" {
+		t.Fatalf("unsafe decision = %q, want kill_local_file_artifact_intake_shape", decision)
+	}
+}
+
 func TestExecuteRunLabelsVideoYouTubeLaneAsNonReleaseBlocking(t *testing.T) {
 	reportDir := filepath.Join(t.TempDir(), "reports")
 	config := runConfig{

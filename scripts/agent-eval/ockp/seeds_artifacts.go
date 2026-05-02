@@ -198,6 +198,23 @@ Fresh before heterogeneous artifact ingestion pressure checks.
 `) + "\n"
 	return createSeedDocument(ctx, cfg, artifactMixedSynthesisPath, "Artifact Ingestion Pressure", synthesisBody)
 }
+func seedLocalFileArtifactDuplicate(ctx context.Context, cfg runclient.Config) error {
+	body := strings.TrimSpace(`---
+type: source
+source_type: local_file_supplied_text
+asset_path: assets/local-file-artifacts/existing-field-report.pdf
+---
+# Existing Field Report
+
+Local file artifact duplicate provenance evidence.
+
+The supplied field report says the north entrance badge reader failed twice.
+Facilities owner: Dana.
+
+Authority limits: supplied text only; no local file read or parser was used.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, localFileArtifactDuplicatePath, "Existing Field Report", body)
+}
 func seedVideoYouTubeSynthesisFreshness(ctx context.Context, cfg runclient.Config) error {
 	result, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionIngestVideoURL,
