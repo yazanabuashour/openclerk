@@ -309,7 +309,7 @@ func verifyMemoryRouterRecallEvidenceOnly(ctx context.Context, paths evalPaths, 
 }
 
 func verifyMemoryRouterRecallCandidateCurrentPrimitives(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics, scripted bool) (verificationResult, error) {
-	base, err := verifyHighTouchMemoryRouterRecall(ctx, paths, finalMessage, turnMetrics, scripted)
+	base, err := verifyMemoryRouterRecallEvidenceOnly(ctx, paths, turnMetrics)
 	if err != nil {
 		return verificationResult{}, err
 	}

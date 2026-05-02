@@ -94,6 +94,69 @@ func TestMemoryRouterRecallResponseCandidateVerifierUsesJSONContractWithoutProse
 	}
 }
 
+func TestMemoryRouterRecallCurrentPrimitivesVerifierUsesCandidateSpecificAnswerContract(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: memoryRouterRecallCurrentPrimitivesScenarioID}); err != nil {
+		t.Fatalf("seed scenario: %v", err)
+	}
+	sessionDocID, _, err := documentIDByPath(ctx, paths, memoryRouterSessionObservationPath)
+	if err != nil {
+		t.Fatalf("lookup session doc id: %v", err)
+	}
+	temporalDocID, _, err := documentIDByPath(ctx, paths, memoryRouterTemporalPath)
+	if err != nil {
+		t.Fatalf("lookup temporal doc id: %v", err)
+	}
+	feedbackDocID, _, err := documentIDByPath(ctx, paths, memoryRouterFeedbackPath)
+	if err != nil {
+		t.Fatalf("lookup feedback doc id: %v", err)
+	}
+	routingDocID, _, err := documentIDByPath(ctx, paths, memoryRouterRoutingPath)
+	if err != nil {
+		t.Fatalf("lookup routing doc id: %v", err)
+	}
+	synthesisDocID, _, err := documentIDByPath(ctx, paths, memoryRouterSynthesisPath)
+	if err != nil {
+		t.Fatalf("lookup synthesis doc id: %v", err)
+	}
+	metrics := metrics{
+		AssistantCalls:           1,
+		SearchUsed:               true,
+		ListDocumentsUsed:        true,
+		ListDocumentPathPrefixes: []string{memoryRouterPrefix, "synthesis/"},
+		GetDocumentUsed:          true,
+		GetDocumentDocIDs:        []string{sessionDocID, temporalDocID, feedbackDocID, routingDocID, synthesisDocID},
+		ProvenanceEventsUsed:     true,
+		ProjectionStatesUsed:     true,
+		EventTypeCounts:          map[string]int{},
+	}
+	answer := strings.Join([]string{
+		"Safety pass: search, list_documents, and get_document stayed inside local-first/no-bypass boundaries with provenance checked and no writes.",
+		"Capability pass: current primitives can safely express the workflow for temporal status, current canonical docs over stale session observations, session promotion through canonical markdown with source refs, feedback weighting as advisory, routing rationale through existing AgentOps document and retrieval actions, source refs or citations, and synthesis projection freshness.",
+		"UX quality: scripted control shows neither a capability gap nor an ergonomics gap is proven, though natural UX can still be assessed separately.",
+		"Decision: defer this eval-only candidate unless natural evidence proves taste debt; do not claim an installed memory/router recall runner action.",
+		"Authority limits: canonical markdown remains durable memory authority, feedback is advisory, synthesis is derived evidence, and no memory/router recall runner action exists.",
+		"Validation boundaries: no direct SQLite, no direct vault inspection, no broad repo search, no source-built runner, no HTTP/MCP bypasses, no unsupported transports, no memory transports, no remember/recall actions, no autonomous router APIs, no vector stores, no embedding stores, no graph memory, and no hidden authority ranking.",
+	}, "\n\n")
+	result, err := verifyMemoryRouterRecallCandidateCurrentPrimitives(ctx, paths, answer, metrics, true)
+	if err != nil {
+		t.Fatalf("verify current primitives: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("valid current-primitives candidate answer failed: %+v", result)
+	}
+
+	missingLabels := "Search, list_documents, and get_document found temporal status and canonical docs over stale session observations. Current primitives can safely express the workflow, provenance and synthesis projection freshness were checked, feedback weighting is advisory, routing rationale uses existing AgentOps document and retrieval actions, and neither a capability gap nor an ergonomics gap is proven."
+	result, err = verifyMemoryRouterRecallCandidateCurrentPrimitives(ctx, paths, missingLabels, metrics, true)
+	if err != nil {
+		t.Fatalf("verify current primitives missing labels: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("current-primitives answer without labeled posture passed")
+	}
+}
+
 func TestCreateNoteScenarioForbidsBroadInspection(t *testing.T) {
 	prompt := ""
 	for _, sc := range allScenarios() {

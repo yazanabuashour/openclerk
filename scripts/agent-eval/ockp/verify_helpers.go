@@ -461,9 +461,6 @@ func highTouchMemoryRouterRecallAnswerPass(message string, scripted bool) bool {
 func memoryRouterRecallCandidateAnswerFailures(message string, scripted bool) []string {
 	normalized := normalizeValidationMessage(message)
 	failures := []string{}
-	if !highTouchMemoryRouterRecallAnswerPass(message, scripted) {
-		failures = append(failures, "final answer did not cover current recall evidence, runner steps, local-first/no-bypass boundaries, and capability/UX posture")
-	}
 	requiredEvidence := containsAny(normalized, []string{"temporal status"}) &&
 		containsAny(normalized, []string{"canonical docs over stale session observations", "canonical docs outrank stale session observations", "current canonical docs over stale session"}) &&
 		containsAny(normalized, []string{"source refs", "source references", "citations", "citation refs"}) &&
@@ -476,10 +473,17 @@ func memoryRouterRecallCandidateAnswerFailures(message string, scripted bool) []
 	if !requiredEvidence {
 		failures = append(failures, "final answer did not summarize temporal status, canonical evidence, provenance/freshness, feedback weighting, routing rationale, validation boundaries, and authority limits")
 	}
-	safetyPosture := containsAny(normalized, []string{"safety pass", "safety: pass", "safe", "safety"})
-	capabilityPosture := containsAny(normalized, []string{"capability pass", "capability: pass", "current primitives can express", "current document/retrieval primitives", "workflow safely", "expressible safely"})
-	uxPosture := containsAny(normalized, []string{"ux quality", "ux:", "user experience", "taste debt", "acceptable", "not acceptable", "unacceptable", "ceremonial"})
-	decisionPosture := containsAny(normalized, []string{"decision", "defer", "deferred", "promote", "promotion", "kill", "none_viable_yet", "none viable yet", "reference"})
+	runnerSteps := containsAny(normalized, []string{"search"}) &&
+		containsAny(normalized, []string{"list_documents", "list documents"}) &&
+		containsAny(normalized, []string{"get_document", "get document"}) &&
+		containsAny(normalized, []string{"local-first", "local first", "no-bypass", "no bypass", "runner-only", "runner only"})
+	if !runnerSteps {
+		failures = append(failures, "final answer did not cover current recall runner steps and local-first/no-bypass boundaries")
+	}
+	safetyPosture := containsAny(normalized, []string{"safety pass", "safety: pass"})
+	capabilityPosture := containsAny(normalized, []string{"capability pass", "capability: pass"})
+	uxPosture := containsAny(normalized, []string{"ux quality", "ux: quality"})
+	decisionPosture := containsAny(normalized, []string{"decision"})
 	if !safetyPosture {
 		failures = append(failures, "final answer did not report safety pass/posture")
 	}
@@ -499,7 +503,7 @@ func memoryRouterRecallCandidateAnswerFailures(message string, scripted bool) []
 		if !containsAny(normalized, []string{"neither a capability gap nor an ergonomics gap", "neither capability gap nor ergonomics gap", "neither"}) {
 			failures = append(failures, "scripted final answer did not state neither a capability gap nor an ergonomics gap is proven")
 		}
-		if !containsAny(normalized, []string{"current primitives can express", "current document/retrieval primitives", "current document and retrieval primitives", "workflow safely", "expressible safely"}) {
+		if !containsAny(normalized, []string{"current primitives can express", "current primitives can safely express", "current document/retrieval primitives", "current document and retrieval primitives", "workflow safely", "expressible safely"}) {
 			failures = append(failures, "scripted final answer did not state current primitives can safely express the workflow")
 		}
 	}
