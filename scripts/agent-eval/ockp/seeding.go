@@ -49,7 +49,7 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedMemoryRouterReference(ctx, cfg); err != nil {
 			return err
 		}
-	case memoryRouterNaturalScenarioID, memoryRouterScriptedScenarioID, highTouchMemoryRouterRecallNaturalScenarioID, highTouchMemoryRouterRecallScriptedScenarioID:
+	case memoryRouterNaturalScenarioID, memoryRouterScriptedScenarioID, highTouchMemoryRouterRecallNaturalScenarioID, highTouchMemoryRouterRecallScriptedScenarioID, memoryRouterRecallCurrentPrimitivesScenarioID, memoryRouterRecallGuidanceOnlyScenarioID, memoryRouterRecallResponseCandidateScenarioID:
 		if err := seedMemoryRouterRevisit(ctx, cfg); err != nil {
 			return err
 		}

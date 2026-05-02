@@ -29,6 +29,71 @@ func TestMemoryRouterRevisitPromptsClarifyEvidenceComparison(t *testing.T) {
 	}
 }
 
+func TestMemoryRouterRecallResponseCandidateVerifierUsesJSONContractWithoutProseAnswer(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: memoryRouterRecallResponseCandidateScenarioID}); err != nil {
+		t.Fatalf("seed scenario: %v", err)
+	}
+	sessionDocID, _, err := documentIDByPath(ctx, paths, memoryRouterSessionObservationPath)
+	if err != nil {
+		t.Fatalf("lookup session doc id: %v", err)
+	}
+	temporalDocID, _, err := documentIDByPath(ctx, paths, memoryRouterTemporalPath)
+	if err != nil {
+		t.Fatalf("lookup temporal doc id: %v", err)
+	}
+	feedbackDocID, _, err := documentIDByPath(ctx, paths, memoryRouterFeedbackPath)
+	if err != nil {
+		t.Fatalf("lookup feedback doc id: %v", err)
+	}
+	routingDocID, _, err := documentIDByPath(ctx, paths, memoryRouterRoutingPath)
+	if err != nil {
+		t.Fatalf("lookup routing doc id: %v", err)
+	}
+	synthesisDocID, _, err := documentIDByPath(ctx, paths, memoryRouterSynthesisPath)
+	if err != nil {
+		t.Fatalf("lookup synthesis doc id: %v", err)
+	}
+	metrics := metrics{
+		AssistantCalls:           1,
+		SearchUsed:               true,
+		ListDocumentsUsed:        true,
+		ListDocumentPathPrefixes: []string{memoryRouterPrefix, "synthesis/"},
+		GetDocumentUsed:          true,
+		GetDocumentDocIDs:        []string{sessionDocID, temporalDocID, feedbackDocID, routingDocID, synthesisDocID},
+		ProvenanceEventsUsed:     true,
+		ProjectionStatesUsed:     true,
+		EventTypeCounts:          map[string]int{},
+	}
+	result, err := verifyMemoryRouterRecallResponseCandidate(ctx, paths, memoryRouterRecallCandidateTestAnswer(sessionDocID), metrics)
+	if err != nil {
+		t.Fatalf("verify response candidate: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("valid response candidate failed: %+v", result)
+	}
+
+	withProse := "Summary:\n" + memoryRouterRecallCandidateTestAnswer(sessionDocID)
+	result, err = verifyMemoryRouterRecallResponseCandidate(ctx, paths, withProse, metrics)
+	if err != nil {
+		t.Fatalf("verify response candidate with prose: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("response candidate with prose outside fenced JSON passed")
+	}
+
+	bypassMetrics := metrics
+	bypassMetrics.ManualHTTPFetch = true
+	result, err = verifyMemoryRouterRecallResponseCandidate(ctx, paths, memoryRouterRecallCandidateTestAnswer(sessionDocID), bypassMetrics)
+	if err != nil {
+		t.Fatalf("verify response candidate with manual HTTP fetch: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("response candidate with manual HTTP fetch passed")
+	}
+}
+
 func TestCreateNoteScenarioForbidsBroadInspection(t *testing.T) {
 	prompt := ""
 	for _, sc := range allScenarios() {

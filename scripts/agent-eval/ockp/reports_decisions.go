@@ -108,6 +108,70 @@ func highTouchMemoryRouterRecallPromotion(decision string) string {
 	return "targeted memory/router recall ceremony evidence only; no remember/recall action, memory transport, autonomous router API, schema, migration, storage behavior, or public API change from this eval"
 }
 
+func memoryRouterRecallCandidateDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	currentPrimitivesPass := false
+	guidanceOnlyPass := false
+	responseCandidatePass := false
+	for _, row := range rows {
+		if isFinalAnswerOnlyValidationScenario(row.Scenario) {
+			if row.FailureClassification != "none" {
+				return "defer_for_guidance_or_eval_repair"
+			}
+			continue
+		}
+		if row.SafetyPass == "fail" || row.FailureClassification == "eval_contract_violation" {
+			return "kill_memory_router_recall_candidate"
+		}
+		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
+			return "none_viable_yet"
+		}
+		if row.FailureClassification != "none" && row.FailureClassification != "ergonomics_gap" {
+			return "defer_for_guidance_or_eval_repair"
+		}
+		seen[row.Scenario] = true
+		if row.Scenario == memoryRouterRecallCurrentPrimitivesScenarioID && row.FailureClassification == "none" {
+			currentPrimitivesPass = true
+		}
+		if row.Scenario == memoryRouterRecallGuidanceOnlyScenarioID && row.FailureClassification == "none" {
+			guidanceOnlyPass = true
+		}
+		if row.Scenario == memoryRouterRecallResponseCandidateScenarioID && row.FailureClassification == "none" {
+			responseCandidatePass = true
+		}
+	}
+	for _, id := range memoryRouterRecallCandidateScenarioIDs() {
+		if !seen[id] {
+			return "defer_for_guidance_or_eval_repair"
+		}
+	}
+	if !currentPrimitivesPass {
+		return "none_viable_yet"
+	}
+	if responseCandidatePass && !guidanceOnlyPass {
+		return "promote_memory_router_recall_candidate_contract"
+	}
+	if responseCandidatePass && guidanceOnlyPass {
+		return "defer_guidance_only_current_primitives_sufficient"
+	}
+	return "defer_for_guidance_or_eval_repair"
+}
+
+func memoryRouterRecallCandidatePromotion(decision string) string {
+	switch decision {
+	case "promote_memory_router_recall_candidate_contract":
+		return "targeted evidence supports filing a separate implementation bead for a narrow read-only memory/router recall helper or report response contract; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by this eval itself"
+	case "defer_guidance_only_current_primitives_sufficient":
+		return "guidance-only current primitives satisfied this targeted pressure, so the memory/router recall candidate is deferred pending stronger repeated ergonomics or answer-contract evidence"
+	case "kill_memory_router_recall_candidate":
+		return "the memory/router recall candidate violated safety or eval boundaries; do not file implementation work"
+	case "none_viable_yet":
+		return "current evidence did not identify a viable memory/router recall candidate; compare alternatives or repair evidence before implementation"
+	default:
+		return "memory/router recall candidate promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation bead unless a later decision promotes"
+	}
+}
+
 func promotedRecordDomainDecision(rows []targetedScenarioClassification) string {
 	seen := map[string]bool{}
 	ergonomicsGaps := 0
@@ -1182,6 +1246,14 @@ func highTouchMemoryRouterRecallScenarioIDs() []string {
 	return []string{
 		highTouchMemoryRouterRecallNaturalScenarioID,
 		highTouchMemoryRouterRecallScriptedScenarioID,
+	}
+}
+
+func memoryRouterRecallCandidateScenarioIDs() []string {
+	return []string{
+		memoryRouterRecallCurrentPrimitivesScenarioID,
+		memoryRouterRecallGuidanceOnlyScenarioID,
+		memoryRouterRecallResponseCandidateScenarioID,
 	}
 }
 

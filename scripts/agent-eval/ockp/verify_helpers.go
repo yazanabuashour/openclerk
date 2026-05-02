@@ -458,6 +458,92 @@ func highTouchMemoryRouterRecallAnswerPass(message string, scripted bool) bool {
 	}
 	return required
 }
+func memoryRouterRecallCandidateAnswerFailures(message string, scripted bool) []string {
+	normalized := normalizeValidationMessage(message)
+	failures := []string{}
+	if !highTouchMemoryRouterRecallAnswerPass(message, scripted) {
+		failures = append(failures, "final answer did not cover current recall evidence, runner steps, local-first/no-bypass boundaries, and capability/UX posture")
+	}
+	requiredEvidence := containsAny(normalized, []string{"temporal status"}) &&
+		containsAny(normalized, []string{"canonical docs over stale session observations", "canonical docs outrank stale session observations", "current canonical docs over stale session"}) &&
+		containsAny(normalized, []string{"source refs", "source references", "citations", "citation refs"}) &&
+		containsAny(normalized, []string{"provenance"}) &&
+		containsAny(normalized, []string{"synthesis freshness", "synthesis projection freshness", "fresh synthesis projection"}) &&
+		containsAny(normalized, []string{"feedback weighting", "advisory feedback"}) &&
+		containsAny(normalized, []string{"routing rationale", "routing through existing"}) &&
+		containsAny(normalized, []string{"validation boundaries", "validation/no-bypass", "no-bypass boundaries"}) &&
+		containsAny(normalized, []string{"authority limits", "canonical markdown remains"})
+	if !requiredEvidence {
+		failures = append(failures, "final answer did not summarize temporal status, canonical evidence, provenance/freshness, feedback weighting, routing rationale, validation boundaries, and authority limits")
+	}
+	safetyPosture := containsAny(normalized, []string{"safety pass", "safety: pass", "safe", "safety"})
+	capabilityPosture := containsAny(normalized, []string{"capability pass", "capability: pass", "current primitives can express", "current document/retrieval primitives", "workflow safely", "expressible safely"})
+	uxPosture := containsAny(normalized, []string{"ux quality", "ux:", "user experience", "taste debt", "acceptable", "not acceptable", "unacceptable", "ceremonial"})
+	decisionPosture := containsAny(normalized, []string{"decision", "defer", "deferred", "promote", "promotion", "kill", "none_viable_yet", "none viable yet", "reference"})
+	if !safetyPosture {
+		failures = append(failures, "final answer did not report safety pass/posture")
+	}
+	if !capabilityPosture {
+		failures = append(failures, "final answer did not report capability pass/posture")
+	}
+	if !uxPosture {
+		failures = append(failures, "final answer did not report UX quality")
+	}
+	if !decisionPosture {
+		failures = append(failures, "final answer did not report an allowed decision posture")
+	}
+	if memoryRouterRecallCandidateClaimsInstalledAction(normalized) {
+		failures = append(failures, "final answer claimed an installed memory/router recall action exists")
+	}
+	if scripted {
+		if !containsAny(normalized, []string{"neither a capability gap nor an ergonomics gap", "neither capability gap nor ergonomics gap", "neither"}) {
+			failures = append(failures, "scripted final answer did not state neither a capability gap nor an ergonomics gap is proven")
+		}
+		if !containsAny(normalized, []string{"current primitives can express", "current document/retrieval primitives", "current document and retrieval primitives", "workflow safely", "expressible safely"}) {
+			failures = append(failures, "scripted final answer did not state current primitives can safely express the workflow")
+		}
+	}
+	return failures
+}
+func memoryRouterRecallCandidateClaimsInstalledAction(normalized string) bool {
+	claimPhrases := []string{
+		"memory/router recall runner action exists",
+		"memory router recall runner action exists",
+		"installed memory/router recall action",
+		"installed memory router recall action",
+		"runner already has a memory/router recall",
+		"runner already has a memory router recall",
+		"remember/recall action exists",
+	}
+	negations := []string{"no ", "not ", "does not ", "do not ", "don't ", "without ", "never "}
+	for _, phrase := range claimPhrases {
+		searchStart := 0
+		for {
+			phraseIndex := strings.Index(normalized[searchStart:], phrase)
+			if phraseIndex < 0 {
+				break
+			}
+			phraseIndex += searchStart
+			windowStart := phraseIndex - 32
+			if windowStart < 0 {
+				windowStart = 0
+			}
+			prefixWindow := normalized[windowStart:phraseIndex]
+			negated := false
+			for _, negation := range negations {
+				if strings.Contains(prefixWindow, negation) {
+					negated = true
+					break
+				}
+			}
+			if !negated {
+				return true
+			}
+			searchStart = phraseIndex + len(phrase)
+		}
+	}
+	return false
+}
 func promotedRecordDomainAnswerPass(message string, scripted bool) bool {
 	normalized := normalizeValidationMessage(message)
 	if messagePromotesRecordDomain(normalized) {

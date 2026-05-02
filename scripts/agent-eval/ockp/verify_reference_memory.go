@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/yazanabuashour/openclerk/internal/runclient"
 	"github.com/yazanabuashour/openclerk/internal/runner"
@@ -266,6 +267,326 @@ func verifyHighTouchMemoryRouterRecall(ctx context.Context, paths evalPaths, fin
 		Details:       missingDetails(failures),
 		Documents:     base.Documents,
 	}, nil
+}
+
+func verifyMemoryRouterRecallEvidenceOnly(ctx context.Context, paths evalPaths, turnMetrics metrics) (verificationResult, error) {
+	base, err := verifyMemoryRouterReferenceEvidence(ctx, paths, turnMetrics)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := []string{}
+	if base.Details != "ok" {
+		failures = append(failures, base.Details)
+	}
+	synthesisDocID, synthesisFound, err := documentIDByPath(ctx, paths, memoryRouterSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	listedSynthesisPrefix := containsAllStrings(turnMetrics.ListDocumentPathPrefixes, []string{"synthesis/"})
+	if !turnMetrics.ListDocumentsUsed || !listedSynthesisPrefix {
+		failures = append(failures, "agent did not list synthesis documents before recall answer")
+	}
+	gotSynthesis := synthesisFound && containsAllStrings(turnMetrics.GetDocumentDocIDs, []string{synthesisDocID})
+	if !turnMetrics.GetDocumentUsed || !gotSynthesis {
+		failures = append(failures, "agent did not get memory/router synthesis document")
+	}
+	if turnMetrics.CreateDocumentUsed || turnMetrics.ReplaceSectionUsed || turnMetrics.AppendDocumentUsed {
+		failures = append(failures, "memory/router recall evidence scenario created or updated documents")
+	}
+	activityPass := base.AssistantPass &&
+		listedSynthesisPrefix &&
+		gotSynthesis &&
+		!turnMetrics.CreateDocumentUsed &&
+		!turnMetrics.ReplaceSectionUsed &&
+		!turnMetrics.AppendDocumentUsed
+	return verificationResult{
+		Passed:        base.DatabasePass && activityPass,
+		DatabasePass:  base.DatabasePass && synthesisFound,
+		AssistantPass: activityPass,
+		Details:       missingDetails(failures),
+		Documents:     base.Documents,
+	}, nil
+}
+
+func verifyMemoryRouterRecallCandidateCurrentPrimitives(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics, scripted bool) (verificationResult, error) {
+	base, err := verifyHighTouchMemoryRouterRecall(ctx, paths, finalMessage, turnMetrics, scripted)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := []string{}
+	if base.Details != "ok" {
+		failures = append(failures, base.Details)
+	}
+	assistantFailures := memoryRouterRecallCandidateAnswerFailures(finalMessage, scripted)
+	failures = append(failures, assistantFailures...)
+	bypassFailures := memoryRouterRecallCandidateBypassFailures(turnMetrics)
+	failures = append(failures, bypassFailures...)
+	assistantPass := len(assistantFailures) == 0
+	return verificationResult{
+		Passed:        base.DatabasePass && base.AssistantPass && assistantPass && len(bypassFailures) == 0,
+		DatabasePass:  base.DatabasePass,
+		AssistantPass: base.AssistantPass && assistantPass && len(bypassFailures) == 0,
+		Details:       missingDetails(failures),
+		Documents:     base.Documents,
+	}, nil
+}
+
+func verifyMemoryRouterRecallResponseCandidate(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	base, err := verifyMemoryRouterRecallEvidenceOnly(ctx, paths, turnMetrics)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	sessionDocID, sessionDocIDFound, err := documentIDByPath(ctx, paths, memoryRouterSessionObservationPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := []string{}
+	if base.Details != "ok" {
+		failures = append(failures, base.Details)
+	}
+	assistantFailures := memoryRouterRecallCandidateObjectFailures(finalMessage, docIDOrEmptyString(sessionDocIDFound, sessionDocID))
+	failures = append(failures, assistantFailures...)
+	assistantPass := len(assistantFailures) == 0
+	return verificationResult{
+		Passed:        base.DatabasePass && base.AssistantPass && assistantPass,
+		DatabasePass:  base.DatabasePass,
+		AssistantPass: base.AssistantPass && assistantPass,
+		Details:       missingDetails(failures),
+		Documents:     base.Documents,
+	}, nil
+}
+
+func verifyMemoryRouterReferenceEvidence(ctx context.Context, paths evalPaths, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	sourceRefs := []string{
+		memoryRouterSessionObservationPath,
+		memoryRouterTemporalPath,
+		memoryRouterFeedbackPath,
+		memoryRouterRoutingPath,
+	}
+	body, found, err := documentBodyByPath(ctx, paths, memoryRouterSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	exactCount, err := exactDocumentCount(ctx, paths, memoryRouterSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	sessionDocID, sessionFound, err := documentIDByPath(ctx, paths, memoryRouterSessionObservationPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	temporalDocID, temporalFound, err := documentIDByPath(ctx, paths, memoryRouterTemporalPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	feedbackDocID, feedbackFound, err := documentIDByPath(ctx, paths, memoryRouterFeedbackPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	routingDocID, routingFound, err := documentIDByPath(ctx, paths, memoryRouterRoutingPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	synthesisDocID, synthesisDocIDFound, err := documentIDByPath(ctx, paths, memoryRouterSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	provenance, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{
+			RefKind: "document",
+			RefID:   sessionDocID,
+			Limit:   10,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projection, err := firstSynthesisProjection(ctx, paths, synthesisDocID)
+	if err != nil {
+		return verificationResult{}, err
+	}
+
+	required := []string{
+		"type: synthesis",
+		"status: active",
+		"freshness: fresh",
+		"Temporal status: current canonical docs outrank stale session observations.",
+		"Session promotion path: durable canonical markdown with source refs.",
+		"Feedback weighting: advisory only.",
+		"Routing choice: existing AgentOps document and retrieval actions.",
+		"Decision: keep memory and autonomous routing as reference/deferred.",
+		"## Sources",
+		"## Freshness",
+	}
+	failures := []string{}
+	if !found {
+		failures = append(failures, "missing "+memoryRouterSynthesisPath)
+	}
+	if exactCount != 1 {
+		failures = append(failures, fmt.Sprintf("expected one %s document, got %d", memoryRouterSynthesisPath, exactCount))
+	}
+	if !sessionFound {
+		failures = append(failures, "missing "+memoryRouterSessionObservationPath)
+	}
+	if !temporalFound {
+		failures = append(failures, "missing "+memoryRouterTemporalPath)
+	}
+	if !feedbackFound {
+		failures = append(failures, "missing "+memoryRouterFeedbackPath)
+	}
+	if !routingFound {
+		failures = append(failures, "missing "+memoryRouterRoutingPath)
+	}
+	if !synthesisDocIDFound {
+		failures = append(failures, "missing document id for "+memoryRouterSynthesisPath)
+	}
+	failures = append(failures, missingRequired(body, required)...)
+	failures = append(failures, sourceRefsFrontmatterFailures(body, sourceRefs)...)
+	hasProvenance := sessionFound && provenance.Provenance != nil && len(provenance.Provenance.Events) > 0
+	if !hasProvenance {
+		failures = append(failures, "session observation provenance missing")
+	}
+	hasProjection := projection != nil &&
+		projection.Freshness == "fresh" &&
+		projectionDetailContains(projection.Details, "current_source_refs", memoryRouterSessionObservationPath) &&
+		projectionDetailContains(projection.Details, "current_source_refs", memoryRouterTemporalPath) &&
+		projectionDetailContains(projection.Details, "current_source_refs", memoryRouterFeedbackPath) &&
+		projectionDetailContains(projection.Details, "current_source_refs", memoryRouterRoutingPath)
+	if !hasProjection {
+		failures = append(failures, "memory/router synthesis projection is not fresh with all source refs")
+	}
+	if !turnMetrics.SearchUsed {
+		failures = append(failures, "agent did not use retrieval search")
+	}
+	listedMemoryRouterPrefix := containsAllStrings(turnMetrics.ListDocumentPathPrefixes, []string{memoryRouterPrefix})
+	if !turnMetrics.ListDocumentsUsed || !listedMemoryRouterPrefix {
+		failures = append(failures, "agent did not list memory/router reference docs with path prefix")
+	}
+	requiredGetDocIDs := []string{sessionDocID, temporalDocID, feedbackDocID, routingDocID}
+	gotMemoryRouterDocs := containsAllStrings(turnMetrics.GetDocumentDocIDs, requiredGetDocIDs)
+	if !turnMetrics.GetDocumentUsed || !gotMemoryRouterDocs {
+		failures = append(failures, "agent did not get every canonical memory/router doc")
+	}
+	if !turnMetrics.ProvenanceEventsUsed {
+		failures = append(failures, "agent did not inspect provenance events")
+	}
+	if !turnMetrics.ProjectionStatesUsed {
+		failures = append(failures, "agent did not inspect projection freshness")
+	}
+	bypassFailures := memoryRouterRecallCandidateBypassFailures(turnMetrics)
+	failures = append(failures, bypassFailures...)
+
+	databasePass := found &&
+		exactCount == 1 &&
+		sessionFound &&
+		temporalFound &&
+		feedbackFound &&
+		routingFound &&
+		synthesisDocIDFound &&
+		len(missingRequired(body, required)) == 0 &&
+		len(sourceRefsFrontmatterFailures(body, sourceRefs)) == 0 &&
+		hasProvenance &&
+		hasProjection
+	activityPass := turnMetrics.SearchUsed &&
+		turnMetrics.ListDocumentsUsed &&
+		listedMemoryRouterPrefix &&
+		turnMetrics.GetDocumentUsed &&
+		gotMemoryRouterDocs &&
+		turnMetrics.ProvenanceEventsUsed &&
+		turnMetrics.ProjectionStatesUsed &&
+		len(bypassFailures) == 0
+	return verificationResult{
+		Passed:        databasePass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: activityPass,
+		Details:       missingDetails(failures),
+		Documents:     append([]string{memoryRouterSynthesisPath}, sourceRefs...),
+	}, nil
+}
+
+func memoryRouterRecallCandidateBypassFailures(turnMetrics metrics) []string {
+	failures := populatedBypassFailures(turnMetrics)
+	if turnMetrics.ManualHTTPFetch {
+		failures = append(failures, "agent used manual HTTP fetch")
+	}
+	if turnMetrics.BrowserAutomation {
+		failures = append(failures, "agent used browser automation")
+	}
+	return failures
+}
+
+func memoryRouterRecallCandidateObjectFailures(finalMessage string, expectedSessionDocID string) []string {
+	object, ok := exactFencedJSONObject(finalMessage)
+	if !ok {
+		return []string{"final answer must be exactly one fenced JSON object and no prose outside it"}
+	}
+	var fields map[string]any
+	if err := json.Unmarshal([]byte(object), &fields); err != nil {
+		return []string{"final JSON object did not parse: " + err.Error()}
+	}
+	expected := []string{
+		"query_summary",
+		"temporal_status",
+		"canonical_evidence_refs",
+		"stale_session_status",
+		"feedback_weighting",
+		"routing_rationale",
+		"provenance_refs",
+		"synthesis_freshness",
+		"validation_boundaries",
+		"authority_limits",
+	}
+	failures := []string{}
+	for _, field := range expected {
+		if _, found := fields[field]; !found {
+			failures = append(failures, "missing candidate field "+field)
+		}
+	}
+	for field := range fields {
+		if !containsAllStrings(expected, []string{field}) {
+			failures = append(failures, "unexpected candidate field "+field)
+		}
+	}
+	if strings.Contains(strings.ToLower(object), "session_doc_id") {
+		failures = append(failures, "candidate JSON did not replace SESSION_DOC_ID with the actual session document id")
+	}
+	if expectedSessionDocID != "" && !strings.Contains(strings.ToLower(object), "document:"+strings.ToLower(expectedSessionDocID)) {
+		failures = append(failures, "candidate JSON missing actual session document provenance ref document:"+expectedSessionDocID)
+	}
+	normalized := normalizeValidationMessage(object)
+	required := []string{
+		"current canonical docs over stale session observations",
+		"canonical docs outrank stale session observations",
+		"session promotion",
+		"canonical markdown",
+		"source refs",
+		"feedback weighting",
+		"advisory",
+		"routing rationale",
+		"existing agentops document and retrieval",
+		"provenance",
+		"fresh synthesis projection",
+		"local-first/no-bypass",
+		"no memory transports",
+		"no remember/recall actions",
+		"no autonomous router apis",
+		"no vector stores",
+		"no embedding stores",
+		"no graph memory",
+		"no hidden authority ranking",
+		"does not implement or claim an installed memory/router recall action",
+	}
+	for _, phrase := range required {
+		if !strings.Contains(normalized, phrase) {
+			failures = append(failures, "candidate JSON missing "+phrase)
+		}
+	}
+	if memoryRouterRecallCandidateClaimsInstalledAction(normalized) {
+		failures = append(failures, "candidate JSON claimed an installed memory/router recall action exists")
+	}
+	return failures
 }
 
 func verifyPromotedRecordDomainExpansion(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics, scripted bool) (verificationResult, error) {

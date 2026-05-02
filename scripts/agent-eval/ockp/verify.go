@@ -69,6 +69,12 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyHighTouchMemoryRouterRecall(ctx, paths, finalMessage, turnMetrics, false)
 	case highTouchMemoryRouterRecallScriptedScenarioID:
 		return verifyHighTouchMemoryRouterRecall(ctx, paths, finalMessage, turnMetrics, true)
+	case memoryRouterRecallCurrentPrimitivesScenarioID:
+		return verifyMemoryRouterRecallCandidateCurrentPrimitives(ctx, paths, finalMessage, turnMetrics, true)
+	case memoryRouterRecallGuidanceOnlyScenarioID:
+		return verifyMemoryRouterRecallCandidateCurrentPrimitives(ctx, paths, finalMessage, turnMetrics, false)
+	case memoryRouterRecallResponseCandidateScenarioID:
+		return verifyMemoryRouterRecallResponseCandidate(ctx, paths, finalMessage, turnMetrics)
 	case promotedRecordDomainNaturalScenarioID:
 		return verifyPromotedRecordDomainExpansion(ctx, paths, finalMessage, turnMetrics, false)
 	case promotedRecordDomainScriptedScenarioID:
