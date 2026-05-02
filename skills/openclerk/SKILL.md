@@ -92,6 +92,10 @@ Required-field rules:
 - A request with explicit note body content and unresolved duplicate
   update-versus-new intent is not a no-tools missing-field case. Use
   runner-visible duplicate checks before validating or writing.
+- A request with supplied local-file-derived source content and unresolved
+  duplicate source intent is not a no-tools local-file-read case when the task
+  only asks for runner-visible duplicate/provenance inspection. Use runner
+  evidence before validating or writing.
 - A "document these links" request with explicit public web URLs and omitted
   `source.path_hint` or synthesis placement is not a no-tools missing-field
   case when the document-these-links placement policy can propose safe
@@ -208,6 +212,23 @@ Then report the likely target path and title, say no document was created or
 updated, and ask whether to update the existing target or create a new document
 at a confirmed path.
 
+For supplied local-file-derived source duplicate checks, do not read local
+files, parse artifacts, run OCR, inspect vault files directly, or treat the
+duplicate check as a no-tools local-file-read request. Use only runner-visible
+retrieval `search`, document `list_documents`, document `get_document`, and
+retrieval `provenance_events` for the likely existing source before answering.
+When the request supplies the duplicate search text, path prefix, existing
+source path, or enough equivalent runner-visible target evidence, a no-tools
+answer is incomplete; run the read-only runner checks before answering.
+Then name the existing source path, the candidate path that was not created,
+the duplicate/provenance evidence, the no-local-file-read/parser/OCR boundary,
+and approval-before-write. Include the exact ideas `duplicate` or `existing`,
+`provenance`, `was not created` or `no document was created`, and
+`approval-before-write` or `approval before write`. Do not call `validate`,
+`create_document`, `append_document`, `replace_section`, `ingest_source_url`,
+or `ingest_video_url` while duplicate update-versus-new source intent remains
+unresolved.
+
 For "document these links" requests with explicit public web URLs but missing
 `source.path_hint` values or synthesis placement, treat the request as valid
 placement-proposal work. Do not fetch, validate, create, append, or replace
@@ -262,10 +283,12 @@ For candidate proposals:
    If the user or candidate context gives a likely collection or path prefix,
    include that `path_prefix` in the retrieval search and use the same prefix
    for `list_documents`. When a likely duplicate is visible, run
-   `get_document` for that target, present the likely target path and title,
-   briefly summarize the search/list/get evidence, state that no document was
-   created or updated, and ask whether to update the existing target or create
-   a new document at a confirmed path.
+   `get_document` for that target. For supplied local-file-derived source
+   duplicate checks, also run retrieval `provenance_events` for the same
+   target. Present the likely target path and title, briefly summarize the
+   search/list/get evidence and any required provenance evidence, state that no
+   document was created or updated, and ask whether to update the existing
+   target or create a new document at a confirmed path.
 6. Do not call `validate`, `create_document`, `append_document`, or
    `replace_section` while duplicate update-versus-new-path intent is
    unresolved.

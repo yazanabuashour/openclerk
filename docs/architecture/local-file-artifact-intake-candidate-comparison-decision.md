@@ -5,7 +5,7 @@ decision_status: accepted
 decision_scope: artifact-local-file-intake
 decision_owner: platform
 decision_date: 2026-05-02
-source_refs: docs/evals/local-file-artifact-intake-candidate-comparison-poc.md, docs/evals/artifact-local-file-intake-ladder.md, docs/evals/results/ockp-artifact-local-file-intake-ladder.md, docs/architecture/local-file-artifact-intake-ladder-promotion-decision.md
+source_refs: docs/evals/local-file-artifact-intake-candidate-comparison-poc.md, docs/evals/artifact-local-file-intake-ladder.md, docs/evals/results/ockp-artifact-local-file-intake-ladder.md, docs/evals/local-file-artifact-duplicate-provenance-repair.md, docs/evals/results/ockp-artifact-local-file-duplicate-provenance-repair.md, docs/architecture/local-file-artifact-intake-ladder-promotion-decision.md
 ---
 # Decision: Local File Artifact Intake Candidate Comparison
 
@@ -26,6 +26,8 @@ Evidence:
 - [`docs/evals/local-file-artifact-intake-candidate-comparison-poc.md`](../evals/local-file-artifact-intake-candidate-comparison-poc.md)
 - [`docs/evals/artifact-local-file-intake-ladder.md`](../evals/artifact-local-file-intake-ladder.md)
 - [`docs/evals/results/ockp-artifact-local-file-intake-ladder.md`](../evals/results/ockp-artifact-local-file-intake-ladder.md)
+- [`docs/evals/local-file-artifact-duplicate-provenance-repair.md`](../evals/local-file-artifact-duplicate-provenance-repair.md)
+- [`docs/evals/results/ockp-artifact-local-file-duplicate-provenance-repair.md`](../evals/results/ockp-artifact-local-file-duplicate-provenance-repair.md)
 - [`docs/architecture/local-file-artifact-intake-ladder-promotion-decision.md`](local-file-artifact-intake-ladder-promotion-decision.md)
 
 ## Decision
@@ -46,8 +48,11 @@ Select the combined current-primitives path:
 Outcome category: need exists, evaluated shape needs guidance/eval repair and
 candidate-surface deferral.
 
-Follow-up `oc-ipjt` tracks duplicate/provenance answer-contract or eval repair.
-No implementation bead is filed from `oc-4leh` or `oc-vuyb`.
+Follow-up `oc-ipjt` repairs the duplicate/provenance answer contract through
+skill guidance and eval-prompt hardening only. The focused repair report
+completed the duplicate row with scoped search/list/get/provenance evidence
+and no duplicate write. No implementation bead is filed from `oc-4leh`,
+`oc-vuyb`, or `oc-ipjt`.
 
 ## Rejected Alternatives
 
@@ -84,9 +89,9 @@ inspect and report the runner-visible evidence correctly.
 UX quality: defer and repair. Natural clarification and validation-control
 rows completed cheaply. Supplied-content and approved-candidate rows completed
 through current primitives. The explicit asset-policy row is taste debt because
-it required 42 tools/commands, 5 assistant calls, and 56.48s. The failed
-duplicate/provenance row blocks promotion until `oc-ipjt` repairs the guidance
-or eval coverage.
+it required 42 tools/commands, 5 assistant calls, and 56.48s. `oc-ipjt`
+repairs the duplicate/provenance answer contract, but the track remains
+deferred pending any later promotion evidence for a simpler exact surface.
 
 ## Compatibility
 
