@@ -92,6 +92,72 @@ func TestScenarioIDsIncludeADRProofObligations(t *testing.T) {
 	}
 }
 
+func TestNativeMediaTranscriptPromptsUseDirectRunnerCommandShapes(t *testing.T) {
+	createPrompt := scenarioPrompt(t, nativeMediaSuppliedTranscriptScenarioID)
+	for _, want := range []string{
+		"The installed openclerk binary is on PATH",
+		"run it directly with JSON on stdin",
+		"not a final-answer-only rejection",
+		"do not repeat a successful runner command",
+		"Use exactly one shell tool call for the full two-step workflow",
+		"printf '%s' '{\"action\":\"ingest_video_url\"",
+		"| openclerk document",
+		"printf '%s' '{\"action\":\"search\"",
+		"| openclerk retrieval",
+		"sources/native-media/vendor-webinar-transcript.md",
+		"transcript provenance",
+		"citation evidence such as doc_id or chunk_id",
+		"no native media acquisition, downloader, STT, transcript API, or remote extraction",
+	} {
+		if !strings.Contains(createPrompt, want) {
+			t.Fatalf("native media supplied-transcript prompt missing %q:\n%s", want, createPrompt)
+		}
+	}
+	for _, prohibited := range []string{"openclerk --help", "direct SQLite", "HTTP/MCP bypasses", "source-built command paths", "local media inspection", "native media fetch"} {
+		if !strings.Contains(createPrompt, prohibited) {
+			t.Fatalf("native media supplied-transcript prompt missing prohibited boundary %q:\n%s", prohibited, createPrompt)
+		}
+	}
+	if got := strings.Count(createPrompt, "| openclerk "); got != 2 {
+		t.Fatalf("native media supplied-transcript prompt command shapes = %d, want 2:\n%s", got, createPrompt)
+	}
+
+	freshnessPrompt := scenarioPrompt(t, nativeMediaFreshnessScenarioID)
+	for _, want := range []string{
+		"The installed openclerk binary is on PATH",
+		"run it directly with JSON on stdin",
+		"not a final-answer-only rejection",
+		"Execute only the seven runner commands below",
+		"do not repeat a successful runner command",
+		"Use exactly one shell tool call for the full seven-step script",
+		"printf '%s' '{\"action\":\"ingest_video_url\"",
+		"printf '%s' '{\"action\":\"search\"",
+		"printf '%s' '{\"action\":\"list_documents\"",
+		"printf '%s' '{\"action\":\"get_document\"",
+		"printf '%s' '{\"action\":\"projection_states\"",
+		"printf '%s' '{\"action\":\"provenance_events\"",
+		"synthesis/native-media-transcript-acquisition.md",
+		"sources/native-media/vendor-webinar-current.md",
+		"same-transcript no-op",
+		"changed-transcript update",
+		"stale freshness/projection evidence",
+		"no native media acquisition dependency",
+		"capture the synthesis doc_id from the list_documents JSON",
+	} {
+		if !strings.Contains(freshnessPrompt, want) {
+			t.Fatalf("native media freshness prompt missing %q:\n%s", want, freshnessPrompt)
+		}
+	}
+	for _, prohibited := range []string{"openclerk --help", "direct SQLite", "HTTP/MCP bypasses", "source-built command paths", "local media inspection", "native media fetch", "yt-dlp", "ffmpeg", "Whisper"} {
+		if !strings.Contains(freshnessPrompt, prohibited) {
+			t.Fatalf("native media freshness prompt missing prohibited boundary %q:\n%s", prohibited, freshnessPrompt)
+		}
+	}
+	if got := strings.Count(freshnessPrompt, "| openclerk "); got != 7 {
+		t.Fatalf("native media freshness prompt command shapes = %d, want 7:\n%s", got, freshnessPrompt)
+	}
+}
+
 func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	defaultIDs := map[string]bool{}
 	for _, scenario := range selectedScenarios(runConfig{}) {
@@ -442,6 +508,17 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	if lane != broadAuditLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, broadAuditLaneName)
 	}
+}
+
+func scenarioPrompt(t *testing.T, id string) string {
+	t.Helper()
+	for _, sc := range allScenarios() {
+		if sc.ID == id {
+			return sc.Prompt
+		}
+	}
+	t.Fatalf("missing scenario %q", id)
+	return ""
 }
 
 func requireScenarioByID(t *testing.T, id string) scenario {

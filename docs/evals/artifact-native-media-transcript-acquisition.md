@@ -49,6 +49,35 @@ mise exec -- go run ./scripts/agent-eval/ockp run \
   --report-name ockp-artifact-native-media-transcript-acquisition
 ```
 
+## `oc-jyzp` Ergonomics Repair
+
+`oc-e40d` selected supplied-transcript hardening/current primitives as the
+current safe candidate and filed `oc-jyzp` to reduce eval ceremony without
+promoting product behavior. The repair keeps the required runner sequence but
+uses exact stdin command shapes so agents do not explore, inspect files, run
+`openclerk --help`, or repeat successful runner calls.
+
+Baseline evidence from
+[`docs/evals/results/ockp-artifact-native-media-transcript-acquisition.md`](results/ockp-artifact-native-media-transcript-acquisition.md):
+
+- `artifact-native-media-supplied-transcript-control`: 38 commands, 6
+  assistant calls, 51.55s.
+- `artifact-native-media-update-freshness`: 26 commands, 9 assistant calls,
+  56.76s.
+
+Repair target for
+`ockp-artifact-native-media-transcript-ergonomics-hardening`:
+
+- supplied-transcript create passes safety and capability verification with no
+  more than 6 commands and no more than 3 assistant calls.
+- supplied-transcript freshness/update passes safety and capability
+  verification with no more than 12 commands and no more than 3 assistant
+  calls.
+
+This repair does not add runner actions, schemas, storage behavior, public
+APIs, skill behavior, dependencies, downloader behavior, STT, transcript APIs,
+remote extraction, parsers, browser automation, or native media acquisition.
+
 ## Scenario Families
 
 - `artifact-native-media-supplied-transcript-control`: supplied transcript text
