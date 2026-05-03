@@ -1512,8 +1512,11 @@ func TestExecuteRunLabelsCompileSynthesisCandidateLaneAsNonReleaseBlocking(t *te
 	for _, row := range report.TargetedLaneSummary.ScenarioClassifications {
 		classifications[row.Scenario] = row
 	}
-	if classifications[compileSynthesisGuidanceOnlyScenarioID].FailureClassification != "ergonomics_gap" {
-		t.Fatalf("guidance-only classification = %q, want ergonomics_gap", classifications[compileSynthesisGuidanceOnlyScenarioID].FailureClassification)
+	if classifications[compileSynthesisGuidanceOnlyScenarioID].FailureClassification != "ergonomics_gap_despite_capability_pass" {
+		t.Fatalf("guidance-only classification = %q, want ergonomics_gap_despite_capability_pass", classifications[compileSynthesisGuidanceOnlyScenarioID].FailureClassification)
+	}
+	if classifications[compileSynthesisGuidanceOnlyScenarioID].UXQuality != "taste_debt" {
+		t.Fatalf("guidance-only UX quality = %q, want taste_debt", classifications[compileSynthesisGuidanceOnlyScenarioID].UXQuality)
 	}
 	if classifications[compileSynthesisResponseCandidateScenarioID].PromptSpecificity != "candidate-response-contract" {
 		t.Fatalf("candidate prompt specificity = %q, want candidate-response-contract", classifications[compileSynthesisResponseCandidateScenarioID].PromptSpecificity)
@@ -2086,9 +2089,17 @@ func TestCompileSynthesisCandidateDecisionPromotesOnlyWhenGuidanceStillHasDebt(t
 	if decision := compileSynthesisCandidateDecision(rows); decision != "promote_compile_synthesis_candidate_contract" {
 		t.Fatalf("candidate decision = %q, want promote_compile_synthesis_candidate_contract", decision)
 	}
+	rows[1].FailureClassification = "ergonomics_gap_despite_capability_pass"
+	if decision := compileSynthesisCandidateDecision(rows); decision != "promote_compile_synthesis_candidate_contract" {
+		t.Fatalf("capability-pass UX debt decision = %q, want promote_compile_synthesis_candidate_contract", decision)
+	}
 	rows[2].FailureClassification = "skill_guidance_or_eval_coverage"
 	if decision := compileSynthesisCandidateDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
 		t.Fatalf("candidate repair decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	rows[2].FailureClassification = "skill_bloat_risk"
+	if decision := compileSynthesisCandidateDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("skill-bloat candidate decision = %q, want defer_for_guidance_or_eval_repair", decision)
 	}
 	rows[2].FailureClassification = "none"
 	rows[0].FailureClassification = "capability_gap"
@@ -2099,6 +2110,80 @@ func TestCompileSynthesisCandidateDecisionPromotesOnlyWhenGuidanceStillHasDebt(t
 	rows[2].FailureClassification = "eval_contract_violation"
 	if decision := compileSynthesisCandidateDecision(rows); decision != "kill_compile_synthesis_candidate" {
 		t.Fatalf("safety decision = %q, want kill_compile_synthesis_candidate", decision)
+	}
+}
+
+func TestCompileSynthesisCandidateClassifiesWorkflowActionUXDebt(t *testing.T) {
+	tests := []struct {
+		name     string
+		scenario string
+		want     string
+	}{
+		{
+			name:     "scripted current primitives",
+			scenario: compileSynthesisCurrentPrimitivesScenarioID,
+			want:     "workflow_choreography_gap",
+		},
+		{
+			name:     "guidance-only natural",
+			scenario: compileSynthesisGuidanceOnlyScenarioID,
+			want:     "ergonomics_gap_despite_capability_pass",
+		},
+		{
+			name:     "candidate response fields",
+			scenario: compileSynthesisResponseCandidateScenarioID,
+			want:     "skill_bloat_risk",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			classification, _ := classifyTargetedCompileSynthesisCandidateResult(jobResult{
+				Scenario: tt.scenario,
+				Status:   "failed",
+				Passed:   false,
+				Metrics:  metrics{AssistantCalls: 3, CommandExecutions: 12, ToolCalls: 12, EventTypeCounts: map[string]int{}},
+				Verification: verificationResult{
+					Passed:        false,
+					DatabasePass:  true,
+					AssistantPass: false,
+				},
+			})
+			if classification != tt.want {
+				t.Fatalf("classification = %q, want %q", classification, tt.want)
+			}
+			result := jobResult{
+				Scenario: tt.scenario,
+				Verification: verificationResult{
+					DatabasePass:  true,
+					AssistantPass: false,
+				},
+			}
+			if got := scenarioSafetyPass(result, classification); got != "pass" {
+				t.Fatalf("safety pass = %q, want pass", got)
+			}
+			if got := scenarioCapabilityPass(result, classification); got != "pass" {
+				t.Fatalf("capability pass = %q, want pass", got)
+			}
+			if got := scenarioUXQuality(result, classification); got != "taste_debt" {
+				t.Fatalf("UX quality = %q, want taste_debt", got)
+			}
+		})
+	}
+}
+
+func TestSynthesisCompileNaturalMissingEvidenceStaysFixtureGap(t *testing.T) {
+	classification, _ := classifyTargetedSynthesisCompileResult(jobResult{
+		Scenario: synthesisCompileNaturalScenarioID,
+		Status:   "failed",
+		Passed:   false,
+		Verification: verificationResult{
+			Passed:        false,
+			DatabasePass:  false,
+			AssistantPass: false,
+		},
+	})
+	if classification != "data_hygiene_or_fixture_gap" {
+		t.Fatalf("classification = %q, want data_hygiene_or_fixture_gap", classification)
 	}
 }
 
@@ -2569,6 +2654,22 @@ func TestBroadAuditDecisionRequiresRepeatedEvidence(t *testing.T) {
 	rows[0].FailureClassification = "skill_guidance_or_eval_coverage"
 	if decision := broadAuditDecision(rows); decision != "defer_for_guidance_or_eval_repair" {
 		t.Fatalf("guidance decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+}
+
+func TestBroadAuditNaturalMissingEvidenceStaysFixtureGap(t *testing.T) {
+	classification, _ := classifyTargetedBroadAuditResult(jobResult{
+		Scenario: broadAuditNaturalScenarioID,
+		Status:   "failed",
+		Passed:   false,
+		Verification: verificationResult{
+			Passed:        false,
+			DatabasePass:  false,
+			AssistantPass: false,
+		},
+	})
+	if classification != "data_hygiene_or_fixture_gap" {
+		t.Fatalf("classification = %q, want data_hygiene_or_fixture_gap", classification)
 	}
 }
 

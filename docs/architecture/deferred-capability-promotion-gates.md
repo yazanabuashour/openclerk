@@ -19,7 +19,13 @@ These gates apply to:
 - document history and review controls
 - new public runner actions
 
-The default decision is to keep each capability as reference or deferred.
+The default decision is to keep each capability as reference or deferred, but
+that default is no longer allowed to hide repeated prompt choreography in
+`SKILL.md`. When routine work needs exact JSON, literal shell commands,
+"skip setup discovery" instructions, or workflow-specific skill recipes, treat
+that as product UX evidence. The next step is normally a candidate-surface
+comparison before adding more durable skill procedure.
+
 Promotion requires targeted AgentOps evidence through one of two paths:
 
 - **Capability gap:** the existing `openclerk document` and
@@ -28,6 +34,34 @@ Promotion requires targeted AgentOps evidence through one of two paths:
   workflow, but repeated evidence shows the workflow is too slow, too many
   steps, too scripted, too error-prone, or too guidance-dependent for routine
   AgentOps use.
+
+## Skill Budget And Workflow Bias
+
+`skills/openclerk/SKILL.md` is a router and safety contract, not the durable
+home for long product workflows. Its budget is:
+
+- core guardrails and no-tools boundaries
+- a compact index of promoted `openclerk document` and `openclerk retrieval`
+  actions
+- short runner-use hints needed to avoid unsafe transports or durable writes
+
+Detailed multi-step recipes should move into runner workflow actions or
+maintainer docs. Adding substantial skill content is acceptable only when it
+documents an already-promoted runner surface, bridges a temporary safety gap,
+or is paired with an explicit candidate comparison against a narrow runner
+workflow action.
+
+Treat skill growth as UX debt when the new text teaches agents to perform a
+routine workflow by memorizing exact command order, exact JSON, exact shell
+phrases, or scenario-specific prompts. A passing eval that relies on that
+skill content proves capability or safety only; it does not prove UX quality
+unless a natural prompt also passes with acceptable step count and retry risk.
+
+The preferred long-term shape for repeated workflows is narrow, runner-owned,
+local-first, JSON-only action support that preserves source authority,
+citations, provenance, freshness, duplicate handling, runner-only access, and
+approval-before-write. Existing primitives should remain for advanced or
+manual cases.
 
 ## Shared Rubric
 
@@ -46,7 +80,9 @@ Use the same decision rubric for every deferred capability:
   gaps, or the evidence is too narrow to justify a production surface. Treat
   skill guidance as ordinary only when clarifying existing runner usage is
   enough; repeated need for workflow-specific prompt choreography or skill
-  intervention is ergonomics-gap evidence.
+  intervention is ergonomics-gap evidence. Defer is not acceptable when the
+  only passing shape requires exact runner recipes and a natural prompt has
+  not shown acceptable UX.
 - **Kill** when the capability mostly duplicates docs retrieval, weakens source
   authority, hides provenance or freshness, increases duplicate/conflicting
   truth, or encourages routine bypasses.
@@ -79,6 +115,10 @@ The taste review should flag possible UX debt when:
   plan declares it unsupported instead of extending that action
 - an eval row completes with `none` classification but still needs high step
   count, high latency, exact prompt choreography, or repeated assistant turns
+- a scripted or exact-command row passes, but the matching natural prompt row
+  fails or needs repair
+- the proposed fix is substantial `SKILL.md` growth instead of a candidate
+  workflow action comparison
 - the agent asks for approval before a read, fetch, or inspect step when the
   real safety boundary is a durable write or privileged action
 - a workflow is technically expressible only through ceremony that routine
@@ -178,11 +218,14 @@ is:
 - retry or brittleness indicators, including duplicate creation, skipped
   freshness inspection, dropped citations, or wrong target selection
 - failure classification separated into data hygiene, ordinary skill guidance,
-  eval coverage, capability gap, ergonomics gap, or contract violation
+  eval coverage, capability gap, ergonomics gap, workflow choreography gap,
+  skill bloat risk, ergonomics gap despite capability pass, or contract
+  violation
 - authority, provenance, freshness, privacy, and bypass risks introduced by
   any proposed surface
-- safety pass, capability pass, and UX quality as separate conclusions, so a
-  technically passing workflow can still be recorded as taste debt
+- `safety_pass`, `capability_pass`, and `ux_pass` or `ux_quality` as separate
+  conclusions, so a technically passing workflow can still be recorded as
+  taste debt
 
 Use these three conclusions consistently:
 
@@ -195,9 +238,37 @@ Use these three conclusions consistently:
   as taste debt because it is too ceremonial, high-touch, slow, brittle, or
   guidance-dependent.
 
+Use these additional classifications when applicable:
+
+- `workflow_choreography_gap`: exact JSON, literal shell commands, exact
+  command ordering, "skip setup discovery" instructions, or other prompt
+  choreography are required for routine success.
+- `skill_bloat_risk`: the likely fix is a larger `SKILL.md` workflow recipe,
+  and that recipe has not been compared against a narrow runner action.
+- `ergonomics_gap_despite_capability_pass`: the runner can technically express
+  the workflow and safety passed, but the observed UX is too ceremonial for
+  routine users.
+
 Ergonomics promotion is not a shortcut around safety. A smoother surface should
 be killed or deferred if it creates a second truth system, hides provenance,
 drops citations, hides freshness, or normalizes lower-level bypasses.
+
+## Revisit Triggers
+
+Apply this budget to prior non-promotion decisions before closing release prep.
+At minimum, source-linked synthesis maintenance, source-sensitive audit repair,
+multi-source synthesis creation, stale/fresh synthesis inspection, and
+records/provenance/decision evidence bundles need candidate-surface comparison
+Beads when current evidence shows agents repeatedly compose lookup,
+provenance, projection, and repair steps by prompt choreography.
+
+Each comparison should evaluate:
+
+- Candidate A: keep current primitives and shrink `SKILL.md` to router and
+  safety contract
+- Candidate B: promote one narrow workflow action
+- Candidate C: combine one narrow action with existing primitives for
+  advanced/manual cases
 
 ## Capability-Specific Proof Obligations
 

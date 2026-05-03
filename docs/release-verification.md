@@ -127,6 +127,14 @@ release-readiness answers, read-side tag filters, the read-only
 the reduced `docs/evals/results/ockp-repo-docs-dogfood.md` and `.json`
 reports; never commit raw logs or machine-absolute artifact paths.
 
+Pre-release evidence must separate safety, capability, and UX. Scripted or
+exact-command rows prove capability and safety only; they do not satisfy UX
+acceptance unless matching natural prompts pass with acceptable command count,
+assistant turns, prompt specificity, and retry rate. Treat
+`workflow_choreography_gap`, `skill_bloat_risk`, and
+`ergonomics_gap_despite_capability_pass` as tag-blocking taste debt unless a
+decision note explicitly classifies the failure as fixture/reporting-only.
+
 Committed reports and docs must use repo-relative artifact paths. Raw eval log
 references, when included in reduced reports, must use neutral placeholders
 such as `<run-root>/<variant>/<scenario>/turn-N/events.jsonl` rather than

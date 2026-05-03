@@ -21,7 +21,7 @@ func graphSemanticsRevisitDecision(rows []targetedScenarioClassification) string
 		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
 			return "promote_graph_semantics_surface_design"
 		}
-		if row.FailureClassification == "ergonomics_gap" {
+		if isUXDebtClassification(row.FailureClassification) {
 			ergonomicsGaps++
 		} else if row.FailureClassification != "none" {
 			return "defer_for_guidance_or_eval_repair"
@@ -49,7 +49,7 @@ func memoryRouterRevisitDecision(rows []targetedScenarioClassification) string {
 		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
 			return "promote_memory_router_surface_design"
 		}
-		if row.FailureClassification == "ergonomics_gap" {
+		if isUXDebtClassification(row.FailureClassification) {
 			ergonomicsGaps++
 		} else if row.FailureClassification != "none" {
 			return "defer_for_guidance_or_eval_repair"
@@ -77,7 +77,7 @@ func highTouchMemoryRouterRecallDecision(rows []targetedScenarioClassification) 
 		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
 			return "promote_memory_router_recall_surface_design"
 		}
-		if row.FailureClassification == "ergonomics_gap" {
+		if isUXDebtClassification(row.FailureClassification) {
 			ergonomicsGaps++
 		} else if row.FailureClassification != "none" {
 			return "defer_for_guidance_or_eval_repair"
@@ -126,7 +126,7 @@ func memoryRouterRecallCandidateDecision(rows []targetedScenarioClassification) 
 		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
 			return "none_viable_yet"
 		}
-		if row.FailureClassification != "none" && row.FailureClassification != "ergonomics_gap" {
+		if row.FailureClassification != "none" && !isUXDebtClassification(row.FailureClassification) {
 			return "defer_for_guidance_or_eval_repair"
 		}
 		seen[row.Scenario] = true
@@ -198,7 +198,7 @@ func promotedRecordDomainDecision(rows []targetedScenarioClassification) string 
 		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
 			return "promote_promoted_record_domain_surface_design"
 		}
-		if row.FailureClassification == "ergonomics_gap" {
+		if isUXDebtClassification(row.FailureClassification) {
 			ergonomicsGaps++
 		} else if row.FailureClassification != "none" {
 			return "defer_for_guidance_or_eval_repair"
@@ -275,7 +275,7 @@ func relationshipRecordCandidateDecision(rows []targetedScenarioClassification) 
 		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
 			return "none_viable_yet"
 		}
-		if row.FailureClassification != "none" && row.FailureClassification != "ergonomics_gap" {
+		if row.FailureClassification != "none" && !isUXDebtClassification(row.FailureClassification) {
 			return "defer_for_guidance_or_eval_repair"
 		}
 		seen[row.Scenario] = true
@@ -882,7 +882,7 @@ func synthesisCompileDecision(rows []targetedScenarioClassification) string {
 		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
 			return "promote_compile_synthesis_surface_design"
 		}
-		if row.FailureClassification == "ergonomics_gap" {
+		if isUXDebtClassification(row.FailureClassification) {
 			ergonomicsGaps++
 		} else if row.FailureClassification != "none" {
 			return "defer_for_guidance_or_eval_repair"
@@ -910,7 +910,7 @@ func highTouchCompileSynthesisDecision(rows []targetedScenarioClassification) st
 		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
 			return "promote_compile_synthesis_surface_design"
 		}
-		if row.FailureClassification == "ergonomics_gap" {
+		if isUXDebtClassification(row.FailureClassification) {
 			ergonomicsGaps++
 		} else if row.FailureClassification != "none" {
 			return "defer_for_guidance_or_eval_repair"
@@ -958,7 +958,7 @@ func compileSynthesisCandidateDecision(rows []targetedScenarioClassification) st
 		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
 			return "none_viable_yet"
 		}
-		if row.FailureClassification != "none" && row.FailureClassification != "ergonomics_gap" {
+		if row.FailureClassification != "none" && !isUXDebtClassification(row.FailureClassification) {
 			return "defer_for_guidance_or_eval_repair"
 		}
 		seen[row.Scenario] = true
@@ -1005,7 +1005,7 @@ func broadAuditDecision(rows []targetedScenarioClassification) string {
 	for _, row := range rows {
 		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
 			hasCapabilityGap = true
-		} else if row.FailureClassification == "ergonomics_gap" {
+		} else if isUXDebtClassification(row.FailureClassification) {
 			ergonomicsGaps++
 		} else if row.FailureClassification != "none" {
 			return "defer_for_guidance_or_eval_repair"

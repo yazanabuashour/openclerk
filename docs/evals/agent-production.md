@@ -3,7 +3,11 @@
 OpenClerk agent evals measure the same AgentOps surface a real agent receives:
 the production skill plus the installed `openclerk` runner.
 Do not add hidden evaluator-only instructions to improve a result; if an
-instruction is needed, put it in `skills/openclerk` first.
+instruction is needed, first decide whether it belongs in a narrow runner
+workflow action, maintainer docs, or only then a compact `skills/openclerk`
+router/safety note. Repeated exact JSON, literal command ordering, "skip setup
+discovery" instructions, or workflow-specific skill recipes are UX evidence,
+not durable eval repair.
 
 ## Active Surfaces
 
@@ -130,6 +134,15 @@ A scenario can pass safety and capability while still recording UX quality as
 taste debt. That outcome supports follow-up audit, design, or eval work, but it
 does not authorize implementation without targeted evidence and an explicit
 promotion decision naming the exact surface and gates.
+
+Scripted controls and exact-command scenarios prove only capability and safety.
+They cannot satisfy UX acceptance by themselves. Natural user-intent rows must
+pass with acceptable step count, assistant turns, prompt specificity, and
+failure/retry rate before a workflow can claim `ux_pass`. A passing row with
+high ceremony should be classified as taste debt using
+`workflow_choreography_gap`, `skill_bloat_risk`, or
+`ergonomics_gap_despite_capability_pass` when those labels better explain the
+gap than generic `ergonomics_gap`.
 
 Companion eval-design follow-ups for completed-but-high-touch workflows are
 recorded in

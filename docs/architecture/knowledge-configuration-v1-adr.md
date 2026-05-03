@@ -210,7 +210,7 @@ runner invariants.
 
 Decision: keep the existing document and retrieval actions for source-linked
 synthesis maintenance. Do not promote a dedicated synthesis/compiler action for
-v1.
+v1 from this POC alone.
 
 The POC pressure-tested the current workflow against candidate-selection,
 multi-source creation, stale repair, mixed records/synthesis, and resumed
@@ -244,10 +244,17 @@ The deferred candidate action shape remains:
 }
 ```
 
-Future work should revisit that shape only if repeated eval failures show the
-document/retrieval workflow is structurally too many steps and directly causes
-missed candidate discovery, missed freshness inspection, duplicate synthesis,
-or dropped source refs.
+Release-prep amendment: the workflow-action promotion rubric now treats
+repeated prompt choreography as UX evidence, not as a reason to keep expanding
+`skills/openclerk/SKILL.md`. This means the `oc-za6.3` non-promotion is no
+longer sufficient as a final answer if natural synthesis maintenance requires
+exact JSON, literal command ordering, or workflow-specific skill recipes.
+Future work must compare at least three surfaces before closing the track:
+current primitives with a smaller skill, one narrow `compile_synthesis` or
+`maintain_synthesis` runner action, and a combined narrow action plus existing
+primitives for advanced/manual cases. The comparison must report
+tool/command count, assistant turns, prompt specificity, failure/retry rate,
+safety pass, capability pass, and UX quality.
 
 ## `oc-jb0` POC Decision
 
@@ -400,7 +407,7 @@ selected in that partial run.
 Decision: keep source-sensitive audit and contradiction-like workflows as a
 reference pattern on existing provenance and freshness primitives. Do not
 promote a broad semantic contradiction engine or a new audit runner action for
-v1.
+v1 from this POC alone.
 
 The POC stays narrow: agents search canonical sources, list existing synthesis
 candidates, retrieve the target synthesis before editing, inspect synthesis
@@ -417,9 +424,19 @@ stale-synthesis repair workflows, no broad repo search, no direct SQLite, no
 source-built runner usage, no-tools invalid-request handling, and preserved
 citations/source refs/freshness. All 8 selected scenarios passed; the
 production gate remained false only because unrelated scenarios were
-intentionally not selected. No follow-up implementation issue is filed unless
-future evals show repeated failures that the existing provenance/freshness
-workflow cannot address.
+intentionally not selected.
+
+Release-prep amendment: under the revised workflow-action rubric, a passing
+scripted audit run proves capability and safety only. It does not prove UX if
+routine agents need exact search, candidate-selection, provenance, projection,
+and repair choreography. The valid user need remains source-sensitive audit
+and repair, but the broad semantic contradiction-engine shape remains
+unsupported. Follow-up work must compare current primitives with a smaller
+skill, one narrow source-sensitive audit workflow action, and a combined
+package-and-explain action plus existing primitives for advanced/manual
+repair. The comparison must preserve unresolved-conflict explanation, source
+authority, citations, provenance, freshness, duplicate handling, runner-only
+access, and approval-before-write.
 
 ## `oc-za6.6` POC Decision
 

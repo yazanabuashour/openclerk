@@ -122,6 +122,14 @@ must pass before tagging. Keep this targeted lane separate from the full
 release-blocking AgentOps production gate, but treat failures as tag blockers
 until repaired or explicitly reclassified as fixture/reporting defects.
 
+For ADR, POC, eval, promotion, and deferred-capability work, report
+`safety_pass`, `capability_pass`, and `ux_pass` or `ux_quality` separately.
+Exact-command or scripted rows prove capability only. If routine success
+depends on workflow-specific skill recipes, exact JSON, or command
+choreography, classify it as `workflow_choreography_gap`, `skill_bloat_risk`,
+or `ergonomics_gap_despite_capability_pass` and compare runner workflow-action
+candidates before expanding `skills/openclerk/SKILL.md`.
+
 Tag a version like `v0.1.0`, push the tag, and let the release workflow:
 
 - validate release notes, changelog, skill package, formatting, linting, and tests

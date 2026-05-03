@@ -429,16 +429,16 @@ func classifyTargetedSynthesisCompileResult(result jobResult) (string, string) {
 	if (result.Scenario == synthesisCompileScriptedScenarioID || result.Scenario == highTouchCompileSynthesisScriptedScenarioID) && !result.Verification.DatabasePass {
 		return "capability_gap", "scripted current-primitives control could not safely repair source-linked synthesis"
 	}
-	if (result.Scenario == synthesisCompileNaturalScenarioID || result.Scenario == highTouchCompileSynthesisNaturalScenarioID) && !result.Verification.Passed {
-		return "ergonomics_gap", "natural compile_synthesis revisit intent did not complete the safe current-primitives workflow"
+	if (result.Scenario == synthesisCompileNaturalScenarioID || result.Scenario == highTouchCompileSynthesisNaturalScenarioID) && result.Verification.DatabasePass && !result.Verification.Passed {
+		return "ergonomics_gap_despite_capability_pass", "natural compile_synthesis revisit intent did not complete the safe current-primitives workflow even though runner-visible synthesis evidence existed"
 	}
 	if !result.Verification.DatabasePass {
 		return "data_hygiene_or_fixture_gap", "fixture or durable synthesis evidence did not satisfy compile_synthesis revisit pressure"
 	}
 	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
-		return "skill_guidance_or_eval_coverage", "runner-visible synthesis evidence existed, but the assistant answer or required runner steps did not satisfy the scenario"
+		return "workflow_choreography_gap", "runner-visible synthesis evidence existed, but the assistant answer or required runner steps required workflow choreography"
 	}
-	return "ergonomics_gap", "manual review required before any compile_synthesis promotion"
+	return "ergonomics_gap_despite_capability_pass", "manual review required before any compile_synthesis promotion because capability is not enough to prove UX"
 }
 
 func classifyTargetedCompileSynthesisCandidateResult(result jobResult) (string, string) {
@@ -470,15 +470,15 @@ func classifyTargetedCompileSynthesisCandidateResult(result jobResult) (string, 
 		return "data_hygiene_or_fixture_gap", "fixture or database evidence did not satisfy the compile_synthesis candidate contract"
 	}
 	if result.Scenario == compileSynthesisGuidanceOnlyScenarioID && !result.Verification.Passed {
-		return "ergonomics_gap", "guidance-only natural compile_synthesis intent did not complete the safe current-primitives workflow"
+		return "ergonomics_gap_despite_capability_pass", "guidance-only natural compile_synthesis intent did not complete the safe current-primitives workflow even though the runner could express it"
 	}
 	if result.Scenario == compileSynthesisResponseCandidateScenarioID && result.Verification.DatabasePass && !result.Verification.AssistantPass {
-		return "skill_guidance_or_eval_coverage", "runner-visible compile_synthesis evidence existed, but the candidate response fields were missing"
+		return "skill_bloat_risk", "runner-visible compile_synthesis evidence existed, but the candidate response still depended on skill-level field choreography"
 	}
 	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
-		return "skill_guidance_or_eval_coverage", "runner-visible compile_synthesis evidence existed, but the assistant answer or required runner steps did not satisfy the scenario"
+		return "workflow_choreography_gap", "runner-visible compile_synthesis evidence existed, but the assistant answer or required runner steps depended on prompt choreography"
 	}
-	return "ergonomics_gap", "manual review required before compile_synthesis candidate promotion"
+	return "ergonomics_gap_despite_capability_pass", "manual review required before compile_synthesis candidate promotion because capability is not enough to prove UX"
 }
 
 func classifyTargetedBroadAuditResult(result jobResult) (string, string) {
@@ -503,16 +503,25 @@ func classifyTargetedBroadAuditResult(result jobResult) (string, string) {
 	if result.Scenario == broadAuditScriptedScenarioID && !result.Verification.DatabasePass {
 		return "capability_gap", "scripted current-primitives control could not safely express broad contradiction/audit workflow"
 	}
-	if result.Scenario == broadAuditNaturalScenarioID && !result.Verification.Passed {
-		return "ergonomics_gap", "natural broad contradiction/audit revisit intent did not complete the safe current-primitives workflow"
+	if result.Scenario == broadAuditNaturalScenarioID && result.Verification.DatabasePass && !result.Verification.Passed {
+		return "ergonomics_gap_despite_capability_pass", "natural broad contradiction/audit revisit intent did not complete the safe current-primitives workflow even though runner-visible audit evidence existed"
 	}
 	if !result.Verification.DatabasePass {
 		return "data_hygiene_or_fixture_gap", "fixture or durable audit evidence did not satisfy broad contradiction/audit revisit pressure"
 	}
 	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
-		return "skill_guidance_or_eval_coverage", "runner-visible audit evidence existed, but the assistant answer or required runner steps did not satisfy the scenario"
+		return "workflow_choreography_gap", "runner-visible audit evidence existed, but the assistant answer or required runner steps depended on prompt choreography"
 	}
-	return "ergonomics_gap", "manual review required before any broad contradiction/audit promotion"
+	return "ergonomics_gap_despite_capability_pass", "manual review required before any broad contradiction/audit promotion because capability is not enough to prove UX"
+}
+
+func isUXDebtClassification(classification string) bool {
+	switch classification {
+	case "ergonomics_gap", "workflow_choreography_gap", "skill_bloat_risk", "ergonomics_gap_despite_capability_pass":
+		return true
+	default:
+		return false
+	}
 }
 
 func promptSpecificity(scenarioID string) string {
@@ -1028,7 +1037,7 @@ func scenarioCapabilityPass(result jobResult, classification string) string {
 
 func scenarioUXQuality(result jobResult, classification string) string {
 	if isCompileSynthesisCandidateScenario(result.Scenario) {
-		if classification == "ergonomics_gap" {
+		if isUXDebtClassification(classification) {
 			return "taste_debt"
 		}
 		if classification == "none" {
@@ -1047,7 +1056,7 @@ func scenarioUXQuality(result jobResult, classification string) string {
 		return "manual_review"
 	}
 	if isWebURLStaleImpactScenario(result.Scenario) {
-		if classification == "ergonomics_gap" {
+		if isUXDebtClassification(classification) {
 			return "taste_debt"
 		}
 		if classification == "none" {
@@ -1066,7 +1075,7 @@ func scenarioUXQuality(result jobResult, classification string) string {
 		return "manual_review"
 	}
 	if isDocumentLifecycleRollbackCandidateScenario(result.Scenario) {
-		if classification == "ergonomics_gap" {
+		if isUXDebtClassification(classification) {
 			return "taste_debt"
 		}
 		if classification == "none" {
@@ -1084,7 +1093,7 @@ func scenarioUXQuality(result jobResult, classification string) string {
 		}
 		return "manual_review"
 	}
-	if classification == "ergonomics_gap" {
+	if isUXDebtClassification(classification) {
 		return "taste_debt"
 	}
 	return scenarioUX(result)
