@@ -43,6 +43,7 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 				"Primitive request shapes:",
 				"ingest_source_url",
 				"asset_path_hint",
+				"placement plan",
 				"ingest_video_url",
 				"transcript",
 				"compile_synthesis",
@@ -54,7 +55,7 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 		{
 			name: "retrieval",
 			args: []string{"retrieval", "--help"},
-			want: []string{"source_audit_report", "evidence_bundle_report", "agent_handoff", "Read-only"},
+			want: []string{"source_audit_report", "evidence_bundle_report", "duplicate_candidate_report", "agent_handoff", "Read-only"},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

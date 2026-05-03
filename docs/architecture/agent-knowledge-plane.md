@@ -59,18 +59,25 @@ guidance-dependent for routine use. Either path must preserve canonical
 markdown authority, citations, provenance, projection freshness, local-first
 storage, and no-bypass operation.
 
-Current recipe-heavy workflows should be treated as candidate-surface
-comparison backlog instead of permanent skill prose:
+The current recipe-heavy workflow comparison is resolved in
+[`thin-skill-workflow-surface-comparison-decision.md`](thin-skill-workflow-surface-comparison-decision.md).
+The outcome is intentionally not more `SKILL.md` prose:
 
-- propose-before-create, save-this-note, and low-risk capture: `oc-phvu`
-- duplicate candidate update versus new document: `oc-ond7`
-- document-these-links placement: `oc-80l1`
-- document lifecycle review and rollback: `oc-sow6`
-- populated-vault polluted or decoy evidence handling: `oc-z55m`
+- propose-before-create, save-this-note, and low-risk capture stay with
+  existing primitives plus caller autonomy
+- duplicate candidate update versus new document is handled by the `oc-aw2d`
+  read-only `duplicate_candidate_report` action with `agent_handoff`
+- document-these-links placement is handled by the `oc-7bjj`
+  `ingest_source_url` placement plan mode before durable fetch/write
+- document lifecycle review and rollback is deferred to current document and
+  retrieval primitives
+- populated-vault polluted or decoy evidence handling is deferred to current
+  retrieval primitives plus compact authority policy
 
-For each lane, compare existing primitives plus caller autonomy, extending a
-natural existing runner action, and adding one narrow workflow action with
-`agent_handoff`; then promote, defer, kill, or record `none viable yet`.
+Future recipe-heavy lanes should use the same comparison frame: existing
+primitives plus caller autonomy, extending a natural existing runner action,
+or adding one narrow workflow action with `agent_handoff`; then promote,
+defer, kill, or record `none viable yet`.
 
 ## Canonical and derived layers
 

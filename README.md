@@ -106,6 +106,10 @@ requiring agents to choreograph many primitives:
   runner-owned action index for these promoted workflows, so routine agents do
   not need long `SKILL.md` recipes or source inspection to find the request
   shape.
+- `openclerk document` `ingest_source_url` supports read-only `plan` mode for
+  public-link placement before durable fetch/write. It returns candidate source
+  path hints, duplicate source status, synthesis-placement guidance,
+  no-fetch/no-write status, approval boundaries, and `agent_handoff`.
 - `openclerk document` `compile_synthesis` creates or updates exactly one
   source-linked synthesis target from either explicit `body` markdown or
   runner-assembled `body_facts`, defaults the only supported
@@ -120,6 +124,9 @@ requiring agents to choreograph many primitives:
 - `openclerk retrieval` `evidence_bundle_report` is read-only and packages
   records, decisions, citations, provenance, projection freshness, validation
   boundaries, authority limits, and `agent_handoff`.
+- `openclerk retrieval` `duplicate_candidate_report` is read-only and packages
+  the likely duplicate target, evidence inspected, no-write status, approval
+  boundary, validation boundaries, authority limits, and `agent_handoff`.
 
 Validation rejections are JSON results with `rejected: true`. Runtime failures
 exit non-zero and write errors to stderr.

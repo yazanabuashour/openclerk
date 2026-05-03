@@ -39,7 +39,7 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 		}, nil
 	}
 
-	if isMutatingDocumentAction(normalized.Action) {
+	if isMutatingDocumentAction(normalized) {
 		var result DocumentTaskResult
 		err := runclient.WithWriteLock(ctx, config, func() error {
 			client, err := runclient.OpenForWrite(config)
@@ -67,6 +67,15 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 	}()
 
 	switch normalized.Action {
+	case DocumentTaskActionIngestSourceURL:
+		plan, err := runSourcePlacementPlan(ctx, client, normalized.Source)
+		if err != nil {
+			return DocumentTaskResult{}, err
+		}
+		return DocumentTaskResult{
+			SourcePlacement: &plan,
+			Summary:         "planned source URL placement",
+		}, nil
 	case DocumentTaskActionList:
 		documents, err := client.ListDocuments(ctx, domain.DocumentListQuery{
 			PathPrefix:    normalized.List.PathPrefix,
@@ -112,15 +121,16 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 	}
 }
 
-func isMutatingDocumentAction(action string) bool {
-	switch action {
+func isMutatingDocumentAction(normalized normalizedDocumentTaskRequest) bool {
+	switch normalized.Action {
 	case DocumentTaskActionCreate,
-		DocumentTaskActionIngestSourceURL,
 		DocumentTaskActionIngestVideoURL,
 		DocumentTaskActionCompileSynthesis,
 		DocumentTaskActionAppend,
 		DocumentTaskActionReplaceSection:
 		return true
+	case DocumentTaskActionIngestSourceURL:
+		return normalized.Source.Mode != "plan"
 	default:
 		return false
 	}
@@ -488,8 +498,8 @@ func validateSourceURLInput(input SourceURLInput) string {
 	if mode == "" {
 		mode = "create"
 	}
-	if mode != "create" && mode != "update" {
-		return "source.mode must be create or update"
+	if mode != "create" && mode != "update" && mode != "plan" {
+		return "source.mode must be create, update, or plan"
 	}
 	sourceType := input.SourceType
 	if sourceType != "" && sourceType != "pdf" && sourceType != "web" {

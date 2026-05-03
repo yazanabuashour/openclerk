@@ -101,6 +101,69 @@ Checked source refs.
 	}
 }
 
+func TestRetrievalTaskDuplicateCandidateReportIsReadOnly(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	target := createDocument(t, ctx, config, "notes/duplicates/existing-renewal-note.md", "Existing Renewal Note", "# Existing Renewal Note\n\n## Summary\nRenewal packaging duplicate marker belongs to the existing account renewal note.\n")
+	createDocument(t, ctx, config, "notes/duplicates/decoy-renewal-note.md", "Decoy Renewal Note", "# Decoy Renewal Note\n\n## Summary\nAdjacent renewal note without the exact duplicate marker.\n")
+
+	result, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionDuplicateCandidate,
+		DuplicateCandidate: runner.DuplicateCandidateOptions{
+			Query:      "renewal packaging duplicate marker account renewal",
+			PathPrefix: "notes/duplicates/",
+			Limit:      10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("duplicate candidate report: %v", err)
+	}
+	if result.Rejected || result.DuplicateCandidate == nil {
+		t.Fatalf("duplicate candidate result = %+v", result)
+	}
+	report := result.DuplicateCandidate
+	if report.LikelyTarget == nil ||
+		report.LikelyTarget.DocID != target.DocID ||
+		report.LikelyTarget.Path != target.Path ||
+		report.DuplicateStatus != "likely_duplicate_found" ||
+		report.WriteStatus != "read_only_no_document_created_or_updated" ||
+		report.AgentHandoff == nil ||
+		!containsString(report.EvidenceInspected, "search:renewal packaging duplicate marker account renewal") ||
+		!containsString(report.EvidenceInspected, "list_documents:notes/duplicates/") ||
+		!containsString(report.EvidenceInspected, "get_document:"+target.Path) ||
+		!strings.Contains(report.ApprovalBoundary, "update the likely existing target") ||
+		!strings.Contains(report.ValidationBoundaries, "read-only") {
+		t.Fatalf("duplicate candidate report = %+v", report)
+	}
+	list, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{PathPrefix: "notes/duplicates/", Limit: 10},
+	})
+	if err != nil {
+		t.Fatalf("list duplicates after report: %v", err)
+	}
+	if len(list.Documents) != 2 {
+		t.Fatalf("duplicate report mutated documents: %+v", list.Documents)
+	}
+}
+
+func TestRetrievalTaskDuplicateCandidateReportRejectsMissingQuery(t *testing.T) {
+	t.Parallel()
+
+	result, err := runner.RunRetrievalTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.RetrievalTaskRequest{
+		Action:             runner.RetrievalTaskActionDuplicateCandidate,
+		DuplicateCandidate: runner.DuplicateCandidateOptions{PathPrefix: "notes/"},
+	})
+	if err != nil {
+		t.Fatalf("duplicate candidate reject: %v", err)
+	}
+	if !result.Rejected || result.RejectionReason != "duplicate_candidate.query is required" {
+		t.Fatalf("duplicate candidate rejection = %+v", result)
+	}
+}
+
 func TestRetrievalTaskAuditContradictionsPlansAndRepairsExistingSynthesis(t *testing.T) {
 	t.Parallel()
 

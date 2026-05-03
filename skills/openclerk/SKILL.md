@@ -31,11 +31,17 @@ matches the request:
 
 - Source-linked synthesis create/update: document `compile_synthesis`, then
   answer from `compile_synthesis.agent_handoff`.
+- Source URL placement before durable fetch/write: document
+  `ingest_source_url` with `mode: "plan"`, then answer from
+  `source_placement_plan.agent_handoff`.
 - Source-sensitive audit explain/repair: retrieval `source_audit_report`, then
   answer from `source_audit.agent_handoff`.
 - Records, decisions, provenance, and projection evidence bundles: retrieval
   `evidence_bundle_report`, then answer from
   `evidence_bundle.agent_handoff`.
+- Duplicate update-versus-new clarification: retrieval
+  `duplicate_candidate_report`, then answer from
+  `duplicate_candidate.agent_handoff`.
 - Routine read-only memory/router recall reports: retrieval
   `memory_router_recall_report`, then answer from
   `memory_router_recall.agent_handoff` or returned evidence.
@@ -165,7 +171,7 @@ Common actions are `validate`, `create_document`, `ingest_source_url`,
 `ingest_video_url`, `list_documents`, `get_document`, `append_document`,
 `replace_section`, `resolve_paths`, `inspect_layout`, and `compile_synthesis`.
 Use `openclerk document --help` for primitive and promoted workflow-action
-request shapes, including required source and video ingestion fields.
+request shapes, including source placement, source ingestion, and video fields.
 
 Minimal request shapes:
 
@@ -191,7 +197,8 @@ Common actions are `search`, `document_links`, `graph_neighborhood`,
 `records_lookup`, `record_entity`, `services_lookup`, `service_record`,
 `decisions_lookup`, `decision_record`, `provenance_events`,
 `projection_states`, `audit_contradictions`, `source_audit_report`,
-`evidence_bundle_report`, and `memory_router_recall_report`. Use
+`evidence_bundle_report`, `duplicate_candidate_report`, and
+`memory_router_recall_report`. Use
 `openclerk retrieval --help` for promoted workflow-action request shape.
 
 Use search for source-grounded answers; document links and graph neighborhoods

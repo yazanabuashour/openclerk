@@ -250,6 +250,15 @@ func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, n
 			EvidenceBundle: &report,
 			Summary:        "returned evidence bundle report",
 		}, nil
+	case RetrievalTaskActionDuplicateCandidate:
+		report, err := runDuplicateCandidateReport(ctx, client, normalized.DuplicateCandidate)
+		if err != nil {
+			return RetrievalTaskResult{}, err
+		}
+		return RetrievalTaskResult{
+			DuplicateCandidate: &report,
+			Summary:            "returned duplicate candidate report",
+		}, nil
 	default:
 		return RetrievalTaskResult{}, fmt.Errorf("unsupported retrieval task action %q", normalized.Action)
 	}
@@ -273,6 +282,7 @@ type normalizedRetrievalTaskRequest struct {
 	MemoryRouterRecall MemoryRouterRecallOptions
 	SourceAudit        SourceAuditReportOptions
 	EvidenceBundle     EvidenceBundleOptions
+	DuplicateCandidate DuplicateCandidateOptions
 	Limit              int
 }
 
@@ -299,6 +309,7 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		MemoryRouterRecall: request.MemoryRouterRecall,
 		SourceAudit:        request.SourceAudit,
 		EvidenceBundle:     request.EvidenceBundle,
+		DuplicateCandidate: request.DuplicateCandidate,
 		Limit:              request.Limit,
 	}
 
@@ -312,7 +323,8 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		request.Audit.Limit < 0 ||
 		request.MemoryRouterRecall.Limit < 0 ||
 		request.SourceAudit.Limit < 0 ||
-		request.EvidenceBundle.Limit < 0 {
+		request.EvidenceBundle.Limit < 0 ||
+		request.DuplicateCandidate.Limit < 0 {
 		return normalizedRetrievalTaskRequest{}, "limit must be greater than or equal to 0"
 	}
 
@@ -418,6 +430,13 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		}
 		if (normalized.EvidenceBundle.RefKind == "") != (normalized.EvidenceBundle.RefID == "") {
 			return normalizedRetrievalTaskRequest{}, "evidence_bundle.ref_kind and evidence_bundle.ref_id must be provided together"
+		}
+		return normalized, ""
+	case RetrievalTaskActionDuplicateCandidate:
+		normalized.DuplicateCandidate.Query = strings.TrimSpace(request.DuplicateCandidate.Query)
+		normalized.DuplicateCandidate.PathPrefix = strings.TrimSpace(request.DuplicateCandidate.PathPrefix)
+		if normalized.DuplicateCandidate.Query == "" {
+			return normalizedRetrievalTaskRequest{}, "duplicate_candidate.query is required"
 		}
 		return normalized, ""
 	default:

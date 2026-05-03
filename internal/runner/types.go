@@ -36,6 +36,7 @@ const (
 	RetrievalTaskActionMemoryRouterRecall  = "memory_router_recall_report"
 	RetrievalTaskActionSourceAuditReport   = "source_audit_report"
 	RetrievalTaskActionEvidenceBundle      = "evidence_bundle_report"
+	RetrievalTaskActionDuplicateCandidate  = "duplicate_candidate_report"
 )
 
 type DocumentTaskRequest struct {
@@ -136,6 +137,22 @@ type SourceIngestionResult struct {
 	NoRepairWarning     string                  `json:"no_repair_warning,omitempty"`
 }
 
+type SourcePlacementPlan struct {
+	SourceURL              string           `json:"source_url"`
+	SourceType             string           `json:"source_type"`
+	CandidateSourcePaths   []string         `json:"candidate_source_paths"`
+	CandidateAssetPaths    []string         `json:"candidate_asset_paths,omitempty"`
+	CandidateSynthesisPath string           `json:"candidate_synthesis_path,omitempty"`
+	ExistingSource         *DocumentSummary `json:"existing_source,omitempty"`
+	DuplicateStatus        string           `json:"duplicate_status"`
+	FetchStatus            string           `json:"fetch_status"`
+	WriteStatus            string           `json:"write_status"`
+	ApprovalBoundary       string           `json:"approval_boundary"`
+	ValidationBoundaries   string           `json:"validation_boundaries"`
+	AuthorityLimits        string           `json:"authority_limits"`
+	AgentHandoff           *AgentHandoff    `json:"agent_handoff,omitempty"`
+}
+
 type SourceStaleDependent struct {
 	Path            string   `json:"path"`
 	DocID           string   `json:"doc_id"`
@@ -193,6 +210,7 @@ type DocumentTaskResult struct {
 	RejectionReason  string                  `json:"rejection_reason,omitempty"`
 	Document         *Document               `json:"document,omitempty"`
 	Ingestion        *SourceIngestionResult  `json:"ingestion,omitempty"`
+	SourcePlacement  *SourcePlacementPlan    `json:"source_placement_plan,omitempty"`
 	VideoIngestion   *VideoIngestionResult   `json:"video_ingestion,omitempty"`
 	CompileSynthesis *CompileSynthesisResult `json:"compile_synthesis,omitempty"`
 	Documents        []DocumentSummary       `json:"documents,omitempty"`
@@ -220,6 +238,7 @@ type RetrievalTaskRequest struct {
 	MemoryRouterRecall MemoryRouterRecallOptions  `json:"memory_router_recall,omitempty"`
 	SourceAudit        SourceAuditReportOptions   `json:"source_audit,omitempty"`
 	EvidenceBundle     EvidenceBundleOptions      `json:"evidence_bundle,omitempty"`
+	DuplicateCandidate DuplicateCandidateOptions  `json:"duplicate_candidate,omitempty"`
 	Limit              int                        `json:"limit,omitempty"`
 }
 
@@ -347,6 +366,12 @@ type EvidenceBundleOptions struct {
 	Limit      int    `json:"limit,omitempty"`
 }
 
+type DuplicateCandidateOptions struct {
+	Query      string `json:"query,omitempty"`
+	PathPrefix string `json:"path_prefix,omitempty"`
+	Limit      int    `json:"limit,omitempty"`
+}
+
 type RetrievalTaskResult struct {
 	Rejected           bool                       `json:"rejected"`
 	RejectionReason    string                     `json:"rejection_reason,omitempty"`
@@ -365,6 +390,7 @@ type RetrievalTaskResult struct {
 	MemoryRouterRecall *MemoryRouterRecallReport  `json:"memory_router_recall,omitempty"`
 	SourceAudit        *SourceAuditReport         `json:"source_audit,omitempty"`
 	EvidenceBundle     *EvidenceBundleReport      `json:"evidence_bundle,omitempty"`
+	DuplicateCandidate *DuplicateCandidateReport  `json:"duplicate_candidate,omitempty"`
 	Summary            string                     `json:"summary"`
 }
 
@@ -441,6 +467,21 @@ type EvidenceBundleReport struct {
 	ValidationBoundaries string                `json:"validation_boundaries"`
 	AuthorityLimits      string                `json:"authority_limits"`
 	AgentHandoff         *AgentHandoff         `json:"agent_handoff,omitempty"`
+}
+
+type DuplicateCandidateReport struct {
+	Query                string            `json:"query"`
+	PathPrefix           string            `json:"path_prefix,omitempty"`
+	Search               *SearchResult     `json:"search,omitempty"`
+	Documents            []DocumentSummary `json:"documents,omitempty"`
+	LikelyTarget         *DocumentSummary  `json:"likely_target,omitempty"`
+	EvidenceInspected    []string          `json:"evidence_inspected"`
+	DuplicateStatus      string            `json:"duplicate_status"`
+	WriteStatus          string            `json:"write_status"`
+	ApprovalBoundary     string            `json:"approval_boundary"`
+	ValidationBoundaries string            `json:"validation_boundaries"`
+	AuthorityLimits      string            `json:"authority_limits"`
+	AgentHandoff         *AgentHandoff     `json:"agent_handoff,omitempty"`
 }
 
 type AuditContradictionsResult struct {

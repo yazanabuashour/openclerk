@@ -261,6 +261,97 @@ func TestDocumentTaskCompileSynthesisRejectsMissingFields(t *testing.T) {
 	}
 }
 
+func TestDocumentTaskIngestSourceURLPlanModeIsReadOnly(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestSourceURL,
+		Source: runner.SourceURLInput{
+			URL:        "https://Example.Test/product/page.html#section",
+			Mode:       "plan",
+			SourceType: "web",
+			Title:      "Runner Product Page",
+		},
+	})
+	if err != nil {
+		t.Fatalf("source placement plan: %v", err)
+	}
+	if result.Rejected || result.SourcePlacement == nil {
+		t.Fatalf("placement plan result = %+v", result)
+	}
+	plan := result.SourcePlacement
+	if plan.SourceURL != "https://example.test/product/page.html" ||
+		plan.SourceType != "web" ||
+		plan.DuplicateStatus != "no_existing_source_url_found" ||
+		plan.FetchStatus != "planned_no_fetch" ||
+		plan.WriteStatus != "planned_no_write" ||
+		plan.AgentHandoff == nil ||
+		!strings.Contains(plan.ApprovalBoundary, "durable-write approval") ||
+		!containsString(plan.CandidateSourcePaths, "sources/web/runner-product-page.md") ||
+		plan.CandidateSynthesisPath != "synthesis/runner-product-page.md" ||
+		!strings.Contains(plan.ValidationBoundaries, "no fetch") {
+		t.Fatalf("placement plan = %+v", plan)
+	}
+	list, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{PathPrefix: "sources/", Limit: 10},
+	})
+	if err != nil {
+		t.Fatalf("list sources after plan: %v", err)
+	}
+	if len(list.Documents) != 0 {
+		t.Fatalf("plan mode wrote source documents: %+v", list.Documents)
+	}
+}
+
+func TestDocumentTaskIngestSourceURLPlanModeReportsExistingSource(t *testing.T) {
+	fixtureRoot := t.TempDir()
+	fixturePath := filepath.Join(fixtureRoot, "web", "existing.html")
+	if err := os.MkdirAll(filepath.Dir(fixturePath), 0o755); err != nil {
+		t.Fatalf("mkdir web fixture: %v", err)
+	}
+	if err := os.WriteFile(fixturePath, []byte(`<!doctype html><html><head><title>Existing Source</title></head><body><h1>Existing Source</h1><p>Existing source evidence.</p></body></html>`), 0o644); err != nil {
+		t.Fatalf("write web fixture: %v", err)
+	}
+	t.Setenv("OPENCLERK_EVAL_SOURCE_FIXTURE_ROOT", fixtureRoot)
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	sourceURL := "http://openclerk-eval.local/web/existing.html"
+	created, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestSourceURL,
+		Source: runner.SourceURLInput{
+			URL:        sourceURL,
+			PathHint:   "sources/web/existing.md",
+			SourceType: "web",
+		},
+	})
+	if err != nil {
+		t.Fatalf("create web source: %v", err)
+	}
+	plan, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestSourceURL,
+		Source: runner.SourceURLInput{
+			URL:        sourceURL,
+			Mode:       "plan",
+			SourceType: "web",
+		},
+	})
+	if err != nil {
+		t.Fatalf("source placement duplicate plan: %v", err)
+	}
+	if plan.SourcePlacement == nil ||
+		plan.SourcePlacement.ExistingSource == nil ||
+		plan.SourcePlacement.ExistingSource.DocID != created.Ingestion.DocID ||
+		plan.SourcePlacement.DuplicateStatus != "existing_source_url_found_no_fetch_no_write" ||
+		plan.SourcePlacement.CandidateSynthesisPath != "" ||
+		!strings.Contains(plan.SourcePlacement.AgentHandoff.AnswerSummary, "no fetch or write occurred") {
+		t.Fatalf("duplicate placement plan = %+v", plan.SourcePlacement)
+	}
+}
+
 func TestDocumentTaskCompileSynthesisAssemblesPlainBodyAndAliases(t *testing.T) {
 	t.Parallel()
 

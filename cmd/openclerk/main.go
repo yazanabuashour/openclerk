@@ -205,7 +205,7 @@ func usage(stderr io.Writer) {
 	_, _ = fmt.Fprintln(stderr, "       openclerk document --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk retrieval --help")
 	_, _ = fmt.Fprintln(stderr, "document/retrieval read strict JSON from stdin and use configured paths by default; pass --db only for an explicit dataset.")
-	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, source_audit_report, evidence_bundle_report")
+	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, ingest_source_url plan, source_audit_report, evidence_bundle_report, duplicate_candidate_report")
 }
 
 func documentUsage(w io.Writer) {
@@ -218,6 +218,7 @@ func documentUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, `  ingest_source_url PDF create: {"action":"ingest_source_url","source":{"url":"https://example.test/source.pdf","path_hint":"sources/example.md","asset_path_hint":"assets/sources/example.pdf","title":"Optional title"}}`)
 	_, _ = fmt.Fprintln(w, `  ingest_source_url web create: {"action":"ingest_source_url","source":{"url":"https://example.test/page.html","path_hint":"sources/web/example.md","source_type":"web","title":"Optional title"}}`)
 	_, _ = fmt.Fprintln(w, `  ingest_source_url update: {"action":"ingest_source_url","source":{"url":"https://example.test/page.html","mode":"update","source_type":"web"}}`)
+	_, _ = fmt.Fprintln(w, `  ingest_source_url placement plan: {"action":"ingest_source_url","source":{"url":"https://example.test/page.html","mode":"plan","source_type":"web","title":"Optional title"}}`)
 	_, _ = fmt.Fprintln(w, `  ingest_video_url create: {"action":"ingest_video_url","video":{"url":"https://youtube.example.test/watch?v=demo","path_hint":"sources/video-youtube/demo.md","transcript":{"text":"Supplied transcript text.","policy":"supplied","origin":"user_supplied_transcript"}}}`)
 	_, _ = fmt.Fprintln(w, `  ingest_video_url update: {"action":"ingest_video_url","video":{"url":"https://youtube.example.test/watch?v=demo","mode":"update","transcript":{"text":"Updated supplied transcript text.","policy":"supplied","origin":"user_supplied_transcript"}}}`)
 	_, _ = fmt.Fprintln(w, `  list/get/edit: {"action":"list_documents","list":{"path_prefix":"notes/","limit":20}} | {"action":"get_document","doc_id":"doc_id_from_json"} | {"action":"replace_section","doc_id":"doc_id_from_json","heading":"Summary","content":"Updated summary."}`)
@@ -238,4 +239,6 @@ func retrievalUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  Default mode is explain; repair_existing may update only an existing synthesis target.")
 	_, _ = fmt.Fprintln(w, `  evidence_bundle_report: {"action":"evidence_bundle_report","evidence_bundle":{"query":"...","entity_id":"...","decision_id":"...","ref_kind":"document","ref_id":"...","projection":"records","limit":10}}`)
 	_, _ = fmt.Fprintln(w, "  Read-only. Returns evidence_bundle.agent_handoff with citations, provenance, projection freshness, validation boundaries, and authority limits.")
+	_, _ = fmt.Fprintln(w, `  duplicate_candidate_report: {"action":"duplicate_candidate_report","duplicate_candidate":{"query":"renewal packaging notes","path_prefix":"notes/","limit":10}}`)
+	_, _ = fmt.Fprintln(w, "  Read-only. Returns duplicate_candidate.agent_handoff with likely target, evidence inspected, no-write status, and approval boundary.")
 }
