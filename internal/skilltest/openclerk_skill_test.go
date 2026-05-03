@@ -78,7 +78,6 @@ func TestOpenClerkSkillUsesInstalledRunnerForRoutineWork(t *testing.T) {
 		"Agent",
 		"Skills-compatible",
 		"Do not inspect source files",
-		"one no-tools assistant answer",
 		"synthesis/",
 		"source_refs",
 		"## Sources",
@@ -86,6 +85,10 @@ func TestOpenClerkSkillUsesInstalledRunnerForRoutineWork(t *testing.T) {
 		"provenance_events",
 		"projection_states",
 		"audit_contradictions",
+		"compile_synthesis",
+		"source_audit_report",
+		"evidence_bundle_report",
+		"memory_router_recall_report",
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("SKILL.md missing %q", want)
@@ -125,6 +128,35 @@ func TestOpenClerkSkillUsesInstalledRunnerForRoutineWork(t *testing.T) {
 	}
 }
 
+func TestOpenClerkSkillStaysWithinThinRouterBudget(t *testing.T) {
+	t.Parallel()
+
+	content, err := os.ReadFile(openClerkSkillPath(t))
+	if err != nil {
+		t.Fatalf("read skill: %v", err)
+	}
+
+	lines := strings.Split(strings.TrimRight(string(content), "\n"), "\n")
+	if len(lines) > 250 {
+		t.Fatalf("SKILL.md line count = %d, want <= 250", len(lines))
+	}
+
+	text := strings.Join(strings.Fields(string(content)), " ")
+	for _, want := range []string{
+		"activation, routing, and safety contract",
+		"not the durable home for long workflow recipes",
+		"use agent autonomy with runner JSON results",
+		"workflow-action comparison",
+		"openclerk document --help",
+		"openclerk retrieval --help",
+		"Detailed versions of these workflows belong in runner actions",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("SKILL.md missing thin-router contract %q", want)
+		}
+	}
+}
+
 func TestOpenClerkSkillDescriptionContainsBootstrapNoToolsGuard(t *testing.T) {
 	t.Parallel()
 
@@ -140,343 +172,31 @@ func TestOpenClerkSkillDescriptionContainsBootstrapNoToolsGuard(t *testing.T) {
 		"Bootstrap no-tools rule",
 		"required fields are missing",
 		"document path, title, or body is missing",
-		"name the missing fields",
-		"ask the user to provide them",
+		"explicit user content for a faithful candidate, duplicate-risk check, or public-link placement proposal",
+		"numeric limit is negative",
+		"bypass the runner",
+		"SQLite",
+		"raw vault/file/repo inspection",
+		"HTTP/MCP",
+		"legacy/source-built paths",
+		"unsupported transports",
+		"backend variants",
+		"module-cache inspection",
+		"rg",
+		"find",
+		"ls",
+		"OCR",
+		"browser automation",
+		"local file reads",
+		"opaque artifact parsing",
+		"this description is complete",
+		"For those invalid cases only",
+		"With explicit user content, validate a faithful candidate through the runner but do not write before approval",
 		"Do not open this skill file",
 		"run commands",
 		"use tools",
 		"call the runner",
-		"limit -3",
-		"bypass the runner",
-		"SQLite",
-		"HTTP",
-		"MCP",
-		"legacy or source-built paths",
-		"unsupported transports",
-		"backend variants",
-		"module-cache inspection",
-		"rg --files",
-		"find",
-		"ls",
-		"opaque image/screenshot",
-		"slide deck/PPTX",
-		"email archive",
-		"exported chat",
-		"form",
-		"bundle",
-		"pasted/supplied content",
-		"OCR",
-		"PPTX parsing",
-		"email/chat/form/bundle parsing",
-		"local file reads",
-		"browser automation",
-		"this description is complete",
-		"respond with exactly one no-tools assistant answer",
-		"openclerk document",
-		"openclerk retrieval",
-		"direct vault inspection",
-		"repo search",
-	} {
-		if !strings.Contains(description, want) {
-			t.Fatalf("SKILL.md description missing %q: %s", want, description)
-		}
-	}
-}
-
-func TestOpenClerkSkillGuidesUnsupportedArtifactIntake(t *testing.T) {
-	t.Parallel()
-
-	content, err := os.ReadFile(openClerkSkillPath(t))
-	if err != nil {
-		t.Fatalf("read skill: %v", err)
-	}
-	text := string(content)
-	noToolsSection := markdownSection(text, "## No-Tools Handling Before Runners", "## Propose-Before-Create Candidate Documents")
-	if noToolsSection == "" {
-		t.Fatal("missing no-tools section")
-	}
-	proposalSection := markdownSection(text, "## Propose-Before-Create Candidate Documents", "## Document Tasks")
-	if proposalSection == "" {
-		t.Fatal("missing propose-before-create section")
-	}
-	combined := strings.Join(strings.Fields(noToolsSection+" "+proposalSection), " ")
-	for _, want := range []string{
-		"Unsupported opaque artifact rules",
-		"Opaque images or screenshots, slide decks or PPTX files, email archives, exported chats, forms, and mixed bundles",
-		"unsupported when the user has not pasted or explicitly supplied preservable text/body content",
-		"use one no-tools answer",
-		"ask for pasted or explicitly supplied content",
-		"approve a candidate-document workflow only when a faithful candidate can be formed from supplied content",
-		"Public read or inspect permission is not durable-write approval",
-		"durable writes gated on explicit approval",
-		"Do not claim parser truth, OCR results, hidden file inspection, attachment contents, or bundle contents",
-		"Parser and acquisition bypass rules",
-		"Reject requests to use OCR, PPTX parsing, email import or parsing, chat/form/bundle parsing or extraction, local file reads, browser automation, direct vault inspection, direct SQLite, HTTP/MCP bypasses, source-built runners",
-		"final-answer-only: no tools, no commands, no runner call",
-		"Opaque artifact references are not explicit supplied content",
-		"Do not propose a candidate from a screenshot, slide deck, PPTX, email archive, exported chat file, form, or bundle unless the user pasted or explicitly supplied the text to preserve",
-		"run `validate`, show `Path:`, `Title:`, and `Body preview:`",
-		"ask for approval before any durable write",
-	} {
-		if !strings.Contains(combined, want) {
-			t.Fatalf("unsupported artifact guidance missing %q", want)
-		}
-	}
-	for _, forbidden := range []string{
-		"schema change",
-		"public API",
-		"storage migration",
-		"direct-create shortcut",
-	} {
-		if strings.Contains(strings.ToLower(combined), forbidden) {
-			t.Fatalf("unsupported artifact guidance contains promotion language %q", forbidden)
-		}
-	}
-}
-
-func TestOpenClerkSkillRejectsPollutedPopulatedVaultEvidence(t *testing.T) {
-	t.Parallel()
-
-	content, err := os.ReadFile(openClerkSkillPath(t))
-	if err != nil {
-		t.Fatalf("read skill: %v", err)
-	}
-	text := string(content)
-	normalized := strings.Join(strings.Fields(text), " ")
-	for _, want := range []string{
-		"messy populated-vault retrieval",
-		"Metadata-filtered authority results",
-		"stale, draft, archived, duplicate, or candidate",
-		"explicitly reject that hit as not authority",
-		"do not repeat its false claim text as a valid answer",
-	} {
-		if !strings.Contains(normalized, want) {
-			t.Fatalf("SKILL.md missing polluted-evidence guidance %q", want)
-		}
-	}
-	for _, want := range []string{"`status: polluted`", "`populated_role: decoy`"} {
-		if !strings.Contains(text, want) {
-			t.Fatalf("SKILL.md missing polluted-evidence guidance %q", want)
-		}
-	}
-	if !strings.Contains(normalized, "active canonical sources") {
-		t.Fatal("SKILL.md missing polluted-evidence guidance for active canonical sources")
-	}
-}
-
-func TestOpenClerkSkillGuidesDuplicateCandidateClarification(t *testing.T) {
-	t.Parallel()
-
-	content, err := os.ReadFile(openClerkSkillPath(t))
-	if err != nil {
-		t.Fatalf("read skill: %v", err)
-	}
-	text := string(content)
-	proposalSection := markdownSection(text, "## Propose-Before-Create Candidate Documents", "## Document Tasks")
-	if proposalSection == "" {
-		t.Fatal("missing propose-before-create section")
-	}
-	normalized := strings.Join(strings.Fields(proposalSection), " ")
-	for _, want := range []string{
-		"duplicate risk is requested or plausible",
-		"valid runner-backed capture work",
-		"retrieval `search`",
-		"document `list_documents`",
-		"include that `path_prefix` in the retrieval search",
-		"use the same prefix for `list_documents`",
-		"`get_document`",
-		"likely target path and title",
-		"search/list/get evidence",
-		"no document was created or updated",
-		"update the existing target or create a new document at a confirmed path",
-		"Do not call `validate`, `create_document`, `append_document`, or `replace_section`",
-		"update-versus-new-path intent is unresolved",
-	} {
-		if !strings.Contains(normalized, want) {
-			t.Fatalf("propose-before-create guidance missing %q", want)
-		}
-	}
-	for _, forbidden := range []string{
-		"new runner action",
-		"runner action",
-		"schema",
-		"public API",
-		"storage migration",
-		"direct-create shortcut",
-	} {
-		if strings.Contains(strings.ToLower(proposalSection), forbidden) {
-			t.Fatalf("duplicate-candidate guidance contains promotion language %q", forbidden)
-		}
-	}
-}
-
-func TestOpenClerkSkillGuidesSaveThisNotePolicy(t *testing.T) {
-	t.Parallel()
-
-	content, err := os.ReadFile(openClerkSkillPath(t))
-	if err != nil {
-		t.Fatalf("read skill: %v", err)
-	}
-	text := string(content)
-	proposalSection := markdownSection(text, "## Propose-Before-Create Candidate Documents", "## Document Tasks")
-	if proposalSection == "" {
-		t.Fatal("missing propose-before-create section")
-	}
-	normalized := strings.Join(strings.Fields(proposalSection), " ")
-	for _, want := range []string{
-		`"save this note" requests with explicit note content but no path or title`,
-		"derive a faithful note candidate from the supplied content",
-		"validate it",
-		"show the candidate",
-		"state that no document was created",
-		"ask for approval before creating anything",
-		"bare prior-context requests",
-		"save this note from what we discussed last week",
-		"use the no-tools rule",
-		"ask for the actual note content plus any path, title, or placement preferences",
-		"do not invent a path, title, or body",
-		"notes/candidates/<slug-from-title>.md",
-		"Final answers for proposals show `Path:`, `Title:`, and `Body preview:`",
-	} {
-		if !strings.Contains(normalized, want) {
-			t.Fatalf("save-this-note guidance missing %q", want)
-		}
-	}
-	for _, forbidden := range []string{
-		"runner action",
-		"schema",
-		"public API",
-		"storage migration",
-		"direct-create shortcut",
-	} {
-		if strings.Contains(strings.ToLower(proposalSection), forbidden) {
-			t.Fatalf("save-this-note guidance contains promotion language %q", forbidden)
-		}
-	}
-}
-
-func TestOpenClerkSkillGuidesLowRiskCapturePolicy(t *testing.T) {
-	t.Parallel()
-
-	content, err := os.ReadFile(openClerkSkillPath(t))
-	if err != nil {
-		t.Fatalf("read skill: %v", err)
-	}
-	text := string(content)
-	proposalSection := markdownSection(text, "## Propose-Before-Create Candidate Documents", "## Document Tasks")
-	if proposalSection == "" {
-		t.Fatal("missing propose-before-create section")
-	}
-	normalized := strings.Join(strings.Fields(proposalSection), " ")
-	for _, want := range []string{
-		"routine low-risk note capture",
-		`"save this low-risk note"`,
-		"explicit note body but no path or title",
-		"valid runner-backed propose-before-create work",
-		"Derive the path and title from the supplied content",
-		"notes/candidates/<slug-from-title>.md",
-		"Validate the candidate",
-		"answer with `Path:`, `Title:`, and `Body preview:`",
-		"validation result",
-		"no-write statement",
-		"approval request",
-		"Do not answer with only validation status",
-		"the candidate path, title, and body preview must be visible",
-		"workflow is incomplete even when validation passed",
-		"low-risk duplicate checks",
-		"do not treat the missing update-versus-new choice as a no-tools missing-field rejection",
-		"use retrieval `search`, document `list_documents`, and `get_document`",
-		"report the likely target path and title",
-		"no document was created or updated",
-		"update the existing target or create a new document at a confirmed path",
-	} {
-		if !strings.Contains(normalized, want) {
-			t.Fatalf("low-risk capture guidance missing %q", want)
-		}
-	}
-	for _, forbidden := range []string{
-		"runner action",
-		"schema",
-		"public API",
-		"storage migration",
-		"direct-create shortcut",
-	} {
-		if strings.Contains(strings.ToLower(proposalSection), forbidden) {
-			t.Fatalf("low-risk capture guidance contains promotion language %q", forbidden)
-		}
-	}
-}
-
-func TestOpenClerkSkillGuidesDocumentTheseLinksPolicy(t *testing.T) {
-	t.Parallel()
-
-	content, err := os.ReadFile(openClerkSkillPath(t))
-	if err != nil {
-		t.Fatalf("read skill: %v", err)
-	}
-	text := string(content)
-	proposalSection := markdownSection(text, "## Propose-Before-Create Candidate Documents", "## Document Tasks")
-	if proposalSection == "" {
-		t.Fatal("missing propose-before-create section")
-	}
-	normalized := strings.Join(strings.Fields(proposalSection), " ")
-	for _, want := range []string{
-		`"document these links" requests`,
-		"explicit public web URLs",
-		"missing `source.path_hint` values or synthesis placement",
-		"valid placement-proposal work",
-		"Do not fetch, validate, create, append, or replace",
-		"`sources/candidates/<slug-from-label-or-url>.md`",
-		"`synthesis/<shared-topic-or-url-set>.md`",
-		"no source or synthesis document was created",
-		"approval before any durable source fetch or synthesis write",
-		"`ingest_source_url` with `source_type: \"web\"`",
-		"approved `source.path_hint`",
-		"citation evidence",
-		"PDF and other artifact URLs still require the existing source and asset path hints",
-		"Validate a source-linked synthesis candidate",
-		"single-line `source_refs`",
-		"`## Sources`",
-		"`## Freshness`",
-		"document-these-links duplicate checks",
-		"use retrieval `search`, document `list_documents`, and `get_document`",
-		"existing source or synthesis paths",
-		"search/list/get evidence",
-		"update the existing placement or create new confirmed paths",
-		"Do not call `validate`, `ingest_source_url`, `create_document`, `append_document`, or `replace_section`",
-		"update-versus-new placement is unresolved",
-	} {
-		if !strings.Contains(normalized, want) {
-			t.Fatalf("document-these-links guidance missing %q", want)
-		}
-	}
-	for _, forbidden := range []string{
-		"runner action",
-		"schema",
-		"public API",
-		"storage migration",
-		"direct-create shortcut",
-		"hidden autofiling",
-	} {
-		if strings.Contains(strings.ToLower(proposalSection), forbidden) {
-			t.Fatalf("document-these-links guidance contains promotion language %q", forbidden)
-		}
-	}
-}
-
-func TestOpenClerkSkillDescriptionDoesNotSuppressDuplicateRiskChecks(t *testing.T) {
-	t.Parallel()
-
-	content, err := os.ReadFile(openClerkSkillPath(t))
-	if err != nil {
-		t.Fatalf("read skill: %v", err)
-	}
-	description := frontmatterDescription(string(content))
-	for _, want := range []string{
-		"faithful propose-before-create candidate, duplicate-risk check",
-		"public-link placement proposal",
-		"explicit user content",
-		"this description is complete",
+		"respond with exactly one no-tools assistant answer naming the missing/invalid fields or unsupported workflow",
 		"openclerk document",
 		"openclerk retrieval",
 	} {
@@ -486,6 +206,79 @@ func TestOpenClerkSkillDescriptionDoesNotSuppressDuplicateRiskChecks(t *testing.
 	}
 	if len([]rune(description)) > 1024 {
 		t.Fatalf("description length = %d, want <= 1024", len([]rune(description)))
+	}
+}
+
+func TestOpenClerkSkillKeepsWorkflowPoliciesCompact(t *testing.T) {
+	t.Parallel()
+
+	content, err := os.ReadFile(openClerkSkillPath(t))
+	if err != nil {
+		t.Fatalf("read skill: %v", err)
+	}
+	text := string(content)
+	policySection := markdownSection(text, "## Workflow Policies", "## Document Tasks")
+	if policySection == "" {
+		t.Fatal("missing workflow policies section")
+	}
+	normalized := strings.Join(strings.Fields(policySection), " ")
+	for _, want := range []string{
+		"Candidate documents",
+		"preserve explicit user path/title/body/type/naming instructions",
+		"validate with `openclerk document` before presenting a candidate",
+		"`notes/candidates/<slug-from-title>.md`",
+		"concise singular noun phrase",
+		"Include `type: note` frontmatter",
+		"`# <Title>` heading",
+		"`Path:`, `Title:`, and `Body preview:`",
+		"Duplicate checks",
+		"duplicate risk is requested or plausible",
+		"runner-visible evidence",
+		"no document was created or updated",
+		"update the existing target or create a confirmed new path",
+		"Public URL/source intake",
+		"`ingest_source_url`",
+		"Do not fetch URLs with browser, HTTP, filesystem, or other non-runner tools",
+		"Document lifecycle review, rollback, restore, and semantic diff",
+		"There is no public history, raw diff, review, restore, rollback, or lifecycle action",
+		"Before lifecycle repair, list the likely target collection, get the target document, then inspect provenance and projection freshness after any write",
+		"Messy populated-vault retrieval",
+		"metadata-filtered authority results",
+		"polluted, decoy, stale, draft, archived, duplicate, or candidate documents as non-authority",
+		"Synthesis maintenance",
+		"prefer `compile_synthesis`",
+		"Detailed versions of these workflows belong in runner actions, compact runner help, maintainer/eval docs, or follow-up candidate-surface comparisons",
+	} {
+		if !strings.Contains(normalized, want) {
+			t.Fatalf("workflow policy missing %q", want)
+		}
+	}
+}
+
+func TestOpenClerkSkillRejectsRecipeCreep(t *testing.T) {
+	t.Parallel()
+
+	content, err := os.ReadFile(openClerkSkillPath(t))
+	if err != nil {
+		t.Fatalf("read skill: %v", err)
+	}
+	text := string(content)
+	for _, forbidden := range []string{
+		"## Propose-Before-Create Candidate Documents",
+		"## Lifecycle Quick Rules",
+		"Unsupported opaque artifact rules",
+		"Parser and acquisition bypass rules",
+		"sources/candidates/<slug-from-label-or-url>.md",
+		"synthesis/<shared-topic-or-url-set>.md",
+		"save this note from what we discussed last week",
+		"Do not answer with only validation status",
+		"workflow is incomplete even when validation passed",
+		"Do not call `validate`, `create_document`, `append_document`, or `replace_section` while duplicate",
+		"Common request shapes:",
+	} {
+		if strings.Contains(text, forbidden) {
+			t.Fatalf("SKILL.md contains recipe creep %q", forbidden)
+		}
 	}
 }
 

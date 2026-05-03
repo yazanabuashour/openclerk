@@ -39,7 +39,17 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 		{
 			name: "document",
 			args: []string{"document", "--help"},
-			want: []string{"compile_synthesis", "body_facts", "agent_handoff", "mode defaults to create_or_update"},
+			want: []string{
+				"Primitive request shapes:",
+				"ingest_source_url",
+				"asset_path_hint",
+				"ingest_video_url",
+				"transcript",
+				"compile_synthesis",
+				"body_facts",
+				"agent_handoff",
+				"mode defaults to create_or_update",
+			},
 		},
 		{
 			name: "retrieval",

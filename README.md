@@ -68,6 +68,20 @@ operations through structured JSON. This keeps product rules close to the
 agent, avoids broad repo search and lower-level runtime bypasses, and leaves
 storage local instead of requiring a hosted service.
 
+## Agent Skill Budget
+
+`skills/openclerk/SKILL.md` is intentionally a thin activation, routing, and
+safety contract. It should tell agents when to use `openclerk document` and
+`openclerk retrieval`, define hard no-tools and bypass boundaries, and point
+routine work at runner-owned JSON surfaces.
+
+Long `SKILL.md` recipes are taste debt. If routine success depends on exact
+JSON, command ordering, or workflow-specific prompt choreography, that evidence
+should drive a candidate-surface comparison: keep primitives with a smaller
+skill, extend an existing runner action, or add a narrow workflow action with
+`agent_handoff`. Agents are expected to use their own autonomy with runner
+help, JSON results, and runner rejections once the safe surface is clear.
+
 ## Runner Interface
 
 The skill sends structured JSON on stdin and reads structured JSON from stdout

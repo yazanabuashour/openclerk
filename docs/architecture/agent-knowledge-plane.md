@@ -10,6 +10,15 @@ and retrieval work. They do not inspect implementation files, backend variants,
 HTTP server internals, source-built command paths, module caches, or SQLite to
 operate the knowledge plane.
 
+The skill is deliberately not the product workflow engine. It activates the
+right surface, names hard safety and no-tools boundaries, and points the caller
+at `openclerk document` and `openclerk retrieval`. Routine behavior that needs
+step ordering, exact JSON recipes, or repeated prompt choreography belongs in
+runner help, an existing runner action, a new narrow workflow action, or
+maintainer/eval documentation. A normal agent caller is expected to use its own
+autonomy with runner JSON results and rejections once those boundaries are
+clear.
+
 It is also positioned as infrastructure for persistent agent-maintained knowledge: useful synthesis should become cited, inspectable markdown instead of being rediscovered from scratch on every query.
 
 The product model is:
@@ -32,7 +41,8 @@ The product model is:
 The public product surface is:
 
 - the installed `openclerk` runner for production agent workflows
-- the Agent Skills-compatible `skills/openclerk/SKILL.md` guidance
+- the Agent Skills-compatible `skills/openclerk/SKILL.md` guidance as a thin
+  activation, routing, and safety contract
 
 The public runner contract is organized by capability, not implementation
 variant:
@@ -48,6 +58,19 @@ primitives are repeatedly too slow, too many steps, too scripted, or too
 guidance-dependent for routine use. Either path must preserve canonical
 markdown authority, citations, provenance, projection freshness, local-first
 storage, and no-bypass operation.
+
+Current recipe-heavy workflows should be treated as candidate-surface
+comparison backlog instead of permanent skill prose:
+
+- propose-before-create, save-this-note, and low-risk capture: `oc-phvu`
+- duplicate candidate update versus new document: `oc-ond7`
+- document-these-links placement: `oc-80l1`
+- document lifecycle review and rollback: `oc-sow6`
+- populated-vault polluted or decoy evidence handling: `oc-z55m`
+
+For each lane, compare existing primitives plus caller autonomy, extending a
+natural existing runner action, and adding one narrow workflow action with
+`agent_handoff`; then promote, defer, kill, or record `none viable yet`.
 
 ## Canonical and derived layers
 

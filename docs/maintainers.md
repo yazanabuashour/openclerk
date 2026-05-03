@@ -7,6 +7,14 @@ tracking. Recurring security operations are tracked in
 Keep public docs honest about the supported surface: the installed `openclerk`
 runner plus `skills/openclerk/SKILL.md`.
 
+Keep `skills/openclerk/SKILL.md` thin. Any substantial skill growth must first
+answer: can this move to an existing runner action, a new narrow workflow
+action, compact runner help, or eval/maintainer docs? If not, the PR must name
+the temporary safety gap, explain why caller autonomy plus runner JSON
+results/rejections is insufficient, and link a follow-up Bead to remove or
+replace the skill text later. Do not repair routine workflow-action UX by
+adding durable `SKILL.md` recipes.
+
 ## Initial Setup
 
 Preferred tool install:
