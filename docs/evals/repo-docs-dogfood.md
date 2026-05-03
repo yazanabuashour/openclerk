@@ -16,7 +16,7 @@ Run the lane with:
 
 ```bash
 mise exec -- go run ./scripts/agent-eval/ockp run \
-  --parallel 1 \
+  --parallel 4 \
   --scenario repo-docs-agentops-retrieval,repo-docs-synthesis-maintenance,repo-docs-decision-records,repo-docs-release-readiness,repo-docs-tag-filter,repo-docs-memory-router-recall-report,repo-docs-release-synthesis-freshness \
   --report-name ockp-repo-docs-dogfood
 ```

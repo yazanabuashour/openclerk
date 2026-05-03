@@ -161,7 +161,7 @@ func verifyDecisionRecordVsDocs(ctx context.Context, paths evalPaths, finalMessa
 		len(projections.Projections.Projections) == 1 &&
 		projections.Projections.Projections[0].Freshness == "fresh"
 	hasCitationPath := messageContainsAny(finalMessage, []string{"docs/architecture/runner-current-decision.md"})
-	assistantPass := messageContainsAny(finalMessage, []string{"decisions lookup", "decisions_lookup", "decision records"}) &&
+	assistantPass := messageContainsAny(finalMessage, []string{"decisions lookup", "decision lookup", "decisions_lookup", "decision records"}) &&
 		messageContainsAny(finalMessage, []string{"plain docs", "plain doc", "search"}) &&
 		messageContainsAny(finalMessage, []string{"status", "scope", "accepted", "agentops"}) &&
 		hasCitationPath

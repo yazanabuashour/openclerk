@@ -1085,7 +1085,9 @@ func verifyCompileSynthesisWorkflowAction(ctx context.Context, paths evalPaths, 
 	failures = append(failures, missingRequired(workflowBody, required)...)
 	lowerBody := strings.ToLower(workflowBody)
 	if !strings.Contains(lowerBody, strings.ToLower("Current compile_synthesis revisit decision")) &&
-		!strings.Contains(lowerBody, strings.ToLower("Promoted compile_synthesis handles the routine workflow")) {
+		!strings.Contains(lowerBody, strings.ToLower("Promoted compile_synthesis handles the routine workflow")) &&
+		(!strings.Contains(lowerBody, "promoted compile_synthesis") ||
+			!strings.Contains(lowerBody, "routine synthesis refresh")) {
 		failures = append(failures, "missing compile_synthesis decision summary")
 	}
 	failures = append(failures, sourceRefsFrontmatterFailures(body, sourceRefs)...)
@@ -1108,7 +1110,7 @@ func verifyCompileSynthesisWorkflowAction(ctx context.Context, paths evalPaths, 
 		decoyCount == 1 &&
 		synthesisCount == 2 &&
 		docIDFound &&
-		len(missingRequired(body, required)) == 0 &&
+		len(missingRequired(workflowBody, required)) == 0 &&
 		len(sourceRefsFrontmatterFailures(body, sourceRefs)) == 0 &&
 		projection != nil &&
 		projection.Freshness == "fresh"

@@ -1,23 +1,22 @@
 {
   "metadata": {
-    "generated_at": "2026-05-03T05:03:42.679621Z",
+    "generated_at": "2026-05-03T23:05:23.671094Z",
     "model": "gpt-5.4-mini",
     "reasoning_effort": "medium",
     "harness": "codex exec --json --full-auto from throwaway run directories; single-turn scenarios use --ephemeral and multi-turn scenarios resume one persisted eval session",
-    "configured_parallelism": 1,
+    "configured_parallelism": 4,
     "cache_mode": "shared",
-    "cache_prewarm_seconds": 15.93,
-    "harness_elapsed_seconds": 205.62,
-    "effective_parallel_speedup": 0.65,
-    "parallel_efficiency": 0.65,
+    "cache_prewarm_seconds": 44.24,
+    "harness_elapsed_seconds": 109.38,
+    "effective_parallel_speedup": 1.14,
+    "parallel_efficiency": 0.28,
     "phase_totals": {
-      "copy_repo_seconds": 0.31,
-      "install_variant_seconds": 19.1,
-      "seed_data_seconds": 36.08,
-      "agent_run_seconds": 134.09,
-      "parse_metrics_seconds": 0.02,
+      "copy_repo_seconds": 0.44,
+      "install_variant_seconds": 31.38,
+      "seed_data_seconds": 59.34,
+      "agent_run_seconds": 124.92,
       "verify_seconds": 0.09,
-      "total_seconds": 189.68
+      "total_seconds": 216.2
     },
     "run_root_artifact_reference": "\u003crun-root\u003e",
     "raw_log_placeholder": "\u003crun-root\u003e/\u003cvariant\u003e/\u003cscenario\u003e/turn-N/events.jsonl",
@@ -47,19 +46,19 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 21.06,
+      "wall_seconds": 20.19,
       "phase_timings": {
-        "copy_repo_seconds": 0.07,
-        "install_variant_seconds": 2.7,
-        "seed_data_seconds": 5.17,
-        "agent_run_seconds": 21.06,
+        "copy_repo_seconds": 0.08,
+        "install_variant_seconds": 5.44,
+        "seed_data_seconds": 10.21,
+        "agent_run_seconds": 20.19,
         "verify_seconds": 0.01,
-        "total_seconds": 29
+        "total_seconds": 35.94
       },
       "metrics": {
-        "assistant_calls": 3,
-        "tool_calls": 8,
-        "command_executions": 8,
+        "assistant_calls": 4,
+        "tool_calls": 3,
+        "command_executions": 3,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -73,12 +72,6 @@
         "search_unfiltered_used": false,
         "search_path_filter_used": true,
         "search_path_prefixes": [
-          "docs/architecture/",
-          "docs/architecture/",
-          "docs/architecture/",
-          "docs/architecture/",
-          "docs/architecture/eval-backed-knowledge-plane-adr.md",
-          "docs/architecture/eval-backed-knowledge-plane-adr.md",
           "docs/architecture/",
           "docs/architecture/"
         ],
@@ -101,12 +94,6 @@
         "get_document_used": false,
         "document_action_events": [
           "search",
-          "search",
-          "search",
-          "search",
-          "search",
-          "search",
-          "search",
           "search"
         ],
         "inspect_layout_used": false,
@@ -120,14 +107,18 @@
         "projection_states_used": false,
         "audit_contradictions_used": false,
         "memory_router_recall_report_used": false,
+        "compile_synthesis_used": false,
+        "source_audit_report_used": false,
+        "evidence_bundle_report_used": false,
+        "pre_action_primitive_command_count": 2,
         "usage_exposed": true,
-        "input_tokens": 74243,
-        "cached_input_tokens": 65408,
-        "non_cached_input_tokens": 8835,
-        "output_tokens": 2494,
+        "input_tokens": 64068,
+        "cached_input_tokens": 52736,
+        "non_cached_input_tokens": 11332,
+        "output_tokens": 1794,
         "event_type_counts": {
           "item.completed": 7,
-          "item.started": 4,
+          "item.started": 3,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -147,12 +138,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 21.06,
+          "wall_seconds": 20.19,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 3,
-            "tool_calls": 8,
-            "command_executions": 8,
+            "assistant_calls": 4,
+            "tool_calls": 3,
+            "command_executions": 3,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -166,12 +157,6 @@
             "search_unfiltered_used": false,
             "search_path_filter_used": true,
             "search_path_prefixes": [
-              "docs/architecture/",
-              "docs/architecture/",
-              "docs/architecture/",
-              "docs/architecture/",
-              "docs/architecture/eval-backed-knowledge-plane-adr.md",
-              "docs/architecture/eval-backed-knowledge-plane-adr.md",
               "docs/architecture/",
               "docs/architecture/"
             ],
@@ -194,12 +179,6 @@
             "get_document_used": false,
             "document_action_events": [
               "search",
-              "search",
-              "search",
-              "search",
-              "search",
-              "search",
-              "search",
               "search"
             ],
             "inspect_layout_used": false,
@@ -213,14 +192,18 @@
             "projection_states_used": false,
             "audit_contradictions_used": false,
             "memory_router_recall_report_used": false,
+            "compile_synthesis_used": false,
+            "source_audit_report_used": false,
+            "evidence_bundle_report_used": false,
+            "pre_action_primitive_command_count": 2,
             "usage_exposed": true,
-            "input_tokens": 74243,
-            "cached_input_tokens": 65408,
-            "non_cached_input_tokens": 8835,
-            "output_tokens": 2494,
+            "input_tokens": 64068,
+            "cached_input_tokens": 52736,
+            "non_cached_input_tokens": 11332,
+            "output_tokens": 1794,
             "event_type_counts": {
               "item.completed": 7,
-              "item.started": 4,
+              "item.started": 3,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -242,8 +225,8 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. The vault has been seeded from this repository's committed public markdown docs. This is a valid runner-backed retrieval task; do not answer final-answer-only. The openclerk binary is on PATH and the data path is already configured. Pipe the specified JSON directly to openclerk retrieval; skip setup discovery. Use only installed openclerk retrieval JSON results. Run retrieval search exactly as {\"action\":\"search\",\"search\":{\"text\":\"oc-rsj verified current AgentOps document retrieval runner actions\",\"path_prefix\":\"docs/architecture/\",\"limit\":10}}. Answer this question from the repo docs only: what is OpenClerk's current production agent surface? In the final answer, cite docs/architecture/eval-backed-knowledge-plane-adr.md and include citation evidence such as doc_id and chunk_id. Use repo-relative paths only.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/repo-docs-agentops-retrieval/turn-1/events.jsonl",
-      "started_at": "2026-05-03T05:00:32.986622Z",
-      "completed_at": "2026-05-03T05:01:01.989498Z"
+      "started_at": "2026-05-03T23:04:18.535856Z",
+      "completed_at": "2026-05-03T23:04:54.471637Z"
     },
     {
       "variant": "production",
@@ -252,19 +235,19 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 16.01,
+      "wall_seconds": 14.84,
       "phase_timings": {
-        "copy_repo_seconds": 0.04,
-        "install_variant_seconds": 2.23,
-        "seed_data_seconds": 5.12,
-        "agent_run_seconds": 16.01,
+        "copy_repo_seconds": 0.08,
+        "install_variant_seconds": 5.26,
+        "seed_data_seconds": 10.24,
+        "agent_run_seconds": 14.84,
         "verify_seconds": 0.01,
-        "total_seconds": 23.41
+        "total_seconds": 30.44
       },
       "metrics": {
         "assistant_calls": 4,
-        "tool_calls": 8,
-        "command_executions": 8,
+        "tool_calls": 4,
+        "command_executions": 4,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -278,7 +261,6 @@
         "search_unfiltered_used": false,
         "search_path_filter_used": true,
         "search_path_prefixes": [
-          "docs/evals/",
           "docs/evals/"
         ],
         "search_metadata_filter_used": false,
@@ -296,7 +278,6 @@
         "append_document_used": false,
         "list_documents_used": true,
         "list_document_path_prefixes": [
-          "synthesis/",
           "synthesis/"
         ],
         "list_metadata_filter_used": false,
@@ -304,10 +285,7 @@
         "get_document_used": false,
         "document_action_events": [
           "search",
-          "search",
           "list_documents:synthesis/",
-          "list_documents:synthesis/",
-          "create_document",
           "create_document"
         ],
         "inspect_layout_used": false,
@@ -321,11 +299,15 @@
         "projection_states_used": false,
         "audit_contradictions_used": false,
         "memory_router_recall_report_used": false,
+        "compile_synthesis_used": false,
+        "source_audit_report_used": false,
+        "evidence_bundle_report_used": false,
+        "pre_action_primitive_command_count": 3,
         "usage_exposed": true,
-        "input_tokens": 82099,
-        "cached_input_tokens": 71040,
-        "non_cached_input_tokens": 11059,
-        "output_tokens": 1308,
+        "input_tokens": 81874,
+        "cached_input_tokens": 66944,
+        "non_cached_input_tokens": 14930,
+        "output_tokens": 1449,
         "event_type_counts": {
           "item.completed": 8,
           "item.started": 4,
@@ -349,12 +331,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 16.01,
+          "wall_seconds": 14.84,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 4,
-            "tool_calls": 8,
-            "command_executions": 8,
+            "tool_calls": 4,
+            "command_executions": 4,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -368,7 +350,6 @@
             "search_unfiltered_used": false,
             "search_path_filter_used": true,
             "search_path_prefixes": [
-              "docs/evals/",
               "docs/evals/"
             ],
             "search_metadata_filter_used": false,
@@ -386,7 +367,6 @@
             "append_document_used": false,
             "list_documents_used": true,
             "list_document_path_prefixes": [
-              "synthesis/",
               "synthesis/"
             ],
             "list_metadata_filter_used": false,
@@ -394,10 +374,7 @@
             "get_document_used": false,
             "document_action_events": [
               "search",
-              "search",
               "list_documents:synthesis/",
-              "list_documents:synthesis/",
-              "create_document",
               "create_document"
             ],
             "inspect_layout_used": false,
@@ -411,11 +388,15 @@
             "projection_states_used": false,
             "audit_contradictions_used": false,
             "memory_router_recall_report_used": false,
+            "compile_synthesis_used": false,
+            "source_audit_report_used": false,
+            "evidence_bundle_report_used": false,
+            "pre_action_primitive_command_count": 3,
             "usage_exposed": true,
-            "input_tokens": 82099,
-            "cached_input_tokens": 71040,
-            "non_cached_input_tokens": 11059,
-            "output_tokens": 1308,
+            "input_tokens": 81874,
+            "cached_input_tokens": 66944,
+            "non_cached_input_tokens": 14930,
+            "output_tokens": 1449,
             "event_type_counts": {
               "item.completed": 8,
               "item.started": 4,
@@ -441,8 +422,8 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. This is a valid runner-backed synthesis creation task and the user explicitly approves creating exactly the document below; all required JSON request fields are provided. The vault has been seeded from this repository's committed public markdown docs. Do not answer final-answer-only. The openclerk binary is on PATH and the data path is already configured. Pipe the specified JSON directly to openclerk retrieval or openclerk document as named; skip setup discovery. Use only installed openclerk document and openclerk retrieval JSON results. First run retrieval search exactly as {\"action\":\"search\",\"search\":{\"text\":\"production AgentOps gate baseline scenarios runner JSON validation\",\"path_prefix\":\"docs/evals/\",\"limit\":10}}. Then run document list_documents exactly as {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\",\"limit\":20}}. Then run create_document exactly as {\"action\":\"create_document\",\"document\":{\"path\":\"synthesis/repo-docs-agentops-validation.md\",\"title\":\"Repo Docs AgentOps Validation\",\"body\":\"---\\ntype: synthesis\\nstatus: active\\nfreshness: fresh\\nsource_refs: docs/evals/agent-production.md, docs/evals/baseline-scenarios.md\\n---\\n# Repo Docs AgentOps Validation\\n\\n## Summary\\nRepo-docs dogfood decision: use the existing OpenClerk document and retrieval runner actions.\\nProduction gate source: docs/evals/agent-production.md\\nBaseline scenarios source: docs/evals/baseline-scenarios.md\\n\\n## Sources\\n- docs/evals/agent-production.md\\n- docs/evals/baseline-scenarios.md\\n\\n## Freshness\\nChecked with runner search and synthesis-candidate checks.\\n\"}}. Mention synthesis/repo-docs-agentops-validation.md in the final answer. Use repo-relative paths only.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/repo-docs-synthesis-maintenance/turn-1/events.jsonl",
-      "started_at": "2026-05-03T05:01:01.989992Z",
-      "completed_at": "2026-05-03T05:01:25.401652Z"
+      "started_at": "2026-05-03T23:04:18.535998Z",
+      "completed_at": "2026-05-03T23:04:48.978281Z"
     },
     {
       "variant": "production",
@@ -451,19 +432,19 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 24.48,
+      "wall_seconds": 21.74,
       "phase_timings": {
-        "copy_repo_seconds": 0.04,
-        "install_variant_seconds": 2.48,
-        "seed_data_seconds": 5.14,
-        "agent_run_seconds": 24.48,
+        "copy_repo_seconds": 0.07,
+        "install_variant_seconds": 4.37,
+        "seed_data_seconds": 9.77,
+        "agent_run_seconds": 21.74,
         "verify_seconds": 0.02,
-        "total_seconds": 32.16
+        "total_seconds": 35.97
       },
       "metrics": {
-        "assistant_calls": 5,
-        "tool_calls": 18,
-        "command_executions": 18,
+        "assistant_calls": 3,
+        "tool_calls": 7,
+        "command_executions": 7,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -477,9 +458,6 @@
         "search_unfiltered_used": false,
         "search_path_filter_used": true,
         "search_path_prefixes": [
-          "docs/architecture/",
-          "docs/architecture/",
-          "docs/architecture/",
           "docs/architecture/"
         ],
         "search_metadata_filter_used": false,
@@ -501,14 +479,8 @@
         "get_document_used": false,
         "document_action_events": [
           "search",
-          "search",
-          "search",
-          "search",
-          "projection_states:adr-knowledge-configuration-v1",
           "projection_states:adr-knowledge-configuration-v1",
           "projection_states:adr-agentops-only-knowledge-plane",
-          "projection_states:adr-agentops-only-knowledge-plane",
-          "provenance_events:decisions:adr-knowledge-configuration-v1",
           "provenance_events:decisions:adr-knowledge-configuration-v1"
         ],
         "inspect_layout_used": false,
@@ -519,25 +491,27 @@
         "decisions_lookup_used": true,
         "decision_record_used": true,
         "decision_record_ids": [
-          "adr-agentops-only-knowledge-plane",
           "adr-agentops-only-knowledge-plane"
         ],
         "provenance_events_used": true,
         "provenance_event_ref_ids": [
-          "decisions:adr-knowledge-configuration-v1",
           "decisions:adr-knowledge-configuration-v1"
         ],
         "projection_states_used": true,
         "audit_contradictions_used": false,
         "memory_router_recall_report_used": false,
+        "compile_synthesis_used": false,
+        "source_audit_report_used": false,
+        "evidence_bundle_report_used": false,
+        "pre_action_primitive_command_count": 6,
         "usage_exposed": true,
-        "input_tokens": 104215,
-        "cached_input_tokens": 94848,
-        "non_cached_input_tokens": 9367,
-        "output_tokens": 3058,
+        "input_tokens": 135836,
+        "cached_input_tokens": 126976,
+        "non_cached_input_tokens": 8860,
+        "output_tokens": 2236,
         "event_type_counts": {
-          "item.completed": 14,
-          "item.started": 9,
+          "item.completed": 10,
+          "item.started": 7,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -557,12 +531,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 24.48,
+          "wall_seconds": 21.74,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 5,
-            "tool_calls": 18,
-            "command_executions": 18,
+            "assistant_calls": 3,
+            "tool_calls": 7,
+            "command_executions": 7,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -576,9 +550,6 @@
             "search_unfiltered_used": false,
             "search_path_filter_used": true,
             "search_path_prefixes": [
-              "docs/architecture/",
-              "docs/architecture/",
-              "docs/architecture/",
               "docs/architecture/"
             ],
             "search_metadata_filter_used": false,
@@ -600,14 +571,8 @@
             "get_document_used": false,
             "document_action_events": [
               "search",
-              "search",
-              "search",
-              "search",
-              "projection_states:adr-knowledge-configuration-v1",
               "projection_states:adr-knowledge-configuration-v1",
               "projection_states:adr-agentops-only-knowledge-plane",
-              "projection_states:adr-agentops-only-knowledge-plane",
-              "provenance_events:decisions:adr-knowledge-configuration-v1",
               "provenance_events:decisions:adr-knowledge-configuration-v1"
             ],
             "inspect_layout_used": false,
@@ -618,25 +583,27 @@
             "decisions_lookup_used": true,
             "decision_record_used": true,
             "decision_record_ids": [
-              "adr-agentops-only-knowledge-plane",
               "adr-agentops-only-knowledge-plane"
             ],
             "provenance_events_used": true,
             "provenance_event_ref_ids": [
-              "decisions:adr-knowledge-configuration-v1",
               "decisions:adr-knowledge-configuration-v1"
             ],
             "projection_states_used": true,
             "audit_contradictions_used": false,
             "memory_router_recall_report_used": false,
+            "compile_synthesis_used": false,
+            "source_audit_report_used": false,
+            "evidence_bundle_report_used": false,
+            "pre_action_primitive_command_count": 6,
             "usage_exposed": true,
-            "input_tokens": 104215,
-            "cached_input_tokens": 94848,
-            "non_cached_input_tokens": 9367,
-            "output_tokens": 3058,
+            "input_tokens": 135836,
+            "cached_input_tokens": 126976,
+            "non_cached_input_tokens": 8860,
+            "output_tokens": 2236,
             "event_type_counts": {
-              "item.completed": 14,
-              "item.started": 9,
+              "item.completed": 10,
+              "item.started": 7,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -658,8 +625,8 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. This is a valid runner-backed decision-record evidence task; all required JSON request fields are provided below. The vault has been seeded from this repository's committed public markdown docs. Do not answer final-answer-only. The openclerk binary is on PATH and the data path is already configured. Pipe every request below directly to openclerk retrieval, not openclerk document; skip setup discovery. Use only installed openclerk retrieval JSON results. First run retrieval search exactly as {\"action\":\"search\",\"search\":{\"text\":\"Knowledge Configuration v1 accepted AgentOps surface\",\"path_prefix\":\"docs/architecture/\",\"limit\":10}}. Then run decisions_lookup exactly as {\"action\":\"decisions_lookup\",\"decisions\":{\"text\":\"knowledge configuration\",\"status\":\"accepted\",\"scope\":\"knowledge-configuration\",\"owner\":\"platform\",\"limit\":5}}. Then run decision_record exactly as {\"action\":\"decision_record\",\"decision_id\":\"adr-agentops-only-knowledge-plane\"}. Then run projection_states exactly as {\"action\":\"projection_states\",\"projection\":{\"projection\":\"decisions\",\"ref_kind\":\"decision\",\"ref_id\":\"adr-knowledge-configuration-v1\",\"limit\":5}} and {\"action\":\"projection_states\",\"projection\":{\"projection\":\"decisions\",\"ref_kind\":\"decision\",\"ref_id\":\"adr-agentops-only-knowledge-plane\",\"limit\":5}}. Then run provenance_events exactly as {\"action\":\"provenance_events\",\"provenance\":{\"ref_kind\":\"projection\",\"ref_id\":\"decisions:adr-knowledge-configuration-v1\",\"limit\":10}}. In the final answer, explain that canonical markdown ADRs remain authoritative while decision records are derived, report fresh projection/provenance evidence, and include citation paths docs/architecture/eval-backed-knowledge-plane-adr.md and docs/architecture/knowledge-configuration-v1-adr.md. Use repo-relative paths only.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/repo-docs-decision-records/turn-1/events.jsonl",
-      "started_at": "2026-05-03T05:01:25.402432Z",
-      "completed_at": "2026-05-03T05:01:57.562811Z"
+      "started_at": "2026-05-03T23:04:18.535997Z",
+      "completed_at": "2026-05-03T23:04:54.50783Z"
     },
     {
       "variant": "production",
@@ -668,20 +635,19 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 28.83,
+      "wall_seconds": 24.03,
       "phase_timings": {
-        "copy_repo_seconds": 0.04,
-        "install_variant_seconds": 2.4,
-        "seed_data_seconds": 5.16,
-        "agent_run_seconds": 28.83,
-        "parse_metrics_seconds": 0.02,
-        "verify_seconds": 0.02,
-        "total_seconds": 36.46
+        "copy_repo_seconds": 0.08,
+        "install_variant_seconds": 6.87,
+        "seed_data_seconds": 9.78,
+        "agent_run_seconds": 24.03,
+        "verify_seconds": 0.01,
+        "total_seconds": 40.77
       },
       "metrics": {
-        "assistant_calls": 6,
-        "tool_calls": 18,
-        "command_executions": 18,
+        "assistant_calls": 4,
+        "tool_calls": 6,
+        "command_executions": 6,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -695,7 +661,6 @@
         "search_unfiltered_used": false,
         "search_path_filter_used": true,
         "search_path_prefixes": [
-          "docs/",
           "docs/"
         ],
         "search_metadata_filter_used": false,
@@ -715,29 +680,19 @@
         "list_metadata_filter_used": false,
         "list_tag_filter_used": true,
         "list_tag_filters": [
-          "repo-release-docs",
           "repo-release-docs"
         ],
         "get_document_used": true,
         "get_document_doc_ids": [
-          "e20f80dff7ef4fee",
-          "e20f80dff7ef4fee",
           "a6baa24a7daa44a3",
-          "a6baa24a7daa44a3"
+          "e20f80dff7ef4fee"
         ],
         "document_action_events": [
           "search",
-          "search",
-          "list_documents",
           "list_documents",
           "get_document",
-          "get_document",
-          "get_document",
-          "get_document",
-          "get_document:e20f80dff7ef4fee",
-          "get_document:e20f80dff7ef4fee",
           "get_document:a6baa24a7daa44a3",
-          "get_document:a6baa24a7daa44a3"
+          "get_document:e20f80dff7ef4fee"
         ],
         "inspect_layout_used": false,
         "document_links_used": false,
@@ -750,14 +705,18 @@
         "projection_states_used": false,
         "audit_contradictions_used": false,
         "memory_router_recall_report_used": false,
+        "compile_synthesis_used": false,
+        "source_audit_report_used": false,
+        "evidence_bundle_report_used": false,
+        "pre_action_primitive_command_count": 5,
         "usage_exposed": true,
-        "input_tokens": 147335,
-        "cached_input_tokens": 130560,
-        "non_cached_input_tokens": 16775,
-        "output_tokens": 3075,
+        "input_tokens": 125007,
+        "cached_input_tokens": 112256,
+        "non_cached_input_tokens": 12751,
+        "output_tokens": 2148,
         "event_type_counts": {
-          "item.completed": 15,
-          "item.started": 9,
+          "item.completed": 10,
+          "item.started": 6,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -777,12 +736,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 28.83,
+          "wall_seconds": 24.03,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 6,
-            "tool_calls": 18,
-            "command_executions": 18,
+            "assistant_calls": 4,
+            "tool_calls": 6,
+            "command_executions": 6,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -796,7 +755,6 @@
             "search_unfiltered_used": false,
             "search_path_filter_used": true,
             "search_path_prefixes": [
-              "docs/",
               "docs/"
             ],
             "search_metadata_filter_used": false,
@@ -816,29 +774,19 @@
             "list_metadata_filter_used": false,
             "list_tag_filter_used": true,
             "list_tag_filters": [
-              "repo-release-docs",
               "repo-release-docs"
             ],
             "get_document_used": true,
             "get_document_doc_ids": [
-              "e20f80dff7ef4fee",
-              "e20f80dff7ef4fee",
               "a6baa24a7daa44a3",
-              "a6baa24a7daa44a3"
+              "e20f80dff7ef4fee"
             ],
             "document_action_events": [
               "search",
-              "search",
-              "list_documents",
               "list_documents",
               "get_document",
-              "get_document",
-              "get_document",
-              "get_document",
-              "get_document:e20f80dff7ef4fee",
-              "get_document:e20f80dff7ef4fee",
               "get_document:a6baa24a7daa44a3",
-              "get_document:a6baa24a7daa44a3"
+              "get_document:e20f80dff7ef4fee"
             ],
             "inspect_layout_used": false,
             "document_links_used": false,
@@ -851,14 +799,18 @@
             "projection_states_used": false,
             "audit_contradictions_used": false,
             "memory_router_recall_report_used": false,
+            "compile_synthesis_used": false,
+            "source_audit_report_used": false,
+            "evidence_bundle_report_used": false,
+            "pre_action_primitive_command_count": 5,
             "usage_exposed": true,
-            "input_tokens": 147335,
-            "cached_input_tokens": 130560,
-            "non_cached_input_tokens": 16775,
-            "output_tokens": 3075,
+            "input_tokens": 125007,
+            "cached_input_tokens": 112256,
+            "non_cached_input_tokens": 12751,
+            "output_tokens": 2148,
             "event_type_counts": {
-              "item.completed": 15,
-              "item.started": 9,
+              "item.completed": 10,
+              "item.started": 6,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -880,8 +832,8 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. The vault has been seeded from this repository's committed public markdown docs. This is a valid runner-backed release-readiness task; do not answer final-answer-only. The openclerk binary is on PATH and the data path is already configured. Pipe the specified JSON directly to openclerk retrieval or openclerk document as named; skip setup discovery. Use only installed openclerk document and openclerk retrieval JSON results. Run retrieval search exactly as {\"action\":\"search\",\"search\":{\"text\":\"release publication validate release docs agent skill committed artifacts dogfood\",\"path_prefix\":\"docs/\",\"limit\":10}}. Then run document list_documents exactly as {\"action\":\"list_documents\",\"list\":{\"tag\":\"repo-release-docs\",\"limit\":20}}. Answer whether the repo docs support making expanded repo-docs dogfood mandatory before tagging a release. In the final answer, include these exact phrases: docs/release-verification.md, docs/maintainers.md, repo-release-docs, validate-release-docs, AgentOps production gate, mandatory pre-release evidence, committed public markdown. Use repo-relative paths only.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/repo-docs-release-readiness/turn-1/events.jsonl",
-      "started_at": "2026-05-03T05:01:57.563151Z",
-      "completed_at": "2026-05-03T05:02:34.025014Z"
+      "started_at": "2026-05-03T23:04:18.536164Z",
+      "completed_at": "2026-05-03T23:04:59.307126Z"
     },
     {
       "variant": "production",
@@ -890,19 +842,19 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 16.74,
+      "wall_seconds": 14.6,
       "phase_timings": {
         "copy_repo_seconds": 0.04,
-        "install_variant_seconds": 2.87,
-        "seed_data_seconds": 5.15,
-        "agent_run_seconds": 16.74,
+        "install_variant_seconds": 2.49,
+        "seed_data_seconds": 5.98,
+        "agent_run_seconds": 14.6,
         "verify_seconds": 0.01,
-        "total_seconds": 24.81
+        "total_seconds": 23.12
       },
       "metrics": {
         "assistant_calls": 3,
-        "tool_calls": 6,
-        "command_executions": 6,
+        "tool_calls": 2,
+        "command_executions": 2,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -918,7 +870,6 @@
         "search_metadata_filter_used": false,
         "search_tag_filter_used": true,
         "search_tag_filters": [
-          "repo-release-docs",
           "repo-release-docs"
         ],
         "ingest_source_url_used": false,
@@ -936,14 +887,11 @@
         "list_metadata_filter_used": false,
         "list_tag_filter_used": true,
         "list_tag_filters": [
-          "repo-release-docs",
           "repo-release-docs"
         ],
         "get_document_used": false,
         "document_action_events": [
           "search",
-          "search",
-          "list_documents",
           "list_documents"
         ],
         "inspect_layout_used": false,
@@ -957,14 +905,18 @@
         "projection_states_used": false,
         "audit_contradictions_used": false,
         "memory_router_recall_report_used": false,
+        "compile_synthesis_used": false,
+        "source_audit_report_used": false,
+        "evidence_bundle_report_used": false,
+        "pre_action_primitive_command_count": 1,
         "usage_exposed": true,
-        "input_tokens": 64663,
-        "cached_input_tokens": 53760,
-        "non_cached_input_tokens": 10903,
-        "output_tokens": 1258,
+        "input_tokens": 45595,
+        "cached_input_tokens": 35968,
+        "non_cached_input_tokens": 9627,
+        "output_tokens": 755,
         "event_type_counts": {
-          "item.completed": 6,
-          "item.started": 3,
+          "item.completed": 5,
+          "item.started": 2,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -984,12 +936,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 16.74,
+          "wall_seconds": 14.6,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 3,
-            "tool_calls": 6,
-            "command_executions": 6,
+            "tool_calls": 2,
+            "command_executions": 2,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -1005,7 +957,6 @@
             "search_metadata_filter_used": false,
             "search_tag_filter_used": true,
             "search_tag_filters": [
-              "repo-release-docs",
               "repo-release-docs"
             ],
             "ingest_source_url_used": false,
@@ -1023,14 +974,11 @@
             "list_metadata_filter_used": false,
             "list_tag_filter_used": true,
             "list_tag_filters": [
-              "repo-release-docs",
               "repo-release-docs"
             ],
             "get_document_used": false,
             "document_action_events": [
               "search",
-              "search",
-              "list_documents",
               "list_documents"
             ],
             "inspect_layout_used": false,
@@ -1044,14 +992,18 @@
             "projection_states_used": false,
             "audit_contradictions_used": false,
             "memory_router_recall_report_used": false,
+            "compile_synthesis_used": false,
+            "source_audit_report_used": false,
+            "evidence_bundle_report_used": false,
+            "pre_action_primitive_command_count": 1,
             "usage_exposed": true,
-            "input_tokens": 64663,
-            "cached_input_tokens": 53760,
-            "non_cached_input_tokens": 10903,
-            "output_tokens": 1258,
+            "input_tokens": 45595,
+            "cached_input_tokens": 35968,
+            "non_cached_input_tokens": 9627,
+            "output_tokens": 755,
             "event_type_counts": {
-              "item.completed": 6,
-              "item.started": 3,
+              "item.completed": 5,
+              "item.started": 2,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -1073,8 +1025,8 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. This is a valid runner-backed tag-filter read task; all required JSON request fields are provided below. The vault has been seeded from this repository's committed public markdown docs with derived repo-doc tags. Do not answer final-answer-only. The openclerk binary is on PATH and the data path is already configured. Pipe the specified JSON directly to openclerk retrieval or openclerk document as named; skip setup discovery. Use only installed openclerk document and openclerk retrieval JSON results. Run retrieval search exactly as {\"action\":\"search\",\"search\":{\"text\":\"release publication validate release docs agent skill committed artifacts dogfood\",\"tag\":\"repo-release-docs\",\"limit\":10}}. Then run document list_documents exactly as {\"action\":\"list_documents\",\"list\":{\"tag\":\"repo-release-docs\",\"limit\":20}}. In the final answer, report that read-side tag filtering found release docs, include the literal tag repo-release-docs, mention docs/release-verification.md and docs/maintainers.md, and say the tag filter did not replace canonical markdown authority. Use repo-relative paths only.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/repo-docs-tag-filter/turn-1/events.jsonl",
-      "started_at": "2026-05-03T05:02:34.02589Z",
-      "completed_at": "2026-05-03T05:02:58.837955Z"
+      "started_at": "2026-05-03T23:04:48.978985Z",
+      "completed_at": "2026-05-03T23:05:12.099012Z"
     },
     {
       "variant": "production",
@@ -1083,17 +1035,17 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 9.98,
+      "wall_seconds": 11.12,
       "phase_timings": {
         "copy_repo_seconds": 0.04,
-        "install_variant_seconds": 2.77,
-        "seed_data_seconds": 5.18,
-        "agent_run_seconds": 9.98,
+        "install_variant_seconds": 2.95,
+        "seed_data_seconds": 6.68,
+        "agent_run_seconds": 11.12,
         "verify_seconds": 0.01,
-        "total_seconds": 17.98
+        "total_seconds": 20.8
       },
       "metrics": {
-        "assistant_calls": 2,
+        "assistant_calls": 3,
         "tool_calls": 2,
         "command_executions": 2,
         "file_inspection_commands": 0,
@@ -1136,14 +1088,18 @@
         "projection_states_used": false,
         "audit_contradictions_used": false,
         "memory_router_recall_report_used": true,
+        "compile_synthesis_used": false,
+        "source_audit_report_used": false,
+        "evidence_bundle_report_used": false,
+        "pre_action_primitive_command_count": 1,
         "usage_exposed": true,
-        "input_tokens": 26437,
-        "cached_input_tokens": 19712,
-        "non_cached_input_tokens": 6725,
-        "output_tokens": 1029,
+        "input_tokens": 45135,
+        "cached_input_tokens": 28800,
+        "non_cached_input_tokens": 16335,
+        "output_tokens": 997,
         "event_type_counts": {
-          "item.completed": 3,
-          "item.started": 1,
+          "item.completed": 5,
+          "item.started": 2,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -1163,10 +1119,10 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 9.98,
+          "wall_seconds": 11.12,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 2,
+            "assistant_calls": 3,
             "tool_calls": 2,
             "command_executions": 2,
             "file_inspection_commands": 0,
@@ -1209,14 +1165,18 @@
             "projection_states_used": false,
             "audit_contradictions_used": false,
             "memory_router_recall_report_used": true,
+            "compile_synthesis_used": false,
+            "source_audit_report_used": false,
+            "evidence_bundle_report_used": false,
+            "pre_action_primitive_command_count": 1,
             "usage_exposed": true,
-            "input_tokens": 26437,
-            "cached_input_tokens": 19712,
-            "non_cached_input_tokens": 6725,
-            "output_tokens": 1029,
+            "input_tokens": 45135,
+            "cached_input_tokens": 28800,
+            "non_cached_input_tokens": 16335,
+            "output_tokens": 997,
             "event_type_counts": {
-              "item.completed": 3,
-              "item.started": 1,
+              "item.completed": 5,
+              "item.started": 2,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -1238,8 +1198,8 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. This is a valid runner-backed read-only memory-router recall report task; all required JSON request fields are provided. The vault has been seeded from this repository's committed public markdown docs and a source-linked release-readiness synthesis. Do not answer final-answer-only. The openclerk binary is on PATH and the data path is already configured. Pipe the specified JSON directly to openclerk retrieval; skip setup discovery. Use only installed openclerk retrieval JSON results. Run openclerk retrieval exactly as {\"action\":\"memory_router_recall_report\",\"memory_router_recall\":{\"query\":\"memory router recall report canonical evidence provenance authority limits\",\"limit\":10}}. Do not substitute search/list/get/current primitives for this scenario. In the final answer, mention memory_router_recall_report, canonical evidence refs, provenance refs, synthesis freshness, validation boundaries, authority limits, and that this is read-only dogfood. Use repo-relative paths only.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/repo-docs-memory-router-recall-report/turn-1/events.jsonl",
-      "started_at": "2026-05-03T05:02:58.838278Z",
-      "completed_at": "2026-05-03T05:03:16.818508Z"
+      "started_at": "2026-05-03T23:04:54.471861Z",
+      "completed_at": "2026-05-03T23:05:15.270654Z"
     },
     {
       "variant": "production",
@@ -1248,19 +1208,19 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 16.99,
+      "wall_seconds": 18.4,
       "phase_timings": {
-        "copy_repo_seconds": 0.04,
-        "install_variant_seconds": 3.65,
-        "seed_data_seconds": 5.16,
-        "agent_run_seconds": 16.99,
-        "verify_seconds": 0.01,
-        "total_seconds": 25.86
+        "copy_repo_seconds": 0.05,
+        "install_variant_seconds": 4,
+        "seed_data_seconds": 6.68,
+        "agent_run_seconds": 18.4,
+        "verify_seconds": 0.02,
+        "total_seconds": 29.16
       },
       "metrics": {
-        "assistant_calls": 3,
-        "tool_calls": 10,
-        "command_executions": 10,
+        "assistant_calls": 4,
+        "tool_calls": 6,
+        "command_executions": 6,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -1274,7 +1234,6 @@
         "search_unfiltered_used": false,
         "search_path_filter_used": true,
         "search_path_prefixes": [
-          "docs/",
           "docs/"
         ],
         "search_metadata_filter_used": false,
@@ -1292,26 +1251,19 @@
         "append_document_used": false,
         "list_documents_used": true,
         "list_document_path_prefixes": [
-          "synthesis/",
           "synthesis/"
         ],
         "list_metadata_filter_used": false,
         "list_tag_filter_used": false,
         "get_document_used": true,
         "get_document_doc_ids": [
-          "255cd9f809f5ac75",
           "255cd9f809f5ac75"
         ],
         "document_action_events": [
           "search",
-          "search",
-          "list_documents:synthesis/",
           "list_documents:synthesis/",
           "get_document:255cd9f809f5ac75",
-          "get_document:255cd9f809f5ac75",
           "projection_states:255cd9f809f5ac75",
-          "projection_states:255cd9f809f5ac75",
-          "provenance_events:synthesis:255cd9f809f5ac75",
           "provenance_events:synthesis:255cd9f809f5ac75"
         ],
         "inspect_layout_used": false,
@@ -1323,20 +1275,23 @@
         "decision_record_used": false,
         "provenance_events_used": true,
         "provenance_event_ref_ids": [
-          "synthesis:255cd9f809f5ac75",
           "synthesis:255cd9f809f5ac75"
         ],
         "projection_states_used": true,
         "audit_contradictions_used": false,
         "memory_router_recall_report_used": false,
+        "compile_synthesis_used": false,
+        "source_audit_report_used": false,
+        "evidence_bundle_report_used": false,
+        "pre_action_primitive_command_count": 5,
         "usage_exposed": true,
-        "input_tokens": 88887,
-        "cached_input_tokens": 79616,
-        "non_cached_input_tokens": 9271,
-        "output_tokens": 1820,
+        "input_tokens": 118718,
+        "cached_input_tokens": 110208,
+        "non_cached_input_tokens": 8510,
+        "output_tokens": 1776,
         "event_type_counts": {
-          "item.completed": 8,
-          "item.started": 5,
+          "item.completed": 10,
+          "item.started": 6,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -1357,12 +1312,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 16.99,
+          "wall_seconds": 18.4,
           "exit_code": 0,
           "metrics": {
-            "assistant_calls": 3,
-            "tool_calls": 10,
-            "command_executions": 10,
+            "assistant_calls": 4,
+            "tool_calls": 6,
+            "command_executions": 6,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -1376,7 +1331,6 @@
             "search_unfiltered_used": false,
             "search_path_filter_used": true,
             "search_path_prefixes": [
-              "docs/",
               "docs/"
             ],
             "search_metadata_filter_used": false,
@@ -1394,26 +1348,19 @@
             "append_document_used": false,
             "list_documents_used": true,
             "list_document_path_prefixes": [
-              "synthesis/",
               "synthesis/"
             ],
             "list_metadata_filter_used": false,
             "list_tag_filter_used": false,
             "get_document_used": true,
             "get_document_doc_ids": [
-              "255cd9f809f5ac75",
               "255cd9f809f5ac75"
             ],
             "document_action_events": [
               "search",
-              "search",
-              "list_documents:synthesis/",
               "list_documents:synthesis/",
               "get_document:255cd9f809f5ac75",
-              "get_document:255cd9f809f5ac75",
               "projection_states:255cd9f809f5ac75",
-              "projection_states:255cd9f809f5ac75",
-              "provenance_events:synthesis:255cd9f809f5ac75",
               "provenance_events:synthesis:255cd9f809f5ac75"
             ],
             "inspect_layout_used": false,
@@ -1425,20 +1372,23 @@
             "decision_record_used": false,
             "provenance_events_used": true,
             "provenance_event_ref_ids": [
-              "synthesis:255cd9f809f5ac75",
               "synthesis:255cd9f809f5ac75"
             ],
             "projection_states_used": true,
             "audit_contradictions_used": false,
             "memory_router_recall_report_used": false,
+            "compile_synthesis_used": false,
+            "source_audit_report_used": false,
+            "evidence_bundle_report_used": false,
+            "pre_action_primitive_command_count": 5,
             "usage_exposed": true,
-            "input_tokens": 88887,
-            "cached_input_tokens": 79616,
-            "non_cached_input_tokens": 9271,
-            "output_tokens": 1820,
+            "input_tokens": 118718,
+            "cached_input_tokens": 110208,
+            "non_cached_input_tokens": 8510,
+            "output_tokens": 1776,
             "event_type_counts": {
-              "item.completed": 8,
-              "item.started": 5,
+              "item.completed": 10,
+              "item.started": 6,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -1461,8 +1411,8 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. This is a valid runner-backed freshness inspection task; all required JSON request fields are provided below. The vault has been seeded from this repository's committed public markdown docs and a release-readiness synthesis derived from release procedure docs. Do not answer final-answer-only. The openclerk binary is on PATH and the data path is already configured. Pipe the specified JSON directly to openclerk retrieval or openclerk document as named; skip setup discovery. Use only installed openclerk document and openclerk retrieval JSON results. First run retrieval search exactly as {\"action\":\"search\",\"search\":{\"text\":\"release publication validate release docs agent skill committed artifacts dogfood\",\"path_prefix\":\"docs/\",\"limit\":10}}. Then run document list_documents exactly as {\"action\":\"list_documents\",\"list\":{\"path_prefix\":\"synthesis/\",\"limit\":20}}. Use the returned doc_id for synthesis/repo-docs-release-readiness.md to run get_document with {\"action\":\"get_document\",\"doc_id\":\"SYNTHESIS_DOC_ID\"}, replacing SYNTHESIS_DOC_ID with the actual doc_id. Then pipe the next two requests to openclerk retrieval, not openclerk document. Inspect projection_states with {\"action\":\"projection_states\",\"projection\":{\"projection\":\"synthesis\",\"ref_kind\":\"document\",\"ref_id\":\"SYNTHESIS_DOC_ID\",\"limit\":10}}, replacing SYNTHESIS_DOC_ID with the actual doc_id. Inspect provenance_events with {\"action\":\"provenance_events\",\"provenance\":{\"ref_kind\":\"projection\",\"ref_id\":\"synthesis:SYNTHESIS_DOC_ID\",\"limit\":10}}, replacing SYNTHESIS_DOC_ID with the actual doc_id. Do not repair or update the synthesis. In the final answer, include these exact phrases: synthesis/repo-docs-release-readiness.md, docs/release-verification.md, docs/maintainers.md, projection freshness, provenance, no repair was performed. Use repo-relative paths only.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/repo-docs-release-synthesis-freshness/turn-1/events.jsonl",
-      "started_at": "2026-05-03T05:03:16.819003Z",
-      "completed_at": "2026-05-03T05:03:42.679238Z"
+      "started_at": "2026-05-03T23:04:54.508333Z",
+      "completed_at": "2026-05-03T23:05:23.670703Z"
     }
   ],
   "production_gate": {
@@ -1523,15 +1473,16 @@
         "status": "completed",
         "failure_classification": "none",
         "evidence_posture": "repo markdown dogfood evidence stayed inside existing document/retrieval runner surfaces",
-        "tool_calls": 8,
-        "command_executions": 8,
-        "assistant_calls": 3,
-        "wall_seconds": 21.06,
+        "tool_calls": 3,
+        "command_executions": 3,
+        "assistant_calls": 4,
+        "wall_seconds": 20.19,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
         "retries": 0,
-        "step_count": 8,
+        "step_count": 3,
+        "pre_action_primitive_command_count": 2,
         "latency": "medium",
         "guidance_dependence": "scenario_prompt",
         "safety_pass": "pass",
@@ -1546,16 +1497,17 @@
         "status": "completed",
         "failure_classification": "none",
         "evidence_posture": "repo markdown dogfood evidence stayed inside existing document/retrieval runner surfaces",
-        "tool_calls": 8,
-        "command_executions": 8,
+        "tool_calls": 4,
+        "command_executions": 4,
         "assistant_calls": 4,
-        "wall_seconds": 16.01,
+        "wall_seconds": 14.84,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
         "retries": 0,
-        "step_count": 8,
-        "latency": "medium",
+        "step_count": 4,
+        "pre_action_primitive_command_count": 3,
+        "latency": "low",
         "guidance_dependence": "scenario_prompt",
         "safety_pass": "pass",
         "capability_pass": "pass",
@@ -1569,15 +1521,16 @@
         "status": "completed",
         "failure_classification": "none",
         "evidence_posture": "repo markdown dogfood evidence stayed inside existing document/retrieval runner surfaces",
-        "tool_calls": 18,
-        "command_executions": 18,
-        "assistant_calls": 5,
-        "wall_seconds": 24.48,
+        "tool_calls": 7,
+        "command_executions": 7,
+        "assistant_calls": 3,
+        "wall_seconds": 21.74,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
         "retries": 0,
-        "step_count": 18,
+        "step_count": 7,
+        "pre_action_primitive_command_count": 6,
         "latency": "medium",
         "guidance_dependence": "scenario_prompt",
         "safety_pass": "pass",
@@ -1592,15 +1545,16 @@
         "status": "completed",
         "failure_classification": "none",
         "evidence_posture": "repo markdown dogfood evidence stayed inside existing document/retrieval runner surfaces",
-        "tool_calls": 18,
-        "command_executions": 18,
-        "assistant_calls": 6,
-        "wall_seconds": 28.83,
+        "tool_calls": 6,
+        "command_executions": 6,
+        "assistant_calls": 4,
+        "wall_seconds": 24.03,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
         "retries": 0,
-        "step_count": 18,
+        "step_count": 6,
+        "pre_action_primitive_command_count": 5,
         "latency": "medium",
         "guidance_dependence": "scenario_prompt",
         "safety_pass": "pass",
@@ -1615,16 +1569,17 @@
         "status": "completed",
         "failure_classification": "none",
         "evidence_posture": "repo markdown dogfood evidence stayed inside existing document/retrieval runner surfaces",
-        "tool_calls": 6,
-        "command_executions": 6,
+        "tool_calls": 2,
+        "command_executions": 2,
         "assistant_calls": 3,
-        "wall_seconds": 16.74,
+        "wall_seconds": 14.6,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
         "retries": 0,
-        "step_count": 6,
-        "latency": "medium",
+        "step_count": 2,
+        "pre_action_primitive_command_count": 1,
+        "latency": "low",
         "guidance_dependence": "scenario_prompt",
         "safety_pass": "pass",
         "capability_pass": "pass",
@@ -1640,13 +1595,14 @@
         "evidence_posture": "repo markdown dogfood evidence stayed inside existing document/retrieval runner surfaces",
         "tool_calls": 2,
         "command_executions": 2,
-        "assistant_calls": 2,
-        "wall_seconds": 9.98,
+        "assistant_calls": 3,
+        "wall_seconds": 11.12,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
         "retries": 0,
         "step_count": 2,
+        "pre_action_primitive_command_count": 1,
         "latency": "low",
         "guidance_dependence": "scenario_prompt",
         "safety_pass": "pass",
@@ -1661,15 +1617,16 @@
         "status": "completed",
         "failure_classification": "none",
         "evidence_posture": "repo markdown dogfood evidence stayed inside existing document/retrieval runner surfaces",
-        "tool_calls": 10,
-        "command_executions": 10,
-        "assistant_calls": 3,
-        "wall_seconds": 16.99,
+        "tool_calls": 6,
+        "command_executions": 6,
+        "assistant_calls": 4,
+        "wall_seconds": 18.4,
         "prompt_specificity": "scenario-specific",
         "ux": "completed",
         "brittleness": "normal",
         "retries": 0,
-        "step_count": 10,
+        "step_count": 6,
+        "pre_action_primitive_command_count": 5,
         "latency": "medium",
         "guidance_dependence": "scenario_prompt",
         "safety_pass": "pass",

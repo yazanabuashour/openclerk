@@ -71,7 +71,7 @@ func parseMetrics(eventsPath string) (parsedTurn, error) {
 		for _, command := range commands {
 			out.metrics.CommandExecutions++
 			classifyCommand(command, &out.metrics)
-			actionText := strings.ReplaceAll(strings.ToLower(command), `\"`, `"`)
+			actionText := normalizeActionText(command)
 			if commandContainsWorkflowAction(actionText) {
 				workflowActionObserved = true
 			}
@@ -200,7 +200,7 @@ func collectCommandTexts(value any, out *[]string) {
 }
 func classifyCommand(command string, m *metrics) {
 	lower := strings.ToLower(command)
-	actionText := strings.ReplaceAll(lower, `\"`, `"`)
+	actionText := normalizeActionText(lower)
 	workflowActionCommand := commandContainsWorkflowAction(actionText)
 	primitiveCommand := commandContainsWorkflowPrimitive(actionText)
 	if workflowActionCommand {
@@ -345,6 +345,17 @@ func classifyCommand(command string, m *metrics) {
 	}
 	if commandContainsAction(actionText, "evidence_bundle_report") {
 		m.EvidenceBundleReportUsed = true
+	}
+}
+func normalizeActionText(command string) string {
+	actionText := strings.ToLower(command)
+	for {
+		normalized := strings.ReplaceAll(actionText, `\\\"`, `"`)
+		normalized = strings.ReplaceAll(normalized, `\"`, `"`)
+		if normalized == actionText {
+			return normalized
+		}
+		actionText = normalized
 	}
 }
 func commandContainsAction(actionText string, action string) bool {

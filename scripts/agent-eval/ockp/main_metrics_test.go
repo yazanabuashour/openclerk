@@ -163,6 +163,19 @@ func TestAggregateMetricsRequiresAllTurnsExposeUsage(t *testing.T) {
 	}
 }
 
+func TestNormalizeActionTextHandlesShellEscapedJSON(t *testing.T) {
+	metrics := emptyMetrics()
+	classifyCommand(`printf '%s' \"{\\\"action\\\":\\\"provenance_events\\\",\\\"provenance\\\":{\\\"ref_kind\\\":\\\"document\\\",\\\"ref_id\\\":\\\"doc_alpha\\\"}}\" | openclerk retrieval`, &metrics)
+	classifyCommand(`printf '%s' \"{\\\"action\\\":\\\"projection_states\\\",\\\"projection\\\":{\\\"ref_kind\\\":\\\"document\\\",\\\"ref_id\\\":\\\"doc_alpha\\\"}}\" | openclerk retrieval`, &metrics)
+	classifyCommand(`printf '%s' \"{\\\"action\\\":\\\"get_document\\\",\\\"doc_id\\\":\\\"doc_alpha\\\"}\" | openclerk document`, &metrics)
+	if !metrics.ProvenanceEventsUsed || !metrics.ProjectionStatesUsed || !metrics.GetDocumentUsed {
+		t.Fatalf("expected escaped runner actions to be detected: %+v", metrics)
+	}
+	if !containsAllStrings(metrics.GetDocumentDocIDs, []string{"doc_alpha"}) {
+		t.Fatalf("expected escaped get_document doc id: %+v", metrics)
+	}
+}
+
 func TestClassifyCommandFlagsGenericNativeMediaFetches(t *testing.T) {
 	for name, command := range map[string]string{
 		"python_urlopen": `python -c 'import urllib.request; urllib.request.urlopen("https://video.example.test/watch?v=native-demo").read()'`,
