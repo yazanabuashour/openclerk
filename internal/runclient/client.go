@@ -129,6 +129,14 @@ func (c *Client) ReplaceSection(ctx context.Context, docID string, input domain.
 	return wrapResult(store.ReplaceDocumentSection(ctx, docID, input))
 }
 
+func (c *Client) ReplaceDocument(ctx context.Context, docID string, input domain.ReplaceDocumentInput) (domain.Document, error) {
+	store, err := c.store()
+	if err != nil {
+		return domain.Document{}, err
+	}
+	return wrapResult(store.ReplaceDocument(ctx, docID, input))
+}
+
 func (c *Client) GetDocumentLinks(ctx context.Context, docID string) (domain.DocumentLinks, error) {
 	store, err := c.store()
 	if err != nil {

@@ -57,7 +57,7 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedPromotedRecordDomainExpansion(ctx, cfg); err != nil {
 			return err
 		}
-	case highTouchRelationshipRecordNaturalScenarioID, highTouchRelationshipRecordScriptedScenarioID, relationshipRecordCurrentPrimitivesScenarioID, relationshipRecordGuidanceOnlyScenarioID, relationshipRecordResponseCandidateScenarioID:
+	case highTouchRelationshipRecordNaturalScenarioID, highTouchRelationshipRecordScriptedScenarioID, relationshipRecordCurrentPrimitivesScenarioID, relationshipRecordGuidanceOnlyScenarioID, relationshipRecordResponseCandidateScenarioID, evidenceBundleWorkflowActionScenarioID:
 		if err := seedGraphSemanticsReference(ctx, cfg); err != nil {
 			return err
 		}
@@ -126,11 +126,11 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedSynthesisSourceSetPressure(ctx, cfg); err != nil {
 			return err
 		}
-	case synthesisCompileNaturalScenarioID, synthesisCompileScriptedScenarioID, highTouchCompileSynthesisNaturalScenarioID, highTouchCompileSynthesisScriptedScenarioID, compileSynthesisCurrentPrimitivesScenarioID, compileSynthesisGuidanceOnlyScenarioID, compileSynthesisResponseCandidateScenarioID:
+	case synthesisCompileNaturalScenarioID, synthesisCompileScriptedScenarioID, highTouchCompileSynthesisNaturalScenarioID, highTouchCompileSynthesisScriptedScenarioID, compileSynthesisCurrentPrimitivesScenarioID, compileSynthesisGuidanceOnlyScenarioID, compileSynthesisResponseCandidateScenarioID, compileSynthesisWorkflowActionScenarioID:
 		if err := seedSynthesisCompileRevisit(ctx, cfg); err != nil {
 			return err
 		}
-	case broadAuditNaturalScenarioID, broadAuditScriptedScenarioID:
+	case broadAuditNaturalScenarioID, broadAuditScriptedScenarioID, sourceAuditWorkflowActionScenarioID:
 		if err := seedBroadContradictionAuditRevisit(ctx, cfg); err != nil {
 			return err
 		}

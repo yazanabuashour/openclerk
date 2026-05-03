@@ -113,6 +113,9 @@ mise exec -- golangci-lint run
 mise exec -- go test ./...
 mise exec -- go run ./scripts/agent-eval/ockp run --report-name ockp-agentops-production
 mise exec -- go run ./scripts/agent-eval/ockp run --parallel 1 --scenario repo-docs-agentops-retrieval,repo-docs-synthesis-maintenance,repo-docs-decision-records,repo-docs-release-readiness,repo-docs-tag-filter,repo-docs-memory-router-recall-report,repo-docs-release-synthesis-freshness --report-name ockp-repo-docs-dogfood
+mise exec -- go run ./scripts/agent-eval/ockp run --scenario compile-synthesis-workflow-action-natural --report-name ockp-compile-synthesis-workflow-action
+mise exec -- go run ./scripts/agent-eval/ockp run --scenario source-audit-workflow-action-natural --report-name ockp-source-audit-workflow-action
+mise exec -- go run ./scripts/agent-eval/ockp run --scenario evidence-bundle-workflow-action-natural --report-name ockp-evidence-bundle-workflow-action
 ```
 
 The repo-docs dogfood run is mandatory pre-release evidence. It imports only
@@ -129,6 +132,13 @@ depends on workflow-specific skill recipes, exact JSON, or command
 choreography, classify it as `workflow_choreography_gap`, `skill_bloat_risk`,
 or `ergonomics_gap_despite_capability_pass` and compare runner workflow-action
 candidates before expanding `skills/openclerk/SKILL.md`.
+
+For promoted workflow-action surfaces, refresh the targeted reduced reports
+before release notes claim them. `compile_synthesis`, `source_audit_report`,
+and read-only `evidence_bundle_report` are narrow runner-owned actions plus
+existing primitives for manual/advanced cases; do not broaden their release
+claims into a synthesis engine, broad contradiction engine, memory transport,
+vector DB, browser acquisition, or lower-level storage access.
 
 Tag a version like `v0.1.0`, push the tag, and let the release workflow:
 

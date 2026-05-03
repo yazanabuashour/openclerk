@@ -53,6 +53,9 @@ full release-gate replacements.
 | Document artifact candidate generation | `docs/evals/results/ockp-document-artifact-candidate-generation.md`; follow-up `docs/evals/results/ockp-document-artifact-candidate-ergonomics.md` | Quality lane and refreshed ergonomics scorecard support the existing propose-before-create skill policy; no runner/schema/storage/API/direct-create behavior promoted |
 | Duplicate-candidate capture | `docs/evals/results/ockp-capture-duplicate-candidate-update.md`; follow-up `docs/evals/results/ockp-capture-duplicate-candidate-guidance-hardening.md` | Original lane promoted skill-policy clarification; focused hardening made the natural row pass with path-filtered search/list/get evidence while preserving no-write and approval boundaries |
 | Low-risk capture | `docs/evals/results/ockp-capture-low-risk-ceremony.md`; follow-up `docs/evals/results/ockp-capture-low-risk-guidance-hardening.md` | Original ceremony lane exposed an ergonomics gap in the natural row; focused guidance hardening made natural, scripted, duplicate-check, and no-bypass controls pass while keeping the surface to skill policy over existing `openclerk document` and `openclerk retrieval` JSON actions |
+| Compile synthesis workflow action | `docs/evals/results/ockp-compile-synthesis-workflow-action.md` | Candidate C accepted: promote narrow `compile_synthesis` and keep existing primitives for advanced/manual synthesis work |
+| Source audit workflow action | `docs/evals/results/ockp-source-audit-workflow-action.md` | Candidate C accepted: promote narrow `source_audit_report`; broad contradiction-engine claims remain rejected |
+| Evidence bundle workflow action | `docs/evals/results/ockp-evidence-bundle-workflow-action.md` | Candidate C accepted: promote read-only `evidence_bundle_report` and keep lookup/provenance/projection primitives |
 
 ## Interpretation
 
@@ -62,7 +65,7 @@ freshness, and final-answer-only rejection gates.
 
 The later targeted POCs do not promote Mem0 or a memory API, remember/recall
 actions, an autonomous router, a semantic graph truth layer, a broad
-contradiction engine, or new public runner actions. Those capabilities remain
-deferred until eval evidence shows the existing `openclerk document` and
-`openclerk retrieval` actions are structurally insufficient or unacceptable
-after guidance/eval repair.
+contradiction engine, embeddings/vector DB, browser acquisition, direct
+local-file intake, or lower-level storage access. The only new public runner
+actions promoted by the workflow-action reports are `compile_synthesis`,
+`source_audit_report`, and read-only `evidence_bundle_report`.

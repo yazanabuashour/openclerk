@@ -355,7 +355,7 @@ func graphSemanticsRevisitAnswerPass(message string, scripted bool) bool {
 }
 func broadContradictionAuditAnswerPass(message string, scripted bool) bool {
 	normalized := normalizeValidationMessage(message)
-	requiredEvidence := containsAny(normalized, []string{"search", "audit_contradictions"}) &&
+	requiredEvidence := containsAny(normalized, []string{"search", "audit_contradictions", "source_audit_report"}) &&
 		containsAny(normalized, []string{"citation", "cited", "current source", "current_source_paths", "superseded source", "superseded_source_paths", "source path", "source paths", "source docs", "source refs", "source_refs"}) &&
 		containsAny(normalized, []string{"provenance"}) &&
 		containsAny(normalized, []string{"projection"}) &&

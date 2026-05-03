@@ -89,6 +89,19 @@ Gemini extraction:
 printf '%s\n' '{"action":"ingest_video_url","video":{"url":"https://youtube.example.test/watch?v=demo","path_hint":"sources/video-youtube/demo.md","transcript":{"text":"Supplied transcript text.","policy":"supplied","origin":"user_supplied_transcript"}}}' | openclerk document
 ```
 
+For promoted workflow actions after `oc-e8om`, `oc-w8x0`, and `oc-lrqi`,
+release notes and skill examples may claim only these narrow surfaces:
+
+```bash
+printf '%s\n' '{"action":"compile_synthesis","synthesis":{"path":"synthesis/example.md","title":"Example","source_refs":["sources/example.md"],"body":"# Example\n\n## Summary\nSource-backed synthesis.\n\n## Sources\n- sources/example.md\n\n## Freshness\nChecked with runner-visible source evidence.","mode":"create_or_update"}}' | openclerk document
+printf '%s\n' '{"action":"source_audit_report","source_audit":{"query":"source-sensitive audit runner repair evidence","target_path":"synthesis/example.md","mode":"explain","limit":10}}' | openclerk retrieval
+printf '%s\n' '{"action":"evidence_bundle_report","evidence_bundle":{"query":"AgentOps Escalation Policy","entity_id":"agentops-escalation-policy","projection":"records","limit":10}}' | openclerk retrieval
+```
+
+These claims do not imply a broad contradiction engine, embeddings/vector DB,
+memory transport, autonomous router API, browser acquisition, direct local-file
+intake, or lower-level storage access.
+
 The current full production OpenClerk AgentOps gate remains
 `docs/evals/results/ockp-agentops-production.md`. Source URL update mode is
 covered by targeted AgentOps evidence at
@@ -116,6 +129,9 @@ the mandatory repo-docs dogfood lane:
 ```bash
 mise exec -- go run ./scripts/agent-eval/ockp run --report-name ockp-agentops-production
 mise exec -- go run ./scripts/agent-eval/ockp run --parallel 1 --scenario repo-docs-agentops-retrieval,repo-docs-synthesis-maintenance,repo-docs-decision-records,repo-docs-release-readiness,repo-docs-tag-filter,repo-docs-memory-router-recall-report,repo-docs-release-synthesis-freshness --report-name ockp-repo-docs-dogfood
+mise exec -- go run ./scripts/agent-eval/ockp run --scenario compile-synthesis-workflow-action-natural --report-name ockp-compile-synthesis-workflow-action
+mise exec -- go run ./scripts/agent-eval/ockp run --scenario source-audit-workflow-action-natural --report-name ockp-source-audit-workflow-action
+mise exec -- go run ./scripts/agent-eval/ockp run --scenario evidence-bundle-workflow-action-natural --report-name ockp-evidence-bundle-workflow-action
 ```
 
 The dogfood lane imports only committed public markdown into an isolated

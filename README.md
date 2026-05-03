@@ -85,6 +85,20 @@ printf '%s\n' '{"action":"search","search":{"text":"architecture","limit":10}}' 
   openclerk retrieval
 ```
 
+Promoted narrow workflow actions cover routine source-backed workflows without
+requiring agents to choreograph many primitives:
+
+- `openclerk document` `compile_synthesis` creates or updates exactly one
+  source-linked synthesis target while returning source evidence, duplicate
+  status, provenance refs, projection freshness, write status, validation
+  boundaries, and authority limits.
+- `openclerk retrieval` `source_audit_report` explains source-sensitive audit
+  evidence and can repair only an existing synthesis target in
+  `repair_existing` mode. It is not a broad contradiction engine.
+- `openclerk retrieval` `evidence_bundle_report` is read-only and packages
+  records, decisions, citations, provenance, projection freshness, validation
+  boundaries, and authority limits.
+
 Validation rejections are JSON results with `rejected: true`. Runtime failures
 exit non-zero and write errors to stderr.
 
@@ -138,6 +152,9 @@ mise exec -- ./scripts/validate-agent-skill.sh skills/openclerk
 mise exec -- ./scripts/validate-release-docs.sh v0.2.3
 mise exec -- go run ./scripts/agent-eval/ockp run --report-name ockp-agentops-production
 mise exec -- go run ./scripts/agent-eval/ockp run --parallel 1 --scenario repo-docs-agentops-retrieval,repo-docs-synthesis-maintenance,repo-docs-decision-records,repo-docs-release-readiness,repo-docs-tag-filter,repo-docs-memory-router-recall-report,repo-docs-release-synthesis-freshness --report-name ockp-repo-docs-dogfood
+mise exec -- go run ./scripts/agent-eval/ockp run --scenario compile-synthesis-workflow-action-natural --report-name ockp-compile-synthesis-workflow-action
+mise exec -- go run ./scripts/agent-eval/ockp run --scenario source-audit-workflow-action-natural --report-name ockp-source-audit-workflow-action
+mise exec -- go run ./scripts/agent-eval/ockp run --scenario evidence-bundle-workflow-action-natural --report-name ockp-evidence-bundle-workflow-action
 ```
 
 `golangci-lint` is pinned by `mise.toml`; use `mise exec -- golangci-lint run`

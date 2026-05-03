@@ -41,7 +41,10 @@ func reportLane(ids []string) (string, bool) {
 	synthesisCompile := 0
 	highTouchCompileSynthesis := 0
 	compileSynthesisCandidate := 0
+	compileSynthesisWorkflowAction := 0
 	broadAudit := 0
+	sourceAuditWorkflowAction := 0
+	evidenceBundleWorkflowAction := 0
 	validation := 0
 	releaseBlocking := false
 	for _, id := range ids {
@@ -193,8 +196,20 @@ func reportLane(ids []string) (string, bool) {
 			compileSynthesisCandidate++
 			continue
 		}
+		if isCompileSynthesisWorkflowActionScenario(id) {
+			compileSynthesisWorkflowAction++
+			continue
+		}
 		if isBroadAuditScenario(id) {
 			broadAudit++
+			continue
+		}
+		if isSourceAuditWorkflowActionScenario(id) {
+			sourceAuditWorkflowAction++
+			continue
+		}
+		if isEvidenceBundleWorkflowActionScenario(id) {
+			evidenceBundleWorkflowAction++
 			continue
 		}
 		if isFinalAnswerOnlyValidationScenario(id) {
@@ -314,8 +329,17 @@ func reportLane(ids []string) (string, bool) {
 	if compileSynthesisCandidate > 0 && compileSynthesisCandidate+validation == len(ids) {
 		return compileSynthesisCandidateLaneName, false
 	}
+	if compileSynthesisWorkflowAction > 0 && compileSynthesisWorkflowAction+validation == len(ids) {
+		return compileSynthesisWorkflowActionLaneName, false
+	}
 	if broadAudit > 0 && broadAudit+validation == len(ids) {
 		return broadAuditLaneName, false
+	}
+	if sourceAuditWorkflowAction > 0 && sourceAuditWorkflowAction+validation == len(ids) {
+		return sourceAuditWorkflowActionLaneName, false
+	}
+	if evidenceBundleWorkflowAction > 0 && evidenceBundleWorkflowAction+validation == len(ids) {
+		return evidenceBundleWorkflowActionLaneName, false
 	}
 	if populated > 0 {
 		return populatedMixedLaneName, releaseBlocking

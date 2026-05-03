@@ -117,6 +117,7 @@ func isMutatingDocumentAction(action string) bool {
 	case DocumentTaskActionCreate,
 		DocumentTaskActionIngestSourceURL,
 		DocumentTaskActionIngestVideoURL,
+		DocumentTaskActionCompileSynthesis,
 		DocumentTaskActionAppend,
 		DocumentTaskActionReplaceSection:
 		return true
@@ -184,6 +185,15 @@ func runMutatingDocumentTask(ctx context.Context, client *runclient.Client, norm
 			VideoIngestion: &converted,
 			Summary:        fmt.Sprintf("ingested video URL into %s", converted.SourcePath),
 		}, nil
+	case DocumentTaskActionCompileSynthesis:
+		compiled, err := runCompileSynthesis(ctx, client, normalized.Synthesis)
+		if err != nil {
+			return DocumentTaskResult{}, err
+		}
+		return DocumentTaskResult{
+			CompileSynthesis: &compiled,
+			Summary:          fmt.Sprintf("compiled synthesis %s", compiled.SelectedPath),
+		}, nil
 	case DocumentTaskActionAppend:
 		document, err := client.AppendDocument(ctx, normalized.DocID, domain.AppendDocumentInput{Content: normalized.Content})
 		if err != nil {
@@ -213,14 +223,15 @@ func runMutatingDocumentTask(ctx context.Context, client *runclient.Client, norm
 }
 
 type normalizedDocumentTaskRequest struct {
-	Action   string
-	Document DocumentInput
-	Source   SourceURLInput
-	Video    VideoURLInput
-	DocID    string
-	Content  string
-	Heading  string
-	List     DocumentListOptions
+	Action    string
+	Document  DocumentInput
+	Source    SourceURLInput
+	Video     VideoURLInput
+	Synthesis CompileSynthesisInput
+	DocID     string
+	Content   string
+	Heading   string
+	List      DocumentListOptions
 }
 
 func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocumentTaskRequest, string) {
@@ -229,14 +240,15 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		action = DocumentTaskActionValidate
 	}
 	normalized := normalizedDocumentTaskRequest{
-		Action:   action,
-		Document: request.Document,
-		Source:   trimSourceURLInput(request.Source),
-		Video:    trimVideoURLInput(request.Video),
-		DocID:    strings.TrimSpace(request.DocID),
-		Content:  request.Content,
-		Heading:  strings.TrimSpace(request.Heading),
-		List:     request.List,
+		Action:    action,
+		Document:  request.Document,
+		Source:    trimSourceURLInput(request.Source),
+		Video:     trimVideoURLInput(request.Video),
+		Synthesis: trimCompileSynthesisInput(request.Synthesis),
+		DocID:     strings.TrimSpace(request.DocID),
+		Content:   request.Content,
+		Heading:   strings.TrimSpace(request.Heading),
+		List:      request.List,
 	}
 
 	if request.List.Limit < 0 {
@@ -261,6 +273,11 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		return normalized, ""
 	case DocumentTaskActionIngestVideoURL:
 		if rejection := validateVideoURLInput(normalized.Video); rejection != "" {
+			return normalizedDocumentTaskRequest{}, rejection
+		}
+		return normalized, ""
+	case DocumentTaskActionCompileSynthesis:
+		if rejection := validateCompileSynthesisInput(normalized.Synthesis); rejection != "" {
 			return normalizedDocumentTaskRequest{}, rejection
 		}
 		return normalized, ""
@@ -332,6 +349,82 @@ func trimVideoURLInput(input VideoURLInput) VideoURLInput {
 			SHA256:     strings.TrimSpace(input.Transcript.SHA256),
 		},
 	}
+}
+
+func trimCompileSynthesisInput(input CompileSynthesisInput) CompileSynthesisInput {
+	sourceRefs := make([]string, 0, len(input.SourceRefs))
+	for _, ref := range input.SourceRefs {
+		sourceRefs = append(sourceRefs, normalizeCompileSynthesisMarkdownPath(strings.TrimSpace(ref)))
+	}
+	return CompileSynthesisInput{
+		Path:       normalizeCompileSynthesisMarkdownPath(strings.TrimSpace(input.Path)),
+		Title:      strings.TrimSpace(input.Title),
+		SourceRefs: sourceRefs,
+		Body:       input.Body,
+		Mode:       strings.TrimSpace(input.Mode),
+	}
+}
+
+func normalizeCompileSynthesisMarkdownPath(raw string) string {
+	if raw == "" || filepath.IsAbs(raw) || strings.HasPrefix(raw, "/") {
+		return raw
+	}
+	clean := path.Clean(filepath.ToSlash(raw))
+	if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
+		return clean
+	}
+	if path.Ext(clean) == "" {
+		clean += ".md"
+	}
+	return clean
+}
+
+func validateCompileSynthesisInput(input CompileSynthesisInput) string {
+	if input.Path == "" {
+		return "synthesis.path is required"
+	}
+	if filepath.IsAbs(input.Path) || strings.HasPrefix(input.Path, "/") || input.Path == "." || input.Path == ".." || strings.HasPrefix(input.Path, "../") {
+		return "synthesis.path must stay inside the vault root"
+	}
+	if !strings.HasPrefix(input.Path, "synthesis/") {
+		return "synthesis.path must be under synthesis/"
+	}
+	if path.Ext(input.Path) != ".md" {
+		return "synthesis.path must end with .md"
+	}
+	if input.Title == "" {
+		return "synthesis.title is required"
+	}
+	if len(input.SourceRefs) == 0 {
+		return "synthesis.source_refs is required"
+	}
+	for _, ref := range input.SourceRefs {
+		if ref == "" {
+			return "synthesis.source_refs entries must be non-empty"
+		}
+		if filepath.IsAbs(ref) || strings.HasPrefix(ref, "/") || ref == "." || ref == ".." || strings.HasPrefix(ref, "../") {
+			return "synthesis.source_refs entries must stay inside the vault root"
+		}
+		if !strings.HasPrefix(ref, "sources/") {
+			return "synthesis.source_refs entries must be under sources/"
+		}
+		if path.Ext(ref) != ".md" {
+			return "synthesis.source_refs entries must end with .md"
+		}
+	}
+	if strings.TrimSpace(input.Body) == "" {
+		return "synthesis.body is required"
+	}
+	if !strings.Contains(input.Body, "## Sources") {
+		return "synthesis.body must include ## Sources"
+	}
+	if !strings.Contains(input.Body, "## Freshness") {
+		return "synthesis.body must include ## Freshness"
+	}
+	if input.Mode != "create_or_update" {
+		return "synthesis.mode must be create_or_update"
+	}
+	return ""
 }
 
 func validateSourceURLInput(input SourceURLInput) string {

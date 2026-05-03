@@ -39,6 +39,9 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"provenance_events\",\"provenance\":{\"ref_kind\":\"document\",\"ref_id\":\"doc_alpha\",\"limit\":10}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"projection_states\",\"projection\":{\"limit\":10}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"memory_router_recall_report\",\"memory_router_recall\":{\"query\":\"memory router\",\"limit\":10}}' | openclerk retrieval"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"compile_synthesis\",\"synthesis\":{\"path\":\"synthesis/example.md\",\"title\":\"Example\",\"source_refs\":[\"sources/example.md\"],\"body\":\"# Example\\n\\n## Sources\\n- sources/example.md\\n\\n## Freshness\\nChecked.\",\"mode\":\"create_or_update\"}}' | openclerk document"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"source_audit_report\",\"source_audit\":{\"query\":\"audit\",\"target_path\":\"synthesis/example.md\",\"mode\":\"repair_existing\",\"limit\":10}}' | openclerk retrieval"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"evidence_bundle_report\",\"evidence_bundle\":{\"query\":\"policy\",\"entity_id\":\"agentops-escalation-policy\",\"projection\":\"records\",\"limit\":10}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"/bin/zsh -lc \"printf '%s' '{\\\"action\\\":\\\"search\\\",\\\"search\\\":{\\\"text\\\":\\\"runner\\\"}}' | openclerk retrieval\""}}`,
 		`not json`,
 	}, "\n")
@@ -52,7 +55,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	if parsed.sessionID != "session-123" || parsed.finalMessage != "done" {
 		t.Fatalf("parsed = %+v", parsed)
 	}
-	if parsed.metrics.ToolCalls != 27 || parsed.metrics.CommandExecutions != 27 || parsed.metrics.AssistantCalls != 1 {
+	if parsed.metrics.ToolCalls != 30 || parsed.metrics.CommandExecutions != 30 || parsed.metrics.AssistantCalls != 1 {
 		t.Fatalf("metrics = %+v", parsed.metrics)
 	}
 	if !parsed.metrics.BroadRepoSearch {
@@ -130,6 +133,9 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		"provenance_events":      parsed.metrics.ProvenanceEventsUsed,
 		"projection_states":      parsed.metrics.ProjectionStatesUsed,
 		"memory_router_recall":   parsed.metrics.MemoryRouterRecallReportUsed,
+		"compile_synthesis":      parsed.metrics.CompileSynthesisUsed,
+		"source_audit_report":    parsed.metrics.SourceAuditReportUsed,
+		"evidence_bundle_report": parsed.metrics.EvidenceBundleReportUsed,
 	} {
 		if !used {
 			t.Fatalf("expected %s action metric in %+v", name, parsed.metrics)

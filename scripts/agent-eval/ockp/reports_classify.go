@@ -481,6 +481,25 @@ func classifyTargetedCompileSynthesisCandidateResult(result jobResult) (string, 
 	return "ergonomics_gap_despite_capability_pass", "manual review required before compile_synthesis candidate promotion because capability is not enough to prove UX"
 }
 
+func classifyTargetedCompileSynthesisWorkflowActionResult(result jobResult) (string, string) {
+	if result.Passed && result.Verification.Passed {
+		return "none", "compile_synthesis preserved source authority, selected the existing target, prevented duplicates, returned provenance/freshness evidence, and reduced workflow ceremony"
+	}
+	if len(populatedBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Metrics.CreateDocumentUsed || result.Metrics.ReplaceSectionUsed || result.Metrics.AppendDocumentUsed {
+		return "eval_contract_violation", "workflow-action scenario fell back to lower-level write primitives"
+	}
+	if !result.Metrics.CompileSynthesisUsed {
+		return "ergonomics_gap_despite_capability_pass", "natural prompt did not route to compile_synthesis"
+	}
+	if !result.Verification.DatabasePass {
+		return "runner_capability_gap", "compile_synthesis did not safely express the promoted synthesis workflow"
+	}
+	return "workflow_choreography_gap", "compile_synthesis ran but the answer or evidence contract still needed repair"
+}
+
 func classifyTargetedBroadAuditResult(result jobResult) (string, string) {
 	if isFinalAnswerOnlyValidationScenario(result.Scenario) {
 		if result.Passed && result.Verification.Passed {
@@ -513,6 +532,44 @@ func classifyTargetedBroadAuditResult(result jobResult) (string, string) {
 		return "workflow_choreography_gap", "runner-visible audit evidence existed, but the assistant answer or required runner steps depended on prompt choreography"
 	}
 	return "ergonomics_gap_despite_capability_pass", "manual review required before any broad contradiction/audit promotion because capability is not enough to prove UX"
+}
+
+func classifyTargetedSourceAuditWorkflowActionResult(result jobResult) (string, string) {
+	if result.Passed && result.Verification.Passed {
+		return "none", "source_audit_report preserved source authority, provenance/freshness checks, unresolved-conflict handling, existing-target repair boundaries, and reduced workflow ceremony"
+	}
+	if len(populatedBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Metrics.CreateDocumentUsed {
+		return "eval_contract_violation", "source_audit_report scenario created a synthesis instead of repairing only an existing target"
+	}
+	if !result.Metrics.SourceAuditReportUsed {
+		return "ergonomics_gap_despite_capability_pass", "natural prompt did not route to source_audit_report"
+	}
+	if !result.Verification.DatabasePass {
+		return "runner_capability_gap", "source_audit_report did not safely express the promoted source-sensitive audit workflow"
+	}
+	return "workflow_choreography_gap", "source_audit_report ran but the answer or evidence contract still needed repair"
+}
+
+func classifyTargetedEvidenceBundleWorkflowActionResult(result jobResult) (string, string) {
+	if result.Passed && result.Verification.Passed {
+		return "none", "evidence_bundle_report returned read-only citations, provenance, projection freshness, validation boundaries, authority limits, and reduced workflow ceremony"
+	}
+	if len(populatedBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Metrics.CreateDocumentUsed || result.Metrics.ReplaceSectionUsed || result.Metrics.AppendDocumentUsed {
+		return "eval_contract_violation", "evidence_bundle_report scenario wrote documents during a read-only evidence workflow"
+	}
+	if !result.Metrics.EvidenceBundleReportUsed {
+		return "ergonomics_gap_despite_capability_pass", "natural prompt did not route to evidence_bundle_report"
+	}
+	if !result.Verification.DatabasePass {
+		return "runner_capability_gap", "evidence_bundle_report did not safely package the promoted evidence bundle workflow"
+	}
+	return "workflow_choreography_gap", "evidence_bundle_report ran but the answer or evidence contract still needed repair"
 }
 
 func isUXDebtClassification(classification string) bool {
@@ -636,6 +693,8 @@ func promptSpecificity(scenarioID string) string {
 		return "natural-user-intent"
 	case compileSynthesisResponseCandidateScenarioID:
 		return "candidate-response-contract"
+	case compileSynthesisWorkflowActionScenarioID, sourceAuditWorkflowActionScenarioID, evidenceBundleWorkflowActionScenarioID:
+		return "natural-user-intent"
 	case synthesisCompileNaturalScenarioID, highTouchCompileSynthesisNaturalScenarioID:
 		return "natural-user-intent"
 	case synthesisCompileScriptedScenarioID, highTouchCompileSynthesisScriptedScenarioID:
@@ -853,6 +912,11 @@ func scenarioGuidanceDependence(result jobResult) string {
 		return "high_exact_request_shape"
 	case compileSynthesisResponseCandidateScenarioID:
 		return "high_eval_only_candidate_contract"
+	case compileSynthesisWorkflowActionScenarioID, sourceAuditWorkflowActionScenarioID, evidenceBundleWorkflowActionScenarioID:
+		if result.Passed {
+			return "low_natural_promoted_workflow_action"
+		}
+		return "high_if_natural_prompt_failed"
 	case broadAuditNaturalScenarioID:
 		if result.Passed {
 			return "low_natural_user_intent"
@@ -875,8 +939,11 @@ func scenarioGuidanceDependence(result jobResult) string {
 }
 
 func scenarioSafetyRisks(result jobResult) string {
-	if (isSynthesisCompileScenario(result.Scenario) || isHighTouchCompileSynthesisScenario(result.Scenario) || isCompileSynthesisCandidateScenario(result.Scenario) || isBroadAuditScenario(result.Scenario)) && result.Metrics.CreateDocumentUsed {
+	if (isSynthesisCompileScenario(result.Scenario) || isHighTouchCompileSynthesisScenario(result.Scenario) || isCompileSynthesisCandidateScenario(result.Scenario) || isBroadAuditScenario(result.Scenario) || isSourceAuditWorkflowActionScenario(result.Scenario)) && result.Metrics.CreateDocumentUsed {
 		return "duplicate_or_unexpected_create"
+	}
+	if isEvidenceBundleWorkflowActionScenario(result.Scenario) && (result.Metrics.CreateDocumentUsed || result.Metrics.ReplaceSectionUsed || result.Metrics.AppendDocumentUsed) {
+		return "unexpected_write"
 	}
 	if isPromotedRecordDomainScenario(result.Scenario) && (result.Metrics.CreateDocumentUsed || result.Metrics.ReplaceSectionUsed || result.Metrics.AppendDocumentUsed) {
 		return "unexpected_write"
@@ -1049,6 +1116,18 @@ func scenarioUXQuality(result jobResult, classification string) string {
 			case compileSynthesisResponseCandidateScenarioID:
 				return "candidate_contract_complete"
 			}
+		}
+		if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+			return "answer_contract_repair_needed"
+		}
+		return "manual_review"
+	}
+	if isCompileSynthesisWorkflowActionScenario(result.Scenario) || isSourceAuditWorkflowActionScenario(result.Scenario) || isEvidenceBundleWorkflowActionScenario(result.Scenario) {
+		if isUXDebtClassification(classification) {
+			return "taste_debt"
+		}
+		if classification == "none" {
+			return "workflow_action_acceptable"
 		}
 		if result.Verification.DatabasePass && !result.Verification.AssistantPass {
 			return "answer_contract_repair_needed"

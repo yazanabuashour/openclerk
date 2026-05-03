@@ -303,6 +303,16 @@ func classifyCommand(command string, m *metrics) {
 	if commandContainsAction(actionText, "memory_router_recall_report") {
 		m.MemoryRouterRecallReportUsed = true
 	}
+	if commandContainsAction(actionText, "compile_synthesis") {
+		m.CompileSynthesisUsed = true
+	}
+	if commandContainsAction(actionText, "source_audit_report") {
+		m.SourceAuditReportUsed = true
+		m.SourceAuditReportModes = append(m.SourceAuditReportModes, actionFieldValues(actionText, "source_audit_report", "mode")...)
+	}
+	if commandContainsAction(actionText, "evidence_bundle_report") {
+		m.EvidenceBundleReportUsed = true
+	}
 }
 func commandContainsAction(actionText string, action string) bool {
 	compacted := strings.Join(strings.Fields(actionText), "")
@@ -600,6 +610,10 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.AuditContradictionsUsed = out.AuditContradictionsUsed || current.AuditContradictionsUsed
 		out.AuditContradictionsModes = append(out.AuditContradictionsModes, current.AuditContradictionsModes...)
 		out.MemoryRouterRecallReportUsed = out.MemoryRouterRecallReportUsed || current.MemoryRouterRecallReportUsed
+		out.CompileSynthesisUsed = out.CompileSynthesisUsed || current.CompileSynthesisUsed
+		out.SourceAuditReportUsed = out.SourceAuditReportUsed || current.SourceAuditReportUsed
+		out.SourceAuditReportModes = append(out.SourceAuditReportModes, current.SourceAuditReportModes...)
+		out.EvidenceBundleReportUsed = out.EvidenceBundleReportUsed || current.EvidenceBundleReportUsed
 		out.GeneratedFileEvidence = append(out.GeneratedFileEvidence, current.GeneratedFileEvidence...)
 		out.ModuleCacheEvidence = append(out.ModuleCacheEvidence, current.ModuleCacheEvidence...)
 		out.BroadRepoSearchEvidence = append(out.BroadRepoSearchEvidence, current.BroadRepoSearchEvidence...)

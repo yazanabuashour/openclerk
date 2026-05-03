@@ -152,6 +152,11 @@ The v1 document runner actions are:
 - `inspect_layout` exposes the convention-first layout contract, conventional
   prefixes, first-class document kinds, and pass/warn/fail validation checks.
 - `create_document` writes a new canonical markdown document and registers it.
+- `compile_synthesis` creates or updates exactly one source-linked synthesis
+  page under `synthesis/`, preserves single-line source refs, requires
+  `## Sources` and `## Freshness`, reports duplicate status, provenance refs,
+  projection freshness, write status, validation boundaries, and authority
+  limits.
 - `ingest_source_url` downloads a PDF source URL into a configured vault asset
   path, creates or explicitly updates the canonical markdown source note, and
   returns validated retrieval/provenance metadata.
@@ -173,6 +178,13 @@ The v1 retrieval runner actions are:
 - `decisions_lookup` finds promoted decision records with status, scope, owner,
   and text filters.
 - `decision_record` returns one promoted decision record by stable decision ID.
+- `source_audit_report` explains source-sensitive audit evidence and can repair
+  only an existing synthesis target in `repair_existing` mode while preserving
+  citations, provenance, freshness, duplicate prevention, and unresolved
+  current-source conflicts. It is not a broad contradiction engine.
+- `evidence_bundle_report` packages read-only records, decisions, exact
+  evidence by supplied IDs, provenance events, projection freshness, citations,
+  validation boundaries, and authority limits without adding new storage.
 - `provenance_events` exposes derivation, update, invalidation, and refresh
   history.
 - `projection_states` exposes current derived freshness and version state.
@@ -228,6 +240,27 @@ because unrelated scenarios were intentionally not selected. The selected run
 also preserved the no broad repo search, no direct SQLite, no source-built
 runner usage, no-tools invalid-request handling, and citation/source
 freshness invariants.
+
+## Workflow Action Promotion Addendum
+
+Later candidate-comparison work selected Candidate C for three high-ceremony
+tracks: promote one narrow runner-owned workflow action while keeping the
+existing primitives for advanced/manual cases. This addendum updates the v1
+runner contract without changing canonical markdown authority, storage schema,
+or bypass boundaries:
+
+- `oc-e8om`: promote `compile_synthesis` for routine source-linked synthesis
+  creation/update and keep document/retrieval primitives for manual repair.
+- `oc-w8x0`: promote `source_audit_report` for narrow source-sensitive audit
+  explain/repair and keep broad contradiction-engine claims rejected.
+- `oc-lrqi`: promote read-only `evidence_bundle_report` for records,
+  provenance, decision, and projection evidence bundles while keeping the
+  underlying lookup primitives available.
+
+The promotion reason is UX evidence: repeated prompt choreography, exact JSON
+recipes, and step ordering proved capability but created taste debt. The skill
+remains a compact router and safety contract rather than the long-term home for
+multi-step workflow recipes.
 
 The deferred candidate action shape remains:
 

@@ -216,6 +216,39 @@ Source sensitive audit conflict runner retention is thirty days.
 		t.Fatalf("plan_only changed synthesis body = %q", unchanged.Document.Body)
 	}
 
+	sourceAudit, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSourceAuditReport,
+		SourceAudit: runner.SourceAuditReportOptions{
+			Query:         "source-sensitive audit runner repair evidence",
+			TargetPath:    "synthesis/audit-runner-routing.md",
+			Mode:          "explain",
+			ConflictQuery: "source sensitive audit conflict runner retention",
+			Limit:         10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("source audit explain: %v", err)
+	}
+	if sourceAudit.SourceAudit == nil ||
+		sourceAudit.SourceAudit.Mode != "explain" ||
+		sourceAudit.SourceAudit.RepairStatus != "planned" ||
+		sourceAudit.SourceAudit.RepairApplied ||
+		sourceAudit.SourceAudit.SelectedTargetPath != "synthesis/audit-runner-routing.md" ||
+		!strings.Contains(sourceAudit.SourceAudit.ValidationBoundaries, "explain mode is read-only") ||
+		!strings.Contains(sourceAudit.SourceAudit.AuthorityLimits, "unresolved current-source conflicts") {
+		t.Fatalf("source audit explain result = %+v", sourceAudit.SourceAudit)
+	}
+	stillUnchanged, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGet,
+		DocID:  synthesis.DocID,
+	})
+	if err != nil {
+		t.Fatalf("get source audit unchanged synthesis: %v", err)
+	}
+	if !strings.Contains(stillUnchanged.Document.Body, "legacy command-path workaround") {
+		t.Fatalf("source_audit explain changed synthesis body = %q", stillUnchanged.Document.Body)
+	}
+
 	repaired, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
 		Action: runner.RetrievalTaskActionAuditContradictions,
 		Audit: runner.AuditContradictionsOptions{
@@ -257,6 +290,101 @@ Source sensitive audit conflict runner retention is thirty days.
 		if !strings.Contains(updated.Document.Body, want) {
 			t.Fatalf("repaired body missing %q:\n%s", want, updated.Document.Body)
 		}
+	}
+}
+
+func TestRetrievalTaskSourceAuditReportRepairsOnlyExistingSynthesis(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "sources/source-audit-old.md", "Old source audit source", strings.TrimSpace(`---
+type: source
+status: superseded
+superseded_by: sources/source-audit-current.md
+---
+# Old source audit source
+
+## Summary
+Old source-sensitive audit workflow says use direct vault inspection.
+`)+"\n")
+	createDocument(t, ctx, config, "sources/source-audit-current.md", "Current source audit source", strings.TrimSpace(`---
+type: source
+status: active
+supersedes: sources/source-audit-old.md
+---
+# Current source audit source
+
+## Summary
+Current source-sensitive audit workflow says use source_audit_report.
+`)+"\n")
+	synthesis := createDocument(t, ctx, config, "synthesis/source-audit.md", "Source audit synthesis", strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: sources/source-audit-current.md, sources/source-audit-old.md
+---
+# Source audit synthesis
+
+## Summary
+Stale audit workflow says use direct vault inspection.
+
+## Sources
+- sources/source-audit-current.md
+- sources/source-audit-old.md
+
+## Freshness
+Checked source refs.
+`)+"\n")
+
+	repaired, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSourceAuditReport,
+		SourceAudit: runner.SourceAuditReportOptions{
+			Query:      "source-sensitive audit workflow",
+			TargetPath: "synthesis/source-audit.md",
+			Mode:       "repair_existing",
+			Limit:      10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("source audit repair: %v", err)
+	}
+	if repaired.SourceAudit == nil ||
+		repaired.SourceAudit.Mode != "repair_existing" ||
+		!repaired.SourceAudit.RepairApplied ||
+		repaired.SourceAudit.RepairStatus != "applied" ||
+		repaired.SourceAudit.DuplicatePrevention != "existing_target_selected_no_duplicate_created" {
+		t.Fatalf("source audit repair result = %+v", repaired.SourceAudit)
+	}
+
+	updated, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGet,
+		DocID:  synthesis.DocID,
+	})
+	if err != nil {
+		t.Fatalf("get repaired source audit synthesis: %v", err)
+	}
+	if strings.Contains(updated.Document.Body, "direct vault inspection") ||
+		!strings.Contains(updated.Document.Body, "installed openclerk JSON runner") {
+		t.Fatalf("source audit repaired body = %q", updated.Document.Body)
+	}
+
+	missing, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSourceAuditReport,
+		SourceAudit: runner.SourceAuditReportOptions{
+			Query:      "source-sensitive audit workflow",
+			TargetPath: "synthesis/missing-source-audit.md",
+			Mode:       "repair_existing",
+			Limit:      10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("source audit missing target: %v", err)
+	}
+	if missing.SourceAudit == nil ||
+		missing.SourceAudit.RepairApplied ||
+		missing.SourceAudit.FailureClassification != "target_not_found" {
+		t.Fatalf("source audit missing target result = %+v", missing.SourceAudit)
 	}
 }
 
@@ -645,6 +773,46 @@ func TestRetrievalTaskSearchLinksRecordsAndProvenance(t *testing.T) {
 		decisionProjections.Projections.Projections[0].Freshness != "stale" ||
 		decisionProjections.Projections.Projections[0].Details["superseded_by"] != "adr-runner-current" {
 		t.Fatalf("decision projections result = %+v", decisionProjections)
+	}
+
+	evidence, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionEvidenceBundle,
+		EvidenceBundle: runner.EvidenceBundleOptions{
+			Query:      "JSON runner",
+			EntityID:   "transmission-solenoid",
+			DecisionID: "adr-runner-current",
+			RefKind:    "document",
+			RefID:      roadmap.DocID,
+			Projection: "graph",
+			Limit:      10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("evidence bundle task: %v", err)
+	}
+	if evidence.EvidenceBundle == nil ||
+		evidence.EvidenceBundle.Search == nil ||
+		evidence.EvidenceBundle.Records == nil ||
+		evidence.EvidenceBundle.Entity == nil ||
+		evidence.EvidenceBundle.Decisions == nil ||
+		evidence.EvidenceBundle.Decision == nil ||
+		evidence.EvidenceBundle.Provenance == nil ||
+		evidence.EvidenceBundle.Projections == nil ||
+		len(evidence.EvidenceBundle.Citations) == 0 ||
+		!strings.Contains(evidence.EvidenceBundle.ValidationBoundaries, "read-only") ||
+		!strings.Contains(evidence.EvidenceBundle.AuthorityLimits, "does not create a new authority source") {
+		t.Fatalf("evidence bundle result = %+v", evidence.EvidenceBundle)
+	}
+
+	afterEvidenceList, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{Limit: 100},
+	})
+	if err != nil {
+		t.Fatalf("list after evidence bundle: %v", err)
+	}
+	if len(afterEvidenceList.Documents) != 8 {
+		t.Fatalf("evidence bundle changed document count: %+v", afterEvidenceList.Documents)
 	}
 }
 

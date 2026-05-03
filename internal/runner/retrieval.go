@@ -54,7 +54,8 @@ func RunRetrievalTask(ctx context.Context, config runclient.Config, request Retr
 }
 
 func isMutatingRetrievalAction(normalized normalizedRetrievalTaskRequest) bool {
-	return normalized.Action == RetrievalTaskActionAuditContradictions && normalized.Audit.Mode == "repair_existing"
+	return (normalized.Action == RetrievalTaskActionAuditContradictions && normalized.Audit.Mode == "repair_existing") ||
+		(normalized.Action == RetrievalTaskActionSourceAuditReport && normalized.SourceAudit.Mode == "repair_existing")
 }
 
 func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, normalized normalizedRetrievalTaskRequest) (RetrievalTaskResult, error) {
@@ -231,6 +232,24 @@ func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, n
 			MemoryRouterRecall: &report,
 			Summary:            "returned memory/router recall report",
 		}, nil
+	case RetrievalTaskActionSourceAuditReport:
+		report, err := runSourceAuditReport(ctx, client, normalized.SourceAudit)
+		if err != nil {
+			return RetrievalTaskResult{}, err
+		}
+		return RetrievalTaskResult{
+			SourceAudit: &report,
+			Summary:     sourceAuditReportSummary(report),
+		}, nil
+	case RetrievalTaskActionEvidenceBundle:
+		report, err := runEvidenceBundleReport(ctx, client, normalized.EvidenceBundle)
+		if err != nil {
+			return RetrievalTaskResult{}, err
+		}
+		return RetrievalTaskResult{
+			EvidenceBundle: &report,
+			Summary:        "returned evidence bundle report",
+		}, nil
 	default:
 		return RetrievalTaskResult{}, fmt.Errorf("unsupported retrieval task action %q", normalized.Action)
 	}
@@ -252,6 +271,8 @@ type normalizedRetrievalTaskRequest struct {
 	Projection         ProjectionStateOptions
 	Audit              AuditContradictionsOptions
 	MemoryRouterRecall MemoryRouterRecallOptions
+	SourceAudit        SourceAuditReportOptions
+	EvidenceBundle     EvidenceBundleOptions
 	Limit              int
 }
 
@@ -276,6 +297,8 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		Projection:         request.Projection,
 		Audit:              request.Audit,
 		MemoryRouterRecall: request.MemoryRouterRecall,
+		SourceAudit:        request.SourceAudit,
+		EvidenceBundle:     request.EvidenceBundle,
 		Limit:              request.Limit,
 	}
 
@@ -287,7 +310,9 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		request.Provenance.Limit < 0 ||
 		request.Projection.Limit < 0 ||
 		request.Audit.Limit < 0 ||
-		request.MemoryRouterRecall.Limit < 0 {
+		request.MemoryRouterRecall.Limit < 0 ||
+		request.SourceAudit.Limit < 0 ||
+		request.EvidenceBundle.Limit < 0 {
 		return normalizedRetrievalTaskRequest{}, "limit must be greater than or equal to 0"
 	}
 
@@ -358,6 +383,42 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		return normalized, ""
 	case RetrievalTaskActionMemoryRouterRecall:
 		normalized.MemoryRouterRecall.Query = strings.TrimSpace(request.MemoryRouterRecall.Query)
+		return normalized, ""
+	case RetrievalTaskActionSourceAuditReport:
+		normalized.SourceAudit.Query = strings.TrimSpace(request.SourceAudit.Query)
+		normalized.SourceAudit.TargetPath = strings.TrimSpace(request.SourceAudit.TargetPath)
+		normalized.SourceAudit.Mode = strings.TrimSpace(request.SourceAudit.Mode)
+		normalized.SourceAudit.ConflictQuery = strings.TrimSpace(request.SourceAudit.ConflictQuery)
+		if normalized.SourceAudit.Mode == "" {
+			normalized.SourceAudit.Mode = "explain"
+		}
+		if normalized.SourceAudit.Query == "" {
+			return normalizedRetrievalTaskRequest{}, "source_audit.query is required"
+		}
+		if normalized.SourceAudit.TargetPath == "" {
+			return normalizedRetrievalTaskRequest{}, "source_audit.target_path is required"
+		}
+		if normalized.SourceAudit.Mode != "explain" && normalized.SourceAudit.Mode != "repair_existing" {
+			return normalizedRetrievalTaskRequest{}, "source_audit.mode must be explain or repair_existing"
+		}
+		return normalized, ""
+	case RetrievalTaskActionEvidenceBundle:
+		normalized.EvidenceBundle.Query = strings.TrimSpace(request.EvidenceBundle.Query)
+		normalized.EvidenceBundle.EntityID = strings.TrimSpace(request.EvidenceBundle.EntityID)
+		normalized.EvidenceBundle.DecisionID = strings.TrimSpace(request.EvidenceBundle.DecisionID)
+		normalized.EvidenceBundle.RefKind = strings.TrimSpace(request.EvidenceBundle.RefKind)
+		normalized.EvidenceBundle.RefID = strings.TrimSpace(request.EvidenceBundle.RefID)
+		normalized.EvidenceBundle.Projection = strings.TrimSpace(request.EvidenceBundle.Projection)
+		if normalized.EvidenceBundle.Query == "" &&
+			normalized.EvidenceBundle.EntityID == "" &&
+			normalized.EvidenceBundle.DecisionID == "" &&
+			(normalized.EvidenceBundle.RefKind == "" || normalized.EvidenceBundle.RefID == "") &&
+			normalized.EvidenceBundle.Projection == "" {
+			return normalizedRetrievalTaskRequest{}, "evidence_bundle query, entity_id, decision_id, ref_kind/ref_id, or projection is required"
+		}
+		if (normalized.EvidenceBundle.RefKind == "") != (normalized.EvidenceBundle.RefID == "") {
+			return normalizedRetrievalTaskRequest{}, "evidence_bundle.ref_kind and evidence_bundle.ref_id must be provided together"
+		}
 		return normalized, ""
 	default:
 		return normalizedRetrievalTaskRequest{}, fmt.Sprintf("unsupported retrieval task action %q", action)

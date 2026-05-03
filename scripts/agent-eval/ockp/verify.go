@@ -155,10 +155,16 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifySynthesisCompileRevisit(ctx, paths, finalMessage, turnMetrics, true)
 	case compileSynthesisResponseCandidateScenarioID:
 		return verifyCompileSynthesisResponseCandidate(ctx, paths, finalMessage, turnMetrics)
+	case compileSynthesisWorkflowActionScenarioID:
+		return verifyCompileSynthesisWorkflowAction(ctx, paths, finalMessage, turnMetrics)
 	case broadAuditNaturalScenarioID:
 		return verifyBroadContradictionAuditRevisit(ctx, paths, finalMessage, turnMetrics, false)
 	case broadAuditScriptedScenarioID:
 		return verifyBroadContradictionAuditRevisit(ctx, paths, finalMessage, turnMetrics, true)
+	case sourceAuditWorkflowActionScenarioID:
+		return verifySourceAuditWorkflowAction(ctx, paths, finalMessage, turnMetrics)
+	case evidenceBundleWorkflowActionScenarioID:
+		return verifyEvidenceBundleReportAction(ctx, paths, finalMessage, turnMetrics)
 	case decisionRecordVsDocsScenarioID:
 		return verifyDecisionRecordVsDocs(ctx, paths, finalMessage, turnMetrics)
 	case decisionSupersessionScenarioID:

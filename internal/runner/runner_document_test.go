@@ -102,6 +102,184 @@ func TestDocumentTaskCreateListGetAndUpdate(t *testing.T) {
 	}
 }
 
+func TestDocumentTaskCompileSynthesisCreatesAndUpdatesOneTarget(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "sources/synthesis-a.md", "Synthesis source A", "# Synthesis source A\n\n## Summary\nCurrent synthesis workflow evidence A.\n")
+	createDocument(t, ctx, config, "sources/synthesis-b.md", "Synthesis source B", "# Synthesis source B\n\n## Summary\nCurrent synthesis workflow evidence B.\n")
+
+	body := strings.TrimSpace(`# Workflow Synthesis
+
+## Summary
+Initial workflow synthesis.
+
+## Sources
+- sources/synthesis-a.md
+- sources/synthesis-b.md
+
+## Freshness
+Checked current source evidence.
+`) + "\n"
+	created, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionCompileSynthesis,
+		Synthesis: runner.CompileSynthesisInput{
+			Path:       "synthesis/workflow.md",
+			Title:      "Workflow Synthesis",
+			SourceRefs: []string{"sources/synthesis-a.md", "sources/synthesis-b.md"},
+			Body:       body,
+			Mode:       "create_or_update",
+		},
+	})
+	if err != nil {
+		t.Fatalf("compile synthesis create: %v", err)
+	}
+	if created.Rejected || created.CompileSynthesis == nil {
+		t.Fatalf("compile synthesis create result = %+v", created)
+	}
+	if created.CompileSynthesis.WriteStatus != "created" ||
+		created.CompileSynthesis.DuplicateStatus != "no_duplicate_created" ||
+		len(created.CompileSynthesis.SourceEvidence) != 2 ||
+		len(created.CompileSynthesis.ProjectionFreshness) == 0 ||
+		!strings.Contains(created.CompileSynthesis.ValidationBoundaries, "no broad repo search") {
+		t.Fatalf("compile synthesis create report = %+v", created.CompileSynthesis)
+	}
+
+	updateBody := strings.Replace(body, "Initial workflow synthesis.", "Updated workflow synthesis.", 1)
+	updated, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionCompileSynthesis,
+		Synthesis: runner.CompileSynthesisInput{
+			Path:       "synthesis/workflow.md",
+			Title:      "Workflow Synthesis",
+			SourceRefs: []string{"sources/synthesis-a.md", "sources/synthesis-b.md"},
+			Body:       updateBody,
+			Mode:       "create_or_update",
+		},
+	})
+	if err != nil {
+		t.Fatalf("compile synthesis update: %v", err)
+	}
+	if updated.CompileSynthesis == nil ||
+		!updated.CompileSynthesis.ExistingCandidate ||
+		updated.CompileSynthesis.WriteStatus != "updated" ||
+		updated.CompileSynthesis.DocumentID != created.CompileSynthesis.DocumentID {
+		t.Fatalf("compile synthesis update report = %+v", updated.CompileSynthesis)
+	}
+
+	list, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{PathPrefix: "synthesis/", Limit: 10},
+	})
+	if err != nil {
+		t.Fatalf("list synthesis docs: %v", err)
+	}
+	if len(list.Documents) != 1 {
+		t.Fatalf("synthesis docs = %+v, want one target", list.Documents)
+	}
+	get, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGet,
+		DocID:  created.CompileSynthesis.DocumentID,
+	})
+	if err != nil {
+		t.Fatalf("get synthesis: %v", err)
+	}
+	if get.Document == nil ||
+		!strings.Contains(get.Document.Body, "source_refs: sources/synthesis-a.md, sources/synthesis-b.md") ||
+		!strings.Contains(get.Document.Body, "Updated workflow synthesis.") {
+		t.Fatalf("compiled synthesis body = %q", get.Document.Body)
+	}
+}
+
+func TestDocumentTaskCompileSynthesisRejectsMissingFields(t *testing.T) {
+	t.Parallel()
+
+	result, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionCompileSynthesis,
+		Synthesis: runner.CompileSynthesisInput{
+			Path:       "synthesis/missing.md",
+			Title:      "Missing",
+			SourceRefs: []string{"sources/a.md"},
+			Body:       "# Missing\n\n## Summary\nNo freshness.\n",
+			Mode:       "create_or_update",
+		},
+	})
+	if err != nil {
+		t.Fatalf("compile synthesis reject: %v", err)
+	}
+	if !result.Rejected || !strings.Contains(result.RejectionReason, "## Sources") {
+		t.Fatalf("compile synthesis rejection = %+v", result)
+	}
+}
+
+func TestDocumentTaskCompileSynthesisRejectsCleanedPathsOutsideNamespaces(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	body := strings.TrimSpace(`# Invalid
+
+## Summary
+Invalid synthesis.
+
+## Sources
+- sources/source.md
+
+## Freshness
+Checked.
+`) + "\n"
+
+	for _, tt := range []struct {
+		name      string
+		path      string
+		sourceRef string
+		want      string
+	}{
+		{
+			name:      "target traversal",
+			path:      "synthesis/../notes/escaped.md",
+			sourceRef: "sources/source.md",
+			want:      "synthesis.path must be under synthesis/",
+		},
+		{
+			name:      "source ref traversal",
+			path:      "synthesis/valid.md",
+			sourceRef: "sources/../notes/source.md",
+			want:      "synthesis.source_refs entries must be under sources/",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+				Action: runner.DocumentTaskActionCompileSynthesis,
+				Synthesis: runner.CompileSynthesisInput{
+					Path:       tt.path,
+					Title:      "Invalid",
+					SourceRefs: []string{tt.sourceRef},
+					Body:       body,
+					Mode:       "create_or_update",
+				},
+			})
+			if err != nil {
+				t.Fatalf("compile synthesis reject: %v", err)
+			}
+			if !result.Rejected || result.RejectionReason != tt.want {
+				t.Fatalf("compile synthesis rejection = %+v, want %q", result, tt.want)
+			}
+		})
+	}
+
+	list, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{Limit: 10},
+	})
+	if err != nil {
+		t.Fatalf("list after rejected compile synthesis: %v", err)
+	}
+	if len(list.Documents) != 0 {
+		t.Fatalf("rejected compile synthesis wrote documents: %+v", list.Documents)
+	}
+}
+
 func TestDocumentTaskRejectsInvalidCreateFrontmatterBeforeRuntimeFiles(t *testing.T) {
 	t.Parallel()
 

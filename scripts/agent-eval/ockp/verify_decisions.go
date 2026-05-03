@@ -515,7 +515,8 @@ func verifySourceSensitiveAuditRepair(ctx context.Context, paths evalPaths, fina
 		projectionDetailContains(projection.Details, "superseded_source_refs", sourceAuditOldSourcePath)
 	hasInvalidation := events.Provenance != nil && eventTypesInclude(events.Provenance.Events, "projection_invalidated")
 	hasRefresh := events.Provenance != nil && eventTypesInclude(events.Provenance.Events, "projection_refreshed")
-	activityPass := turnMetrics.AuditContradictionsUsed || turnMetrics.SearchUsed &&
+	auditReportUsed := turnMetrics.AuditContradictionsUsed || turnMetrics.SourceAuditReportUsed
+	activityPass := auditReportUsed || turnMetrics.SearchUsed &&
 		turnMetrics.ListDocumentsUsed &&
 		turnMetrics.GetDocumentUsed &&
 		turnMetrics.ProjectionStatesUsed &&
@@ -548,7 +549,7 @@ func verifySourceSensitiveAuditRepair(ctx context.Context, paths evalPaths, fina
 	if !hasRefresh {
 		failures = append(failures, "audit synthesis refresh event missing")
 	}
-	if !turnMetrics.AuditContradictionsUsed {
+	if !auditReportUsed {
 		if !turnMetrics.SearchUsed {
 			failures = append(failures, "agent did not use retrieval search")
 		}
@@ -729,10 +730,11 @@ func verifyBroadContradictionAuditRevisit(ctx context.Context, paths evalPaths, 
 		alphaEvents.Provenance != nil && len(alphaEvents.Provenance.Events) > 0 &&
 		bravoEvents.Provenance != nil && len(bravoEvents.Provenance.Events) > 0
 	inspectedBothProvenanceRefs := provenanceEventRefIDsInclude(turnMetrics.ProvenanceEventRefIDs, alphaID, bravoID)
-	conflictActivityPass := turnMetrics.AuditContradictionsUsed || turnMetrics.SearchUsed && inspectedBothProvenanceRefs
+	auditReportUsed := turnMetrics.AuditContradictionsUsed || turnMetrics.SourceAuditReportUsed
+	conflictActivityPass := auditReportUsed || turnMetrics.SearchUsed && inspectedBothProvenanceRefs
 	conflictAnswerPass := messageContainsAll(finalMessage, []string{sourceAuditConflictAlphaPath, sourceAuditConflictBravoPath}) &&
 		messageContainsAny(finalMessage, []string{"conflict", "conflicting", "contradict", "contradiction"}) &&
-		(turnMetrics.AuditContradictionsUsed || messageContainsAny(finalMessage, []string{"both are current", "both sources are current", "current sources", "both current"})) &&
+		(auditReportUsed || messageContainsAny(finalMessage, []string{"both are current", "both sources are current", "current sources", "both current"})) &&
 		messageContainsAny(finalMessage, []string{"unresolved", "no supersession", "no source authority", "cannot choose", "do not choose"}) &&
 		messageContainsAny(finalMessage, []string{"seven", "7"}) &&
 		messageContainsAny(finalMessage, []string{"thirty", "30"})
@@ -754,8 +756,8 @@ func verifyBroadContradictionAuditRevisit(ctx context.Context, paths evalPaths, 
 	if synthesisCount != 2 {
 		failures = append(failures, fmt.Sprintf("expected target and decoy synthesis documents only, got %d", synthesisCount))
 	}
-	if !turnMetrics.AuditContradictionsUsed && !inspectedBothProvenanceRefs {
-		failures = append(failures, "agent did not inspect provenance events for both conflict sources")
+	if !auditReportUsed && !inspectedBothProvenanceRefs {
+		failures = append(failures, "agent did not use source audit report or inspect provenance events for both conflict sources")
 	}
 	if !conflictAnswerPass {
 		failures = append(failures, "final answer did not explain unresolved conflicting source evidence")
@@ -765,6 +767,69 @@ func verifyBroadContradictionAuditRevisit(ctx context.Context, paths evalPaths, 
 	}
 	databasePass := repair.DatabasePass && searchHasBoth && hasConflictProvenance && synthesisCount == 2
 	assistantPass := len(populatedBypassFailures(turnMetrics)) == 0 && !turnMetrics.CreateDocumentUsed && repair.AssistantPass && conflictAnswerPass && decisionAnswerPass && conflictActivityPass
+	return verificationResult{
+		Passed:        databasePass && assistantPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{sourceAuditSynthesisPath, sourceAuditDecoyPath, sourceAuditCurrentSourcePath, sourceAuditOldSourcePath, sourceAuditConflictAlphaPath, sourceAuditConflictBravoPath},
+	}, nil
+}
+
+func verifySourceAuditWorkflowAction(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	repair, err := verifySourceSensitiveAuditRepair(ctx, paths, finalMessage, turnMetrics)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	search, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{Text: sourceAuditConflictSearchText, Limit: 10},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	synthesisCount, err := documentCountWithPrefix(ctx, paths, "synthesis/")
+	if err != nil {
+		return verificationResult{}, err
+	}
+	searchHasBoth := searchContainsPath(search, sourceAuditConflictAlphaPath) && searchContainsPath(search, sourceAuditConflictBravoPath)
+	conflictAnswerPass := messageContainsAll(finalMessage, []string{sourceAuditConflictAlphaPath, sourceAuditConflictBravoPath}) &&
+		messageContainsAny(finalMessage, []string{"conflict", "conflicting", "contradict", "contradiction"}) &&
+		messageContainsAny(finalMessage, []string{"unresolved", "no supersession", "no source authority", "cannot choose", "do not choose"}) &&
+		messageContainsAny(finalMessage, []string{"seven", "7"}) &&
+		messageContainsAny(finalMessage, []string{"thirty", "30"})
+	actionAnswerPass := messageContainsAll(finalMessage, []string{"source_audit_report", sourceAuditSynthesisPath, sourceAuditCurrentSourcePath}) &&
+		messageContainsAll(finalMessage, []string{"provenance", "projection", "freshness", "duplicate", "validation", "authority"})
+	failures := populatedBypassFailures(turnMetrics)
+	if !repair.Passed {
+		failures = append(failures, "source audit repair failed: "+repair.Details)
+	}
+	if !turnMetrics.SourceAuditReportUsed {
+		failures = append(failures, "agent did not use source_audit_report")
+	}
+	if turnMetrics.CreateDocumentUsed {
+		failures = append(failures, "agent created a document instead of repairing only existing synthesis")
+	}
+	if !searchHasBoth {
+		failures = append(failures, "search did not find both conflict sources")
+	}
+	if synthesisCount != 2 {
+		failures = append(failures, fmt.Sprintf("expected target and decoy synthesis documents only, got %d", synthesisCount))
+	}
+	if !conflictAnswerPass {
+		failures = append(failures, "final answer did not explain unresolved conflicting source evidence")
+	}
+	if !actionAnswerPass {
+		failures = append(failures, "final answer did not report source_audit_report evidence, validation boundaries, and authority limits")
+	}
+	databasePass := repair.DatabasePass && searchHasBoth && synthesisCount == 2
+	assistantPass := len(populatedBypassFailures(turnMetrics)) == 0 &&
+		!turnMetrics.CreateDocumentUsed &&
+		turnMetrics.SourceAuditReportUsed &&
+		repair.AssistantPass &&
+		conflictAnswerPass &&
+		actionAnswerPass
 	return verificationResult{
 		Passed:        databasePass && assistantPass,
 		DatabasePass:  databasePass,

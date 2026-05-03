@@ -158,6 +158,10 @@ type metrics struct {
 	AuditContradictionsUsed        bool           `json:"audit_contradictions_used"`
 	AuditContradictionsModes       []string       `json:"audit_contradictions_modes,omitempty"`
 	MemoryRouterRecallReportUsed   bool           `json:"memory_router_recall_report_used"`
+	CompileSynthesisUsed           bool           `json:"compile_synthesis_used"`
+	SourceAuditReportUsed          bool           `json:"source_audit_report_used"`
+	SourceAuditReportModes         []string       `json:"source_audit_report_modes,omitempty"`
+	EvidenceBundleReportUsed       bool           `json:"evidence_bundle_report_used"`
 	GeneratedFileEvidence          []string       `json:"generated_file_evidence,omitempty"`
 	ModuleCacheEvidence            []string       `json:"module_cache_evidence,omitempty"`
 	BroadRepoSearchEvidence        []string       `json:"broad_repo_search_evidence,omitempty"`

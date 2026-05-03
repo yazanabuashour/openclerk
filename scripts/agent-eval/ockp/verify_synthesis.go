@@ -1030,6 +1030,97 @@ func verifyCompileSynthesisResponseCandidate(ctx context.Context, paths evalPath
 	}, nil
 }
 
+func verifyCompileSynthesisWorkflowAction(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	body, found, err := documentBodyByPath(ctx, paths, synthesisCompilePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	exactCount, err := exactDocumentCount(ctx, paths, synthesisCompilePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	decoyCount, err := exactDocumentCount(ctx, paths, synthesisCompileDecoyPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	synthesisCount, err := documentCountWithPrefix(ctx, paths, "synthesis/")
+	if err != nil {
+		return verificationResult{}, err
+	}
+	docID, docIDFound, err := documentIDByPath(ctx, paths, synthesisCompilePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projection, err := firstSynthesisProjection(ctx, paths, docID)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	required := []string{
+		"type: synthesis",
+		"status: active",
+		"freshness: fresh",
+		"Current compile_synthesis revisit decision",
+		"Current source: " + synthesisCompileCurrentSrc,
+		"Superseded source: " + synthesisCompileOldSrc,
+		"## Sources",
+		"## Freshness",
+	}
+	sourceRefs := []string{synthesisCompileCurrentSrc, synthesisCompileOldSrc}
+	failures := populatedBypassFailures(turnMetrics)
+	if !found {
+		failures = append(failures, "missing "+synthesisCompilePath)
+	}
+	if exactCount != 1 {
+		failures = append(failures, fmt.Sprintf("expected one %s document, got %d", synthesisCompilePath, exactCount))
+	}
+	if decoyCount != 1 {
+		failures = append(failures, fmt.Sprintf("expected one %s decoy document, got %d", synthesisCompileDecoyPath, decoyCount))
+	}
+	if synthesisCount != 2 {
+		failures = append(failures, fmt.Sprintf("expected exactly target and decoy synthesis documents, got %d", synthesisCount))
+	}
+	if !docIDFound {
+		failures = append(failures, "missing document id for "+synthesisCompilePath)
+	}
+	failures = append(failures, missingRequired(body, required)...)
+	failures = append(failures, sourceRefsFrontmatterFailures(body, sourceRefs)...)
+	if projection == nil || projection.Freshness != "fresh" {
+		failures = append(failures, "synthesis projection is not fresh")
+	}
+	if !turnMetrics.CompileSynthesisUsed {
+		failures = append(failures, "agent did not use compile_synthesis")
+	}
+	if turnMetrics.CreateDocumentUsed || turnMetrics.ReplaceSectionUsed || turnMetrics.AppendDocumentUsed {
+		failures = append(failures, "agent used lower-level document write primitives instead of compile_synthesis")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{"compile_synthesis", synthesisCompilePath, synthesisCompileCurrentSrc}) &&
+		messageContainsAll(finalMessage, []string{"duplicate", "provenance", "freshness", "validation", "authority"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report action evidence, duplicate status, freshness, validation boundaries, and authority limits")
+	}
+	databasePass := found &&
+		exactCount == 1 &&
+		decoyCount == 1 &&
+		synthesisCount == 2 &&
+		docIDFound &&
+		len(missingRequired(body, required)) == 0 &&
+		len(sourceRefsFrontmatterFailures(body, sourceRefs)) == 0 &&
+		projection != nil &&
+		projection.Freshness == "fresh"
+	activityPass := len(populatedBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.CompileSynthesisUsed &&
+		!turnMetrics.CreateDocumentUsed &&
+		!turnMetrics.ReplaceSectionUsed &&
+		!turnMetrics.AppendDocumentUsed
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{synthesisCompilePath, synthesisCompileDecoyPath, synthesisCompileCurrentSrc, synthesisCompileOldSrc},
+	}, nil
+}
+
 func validateCompileSynthesisCandidateObject(finalMessage string, expectedDocID string) (bool, []string) {
 	object, ok := exactFencedJSONObject(finalMessage)
 	if !ok {

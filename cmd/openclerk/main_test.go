@@ -206,6 +206,52 @@ func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 	if layoutResult.Layout == nil || !layoutResult.Layout.Valid || layoutResult.Layout.Mode != "convention_first" {
 		t.Fatalf("layout result = %+v", layoutResult)
 	}
+
+	compileRequestBytes, err := json.Marshal(runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionCompileSynthesis,
+		Synthesis: runner.CompileSynthesisInput{
+			Path:       "synthesis/runner-workflow.md",
+			Title:      "Runner Workflow",
+			SourceRefs: []string{"sources/runner-current.md", "sources/runner-old.md"},
+			Body:       "# Runner Workflow\n\n## Summary\nCompiled runner workflow evidence.\n\n## Sources\n- sources/runner-current.md\n- sources/runner-old.md\n\n## Freshness\nChecked current runner sources.\n",
+			Mode:       "create_or_update",
+		},
+	})
+	if err != nil {
+		t.Fatalf("marshal compile request: %v", err)
+	}
+	var compileResult runner.DocumentTaskResult
+	code, stderr = runJSON(t, []string{"document", "--db", dbPath}, string(compileRequestBytes), &compileResult)
+	if code != 0 {
+		t.Fatalf("compile synthesis exit = %d stderr=%s", code, stderr)
+	}
+	if compileResult.CompileSynthesis == nil || compileResult.CompileSynthesis.WriteStatus != "created" {
+		t.Fatalf("compile synthesis result = %+v", compileResult)
+	}
+
+	sourceAuditRequest := `{"action":"source_audit_report","source_audit":{"query":"runner source","target_path":"synthesis/runner-workflow.md","mode":"explain","limit":10}}`
+	var sourceAuditResult runner.RetrievalTaskResult
+	code, stderr = runJSON(t, []string{"retrieval", "--db", dbPath}, sourceAuditRequest, &sourceAuditResult)
+	if code != 0 {
+		t.Fatalf("source audit exit = %d stderr=%s", code, stderr)
+	}
+	if sourceAuditResult.SourceAudit == nil || sourceAuditResult.SourceAudit.Mode != "explain" || sourceAuditResult.SourceAudit.RepairApplied {
+		t.Fatalf("source audit result = %+v", sourceAuditResult)
+	}
+
+	evidenceRequest := `{"action":"evidence_bundle_report","evidence_bundle":{"query":"JSON runner","decision_id":"adr-runner","ref_kind":"document","ref_id":"` + decisionCreate.Document.DocID + `","projection":"decisions","limit":10}}`
+	var evidenceResult runner.RetrievalTaskResult
+	code, stderr = runJSON(t, []string{"retrieval", "--db", dbPath}, evidenceRequest, &evidenceResult)
+	if code != 0 {
+		t.Fatalf("evidence bundle exit = %d stderr=%s", code, stderr)
+	}
+	if evidenceResult.EvidenceBundle == nil ||
+		evidenceResult.EvidenceBundle.Search == nil ||
+		evidenceResult.EvidenceBundle.Decision == nil ||
+		evidenceResult.EvidenceBundle.Provenance == nil ||
+		evidenceResult.EvidenceBundle.Projections == nil {
+		t.Fatalf("evidence bundle result = %+v", evidenceResult)
+	}
 }
 
 func TestRunnerDocumentSourceURLUpdateStaleImpactJSON(t *testing.T) {

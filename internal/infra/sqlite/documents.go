@@ -248,6 +248,23 @@ func (s *Store) ReplaceDocumentSection(ctx context.Context, docID string, input 
 	return s.GetDocument(ctx, docID)
 }
 
+func (s *Store) ReplaceDocument(ctx context.Context, docID string, input domain.ReplaceDocumentInput) (domain.Document, error) {
+	if strings.TrimSpace(input.Body) == "" {
+		return domain.Document{}, domain.ValidationError("body is required", nil)
+	}
+	doc, err := s.refreshDocumentFromDisk(ctx, docID)
+	if err != nil {
+		return domain.Document{}, err
+	}
+	if err := osWriteFile(filepath.Join(s.vaultRoot, filepath.FromSlash(doc.Path)), strings.TrimRight(input.Body, "\n")+"\n"); err != nil {
+		return domain.Document{}, domain.InternalError("replace document", err)
+	}
+	if err := s.syncDocumentFromDisk(ctx, doc.Path, strings.TrimSpace(input.Title)); err != nil {
+		return domain.Document{}, err
+	}
+	return s.GetDocument(ctx, docID)
+}
+
 func (s *Store) refreshDocumentFromDisk(ctx context.Context, docID string) (domain.Document, error) {
 	doc, err := s.GetDocument(ctx, docID)
 	if err != nil {

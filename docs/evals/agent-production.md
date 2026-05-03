@@ -44,6 +44,16 @@ maintenance, decision-record explainability, release-readiness answers,
 read-side tag filtering, memory-router recall reports, and release synthesis
 freshness without private vault evidence.
 
+Targeted workflow-action lanes cover the three promoted narrow surfaces that
+replace repeated prompt choreography with runner-owned JSON actions:
+`compile_synthesis`, `source_audit_report`, and `evidence_bundle_report`.
+Their reduced reports are
+`docs/evals/results/ockp-compile-synthesis-workflow-action.md`,
+`docs/evals/results/ockp-source-audit-workflow-action.md`, and
+`docs/evals/results/ockp-evidence-bundle-workflow-action.md`. These lanes are
+targeted promotion evidence and do not replace the full production gate or the
+mandatory repo-docs dogfood lane.
+
 ## Harness
 
 Use `scripts/agent-eval/ockp`:
@@ -177,6 +187,9 @@ The `ockp` harness covers routine local knowledge-plane workflows:
 - synthesis compiler pressure checks for candidate selection with decoys,
   multi-source source-ref preservation, resumed drift repair, projection
   freshness inspection, and duplicate prevention
+- narrow workflow-action checks for `compile_synthesis`,
+  `source_audit_report`, and read-only `evidence_bundle_report`, including
+  safety, capability, and UX classification
 - append and replace-section workflows that preserve unrelated document content
 - promoted-record-shaped document creation, records lookup, provenance events,
   projection states, and freshness-aware synthesis when records are summarized

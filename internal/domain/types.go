@@ -219,6 +219,11 @@ type ReplaceSectionInput struct {
 	Content string
 }
 
+type ReplaceDocumentInput struct {
+	Title string
+	Body  string
+}
+
 type GraphNeighborhoodInput struct {
 	DocID   string
 	ChunkID string
@@ -406,6 +411,7 @@ type Store interface {
 	GetDocumentLinks(context.Context, string) (DocumentLinks, error)
 	AppendDocument(context.Context, string, AppendDocumentInput) (Document, error)
 	ReplaceDocumentSection(context.Context, string, ReplaceSectionInput) (Document, error)
+	ReplaceDocument(context.Context, string, ReplaceDocumentInput) (Document, error)
 	GetChunk(context.Context, string) (Chunk, error)
 	GraphNeighborhood(context.Context, GraphNeighborhoodInput) (GraphNeighborhood, error)
 	RecordsLookup(context.Context, RecordLookupInput) (RecordLookupResult, error)

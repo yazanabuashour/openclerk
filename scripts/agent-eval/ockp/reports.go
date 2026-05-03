@@ -91,7 +91,7 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	if releaseBlocking {
 		return nil
 	}
-	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != highTouchMemoryRouterRecallLaneName && lane != memoryRouterRecallCandidateLaneName && lane != memoryRouterRecallReportLaneName && lane != promotedRecordDomainLaneName && lane != highTouchRelationshipRecordLaneName && lane != relationshipRecordCandidateLaneName && lane != parallelRunnerLaneName && lane != documentHistoryLaneName && lane != highTouchDocumentLifecycleLaneName && lane != documentLifecycleRollbackCandidateLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != captureLowRiskLaneName && lane != captureExplicitOverridesLaneName && lane != captureDuplicateCandidateLaneName && lane != taggingLaneName && lane != captureSaveThisNoteLaneName && lane != captureDocumentLinksLaneName && lane != sourceURLUpdateLaneName && lane != webURLIntakeLaneName && lane != webURLStaleRepairLaneName && lane != webURLStaleImpactLaneName && lane != webProductPageLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != unsupportedArtifactKindLaneName && lane != localFileArtifactLaneName && lane != videoYouTubeLaneName && lane != nativeMediaTranscriptLaneName && lane != synthesisCompileLaneName && lane != highTouchCompileSynthesisLaneName && lane != compileSynthesisCandidateLaneName && lane != broadAuditLaneName {
+	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != highTouchMemoryRouterRecallLaneName && lane != memoryRouterRecallCandidateLaneName && lane != memoryRouterRecallReportLaneName && lane != promotedRecordDomainLaneName && lane != highTouchRelationshipRecordLaneName && lane != relationshipRecordCandidateLaneName && lane != parallelRunnerLaneName && lane != documentHistoryLaneName && lane != highTouchDocumentLifecycleLaneName && lane != documentLifecycleRollbackCandidateLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != captureLowRiskLaneName && lane != captureExplicitOverridesLaneName && lane != captureDuplicateCandidateLaneName && lane != taggingLaneName && lane != captureSaveThisNoteLaneName && lane != captureDocumentLinksLaneName && lane != sourceURLUpdateLaneName && lane != webURLIntakeLaneName && lane != webURLStaleRepairLaneName && lane != webURLStaleImpactLaneName && lane != webProductPageLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != unsupportedArtifactKindLaneName && lane != localFileArtifactLaneName && lane != videoYouTubeLaneName && lane != nativeMediaTranscriptLaneName && lane != synthesisCompileLaneName && lane != highTouchCompileSynthesisLaneName && lane != compileSynthesisCandidateLaneName && lane != compileSynthesisWorkflowActionLaneName && lane != broadAuditLaneName && lane != sourceAuditWorkflowActionLaneName && lane != evidenceBundleWorkflowActionLaneName {
 		return nil
 	}
 	summary := targetedLaneSummary{
@@ -217,9 +217,18 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		case compileSynthesisCandidateLaneName:
 			include = isCompileSynthesisCandidateScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
 			classification, posture = classifyTargetedCompileSynthesisCandidateResult(result)
+		case compileSynthesisWorkflowActionLaneName:
+			include = isCompileSynthesisWorkflowActionScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
+			classification, posture = classifyTargetedCompileSynthesisWorkflowActionResult(result)
 		case broadAuditLaneName:
 			include = isBroadAuditScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
 			classification, posture = classifyTargetedBroadAuditResult(result)
+		case sourceAuditWorkflowActionLaneName:
+			include = isSourceAuditWorkflowActionScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
+			classification, posture = classifyTargetedSourceAuditWorkflowActionResult(result)
+		case evidenceBundleWorkflowActionLaneName:
+			include = isEvidenceBundleWorkflowActionScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
+			classification, posture = classifyTargetedEvidenceBundleWorkflowActionResult(result)
 		}
 		if !include {
 			continue
@@ -370,9 +379,18 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	case compileSynthesisCandidateLaneName:
 		summary.Decision = compileSynthesisCandidateDecision(summary.ScenarioClassifications)
 		summary.Promotion = compileSynthesisCandidatePromotion(summary.Decision)
+	case compileSynthesisWorkflowActionLaneName:
+		summary.Decision = "accept_compile_synthesis_workflow_action"
+		summary.Promotion = "implemented narrow compile_synthesis document action plus existing primitives for advanced/manual cases; no schema migration, direct vault behavior, broad synthesis engine, or source authority change"
 	case broadAuditLaneName:
 		summary.Decision = broadAuditDecision(summary.ScenarioClassifications)
 		summary.Promotion = "targeted broad contradiction/audit revisit evidence only; no broad semantic contradiction engine, audit runner action, schema, migration, storage behavior, or public API change from this eval"
+	case sourceAuditWorkflowActionLaneName:
+		summary.Decision = "accept_source_audit_report_workflow_action"
+		summary.Promotion = "implemented narrow source_audit_report retrieval action plus existing primitives for advanced/manual cases; broad contradiction engine claims remain rejected"
+	case evidenceBundleWorkflowActionLaneName:
+		summary.Decision = "accept_evidence_bundle_report_workflow_action"
+		summary.Promotion = "implemented read-only evidence_bundle_report retrieval action plus existing records/provenance/decision/projection primitives; no schema migration, memory transport, vector DB, or hidden authority ranking"
 	}
 	return &summary
 }

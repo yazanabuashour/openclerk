@@ -2295,6 +2295,67 @@ func TestMemoryRouterRecallReportImplementationDecisionAcceptsOnlyCleanEvidence(
 	}
 }
 
+func TestWorkflowActionLaneMetadataAndUX(t *testing.T) {
+	tests := []struct {
+		name     string
+		scenario string
+		lane     string
+		action   func(metrics) metrics
+	}{
+		{
+			name:     "compile synthesis",
+			scenario: compileSynthesisWorkflowActionScenarioID,
+			lane:     compileSynthesisWorkflowActionLaneName,
+			action: func(m metrics) metrics {
+				m.CompileSynthesisUsed = true
+				return m
+			},
+		},
+		{
+			name:     "source audit",
+			scenario: sourceAuditWorkflowActionScenarioID,
+			lane:     sourceAuditWorkflowActionLaneName,
+			action: func(m metrics) metrics {
+				m.SourceAuditReportUsed = true
+				return m
+			},
+		},
+		{
+			name:     "evidence bundle",
+			scenario: evidenceBundleWorkflowActionScenarioID,
+			lane:     evidenceBundleWorkflowActionLaneName,
+			action: func(m metrics) metrics {
+				m.EvidenceBundleReportUsed = true
+				return m
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lane, releaseBlocking := reportLane([]string{tt.scenario})
+			if lane != tt.lane || releaseBlocking {
+				t.Fatalf("lane metadata = %q/%t, want %q/false", lane, releaseBlocking, tt.lane)
+			}
+			result := jobResult{
+				Variant:      productionVariant,
+				Scenario:     tt.scenario,
+				Status:       "passed",
+				Passed:       true,
+				Metrics:      tt.action(metrics{ToolCalls: 1, CommandExecutions: 1, AssistantCalls: 1, EventTypeCounts: map[string]int{}}),
+				Verification: verificationResult{Passed: true, DatabasePass: true, AssistantPass: true},
+			}
+			summary := buildTargetedLaneSummary(tt.lane, false, []jobResult{result})
+			if summary == nil || summary.Decision == "" || len(summary.ScenarioClassifications) != 1 {
+				t.Fatalf("summary = %+v", summary)
+			}
+			row := summary.ScenarioClassifications[0]
+			if row.FailureClassification != "none" || row.UXQuality != "workflow_action_acceptable" || row.SafetyPass != "pass" || row.CapabilityPass != "pass" {
+				t.Fatalf("classification row = %+v", row)
+			}
+		})
+	}
+}
+
 func TestDocumentLifecycleRollbackCandidateDecisionPromotesOnlyWhenGuidanceStillHasDebt(t *testing.T) {
 	rows := make([]targetedScenarioClassification, 0, len(documentLifecycleRollbackCandidateScenarioIDs()))
 	for _, id := range documentLifecycleRollbackCandidateScenarioIDs() {

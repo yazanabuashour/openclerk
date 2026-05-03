@@ -261,6 +261,80 @@ func verifyRelationshipRecordResponseCandidate(ctx context.Context, paths evalPa
 	}, nil
 }
 
+func verifyEvidenceBundleReportAction(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	report, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionEvidenceBundle,
+		EvidenceBundle: runner.EvidenceBundleOptions{
+			Query:      promotedRecordDomainEntityName,
+			EntityID:   promotedRecordDomainEntityID,
+			Projection: "records",
+			Limit:      10,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	entityDocID, entityDocFound, err := documentIDByPath(ctx, paths, promotedRecordDomainPrimaryPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	bundle := report.EvidenceBundle
+	hasBundle := bundle != nil
+	hasEntity := hasBundle &&
+		bundle.Entity != nil &&
+		bundle.Entity.EntityID == promotedRecordDomainEntityID &&
+		bundle.Entity.EntityType == promotedRecordDomainEntityType &&
+		len(bundle.Entity.Citations) > 0
+	hasRecords := hasBundle && bundle.Records != nil && len(bundle.Records.Entities) > 0
+	hasCitations := hasBundle && len(bundle.Citations) > 0 && entityDocFound && citationsContainPath(bundle.Citations, promotedRecordDomainPrimaryPath)
+	hasProvenance := hasBundle && bundle.Provenance != nil && len(bundle.Provenance.Events) > 0
+	hasProjection := hasBundle && bundle.Projections != nil && len(bundle.Projections.Projections) > 0 && bundle.Projections.Projections[0].Freshness == "fresh"
+	failures := populatedBypassFailures(turnMetrics)
+	if !hasBundle {
+		failures = append(failures, "evidence_bundle_report did not return a report")
+	}
+	if !hasEntity {
+		failures = append(failures, "evidence bundle missing exact entity evidence with citations")
+	}
+	if !hasRecords {
+		failures = append(failures, "evidence bundle missing records lookup evidence")
+	}
+	if !hasCitations {
+		failures = append(failures, "evidence bundle missing citation for "+promotedRecordDomainPrimaryPath)
+	}
+	if !hasProvenance {
+		failures = append(failures, "evidence bundle missing provenance events")
+	}
+	if !hasProjection {
+		failures = append(failures, "evidence bundle missing fresh records projection")
+	}
+	if !turnMetrics.EvidenceBundleReportUsed {
+		failures = append(failures, "agent did not use evidence_bundle_report")
+	}
+	if turnMetrics.CreateDocumentUsed || turnMetrics.ReplaceSectionUsed || turnMetrics.AppendDocumentUsed {
+		failures = append(failures, "agent wrote documents during read-only evidence bundle scenario")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{"evidence_bundle_report", promotedRecordDomainPrimaryPath}) &&
+		messageContainsAll(finalMessage, []string{"citation", "provenance", "projection", "fresh", "validation", "authority", "read-only"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report read-only evidence bundle fields, freshness, validation boundaries, and authority limits")
+	}
+	databasePass := hasBundle && hasEntity && hasRecords && hasCitations && hasProvenance && hasProjection && entityDocID != ""
+	activityPass := len(populatedBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.EvidenceBundleReportUsed &&
+		!turnMetrics.CreateDocumentUsed &&
+		!turnMetrics.ReplaceSectionUsed &&
+		!turnMetrics.AppendDocumentUsed
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{promotedRecordDomainPrimaryPath},
+	}, nil
+}
+
 func validateRelationshipRecordCandidateObject(finalMessage string, expectedGraphDocID string) (bool, []string) {
 	object, ok := exactFencedJSONObject(finalMessage)
 	if !ok {
@@ -353,4 +427,13 @@ func validateRelationshipRecordCandidateObject(finalMessage string, expectedGrap
 		failures = append(failures, "candidate authority_limits did not preserve graph/records authority limits")
 	}
 	return len(failures) == 0, failures
+}
+
+func citationsContainPath(citations []runner.Citation, path string) bool {
+	for _, citation := range citations {
+		if citation.Path == path {
+			return true
+		}
+	}
+	return false
 }
