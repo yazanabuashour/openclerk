@@ -138,7 +138,10 @@ before release notes claim them. `compile_synthesis`, `source_audit_report`,
 and read-only `evidence_bundle_report` are narrow runner-owned actions plus
 existing primitives for manual/advanced cases; do not broaden their release
 claims into a synthesis engine, broad contradiction engine, memory transport,
-vector DB, browser acquisition, or lower-level storage access.
+vector DB, browser acquisition, or lower-level storage access. Do not repair
+routine workflow-action UX by adding long `skills/openclerk/SKILL.md` recipes;
+keep the skill to compact action routing and move detailed examples to docs or
+the runner action itself.
 
 Tag a version like `v0.1.0`, push the tag, and let the release workflow:
 

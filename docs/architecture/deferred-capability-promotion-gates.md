@@ -35,7 +35,7 @@ Promotion requires targeted AgentOps evidence through one of two paths:
   steps, too scripted, too error-prone, or too guidance-dependent for routine
   AgentOps use.
 
-## Skill Budget And Workflow Bias
+## Skill Budget And Workflow Action Promotion
 
 `skills/openclerk/SKILL.md` is a router and safety contract, not the durable
 home for long product workflows. Its budget is:
@@ -46,16 +46,21 @@ home for long product workflows. Its budget is:
 - short runner-use hints needed to avoid unsafe transports or durable writes
 
 Detailed multi-step recipes should move into runner workflow actions or
-maintainer docs. Adding substantial skill content is acceptable only when it
-documents an already-promoted runner surface, bridges a temporary safety gap,
-or is paired with an explicit candidate comparison against a narrow runner
-workflow action.
+maintainer/user docs. Routine repeated behavior belongs in runner-owned
+workflow actions. Adding substantial skill content is acceptable only when it
+documents an already-promoted runner surface in compact index form, bridges a
+temporary safety gap, or is paired with an explicit candidate comparison
+against a narrow runner workflow action. Long request examples, field catalogs,
+and workflow recipes should not live in the skill after the corresponding
+runner action is promoted.
 
 Treat skill growth as UX debt when the new text teaches agents to perform a
 routine workflow by memorizing exact command order, exact JSON, exact shell
 phrases, or scenario-specific prompts. A passing eval that relies on that
 skill content proves capability or safety only; it does not prove UX quality
-unless a natural prompt also passes with acceptable step count and retry risk.
+unless a natural prompt also passes with acceptable step count, assistant-turn
+count, and retry risk. If the natural row passes but still exceeds the
+low-ceremony threshold, classify it as taste debt rather than acceptable UX.
 
 The preferred long-term shape for repeated workflows is narrow, runner-owned,
 local-first, JSON-only action support that preserves source authority,

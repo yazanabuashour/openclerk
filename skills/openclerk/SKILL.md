@@ -18,20 +18,17 @@ openclerk retrieval
 
 ## Action Index
 
-Prefer the narrow workflow action when it matches the request:
+Prefer a promoted workflow action over step-by-step primitive choreography when
+it matches the request:
 
-- Source-linked synthesis create/update: use document `compile_synthesis`.
-  Do not preflight with `search`, `list_documents`, `get_document`,
-  `replace_section`, or `append_document` unless the user asks for manual
-  investigation or the action rejects.
-- Source-sensitive audit explain/repair: use retrieval `source_audit_report`.
-  Use `mode: "explain"` for read-only answers and `mode: "repair_existing"`
-  only for an existing synthesis target.
-- Records, decisions, provenance, and projection evidence bundles: use
-  read-only retrieval `evidence_bundle_report`.
-- Use lower-level primitives for advanced/manual cases, explicit primitive
-  requests, unsupported workflow-action inputs, and follow-up inspection after
-  a runner rejection.
+- Source-linked synthesis create/update: document `compile_synthesis`.
+- Source-sensitive audit explain/repair: retrieval `source_audit_report`.
+- Records, decisions, provenance, and projection evidence bundles: retrieval
+  `evidence_bundle_report`.
+
+Use lower-level primitives for explicit primitive requests, advanced/manual
+cases, unsupported workflow-action inputs, and follow-up inspection after a
+runner rejection.
 
 ## Core Guardrails
 
@@ -343,7 +340,6 @@ Common request shapes:
 {"action":"ingest_source_url","source":{"url":"https://example.test/page.html","mode":"update","source_type":"web"}}
 {"action":"ingest_video_url","video":{"url":"https://youtube.example.test/watch?v=demo","path_hint":"sources/video-youtube/demo.md","title":"Demo Video Transcript","transcript":{"text":"Supplied transcript text.","policy":"supplied","origin":"user_supplied_transcript","language":"en","captured_at":"2026-04-27T00:00:00Z"}}}
 {"action":"ingest_video_url","video":{"url":"https://youtube.example.test/watch?v=demo","mode":"update","transcript":{"text":"Updated supplied transcript text.","policy":"supplied","origin":"user_supplied_transcript"}}}
-{"action":"compile_synthesis","synthesis":{"path":"synthesis/example.md","title":"Example","source_refs":["sources/example.md"],"body":"# Example\n\n## Summary\nSource-backed synthesis.\n\n## Sources\n- sources/example.md\n\n## Freshness\nChecked with runner-visible source evidence.","mode":"create_or_update"}}
 {"action":"list_documents","list":{"path_prefix":"notes/","limit":20}}
 {"action":"list_documents","list":{"path_prefix":"notes/","tag":"account-renewal","limit":20}}
 {"action":"get_document","doc_id":"doc_id_from_json"}
@@ -391,26 +387,10 @@ Use `ingest_video_url` only with user-supplied transcript text and provenance.
 Do not acquire media or transcripts with external tools or lower-level storage.
 Unsupported acquisition paths remain design-only until promoted.
 
-For routine source-linked synthesis create/update, prefer document
-`compile_synthesis`. It writes exactly one `synthesis/` target, preserves
-single-line comma-separated `source_refs`, requires `## Sources` and
-`## Freshness`, checks duplicate paths, and returns selected path, source
-evidence, provenance refs, projection freshness, write status, validation
-boundaries, and authority limits. Use lower-level `search`, `list_documents`,
-`get_document`, `replace_section`, and `append_document` only for advanced or
-manual workflows.
-
 Before stale synthesis repair or source-sensitive audit output, inspect
 `projection_states` and `provenance_events`. If current sources conflict without
 runner-visible authority or supersession, explain the conflict with both source
 paths instead of choosing a winner.
-
-Use retrieval `source_audit_report` for routine source-sensitive audit and
-existing-target repair. It can explain or repair an existing synthesis page,
-inspect provenance/freshness, prevent duplicates, and report unresolved current
-source conflicts without claiming a broad contradiction engine. Use
-`audit_contradictions` as an advanced/manual primitive when specifically
-needed.
 
 For messy populated-vault retrieval, answer from runner-visible authority:
 Metadata-filtered authority results, active canonical sources, cited source
@@ -451,9 +431,6 @@ Common request shapes:
 {"action":"projection_states","projection":{"projection":"decisions","ref_kind":"decision","ref_id":"decision_id_from_json","limit":20}}
 {"action":"audit_contradictions","audit":{"query":"source-sensitive audit runner repair evidence","target_path":"synthesis/audit-runner-routing.md","mode":"plan_only","conflict_query":"source sensitive audit conflict runner retention","limit":10}}
 {"action":"audit_contradictions","audit":{"query":"source-sensitive audit runner repair evidence","target_path":"synthesis/audit-runner-routing.md","mode":"repair_existing","conflict_query":"source sensitive audit conflict runner retention","limit":10}}
-{"action":"source_audit_report","source_audit":{"query":"source-sensitive audit runner repair evidence","target_path":"synthesis/audit-runner-routing.md","mode":"explain","conflict_query":"source sensitive audit conflict runner retention","limit":10}}
-{"action":"source_audit_report","source_audit":{"query":"source-sensitive audit runner repair evidence","target_path":"synthesis/audit-runner-routing.md","mode":"repair_existing","conflict_query":"source sensitive audit conflict runner retention","limit":10}}
-{"action":"evidence_bundle_report","evidence_bundle":{"query":"Runner Policy","entity_id":"runner-policy","projection":"records","limit":10}}
 ```
 
 Request fields are `action`, `search`, `doc_id`, `chunk_id`, `node_id`,

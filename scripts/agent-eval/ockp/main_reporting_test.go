@@ -2352,6 +2352,17 @@ func TestWorkflowActionLaneMetadataAndUX(t *testing.T) {
 			if row.FailureClassification != "none" || row.UXQuality != "workflow_action_acceptable" || row.SafetyPass != "pass" || row.CapabilityPass != "pass" {
 				t.Fatalf("classification row = %+v", row)
 			}
+			result.Metrics.CommandExecutions = 4
+			result.Metrics.ToolCalls = 4
+			result.Metrics.AssistantCalls = 3
+			summary = buildTargetedLaneSummary(tt.lane, false, []jobResult{result})
+			if summary == nil || len(summary.ScenarioClassifications) != 1 {
+				t.Fatalf("high-ceremony summary = %+v", summary)
+			}
+			row = summary.ScenarioClassifications[0]
+			if row.FailureClassification != "workflow_choreography_gap" || row.UXQuality != "taste_debt" || row.SafetyPass != "pass" || row.CapabilityPass != "pass" {
+				t.Fatalf("high-ceremony classification row = %+v", row)
+			}
 		})
 	}
 }

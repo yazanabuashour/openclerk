@@ -6,10 +6,10 @@
 - Release blocking: `false`
 - Configured parallelism: `4`
 - Cache mode: `shared`
-- Cache prewarm seconds: `16.33`
-- Harness elapsed seconds: `47.11`
-- Effective parallel speedup: `0.59x`
-- Parallel efficiency: `0.15`
+- Cache prewarm seconds: `16.00`
+- Harness elapsed seconds: `106.65`
+- Effective parallel speedup: `0.82x`
+- Parallel efficiency: `0.21`
 - Raw logs: `<run-root>/<variant>/<scenario>/turn-N/events.jsonl`
 
 ## Production Gate
@@ -35,20 +35,20 @@ Recommendation: `fix_production_agentops_before_release`
 | Phase | Seconds |
 | --- | ---: |
 | prepare_run_dir | 0.00 |
-| copy_repo | 0.06 |
-| install_variant | 3.10 |
+| copy_repo | 0.05 |
+| install_variant | 3.42 |
 | warm_cache | 0.00 |
-| seed_data | 0.03 |
-| agent_run | 27.56 |
-| parse_metrics | 0.00 |
-| verify | 0.03 |
-| total | 30.79 |
+| seed_data | 0.02 |
+| agent_run | 87.12 |
+| parse_metrics | 0.01 |
+| verify | 0.02 |
+| total | 90.65 |
 
 ## Results
 
 | Variant | Scenario | Status | Tools | Commands | Assistant Calls | Non-Cached Input | Wall Seconds | Raw Log |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `production` | `compile-synthesis-workflow-action-natural` | `completed` | 12 | 12 | 7 | 14532 | 27.56 | `<run-root>/production/compile-synthesis-workflow-action-natural/turn-1/events.jsonl` |
+| `production` | `compile-synthesis-workflow-action-natural` | `completed` | 72 | 72 | 19 | 51342 | 87.12 | `<run-root>/production/compile-synthesis-workflow-action-natural/turn-1/events.jsonl` |
 
 ## Targeted Lane Summary
 
@@ -60,12 +60,12 @@ Promotion: implemented narrow compile_synthesis document action plus existing pr
 
 | Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Latency | Guidance dependence | Safety pass | Capability pass | UX quality | Safety risks | Fixture preflight | Evidence posture |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- |
-| `production` | `compile-synthesis-workflow-action-natural` | `completed` | `none` | 12 | 12 | 7 | 27.56 | `natural-user-intent` | `completed` | `normal` | 0 | 12 | `medium` | `low_natural_promoted_workflow_action` | `pass` | `pass` | `workflow_action_acceptable` | `none_observed` | `not_applicable` | compile_synthesis preserved source authority, selected the existing target, prevented duplicates, returned provenance/freshness evidence, and reduced workflow ceremony |
+| `production` | `compile-synthesis-workflow-action-natural` | `completed` | `workflow_choreography_gap` | 72 | 72 | 19 | 87.12 | `natural-user-intent` | `completed` | `normal` | 0 | 72 | `high` | `high_ceremony_promoted_workflow_action` | `pass` | `pass` | `taste_debt` | `none_observed` | `not_applicable` | compile_synthesis preserved source authority and passed, but natural workflow-action use still required more commands or assistant turns than the low-ceremony UX threshold |
 
 ## Candidate Comparison Context
 
 | Row | Scenario | Prompt specificity | Safety pass | Capability pass | UX quality | Interpretation |
 | --- | --- | --- | --- | --- | --- | --- |
 | Candidate A | `compile-synthesis-current-primitives-control` | scripted-control | pass | pass | baseline_ceremonial_control | Existing primitives prove capability but require workflow choreography. |
-| Candidate B | `compile-synthesis-response-candidate` | candidate-response-contract | pass | pass | candidate_contract_complete | Candidate fields are useful but should be runner-owned rather than skill choreography. |
-| Candidate C | `compile-synthesis-workflow-action-natural` | natural-user-intent | pass | pass | workflow_action_acceptable | Selected narrow action plus existing primitives for advanced/manual cases. |
+| Candidate B | `compile-synthesis-response-candidate` | candidate-response-contract | pass | pass | candidate_contract_complete | Candidate fields are useful, but should be runner-owned instead of skill choreography. |
+| Candidate C | `compile-synthesis-workflow-action-natural` | natural-user-intent | pass | pass | taste_debt | Selected narrow action plus existing primitives; residual command ceremony is tracked by `oc-nj5h`. |

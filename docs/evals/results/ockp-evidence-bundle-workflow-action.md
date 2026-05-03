@@ -6,10 +6,10 @@
 - Release blocking: `false`
 - Configured parallelism: `4`
 - Cache mode: `shared`
-- Cache prewarm seconds: `16.39`
-- Harness elapsed seconds: `34.50`
-- Effective parallel speedup: `0.41x`
-- Parallel efficiency: `0.10`
+- Cache prewarm seconds: `14.39`
+- Harness elapsed seconds: `73.87`
+- Effective parallel speedup: `0.73x`
+- Parallel efficiency: `0.18`
 - Raw logs: `<run-root>/<variant>/<scenario>/turn-N/events.jsonl`
 
 ## Production Gate
@@ -35,20 +35,20 @@ Recommendation: `fix_production_agentops_before_release`
 | Phase | Seconds |
 | --- | ---: |
 | prepare_run_dir | 0.00 |
-| copy_repo | 0.06 |
-| install_variant | 3.96 |
+| copy_repo | 0.05 |
+| install_variant | 5.27 |
 | warm_cache | 0.00 |
 | seed_data | 0.04 |
-| agent_run | 14.04 |
-| parse_metrics | 0.00 |
+| agent_run | 54.09 |
+| parse_metrics | 0.01 |
 | verify | 0.01 |
-| total | 18.11 |
+| total | 59.47 |
 
 ## Results
 
 | Variant | Scenario | Status | Tools | Commands | Assistant Calls | Non-Cached Input | Wall Seconds | Raw Log |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `production` | `evidence-bundle-workflow-action-natural` | `completed` | 6 | 6 | 3 | 11781 | 14.04 | `<run-root>/production/evidence-bundle-workflow-action-natural/turn-1/events.jsonl` |
+| `production` | `evidence-bundle-workflow-action-natural` | `completed` | 30 | 30 | 8 | 26945 | 54.09 | `<run-root>/production/evidence-bundle-workflow-action-natural/turn-1/events.jsonl` |
 
 ## Targeted Lane Summary
 
@@ -60,12 +60,12 @@ Promotion: implemented read-only evidence_bundle_report retrieval action plus ex
 
 | Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Latency | Guidance dependence | Safety pass | Capability pass | UX quality | Safety risks | Fixture preflight | Evidence posture |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- |
-| `production` | `evidence-bundle-workflow-action-natural` | `completed` | `none` | 6 | 6 | 3 | 14.04 | `natural-user-intent` | `completed` | `normal` | 0 | 6 | `low` | `low_natural_promoted_workflow_action` | `pass` | `pass` | `workflow_action_acceptable` | `none_observed` | `not_applicable` | evidence_bundle_report returned read-only citations, provenance, projection freshness, validation boundaries, authority limits, and reduced workflow ceremony |
+| `production` | `evidence-bundle-workflow-action-natural` | `completed` | `workflow_choreography_gap` | 30 | 30 | 8 | 54.09 | `natural-user-intent` | `completed` | `normal` | 0 | 30 | `medium` | `high_ceremony_promoted_workflow_action` | `pass` | `pass` | `taste_debt` | `none_observed` | `not_applicable` | evidence_bundle_report returned the required read-only evidence and passed, but natural workflow-action use still required more commands or assistant turns than the low-ceremony UX threshold |
 
 ## Candidate Comparison Context
 
 | Row | Scenario | Prompt specificity | Safety pass | Capability pass | UX quality | Interpretation |
 | --- | --- | --- | --- | --- | --- | --- |
-| Candidate A | `relationship-record-current-primitives-control` | scripted-control | pass | pass | baseline_ceremonial_control | Lookup plus provenance plus projection primitives prove capability but are routine ceremony. |
-| Candidate B | `relationship-record-response-candidate` | candidate-response-contract | pass | pass | candidate_contract_complete | Candidate fields are useful but should be runner-owned rather than assembled in skill prose. |
-| Candidate C | `evidence-bundle-workflow-action-natural` | natural-user-intent | pass | pass | workflow_action_acceptable | Selected read-only bundle action plus existing primitives for advanced/manual review. |
+| Candidate A | `relationship-record-current-primitives-control` | scripted-control | pass | pass | baseline_ceremonial_control | Lookup plus provenance plus projection primitives prove capability but remain routine ceremony. |
+| Candidate B | `relationship-record-response-candidate` | candidate-response-contract | pass | pass | candidate_contract_complete | Candidate fields are useful, but should be runner-owned instead of assembled in skill prose. |
+| Candidate C | `evidence-bundle-workflow-action-natural` | natural-user-intent | pass | pass | taste_debt | Selected read-only bundle action plus existing primitives; residual command ceremony is tracked by `oc-nj5h`. |

@@ -154,6 +154,12 @@ high ceremony should be classified as taste debt using
 `ergonomics_gap_despite_capability_pass` when those labels better explain the
 gap than generic `ergonomics_gap`.
 
+For promoted workflow actions, low ceremony means no more than three runner
+commands, no more than two assistant turns, and no retries in the natural row.
+Rows above that threshold may still be `safety_pass: pass` and
+`capability_pass: pass`, but their `ux_quality` must remain taste debt until
+the workflow action, runner summary, skill routing, or eval prompt is repaired.
+
 Companion eval-design follow-ups for completed-but-high-touch workflows are
 recorded in
 [`high-touch-successful-workflows-ceremony-eval-design.md`](high-touch-successful-workflows-ceremony-eval-design.md).

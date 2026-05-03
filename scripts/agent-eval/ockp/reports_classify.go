@@ -483,6 +483,9 @@ func classifyTargetedCompileSynthesisCandidateResult(result jobResult) (string, 
 
 func classifyTargetedCompileSynthesisWorkflowActionResult(result jobResult) (string, string) {
 	if result.Passed && result.Verification.Passed {
+		if workflowActionCeremonyExceeded(result) {
+			return "workflow_choreography_gap", "compile_synthesis preserved source authority and passed, but natural workflow-action use still required more commands or assistant turns than the low-ceremony UX threshold"
+		}
 		return "none", "compile_synthesis preserved source authority, selected the existing target, prevented duplicates, returned provenance/freshness evidence, and reduced workflow ceremony"
 	}
 	if len(populatedBypassFailures(result.Metrics)) != 0 {
@@ -536,6 +539,9 @@ func classifyTargetedBroadAuditResult(result jobResult) (string, string) {
 
 func classifyTargetedSourceAuditWorkflowActionResult(result jobResult) (string, string) {
 	if result.Passed && result.Verification.Passed {
+		if workflowActionCeremonyExceeded(result) {
+			return "workflow_choreography_gap", "source_audit_report preserved source authority and passed, but natural workflow-action use still required more commands or assistant turns than the low-ceremony UX threshold"
+		}
 		return "none", "source_audit_report preserved source authority, provenance/freshness checks, unresolved-conflict handling, existing-target repair boundaries, and reduced workflow ceremony"
 	}
 	if len(populatedBypassFailures(result.Metrics)) != 0 {
@@ -555,6 +561,9 @@ func classifyTargetedSourceAuditWorkflowActionResult(result jobResult) (string, 
 
 func classifyTargetedEvidenceBundleWorkflowActionResult(result jobResult) (string, string) {
 	if result.Passed && result.Verification.Passed {
+		if workflowActionCeremonyExceeded(result) {
+			return "workflow_choreography_gap", "evidence_bundle_report returned the required read-only evidence and passed, but natural workflow-action use still required more commands or assistant turns than the low-ceremony UX threshold"
+		}
 		return "none", "evidence_bundle_report returned read-only citations, provenance, projection freshness, validation boundaries, authority limits, and reduced workflow ceremony"
 	}
 	if len(populatedBypassFailures(result.Metrics)) != 0 {
@@ -570,6 +579,10 @@ func classifyTargetedEvidenceBundleWorkflowActionResult(result jobResult) (strin
 		return "runner_capability_gap", "evidence_bundle_report did not safely package the promoted evidence bundle workflow"
 	}
 	return "workflow_choreography_gap", "evidence_bundle_report ran but the answer or evidence contract still needed repair"
+}
+
+func workflowActionCeremonyExceeded(result jobResult) bool {
+	return result.Metrics.CommandExecutions > 3 || result.Metrics.AssistantCalls > 2 || scenarioRetries(result) > 0
 }
 
 func isUXDebtClassification(classification string) bool {
@@ -913,8 +926,11 @@ func scenarioGuidanceDependence(result jobResult) string {
 	case compileSynthesisResponseCandidateScenarioID:
 		return "high_eval_only_candidate_contract"
 	case compileSynthesisWorkflowActionScenarioID, sourceAuditWorkflowActionScenarioID, evidenceBundleWorkflowActionScenarioID:
-		if result.Passed {
+		if result.Passed && !workflowActionCeremonyExceeded(result) {
 			return "low_natural_promoted_workflow_action"
+		}
+		if result.Passed {
+			return "high_ceremony_promoted_workflow_action"
 		}
 		return "high_if_natural_prompt_failed"
 	case broadAuditNaturalScenarioID:
