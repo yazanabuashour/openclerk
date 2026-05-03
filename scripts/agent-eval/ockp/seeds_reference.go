@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/yazanabuashour/openclerk/internal/runclient"
+	"github.com/yazanabuashour/openclerk/internal/runner"
 )
 
 func seedRAGRetrievalBaseline(ctx context.Context, cfg runclient.Config) error {
@@ -89,7 +90,8 @@ func seedRepoDocsDogfood(ctx context.Context, cfg runclient.Config) error {
 			return err
 		}
 		repoPath := filepath.ToSlash(rel)
-		if err := createSeedDocument(ctx, cfg, repoPath, markdownTitle(repoPath, string(content)), string(content)); err != nil {
+		body := repoDocsDogfoodBody(repoPath, string(content))
+		if err := createSeedDocument(ctx, cfg, repoPath, markdownTitle(repoPath, string(content)), body); err != nil {
 			return fmt.Errorf("import repo doc %s: %w", repoPath, err)
 		}
 		imported++
@@ -101,7 +103,81 @@ func seedRepoDocsDogfood(ctx context.Context, cfg runclient.Config) error {
 	if imported == 0 {
 		return errors.New("repo-docs dogfood seed imported no markdown documents")
 	}
-	return nil
+	if err := seedMemoryRouterRevisit(ctx, cfg); err != nil {
+		return err
+	}
+	return seedRepoDocsReleaseSynthesis(ctx, cfg)
+}
+
+func repoDocsDogfoodBody(repoPath string, body string) string {
+	tag := repoDocsDogfoodTag(repoPath)
+	if tag == "" {
+		return body
+	}
+	if strings.HasPrefix(body, "---\n") {
+		end := strings.Index(body[4:], "\n---")
+		if end >= 0 {
+			frontmatter := body[:4+end]
+			rest := body[4+end:]
+			if strings.Contains(frontmatter, "\ntag:") || strings.Contains(frontmatter, "\ntags:") {
+				return body
+			}
+			return frontmatter + "\ntag: " + tag + rest
+		}
+	}
+	return strings.TrimRight("---\ntype: repo-doc\ntag: "+tag+"\n---\n"+body, "\n") + "\n"
+}
+
+func repoDocsDogfoodTag(repoPath string) string {
+	switch {
+	case strings.HasPrefix(repoPath, "docs/release"), repoPath == repoDocsReleaseVerification, repoPath == repoDocsMaintainersPath, repoPath == "README.md", repoPath == "CHANGELOG.md":
+		return repoDocsReleaseTag
+	case strings.HasPrefix(repoPath, "docs/architecture/"):
+		return repoDocsArchitectureTag
+	case strings.HasPrefix(repoPath, "docs/evals/"):
+		return "repo-eval-docs"
+	case strings.HasPrefix(repoPath, "skills/"):
+		return "repo-skill-docs"
+	default:
+		return "repo-public-docs"
+	}
+}
+
+func seedRepoDocsReleaseSynthesis(ctx context.Context, cfg runclient.Config) error {
+	for _, path := range []string{repoDocsReleaseVerification, repoDocsMaintainersPath} {
+		list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+			Action: runner.DocumentTaskActionList,
+			List:   runner.DocumentListOptions{PathPrefix: path, Limit: 5},
+		})
+		if err != nil {
+			return err
+		}
+		if !documentSummariesContainPath(list.Documents, path) {
+			return nil
+		}
+	}
+	body := strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: docs/release-verification.md, docs/maintainers.md
+---
+# Repo Docs Release Readiness
+
+## Summary
+Pre-release dogfood synthesis says release prep should validate release docs, the OpenClerk skill, committed artifacts, formatting, linting, unit tests, the full AgentOps production gate, and the expanded repo-docs dogfood lane before tagging.
+
+## Sources
+- docs/release-verification.md
+- docs/maintainers.md
+
+## Freshness
+Checked against committed public release procedure docs before the latest release-verification dogfood marker was added.
+`) + "\n"
+	if err := createSeedDocument(ctx, cfg, repoDocsReleaseSynthesisPath, "Repo Docs Release Readiness", body); err != nil {
+		return err
+	}
+	return replaceScenarioSeedSection(ctx, cfg, repoDocsReleaseVerification, "Verify a Release", "Repo-docs dogfood release marker: expanded repo-docs dogfood is mandatory pre-release evidence before tagging v0.2.3 or later.\n\nDownload the assets from the GitHub Release page for the tag you want to verify,\nthen run:")
 }
 func shouldDescendRepoMarkdownDir(rel string) bool {
 	slash := filepath.ToSlash(rel)

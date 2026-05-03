@@ -31,9 +31,14 @@ part of the current release-blocking production gate.
 
 The repo-docs dogfood lane is defined in
 [`repo-docs-dogfood.md`](repo-docs-dogfood.md). It imports this repository's
-committed public markdown into an isolated eval vault and provides recurring
-non-release-blocking pressure on retrieval, synthesis maintenance, and
-decision-record explainability without private vault evidence.
+committed public markdown into an isolated eval vault and is mandatory
+pre-release evidence. It remains a targeted lane, separate from the full
+release-blocking production gate, but pre-tag release prep must refresh it and
+repair any failures before tagging unless the failure is explicitly classified
+as fixture/reporting-only. Current coverage includes retrieval, synthesis
+maintenance, decision-record explainability, release-readiness answers,
+read-side tag filtering, memory-router recall reports, and release synthesis
+freshness without private vault evidence.
 
 ## Harness
 

@@ -6,11 +6,11 @@
 - Release blocking: `false`
 - Configured parallelism: `1`
 - Cache mode: `shared`
-- Cache prewarm seconds: `15.40`
-- Harness elapsed seconds: `332.86`
-- Effective parallel speedup: `0.47x`
-- Parallel efficiency: `0.47`
-- Targeted acceptance: repo-docs dogfood rows import committed public markdown into an isolated eval vault and report retrieval, synthesis, and decision-record behavior without private vault evidence
+- Cache prewarm seconds: `15.93`
+- Harness elapsed seconds: `205.62`
+- Effective parallel speedup: `0.65x`
+- Parallel efficiency: `0.65`
+- Targeted acceptance: repo-docs dogfood rows import committed public markdown into an isolated eval vault and report retrieval, synthesis, decision-records, release-readiness, tag filtering, memory-router recall report behavior, and release synthesis freshness without private vault evidence
 - Raw logs: `<run-root>/<variant>/<scenario>/turn-N/events.jsonl`
 
 ## Production Gate
@@ -36,22 +36,26 @@ Recommendation: `fix_production_agentops_before_release`
 | Phase | Seconds |
 | --- | ---: |
 | prepare_run_dir | 0.00 |
-| copy_repo | 0.11 |
-| install_variant | 8.84 |
+| copy_repo | 0.31 |
+| install_variant | 19.10 |
 | warm_cache | 0.00 |
-| seed_data | 132.29 |
-| agent_run | 156.42 |
-| parse_metrics | 0.00 |
-| verify | 19.80 |
-| total | 317.45 |
+| seed_data | 36.08 |
+| agent_run | 134.09 |
+| parse_metrics | 0.02 |
+| verify | 0.09 |
+| total | 189.68 |
 
 ## Results
 
 | Variant | Scenario | Status | Tools | Commands | Assistant Calls | Non-Cached Input | Wall Seconds | Raw Log |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `production` | `repo-docs-agentops-retrieval` | `completed` | 12 | 12 | 8 | 31475 | 39.41 | `<run-root>/production/repo-docs-agentops-retrieval/turn-1/events.jsonl` |
-| `production` | `repo-docs-synthesis-maintenance` | `completed` | 10 | 10 | 8 | 30082 | 62.30 | `<run-root>/production/repo-docs-synthesis-maintenance/turn-1/events.jsonl` |
-| `production` | `repo-docs-decision-records` | `completed` | 18 | 18 | 4 | 11911 | 54.71 | `<run-root>/production/repo-docs-decision-records/turn-1/events.jsonl` |
+| `production` | `repo-docs-agentops-retrieval` | `completed` | 8 | 8 | 3 | 8835 | 21.06 | `<run-root>/production/repo-docs-agentops-retrieval/turn-1/events.jsonl` |
+| `production` | `repo-docs-synthesis-maintenance` | `completed` | 8 | 8 | 4 | 11059 | 16.01 | `<run-root>/production/repo-docs-synthesis-maintenance/turn-1/events.jsonl` |
+| `production` | `repo-docs-decision-records` | `completed` | 18 | 18 | 5 | 9367 | 24.48 | `<run-root>/production/repo-docs-decision-records/turn-1/events.jsonl` |
+| `production` | `repo-docs-release-readiness` | `completed` | 18 | 18 | 6 | 16775 | 28.83 | `<run-root>/production/repo-docs-release-readiness/turn-1/events.jsonl` |
+| `production` | `repo-docs-tag-filter` | `completed` | 6 | 6 | 3 | 10903 | 16.74 | `<run-root>/production/repo-docs-tag-filter/turn-1/events.jsonl` |
+| `production` | `repo-docs-memory-router-recall-report` | `completed` | 2 | 2 | 2 | 6725 | 9.98 | `<run-root>/production/repo-docs-memory-router-recall-report/turn-1/events.jsonl` |
+| `production` | `repo-docs-release-synthesis-freshness` | `completed` | 10 | 10 | 3 | 9271 | 16.99 | `<run-root>/production/repo-docs-release-synthesis-freshness/turn-1/events.jsonl` |
 
 ## Targeted Lane Summary
 
@@ -61,8 +65,12 @@ Public surface: `openclerk document`, `openclerk retrieval`
 
 Promotion: targeted repo-docs dogfood evidence only; no promoted runner action, schema, migration, storage API, product behavior, or public OpenClerk interface.
 
-| Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Latency | Guidance dependence | Safety risks | Fixture preflight | Evidence posture |
-| --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | --- | --- | --- | --- | --- |
-| `production` | `repo-docs-agentops-retrieval` | `completed` | `none` | 12 | 12 | 8 | 39.41 | `scenario-specific` | `completed` | `normal` | 0 | 12 | `medium` | `scenario_prompt` | `none_observed` | `not_applicable` | repo markdown dogfood evidence stayed inside existing document/retrieval runner surfaces |
-| `production` | `repo-docs-synthesis-maintenance` | `completed` | `none` | 10 | 10 | 8 | 62.30 | `scenario-specific` | `completed` | `normal` | 0 | 10 | `high` | `scenario_prompt` | `wrote_before_approval` | `not_applicable` | repo markdown dogfood evidence stayed inside existing document/retrieval runner surfaces |
-| `production` | `repo-docs-decision-records` | `completed` | `none` | 18 | 18 | 4 | 54.71 | `scenario-specific` | `completed` | `normal` | 0 | 18 | `medium` | `scenario_prompt` | `none_observed` | `not_applicable` | repo markdown dogfood evidence stayed inside existing document/retrieval runner surfaces |
+| Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Latency | Guidance dependence | Safety pass | Capability pass | UX quality | Safety risks | Fixture preflight | Evidence posture |
+| --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- |
+| `production` | `repo-docs-agentops-retrieval` | `completed` | `none` | 8 | 8 | 3 | 21.06 | `scenario-specific` | `completed` | `normal` | 0 | 8 | `medium` | `scenario_prompt` | `pass` | `pass` | `completed` | `none_observed` | `not_applicable` | repo markdown dogfood evidence stayed inside existing document/retrieval runner surfaces |
+| `production` | `repo-docs-synthesis-maintenance` | `completed` | `none` | 8 | 8 | 4 | 16.01 | `scenario-specific` | `completed` | `normal` | 0 | 8 | `medium` | `scenario_prompt` | `pass` | `pass` | `completed` | `none_observed` | `not_applicable` | repo markdown dogfood evidence stayed inside existing document/retrieval runner surfaces |
+| `production` | `repo-docs-decision-records` | `completed` | `none` | 18 | 18 | 5 | 24.48 | `scenario-specific` | `completed` | `normal` | 0 | 18 | `medium` | `scenario_prompt` | `pass` | `pass` | `completed` | `none_observed` | `not_applicable` | repo markdown dogfood evidence stayed inside existing document/retrieval runner surfaces |
+| `production` | `repo-docs-release-readiness` | `completed` | `none` | 18 | 18 | 6 | 28.83 | `scenario-specific` | `completed` | `normal` | 0 | 18 | `medium` | `scenario_prompt` | `pass` | `pass` | `completed` | `none_observed` | `not_applicable` | repo markdown dogfood evidence stayed inside existing document/retrieval runner surfaces |
+| `production` | `repo-docs-tag-filter` | `completed` | `none` | 6 | 6 | 3 | 16.74 | `scenario-specific` | `completed` | `normal` | 0 | 6 | `medium` | `scenario_prompt` | `pass` | `pass` | `completed` | `none_observed` | `not_applicable` | repo markdown dogfood evidence stayed inside existing document/retrieval runner surfaces |
+| `production` | `repo-docs-memory-router-recall-report` | `completed` | `none` | 2 | 2 | 2 | 9.98 | `scenario-specific` | `completed` | `normal` | 0 | 2 | `low` | `scenario_prompt` | `pass` | `pass` | `completed` | `none_observed` | `not_applicable` | repo markdown dogfood evidence stayed inside existing document/retrieval runner surfaces |
+| `production` | `repo-docs-release-synthesis-freshness` | `completed` | `none` | 10 | 10 | 3 | 16.99 | `scenario-specific` | `completed` | `normal` | 0 | 10 | `medium` | `scenario_prompt` | `pass` | `pass` | `completed` | `none_observed` | `not_applicable` | repo markdown dogfood evidence stayed inside existing document/retrieval runner surfaces |

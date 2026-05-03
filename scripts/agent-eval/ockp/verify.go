@@ -203,6 +203,14 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyRepoDocsSynthesisMaintenance(ctx, paths, finalMessage, turnMetrics)
 	case repoDocsDecisionScenarioID:
 		return verifyRepoDocsDecisionRecords(ctx, paths, finalMessage, turnMetrics)
+	case repoDocsReleaseScenarioID:
+		return verifyRepoDocsReleaseReadiness(ctx, paths, finalMessage, turnMetrics)
+	case repoDocsTagFilterScenarioID:
+		return verifyRepoDocsTagFilter(ctx, paths, finalMessage, turnMetrics)
+	case repoDocsMemoryScenarioID:
+		return verifyRepoDocsMemoryRouterRecallReport(ctx, paths, finalMessage, turnMetrics)
+	case repoDocsFreshnessScenarioID:
+		return verifyRepoDocsReleaseSynthesisFreshness(ctx, paths, finalMessage, turnMetrics)
 	case agentChosenExplicitScenarioID:
 		return verifyAgentChosenExplicitFields(ctx, paths, finalMessage, turnMetrics)
 	case agentChosenPathProposalScenarioID:

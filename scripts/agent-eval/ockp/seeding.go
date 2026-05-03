@@ -186,7 +186,7 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedPopulatedVaultFixture(ctx, cfg); err != nil {
 			return err
 		}
-	case repoDocsRetrievalScenarioID, repoDocsSynthesisScenarioID, repoDocsDecisionScenarioID:
+	case repoDocsRetrievalScenarioID, repoDocsSynthesisScenarioID, repoDocsDecisionScenarioID, repoDocsReleaseScenarioID, repoDocsTagFilterScenarioID, repoDocsMemoryScenarioID, repoDocsFreshnessScenarioID:
 		if err := seedRepoDocsDogfood(ctx, cfg); err != nil {
 			return err
 		}

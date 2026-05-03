@@ -301,3 +301,247 @@ func verifyRepoDocsDecisionRecords(ctx context.Context, paths evalPaths, finalMe
 		Documents:     []string{repoDocsAgentOpsADRPath, repoDocsKnowledgeConfigPath},
 	}, nil
 }
+
+func verifyRepoDocsReleaseReadiness(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	search, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
+			Text:       repoDocsReleaseSearchText,
+			PathPrefix: "docs/",
+			Limit:      10,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List: runner.DocumentListOptions{
+			Tag:   repoDocsReleaseTag,
+			Limit: 20,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := repoDocsBypassFailures(turnMetrics)
+	hasReleaseVerification := searchContainsPath(search, repoDocsReleaseVerification) || documentSummariesContainPath(list.Documents, repoDocsReleaseVerification)
+	hasMaintainers := searchContainsPath(search, repoDocsMaintainersPath) || documentSummariesContainPath(list.Documents, repoDocsMaintainersPath)
+	if !hasReleaseVerification {
+		failures = append(failures, "release-verification doc missing from repo-docs release readiness evidence")
+	}
+	if !hasMaintainers {
+		failures = append(failures, "maintainers doc missing from repo-docs release readiness evidence")
+	}
+	if !turnMetrics.SearchUsed || !containsAllStrings(turnMetrics.SearchPathPrefixes, []string{"docs/"}) {
+		failures = append(failures, "agent did not use docs/ path-prefix search")
+	}
+	if !turnMetrics.ListTagFilterUsed || !stringValuesInclude(turnMetrics.ListTagFilters, repoDocsReleaseTag) {
+		failures = append(failures, "agent did not list repo-release-docs tag")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{repoDocsReleaseVerification, repoDocsMaintainersPath, repoDocsReleaseTag}) &&
+		messageContainsAny(finalMessage, []string{"dogfood", "dogfooding"}) &&
+		messageContainsAny(finalMessage, []string{"mandatory", "required", "before tagging"}) &&
+		messageContainsAny(finalMessage, []string{"validate-release-docs", "validate release docs"}) &&
+		messageContainsAny(finalMessage, []string{"AgentOps", "production gate"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report mandatory dogfood release readiness evidence")
+	}
+	databasePass := hasReleaseVerification && hasMaintainers
+	activityPass := len(repoDocsBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.SearchUsed &&
+		turnMetrics.ListTagFilterUsed &&
+		stringValuesInclude(turnMetrics.ListTagFilters, repoDocsReleaseTag)
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{repoDocsReleaseVerification, repoDocsMaintainersPath},
+	}, nil
+}
+
+func verifyRepoDocsTagFilter(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	search, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
+			Text:  repoDocsReleaseSearchText,
+			Tag:   repoDocsReleaseTag,
+			Limit: 10,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{Tag: repoDocsReleaseTag, Limit: 20},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := repoDocsBypassFailures(turnMetrics)
+	searchHasTaggedReleaseEvidence := search.Search != nil && len(search.Search.Hits) > 0
+	listHasReleaseDoc := documentSummariesContainPath(list.Documents, repoDocsReleaseVerification)
+	listHasMaintainers := documentSummariesContainPath(list.Documents, repoDocsMaintainersPath)
+	if !searchHasTaggedReleaseEvidence {
+		failures = append(failures, "tag-filtered search did not return tagged release evidence")
+	}
+	if !listHasReleaseDoc || !listHasMaintainers {
+		failures = append(failures, "tag-filtered list did not return expected release docs")
+	}
+	if !turnMetrics.SearchTagFilterUsed || !stringValuesInclude(turnMetrics.SearchTagFilters, repoDocsReleaseTag) {
+		failures = append(failures, "agent did not use search tag filter")
+	}
+	if !turnMetrics.ListTagFilterUsed || !stringValuesInclude(turnMetrics.ListTagFilters, repoDocsReleaseTag) {
+		failures = append(failures, "agent did not use list tag filter")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{repoDocsReleaseVerification, repoDocsMaintainersPath, repoDocsReleaseTag}) &&
+		messageContainsAny(finalMessage, []string{"tag", "tag filter", "tag-filter"}) &&
+		messageContainsAny(finalMessage, []string{"canonical markdown", "canonical", "authority"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report tag-filter evidence and canonical authority boundary")
+	}
+	databasePass := searchHasTaggedReleaseEvidence && listHasReleaseDoc && listHasMaintainers
+	activityPass := len(repoDocsBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.SearchTagFilterUsed && stringValuesInclude(turnMetrics.SearchTagFilters, repoDocsReleaseTag) &&
+		turnMetrics.ListTagFilterUsed && stringValuesInclude(turnMetrics.ListTagFilters, repoDocsReleaseTag)
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{repoDocsReleaseVerification, repoDocsMaintainersPath},
+	}, nil
+}
+
+func verifyRepoDocsMemoryRouterRecallReport(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	result, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionMemoryRouterRecall,
+		MemoryRouterRecall: runner.MemoryRouterRecallOptions{
+			Query: repoDocsMemorySearchText,
+			Limit: 10,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := repoDocsBypassFailures(turnMetrics)
+	report := result.MemoryRouterRecall
+	databasePass := report != nil &&
+		len(report.CanonicalEvidenceRefs) > 0 &&
+		len(report.ProvenanceRefs) > 0 &&
+		report.SynthesisFreshness != "" &&
+		report.ValidationBoundaries != "" &&
+		report.AuthorityLimits != ""
+	if !databasePass {
+		failures = append(failures, "memory_router_recall_report missing required evidence fields")
+	}
+	assistantPass := messageContainsAny(finalMessage, []string{"memory_router_recall_report", "memory router recall report"}) &&
+		messageContainsAny(finalMessage, []string{"canonical evidence", "canonical_evidence_refs"}) &&
+		messageContainsAny(finalMessage, []string{"provenance", "provenance_refs"}) &&
+		messageContainsAny(finalMessage, []string{"synthesis freshness", "synthesis_freshness"}) &&
+		messageContainsAny(finalMessage, []string{"validation", "boundaries"}) &&
+		messageContainsAny(finalMessage, []string{"authority", "authority limits"}) &&
+		messageContainsAny(finalMessage, []string{"read-only", "read only", "read-only dogfood"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not summarize memory-router recall report fields and non-promotion boundary")
+	}
+	activityPass := len(repoDocsBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.MemoryRouterRecallReportUsed
+	if !turnMetrics.MemoryRouterRecallReportUsed {
+		failures = append(failures, "agent did not use memory_router_recall_report")
+	}
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{memoryRouterSynthesisPath, memoryRouterSessionObservationPath},
+	}, nil
+}
+
+func verifyRepoDocsReleaseSynthesisFreshness(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	doc, found, err := documentByPath(ctx, paths, repoDocsReleaseSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := repoDocsBypassFailures(turnMetrics)
+	if !found || doc == nil {
+		failures = append(failures, "missing repo-docs release synthesis")
+		return verificationFromFailures(failures, "repo-docs release synthesis missing", []string{repoDocsReleaseSynthesisPath})
+	}
+	projections, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProjectionStates,
+		Projection: runner.ProjectionStateOptions{
+			Projection: "synthesis",
+			RefKind:    "document",
+			RefID:      doc.DocID,
+			Limit:      10,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	provenance, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{
+			RefKind: "projection",
+			RefID:   "synthesis:" + doc.DocID,
+			Limit:   10,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	hasStaleProjection := false
+	if projections.Projections != nil {
+		for _, projection := range projections.Projections.Projections {
+			if projection.RefID == doc.DocID && projection.Freshness == "stale" {
+				hasStaleProjection = true
+				break
+			}
+		}
+	}
+	hasProvenance := provenance.Provenance != nil && len(provenance.Provenance.Events) > 0
+	if !hasStaleProjection {
+		failures = append(failures, "repo-docs release synthesis projection is not stale after source update")
+	}
+	if !hasProvenance {
+		failures = append(failures, "repo-docs release synthesis projection provenance missing")
+	}
+	if !turnMetrics.SearchUsed || !turnMetrics.ListDocumentsUsed || !turnMetrics.GetDocumentUsed || !turnMetrics.ProjectionStatesUsed || !turnMetrics.ProvenanceEventsUsed {
+		failures = append(failures, "agent did not use required search/list/get/projection/provenance workflow")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{repoDocsReleaseSynthesisPath, repoDocsReleaseVerification, repoDocsMaintainersPath}) &&
+		messageContainsAny(finalMessage, []string{"stale", "freshness", "projection"}) &&
+		messageContainsAny(finalMessage, []string{"provenance", "projection_refreshed", "event"}) &&
+		messageContainsAny(finalMessage, []string{"no repair", "not repaired", "no update", "did not perform"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report release synthesis freshness/provenance and no-repair boundary")
+	}
+	databasePass := hasStaleProjection && hasProvenance
+	activityPass := len(repoDocsBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.SearchUsed && turnMetrics.ListDocumentsUsed && turnMetrics.GetDocumentUsed &&
+		turnMetrics.ProjectionStatesUsed && turnMetrics.ProvenanceEventsUsed
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{repoDocsReleaseSynthesisPath, repoDocsReleaseVerification, repoDocsMaintainersPath},
+	}, nil
+}
+
+func documentSummariesContainPath(documents []runner.DocumentSummary, path string) bool {
+	for _, document := range documents {
+		if document.Path == path {
+			return true
+		}
+	}
+	return false
+}

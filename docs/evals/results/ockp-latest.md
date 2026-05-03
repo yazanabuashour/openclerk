@@ -20,6 +20,13 @@ production gate artifact.
 That report is the current release-gate evidence for routine OpenClerk
 knowledge workflows through the installed `openclerk` runner.
 
+## Mandatory Pre-Release Dogfood
+
+Use `docs/evals/results/ockp-repo-docs-dogfood.md` as mandatory pre-release
+dogfood evidence. This targeted lane is separate from the full production
+gate, but release prep must refresh it and require every selected repo-docs
+dogfood scenario to pass before tagging.
+
 ## Later Targeted POC Evidence
 
 The following later reports are targeted POC evidence. Their production gates
@@ -40,6 +47,7 @@ full release-gate replacements.
 | Memory/router reference | `docs/evals/results/ockp-memory-router-reference-poc.md` | Memory and router pressure scenario completed as reference evidence |
 | Memory/router revisit | `docs/evals/results/ockp-memory-router-revisit-pressure.md` | Targeted revisit completed natural and scripted rows with `none` classifications; keep as reference pressure with no memory API, remember/recall action, or autonomous router surface promoted |
 | Real-vault dogfooding | `docs/evals/results/ockp-real-vault-agentops-trial.md` | Sanitized aggregate evidence only; raw logs, paths, titles, snippets, citations, document IDs, and raw JSON remain local-only |
+| Repo-docs dogfooding | `docs/evals/results/ockp-repo-docs-dogfood.md` | Mandatory pre-release targeted lane over committed public markdown covering retrieval, synthesis maintenance, decision records, release readiness, tag filters, memory-router recall reports, and release synthesis freshness |
 | Populated-vault synthetic pressure | `docs/evals/results/ockp-populated-vault-targeted.md`; follow-up `docs/evals/results/ockp-populated-vault-guidance-hardening.md` | Targeted run completed freshness/conflict and synthesis-update pressure; focused follow-up resolved the heterogeneous polluted-evidence guidance failure, with no runner capability gap or product/API promotion |
 | Document-this intake pressure | `docs/evals/results/ockp-document-this-intake-pressure.md` | Targeted document-this intake lane covers missing-field clarification, explicit create/override, duplicate candidates, existing updates, and synthesis freshness |
 | Document artifact candidate generation | `docs/evals/results/ockp-document-artifact-candidate-generation.md`; follow-up `docs/evals/results/ockp-document-artifact-candidate-ergonomics.md` | Quality lane and refreshed ergonomics scorecard support the existing propose-before-create skill policy; no runner/schema/storage/API/direct-create behavior promoted |

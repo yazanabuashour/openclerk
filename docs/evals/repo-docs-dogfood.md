@@ -17,7 +17,7 @@ Run the lane with:
 ```bash
 mise exec -- go run ./scripts/agent-eval/ockp run \
   --parallel 1 \
-  --scenario repo-docs-agentops-retrieval,repo-docs-synthesis-maintenance,repo-docs-decision-records \
+  --scenario repo-docs-agentops-retrieval,repo-docs-synthesis-maintenance,repo-docs-decision-records,repo-docs-release-readiness,repo-docs-tag-filter,repo-docs-memory-router-recall-report,repo-docs-release-synthesis-freshness \
   --report-name ockp-repo-docs-dogfood
 ```
 
@@ -30,11 +30,22 @@ mise exec -- go run ./scripts/agent-eval/ockp run \
 - `repo-docs-decision-records` checks that canonical ADR markdown remains
   authoritative while decision records, projections, and provenance are
   runner-visible derived evidence.
+- `repo-docs-release-readiness` checks whether imported release docs support
+  mandatory dogfood before tagging and requires tag-filtered release-doc
+  listing.
+- `repo-docs-tag-filter` checks the read-side `tag` filter over imported
+  public release docs while preserving canonical markdown authority.
+- `repo-docs-memory-router-recall-report` checks the read-only
+  `memory_router_recall_report` surface and its no-memory-transport boundary
+  inside the dogfood lane.
+- `repo-docs-release-synthesis-freshness` checks runner-visible synthesis
+  projection freshness and provenance over release procedure docs without
+  repairing the synthesis.
 
 ## Gate Status
 
-This lane is not release-blocking. It is a recurring public dogfood signal for
-retrieval quality, synthesis maintenance, and decision-record explainability on
-real project documentation. Failures should be classified in the targeted lane
-summary and used to decide whether the issue is fixture hygiene, skill guidance,
-eval coverage, or a repeated runner capability gap.
+This lane is mandatory pre-release evidence but remains separate from the full
+AgentOps production gate. Before tagging a release, refresh the reduced
+`docs/evals/results/ockp-repo-docs-dogfood.md` and `.json` reports and require
+all selected dogfood scenarios to pass. Failures block tagging unless repaired
+or explicitly classified as fixture/reporting-only defects.

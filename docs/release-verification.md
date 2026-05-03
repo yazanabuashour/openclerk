@@ -42,8 +42,8 @@ Install into a temporary directory, then verify the runner version and commands:
 ```bash
 install_dir="$(mktemp -d)"
 OPENCLERK_INSTALL_DIR="$install_dir" \
-  OPENCLERK_VERSION=v0.2.2 \
-  sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/v0.2.2/install.sh)"
+  OPENCLERK_VERSION=v0.2.3 \
+  sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/v0.2.3/install.sh)"
 
 export PATH="$install_dir:$PATH"
 command -v openclerk
@@ -107,6 +107,25 @@ remote transcript API policies are design-only in
 `docs/architecture/video-transcript-acquisition-design.md`. Release notes,
 skills, and smoke tests must not imply those acquisition paths are available
 until a later promoted implementation ships them.
+
+## Pre-Release Dogfood
+
+Before tagging any release, refresh both the full AgentOps production gate and
+the mandatory repo-docs dogfood lane:
+
+```bash
+mise exec -- go run ./scripts/agent-eval/ockp run --report-name ockp-agentops-production
+mise exec -- go run ./scripts/agent-eval/ockp run --parallel 1 --scenario repo-docs-agentops-retrieval,repo-docs-synthesis-maintenance,repo-docs-decision-records,repo-docs-release-readiness,repo-docs-tag-filter,repo-docs-memory-router-recall-report,repo-docs-release-synthesis-freshness --report-name ockp-repo-docs-dogfood
+```
+
+The dogfood lane imports only committed public markdown into an isolated
+OpenClerk eval vault and exercises installed `openclerk document` and
+`openclerk retrieval` JSON results. It covers repo-doc retrieval,
+source-linked synthesis maintenance, decision-record explainability,
+release-readiness answers, read-side tag filters, the read-only
+`memory_router_recall_report` action, and release synthesis freshness. Commit
+the reduced `docs/evals/results/ockp-repo-docs-dogfood.md` and `.json`
+reports; never commit raw logs or machine-absolute artifact paths.
 
 Committed reports and docs must use repo-relative artifact paths. Raw eval log
 references, when included in reduced reports, must use neutral placeholders

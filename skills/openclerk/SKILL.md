@@ -430,9 +430,16 @@ Common request shapes:
 
 Request fields are `action`, `search`, `doc_id`, `chunk_id`, `node_id`,
 `entity_id`, `service_id`, `decision_id`, `records`, `services`, `decisions`,
-`provenance`, `projection`, `audit`, and `limit`. An `audit` request has
-`query`, `target_path`, `mode`, `conflict_query`, and `limit`; supported modes
-are `plan_only` and `repair_existing`.
+`provenance`, `projection`, `audit`, `memory_router_recall`, and `limit`. A
+`search` request may include `text`, `path_prefix`, `metadata_key`,
+`metadata_value`, `tag`, `limit`, and `cursor`. A document `list_documents`
+request may include `path_prefix`, `metadata_key`, `metadata_value`, `tag`,
+`limit`, and `cursor`. `records`, `services`, and `decisions` lookup requests
+may include their documented text/filter fields plus `limit` and `cursor`; for
+decisions those fields include `text`, `status`, `scope`, and `owner`. A
+`memory_router_recall` request may include `query` and `limit`. An `audit`
+request has `query`, `target_path`, `mode`, `conflict_query`, and `limit`;
+supported modes are `plan_only` and `repair_existing`.
 
 Use search for source-grounded answers; document links and graph neighborhoods
 for markdown relationships; records, services, and decisions lookup for

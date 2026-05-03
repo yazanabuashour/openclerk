@@ -111,7 +111,16 @@ mise exec -- ./scripts/validate-committed-artifacts.sh
 test -z "$(gofmt -l $(git ls-files '*.go'))"
 mise exec -- golangci-lint run
 mise exec -- go test ./...
+mise exec -- go run ./scripts/agent-eval/ockp run --report-name ockp-agentops-production
+mise exec -- go run ./scripts/agent-eval/ockp run --parallel 1 --scenario repo-docs-agentops-retrieval,repo-docs-synthesis-maintenance,repo-docs-decision-records,repo-docs-release-readiness,repo-docs-tag-filter,repo-docs-memory-router-recall-report,repo-docs-release-synthesis-freshness --report-name ockp-repo-docs-dogfood
 ```
+
+The repo-docs dogfood run is mandatory pre-release evidence. It imports only
+committed public markdown into an isolated OpenClerk eval vault, exercises the
+installed `openclerk document` and `openclerk retrieval` JSON surfaces, and
+must pass before tagging. Keep this targeted lane separate from the full
+release-blocking AgentOps production gate, but treat failures as tag blockers
+until repaired or explicitly reclassified as fixture/reporting defects.
 
 Tag a version like `v0.1.0`, push the tag, and let the release workflow:
 

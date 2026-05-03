@@ -430,7 +430,7 @@ func reportLane(ids []string) (string, bool) {
 
 func targetedAcceptanceNote(lane string) string {
 	if lane == repoDocsLaneName {
-		return "repo-docs dogfood rows import committed public markdown into an isolated eval vault and report retrieval, synthesis, and decision-record behavior without private vault evidence"
+		return "repo-docs dogfood rows import committed public markdown into an isolated eval vault and report retrieval, synthesis, decision-records, release-readiness, tag filtering, memory-router recall report behavior, and release synthesis freshness without private vault evidence"
 	}
 	if lane == graphSemanticsRevisitLaneName {
 		return "graph semantics revisit rows report natural relationship intent, scripted current-primitives control, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"
