@@ -74,6 +74,10 @@ func runInit(args []string, stdout io.Writer, stderr io.Writer) int {
 }
 
 func runDocument(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
+	if wantsSubcommandHelp(args) {
+		documentUsage(stdout)
+		return 0
+	}
 	config, ok := parseConfig("document", args, stderr)
 	if !ok {
 		return 2
@@ -96,6 +100,10 @@ func runDocument(args []string, stdin io.Reader, stdout io.Writer, stderr io.Wri
 }
 
 func runRetrieval(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
+	if wantsSubcommandHelp(args) {
+		retrievalUsage(stdout)
+		return 0
+	}
 	config, ok := parseConfig("retrieval", args, stderr)
 	if !ok {
 		return 2
@@ -129,6 +137,16 @@ func parseConfig(name string, args []string, stderr io.Writer) (runclient.Config
 		return runclient.Config{}, false
 	}
 	return runclient.Config{DatabasePath: *databasePath}, true
+}
+
+func wantsSubcommandHelp(args []string) bool {
+	for _, arg := range args {
+		switch arg {
+		case "help", "-h", "--help":
+			return true
+		}
+	}
+	return false
 }
 
 func parseInitConfig(args []string, stderr io.Writer) (runclient.Config, string, bool) {
@@ -184,4 +202,31 @@ func resolvedVersion(linkerVersion string, info *debug.BuildInfo, ok bool) strin
 func usage(stderr io.Writer) {
 	_, _ = fmt.Fprintln(stderr, "usage: openclerk <version|init|document|retrieval> [--db path]")
 	_, _ = fmt.Fprintln(stderr, "       openclerk init [--db path] [--vault-root path]")
+	_, _ = fmt.Fprintln(stderr, "       openclerk document --help")
+	_, _ = fmt.Fprintln(stderr, "       openclerk retrieval --help")
+	_, _ = fmt.Fprintln(stderr, "document/retrieval read strict JSON from stdin and use configured paths by default; pass --db only for an explicit dataset.")
+	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, source_audit_report, evidence_bundle_report")
+}
+
+func documentUsage(w io.Writer) {
+	_, _ = fmt.Fprintln(w, "usage: openclerk document [--db path] < request.json")
+	_, _ = fmt.Fprintln(w, "")
+	_, _ = fmt.Fprintln(w, "Reads one strict JSON object from stdin and writes one JSON result.")
+	_, _ = fmt.Fprintln(w, "Uses configured paths by default; pass --db only for an explicit dataset.")
+	_, _ = fmt.Fprintln(w, "Promoted workflow action:")
+	_, _ = fmt.Fprintln(w, `  compile_synthesis: {"action":"compile_synthesis","synthesis":{"path":"synthesis/example.md","title":"Example","source_refs":["sources/a.md"],"body":"...","body_facts":["..."],"freshness_note":"...","mode":"create_or_update"}}`)
+	_, _ = fmt.Fprintln(w, "  Requires path, title, non-empty source_refs, and either body or body_facts. mode defaults to create_or_update.")
+	_, _ = fmt.Fprintln(w, "  Returns compile_synthesis.agent_handoff with final-answer evidence; use primitives only after rejection or explicit drill-down.")
+}
+
+func retrievalUsage(w io.Writer) {
+	_, _ = fmt.Fprintln(w, "usage: openclerk retrieval [--db path] < request.json")
+	_, _ = fmt.Fprintln(w, "")
+	_, _ = fmt.Fprintln(w, "Reads one strict JSON object from stdin and writes one JSON result.")
+	_, _ = fmt.Fprintln(w, "Uses configured paths by default; pass --db only for an explicit dataset.")
+	_, _ = fmt.Fprintln(w, "Promoted workflow actions:")
+	_, _ = fmt.Fprintln(w, `  source_audit_report: {"action":"source_audit_report","source_audit":{"query":"...","target_path":"synthesis/example.md","mode":"explain","conflict_query":"...","limit":10}}`)
+	_, _ = fmt.Fprintln(w, "  Default mode is explain; repair_existing may update only an existing synthesis target.")
+	_, _ = fmt.Fprintln(w, `  evidence_bundle_report: {"action":"evidence_bundle_report","evidence_bundle":{"query":"...","entity_id":"...","decision_id":"...","ref_kind":"document","ref_id":"...","projection":"records","limit":10}}`)
+	_, _ = fmt.Fprintln(w, "  Read-only. Returns evidence_bundle.agent_handoff with citations, provenance, projection freshness, validation boundaries, and authority limits.")
 }

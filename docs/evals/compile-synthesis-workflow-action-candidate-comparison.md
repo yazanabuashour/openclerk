@@ -18,11 +18,16 @@ existing document/retrieval primitives for advanced or manual synthesis repair.
 ## Selected Surface
 
 `compile_synthesis` creates or updates exactly one `synthesis/` target with
-required `path`, `title`, non-empty `source_refs`, `body`, and
-`mode: "create_or_update"`. It preserves single-line `source_refs`, requires
-`## Sources` and `## Freshness`, avoids duplicate synthesis paths, and returns
-selected path, source evidence, duplicate status, provenance refs, projection
-freshness, write status, validation boundaries, and authority limits.
+required `path`, `title`, and non-empty `source_refs`. The only supported mode
+is `create_or_update`, and the runner defaults to it when omitted. It accepts
+explicit `body` markdown or non-empty `body_facts` plus optional
+`freshness_note` for runner-owned body assembly. It preserves single-line
+`source_refs`, requires or builds `## Sources` and `## Freshness`, avoids
+duplicate synthesis paths, and returns selected path, source evidence,
+duplicate status, provenance refs, projection freshness, write status,
+validation boundaries, authority limits, and `agent_handoff`. The installed
+`openclerk document --help` output exposes the compact action shape so routine
+agents do not need a long skill recipe or source inspection.
 
 ## Evidence Requirements
 
@@ -30,4 +35,7 @@ The targeted lane is `ockp-compile-synthesis-workflow-action`. Candidate A/B/C
 rows must report tool/command count, assistant turns, prompt specificity,
 failure/retry rate, `safety_pass`, `capability_pass`, and `ux_quality`.
 Scripted primitive success is capability evidence only; the natural workflow
-action row must pass to claim UX.
+action row must pass under the low-ceremony threshold to claim UX. `oc-nj5h`
+validates UX maturity by requiring natural prompts without exact JSON or
+literal command choreography to complete from the workflow action and its
+`agent_handoff`.

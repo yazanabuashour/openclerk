@@ -107,6 +107,7 @@ func runEvidenceBundleReport(ctx context.Context, client *runclient.Client, opti
 	}
 
 	report.Citations = dedupeCitations(report.Citations)
+	report.AgentHandoff = evidenceBundleHandoff(report)
 	return report, nil
 }
 
@@ -174,4 +175,71 @@ func evidenceBundleValidationBoundaries() string {
 
 func evidenceBundleAuthorityLimits() string {
 	return "canonical markdown, promoted records, decision records, provenance, and projection freshness remain inspectable evidence; the bundle packages evidence but does not create a new authority source"
+}
+
+func evidenceBundleHandoff(report EvidenceBundleReport) *AgentHandoff {
+	recordCount := evidenceBundleRecordCount(report)
+	decisionCount := evidenceBundleDecisionCount(report)
+	provenanceCount := 0
+	if report.Provenance != nil {
+		provenanceCount = len(report.Provenance.Events)
+	}
+	evidence := []string{
+		"query_summary=" + report.QuerySummary,
+		fmt.Sprintf("records=%d", recordCount),
+		fmt.Sprintf("decisions=%d", decisionCount),
+		"citations=" + citationPathSummary(report.Citations),
+		fmt.Sprintf("provenance_events=%d", provenanceCount),
+		"projection_freshness=" + projectionListFreshnessSummary(report.Projections),
+		"read_only=true",
+	}
+	if report.Entity != nil {
+		evidence = append(evidence, "entity_id="+report.Entity.EntityID)
+	}
+	if report.Decision != nil {
+		evidence = append(evidence, "decision_id="+report.Decision.DecisionID)
+	}
+	return &AgentHandoff{
+		AnswerSummary: fmt.Sprintf(
+			"evidence_bundle_report returned %s with %d records, %d decisions, %d citations, %d provenance events, and %s",
+			report.QuerySummary,
+			recordCount,
+			decisionCount,
+			len(report.Citations),
+			provenanceCount,
+			projectionListFreshnessSummary(report.Projections),
+		),
+		Evidence:                    evidence,
+		ValidationBoundaries:        report.ValidationBoundaries,
+		AuthorityLimits:             report.AuthorityLimits,
+		FollowUpPrimitiveInspection: "not required for routine answer; use primitives only for explicit drill-down or runner rejection repair",
+	}
+}
+
+func evidenceBundleRecordCount(report EvidenceBundleReport) int {
+	seen := map[string]struct{}{}
+	if report.Records != nil {
+		for _, record := range report.Records.Entities {
+			seen[record.EntityID] = struct{}{}
+		}
+	}
+	if report.Entity != nil {
+		seen[report.Entity.EntityID] = struct{}{}
+	}
+	delete(seen, "")
+	return len(seen)
+}
+
+func evidenceBundleDecisionCount(report EvidenceBundleReport) int {
+	seen := map[string]struct{}{}
+	if report.Decisions != nil {
+		for _, decision := range report.Decisions.Decisions {
+			seen[decision.DecisionID] = struct{}{}
+		}
+	}
+	if report.Decision != nil {
+		seen[report.Decision.DecisionID] = struct{}{}
+	}
+	delete(seen, "")
+	return len(seen)
 }

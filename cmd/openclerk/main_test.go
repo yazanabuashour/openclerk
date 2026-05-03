@@ -28,6 +28,41 @@ func TestRunnerVersion(t *testing.T) {
 	}
 }
 
+func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name string
+		args []string
+		want []string
+	}{
+		{
+			name: "document",
+			args: []string{"document", "--help"},
+			want: []string{"compile_synthesis", "body_facts", "agent_handoff", "mode defaults to create_or_update"},
+		},
+		{
+			name: "retrieval",
+			args: []string{"retrieval", "--help"},
+			want: []string{"source_audit_report", "evidence_bundle_report", "agent_handoff", "Read-only"},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+			code := run(tt.args, strings.NewReader(""), &stdout, &stderr)
+			if code != 0 {
+				t.Fatalf("run %v exit = %d stderr=%s", tt.args, code, stderr.String())
+			}
+			for _, want := range tt.want {
+				if !strings.Contains(stdout.String(), want) {
+					t.Fatalf("help output missing %q:\n%s", want, stdout.String())
+				}
+			}
+		})
+	}
+}
+
 func TestResolvedVersion(t *testing.T) {
 	t.Parallel()
 
@@ -210,11 +245,12 @@ func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 	compileRequestBytes, err := json.Marshal(runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionCompileSynthesis,
 		Synthesis: runner.CompileSynthesisInput{
-			Path:       "synthesis/runner-workflow.md",
-			Title:      "Runner Workflow",
-			SourceRefs: []string{"sources/runner-current.md", "sources/runner-old.md"},
-			Body:       "# Runner Workflow\n\n## Summary\nCompiled runner workflow evidence.\n\n## Sources\n- sources/runner-current.md\n- sources/runner-old.md\n\n## Freshness\nChecked current runner sources.\n",
-			Mode:       "create_or_update",
+			Path:          "synthesis/runner-workflow.md",
+			Title:         "Runner Workflow",
+			SourceRefs:    []string{"sources/runner-current.md", "sources/runner-old.md"},
+			BodyFacts:     []string{"Compiled runner workflow evidence."},
+			FreshnessNote: "Checked current runner sources.",
+			Mode:          "create_or_update",
 		},
 	})
 	if err != nil {
@@ -225,7 +261,10 @@ func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("compile synthesis exit = %d stderr=%s", code, stderr)
 	}
-	if compileResult.CompileSynthesis == nil || compileResult.CompileSynthesis.WriteStatus != "created" {
+	if compileResult.CompileSynthesis == nil ||
+		compileResult.CompileSynthesis.WriteStatus != "created" ||
+		compileResult.CompileSynthesis.AgentHandoff == nil ||
+		!strings.Contains(compileResult.CompileSynthesis.AgentHandoff.AnswerSummary, "compile_synthesis created synthesis/runner-workflow.md") {
 		t.Fatalf("compile synthesis result = %+v", compileResult)
 	}
 
@@ -235,7 +274,10 @@ func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("source audit exit = %d stderr=%s", code, stderr)
 	}
-	if sourceAuditResult.SourceAudit == nil || sourceAuditResult.SourceAudit.Mode != "explain" || sourceAuditResult.SourceAudit.RepairApplied {
+	if sourceAuditResult.SourceAudit == nil ||
+		sourceAuditResult.SourceAudit.Mode != "explain" ||
+		sourceAuditResult.SourceAudit.RepairApplied ||
+		sourceAuditResult.SourceAudit.AgentHandoff == nil {
 		t.Fatalf("source audit result = %+v", sourceAuditResult)
 	}
 
@@ -249,7 +291,8 @@ func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 		evidenceResult.EvidenceBundle.Search == nil ||
 		evidenceResult.EvidenceBundle.Decision == nil ||
 		evidenceResult.EvidenceBundle.Provenance == nil ||
-		evidenceResult.EvidenceBundle.Projections == nil {
+		evidenceResult.EvidenceBundle.Projections == nil ||
+		evidenceResult.EvidenceBundle.AgentHandoff == nil {
 		t.Fatalf("evidence bundle result = %+v", evidenceResult)
 	}
 }

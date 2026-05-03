@@ -21,14 +21,22 @@ openclerk retrieval
 Prefer a promoted workflow action over step-by-step primitive choreography when
 it matches the request:
 
-- Source-linked synthesis create/update: document `compile_synthesis`.
-- Source-sensitive audit explain/repair: retrieval `source_audit_report`.
+- Source-linked synthesis create/update: document `compile_synthesis` with
+  `path`, `title`, `source_refs`, `body` or `body_facts`, optional
+  `freshness_note`, optional `mode`, then answer from
+  `compile_synthesis.agent_handoff`.
+- Source-sensitive audit explain/repair: retrieval `source_audit_report` with
+  `query`, `target_path`, optional `conflict_query`, `mode`, `limit`, then
+  answer from `source_audit.agent_handoff`.
 - Records, decisions, provenance, and projection evidence bundles: retrieval
-  `evidence_bundle_report`.
+  `evidence_bundle_report` with `query`, `entity_id`, `decision_id`,
+  `ref_kind`, `ref_id`, `projection`, `limit`, then answer from
+  `evidence_bundle.agent_handoff`.
 
 Use lower-level primitives for explicit primitive requests, advanced/manual
 cases, unsupported workflow-action inputs, and follow-up inspection after a
-runner rejection.
+runner rejection. For promoted workflow actions, answer from the returned
+`agent_handoff` before doing any follow-up primitive inspection.
 
 ## Core Guardrails
 
@@ -356,8 +364,9 @@ A `source` has `url`, `path_hint`, optional `asset_path_hint`, optional
 `source_type` (`pdf` or `web`). A `video` has `url`,
 `path_hint`, optional `asset_path_hint`, optional `title`, optional `mode`, and
 `transcript`. A `synthesis` has `path`, `title`, non-empty `source_refs`,
-`body`, and `mode: "create_or_update"`. A `list` may include `path_prefix`, `tag`, `metadata_key`,
-`metadata_value`, `limit`, and `cursor`.
+`body` or `body_facts`, optional `freshness_note`, and optional `mode`
+(`create_or_update` default). A `list` may include `path_prefix`, `tag`,
+`metadata_key`, `metadata_value`, `limit`, and `cursor`.
 
 Validation rejections are JSON results with `rejected: true` and
 `rejection_reason`; runtime failures exit non-zero and write errors to stderr.
@@ -388,9 +397,10 @@ Do not acquire media or transcripts with external tools or lower-level storage.
 Unsupported acquisition paths remain design-only until promoted.
 
 Before stale synthesis repair or source-sensitive audit output, inspect
-`projection_states` and `provenance_events`. If current sources conflict without
-runner-visible authority or supersession, explain the conflict with both source
-paths instead of choosing a winner.
+`projection_states` and `provenance_events` unless a promoted workflow action
+already returned provenance/freshness in `agent_handoff`. If current sources
+conflict without runner-visible authority or supersession, explain the conflict
+with both source paths instead of choosing a winner.
 
 For messy populated-vault retrieval, answer from runner-visible authority:
 Metadata-filtered authority results, active canonical sources, cited source
@@ -400,8 +410,8 @@ authority says otherwise. If a result is marked with `status: polluted` or
 `populated_role: decoy`, explicitly reject that hit as not authority and do not
 repeat its false claim text as a valid answer.
 
-Even when synthesis maintenance is repetitive, stay with documented AgentOps
-document and retrieval actions.
+For routine synthesis maintenance, prefer `compile_synthesis`; use lower-level
+document and retrieval actions only for explicit primitive or manual cases.
 
 ## Retrieval Tasks
 

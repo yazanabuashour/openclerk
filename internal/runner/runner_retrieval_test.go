@@ -234,6 +234,9 @@ Source sensitive audit conflict runner retention is thirty days.
 		sourceAudit.SourceAudit.RepairStatus != "planned" ||
 		sourceAudit.SourceAudit.RepairApplied ||
 		sourceAudit.SourceAudit.SelectedTargetPath != "synthesis/audit-runner-routing.md" ||
+		sourceAudit.SourceAudit.AgentHandoff == nil ||
+		!strings.Contains(sourceAudit.SourceAudit.AgentHandoff.AnswerSummary, "source_audit_report explain") ||
+		!strings.Contains(sourceAudit.SourceAudit.AgentHandoff.FollowUpPrimitiveInspection, "not required") ||
 		!strings.Contains(sourceAudit.SourceAudit.ValidationBoundaries, "explain mode is read-only") ||
 		!strings.Contains(sourceAudit.SourceAudit.AuthorityLimits, "unresolved current-source conflicts") {
 		t.Fatalf("source audit explain result = %+v", sourceAudit.SourceAudit)
@@ -798,10 +801,53 @@ func TestRetrievalTaskSearchLinksRecordsAndProvenance(t *testing.T) {
 		evidence.EvidenceBundle.Decision == nil ||
 		evidence.EvidenceBundle.Provenance == nil ||
 		evidence.EvidenceBundle.Projections == nil ||
+		evidence.EvidenceBundle.AgentHandoff == nil ||
+		!strings.Contains(evidence.EvidenceBundle.AgentHandoff.AnswerSummary, "evidence_bundle_report returned") ||
+		!strings.Contains(evidence.EvidenceBundle.AgentHandoff.FollowUpPrimitiveInspection, "not required") ||
 		len(evidence.EvidenceBundle.Citations) == 0 ||
 		!strings.Contains(evidence.EvidenceBundle.ValidationBoundaries, "read-only") ||
 		!strings.Contains(evidence.EvidenceBundle.AuthorityLimits, "does not create a new authority source") {
 		t.Fatalf("evidence bundle result = %+v", evidence.EvidenceBundle)
+	}
+
+	entityOnlyEvidence, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionEvidenceBundle,
+		EvidenceBundle: runner.EvidenceBundleOptions{
+			EntityID: "transmission-solenoid",
+			Limit:    10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("entity-only evidence bundle task: %v", err)
+	}
+	if entityOnlyEvidence.EvidenceBundle == nil ||
+		entityOnlyEvidence.EvidenceBundle.Records != nil ||
+		entityOnlyEvidence.EvidenceBundle.Entity == nil ||
+		entityOnlyEvidence.EvidenceBundle.AgentHandoff == nil ||
+		!strings.Contains(entityOnlyEvidence.EvidenceBundle.AgentHandoff.AnswerSummary, "1 records") ||
+		!strings.Contains(strings.Join(entityOnlyEvidence.EvidenceBundle.AgentHandoff.Evidence, "\n"), "records=1") ||
+		!strings.Contains(strings.Join(entityOnlyEvidence.EvidenceBundle.AgentHandoff.Evidence, "\n"), "decisions=0") {
+		t.Fatalf("entity-only evidence bundle handoff = %+v", entityOnlyEvidence.EvidenceBundle)
+	}
+
+	decisionOnlyEvidence, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionEvidenceBundle,
+		EvidenceBundle: runner.EvidenceBundleOptions{
+			DecisionID: "adr-runner-current",
+			Limit:      10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("decision-only evidence bundle task: %v", err)
+	}
+	if decisionOnlyEvidence.EvidenceBundle == nil ||
+		decisionOnlyEvidence.EvidenceBundle.Decisions != nil ||
+		decisionOnlyEvidence.EvidenceBundle.Decision == nil ||
+		decisionOnlyEvidence.EvidenceBundle.AgentHandoff == nil ||
+		!strings.Contains(decisionOnlyEvidence.EvidenceBundle.AgentHandoff.AnswerSummary, "1 decisions") ||
+		!strings.Contains(strings.Join(decisionOnlyEvidence.EvidenceBundle.AgentHandoff.Evidence, "\n"), "records=0") ||
+		!strings.Contains(strings.Join(decisionOnlyEvidence.EvidenceBundle.AgentHandoff.Evidence, "\n"), "decisions=1") {
+		t.Fatalf("decision-only evidence bundle handoff = %+v", decisionOnlyEvidence.EvidenceBundle)
 	}
 
 	afterEvidenceList, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{

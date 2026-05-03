@@ -39,15 +39,22 @@ const (
 )
 
 type DocumentTaskRequest struct {
-	Action    string                `json:"action"`
-	Document  DocumentInput         `json:"document,omitempty"`
-	Source    SourceURLInput        `json:"source,omitempty"`
-	Video     VideoURLInput         `json:"video,omitempty"`
-	Synthesis CompileSynthesisInput `json:"synthesis,omitempty"`
-	DocID     string                `json:"doc_id,omitempty"`
-	Content   string                `json:"content,omitempty"`
-	Heading   string                `json:"heading,omitempty"`
-	List      DocumentListOptions   `json:"list,omitempty"`
+	Action        string                `json:"action"`
+	Document      DocumentInput         `json:"document,omitempty"`
+	Source        SourceURLInput        `json:"source,omitempty"`
+	Video         VideoURLInput         `json:"video,omitempty"`
+	Synthesis     CompileSynthesisInput `json:"synthesis,omitempty"`
+	Path          string                `json:"path,omitempty"`
+	Title         string                `json:"title,omitempty"`
+	Body          string                `json:"body,omitempty"`
+	BodyFacts     []string              `json:"body_facts,omitempty"`
+	SourceRefs    []string              `json:"source_refs,omitempty"`
+	FreshnessNote string                `json:"freshness_note,omitempty"`
+	Mode          string                `json:"mode,omitempty"`
+	DocID         string                `json:"doc_id,omitempty"`
+	Content       string                `json:"content,omitempty"`
+	Heading       string                `json:"heading,omitempty"`
+	List          DocumentListOptions   `json:"list,omitempty"`
 }
 
 type DocumentInput struct {
@@ -86,11 +93,13 @@ type VideoTranscriptInput struct {
 }
 
 type CompileSynthesisInput struct {
-	Path       string   `json:"path"`
-	Title      string   `json:"title"`
-	SourceRefs []string `json:"source_refs,omitempty"`
-	Body       string   `json:"body"`
-	Mode       string   `json:"mode,omitempty"`
+	Path          string   `json:"path"`
+	Title         string   `json:"title"`
+	SourceRefs    []string `json:"source_refs,omitempty"`
+	Body          string   `json:"body,omitempty"`
+	BodyFacts     []string `json:"body_facts,omitempty"`
+	FreshnessNote string   `json:"freshness_note,omitempty"`
+	Mode          string   `json:"mode,omitempty"`
 }
 
 type SourcePDFMetadata struct {
@@ -372,6 +381,15 @@ type CompileSynthesisResult struct {
 	WriteStatus          string            `json:"write_status"`
 	ValidationBoundaries string            `json:"validation_boundaries"`
 	AuthorityLimits      string            `json:"authority_limits"`
+	AgentHandoff         *AgentHandoff     `json:"agent_handoff,omitempty"`
+}
+
+type AgentHandoff struct {
+	AnswerSummary               string   `json:"answer_summary"`
+	Evidence                    []string `json:"evidence,omitempty"`
+	ValidationBoundaries        string   `json:"validation_boundaries"`
+	AuthorityLimits             string   `json:"authority_limits"`
+	FollowUpPrimitiveInspection string   `json:"follow_up_primitive_inspection"`
 }
 
 type MemoryRouterRecallReport struct {
@@ -407,6 +425,7 @@ type SourceAuditReport struct {
 	FailureClassification     string                      `json:"failure_classification"`
 	ValidationBoundaries      string                      `json:"validation_boundaries"`
 	AuthorityLimits           string                      `json:"authority_limits"`
+	AgentHandoff              *AgentHandoff               `json:"agent_handoff,omitempty"`
 }
 
 type EvidenceBundleReport struct {
@@ -421,6 +440,7 @@ type EvidenceBundleReport struct {
 	Projections          *ProjectionStateList  `json:"projections,omitempty"`
 	ValidationBoundaries string                `json:"validation_boundaries"`
 	AuthorityLimits      string                `json:"authority_limits"`
+	AgentHandoff         *AgentHandoff         `json:"agent_handoff,omitempty"`
 }
 
 type AuditContradictionsResult struct {

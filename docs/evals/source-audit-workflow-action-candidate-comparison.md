@@ -22,7 +22,9 @@ manual cases. Broad contradiction-engine claims remain rejected.
 contradiction engine. Default `mode` is `explain` and read-only.
 `repair_existing` may update only an existing synthesis target. Responses expose
 source evidence, provenance/freshness, duplicate status, unresolved conflict
-groups, validation boundaries, and authority limits.
+groups, validation boundaries, authority limits, and `agent_handoff`. The
+installed `openclerk retrieval --help` output exposes the compact action shape
+so routine agents do not need a long skill recipe or source inspection.
 
 ## Evidence Requirements
 
@@ -30,4 +32,7 @@ The targeted lane is `ockp-source-audit-workflow-action`. Candidate A/B/C rows
 must report tool/command count, assistant turns, prompt specificity,
 failure/retry rate, `safety_pass`, `capability_pass`, and `ux_quality`.
 Scripted exact-command success proves capability only; natural workflow-action
-success is required for UX.
+success under the low-ceremony threshold is required for UX. `oc-nj5h`
+validates UX maturity by requiring plain source-sensitive audit prompts to
+complete from the narrow action and its `agent_handoff`, without broad
+contradiction-engine claims or long skill recipes.

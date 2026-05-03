@@ -47,6 +47,8 @@ freshness without private vault evidence.
 Targeted workflow-action lanes cover the three promoted narrow surfaces that
 replace repeated prompt choreography with runner-owned JSON actions:
 `compile_synthesis`, `source_audit_report`, and `evidence_bundle_report`.
+These lanes also validate `agent_handoff`, the runner-owned final-answer bridge
+that should make routine follow-up primitive inspection unnecessary.
 Their reduced reports are
 `docs/evals/results/ockp-compile-synthesis-workflow-action.md`,
 `docs/evals/results/ockp-source-audit-workflow-action.md`, and
@@ -154,11 +156,16 @@ high ceremony should be classified as taste debt using
 `ergonomics_gap_despite_capability_pass` when those labels better explain the
 gap than generic `ergonomics_gap`.
 
-For promoted workflow actions, low ceremony means no more than three runner
-commands, no more than two assistant turns, and no retries in the natural row.
-Rows above that threshold may still be `safety_pass: pass` and
-`capability_pass: pass`, but their `ux_quality` must remain taste debt until
-the workflow action, runner summary, skill routing, or eval prompt is repaired.
+For promoted workflow actions, low ceremony means no more than three
+workflow-action runner calls, no pre-action or post-action primitive runner
+commands, no final-answer repair turns after the action result, and no retries
+in the natural row. Rows above that threshold may still be `safety_pass: pass`
+and `capability_pass: pass`, but their `ux_quality` must remain taste debt
+until the workflow action, runner summary, skill routing, or eval prompt is
+repaired. Reports include total commands/assistant calls for transparency plus
+the first workflow-action command index, workflow-action call count,
+pre-action primitive count, post-action primitive count, and final-answer repair
+turns so a pass cannot hide primitive choreography.
 
 Companion eval-design follow-ups for completed-but-high-touch workflows are
 recorded in

@@ -99,6 +99,12 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	if !parsed.metrics.IngestSourceURLCreateUsed || !parsed.metrics.IngestSourceURLUpdateUsed || parsed.metrics.IngestSourceURLUpdateCount != 2 {
 		t.Fatalf("expected source URL create and two updates in %+v", parsed.metrics)
 	}
+	if parsed.metrics.WorkflowActionFirstCommandIndex != 27 ||
+		parsed.metrics.WorkflowActionCallCount != 3 ||
+		parsed.metrics.PreActionPrimitiveCommandCount != 21 ||
+		parsed.metrics.PostActionPrimitiveCommandCount != 1 {
+		t.Fatalf("expected workflow-action ceremony metrics in %+v", parsed.metrics)
+	}
 	if !containsAllStrings(parsed.metrics.IngestSourceURLPathHints, []string{"sources/web-url/product-page-copy.md", "sources/web-url/product-page.md"}) {
 		t.Fatalf("expected source URL path hints in %+v", parsed.metrics)
 	}

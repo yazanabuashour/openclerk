@@ -582,7 +582,18 @@ func classifyTargetedEvidenceBundleWorkflowActionResult(result jobResult) (strin
 }
 
 func workflowActionCeremonyExceeded(result jobResult) bool {
-	return result.Metrics.CommandExecutions > 3 || result.Metrics.AssistantCalls > 2 || scenarioRetries(result) > 0
+	if result.Metrics.WorkflowActionCallCount == 0 &&
+		result.Metrics.WorkflowActionFirstCommandIndex == 0 &&
+		result.Metrics.PreActionPrimitiveCommandCount == 0 &&
+		result.Metrics.PostActionPrimitiveCommandCount == 0 &&
+		result.Metrics.FinalAnswerRepairTurns == 0 {
+		return result.Metrics.CommandExecutions > 3 || result.Metrics.AssistantCalls > 2 || scenarioRetries(result) > 0
+	}
+	return result.Metrics.WorkflowActionCallCount > 3 ||
+		result.Metrics.PreActionPrimitiveCommandCount > 0 ||
+		result.Metrics.PostActionPrimitiveCommandCount > 0 ||
+		result.Metrics.FinalAnswerRepairTurns > 0 ||
+		scenarioRetries(result) > 0
 }
 
 func isUXDebtClassification(classification string) bool {

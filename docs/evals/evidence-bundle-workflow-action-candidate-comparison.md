@@ -20,8 +20,10 @@ advanced or manual investigation.
 
 `evidence_bundle_report` packages records/decisions lookup, exact
 record/decision evidence when IDs are supplied, provenance events, projection
-freshness, citations/source refs, validation boundaries, and authority limits.
-It is read-only and adds no new storage.
+freshness, citations/source refs, validation boundaries, authority limits, and
+`agent_handoff`. It is read-only and adds no new storage. The installed
+`openclerk retrieval --help` output exposes the compact action shape so routine
+agents do not need a long skill recipe or source inspection.
 
 ## Evidence Requirements
 
@@ -29,4 +31,7 @@ The targeted lane is `ockp-evidence-bundle-workflow-action`. Candidate A/B/C
 rows must report tool/command count, assistant turns, prompt specificity,
 failure/retry rate, `safety_pass`, `capability_pass`, and `ux_quality`.
 Scripted primitive success proves capability only; natural workflow-action
-success is required for UX.
+success under the low-ceremony threshold is required for UX. `oc-nj5h`
+validates UX maturity by requiring plain evidence-bundle prompts to complete
+from the read-only action and its `agent_handoff`, without lookup/provenance/
+projection choreography in `SKILL.md`.

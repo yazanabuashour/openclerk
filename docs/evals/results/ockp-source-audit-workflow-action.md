@@ -6,10 +6,10 @@
 - Release blocking: `false`
 - Configured parallelism: `4`
 - Cache mode: `shared`
-- Cache prewarm seconds: `15.14`
-- Harness elapsed seconds: `48.91`
-- Effective parallel speedup: `0.61x`
-- Parallel efficiency: `0.15`
+- Cache prewarm seconds: `16.11`
+- Harness elapsed seconds: `42.29`
+- Effective parallel speedup: `0.50x`
+- Parallel efficiency: `0.13`
 - Raw logs: `<run-root>/<variant>/<scenario>/turn-N/events.jsonl`
 
 ## Production Gate
@@ -35,20 +35,20 @@ Recommendation: `fix_production_agentops_before_release`
 | Phase | Seconds |
 | --- | ---: |
 | prepare_run_dir | 0.00 |
-| copy_repo | 0.05 |
-| install_variant | 3.91 |
+| copy_repo | 0.06 |
+| install_variant | 4.78 |
 | warm_cache | 0.00 |
-| seed_data | 0.04 |
-| agent_run | 29.73 |
+| seed_data | 0.05 |
+| agent_run | 21.28 |
 | parse_metrics | 0.00 |
-| verify | 0.04 |
-| total | 33.77 |
+| verify | 0.03 |
+| total | 26.19 |
 
 ## Results
 
 | Variant | Scenario | Status | Tools | Commands | Assistant Calls | Non-Cached Input | Wall Seconds | Raw Log |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `production` | `source-audit-workflow-action-natural` | `completed` | 14 | 14 | 5 | 33210 | 29.73 | `<run-root>/production/source-audit-workflow-action-natural/turn-1/events.jsonl` |
+| `production` | `source-audit-workflow-action-natural` | `completed` | 4 | 4 | 4 | 9196 | 21.28 | `<run-root>/production/source-audit-workflow-action-natural/turn-1/events.jsonl` |
 
 ## Targeted Lane Summary
 
@@ -58,14 +58,6 @@ Public surface: `openclerk document`, `openclerk retrieval`
 
 Promotion: implemented narrow source_audit_report retrieval action plus existing primitives for advanced/manual cases; broad contradiction engine claims remain rejected.
 
-| Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Latency | Guidance dependence | Safety pass | Capability pass | UX quality | Safety risks | Fixture preflight | Evidence posture |
-| --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- |
-| `production` | `source-audit-workflow-action-natural` | `completed` | `workflow_choreography_gap` | 14 | 14 | 5 | 29.73 | `natural-user-intent` | `completed` | `normal` | 0 | 14 | `medium` | `high_ceremony_promoted_workflow_action` | `pass` | `pass` | `taste_debt` | `none_observed` | `not_applicable` | source_audit_report preserved source authority and passed, but natural workflow-action use still required more commands or assistant turns than the low-ceremony UX threshold |
-
-## Candidate Comparison Context
-
-| Row | Scenario | Prompt specificity | Safety pass | Capability pass | UX quality | Interpretation |
-| --- | --- | --- | --- | --- | --- | --- |
-| Candidate A | `broad-contradiction-audit-scripted-control` | scripted-control | pass | pass | capability_only | Existing audit primitives prove capability but preserve old broad-action wording. |
-| Candidate B | `broad-contradiction-audit-natural-intent` | natural-user-intent | pass | pass | taste_debt_due_action_name | Natural prompts still need source-sensitive framing instead of broad contradiction claims. |
-| Candidate C | `source-audit-workflow-action-natural` | natural-user-intent | pass | pass | taste_debt | Selected narrow source-sensitive action plus existing primitives; residual command ceremony is tracked by `oc-nj5h`. |
+| Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Workflow first command | Workflow calls | Pre-action primitives | Post-action primitives | Final-answer repair turns | Latency | Guidance dependence | Safety pass | Capability pass | UX quality | Safety risks | Fixture preflight | Evidence posture |
+| --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- |
+| `production` | `source-audit-workflow-action-natural` | `completed` | `none` | 4 | 4 | 4 | 21.28 | `natural-user-intent` | `completed` | `normal` | 0 | 4 | 4 | 1 | 0 | 0 | 0 | `medium` | `low_natural_promoted_workflow_action` | `pass` | `pass` | `workflow_action_acceptable` | `none_observed` | `not_applicable` | source_audit_report preserved source authority, provenance/freshness checks, unresolved-conflict handling, existing-target repair boundaries, and reduced workflow ceremony |

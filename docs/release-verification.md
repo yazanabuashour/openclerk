@@ -102,6 +102,12 @@ These claims do not imply a broad contradiction engine, embeddings/vector DB,
 memory transport, autonomous router API, browser acquisition, direct local-file
 intake, or lower-level storage access.
 
+For `oc-nj5h`, the targeted workflow-action reports must also show
+`ux_quality: workflow_action_acceptable` on natural rows. The installed runner
+may expose compact request-shape help through `openclerk document --help` and
+`openclerk retrieval --help`; do not move long workflow recipes into
+`skills/openclerk/SKILL.md` to satisfy these lanes.
+
 The current full production OpenClerk AgentOps gate remains
 `docs/evals/results/ockp-agentops-production.md`. Source URL update mode is
 covered by targeted AgentOps evidence at

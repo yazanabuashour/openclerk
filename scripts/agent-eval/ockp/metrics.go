@@ -20,6 +20,8 @@ func parseMetrics(eventsPath string) (parsedTurn, error) {
 	cachedTotal := 0
 	outputTotal := 0
 	usageExposed := false
+	workflowActionObserved := false
+	assistantMessagesAfterWorkflowAction := 0
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
@@ -49,12 +51,18 @@ func parseMetrics(eventsPath string) (parsedTurn, error) {
 		if event.Type == "message" || strings.Contains(itemText, `"type":"message"`) || strings.Contains(itemText, `"type":"agent_message"`) {
 			if strings.Contains(itemText, `"role":"assistant"`) || strings.Contains(itemText, `"type":"message"`) || strings.Contains(itemText, `"type":"agent_message"`) {
 				out.metrics.AssistantCalls++
+				if workflowActionObserved {
+					assistantMessagesAfterWorkflowAction++
+				}
 				if msg := extractAssistantText(event.Item); msg != "" {
 					out.finalMessage = msg
 				}
 			}
 		}
-		commands := commandTexts(event.Item)
+		commands := []string{}
+		if event.Type != "item.started" {
+			commands = commandTexts(event.Item)
+		}
 		if len(commands) > 0 {
 			out.metrics.ToolCalls += len(commands)
 		} else if event.Type == "tool_call" || strings.Contains(itemText, `"type":"tool_call"`) || strings.Contains(itemText, `"call_id"`) {
@@ -63,6 +71,10 @@ func parseMetrics(eventsPath string) (parsedTurn, error) {
 		for _, command := range commands {
 			out.metrics.CommandExecutions++
 			classifyCommand(command, &out.metrics)
+			actionText := strings.ReplaceAll(strings.ToLower(command), `\"`, `"`)
+			if commandContainsWorkflowAction(actionText) {
+				workflowActionObserved = true
+			}
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -78,6 +90,9 @@ func parseMetrics(eventsPath string) (parsedTurn, error) {
 		out.metrics.CachedInputTokens = &cachedTotal
 		out.metrics.NonCachedInputTokens = &nonCached
 		out.metrics.OutputTokens = &outputTotal
+	}
+	if out.metrics.WorkflowActionCallCount > 0 && assistantMessagesAfterWorkflowAction > 1 {
+		out.metrics.FinalAnswerRepairTurns = assistantMessagesAfterWorkflowAction - 1
 	}
 	return out, nil
 }
@@ -186,6 +201,20 @@ func collectCommandTexts(value any, out *[]string) {
 func classifyCommand(command string, m *metrics) {
 	lower := strings.ToLower(command)
 	actionText := strings.ReplaceAll(lower, `\"`, `"`)
+	workflowActionCommand := commandContainsWorkflowAction(actionText)
+	primitiveCommand := commandContainsWorkflowPrimitive(actionText)
+	if workflowActionCommand {
+		if m.WorkflowActionFirstCommandIndex == 0 {
+			m.WorkflowActionFirstCommandIndex = m.CommandExecutions
+		}
+		m.WorkflowActionCallCount++
+	} else if primitiveCommand {
+		if m.WorkflowActionFirstCommandIndex == 0 {
+			m.PreActionPrimitiveCommandCount++
+		} else {
+			m.PostActionPrimitiveCommandCount++
+		}
+	}
 	evidence := sanitizeMetricEvidence(command)
 	addEvidence := func(target *[]string) {
 		if len(*target) < 6 {
@@ -212,6 +241,10 @@ func classifyCommand(command string, m *metrics) {
 		m.FileInspectionCommands++
 	}
 	if strings.Contains(command, "go run ./cmd/openclerk ") || strings.Contains(command, "go run ./cmd/openclerk\n") || strings.Contains(command, " ./cmd/openclerk ") {
+		m.LegacyRunnerUsage = true
+		addEvidence(&m.LegacyRunnerEvidence)
+	}
+	if strings.Contains(command, "internal/runner") || strings.Contains(command, "cmd/openclerk") || strings.Contains(command, "scripts/agent-eval/ockp") {
 		m.LegacyRunnerUsage = true
 		addEvidence(&m.LegacyRunnerEvidence)
 	}
@@ -317,6 +350,40 @@ func classifyCommand(command string, m *metrics) {
 func commandContainsAction(actionText string, action string) bool {
 	compacted := strings.Join(strings.Fields(actionText), "")
 	return strings.Contains(compacted, `"action":"`+action+`"`)
+}
+func commandContainsWorkflowAction(actionText string) bool {
+	return commandContainsAction(actionText, "compile_synthesis") ||
+		commandContainsAction(actionText, "source_audit_report") ||
+		commandContainsAction(actionText, "evidence_bundle_report")
+}
+func commandContainsWorkflowPrimitive(actionText string) bool {
+	for _, action := range []string{
+		"validate",
+		"ingest_source_url",
+		"ingest_video_url",
+		"search",
+		"list_documents",
+		"get_document",
+		"create_document",
+		"replace_section",
+		"append_document",
+		"inspect_layout",
+		"document_links",
+		"graph_neighborhood",
+		"records_lookup",
+		"record_entity",
+		"decisions_lookup",
+		"decision_record",
+		"provenance_events",
+		"projection_states",
+		"audit_contradictions",
+		"memory_router_recall_report",
+	} {
+		if commandContainsAction(actionText, action) {
+			return true
+		}
+	}
+	return false
 }
 func actionRefIDs(actionText string, action string) []string {
 	return actionFieldValues(actionText, action, "ref_id")
@@ -554,6 +621,7 @@ func aggregateMetrics(turns []turnResult) metrics {
 	outputTotal := 0
 	for _, turn := range turns {
 		current := turn.Metrics
+		commandOffset := out.CommandExecutions
 		out.AssistantCalls += current.AssistantCalls
 		out.ToolCalls += current.ToolCalls
 		out.CommandExecutions += current.CommandExecutions
@@ -614,6 +682,16 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.SourceAuditReportUsed = out.SourceAuditReportUsed || current.SourceAuditReportUsed
 		out.SourceAuditReportModes = append(out.SourceAuditReportModes, current.SourceAuditReportModes...)
 		out.EvidenceBundleReportUsed = out.EvidenceBundleReportUsed || current.EvidenceBundleReportUsed
+		if current.WorkflowActionFirstCommandIndex != 0 {
+			first := commandOffset + current.WorkflowActionFirstCommandIndex
+			if out.WorkflowActionFirstCommandIndex == 0 || first < out.WorkflowActionFirstCommandIndex {
+				out.WorkflowActionFirstCommandIndex = first
+			}
+		}
+		out.WorkflowActionCallCount += current.WorkflowActionCallCount
+		out.PreActionPrimitiveCommandCount += current.PreActionPrimitiveCommandCount
+		out.PostActionPrimitiveCommandCount += current.PostActionPrimitiveCommandCount
+		out.FinalAnswerRepairTurns += current.FinalAnswerRepairTurns
 		out.GeneratedFileEvidence = append(out.GeneratedFileEvidence, current.GeneratedFileEvidence...)
 		out.ModuleCacheEvidence = append(out.ModuleCacheEvidence, current.ModuleCacheEvidence...)
 		out.BroadRepoSearchEvidence = append(out.BroadRepoSearchEvidence, current.BroadRepoSearchEvidence...)

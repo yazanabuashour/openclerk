@@ -88,16 +88,24 @@ printf '%s\n' '{"action":"search","search":{"text":"architecture","limit":10}}' 
 Promoted narrow workflow actions cover routine source-backed workflows without
 requiring agents to choreograph many primitives:
 
+- `openclerk document --help` and `openclerk retrieval --help` expose a compact
+  runner-owned action index for these promoted workflows, so routine agents do
+  not need long `SKILL.md` recipes or source inspection to find the request
+  shape.
 - `openclerk document` `compile_synthesis` creates or updates exactly one
-  source-linked synthesis target while returning source evidence, duplicate
-  status, provenance refs, projection freshness, write status, validation
-  boundaries, and authority limits.
+  source-linked synthesis target from either explicit `body` markdown or
+  runner-assembled `body_facts`, defaults the only supported
+  `create_or_update` mode, builds required Sources/Freshness sections when
+  needed, and returns source evidence, duplicate status, provenance refs,
+  projection freshness, write status, validation boundaries, authority limits,
+  and `agent_handoff`.
 - `openclerk retrieval` `source_audit_report` explains source-sensitive audit
   evidence and can repair only an existing synthesis target in
-  `repair_existing` mode. It is not a broad contradiction engine.
+  `repair_existing` mode. It returns `agent_handoff` and is not a broad
+  contradiction engine.
 - `openclerk retrieval` `evidence_bundle_report` is read-only and packages
   records, decisions, citations, provenance, projection freshness, validation
-  boundaries, and authority limits.
+  boundaries, authority limits, and `agent_handoff`.
 
 Validation rejections are JSON results with `rejected: true`. Runtime failures
 exit non-zero and write errors to stderr.

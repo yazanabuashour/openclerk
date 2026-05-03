@@ -244,7 +244,7 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		Document:  request.Document,
 		Source:    trimSourceURLInput(request.Source),
 		Video:     trimVideoURLInput(request.Video),
-		Synthesis: trimCompileSynthesisInput(request.Synthesis),
+		Synthesis: trimCompileSynthesisInput(compileSynthesisInputFromRequest(request)),
 		DocID:     strings.TrimSpace(request.DocID),
 		Content:   request.Content,
 		Heading:   strings.TrimSpace(request.Heading),
@@ -316,6 +316,41 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 	}
 }
 
+func compileSynthesisInputFromRequest(request DocumentTaskRequest) CompileSynthesisInput {
+	input := request.Synthesis
+	if input.Path == "" {
+		input.Path = firstNonEmpty(request.Path, request.Document.Path)
+	}
+	if input.Title == "" {
+		input.Title = firstNonEmpty(request.Title, request.Document.Title)
+	}
+	if input.Body == "" {
+		input.Body = firstNonEmpty(request.Body, request.Document.Body)
+	}
+	if len(input.BodyFacts) == 0 {
+		input.BodyFacts = request.BodyFacts
+	}
+	if len(input.SourceRefs) == 0 {
+		input.SourceRefs = request.SourceRefs
+	}
+	if input.FreshnessNote == "" {
+		input.FreshnessNote = request.FreshnessNote
+	}
+	if input.Mode == "" {
+		input.Mode = request.Mode
+	}
+	return input
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
 func normalizeDocumentListTagFilter(list *DocumentListOptions) string {
 	return normalizeTagFilter("list", list.Tag, list.tagProvided, &list.MetadataKey, &list.MetadataValue, &list.Tag)
 }
@@ -356,13 +391,30 @@ func trimCompileSynthesisInput(input CompileSynthesisInput) CompileSynthesisInpu
 	for _, ref := range input.SourceRefs {
 		sourceRefs = append(sourceRefs, normalizeCompileSynthesisMarkdownPath(strings.TrimSpace(ref)))
 	}
-	return CompileSynthesisInput{
-		Path:       normalizeCompileSynthesisMarkdownPath(strings.TrimSpace(input.Path)),
-		Title:      strings.TrimSpace(input.Title),
-		SourceRefs: sourceRefs,
-		Body:       input.Body,
-		Mode:       strings.TrimSpace(input.Mode),
+	bodyFacts := make([]string, 0, len(input.BodyFacts))
+	for _, fact := range input.BodyFacts {
+		trimmed := strings.TrimSpace(fact)
+		if trimmed != "" {
+			bodyFacts = append(bodyFacts, trimmed)
+		}
 	}
+	return CompileSynthesisInput{
+		Path:          normalizeCompileSynthesisMarkdownPath(strings.TrimSpace(input.Path)),
+		Title:         strings.TrimSpace(input.Title),
+		SourceRefs:    sourceRefs,
+		Body:          input.Body,
+		BodyFacts:     bodyFacts,
+		FreshnessNote: strings.TrimSpace(input.FreshnessNote),
+		Mode:          normalizeCompileSynthesisMode(input.Mode),
+	}
+}
+
+func normalizeCompileSynthesisMode(raw string) string {
+	mode := strings.TrimSpace(raw)
+	if mode == "" {
+		return "create_or_update"
+	}
+	return mode
 }
 
 func normalizeCompileSynthesisMarkdownPath(raw string) string {
@@ -412,14 +464,8 @@ func validateCompileSynthesisInput(input CompileSynthesisInput) string {
 			return "synthesis.source_refs entries must end with .md"
 		}
 	}
-	if strings.TrimSpace(input.Body) == "" {
-		return "synthesis.body is required"
-	}
-	if !strings.Contains(input.Body, "## Sources") {
-		return "synthesis.body must include ## Sources"
-	}
-	if !strings.Contains(input.Body, "## Freshness") {
-		return "synthesis.body must include ## Freshness"
+	if strings.TrimSpace(input.Body) == "" && len(input.BodyFacts) == 0 {
+		return "synthesis.body or synthesis.body_facts is required"
 	}
 	if input.Mode != "create_or_update" {
 		return "synthesis.mode must be create_or_update"

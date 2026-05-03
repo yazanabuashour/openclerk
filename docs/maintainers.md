@@ -141,7 +141,9 @@ claims into a synthesis engine, broad contradiction engine, memory transport,
 vector DB, browser acquisition, or lower-level storage access. Do not repair
 routine workflow-action UX by adding long `skills/openclerk/SKILL.md` recipes;
 keep the skill to compact action routing and move detailed examples to docs or
-the runner action itself.
+the runner action itself. The installed runner's `document --help` and
+`retrieval --help` output is an acceptable compact action-index surface when
+agents need request-shape discovery without source inspection.
 
 Tag a version like `v0.1.0`, push the tag, and let the release workflow:
 

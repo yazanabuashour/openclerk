@@ -17,14 +17,25 @@ func runCompileSynthesis(ctx context.Context, client *runclient.Client, input Co
 		return CompileSynthesisResult{}, err
 	}
 	if len(matches) > 1 {
+		validationBoundaries := compileSynthesisValidationBoundaries()
+		authorityLimits := compileSynthesisAuthorityLimits()
 		return CompileSynthesisResult{
 			SelectedPath:         input.Path,
 			SourceRefs:           input.SourceRefs,
 			CandidateStatus:      "blocked_duplicate_target",
 			DuplicateStatus:      "duplicate_target_path_detected",
 			WriteStatus:          "skipped",
-			ValidationBoundaries: compileSynthesisValidationBoundaries(),
-			AuthorityLimits:      compileSynthesisAuthorityLimits(),
+			ValidationBoundaries: validationBoundaries,
+			AuthorityLimits:      authorityLimits,
+			AgentHandoff: compileSynthesisHandoff(
+				input.Path,
+				input.SourceRefs,
+				"blocked duplicate synthesis target; no write applied",
+				[]string{"duplicate_status=duplicate_target_path_detected"},
+				validationBoundaries,
+				authorityLimits,
+				"required: resolve duplicate synthesis target before retrying compile_synthesis",
+			),
 		}, nil
 	}
 
@@ -71,6 +82,9 @@ func runCompileSynthesis(ctx context.Context, client *runclient.Client, input Co
 		sort.Strings(candidates)
 	}
 
+	validationBoundaries := compileSynthesisValidationBoundaries()
+	authorityLimits := compileSynthesisAuthorityLimits()
+	projectionSummary := projectionFreshnessSummary(projectionFreshness)
 	return CompileSynthesisResult{
 		SelectedPath:         document.Path,
 		DocumentID:           document.DocID,
@@ -82,13 +96,29 @@ func runCompileSynthesis(ctx context.Context, client *runclient.Client, input Co
 		ProvenanceRefs:       provenanceRefs,
 		ProjectionFreshness:  projectionFreshness,
 		WriteStatus:          writeStatus,
-		ValidationBoundaries: compileSynthesisValidationBoundaries(),
-		AuthorityLimits:      compileSynthesisAuthorityLimits(),
+		ValidationBoundaries: validationBoundaries,
+		AuthorityLimits:      authorityLimits,
+		AgentHandoff: compileSynthesisHandoff(
+			document.Path,
+			input.SourceRefs,
+			fmt.Sprintf("compile_synthesis %s %s with %s; %s", writeStatus, document.Path, strings.Join(input.SourceRefs, ", "), projectionSummary),
+			[]string{
+				"selected_path=" + document.Path,
+				"source_refs=" + strings.Join(input.SourceRefs, ", "),
+				"duplicate_status=" + duplicateStatus,
+				"provenance_refs=" + strings.Join(provenanceRefs, ", "),
+				"projection_freshness=" + projectionSummary,
+				"write_status=" + writeStatus,
+			},
+			validationBoundaries,
+			authorityLimits,
+			"not required for routine answer; use primitives only for explicit follow-up inspection or runner rejection repair",
+		),
 	}, nil
 }
 
 func compileSynthesisBody(input CompileSynthesisInput) string {
-	content := stripFrontmatter(strings.TrimSpace(input.Body))
+	content := compileSynthesisBodyContent(input)
 	frontmatter := strings.Join([]string{
 		"---",
 		"type: synthesis",
@@ -99,6 +129,51 @@ func compileSynthesisBody(input CompileSynthesisInput) string {
 		"",
 	}, "\n")
 	return strings.TrimRight(frontmatter+content, "\n") + "\n"
+}
+
+func compileSynthesisBodyContent(input CompileSynthesisInput) string {
+	if body := strings.TrimSpace(input.Body); body != "" {
+		stripped := stripFrontmatter(body)
+		if compileSynthesisBodyHasRequiredSections(stripped) {
+			return stripped
+		}
+		return compileSynthesisAssembledContent(input.Title, input.SourceRefs, []string{stripped}, input.FreshnessNote, false)
+	}
+	return compileSynthesisAssembledContent(input.Title, input.SourceRefs, input.BodyFacts, input.FreshnessNote, true)
+}
+
+func compileSynthesisAssembledContent(title string, sourceRefs []string, summaryItems []string, freshnessNote string, bulletSummary bool) string {
+	lines := []string{
+		"# " + title,
+		"",
+		"## Summary",
+	}
+	for _, item := range summaryItems {
+		trimmed := strings.TrimSpace(item)
+		if trimmed == "" {
+			continue
+		}
+		if bulletSummary {
+			lines = append(lines, "- "+trimmed)
+		} else {
+			lines = append(lines, trimmed)
+		}
+	}
+	lines = append(lines, "", "## Sources")
+	for _, sourceRef := range sourceRefs {
+		lines = append(lines, "- "+sourceRef)
+	}
+	if freshnessNote == "" {
+		freshnessNote = "Checked current source evidence through compile_synthesis."
+	}
+	lines = append(lines, "", "## Freshness", freshnessNote)
+	return strings.Join(lines, "\n")
+}
+
+func compileSynthesisBodyHasRequiredSections(body string) bool {
+	hasSources := strings.Contains(body, "\n## Sources") || strings.HasPrefix(body, "## Sources")
+	hasFreshness := strings.Contains(body, "\n## Freshness") || strings.HasPrefix(body, "## Freshness")
+	return hasSources && hasFreshness
 }
 
 func stripFrontmatter(body string) string {
@@ -203,6 +278,19 @@ func compileSynthesisValidationBoundaries() string {
 
 func compileSynthesisAuthorityLimits() string {
 	return "canonical source documents and promoted records remain authority; synthesis is derived evidence with source refs, provenance, and projection freshness"
+}
+
+func compileSynthesisHandoff(path string, sourceRefs []string, answerSummary string, evidence []string, validationBoundaries string, authorityLimits string, followUp string) *AgentHandoff {
+	if answerSummary == "" {
+		answerSummary = fmt.Sprintf("compile_synthesis selected %s from %s", path, strings.Join(sourceRefs, ", "))
+	}
+	return &AgentHandoff{
+		AnswerSummary:               answerSummary,
+		Evidence:                    evidence,
+		ValidationBoundaries:        validationBoundaries,
+		AuthorityLimits:             authorityLimits,
+		FollowUpPrimitiveInspection: followUp,
+	}
 }
 
 func stringSliceContains(values []string, expected string) bool {

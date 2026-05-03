@@ -142,6 +142,9 @@ Checked current source evidence.
 		created.CompileSynthesis.DuplicateStatus != "no_duplicate_created" ||
 		len(created.CompileSynthesis.SourceEvidence) != 2 ||
 		len(created.CompileSynthesis.ProjectionFreshness) == 0 ||
+		created.CompileSynthesis.AgentHandoff == nil ||
+		!strings.Contains(created.CompileSynthesis.AgentHandoff.AnswerSummary, "compile_synthesis created synthesis/workflow.md") ||
+		!strings.Contains(created.CompileSynthesis.AgentHandoff.FollowUpPrimitiveInspection, "not required") ||
 		!strings.Contains(created.CompileSynthesis.ValidationBoundaries, "no broad repo search") {
 		t.Fatalf("compile synthesis create report = %+v", created.CompileSynthesis)
 	}
@@ -191,24 +194,145 @@ Checked current source evidence.
 	}
 }
 
+func TestDocumentTaskCompileSynthesisBuildsBodyFromFacts(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "sources/fact-current.md", "Fact source current", "# Fact source current\n\n## Summary\nCurrent fact source.\n")
+	createDocument(t, ctx, config, "sources/fact-old.md", "Fact source old", "# Fact source old\n\n## Summary\nSuperseded fact source.\n")
+
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionCompileSynthesis,
+		Synthesis: runner.CompileSynthesisInput{
+			Path:          "synthesis/fact-built.md",
+			Title:         "Fact Built",
+			SourceRefs:    []string{"sources/fact-current.md", "sources/fact-old.md"},
+			BodyFacts:     []string{"Current source: sources/fact-current.md", "Superseded source: sources/fact-old.md"},
+			FreshnessNote: "Checked through runner-owned body assembly.",
+			Mode:          "create_or_update",
+		},
+	})
+	if err != nil {
+		t.Fatalf("compile synthesis body facts: %v", err)
+	}
+	if result.Rejected || result.CompileSynthesis == nil || result.CompileSynthesis.AgentHandoff == nil {
+		t.Fatalf("compile synthesis body facts result = %+v", result)
+	}
+	get, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGet,
+		DocID:  result.CompileSynthesis.DocumentID,
+	})
+	if err != nil {
+		t.Fatalf("get fact-built synthesis: %v", err)
+	}
+	for _, want := range []string{
+		"source_refs: sources/fact-current.md, sources/fact-old.md",
+		"## Summary",
+		"- Current source: sources/fact-current.md",
+		"## Sources",
+		"- sources/fact-current.md",
+		"## Freshness",
+		"Checked through runner-owned body assembly.",
+	} {
+		if get.Document == nil || !strings.Contains(get.Document.Body, want) {
+			t.Fatalf("fact-built body missing %q:\n%s", want, get.Document.Body)
+		}
+	}
+}
+
 func TestDocumentTaskCompileSynthesisRejectsMissingFields(t *testing.T) {
 	t.Parallel()
 
 	result, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionCompileSynthesis,
 		Synthesis: runner.CompileSynthesisInput{
-			Path:       "synthesis/missing.md",
-			Title:      "Missing",
-			SourceRefs: []string{"sources/a.md"},
-			Body:       "# Missing\n\n## Summary\nNo freshness.\n",
-			Mode:       "create_or_update",
+			Path:  "synthesis/missing.md",
+			Title: "Missing",
+			Body:  "# Missing\n\n## Summary\nMissing source refs.\n",
+			Mode:  "create_or_update",
 		},
 	})
 	if err != nil {
 		t.Fatalf("compile synthesis reject: %v", err)
 	}
-	if !result.Rejected || !strings.Contains(result.RejectionReason, "## Sources") {
+	if !result.Rejected || result.RejectionReason != "synthesis.source_refs is required" {
 		t.Fatalf("compile synthesis rejection = %+v", result)
+	}
+}
+
+func TestDocumentTaskCompileSynthesisAssemblesPlainBodyAndAliases(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "sources/plain-current.md", "Plain source", "# Plain source\n\n## Summary\nPlain body source.\n")
+
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action:        runner.DocumentTaskActionCompileSynthesis,
+		Document:      runner.DocumentInput{Path: "synthesis/plain-body", Title: "Plain Body"},
+		Body:          "Plain synthesis summary from the user.",
+		SourceRefs:    []string{"sources/plain-current.md"},
+		FreshnessNote: "Plain body wrapped by compile_synthesis.",
+	})
+	if err != nil {
+		t.Fatalf("compile synthesis plain body aliases: %v", err)
+	}
+	if result.Rejected || result.CompileSynthesis == nil {
+		t.Fatalf("compile synthesis plain body result = %+v", result)
+	}
+	get, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGet,
+		DocID:  result.CompileSynthesis.DocumentID,
+	})
+	if err != nil {
+		t.Fatalf("get plain-body synthesis: %v", err)
+	}
+	for _, want := range []string{
+		"source_refs: sources/plain-current.md",
+		"# Plain Body",
+		"## Summary",
+		"Plain synthesis summary from the user.",
+		"## Sources",
+		"- sources/plain-current.md",
+		"## Freshness",
+		"Plain body wrapped by compile_synthesis.",
+	} {
+		if get.Document == nil || !strings.Contains(get.Document.Body, want) {
+			t.Fatalf("plain-body result missing %q:\n%s", want, get.Document.Body)
+		}
+	}
+}
+
+func TestDocumentTaskCompileSynthesisRejectsMissingBodyAndFactsWithoutWrite(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionCompileSynthesis,
+		Synthesis: runner.CompileSynthesisInput{
+			Path:       "synthesis/missing-body.md",
+			Title:      "Missing Body",
+			SourceRefs: []string{"sources/a.md"},
+			Mode:       "create_or_update",
+		},
+	})
+	if err != nil {
+		t.Fatalf("compile synthesis missing body: %v", err)
+	}
+	if !result.Rejected || result.RejectionReason != "synthesis.body or synthesis.body_facts is required" {
+		t.Fatalf("compile synthesis missing body rejection = %+v", result)
+	}
+	list, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{Limit: 10},
+	})
+	if err != nil {
+		t.Fatalf("list after missing body reject: %v", err)
+	}
+	if len(list.Documents) != 0 {
+		t.Fatalf("missing body rejection wrote documents: %+v", list.Documents)
 	}
 }
 
