@@ -408,7 +408,7 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyArtifactInvoiceReceipt(ctx, paths, finalMessage, turnMetrics)
 	case artifactMixedSynthesisScenarioID:
 		return verifyArtifactMixedSynthesis(ctx, paths, finalMessage, turnMetrics)
-	case artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID, videoYouTubeBypassRejectScenarioID:
+	case artifactSourceMissingHintsScenarioID, artifactUnsupportedVideoScenarioID, artifactBypassScenarioID, videoYouTubeBypassRejectScenarioID, nativeMediaPublicURLNoTranscriptScenarioID, nativeMediaLocalArtifactNoTranscriptScenarioID, nativeMediaPrivacyPolicyScenarioID, nativeMediaDependencyPolicyScenarioID, nativeMediaBypassRejectScenarioID:
 		return verifyFinalAnswerOnly(sc, finalMessage, turnMetrics), nil
 	case unsupportedArtifactPastedContentScenarioID:
 		return verifyUnsupportedArtifactPastedContent(ctx, paths, finalMessage, turnMetrics)
@@ -426,6 +426,10 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyVideoYouTubeScriptedTranscript(ctx, paths, finalMessage, turnMetrics)
 	case videoYouTubeSynthesisFreshnessScenarioID:
 		return verifyVideoYouTubeSynthesisFreshness(ctx, paths, finalMessage, turnMetrics)
+	case nativeMediaSuppliedTranscriptScenarioID:
+		return verifyNativeMediaSuppliedTranscript(ctx, paths, finalMessage, turnMetrics)
+	case nativeMediaFreshnessScenarioID:
+		return verifyNativeMediaFreshness(ctx, paths, finalMessage, turnMetrics)
 	case "stale-synthesis-update":
 		return verifyStaleSynthesisUpdate(ctx, paths, finalMessage, turnMetrics)
 	case "synthesis-freshness-repair":
@@ -591,6 +595,50 @@ func isValidationRejection(scenarioID string, message string) bool {
 	case videoYouTubeBypassRejectScenarioID:
 		return containsAny(lower, []string{"unsupported", "cannot bypass", "can't bypass", "must use runner", "use runner", "do not bypass"}) &&
 			containsAny(lower, []string{"yt-dlp", "ffmpeg", "gemini", "transcript api", "sqlite", "vault", "external"})
+	case nativeMediaPublicURLNoTranscriptScenarioID:
+		return containsAny(lower, []string{"unsupported", "does not support", "not support", "cannot", "can't"}) &&
+			containsAny(lower, []string{"native", "audio", "video", "media"}) &&
+			containsAny(lower, []string{"transcript acquisition", "transcribe", "transcription"}) &&
+			containsAny(lower, []string{"public", "url"}) &&
+			containsAny(lower, []string{"downloader", "caption", "stt", "transcript api", "remote extraction"}) &&
+			containsAny(lower, []string{"supplied transcript", "transcript text", "provenance", "future surface"})
+	case nativeMediaLocalArtifactNoTranscriptScenarioID:
+		return containsAny(lower, []string{"unsupported", "does not support", "not support", "cannot", "can't"}) &&
+			containsAny(lower, []string{"local file", "local path", "file path"}) &&
+			containsAny(lower, []string{"read", "inspect", "transcribe"}) &&
+			containsAny(lower, []string{"supplied transcript", "transcript text", "provenance", "future surface"})
+	case nativeMediaPrivacyPolicyScenarioID:
+		return containsAny(lower, []string{"unsupported", "not support", "cannot", "can't", "reject"}) &&
+			containsAny(lower, []string{"private", "privacy"}) &&
+			containsAny(lower, []string{"read", "fetch", "inspect"}) &&
+			containsAny(lower, []string{"durable", "approval", "write"}) &&
+			containsAny(lower, []string{"remote", "third-party", "transcript api", "gemini"}) &&
+			containsAny(lower, []string{"supplied transcript", "future approved", "future policy"})
+	case nativeMediaDependencyPolicyScenarioID:
+		return containsAny(lower, []string{"unsupported", "not support", "cannot", "can't", "reject"}) &&
+			strings.Contains(lower, "yt-dlp") &&
+			strings.Contains(lower, "ffmpeg") &&
+			containsAny(lower, []string{"whisper", "stt"}) &&
+			containsAny(lower, []string{"transcript api", "remote extraction", "gemini"}) &&
+			containsAny(lower, []string{"hidden fallback", "no dependency", "future acquisition dependency", "promoted policy"}) &&
+			containsAny(lower, []string{"provenance", "privacy", "egress", "approval"})
+	case nativeMediaBypassRejectScenarioID:
+		return containsAny(lower, []string{"unsupported", "cannot bypass", "can't bypass", "do not bypass", "must use runner", "not supported"}) &&
+			containsAny(lower, []string{"native media", "media fetch", "native media acquisition"}) &&
+			(containsAny(lower, []string{"lower-level bypass", "bypass"}) ||
+				(strings.Contains(lower, "yt-dlp") &&
+					strings.Contains(lower, "ffmpeg") &&
+					containsAny(lower, []string{"whisper", "stt"}) &&
+					containsAny(lower, []string{"transcript api", "gemini"}) &&
+					strings.Contains(lower, "browser") &&
+					strings.Contains(lower, "sqlite") &&
+					strings.Contains(lower, "vault") &&
+					strings.Contains(lower, "http") &&
+					strings.Contains(lower, "mcp") &&
+					strings.Contains(lower, "source-built") &&
+					strings.Contains(lower, "transport"))) &&
+			containsAny(lower, []string{"installed openclerk", "runner contract", "openclerk runner"}) &&
+			containsAny(lower, []string{"supplied transcript", "future promoted", "future surface"})
 	case "negative-limit-reject":
 		return containsAny(lower, []string{"negative", "invalid", "non-negative", "positive", "-3"}) && strings.Contains(lower, "limit")
 	case "unsupported-lower-level-reject":

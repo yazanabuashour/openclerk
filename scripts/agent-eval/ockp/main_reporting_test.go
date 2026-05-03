@@ -992,6 +992,112 @@ func TestVideoYouTubeDecisionRequiresCompleteScenarioCoverage(t *testing.T) {
 	}
 }
 
+func TestExecuteRunLabelsNativeMediaTranscriptLaneAsNonReleaseBlocking(t *testing.T) {
+	reportDir := filepath.Join(t.TempDir(), "reports")
+	scenarioIDs := append(nativeMediaTranscriptScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject")
+	config := runConfig{
+		Parallel:   1,
+		Variant:    productionVariant,
+		Scenario:   strings.Join(scenarioIDs, ","),
+		RunRoot:    filepath.Join(t.TempDir(), "run"),
+		ReportDir:  reportDir,
+		ReportName: "ockp-artifact-native-media-transcript-acquisition-test",
+		RepoRoot:   ".",
+		CodexBin:   "codex",
+		CacheMode:  cacheModeIsolated,
+	}
+	err := executeRun(context.Background(), config, &strings.Builder{}, func(_ context.Context, _ runConfig, job evalJob, _ cacheConfig) jobResult {
+		now := time.Now().UTC()
+		return jobResult{
+			Variant:       job.Variant,
+			Scenario:      job.Scenario.ID,
+			ScenarioTitle: job.Scenario.Title,
+			Status:        "completed",
+			Passed:        true,
+			Metrics:       metrics{AssistantCalls: 1, EventTypeCounts: map[string]int{}},
+			Verification:  verificationResult{Passed: true, DatabasePass: true, AssistantPass: true},
+			StartedAt:     now,
+			CompletedAt:   &now,
+		}
+	})
+	if err != nil {
+		t.Fatalf("execute native media transcript run: %v", err)
+	}
+	content, err := os.ReadFile(filepath.Join(reportDir, "ockp-artifact-native-media-transcript-acquisition-test.json"))
+	if err != nil {
+		t.Fatalf("read JSON report: %v", err)
+	}
+	var report report
+	if err := json.Unmarshal(content, &report); err != nil {
+		t.Fatalf("decode JSON report: %v", err)
+	}
+	if report.Metadata.Lane != nativeMediaTranscriptLaneName || report.Metadata.ReleaseBlocking {
+		t.Fatalf("native media transcript lane metadata = %q/%t, want %q/false", report.Metadata.Lane, report.Metadata.ReleaseBlocking, nativeMediaTranscriptLaneName)
+	}
+	if report.TargetedLaneSummary == nil {
+		t.Fatal("native media transcript report missing targeted lane summary")
+	}
+	if report.TargetedLaneSummary.Decision != "keep_as_reference" {
+		t.Fatalf("decision = %q, want keep_as_reference", report.TargetedLaneSummary.Decision)
+	}
+	if len(report.TargetedLaneSummary.ScenarioClassifications) != len(scenarioIDs) {
+		t.Fatalf("classifications = %d, want %d", len(report.TargetedLaneSummary.ScenarioClassifications), len(scenarioIDs))
+	}
+	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-artifact-native-media-transcript-acquisition-test.md"))
+	if err != nil {
+		t.Fatalf("read markdown report: %v", err)
+	}
+	for _, want := range []string{
+		"Lane: `" + nativeMediaTranscriptLaneName + "`",
+		"Release blocking: `false`",
+		"Decision: `keep_as_reference`",
+		"Safety pass",
+		"Capability pass",
+		"UX quality",
+		"`none`",
+	} {
+		if !strings.Contains(string(markdown), want) {
+			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
+		}
+	}
+}
+
+func TestNativeMediaTranscriptDecisionRequiresCompleteScenarioCoverage(t *testing.T) {
+	rows := make([]targetedScenarioClassification, 0, len(nativeMediaTranscriptScenarioIDs())+1)
+	for _, id := range nativeMediaTranscriptScenarioIDs() {
+		rows = append(rows, targetedScenarioClassification{
+			Scenario:              id,
+			FailureClassification: "none",
+			SafetyPass:            "pass",
+		})
+	}
+	rows = append(rows, targetedScenarioClassification{
+		Scenario:              "negative-limit-reject",
+		FailureClassification: "none",
+		SafetyPass:            "pass",
+	})
+	if decision := nativeMediaTranscriptDecision(rows[:len(nativeMediaTranscriptScenarioIDs())-1]); decision != "defer_for_guidance_or_eval_repair" {
+		t.Fatalf("partial decision = %q, want defer_for_guidance_or_eval_repair", decision)
+	}
+	if decision := nativeMediaTranscriptDecision(rows); decision != "keep_as_reference" {
+		t.Fatalf("complete decision = %q, want keep_as_reference", decision)
+	}
+	rows[1].FailureClassification = "capability_gap"
+	if decision := nativeMediaTranscriptDecision(rows); decision != "promote_native_media_acquisition_surface_design" {
+		t.Fatalf("capability decision = %q, want promote_native_media_acquisition_surface_design", decision)
+	}
+	rows[1].FailureClassification = "none"
+	rows[2].FailureClassification = "ergonomics_gap"
+	if decision := nativeMediaTranscriptDecision(rows); decision != "promote_native_media_acquisition_surface_design" {
+		t.Fatalf("ergonomics decision = %q, want promote_native_media_acquisition_surface_design", decision)
+	}
+	rows[2].FailureClassification = "none"
+	rows[3].SafetyPass = "fail"
+	if decision := nativeMediaTranscriptDecision(rows); decision != "kill_native_media_acquisition_shape" {
+		t.Fatalf("safety decision = %q, want kill_native_media_acquisition_shape", decision)
+	}
+}
+
 func TestExecuteRunLabelsSynthesisCompileLaneAsNonReleaseBlocking(t *testing.T) {
 	reportDir := filepath.Join(t.TempDir(), "reports")
 	scenarioIDs := append(synthesisCompileScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject")

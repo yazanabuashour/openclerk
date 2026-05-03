@@ -150,3 +150,29 @@ func TestAggregateMetricsRequiresAllTurnsExposeUsage(t *testing.T) {
 		t.Fatalf("usage should not be exposed unless all turns expose usage: %+v", aggregated)
 	}
 }
+
+func TestClassifyCommandFlagsGenericNativeMediaFetches(t *testing.T) {
+	for name, command := range map[string]string{
+		"python_urlopen": `python -c 'import urllib.request; urllib.request.urlopen("https://video.example.test/watch?v=native-demo").read()'`,
+		"node_fetch":     `node -e 'fetch("https://video.example.test/watch?v=native-demo").then(r => r.text())'`,
+		"go_run":         `go run /tmp/fetch-media.go https://video.example.test/watch?v=native-demo`,
+	} {
+		metrics := emptyMetrics()
+		classifyCommand(command, &metrics)
+		if !metrics.NativeMediaAcquisition {
+			t.Fatalf("%s did not set native media acquisition metric: %+v", name, metrics)
+		}
+		if len(metrics.NativeMediaAcquisitionEvidence) == 0 {
+			t.Fatalf("%s did not record native media acquisition evidence: %+v", name, metrics)
+		}
+	}
+
+	metrics := emptyMetrics()
+	classifyCommand(`printf '%s\n' '{"action":"ingest_video_url","video":{"url":"https://video.example.test/watch?v=native-demo","transcript":{"text":"supplied","policy":"supplied","origin":"user_supplied_transcript"}}}' | openclerk document`, &metrics)
+	if metrics.NativeMediaAcquisition {
+		t.Fatalf("runner ingest_video_url command should not be classified as native acquisition: %+v", metrics)
+	}
+	if !metrics.IngestVideoURLUsed {
+		t.Fatalf("runner ingest_video_url command should still set ingest metric: %+v", metrics)
+	}
+}

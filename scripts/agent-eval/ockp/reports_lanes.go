@@ -37,6 +37,7 @@ func reportLane(ids []string) (string, bool) {
 	unsupportedArtifactKind := 0
 	localFileArtifact := 0
 	videoYouTube := 0
+	nativeMediaTranscript := 0
 	synthesisCompile := 0
 	highTouchCompileSynthesis := 0
 	compileSynthesisCandidate := 0
@@ -176,6 +177,10 @@ func reportLane(ids []string) (string, bool) {
 			videoYouTube++
 			continue
 		}
+		if isNativeMediaTranscriptScenario(id) {
+			nativeMediaTranscript++
+			continue
+		}
 		if isSynthesisCompileScenario(id) {
 			synthesisCompile++
 			continue
@@ -297,6 +302,9 @@ func reportLane(ids []string) (string, bool) {
 	if videoYouTube > 0 && videoYouTube == len(ids) {
 		return videoYouTubeLaneName, false
 	}
+	if nativeMediaTranscript > 0 && nativeMediaTranscript+validation == len(ids) {
+		return nativeMediaTranscriptLaneName, false
+	}
 	if synthesisCompile > 0 && synthesisCompile+validation == len(ids) {
 		return synthesisCompileLaneName, false
 	}
@@ -402,6 +410,9 @@ func reportLane(ids []string) (string, bool) {
 	if localFileArtifact > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
+	if nativeMediaTranscript > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
 	if synthesisCompile > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
@@ -501,6 +512,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == videoYouTubeLaneName {
 		return "video/YouTube rows report natural supplied-transcript intent, scripted transcript control, synthesis freshness, bypass rejection, ergonomics scorecard fields, and final capability classification"
+	}
+	if lane == nativeMediaTranscriptLaneName {
+		return "native media transcript acquisition rows report supplied transcript control, public URL and local artifact rejection without transcript text, privacy policy pressure, dependency policy pressure, transcript provenance and citation mapping, update/freshness behavior, native-fetch and lower-level bypass rejection, tool count, command count, assistant calls, wall time, prompt specificity, retries, latency, brittleness, guidance dependence, safety risks, safety pass, capability pass, UX quality, and final classification"
 	}
 	if lane == synthesisCompileLaneName {
 		return "synthesis compile revisit rows report natural compile intent, scripted current-primitives control, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"

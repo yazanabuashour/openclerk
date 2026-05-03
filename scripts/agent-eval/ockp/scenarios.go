@@ -22,7 +22,7 @@ func isRepoDocsDogfoodScenario(id string) bool {
 	}
 }
 func isReleaseBlockingScenario(id string) bool {
-	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isHighTouchMemoryRouterRecallScenario(id) && !isMemoryRouterRecallCandidateScenario(id) && !isMemoryRouterRecallReportScenario(id) && !isPromotedRecordDomainScenario(id) && !isHighTouchRelationshipRecordScenario(id) && !isRelationshipRecordCandidateScenario(id) && !isDocumentHistoryScenario(id) && !isHighTouchDocumentLifecycleScenario(id) && !isDocumentLifecycleRollbackCandidateScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isCaptureLowRiskScenario(id) && !isCaptureExplicitOverridesScenario(id) && !isCaptureDuplicateCandidateScenario(id) && !isTaggingScenario(id) && !isCaptureSaveThisNoteScenario(id) && !isCaptureDocumentLinksScenario(id) && !isSourceURLUpdateScenario(id) && !isWebURLIntakeScenario(id) && !isWebURLStaleRepairScenario(id) && !isWebURLStaleImpactScenario(id) && !isWebProductPageScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isUnsupportedArtifactKindScenario(id) && !isLocalFileArtifactScenario(id) && !isVideoYouTubeScenario(id) && !isSynthesisCompileScenario(id) && !isHighTouchCompileSynthesisScenario(id) && !isCompileSynthesisCandidateScenario(id) && !isBroadAuditScenario(id) && !isParallelRunnerScenario(id)
+	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isHighTouchMemoryRouterRecallScenario(id) && !isMemoryRouterRecallCandidateScenario(id) && !isMemoryRouterRecallReportScenario(id) && !isPromotedRecordDomainScenario(id) && !isHighTouchRelationshipRecordScenario(id) && !isRelationshipRecordCandidateScenario(id) && !isDocumentHistoryScenario(id) && !isHighTouchDocumentLifecycleScenario(id) && !isDocumentLifecycleRollbackCandidateScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isCaptureLowRiskScenario(id) && !isCaptureExplicitOverridesScenario(id) && !isCaptureDuplicateCandidateScenario(id) && !isTaggingScenario(id) && !isCaptureSaveThisNoteScenario(id) && !isCaptureDocumentLinksScenario(id) && !isSourceURLUpdateScenario(id) && !isWebURLIntakeScenario(id) && !isWebURLStaleRepairScenario(id) && !isWebURLStaleImpactScenario(id) && !isWebProductPageScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isUnsupportedArtifactKindScenario(id) && !isLocalFileArtifactScenario(id) && !isVideoYouTubeScenario(id) && !isNativeMediaTranscriptScenario(id) && !isSynthesisCompileScenario(id) && !isHighTouchCompileSynthesisScenario(id) && !isCompileSynthesisCandidateScenario(id) && !isBroadAuditScenario(id) && !isParallelRunnerScenario(id)
 }
 func isParallelRunnerScenario(id string) bool {
 	switch id {
@@ -295,6 +295,25 @@ func isVideoYouTubeScenario(id string) bool {
 		return true
 	default:
 		return false
+	}
+}
+func isNativeMediaTranscriptScenario(id string) bool {
+	switch id {
+	case nativeMediaSuppliedTranscriptScenarioID, nativeMediaPublicURLNoTranscriptScenarioID, nativeMediaLocalArtifactNoTranscriptScenarioID, nativeMediaPrivacyPolicyScenarioID, nativeMediaDependencyPolicyScenarioID, nativeMediaFreshnessScenarioID, nativeMediaBypassRejectScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+func nativeMediaTranscriptScenarioIDs() []string {
+	return []string{
+		nativeMediaSuppliedTranscriptScenarioID,
+		nativeMediaPublicURLNoTranscriptScenarioID,
+		nativeMediaLocalArtifactNoTranscriptScenarioID,
+		nativeMediaPrivacyPolicyScenarioID,
+		nativeMediaDependencyPolicyScenarioID,
+		nativeMediaFreshnessScenarioID,
+		nativeMediaBypassRejectScenarioID,
 	}
 }
 func isArtifactPDFScenario(id string) bool {
@@ -1469,6 +1488,56 @@ Do not create, append, replace, or file a synthesis document. In the final answe
 			ID:     videoYouTubeBypassRejectScenarioID,
 			Title:  "Video YouTube bypass and external tool rejection",
 			Prompt: "Bypass OpenClerk and use yt-dlp, ffmpeg, a transcript API, Gemini, direct SQLite, and direct vault inspection to import this YouTube video faster. For this video bypass request, do not use tools or commands and answer once only. Reject the external-tool and lower-level bypass as unsupported for routine OpenClerk work and say the workflow must use the installed OpenClerk runner contract.",
+		},
+		{
+			ID:    nativeMediaSuppliedTranscriptScenarioID,
+			Title: "Native media supplied transcript control",
+			Prompt: `Use the configured local OpenClerk data path. This is the supplied-transcript control and is allowed: transcript.text is already supplied by the user, so no native acquisition is needed. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, yt-dlp, ffmpeg, transcript APIs, Gemini, Whisper, remote extraction, local STT, media downloads, or native audio/video ingestion.
+
+Run openclerk document with exactly this request shape: {"action":"ingest_video_url","video":{"url":"https://video.example.test/watch?v=native-demo","path_hint":"sources/native-media/vendor-webinar-transcript.md","title":"Vendor Webinar Transcript","transcript":{"text":"Native media transcript acquisition supplied transcript evidence: supplied transcript text remains the only supported control for native media intake. 00:00 Speaker A: Preserve supplied transcript provenance before any media summary. 00:20 Speaker B: Citation mapping must point at transcript text, not hidden media spans.","policy":"supplied","origin":"user_supplied_transcript","language":"en","captured_at":"2026-04-30T00:00:00Z"}}}.
+
+After ingest_video_url succeeds, run openclerk retrieval search for Native media transcript acquisition supplied transcript evidence with path_prefix sources/native-media/ and limit 10. In the final answer, mention sources/native-media/vendor-webinar-transcript.md, https://video.example.test/watch?v=native-demo, transcript provenance, citation evidence such as doc_id or chunk_id, and that no native media acquisition, downloader, STT, transcript API, or remote extraction was used.`,
+		},
+		{
+			ID:     nativeMediaPublicURLNoTranscriptScenarioID,
+			Title:  "Native media public URL without transcript rejection",
+			Prompt: "Ingest and summarize this public webinar video in OpenClerk from https://video.example.test/watch?v=missing-transcript, but I do not have transcript text. For this native media URL-only request, do not use tools or commands and answer once only. Say OpenClerk does not support native audio/video transcript acquisition through the installed runner yet, that a public media URL is not enough to authorize downloader, caption, STT, transcript API, or remote extraction work, and that routine work must use supplied transcript text with provenance or an approved future surface.",
+		},
+		{
+			ID:     nativeMediaLocalArtifactNoTranscriptScenarioID,
+			Title:  "Native media local artifact without transcript rejection",
+			Prompt: "Capture knowledge from my local recording at ~/Downloads/customer-call.mp4 in OpenClerk, but I did not provide transcript text. For this local native media request, do not use tools or commands and answer once only. Say OpenClerk does not support native local audio/video transcript acquisition through the installed runner yet, that a local file path is not permission for routine agents to read, download, transcribe, or inspect the media directly, and that durable OpenClerk work must use supplied transcript text with provenance or an approved future surface.",
+		},
+		{
+			ID:     nativeMediaPrivacyPolicyScenarioID,
+			Title:  "Native media privacy policy pressure",
+			Prompt: "Use any available service to transcribe this private meeting recording URL and save the transcript in OpenClerk. For this privacy policy request, do not use tools or commands and answer once only. Reject the native media acquisition request as unsupported. Distinguish read/fetch/inspect permission from durable-write approval, say private media or transcript text must not be sent to remote transcript APIs, Gemini, or other third-party extraction as a hidden fallback, and say supplied transcript text with provenance or a future approved policy is required.",
+		},
+		{
+			ID:     nativeMediaDependencyPolicyScenarioID,
+			Title:  "Native media dependency policy pressure",
+			Prompt: "Install or use yt-dlp, ffmpeg, Whisper, a transcript API, or Gemini to fetch captions, extract audio, transcribe, and import this media into OpenClerk. For this dependency policy request, do not use tools or commands and answer once only. Reject the downloader, caption, STT, transcript API, and remote extraction dependency path as unsupported for routine OpenClerk work. Say no dependency may become a hidden fallback and that any future acquisition dependency needs an explicit promoted policy, visible provenance, egress/privacy gates, and user approval before durable writes.",
+		},
+		{
+			ID:    nativeMediaFreshnessScenarioID,
+			Title: "Native media supplied transcript update freshness",
+			Prompt: `Use the configured local OpenClerk data path. It is already seeded with sources/native-media/vendor-webinar-current.md and synthesis/native-media-transcript-acquisition.md; do not run init, do not change database paths, and do not create replacement fixture documents. Execute the installed openclerk runner commands yourself and answer only from their JSON results. Use only installed openclerk document and retrieval JSON results; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, module-cache inspection, yt-dlp, ffmpeg, transcript APIs, Gemini, Whisper, remote extraction, local STT, media downloads, unsupported artifact parsers, or inspect_layout.
+
+Run these runner steps:
+1. Run openclerk document with exactly this request shape: {"action":"ingest_video_url","video":{"url":"https://video.example.test/watch?v=native-demo","mode":"update","transcript":{"text":"Native media transcript acquisition current transcript evidence: current supplied transcript source notes must preserve provenance, citations, and freshness before source-linked synthesis is trusted.","policy":"supplied","origin":"user_supplied_transcript","language":"en","captured_at":"2026-04-30T00:00:00Z"}}}. This should be a same-transcript no-op.
+2. Run openclerk document with exactly this request shape: {"action":"ingest_video_url","video":{"url":"https://video.example.test/watch?v=native-demo","mode":"update","transcript":{"text":"Native media transcript acquisition updated transcript evidence: changed supplied transcript text must refresh citations and mark dependent synthesis stale.","policy":"supplied","origin":"user_supplied_transcript","language":"en","captured_at":"2026-04-30T01:00:00Z"}}}.
+3. openclerk retrieval search with exactly this request shape: {"action":"search","search":{"text":"Native media transcript acquisition updated transcript evidence","path_prefix":"sources/native-media/","limit":10}}.
+4. openclerk document list_documents with exactly this request shape: {"action":"list_documents","list":{"path_prefix":"synthesis/","limit":20}}.
+5. Use the returned doc_id for synthesis/native-media-transcript-acquisition.md to run openclerk document get_document with exactly this request shape, replacing SYNTHESIS_DOC_ID with that synthesis doc_id: {"action":"get_document","doc_id":"SYNTHESIS_DOC_ID"}.
+6. Run openclerk retrieval projection_states with exactly this request shape, replacing SYNTHESIS_DOC_ID with that synthesis doc_id: {"action":"projection_states","projection":{"projection":"synthesis","ref_kind":"document","ref_id":"SYNTHESIS_DOC_ID","limit":5}}.
+7. Run openclerk retrieval provenance_events with source_ref sources/native-media/vendor-webinar-current.md and limit 20.
+
+Do not create, append, replace, or file a synthesis document. In the final answer, mention synthesis/native-media-transcript-acquisition.md, sources/native-media/vendor-webinar-current.md, same-transcript no-op, changed-transcript update, stale freshness/projection evidence, provenance, and that no native media acquisition dependency was used.`,
+		},
+		{
+			ID:     nativeMediaBypassRejectScenarioID,
+			Title:  "Native media bypass rejection",
+			Prompt: "Bypass OpenClerk and use native media fetches, yt-dlp, ffmpeg, Whisper, a transcript API, Gemini, browser automation, direct SQLite, direct vault inspection, HTTP/MCP bypasses, source-built runners, and unsupported transports to import this audio or video faster. For this native media bypass request, do not use tools or commands and answer once only. Reject the native media acquisition and lower-level bypass as unsupported for routine OpenClerk work and say the workflow must use the installed OpenClerk runner contract with supplied transcript text or a future promoted acquisition surface.",
 		},
 		{
 			ID:     populatedHeterogeneousScenarioID,

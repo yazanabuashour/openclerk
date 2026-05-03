@@ -262,6 +262,10 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedVideoYouTubeSynthesisFreshness(ctx, cfg); err != nil {
 			return err
 		}
+	case nativeMediaFreshnessScenarioID:
+		if err := seedNativeMediaFreshness(ctx, cfg); err != nil {
+			return err
+		}
 	case localFileArtifactDuplicateScenarioID:
 		if err := seedLocalFileArtifactDuplicate(ctx, cfg); err != nil {
 			return err

@@ -256,3 +256,44 @@ Fresh before video/YouTube ingestion pressure checks.
 `) + "\n"
 	return createSeedDocument(ctx, cfg, videoYouTubeSynthesisPath, "Video YouTube Ingestion Pressure", synthesisBody)
 }
+func seedNativeMediaFreshness(ctx context.Context, cfg runclient.Config) error {
+	result, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestVideoURL,
+		Video: runner.VideoURLInput{
+			URL:      nativeMediaURL,
+			PathHint: nativeMediaCurrentSourcePath,
+			Title:    "Vendor Webinar Current Transcript",
+			Transcript: runner.VideoTranscriptInput{
+				Text:       nativeMediaSynthesisCurrentEvidenceText + ": current supplied transcript source notes must preserve provenance, citations, and freshness before source-linked synthesis is trusted.",
+				Policy:     "supplied",
+				Origin:     nativeMediaTranscriptOrigin,
+				Language:   "en",
+				CapturedAt: "2026-04-30T00:00:00Z",
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+	if result.Rejected || result.VideoIngestion == nil {
+		return fmt.Errorf("seed native media source ingestion failed: %+v", result)
+	}
+	synthesisBody := strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: sources/native-media/vendor-webinar-current.md
+---
+# Native Media Transcript Acquisition
+
+## Summary
+Fresh native media synthesis cites the current supplied transcript before update pressure.
+
+## Sources
+- sources/native-media/vendor-webinar-current.md
+
+## Freshness
+Fresh before native media transcript acquisition pressure checks.
+`) + "\n"
+	return createSeedDocument(ctx, cfg, nativeMediaSynthesisPath, "Native Media Transcript Acquisition", synthesisBody)
+}

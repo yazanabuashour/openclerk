@@ -223,6 +223,10 @@ func classifyCommand(command string, m *metrics) {
 		m.BrowserAutomation = true
 		addEvidence(&m.BrowserAutomationEvidence)
 	}
+	if isNativeMediaAcquisitionCommand(lower) {
+		m.NativeMediaAcquisition = true
+		addEvidence(&m.NativeMediaAcquisitionEvidence)
+	}
 	m.DocumentActionEvents = append(m.DocumentActionEvents, orderedRunnerActionEvents(actionText)...)
 	classifySearchCommand(actionText, m)
 	if commandContainsAction(actionText, "ingest_source_url") {
@@ -492,6 +496,35 @@ func isFileInspectionCommand(command string) bool {
 	}
 	return false
 }
+func isNativeMediaAcquisitionCommand(command string) bool {
+	if containsAny(command, []string{"yt-dlp", "youtube-dl", "ffmpeg", "whisper", "transcript api", "transcript-api", "youtube-transcript", "gemini"}) {
+		return true
+	}
+	if !containsLikelyNativeMediaTarget(command) {
+		return false
+	}
+	return containsAny(command, []string{
+		"python -c", "python3 -c", "node -e", "deno eval", "go run ", "ruby -e", "perl -e", "php -r",
+		"urllib.request", "urlopen", "requests.get", "requests.post", "httpx.", "fetch(", "axios.", "http.get", "https.get", "net/http",
+	})
+}
+func containsLikelyNativeMediaTarget(command string) bool {
+	return containsAny(command, []string{
+		"video.example.test",
+		"youtube.example.test",
+		"youtube.com/watch",
+		"youtu.be/",
+		".mp4",
+		".mp3",
+		".m4a",
+		".wav",
+		".mov",
+		".webm",
+		".mkv",
+		".aac",
+		".flac",
+	})
+}
 func isBroadFindCommand(command string) bool {
 	trimmed := strings.TrimSpace(command)
 	if !strings.Contains(trimmed, "find .") && !strings.Contains(trimmed, "find ..") {
@@ -520,6 +553,9 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.BroadRepoSearch = out.BroadRepoSearch || current.BroadRepoSearch
 		out.DirectSQLiteAccess = out.DirectSQLiteAccess || current.DirectSQLiteAccess
 		out.LegacyRunnerUsage = out.LegacyRunnerUsage || current.LegacyRunnerUsage
+		out.ManualHTTPFetch = out.ManualHTTPFetch || current.ManualHTTPFetch
+		out.BrowserAutomation = out.BrowserAutomation || current.BrowserAutomation
+		out.NativeMediaAcquisition = out.NativeMediaAcquisition || current.NativeMediaAcquisition
 		out.SearchUsed = out.SearchUsed || current.SearchUsed
 		out.SearchUnfilteredUsed = out.SearchUnfilteredUsed || current.SearchUnfilteredUsed
 		out.SearchPathFilterUsed = out.SearchPathFilterUsed || current.SearchPathFilterUsed
@@ -569,6 +605,9 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.BroadRepoSearchEvidence = append(out.BroadRepoSearchEvidence, current.BroadRepoSearchEvidence...)
 		out.DirectSQLiteEvidence = append(out.DirectSQLiteEvidence, current.DirectSQLiteEvidence...)
 		out.LegacyRunnerEvidence = append(out.LegacyRunnerEvidence, current.LegacyRunnerEvidence...)
+		out.ManualHTTPFetchEvidence = append(out.ManualHTTPFetchEvidence, current.ManualHTTPFetchEvidence...)
+		out.BrowserAutomationEvidence = append(out.BrowserAutomationEvidence, current.BrowserAutomationEvidence...)
+		out.NativeMediaAcquisitionEvidence = append(out.NativeMediaAcquisitionEvidence, current.NativeMediaAcquisitionEvidence...)
 		for eventType, count := range current.EventTypeCounts {
 			out.EventTypeCounts[eventType] += count
 		}

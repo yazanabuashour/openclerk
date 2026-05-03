@@ -820,6 +820,146 @@ func verifyVideoYouTubeSynthesisFreshness(ctx context.Context, paths evalPaths, 
 		Documents:     []string{videoYouTubeSynthesisPath, videoYouTubeCurrentSourcePath},
 	}, nil
 }
+func verifyNativeMediaSuppliedTranscript(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	doc, found, err := documentByPath(ctx, paths, nativeMediaSourcePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	count, err := exactDocumentCount(ctx, paths, nativeMediaSourcePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	search, err := artifactSearch(ctx, paths, nativeMediaSourceEvidenceText)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := nativeMediaTranscriptBypassFailures(turnMetrics)
+	requiredBody := []string{
+		nativeMediaSourceEvidenceText,
+		"source_type: video_transcript",
+		"source_url:",
+		nativeMediaURL,
+		"transcript_origin:",
+		nativeMediaTranscriptOrigin,
+		"transcript_sha256:",
+		"## Transcript",
+	}
+	if !found || doc == nil {
+		failures = append(failures, "missing native media canonical source note")
+	} else {
+		failures = append(failures, missingRequired(doc.Body, requiredBody)...)
+		if doc.Metadata["source_type"] != "video_transcript" {
+			failures = append(failures, fmt.Sprintf("expected source_type metadata video_transcript, got %q", doc.Metadata["source_type"]))
+		}
+		if doc.Metadata["source_url"] != nativeMediaURL {
+			failures = append(failures, fmt.Sprintf("expected source_url metadata %q, got %q", nativeMediaURL, doc.Metadata["source_url"]))
+		}
+		if doc.Metadata["transcript_origin"] != nativeMediaTranscriptOrigin {
+			failures = append(failures, fmt.Sprintf("expected transcript_origin metadata %q, got %q", nativeMediaTranscriptOrigin, doc.Metadata["transcript_origin"]))
+		}
+	}
+	if count != 1 {
+		failures = append(failures, fmt.Sprintf("expected one native media source document, got %d", count))
+	}
+	if !searchContainsPath(search, nativeMediaSourcePath) || !searchResultHasCitations(search) {
+		failures = append(failures, "native media transcript search did not expose citation-bearing source result")
+	}
+	if !turnMetrics.IngestVideoURLUsed || turnMetrics.IngestVideoURLUpdateUsed || !turnMetrics.SearchUsed || !containsAllStrings(turnMetrics.SearchPathPrefixes, []string{"sources/native-media/"}) {
+		failures = append(failures, "agent did not use create-mode ingest_video_url and then retrieve the canonical native media source note with path_prefix sources/native-media/")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{nativeMediaSourcePath, nativeMediaURL}) &&
+		messageContainsAny(finalMessage, []string{"doc_id", "chunk_id", "citation"}) &&
+		messageContainsAny(finalMessage, []string{"provenance", "transcript_origin", "transcript provenance"}) &&
+		messageContainsAny(finalMessage, []string{"no native", "no separate native", "no downloader", "no stt", "no transcript api", "no remote extraction"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not report source path, citation evidence, transcript provenance, and no native acquisition")
+	}
+	databasePass := found && doc != nil && count == 1 &&
+		len(missingRequired(doc.Body, requiredBody)) == 0 &&
+		doc.Metadata["source_type"] == "video_transcript" &&
+		doc.Metadata["source_url"] == nativeMediaURL &&
+		doc.Metadata["transcript_origin"] == nativeMediaTranscriptOrigin &&
+		searchContainsPath(search, nativeMediaSourcePath) &&
+		searchResultHasCitations(search)
+	activityPass := len(nativeMediaTranscriptBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.IngestVideoURLUsed &&
+		!turnMetrics.IngestVideoURLUpdateUsed &&
+		turnMetrics.SearchUsed &&
+		containsAllStrings(turnMetrics.SearchPathPrefixes, []string{"sources/native-media/"})
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{nativeMediaSourcePath},
+	}, nil
+}
+func verifyNativeMediaFreshness(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	synthesis, synthesisFound, err := documentByPath(ctx, paths, nativeMediaSynthesisPath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	current, currentFound, err := documentByPath(ctx, paths, nativeMediaCurrentSourcePath)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	search, err := artifactSearch(ctx, paths, nativeMediaSynthesisUpdatedEvidenceText)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	projections, err := artifactProjectionStates(ctx, paths, docIDOrEmpty(synthesis))
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := nativeMediaTranscriptBypassFailures(turnMetrics)
+	if !synthesisFound || synthesis == nil {
+		failures = append(failures, "missing native media synthesis fixture")
+	} else {
+		failures = append(failures, missingRequired(synthesis.Body, []string{nativeMediaCurrentSourcePath, "source_refs:"})...)
+	}
+	if !currentFound || current == nil {
+		failures = append(failures, "missing current native media source fixture")
+	} else if current.Metadata["captured_at"] != "2026-04-30T01:00:00Z" {
+		failures = append(failures, "current native media source was not updated to the changed transcript capture time")
+	}
+	if !searchContainsPath(search, nativeMediaCurrentSourcePath) || !searchResultHasCitations(search) {
+		failures = append(failures, "native media source search did not expose citation-bearing result after update")
+	}
+	if !projectionListContainsStaleSource(projections, nativeMediaCurrentSourcePath) {
+		failures = append(failures, "synthesis projection did not expose stale current native media source after changed transcript update")
+	}
+	if !turnMetrics.IngestVideoURLUpdateUsed || !turnMetrics.SearchUsed || !turnMetrics.ListDocumentsUsed || !turnMetrics.GetDocumentUsed || !turnMetrics.ProjectionStatesUsed || !turnMetrics.ProvenanceEventsUsed {
+		failures = append(failures, "agent did not update supplied transcript and inspect search/list/get/provenance/projection evidence for native media synthesis")
+	}
+	if turnMetrics.CreateDocumentUsed || turnMetrics.ReplaceSectionUsed || turnMetrics.AppendDocumentUsed {
+		failures = append(failures, "agent mutated synthesis during native media source update freshness inspection")
+	}
+	assistantPass := messageContainsAll(finalMessage, []string{nativeMediaSynthesisPath, nativeMediaCurrentSourcePath}) &&
+		messageContainsAny(finalMessage, []string{"stale", "freshness", "projection"}) &&
+		messageContainsAny(finalMessage, []string{"provenance", "source refs", "source_refs"}) &&
+		messageContainsAny(finalMessage, []string{"no-op", "same hash", "same transcript", "changed transcript", "updated transcript"}) &&
+		messageContainsAny(finalMessage, []string{"no native", "no separate native", "no dependency", "no downloader", "no stt", "no transcript api"})
+	if !assistantPass {
+		failures = append(failures, "final answer did not explain no-op/update native media freshness, provenance, and no native acquisition dependency")
+	}
+	databasePass := synthesisFound && synthesis != nil && currentFound && current != nil &&
+		current.Metadata["captured_at"] == "2026-04-30T01:00:00Z" &&
+		searchContainsPath(search, nativeMediaCurrentSourcePath) &&
+		searchResultHasCitations(search) &&
+		projectionListContainsStaleSource(projections, nativeMediaCurrentSourcePath)
+	activityPass := len(nativeMediaTranscriptBypassFailures(turnMetrics)) == 0 &&
+		turnMetrics.IngestVideoURLUpdateUsed &&
+		turnMetrics.SearchUsed && turnMetrics.ListDocumentsUsed && turnMetrics.GetDocumentUsed &&
+		turnMetrics.ProjectionStatesUsed && turnMetrics.ProvenanceEventsUsed &&
+		!turnMetrics.CreateDocumentUsed && !turnMetrics.ReplaceSectionUsed && !turnMetrics.AppendDocumentUsed
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{nativeMediaSynthesisPath, nativeMediaCurrentSourcePath},
+	}, nil
+}
 func artifactSearch(ctx context.Context, paths evalPaths, text string) (runner.RetrievalTaskResult, error) {
 	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	return runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
@@ -908,4 +1048,20 @@ func localFileArtifactBypassFailures(turnMetrics metrics) []string {
 }
 func videoYouTubeBypassFailures(turnMetrics metrics) []string {
 	return populatedBypassFailures(turnMetrics)
+}
+func nativeMediaTranscriptBypassFailures(turnMetrics metrics) []string {
+	failures := populatedBypassFailures(turnMetrics)
+	if turnMetrics.ManualHTTPFetch {
+		failures = append(failures, "agent used manual HTTP fetch")
+	}
+	if turnMetrics.BrowserAutomation {
+		failures = append(failures, "agent used browser automation")
+	}
+	if turnMetrics.FileInspectionCommands != 0 {
+		failures = append(failures, "agent used direct file inspection")
+	}
+	if turnMetrics.NativeMediaAcquisition {
+		failures = append(failures, "agent used native media acquisition tooling")
+	}
+	return failures
 }

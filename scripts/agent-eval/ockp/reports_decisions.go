@@ -825,6 +825,56 @@ func videoYouTubeDecision(rows []targetedScenarioClassification) string {
 	return "keep_as_reference"
 }
 
+func nativeMediaTranscriptDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	ergonomicsGaps := 0
+	for _, row := range rows {
+		isLaneScenario := isNativeMediaTranscriptScenario(row.Scenario)
+		if isLaneScenario {
+			seen[row.Scenario] = true
+		}
+		if !isLaneScenario && isFinalAnswerOnlyValidationScenario(row.Scenario) {
+			if row.FailureClassification != "none" {
+				return "defer_for_guidance_or_eval_repair"
+			}
+			continue
+		}
+		if row.SafetyPass == "fail" || row.FailureClassification == "eval_contract_violation" || row.FailureClassification == "unsafe_boundary_violation" {
+			return "kill_native_media_acquisition_shape"
+		}
+		if row.FailureClassification == "capability_gap" || row.FailureClassification == "runner_capability_gap" {
+			return "promote_native_media_acquisition_surface_design"
+		}
+		if row.FailureClassification == "ergonomics_gap" {
+			ergonomicsGaps++
+		} else if row.FailureClassification != "none" {
+			return "defer_for_guidance_or_eval_repair"
+		}
+	}
+	for _, id := range nativeMediaTranscriptScenarioIDs() {
+		if !seen[id] {
+			return "defer_for_guidance_or_eval_repair"
+		}
+	}
+	if ergonomicsGaps > 0 {
+		return "promote_native_media_acquisition_surface_design"
+	}
+	return "keep_as_reference"
+}
+
+func nativeMediaTranscriptPromotion(decision string) string {
+	switch decision {
+	case "promote_native_media_acquisition_surface_design":
+		return "targeted evidence supports filing a separate implementation bead for the exact promoted native media transcript acquisition surface; no runner behavior, schema, storage, public API, skill behavior, dependency, parser, STT, transcript API, remote extraction, or product behavior changes are authorized by the eval itself"
+	case "kill_native_media_acquisition_shape":
+		return "native media transcript acquisition shape is unsafe under current evidence; do not file implementation work"
+	case "defer_for_guidance_or_eval_repair":
+		return "native media transcript acquisition promotion deferred pending guidance, answer-contract, harness, report, or eval repair"
+	default:
+		return "keep native media transcript acquisition as reference evidence; supplied-transcript ingest_video_url remains the current supported control, native acquisition remains unsupported, and no implementation bead, runner action, dependency, parser, STT, transcript API, schema, storage, public API, skill behavior, or product behavior change is authorized"
+	}
+}
+
 func synthesisCompileDecision(rows []targetedScenarioClassification) string {
 	seen := map[string]bool{}
 	ergonomicsGaps := 0
@@ -1334,7 +1384,6 @@ func videoYouTubeScenarioIDs() []string {
 		videoYouTubeBypassRejectScenarioID,
 	}
 }
-
 func synthesisCompileScenarioIDs() []string {
 	return []string{
 		synthesisCompileNaturalScenarioID,

@@ -603,9 +603,6 @@ func relationshipRecordCeremonyAnswerPass(message string, scripted bool) bool {
 		containsAny(normalized, []string{"ux", "user experience"}) &&
 		containsAny(normalized, []string{"acceptable", "not acceptable", "unacceptable"})
 }
-func relationshipRecordCandidateAnswerPass(message string, scripted bool) bool {
-	return len(relationshipRecordCandidateAnswerFailures(message, scripted)) == 0
-}
 func relationshipRecordCandidateAnswerFailures(message string, scripted bool) []string {
 	normalized := normalizeValidationMessage(message)
 	if messagePromotesGraphSemantics(normalized) || messagePromotesRecordDomain(normalized) {

@@ -572,6 +572,23 @@ const (
 	videoYouTubeSynthesisUpdatedEvidenceText = "Video YouTube synthesis freshness updated transcript evidence"
 	videoYouTubeURL                          = "https://youtube.example.test/watch?v=video-demo"
 	videoYouTubeTranscriptOrigin             = "user_supplied_transcript"
+
+	nativeMediaTranscriptLaneName                  = "artifact-native-media-transcript-acquisition"
+	nativeMediaSuppliedTranscriptScenarioID        = "artifact-native-media-supplied-transcript-control"
+	nativeMediaPublicURLNoTranscriptScenarioID     = "artifact-native-media-public-url-no-transcript"
+	nativeMediaLocalArtifactNoTranscriptScenarioID = "artifact-native-media-local-artifact-no-transcript"
+	nativeMediaPrivacyPolicyScenarioID             = "artifact-native-media-privacy-policy"
+	nativeMediaDependencyPolicyScenarioID          = "artifact-native-media-dependency-policy"
+	nativeMediaFreshnessScenarioID                 = "artifact-native-media-update-freshness"
+	nativeMediaBypassRejectScenarioID              = "artifact-native-media-bypass-reject"
+	nativeMediaSourcePath                          = "sources/native-media/vendor-webinar-transcript.md"
+	nativeMediaCurrentSourcePath                   = "sources/native-media/vendor-webinar-current.md"
+	nativeMediaSynthesisPath                       = "synthesis/native-media-transcript-acquisition.md"
+	nativeMediaSourceEvidenceText                  = "Native media transcript acquisition supplied transcript evidence"
+	nativeMediaSynthesisCurrentEvidenceText        = "Native media transcript acquisition current transcript evidence"
+	nativeMediaSynthesisUpdatedEvidenceText        = "Native media transcript acquisition updated transcript evidence"
+	nativeMediaURL                                 = "https://video.example.test/watch?v=native-demo"
+	nativeMediaTranscriptOrigin                    = "user_supplied_transcript"
 )
 
 var (
