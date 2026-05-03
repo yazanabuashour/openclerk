@@ -10,20 +10,24 @@ Tell your agent:
 ```text
 Install OpenClerk from https://github.com/yazanabuashour/openclerk.
 Complete both required steps before reporting success:
-1. Install and verify the openclerk runner binary with `openclerk --version`.
+1. Install the openclerk runner binary into a durable user-level binary directory.
+   Use `OPENCLERK_INSTALL_DIR="$HOME/.local/bin"` for a normal user-level install.
+   Do not install it under `.codex/tmp`, `/tmp`, a repository checkout, or another ephemeral workspace.
+   Verify with `command -v openclerk` and `openclerk --version`, and confirm `command -v openclerk` resolves to that durable install target.
+   If `$HOME/.local/bin` is not on the user's future shell `PATH`, update the appropriate shell startup file and re-verify.
 2. Register the OpenClerk skill from skills/openclerk/SKILL.md using your native skill system.
 ```
 
 For the latest release:
 
 ```bash
-sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh)"
+OPENCLERK_INSTALL_DIR="$HOME/.local/bin" sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh)"
 ```
 
 For a pinned release:
 
 ```bash
-OPENCLERK_VERSION=v0.2.3 sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/v0.2.3/install.sh)"
+OPENCLERK_INSTALL_DIR="$HOME/.local/bin" OPENCLERK_VERSION=v0.2.3 sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/v0.2.3/install.sh)"
 ```
 
 A complete install has two parts:
@@ -43,14 +47,18 @@ Tell your agent:
 ```text
 Upgrade OpenClerk from https://github.com/yazanabuashour/openclerk.
 Complete both required steps before reporting success:
-1. Upgrade and verify the openclerk runner binary with `openclerk --version`.
+1. Upgrade the openclerk runner binary in its durable user-level binary directory.
+   Use `OPENCLERK_INSTALL_DIR="$HOME/.local/bin"` for a normal user-level install.
+   Do not upgrade it under `.codex/tmp`, `/tmp`, a repository checkout, or another ephemeral workspace.
+   Verify with `command -v openclerk` and `openclerk --version`, and confirm `command -v openclerk` resolves to that durable install target.
+   If `$HOME/.local/bin` is not on the user's future shell `PATH`, update the appropriate shell startup file and re-verify.
 2. Re-register the OpenClerk skill from skills/openclerk/SKILL.md using your native skill system.
 ```
 
 Or upgrade the runner manually:
 
 ```bash
-sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh)"
+OPENCLERK_INSTALL_DIR="$HOME/.local/bin" sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh)"
 ```
 
 Then verify the runner and re-register the matching skill:

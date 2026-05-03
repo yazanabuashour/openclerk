@@ -85,14 +85,30 @@ verify_archive() {
   fail "missing required command: shasum or sha256sum"
 }
 
-first_writable_path_dir() {
+is_ephemeral_install_dir() {
+  dir="$1"
+  case "$dir" in
+    /tmp | /tmp/* | /var/tmp | /var/tmp/*)
+      return 0
+      ;;
+    /var/folders | /var/folders/* | /private/var/folders | /private/var/folders/* | /private/tmp | /private/tmp/*)
+      return 0
+      ;;
+    */.codex/tmp | */.codex/tmp/*)
+      return 0
+      ;;
+  esac
+  return 1
+}
+
+existing_openclerk_path_dir() {
   old_ifs="$IFS"
   IFS=:
   for dir in ${PATH:-}; do
     IFS="$old_ifs"
     [ -n "$dir" ] || dir="."
     [ "$dir" = "." ] && continue
-    if [ -d "$dir" ] && [ -w "$dir" ]; then
+    if [ -x "$dir/openclerk" ] && [ -w "$dir" ] && ! is_ephemeral_install_dir "$dir"; then
       printf '%s' "$dir"
       return 0
     fi
@@ -108,12 +124,12 @@ select_install_dir() {
     return
   fi
 
-  if dir="$(first_writable_path_dir)"; then
+  if dir="$(existing_openclerk_path_dir)"; then
     printf '%s' "$dir"
     return
   fi
 
-  [ -n "${HOME:-}" ] || fail "HOME is not set and no writable PATH directory was found"
+  [ -n "${HOME:-}" ] || fail "HOME is not set and OPENCLERK_INSTALL_DIR was not provided"
   printf '%s/.local/bin' "$HOME"
 }
 
