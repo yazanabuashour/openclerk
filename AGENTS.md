@@ -37,16 +37,19 @@ bd close <id>         # Complete work
 
 ## Session Completion
 
-**When ending a work session**, you MUST complete steps 1-5 below, then stop for manual review before running `git add`, `git commit`, `bd dolt push`, or `git push`. The workflow is paused for manual review at step 5 with uncommitted local changes, and the work session is NOT complete until steps 6-10 are finished after review approval and `git push` succeeds.
+**When ending a work session**, you MUST complete the workflow below through review, commit, push, verification, and handoff. The work session is NOT complete until `git push` succeeds and `git status` shows the branch is up to date with origin.
 
 **MANDATORY WORKFLOW:**
 
 1. **File issues for remaining work** - Create issues for anything that needs follow-up
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close finished work, update in-progress items
-4. **Prepare manual review** - Run `git status`, summarize changed files and quality gates, confirm no commit or push has been performed, and leave files uncommitted for manual review
-5. **Manual review** - Stop here by default with uncommitted local changes, report that the workflow is paused for manual review, and wait for explicit instruction to complete the remaining steps
-6. **Commit approved changes** - After explicit review approval, stage the intended files and create a local commit
+4. **Prepare review** - Run `git status`, summarize changed files and quality gates, and confirm no commit or push has been performed
+5. **Codex review** - Run the review command once:
+   ```bash
+   codex --search -m gpt-5.5 -c 'model_reasoning_effort="high"' review --uncommitted "If you find issues, address the findings."
+   ```
+6. **Commit reviewed changes** - After the review command completes, stage the intended files and create a local commit
 7. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
    git pull --rebase
@@ -59,10 +62,10 @@ bd close <id>         # Complete work
 10. **Hand off** - Provide context for next session
 
 **CRITICAL RULES:**
-- The workflow pauses for manual review after step 5 with uncommitted local changes, and the work session is NOT complete until `git push` succeeds
-- Do NOT run `git add`, `git commit`, `bd dolt push`, or `git push` before manual review unless explicitly instructed
-- Do NOT continue past `Manual review` unless explicitly instructed to complete the remaining workflow steps
-- Once instructed to continue after review, stage, commit, pull/rebase, run `bd dolt push`, and `git push`; do NOT stop again with local-only changes
-- NEVER say "ready to push when you are" after review approval - YOU must push
+- The work session is NOT complete until `git push` succeeds
+- Run the Codex review command once; do not rerun it as a workflow loop
+- Do NOT commit before quality gates and the Codex review command are complete
+- After the review command completes, stage, commit, pull/rebase, run `bd dolt push`, and `git push`; do NOT stop again with local-only changes unless there is a real blocker
+- NEVER say "ready to push when you are" after the review command completes - YOU must push
 - If push fails, resolve and retry until it succeeds
 <!-- END BEADS INTEGRATION -->
