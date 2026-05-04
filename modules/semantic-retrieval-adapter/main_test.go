@@ -74,6 +74,110 @@ func TestSemanticRetrievalAdapterOllamaSearchUsesCacheAndCitations(t *testing.T)
 	}
 }
 
+func TestSemanticRetrievalAdapterPathPrefixAndStaleCache(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	targetDocID := createModuleDocument(t, ctx, dbPath, "docs/architecture/semantic.md", "Semantic Retrieval", "# Semantic Retrieval\n\n## Summary\nSemantic recall citations stay local.\n")
+	createModuleDocument(t, ctx, dbPath, "archive/semantic.md", "Archived Semantic Retrieval", "# Archived Semantic Retrieval\n\n## Summary\nArchived semantic recall must stay out of scoped module results.\n")
+
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/embed" {
+			http.NotFound(w, r)
+			return
+		}
+		requests++
+		var req struct {
+			Input []string `json:"input"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		vectors := make([][]float64, 0, len(req.Input))
+		for _, input := range req.Input {
+			if strings.Contains(strings.ToLower(input), "semantic") {
+				vectors = append(vectors, []float64{1, 0, 0})
+			} else {
+				vectors = append(vectors, []float64{0, 1, 0})
+			}
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"embeddings": vectors})
+	}))
+	defer server.Close()
+
+	req := searchRequest{
+		Query:          "semantic recall",
+		PathPrefix:     "docs/architecture/",
+		Limit:          5,
+		Provider:       providerOllama,
+		OllamaURL:      server.URL,
+		EmbeddingModel: "embeddinggemma",
+		CacheDir:       t.TempDir(),
+	}
+	first, err := executeSearch(ctx, runclient.Config{DatabasePath: dbPath}, req)
+	if err != nil {
+		t.Fatalf("first search: %v", err)
+	}
+	if first.Cache.Status != "rebuilt" || len(first.Results) == 0 || first.Results[0].Citations[0].Path != "docs/architecture/semantic.md" {
+		t.Fatalf("first response = %+v", first)
+	}
+	for _, hit := range first.Results {
+		if strings.HasPrefix(hit.Citations[0].Path, "archive/") {
+			t.Fatalf("path prefix leaked archive hit: %+v", first.Results)
+		}
+	}
+
+	cached, err := executeSearch(ctx, runclient.Config{DatabasePath: dbPath}, req)
+	if err != nil {
+		t.Fatalf("cached search: %v", err)
+	}
+	if cached.Cache.Status != "hit" {
+		t.Fatalf("expected cache hit, got %+v", cached.Cache)
+	}
+
+	appendModuleDocument(t, ctx, dbPath, targetDocID, "Fresh corpus update changes the semantic cache hash.")
+	stale, err := executeSearch(ctx, runclient.Config{DatabasePath: dbPath}, req)
+	if err != nil {
+		t.Fatalf("stale search: %v", err)
+	}
+	if stale.Cache.Status != "rebuilt" || stale.Cache.RebuiltCount == 0 || requests < 5 {
+		t.Fatalf("expected stale cache rebuild, response=%+v requests=%d", stale.Cache, requests)
+	}
+}
+
+func TestSemanticRetrievalAdapterProviderBlockedWithoutFallback(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	createModuleDocument(t, ctx, dbPath, "docs/architecture/semantic.md", "Semantic Retrieval", "# Semantic Retrieval\n\n## Summary\nSemantic recall citations stay local.\n")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "missing model", http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	response, err := executeSearch(ctx, runclient.Config{DatabasePath: dbPath}, searchRequest{
+		Query:          "semantic recall",
+		PathPrefix:     "docs/architecture/",
+		Limit:          5,
+		Provider:       providerOllama,
+		OllamaURL:      server.URL,
+		EmbeddingModel: "embeddinggemma",
+		CacheDir:       t.TempDir(),
+	})
+	if err != nil {
+		t.Fatalf("blocked search: %v", err)
+	}
+	if response.SearchStatus != "provider_blocked" ||
+		response.Provider.Provider != providerOllama ||
+		response.Provider.FallbackProvider != "" ||
+		!strings.Contains(response.AgentHandoff.ApprovalOrConfigurationNeeded, "runtime_config:GEMINI_API_KEY") {
+		t.Fatalf("provider blocked response = %+v", response)
+	}
+}
+
 func TestSemanticRetrievalAdapterRejectsUnsafePrefix(t *testing.T) {
 	t.Parallel()
 
@@ -174,7 +278,7 @@ func TestSemanticRetrievalAdapterGeminiRetriesAndRedactsCredential(t *testing.T)
 	}
 }
 
-func createModuleDocument(t *testing.T, ctx context.Context, dbPath string, path string, title string, body string) {
+func createModuleDocument(t *testing.T, ctx context.Context, dbPath string, path string, title string, body string) string {
 	t.Helper()
 	if _, err := runclient.InitializePaths(runclient.Config{DatabasePath: dbPath}, filepath.Join(filepath.Dir(dbPath), "vault")); err != nil {
 		t.Fatalf("initialize paths: %v", err)
@@ -193,6 +297,10 @@ func createModuleDocument(t *testing.T, ctx context.Context, dbPath string, path
 	if result.Rejected {
 		t.Fatalf("create rejected: %+v", result)
 	}
+	if result.Document == nil {
+		t.Fatalf("create missing document: %+v", result)
+	}
+	return result.Document.DocID
 }
 
 func writeModuleRuntimeConfig(t *testing.T, dbPath string, key string, value string) {
@@ -207,5 +315,20 @@ func writeModuleRuntimeConfig(t *testing.T, dbPath string, key string, value str
 	_, err = db.Exec(`INSERT OR REPLACE INTO runtime_config (key_name, value_text, updated_at) VALUES (?, ?, ?)`, key, value, time.Now().UTC().Format(time.RFC3339))
 	if err != nil {
 		t.Fatalf("write runtime config: %v", err)
+	}
+}
+
+func appendModuleDocument(t *testing.T, ctx context.Context, dbPath string, docID string, content string) {
+	t.Helper()
+	result, err := runner.RunDocumentTask(ctx, runclient.Config{DatabasePath: dbPath}, runner.DocumentTaskRequest{
+		Action:  runner.DocumentTaskActionAppend,
+		DocID:   docID,
+		Content: content,
+	})
+	if err != nil {
+		t.Fatalf("append document: %v", err)
+	}
+	if result.Rejected {
+		t.Fatalf("append rejected: %+v", result)
 	}
 }

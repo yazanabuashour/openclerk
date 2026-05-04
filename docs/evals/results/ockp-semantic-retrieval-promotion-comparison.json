@@ -1,0 +1,87 @@
+{
+  "lane": "semantic-retrieval-promotion",
+  "generated_at": "2026-05-04T00:00:00Z",
+  "schema_version": "semantic_retrieval_promotion_comparison.v1",
+  "bead": "oc-by5n",
+  "decision_thresholds": {
+    "default_search_promotion": {
+      "local_hit_at_3_required": 8,
+      "local_mrr_required": 0.9,
+      "citations_required": true,
+      "filters_required": true,
+      "stale_rebuild_required": true,
+      "provider_dependency_allowed": false
+    },
+    "explicit_core_semantic_mode": "only if local/offline hybrid passes safety/citation/filter/cache checks but default ranking remains too risky"
+  },
+  "semantic_recall_runs": {
+    "lexical_current_search": {
+      "report": "docs/evals/results/ockp-semantic-recall-lexical-fallback-promotion-rerun.md",
+      "method": "current_lexical_fts",
+      "hit_at_3": 7,
+      "mrr": 0.9,
+      "total_seconds": 0.14,
+      "provider_dependency": false,
+      "notes": "current Search includes SQLite FTS plus zero-hit lexical fallback"
+    },
+    "local_ollama_hybrid": {
+      "report": "docs/evals/results/ockp-semantic-recall-local-embeddinggemma-promotion-rerun.md",
+      "model": "embeddinggemma",
+      "embedding_dimensions": 768,
+      "hit_at_3": 7,
+      "mrr": 0.906,
+      "raw_duplicate_hits": 736,
+      "total_seconds": 11.2,
+      "freshness_probe": "completed",
+      "provider_dependency": false,
+      "promotion_threshold_met": false
+    },
+    "gemini_benchmark_hybrid": {
+      "report": "docs/evals/results/ockp-semantic-recall-gemini-promotion-benchmark.md",
+      "model": "gemini-embedding-001",
+      "credential_ref": "runtime_config:GEMINI_API_KEY",
+      "embedding_dimensions": 3072,
+      "hit_at_3": 8,
+      "mrr": 0.938,
+      "raw_duplicate_hits": 736,
+      "total_seconds": 59.88,
+      "request_count": 34,
+      "retry_count": 6,
+      "backoff_seconds": 51.55,
+      "provider_dependency": true,
+      "promotion_threshold_met": false
+    }
+  },
+  "adapter_source_sensitive_checks": {
+    "test_scope": "modules/semantic-retrieval-adapter",
+    "path_prefix": "pass",
+    "citation_fields": "pass",
+    "document_collapse": "pass",
+    "cache_hit": "pass",
+    "stale_cache_rebuild": "pass",
+    "provider_blocked_no_implicit_gemini": "pass",
+    "gemini_credential_disclosure": "pass",
+    "tag_filter": "not_supported_by_adapter_request",
+    "metadata_filter": "not_supported_by_adapter_request",
+    "empty_corpus": "reported_as_empty_corpus"
+  },
+  "candidate_outcomes": {
+    "keep_optional_module": "selected",
+    "promote_local_hybrid_default_search": "rejected_threshold_not_met",
+    "add_explicit_core_semantic_mode": "deferred_local_filter_surface_not_ready",
+    "none_viable_yet": "rejected_optional_module_viable"
+  },
+  "taste_review": {
+    "safety_pass": "pass_for_keep_optional_module",
+    "capability_pass": "partial_local_7_of_8",
+    "ux_quality": "optional_module_acceptable_for_agents_not_normal_user_default"
+  },
+  "checks": {
+    "core_search_default_changed": false,
+    "core_runner_schema_changed": false,
+    "provider_key_committed": false,
+    "cache_committed": false,
+    "machine_absolute_artifact_refs": false,
+    "follow_up": "oc-sloi"
+  }
+}
