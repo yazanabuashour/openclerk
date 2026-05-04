@@ -57,11 +57,22 @@ func (r *Runtime) Paths() Paths {
 
 // ResolvePaths returns the effective storage layout for an internal runtime.
 func ResolvePaths(cfg Config) (Paths, error) {
+	return resolvePaths(cfg, true)
+}
+
+func resolvePaths(cfg Config, lock bool) (Paths, error) {
 	databasePath, err := resolveDatabasePath(cfg)
 	if err != nil {
 		return Paths{}, err
 	}
 	databasePath = filepath.Clean(databasePath)
+	if lock {
+		unlock, err := acquireRuntimeConfigLock(context.Background(), databasePath)
+		if err != nil {
+			return Paths{}, err
+		}
+		defer unlock()
+	}
 	runtimeConfig, err := sqlite.ResolveRuntimeConfig(context.Background(), databasePath, filepath.Join(filepath.Dir(databasePath), defaultVaultDir))
 	if err != nil {
 		return Paths{}, decorateRuntimeConfigError("resolve", databasePath, err)
@@ -80,6 +91,11 @@ func InitializePaths(cfg Config, vaultRoot string) (Paths, error) {
 		return Paths{}, err
 	}
 	defer unlock()
+	configUnlock, err := acquireRuntimeConfigLock(context.Background(), databasePath)
+	if err != nil {
+		return Paths{}, err
+	}
+	defer configUnlock()
 
 	dataDir := filepath.Dir(databasePath)
 	if strings.TrimSpace(vaultRoot) != "" {
@@ -132,7 +148,7 @@ const (
 )
 
 func newRuntimeWithMode(backend domain.BackendKind, cfg Config, mode runtimeOpenMode) (*Runtime, error) {
-	paths, err := ResolvePaths(cfg)
+	paths, err := resolvePaths(cfg, true)
 	if err != nil {
 		return nil, err
 	}
@@ -209,6 +225,44 @@ func acquireRunnerWriteLock(ctx context.Context, databasePath string) (func(), e
 			return nil, domain.ConflictError("runner write lock was not acquired before the context ended", map[string]any{"database_path": databasePath})
 		case <-deadline.C:
 			return nil, domain.ConflictError("runner write lock is held by another command", map[string]any{"database_path": databasePath})
+		case <-ticker.C:
+		}
+	}
+}
+
+func acquireRuntimeConfigLock(ctx context.Context, databasePath string) (func(), error) {
+	if err := ensureLocalDir(filepath.Dir(databasePath)); err != nil {
+		return nil, err
+	}
+	lockPath := databasePath + ".runtime-config.lock"
+	deadline := time.NewTimer(5 * time.Second)
+	defer deadline.Stop()
+	ticker := time.NewTicker(25 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		file, err := os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
+		if err == nil {
+			_, _ = fmt.Fprintf(file, "pid=%d\n", os.Getpid())
+			_ = file.Close()
+			return func() {
+				_ = os.Remove(lockPath)
+			}, nil
+		}
+		if !errors.Is(err, os.ErrExist) {
+			return nil, domain.InternalError("acquire runtime config lock", err)
+		}
+		removed, err := removeStaleRunnerWriteLock(lockPath)
+		if err != nil {
+			return nil, err
+		}
+		if removed {
+			continue
+		}
+		select {
+		case <-ctx.Done():
+			return nil, domain.ConflictError("runtime config lock was not acquired before the context ended", map[string]any{"database_path": databasePath})
+		case <-deadline.C:
+			return nil, domain.ConflictError("runtime config lock is held by another command", map[string]any{"database_path": databasePath})
 		case <-ticker.C:
 		}
 	}

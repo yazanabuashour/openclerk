@@ -23,6 +23,14 @@ func RunRetrievalTask(ctx context.Context, config runclient.Config, request Retr
 		return RetrievalTaskResult{Summary: "valid"}, nil
 	}
 
+	if normalized.Action == RetrievalTaskActionWorkflowGuide {
+		report := runWorkflowGuideReport(normalized.WorkflowGuide)
+		return RetrievalTaskResult{
+			WorkflowGuide: &report,
+			Summary:       "returned workflow guide report",
+		}, nil
+	}
+
 	if isMutatingRetrievalAction(normalized) {
 		var result RetrievalTaskResult
 		err := runclient.WithWriteLock(ctx, config, func() error {
@@ -259,6 +267,12 @@ func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, n
 			DuplicateCandidate: &report,
 			Summary:            "returned duplicate candidate report",
 		}, nil
+	case RetrievalTaskActionWorkflowGuide:
+		report := runWorkflowGuideReport(normalized.WorkflowGuide)
+		return RetrievalTaskResult{
+			WorkflowGuide: &report,
+			Summary:       "returned workflow guide report",
+		}, nil
 	case RetrievalTaskActionStructuredStore:
 		report, err := runStructuredStoreReport(ctx, client, normalized.StructuredStore)
 		if err != nil {
@@ -301,6 +315,7 @@ type normalizedRetrievalTaskRequest struct {
 	SourceAudit        SourceAuditReportOptions
 	EvidenceBundle     EvidenceBundleOptions
 	DuplicateCandidate DuplicateCandidateOptions
+	WorkflowGuide      WorkflowGuideOptions
 	StructuredStore    StructuredStoreOptions
 	HybridRetrieval    HybridRetrievalOptions
 	Limit              int
@@ -330,6 +345,7 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		SourceAudit:        request.SourceAudit,
 		EvidenceBundle:     request.EvidenceBundle,
 		DuplicateCandidate: request.DuplicateCandidate,
+		WorkflowGuide:      request.WorkflowGuide,
 		StructuredStore:    request.StructuredStore,
 		HybridRetrieval:    request.HybridRetrieval,
 		Limit:              request.Limit,
@@ -461,6 +477,12 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		normalized.DuplicateCandidate.PathPrefix = strings.TrimSpace(request.DuplicateCandidate.PathPrefix)
 		if normalized.DuplicateCandidate.Query == "" {
 			return normalizedRetrievalTaskRequest{}, "duplicate_candidate.query is required"
+		}
+		return normalized, ""
+	case RetrievalTaskActionWorkflowGuide:
+		normalized.WorkflowGuide.Intent = strings.TrimSpace(request.WorkflowGuide.Intent)
+		if normalized.WorkflowGuide.Intent == "" {
+			return normalizedRetrievalTaskRequest{}, "workflow_guide.intent is required"
 		}
 		return normalized, ""
 	case RetrievalTaskActionStructuredStore:

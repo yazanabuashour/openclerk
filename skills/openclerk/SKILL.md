@@ -42,6 +42,8 @@ matches the request:
 - Duplicate update-versus-new clarification: retrieval
   `duplicate_candidate_report`, then answer from
   `duplicate_candidate.agent_handoff`.
+- Workflow surface selection: retrieval `workflow_guide_report`, then use
+  `workflow_guide.agent_handoff` to choose the next runner action.
 - Routine read-only memory/router recall reports: retrieval
   `memory_router_recall_report`, then answer from
   `memory_router_recall.agent_handoff` or returned evidence.
@@ -120,49 +122,13 @@ bundle contents that the user did not supply.
 Keep workflow-specific procedure out of this skill. Apply these compact
 policies and let runner results drive the answer:
 
-- Candidate documents: preserve explicit user path/title/body/type/naming
-  instructions; fill omitted fields only from supplied content; validate with
-  `openclerk document` before presenting a candidate; show `Path:`, `Title:`,
-  and `Body preview:`; state no document was created; ask for approval before
-  any durable write. For note-like candidates without an explicit path, use
-  `notes/candidates/<slug-from-title>.md`; derive the title from the content
-  subject as a concise singular noun phrase, not request-framing words such as
-  save, capture, or note. Include `type: note` frontmatter in note-like body
-  previews and a `# <Title>` heading before the supplied body.
-- Duplicate checks: when duplicate risk is requested or plausible, use
-  runner-visible evidence before validating or writing. Report the likely
-  existing target, evidence inspected, and that no document was created or
-  updated; ask whether to update the existing target or create a confirmed new
-  path.
-- Public URL/source intake: use `ingest_source_url` for HTTP/HTTPS PDF and
-  public web source ingestion. Do not fetch URLs with browser, HTTP,
-  filesystem, or other non-runner tools. When explicit public web URLs lack
-  source or synthesis placement, propose source paths and synthesis placement,
-  state that no source or synthesis document was created, and ask for approval
-  before any durable source fetch or synthesis write. Update mode may omit path
-  hints.
-- Video/YouTube source intake: use `ingest_video_url` only with user-supplied
-  transcript text and provenance. Do not acquire media or transcripts with
-  external tools or lower-level storage.
-- Document lifecycle review, rollback, restore, and semantic diff: stay inside
-  `openclerk document` and `openclerk retrieval`. There is no public history,
-  raw diff, review, restore, rollback, or lifecycle action. Use runner-visible
-  search/list/get evidence plus `provenance_events` and `projection_states`
-  when current state, repair, or freshness matters; preserve the accepted
-  target unless the user approves a durable edit. Before lifecycle repair, list
-  the likely target collection, get the target document, then inspect
-  provenance and projection freshness after any write.
-- Messy populated-vault retrieval: answer from runner-visible authority:
-  metadata-filtered authority results, active canonical sources, cited source
-  paths, `doc_id`, and `chunk_id`. Treat polluted, decoy, stale, draft,
-  archived, duplicate, or candidate documents as non-authority unless
-  runner-visible source authority says otherwise. If a result is marked
-  `status: polluted` or `populated_role: decoy`, explicitly reject that hit as
-  not authority and do not repeat its false claim text as a valid answer.
-- Synthesis maintenance: prefer `compile_synthesis`; use lower-level document
-  and retrieval actions only for explicit primitive or manual cases. Preserve
-  `source_refs`, `## Sources`, `## Freshness`, provenance, and projection
-  freshness.
+- Candidate documents: preserve explicit user path/title/body/type/naming instructions; fill omitted fields only from supplied content; validate with `openclerk document` before presenting a candidate; show `Path:`, `Title:`, and `Body preview:`; state no document was created; ask for approval before durable writes; for note-like candidates without an explicit path, use `notes/candidates/<slug-from-title>.md`, derive a concise singular noun phrase title, and Include `type: note` frontmatter plus a `# <Title>` heading.
+- Duplicate checks: when duplicate risk is requested or plausible, use runner-visible evidence before validating or writing; report the likely target, evidence inspected, and that no document was created or updated; ask whether to update the existing target or create a confirmed new path.
+- Public URL/source intake: use `ingest_source_url` for HTTP/HTTPS PDF and public web sources. Do not fetch URLs with browser, HTTP, filesystem, or other non-runner tools; when placement is missing, propose source/synthesis paths and ask for approval before durable fetch or write.
+- Video/YouTube source intake: use `ingest_video_url` only with user-supplied transcript text and provenance; do not acquire media or transcripts externally.
+- Document lifecycle review, rollback, restore, and semantic diff: stay inside `openclerk document` and `openclerk retrieval`. There is no public history, raw diff, review, restore, rollback, or lifecycle action. Before lifecycle repair, list the likely target collection, get the target document, then inspect provenance and projection freshness after any write.
+- Messy populated-vault retrieval: answer from runner-visible authority such as metadata-filtered authority results, active canonical sources, cited source paths, `doc_id`, and `chunk_id`; treat polluted, decoy, stale, draft, archived, duplicate, or candidate documents as non-authority unless runner-visible source authority says otherwise.
+- Synthesis maintenance: prefer `compile_synthesis`; use lower-level document and retrieval actions only for explicit primitive or manual cases; preserve `source_refs`, `## Sources`, `## Freshness`, provenance, and projection freshness.
 
 Detailed versions of these workflows belong in runner actions, compact runner
 help, maintainer/eval docs, or follow-up candidate-surface comparisons, not in
@@ -207,8 +173,8 @@ Common actions are `search`, `document_links`, `graph_neighborhood`,
 `decisions_lookup`, `decision_record`, `provenance_events`,
 `projection_states`, `audit_contradictions`, `source_audit_report`,
 `evidence_bundle_report`, `duplicate_candidate_report`, and
-`memory_router_recall_report`, `structured_store_report`, and
-`hybrid_retrieval_report`. Use
+`workflow_guide_report`, `memory_router_recall_report`,
+`structured_store_report`, and `hybrid_retrieval_report`. Use
 `openclerk retrieval --help` for promoted workflow-action request shape.
 
 Use search for source-grounded answers; document links and graph neighborhoods

@@ -164,6 +164,76 @@ func TestRetrievalTaskDuplicateCandidateReportRejectsMissingQuery(t *testing.T) 
 	}
 }
 
+func TestRetrievalTaskWorkflowGuideReportRoutesIntentWithoutStore(t *testing.T) {
+	t.Parallel()
+
+	result, err := runner.RunRetrievalTask(context.Background(), runclient.Config{}, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionWorkflowGuide,
+		WorkflowGuide: runner.WorkflowGuideOptions{
+			Intent: "Should I update an existing note or create a new duplicate?",
+		},
+	})
+	if err != nil {
+		t.Fatalf("workflow guide report: %v", err)
+	}
+	if result.Rejected || result.WorkflowGuide == nil {
+		t.Fatalf("workflow guide result = %+v", result)
+	}
+	report := result.WorkflowGuide
+	if report.RecommendedSurface != "duplicate_candidate_report" ||
+		report.RunnerDomain != "retrieval" ||
+		report.AgentHandoff == nil ||
+		len(report.CandidateSurfaces) == 0 ||
+		!strings.Contains(report.RequestShape, "duplicate_candidate_report") ||
+		!strings.Contains(report.ValidationBoundaries, "read-only routing report") ||
+		!strings.Contains(report.AuthorityLimits, "final answers") {
+		t.Fatalf("workflow guide report = %+v", report)
+	}
+}
+
+func TestRetrievalTaskWorkflowGuideReportRejectsMissingIntent(t *testing.T) {
+	t.Parallel()
+
+	result, err := runner.RunRetrievalTask(context.Background(), runclient.Config{}, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionWorkflowGuide,
+	})
+	if err != nil {
+		t.Fatalf("workflow guide reject: %v", err)
+	}
+	if !result.Rejected || result.RejectionReason != "workflow_guide.intent is required" {
+		t.Fatalf("workflow guide rejection = %+v", result)
+	}
+}
+
+func TestRetrievalTaskWorkflowGuideReportPrioritizesSpecificDecisionSurfaces(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		intent string
+		want   string
+	}{
+		{intent: "hybrid retrieval decision support", want: "hybrid_retrieval_report"},
+		{intent: "structured data decision support", want: "structured_store_report"},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.intent, func(t *testing.T) {
+			t.Parallel()
+
+			result, err := runner.RunRetrievalTask(context.Background(), runclient.Config{}, runner.RetrievalTaskRequest{
+				Action:        runner.RetrievalTaskActionWorkflowGuide,
+				WorkflowGuide: runner.WorkflowGuideOptions{Intent: tt.intent},
+			})
+			if err != nil {
+				t.Fatalf("workflow guide report: %v", err)
+			}
+			if result.WorkflowGuide == nil || result.WorkflowGuide.RecommendedSurface != tt.want {
+				t.Fatalf("workflow guide surface = %+v, want %q", result.WorkflowGuide, tt.want)
+			}
+		})
+	}
+}
+
 func TestRetrievalTaskHybridRetrievalReportIsReadOnly(t *testing.T) {
 	t.Parallel()
 

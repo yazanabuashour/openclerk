@@ -135,6 +135,10 @@ requiring agents to choreograph many primitives:
 - `openclerk retrieval` `duplicate_candidate_report` is read-only and packages
   the likely duplicate target, evidence inspected, no-write status, approval
   boundary, validation boundaries, authority limits, and `agent_handoff`.
+- `openclerk retrieval` `workflow_guide_report` is read-only and maps routine
+  intent to the runner-owned surface to try next. It returns `agent_handoff`
+  and is a guide only; final answers still come from the selected action's
+  JSON result.
 - `openclerk retrieval` `structured_store_report` is read-only and packages
   promoted record, service, or decision projection evidence with candidate
   structured-store guidance, projection freshness, validation boundaries,

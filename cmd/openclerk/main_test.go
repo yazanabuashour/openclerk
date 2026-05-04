@@ -55,7 +55,7 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 		{
 			name: "retrieval",
 			args: []string{"retrieval", "--help"},
-			want: []string{"source_audit_report", "evidence_bundle_report", "duplicate_candidate_report", "memory_router_recall_report", "structured_store_report", "hybrid_retrieval_report", "agent_handoff", "Read-only"},
+			want: []string{"source_audit_report", "evidence_bundle_report", "duplicate_candidate_report", "workflow_guide_report", "memory_router_recall_report", "structured_store_report", "hybrid_retrieval_report", "agent_handoff", "Read-only"},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -227,6 +227,18 @@ func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 		structuredStoreResult.StructuredStore.Projections == nil ||
 		structuredStoreResult.StructuredStore.AgentHandoff == nil {
 		t.Fatalf("structured store result = %+v", structuredStoreResult)
+	}
+
+	workflowGuideRequest := `{"action":"workflow_guide_report","workflow_guide":{"intent":"Which surface should handle duplicate update versus new?"}}`
+	var workflowGuideResult runner.RetrievalTaskResult
+	code, stderr = runJSON(t, []string{"retrieval", "--db", dbPath}, workflowGuideRequest, &workflowGuideResult)
+	if code != 0 {
+		t.Fatalf("workflow guide exit = %d stderr=%s", code, stderr)
+	}
+	if workflowGuideResult.WorkflowGuide == nil ||
+		workflowGuideResult.WorkflowGuide.RecommendedSurface != "duplicate_candidate_report" ||
+		workflowGuideResult.WorkflowGuide.AgentHandoff == nil {
+		t.Fatalf("workflow guide result = %+v", workflowGuideResult)
 	}
 
 	decisionRequest := `{"action":"create_document","document":{"path":"docs/architecture/runner-decision.md","title":"Runner decision","body":"---\ndecision_id: adr-runner\ndecision_title: Use JSON runner\ndecision_status: accepted\ndecision_scope: agentops\ndecision_owner: platform\ndecision_date: 2026-04-22\n---\n# Runner decision\n\n## Summary\nUse the JSON runner.\n"}}`

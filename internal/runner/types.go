@@ -37,6 +37,7 @@ const (
 	RetrievalTaskActionSourceAuditReport   = "source_audit_report"
 	RetrievalTaskActionEvidenceBundle      = "evidence_bundle_report"
 	RetrievalTaskActionDuplicateCandidate  = "duplicate_candidate_report"
+	RetrievalTaskActionWorkflowGuide       = "workflow_guide_report"
 	RetrievalTaskActionStructuredStore     = "structured_store_report"
 	RetrievalTaskActionHybridRetrieval     = "hybrid_retrieval_report"
 )
@@ -241,6 +242,7 @@ type RetrievalTaskRequest struct {
 	SourceAudit        SourceAuditReportOptions   `json:"source_audit,omitempty"`
 	EvidenceBundle     EvidenceBundleOptions      `json:"evidence_bundle,omitempty"`
 	DuplicateCandidate DuplicateCandidateOptions  `json:"duplicate_candidate,omitempty"`
+	WorkflowGuide      WorkflowGuideOptions       `json:"workflow_guide,omitempty"`
 	StructuredStore    StructuredStoreOptions     `json:"structured_store,omitempty"`
 	HybridRetrieval    HybridRetrievalOptions     `json:"hybrid_retrieval,omitempty"`
 	Limit              int                        `json:"limit,omitempty"`
@@ -376,6 +378,10 @@ type DuplicateCandidateOptions struct {
 	Limit      int    `json:"limit,omitempty"`
 }
 
+type WorkflowGuideOptions struct {
+	Intent string `json:"intent,omitempty"`
+}
+
 type StructuredStoreOptions struct {
 	Domain     string `json:"domain,omitempty"`
 	Query      string `json:"query,omitempty"`
@@ -412,6 +418,7 @@ type RetrievalTaskResult struct {
 	SourceAudit        *SourceAuditReport         `json:"source_audit,omitempty"`
 	EvidenceBundle     *EvidenceBundleReport      `json:"evidence_bundle,omitempty"`
 	DuplicateCandidate *DuplicateCandidateReport  `json:"duplicate_candidate,omitempty"`
+	WorkflowGuide      *WorkflowGuideReport       `json:"workflow_guide,omitempty"`
 	StructuredStore    *StructuredStoreReport     `json:"structured_store,omitempty"`
 	HybridRetrieval    *HybridRetrievalReport     `json:"hybrid_retrieval,omitempty"`
 	Summary            string                     `json:"summary"`
@@ -505,6 +512,27 @@ type DuplicateCandidateReport struct {
 	ValidationBoundaries string            `json:"validation_boundaries"`
 	AuthorityLimits      string            `json:"authority_limits"`
 	AgentHandoff         *AgentHandoff     `json:"agent_handoff,omitempty"`
+}
+
+type WorkflowGuideReport struct {
+	Intent               string                   `json:"intent"`
+	RecommendedSurface   string                   `json:"recommended_surface"`
+	RunnerDomain         string                   `json:"runner_domain"`
+	RequestShape         string                   `json:"request_shape"`
+	UseWhen              string                   `json:"use_when"`
+	DoNotUseFor          []string                 `json:"do_not_use_for,omitempty"`
+	CandidateSurfaces    []WorkflowGuideCandidate `json:"candidate_surfaces,omitempty"`
+	ValidationBoundaries string                   `json:"validation_boundaries"`
+	AuthorityLimits      string                   `json:"authority_limits"`
+	AgentHandoff         *AgentHandoff            `json:"agent_handoff,omitempty"`
+}
+
+type WorkflowGuideCandidate struct {
+	Surface        string `json:"surface"`
+	Status         string `json:"status"`
+	SelectionRule  string `json:"selection_rule"`
+	Boundary       string `json:"boundary"`
+	RequestExample string `json:"request_example,omitempty"`
 }
 
 type StructuredStoreReport struct {

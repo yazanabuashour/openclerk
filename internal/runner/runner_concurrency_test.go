@@ -155,6 +155,39 @@ func TestParallelFreshStartupReadActions(t *testing.T) {
 	})
 }
 
+func TestReadOnlyActionsDoNotTakeRunnerWriteLock(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	if _, err := runclient.InitializePaths(config, ""); err != nil {
+		t.Fatalf("initialize paths: %v", err)
+	}
+	lockPath := config.DatabasePath + ".runner-write.lock"
+	if err := os.WriteFile(lockPath, []byte("pid=1\n"), 0o644); err != nil {
+		t.Fatalf("write fake runner lock: %v", err)
+	}
+	defer func() {
+		_ = os.Remove(lockPath)
+	}()
+
+	if _, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
+			Text:  "runner",
+			Limit: 10,
+		},
+	}); err != nil {
+		t.Fatalf("read-only retrieval should not take runner write lock: %v", err)
+	}
+	if _, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{PathPrefix: "notes/", Limit: 10},
+	}); err != nil {
+		t.Fatalf("read-only document task should not take runner write lock: %v", err)
+	}
+}
+
 func TestParallelReadWorkflowsAfterSeed(t *testing.T) {
 	t.Parallel()
 

@@ -88,6 +88,7 @@ func TestOpenClerkSkillUsesInstalledRunnerForRoutineWork(t *testing.T) {
 		"compile_synthesis",
 		"source_audit_report",
 		"evidence_bundle_report",
+		"workflow_guide_report",
 		"memory_router_recall_report",
 	} {
 		if !strings.Contains(text, want) {
@@ -137,8 +138,8 @@ func TestOpenClerkSkillStaysWithinThinRouterBudget(t *testing.T) {
 	}
 
 	lines := strings.Split(strings.TrimRight(string(content), "\n"), "\n")
-	if len(lines) > 250 {
-		t.Fatalf("SKILL.md line count = %d, want <= 250", len(lines))
+	if len(lines) > 225 {
+		t.Fatalf("SKILL.md line count = %d, want <= 225", len(lines))
 	}
 
 	text := strings.Join(strings.Fields(string(content)), " ")
