@@ -205,7 +205,7 @@ func usage(stderr io.Writer) {
 	_, _ = fmt.Fprintln(stderr, "       openclerk document --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk retrieval --help")
 	_, _ = fmt.Fprintln(stderr, "document/retrieval read strict JSON from stdin and use configured paths by default; pass --db only for an explicit dataset.")
-	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, ingest_source_url plan, source_audit_report, evidence_bundle_report, duplicate_candidate_report")
+	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, ingest_source_url plan, source_audit_report, evidence_bundle_report, duplicate_candidate_report, hybrid_retrieval_report")
 }
 
 func documentUsage(w io.Writer) {
@@ -241,4 +241,6 @@ func retrievalUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  Read-only. Returns evidence_bundle.agent_handoff with citations, provenance, projection freshness, validation boundaries, and authority limits.")
 	_, _ = fmt.Fprintln(w, `  duplicate_candidate_report: {"action":"duplicate_candidate_report","duplicate_candidate":{"query":"renewal packaging notes","path_prefix":"notes/","limit":10}}`)
 	_, _ = fmt.Fprintln(w, "  Read-only. Returns duplicate_candidate.agent_handoff with likely target, evidence inspected, no-write status, and approval boundary.")
+	_, _ = fmt.Fprintln(w, `  hybrid_retrieval_report: {"action":"hybrid_retrieval_report","hybrid_retrieval":{"query":"semantic recall citation quality","path_prefix":"docs/","limit":10}}`)
+	_, _ = fmt.Fprintln(w, "  Read-only. Returns hybrid_retrieval.agent_handoff with lexical baseline evidence and candidate-surface boundaries; it does not create vectors or change default ranking.")
 }

@@ -164,6 +164,67 @@ func TestRetrievalTaskDuplicateCandidateReportRejectsMissingQuery(t *testing.T) 
 	}
 }
 
+func TestRetrievalTaskHybridRetrievalReportIsReadOnly(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	source := createDocument(t, ctx, config, "sources/retrieval/hybrid-baseline.md", "Hybrid Baseline", "# Hybrid Baseline\n\n## Summary\nHybrid retrieval baseline marker preserves citation quality and canonical authority.\n")
+
+	result, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionHybridRetrieval,
+		HybridRetrieval: runner.HybridRetrievalOptions{
+			Query:      "Hybrid retrieval baseline marker citation quality",
+			PathPrefix: "sources/retrieval/",
+			Limit:      10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("hybrid retrieval report: %v", err)
+	}
+	if result.Rejected || result.HybridRetrieval == nil {
+		t.Fatalf("hybrid retrieval result = %+v", result)
+	}
+	report := result.HybridRetrieval
+	if report.LexicalSearch == nil ||
+		len(report.LexicalSearch.Hits) == 0 ||
+		report.LexicalSearch.Hits[0].DocID != source.DocID ||
+		report.LexicalSearch.Hits[0].Citations[0].Path != source.Path ||
+		len(report.CandidateSurfaces) == 0 ||
+		report.AgentHandoff == nil ||
+		!containsString(report.EvidenceInspected, "search:Hybrid retrieval baseline marker citation quality") ||
+		!strings.Contains(report.Recommendation, "keep lexical search as the default") ||
+		!strings.Contains(report.ValidationBoundaries, "does not create embeddings") ||
+		!strings.Contains(report.AuthorityLimits, "canonical markdown") {
+		t.Fatalf("hybrid retrieval report = %+v", report)
+	}
+	list, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{PathPrefix: "sources/retrieval/", Limit: 10},
+	})
+	if err != nil {
+		t.Fatalf("list after hybrid report: %v", err)
+	}
+	if len(list.Documents) != 1 {
+		t.Fatalf("hybrid report mutated documents: %+v", list.Documents)
+	}
+}
+
+func TestRetrievalTaskHybridRetrievalReportRejectsMissingQuery(t *testing.T) {
+	t.Parallel()
+
+	result, err := runner.RunRetrievalTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.RetrievalTaskRequest{
+		Action:          runner.RetrievalTaskActionHybridRetrieval,
+		HybridRetrieval: runner.HybridRetrievalOptions{PathPrefix: "sources/"},
+	})
+	if err != nil {
+		t.Fatalf("hybrid retrieval reject: %v", err)
+	}
+	if !result.Rejected || result.RejectionReason != "hybrid_retrieval.query is required" {
+		t.Fatalf("hybrid retrieval rejection = %+v", result)
+	}
+}
+
 func TestRetrievalTaskAuditContradictionsPlansAndRepairsExistingSynthesis(t *testing.T) {
 	t.Parallel()
 

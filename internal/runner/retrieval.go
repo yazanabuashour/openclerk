@@ -259,6 +259,15 @@ func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, n
 			DuplicateCandidate: &report,
 			Summary:            "returned duplicate candidate report",
 		}, nil
+	case RetrievalTaskActionHybridRetrieval:
+		report, err := runHybridRetrievalReport(ctx, client, normalized.HybridRetrieval)
+		if err != nil {
+			return RetrievalTaskResult{}, err
+		}
+		return RetrievalTaskResult{
+			HybridRetrieval: &report,
+			Summary:         "returned hybrid retrieval report",
+		}, nil
 	default:
 		return RetrievalTaskResult{}, fmt.Errorf("unsupported retrieval task action %q", normalized.Action)
 	}
@@ -283,6 +292,7 @@ type normalizedRetrievalTaskRequest struct {
 	SourceAudit        SourceAuditReportOptions
 	EvidenceBundle     EvidenceBundleOptions
 	DuplicateCandidate DuplicateCandidateOptions
+	HybridRetrieval    HybridRetrievalOptions
 	Limit              int
 }
 
@@ -310,6 +320,7 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		SourceAudit:        request.SourceAudit,
 		EvidenceBundle:     request.EvidenceBundle,
 		DuplicateCandidate: request.DuplicateCandidate,
+		HybridRetrieval:    request.HybridRetrieval,
 		Limit:              request.Limit,
 	}
 
@@ -324,7 +335,8 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		request.MemoryRouterRecall.Limit < 0 ||
 		request.SourceAudit.Limit < 0 ||
 		request.EvidenceBundle.Limit < 0 ||
-		request.DuplicateCandidate.Limit < 0 {
+		request.DuplicateCandidate.Limit < 0 ||
+		request.HybridRetrieval.Limit < 0 {
 		return normalizedRetrievalTaskRequest{}, "limit must be greater than or equal to 0"
 	}
 
@@ -437,6 +449,13 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		normalized.DuplicateCandidate.PathPrefix = strings.TrimSpace(request.DuplicateCandidate.PathPrefix)
 		if normalized.DuplicateCandidate.Query == "" {
 			return normalizedRetrievalTaskRequest{}, "duplicate_candidate.query is required"
+		}
+		return normalized, ""
+	case RetrievalTaskActionHybridRetrieval:
+		normalized.HybridRetrieval.Query = strings.TrimSpace(request.HybridRetrieval.Query)
+		normalized.HybridRetrieval.PathPrefix = strings.TrimSpace(request.HybridRetrieval.PathPrefix)
+		if normalized.HybridRetrieval.Query == "" {
+			return normalizedRetrievalTaskRequest{}, "hybrid_retrieval.query is required"
 		}
 		return normalized, ""
 	default:

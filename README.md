@@ -135,6 +135,10 @@ requiring agents to choreograph many primitives:
 - `openclerk retrieval` `duplicate_candidate_report` is read-only and packages
   the likely duplicate target, evidence inspected, no-write status, approval
   boundary, validation boundaries, authority limits, and `agent_handoff`.
+- `openclerk retrieval` `hybrid_retrieval_report` is read-only and packages
+  the current citation-bearing lexical baseline with candidate-surface
+  guidance for hybrid/vector retrieval decisions. It returns `agent_handoff`
+  and does not create vectors, call embedding APIs, or change default ranking.
 
 Validation rejections are JSON results with `rejected: true`. Runtime failures
 exit non-zero and write errors to stderr.

@@ -37,6 +37,7 @@ const (
 	RetrievalTaskActionSourceAuditReport   = "source_audit_report"
 	RetrievalTaskActionEvidenceBundle      = "evidence_bundle_report"
 	RetrievalTaskActionDuplicateCandidate  = "duplicate_candidate_report"
+	RetrievalTaskActionHybridRetrieval     = "hybrid_retrieval_report"
 )
 
 type DocumentTaskRequest struct {
@@ -239,6 +240,7 @@ type RetrievalTaskRequest struct {
 	SourceAudit        SourceAuditReportOptions   `json:"source_audit,omitempty"`
 	EvidenceBundle     EvidenceBundleOptions      `json:"evidence_bundle,omitempty"`
 	DuplicateCandidate DuplicateCandidateOptions  `json:"duplicate_candidate,omitempty"`
+	HybridRetrieval    HybridRetrievalOptions     `json:"hybrid_retrieval,omitempty"`
 	Limit              int                        `json:"limit,omitempty"`
 }
 
@@ -372,6 +374,12 @@ type DuplicateCandidateOptions struct {
 	Limit      int    `json:"limit,omitempty"`
 }
 
+type HybridRetrievalOptions struct {
+	Query      string `json:"query,omitempty"`
+	PathPrefix string `json:"path_prefix,omitempty"`
+	Limit      int    `json:"limit,omitempty"`
+}
+
 type RetrievalTaskResult struct {
 	Rejected           bool                       `json:"rejected"`
 	RejectionReason    string                     `json:"rejection_reason,omitempty"`
@@ -391,6 +399,7 @@ type RetrievalTaskResult struct {
 	SourceAudit        *SourceAuditReport         `json:"source_audit,omitempty"`
 	EvidenceBundle     *EvidenceBundleReport      `json:"evidence_bundle,omitempty"`
 	DuplicateCandidate *DuplicateCandidateReport  `json:"duplicate_candidate,omitempty"`
+	HybridRetrieval    *HybridRetrievalReport     `json:"hybrid_retrieval,omitempty"`
 	Summary            string                     `json:"summary"`
 }
 
@@ -482,6 +491,32 @@ type DuplicateCandidateReport struct {
 	ValidationBoundaries string            `json:"validation_boundaries"`
 	AuthorityLimits      string            `json:"authority_limits"`
 	AgentHandoff         *AgentHandoff     `json:"agent_handoff,omitempty"`
+}
+
+type HybridRetrievalReport struct {
+	Query                string                     `json:"query"`
+	PathPrefix           string                     `json:"path_prefix,omitempty"`
+	LexicalSearch        *SearchResult              `json:"lexical_search,omitempty"`
+	CandidateSurfaces    []HybridRetrievalCandidate `json:"candidate_surfaces,omitempty"`
+	Recommendation       string                     `json:"recommendation"`
+	SafetyPass           string                     `json:"safety_pass"`
+	CapabilityPass       string                     `json:"capability_pass"`
+	UXQuality            string                     `json:"ux_quality"`
+	PerformancePosture   string                     `json:"performance_posture"`
+	EvidencePosture      string                     `json:"evidence_posture"`
+	ValidationBoundaries string                     `json:"validation_boundaries"`
+	AuthorityLimits      string                     `json:"authority_limits"`
+	EvidenceInspected    []string                   `json:"evidence_inspected,omitempty"`
+	AgentHandoff         *AgentHandoff              `json:"agent_handoff,omitempty"`
+}
+
+type HybridRetrievalCandidate struct {
+	Surface        string   `json:"surface"`
+	Status         string   `json:"status"`
+	Safety         string   `json:"safety"`
+	Capability     string   `json:"capability"`
+	UXQuality      string   `json:"ux_quality"`
+	Implementation []string `json:"implementation,omitempty"`
 }
 
 type AuditContradictionsResult struct {
