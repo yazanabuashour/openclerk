@@ -47,6 +47,7 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 				"ingest_video_url",
 				"transcript",
 				"compile_synthesis",
+				"web_search_plan",
 				"git_lifecycle_report",
 				"--git-checkpoints",
 				"body_facts",

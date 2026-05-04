@@ -20,6 +20,7 @@ const (
 	DocumentTaskActionResolvePaths     = "resolve_paths"
 	DocumentTaskActionInspectLayout    = "inspect_layout"
 	DocumentTaskActionGitLifecycle     = "git_lifecycle_report"
+	DocumentTaskActionWebSearchPlan    = "web_search_plan"
 
 	RetrievalTaskActionValidate            = "validate"
 	RetrievalTaskActionSearch              = "search"
@@ -50,6 +51,7 @@ type DocumentTaskRequest struct {
 	Video         VideoURLInput         `json:"video,omitempty"`
 	Synthesis     CompileSynthesisInput `json:"synthesis,omitempty"`
 	GitLifecycle  GitLifecycleOptions   `json:"git_lifecycle,omitempty"`
+	WebSearch     WebSearchPlanOptions  `json:"web_search,omitempty"`
 	Path          string                `json:"path,omitempty"`
 	Title         string                `json:"title,omitempty"`
 	Body          string                `json:"body,omitempty"`
@@ -219,6 +221,7 @@ type DocumentTaskResult struct {
 	VideoIngestion   *VideoIngestionResult   `json:"video_ingestion,omitempty"`
 	CompileSynthesis *CompileSynthesisResult `json:"compile_synthesis,omitempty"`
 	GitLifecycle     *GitLifecycleReport     `json:"git_lifecycle,omitempty"`
+	WebSearchPlan    *WebSearchPlan          `json:"web_search_plan,omitempty"`
 	Documents        []DocumentSummary       `json:"documents,omitempty"`
 	Paths            *Paths                  `json:"paths,omitempty"`
 	Layout           *KnowledgeLayout        `json:"layout,omitempty"`
@@ -409,6 +412,20 @@ type GitLifecycleOptions struct {
 	Limit   int      `json:"limit,omitempty"`
 }
 
+type WebSearchPlanOptions struct {
+	Query   string                 `json:"query,omitempty"`
+	Results []WebSearchResultInput `json:"results,omitempty"`
+	Limit   int                    `json:"limit,omitempty"`
+}
+
+type WebSearchResultInput struct {
+	URL          string `json:"url,omitempty"`
+	Title        string `json:"title,omitempty"`
+	Snippet      string `json:"snippet,omitempty"`
+	SourceType   string `json:"source_type,omitempty"`
+	AccessStatus string `json:"access_status,omitempty"`
+}
+
 type RetrievalTaskResult struct {
 	Rejected           bool                       `json:"rejected"`
 	RejectionReason    string                     `json:"rejection_reason,omitempty"`
@@ -478,6 +495,34 @@ type GitLifecycleCommit struct {
 	Authored  string `json:"authored"`
 	Summary   string `json:"summary"`
 	PathScope string `json:"path_scope,omitempty"`
+}
+
+type WebSearchPlan struct {
+	Query                string               `json:"query"`
+	Candidates           []WebSearchCandidate `json:"candidates,omitempty"`
+	FetchStatus          string               `json:"fetch_status"`
+	WriteStatus          string               `json:"write_status"`
+	ApprovalBoundary     string               `json:"approval_boundary"`
+	ValidationBoundaries string               `json:"validation_boundaries"`
+	AuthorityLimits      string               `json:"authority_limits"`
+	AgentHandoff         *AgentHandoff        `json:"agent_handoff,omitempty"`
+}
+
+type WebSearchCandidate struct {
+	Rank                    int              `json:"rank"`
+	URL                     string           `json:"url"`
+	NormalizedURL           string           `json:"normalized_url"`
+	Title                   string           `json:"title,omitempty"`
+	Snippet                 string           `json:"snippet,omitempty"`
+	SourceType              string           `json:"source_type"`
+	AccessStatus            string           `json:"access_status"`
+	CandidateStatus         string           `json:"candidate_status"`
+	DuplicateStatus         string           `json:"duplicate_status"`
+	CandidateSourcePaths    []string         `json:"candidate_source_paths,omitempty"`
+	CandidateAssetPaths     []string         `json:"candidate_asset_paths,omitempty"`
+	CandidateSynthesisPath  string           `json:"candidate_synthesis_path,omitempty"`
+	ExistingSource          *DocumentSummary `json:"existing_source,omitempty"`
+	NextIngestSourceRequest string           `json:"next_ingest_source_request,omitempty"`
 }
 
 type AgentHandoff struct {

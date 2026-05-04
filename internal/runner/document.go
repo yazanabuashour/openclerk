@@ -138,6 +138,15 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 			GitLifecycle: &report,
 			Summary:      gitLifecycleSummary(report),
 		}, nil
+	case DocumentTaskActionWebSearchPlan:
+		plan, err := runWebSearchPlan(ctx, client, normalized.WebSearch)
+		if err != nil {
+			return DocumentTaskResult{}, err
+		}
+		return DocumentTaskResult{
+			WebSearchPlan: &plan,
+			Summary:       webSearchPlanSummary(plan),
+		}, nil
 	case DocumentTaskActionInspectLayout:
 		layout, err := inspectKnowledgeLayout(ctx, client)
 		if err != nil {
@@ -274,6 +283,7 @@ type normalizedDocumentTaskRequest struct {
 	Video        VideoURLInput
 	Synthesis    CompileSynthesisInput
 	GitLifecycle GitLifecycleOptions
+	WebSearch    WebSearchPlanOptions
 	DocID        string
 	Content      string
 	Heading      string
@@ -292,6 +302,7 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		Video:        trimVideoURLInput(request.Video),
 		Synthesis:    trimCompileSynthesisInput(compileSynthesisInputFromRequest(request)),
 		GitLifecycle: trimGitLifecycleOptions(request.GitLifecycle),
+		WebSearch:    trimWebSearchPlanOptions(request.WebSearch),
 		DocID:        strings.TrimSpace(request.DocID),
 		Content:      request.Content,
 		Heading:      strings.TrimSpace(request.Heading),
@@ -302,6 +313,9 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		return normalizedDocumentTaskRequest{}, "limit must be greater than or equal to 0"
 	}
 	if request.GitLifecycle.Limit < 0 {
+		return normalizedDocumentTaskRequest{}, "limit must be greater than or equal to 0"
+	}
+	if request.WebSearch.Limit < 0 {
 		return normalizedDocumentTaskRequest{}, "limit must be greater than or equal to 0"
 	}
 
@@ -387,6 +401,19 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		default:
 			return normalizedDocumentTaskRequest{}, "git_lifecycle.mode must be status, history, or checkpoint"
 		}
+	case DocumentTaskActionWebSearchPlan:
+		if normalized.WebSearch.Query == "" {
+			return normalizedDocumentTaskRequest{}, "web_search.query is required"
+		}
+		if len(normalized.WebSearch.Results) == 0 {
+			return normalizedDocumentTaskRequest{}, "web_search.results is required"
+		}
+		for _, result := range normalized.WebSearch.Results {
+			if rejection := validateWebSearchResultInput(result); rejection != "" {
+				return normalizedDocumentTaskRequest{}, rejection
+			}
+		}
+		return normalized, ""
 	default:
 		return normalizedDocumentTaskRequest{}, fmt.Sprintf("unsupported document task action %q", action)
 	}
@@ -501,6 +528,24 @@ func trimGitLifecycleOptions(input GitLifecycleOptions) GitLifecycleOptions {
 	}
 }
 
+func trimWebSearchPlanOptions(input WebSearchPlanOptions) WebSearchPlanOptions {
+	results := make([]WebSearchResultInput, 0, len(input.Results))
+	for _, result := range input.Results {
+		results = append(results, WebSearchResultInput{
+			URL:          strings.TrimSpace(result.URL),
+			Title:        strings.TrimSpace(result.Title),
+			Snippet:      strings.TrimSpace(result.Snippet),
+			SourceType:   strings.TrimSpace(result.SourceType),
+			AccessStatus: strings.TrimSpace(result.AccessStatus),
+		})
+	}
+	return WebSearchPlanOptions{
+		Query:   strings.TrimSpace(input.Query),
+		Results: results,
+		Limit:   input.Limit,
+	}
+}
+
 func normalizeVaultRelativePath(raw string) string {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" || filepath.IsAbs(trimmed) || strings.HasPrefix(trimmed, "/") {
@@ -511,6 +556,28 @@ func normalizeVaultRelativePath(raw string) string {
 		return ""
 	}
 	return clean
+}
+
+func validateWebSearchResultInput(input WebSearchResultInput) string {
+	if input.URL == "" {
+		return "web_search.results.url is required"
+	}
+	parsed, err := url.Parse(input.URL)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return "web_search.results.url must be a valid http or https URL"
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return "web_search.results.url must use http or https"
+	}
+	if input.SourceType != "" && input.SourceType != "web" && input.SourceType != "pdf" {
+		return "web_search.results.source_type must be web or pdf"
+	}
+	switch input.AccessStatus {
+	case "", "public", "blocked", "authenticated", "private", "unknown":
+		return ""
+	default:
+		return "web_search.results.access_status must be public, blocked, authenticated, private, or unknown"
+	}
 }
 
 func normalizeCompileSynthesisMode(raw string) string {

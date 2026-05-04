@@ -240,6 +240,137 @@ func TestDocumentTaskGitLifecycleRejectsPathspecMagic(t *testing.T) {
 	}
 }
 
+func TestDocumentTaskWebSearchPlanReturnsPlacementHints(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "sources/web/existing-example.md", "Existing Example", strings.TrimSpace(`---
+source_url: https://example.test/existing
+source_type: web
+---
+# Existing Example
+
+## Summary
+Existing public web source evidence.
+`)+"\n")
+
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionWebSearchPlan,
+		WebSearch: runner.WebSearchPlanOptions{
+			Query: "public source planning evidence",
+			Results: []runner.WebSearchResultInput{
+				{
+					URL:     "https://example.test/new-report.pdf",
+					Title:   "New Report",
+					Snippet: "Public report search snippet.",
+				},
+				{
+					URL:     "https://example.test/existing",
+					Title:   "Existing Example",
+					Snippet: "Duplicate source search snippet.",
+				},
+				{
+					URL:          "https://example.test/private",
+					Title:        "Private Example",
+					Snippet:      "Login required snippet.",
+					AccessStatus: "authenticated",
+				},
+			},
+			Limit: 10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("web search plan: %v", err)
+	}
+	plan := result.WebSearchPlan
+	if plan == nil ||
+		len(plan.Candidates) != 3 ||
+		plan.FetchStatus != "planned_no_fetch" ||
+		plan.WriteStatus != "planned_no_write" ||
+		plan.AgentHandoff == nil ||
+		!strings.Contains(plan.AuthorityLimits, "discovery hints only") {
+		t.Fatalf("web search plan result = %+v", plan)
+	}
+	first := plan.Candidates[0]
+	if first.Rank != 1 ||
+		first.SourceType != "pdf" ||
+		!containsString(first.CandidateSourcePaths, "sources/new-report.md") ||
+		!containsString(first.CandidateAssetPaths, "assets/sources/new-report.pdf") ||
+		!strings.Contains(first.NextIngestSourceRequest, "ingest_source_url") {
+		t.Fatalf("first web search candidate = %+v", first)
+	}
+	second := plan.Candidates[1]
+	if second.DuplicateStatus != "existing_source_url_found_no_fetch_no_write" ||
+		second.ExistingSource == nil ||
+		second.ExistingSource.Path != "sources/web/existing-example.md" ||
+		second.CandidateSynthesisPath != "" ||
+		!strings.Contains(second.NextIngestSourceRequest, `"mode":"update"`) {
+		t.Fatalf("duplicate web search candidate = %+v", second)
+	}
+	third := plan.Candidates[2]
+	if third.CandidateStatus != "unsupported_private_or_authenticated_no_fetch" ||
+		third.AccessStatus != "authenticated" ||
+		third.NextIngestSourceRequest != "" {
+		t.Fatalf("authenticated web search candidate = %+v", third)
+	}
+
+	privateOnly, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionWebSearchPlan,
+		WebSearch: runner.WebSearchPlanOptions{
+			Query: "private only",
+			Results: []runner.WebSearchResultInput{
+				{URL: "https://example.test/private-only", Title: "Private Only", AccessStatus: "private"},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("private-only web search plan: %v", err)
+	}
+	if privateOnly.WebSearchPlan == nil ||
+		privateOnly.WebSearchPlan.AgentHandoff == nil ||
+		!strings.Contains(privateOnly.WebSearchPlan.AgentHandoff.FollowUpPrimitiveInspection, "do not call ingest_source_url") {
+		t.Fatalf("private-only web search plan = %+v", privateOnly.WebSearchPlan)
+	}
+}
+
+func TestDocumentTaskWebSearchPlanRejectsInvalidInputs(t *testing.T) {
+	t.Parallel()
+
+	result, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionWebSearchPlan,
+		WebSearch: runner.WebSearchPlanOptions{
+			Query: "invalid source",
+			Results: []runner.WebSearchResultInput{
+				{URL: "file:///tmp/source.md"},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("web search invalid input: %v", err)
+	}
+	if !result.Rejected || result.RejectionReason != "web_search.results.url must be a valid http or https URL" {
+		t.Fatalf("invalid URL result = %+v", result)
+	}
+
+	negative, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionWebSearchPlan,
+		WebSearch: runner.WebSearchPlanOptions{
+			Query: "negative limit",
+			Results: []runner.WebSearchResultInput{
+				{URL: "https://example.test/page.html"},
+			},
+			Limit: -1,
+		},
+	})
+	if err != nil {
+		t.Fatalf("web search negative limit: %v", err)
+	}
+	if !negative.Rejected || negative.RejectionReason != "limit must be greater than or equal to 0" {
+		t.Fatalf("negative limit result = %+v", negative)
+	}
+}
+
 func TestDocumentTaskCompileSynthesisCreatesAndUpdatesOneTarget(t *testing.T) {
 	t.Parallel()
 

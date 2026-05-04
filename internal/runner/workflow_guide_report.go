@@ -52,6 +52,15 @@ func selectWorkflowGuideCandidate(intent string) workflowGuideSelection {
 			DoNotUseFor:    []string{"durable document writes", "unrelated source-sensitive audits"},
 			HandoffSummary: "Use retrieval duplicate_candidate_report, then answer from duplicate_candidate.agent_handoff before asking for durable-write approval.",
 		}
+	case containsAny(normalized, "web search", "search web", "search-to-source", "search to source", "search results"):
+		return workflowGuideSelection{
+			Surface:        "web_search_plan",
+			RunnerDomain:   "document",
+			RequestShape:   `{"action":"web_search_plan","web_search":{"query":"...","results":[{"url":"https://example.test/page.html","title":"Example","snippet":"..."}],"limit":10}}`,
+			UseWhen:        "use for harness-supplied public web search results before selecting an ingest_source_url candidate",
+			DoNotUseFor:    []string{"live search provider calls", "browser automation", "durable fetch/write", "private or authenticated pages"},
+			HandoffSummary: "Use document web_search_plan for read-only search-result planning; approved public fetch/write still flows through ingest_source_url.",
+		}
 	case containsAny(normalized, "public url", "public link", "source url", "source placement", "fetch url", "ingest url", "web page", "pdf"):
 		return workflowGuideSelection{
 			Surface:        "ingest_source_url plan",

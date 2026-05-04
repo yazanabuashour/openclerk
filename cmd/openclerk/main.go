@@ -206,7 +206,7 @@ func usage(stderr io.Writer) {
 	_, _ = fmt.Fprintln(stderr, "       openclerk document --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk retrieval --help")
 	_, _ = fmt.Fprintln(stderr, "document/retrieval read strict JSON from stdin and use configured paths by default; pass --db only for an explicit dataset.")
-	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, ingest_source_url plan, git_lifecycle_report, source_audit_report, evidence_bundle_report, duplicate_candidate_report, workflow_guide_report, memory_router_recall_report, structured_store_report, hybrid_retrieval_report")
+	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, ingest_source_url plan, web_search_plan, git_lifecycle_report, source_audit_report, evidence_bundle_report, duplicate_candidate_report, workflow_guide_report, memory_router_recall_report, structured_store_report, hybrid_retrieval_report")
 }
 
 func documentUsage(w io.Writer) {
@@ -231,6 +231,8 @@ func documentUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, `  git_lifecycle_report status/history: {"action":"git_lifecycle_report","git_lifecycle":{"mode":"status","paths":["synthesis/example.md"],"limit":10}}`)
 	_, _ = fmt.Fprintln(w, `  git_lifecycle_report checkpoint: {"action":"git_lifecycle_report","git_lifecycle":{"mode":"checkpoint","paths":["synthesis/example.md"],"message":"openclerk: update synthesis example"}}`)
 	_, _ = fmt.Fprintln(w, "  Status/history are read-only. Checkpoint requires --git-checkpoints or OPENCLERK_GIT_CHECKPOINTS=1, never pushes, switches branches, restores, or emits raw diffs.")
+	_, _ = fmt.Fprintln(w, `  web_search_plan: {"action":"web_search_plan","web_search":{"query":"example source","results":[{"url":"https://example.test/page.html","title":"Example","snippet":"Search snippet"}],"limit":10}}`)
+	_, _ = fmt.Fprintln(w, "  Read-only. Plans harness-supplied public URL candidates with duplicate and placement hints; approved fetch/write still uses ingest_source_url.")
 }
 
 func retrievalUsage(w io.Writer) {

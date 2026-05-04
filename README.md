@@ -118,6 +118,10 @@ requiring agents to choreograph many primitives:
   public-link placement before durable fetch/write. It returns candidate source
   path hints, duplicate source status, synthesis-placement guidance,
   no-fetch/no-write status, approval boundaries, and `agent_handoff`.
+- `openclerk document` `web_search_plan` is read-only and plans
+  harness-supplied public web search results into ranked URL candidates with
+  duplicate and placement hints. Approved public fetch/write still uses
+  `ingest_source_url`.
 - `openclerk document` `compile_synthesis` creates or updates exactly one
   source-linked synthesis target from either explicit `body` markdown or
   runner-assembled `body_facts`, defaults the only supported

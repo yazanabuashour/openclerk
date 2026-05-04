@@ -34,6 +34,9 @@ matches the request:
 - Source URL placement before durable fetch/write: document
   `ingest_source_url` with `mode: "plan"`, then answer from
   `source_placement_plan.agent_handoff`.
+- Harness-supplied web search planning: document `web_search_plan`, then answer
+  from `web_search_plan.agent_handoff`; approved fetch/write remains
+  `ingest_source_url`.
 - Source-sensitive audit explain/repair: retrieval `source_audit_report`, then
   answer from `source_audit.agent_handoff`.
 - Records, decisions, provenance, and projection evidence bundles: retrieval
@@ -124,7 +127,7 @@ policies and let runner results drive the answer:
 
 - Candidate documents: preserve explicit user path/title/body/type/naming instructions; fill omitted fields only from supplied content; validate with `openclerk document` before presenting a candidate; show `Path:`, `Title:`, and `Body preview:`; state no document was created; ask for approval before durable writes; for note-like candidates without an explicit path, use `notes/candidates/<slug-from-title>.md`, derive a concise singular noun phrase title, and Include `type: note` frontmatter plus a `# <Title>` heading.
 - Duplicate checks: when duplicate risk is requested or plausible, use runner-visible evidence before validating or writing; report the likely target, evidence inspected, and that no document was created or updated; ask whether to update the existing target or create a confirmed new path.
-- Public URL/source intake: use `ingest_source_url` for HTTP/HTTPS PDF and public web sources. Do not fetch URLs with browser, HTTP, filesystem, or other non-runner tools; when placement is missing, propose source/synthesis paths and ask for approval before durable fetch or write.
+- Public URL/source intake: use `web_search_plan` for supplied search results and `ingest_source_url` for HTTP/HTTPS PDF and public web sources. Do not fetch URLs with browser, HTTP, filesystem, or other non-runner tools; when placement is missing, propose source/synthesis paths and ask for approval before durable fetch or write.
 - Video/YouTube source intake: use `ingest_video_url` only with user-supplied transcript text and provenance; do not acquire media or transcripts externally.
 - Document lifecycle review, rollback, restore, and semantic diff: stay inside `openclerk document` and `openclerk retrieval`. Use `git_lifecycle_report` only for local Git status/history/checkpoints; it is storage history, not semantic provenance, and checkpoint mode needs explicit runner config. There is no public raw diff, restore, or rollback action.
 - Messy populated-vault retrieval: answer from runner-visible authority such as metadata-filtered authority results, active canonical sources, cited source paths, `doc_id`, and `chunk_id`; treat polluted, decoy, stale, draft, archived, duplicate, or candidate documents as non-authority unless runner-visible source authority says otherwise.
@@ -143,9 +146,9 @@ openclerk document
 ```
 
 Common actions are `validate`, `create_document`, `ingest_source_url`,
-`ingest_video_url`, `list_documents`, `get_document`, `append_document`,
-`replace_section`, `resolve_paths`, `inspect_layout`, `compile_synthesis`, and
-`git_lifecycle_report`.
+`ingest_video_url`, `web_search_plan`, `list_documents`, `get_document`,
+`append_document`, `replace_section`, `resolve_paths`, `inspect_layout`,
+`compile_synthesis`, and `git_lifecycle_report`.
 Use `openclerk document --help` for primitive and promoted workflow-action
 request shapes, including source placement, source ingestion, and video fields.
 

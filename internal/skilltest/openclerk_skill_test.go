@@ -86,6 +86,7 @@ func TestOpenClerkSkillUsesInstalledRunnerForRoutineWork(t *testing.T) {
 		"projection_states",
 		"audit_contradictions",
 		"compile_synthesis",
+		"web_search_plan",
 		"git_lifecycle_report",
 		"source_audit_report",
 		"evidence_bundle_report",
