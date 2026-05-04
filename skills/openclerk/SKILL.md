@@ -58,10 +58,11 @@ matches the request:
   `structured_store.agent_handoff`. Do not claim independent canonical tables,
   time-series stores, external connectors, or durable structured writes from
   this report.
-- Hybrid/vector retrieval decision support: retrieval
-  `hybrid_retrieval_report`, then answer from
-  `hybrid_retrieval.agent_handoff`. Do not claim vector-ranked retrieval or
-  embedding-store evidence from this report.
+- Hybrid/vector decision support: retrieval `hybrid_retrieval_report`, then
+  answer from `hybrid_retrieval.agent_handoff`; do not claim vector ranking.
+- Explicit local semantic retrieval: retrieval `semantic_search`, then answer
+  from `semantic_search.hits` and handoff. Use only for explicit semantic/vector
+  recall; requires loopback Ollama, no Gemini fallback, default `search` unchanged.
 
 Use lower-level primitives for explicit primitive requests, advanced/manual
 cases, unsupported workflow-action inputs, and follow-up inspection after a
@@ -182,8 +183,8 @@ Common actions are `search`, `document_links`, `graph_neighborhood`,
 `projection_states`, `audit_contradictions`, `source_audit_report`,
 `evidence_bundle_report`, `duplicate_candidate_report`, and
 `workflow_guide_report`, `memory_router_recall_report`,
-`structured_store_report`, and `hybrid_retrieval_report`. Use
-`openclerk retrieval --help` for promoted workflow-action request shape.
+`structured_store_report`, `hybrid_retrieval_report`, and `semantic_search`.
+Use `openclerk retrieval --help` for promoted workflow-action request shape.
 
 Use search for source-grounded answers; document links and graph neighborhoods
 for markdown relationships; records, services, and decisions lookup for

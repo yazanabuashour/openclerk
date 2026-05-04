@@ -1,0 +1,82 @@
+{
+  "schema_version": "openclerk-eval-summary.v1",
+  "bead": "oc-sloi",
+  "summary": "Local/offline semantic retrieval model matrix for promotion decision.",
+  "source_reports": [
+    "docs/evals/results/ockp-semantic-recall-local-embeddinggemma-sloi.json",
+    "docs/evals/results/ockp-semantic-recall-local-mxbai-embed-large-sloi.json",
+    "docs/evals/results/ockp-semantic-recall-local-bge-m3-sloi.json",
+    "docs/evals/results/ockp-semantic-recall-local-nomic-embed-text-sloi.json",
+    "docs/evals/results/ockp-semantic-recall-gemini-promotion-benchmark.json"
+  ],
+  "thresholds": {
+    "default_hybrid_search": "8/8 hit@3, MRR >= 0.90, citations/filters/stale rebuild pass, duplicate pressure acceptable after document collapse, exact/source lookup regressions pass, no provider dependency",
+    "explicit_core_semantic_mode": "8/8 hit@3 and citation/filter/cache checks pass, but default ranking risk or normal-user UX risk remains"
+  },
+  "local_models": [
+    {
+      "model": "embeddinggemma",
+      "provider": "ollama",
+      "status": "completed",
+      "embedding_dimensions": 768,
+      "hybrid_hit_at_3": "7/8",
+      "hybrid_mrr": 0.906,
+      "raw_duplicate_hits_before_document_collapse": 736,
+      "total_seconds": 11.44,
+      "outcome": "below recall threshold"
+    },
+    {
+      "model": "mxbai-embed-large",
+      "provider": "ollama",
+      "status": "completed",
+      "embedding_dimensions": 1024,
+      "hybrid_hit_at_3": "8/8",
+      "hybrid_mrr": 0.938,
+      "raw_duplicate_hits_before_document_collapse": 736,
+      "total_seconds": 23.31,
+      "outcome": "clears explicit semantic mode threshold; not selected as default ranking"
+    },
+    {
+      "model": "bge-m3",
+      "provider": "ollama",
+      "status": "environment_blocked",
+      "embedding_dimensions": null,
+      "hybrid_hit_at_3": "0/8",
+      "hybrid_mrr": 0,
+      "raw_duplicate_hits_before_document_collapse": 0,
+      "total_seconds": 30.15,
+      "blocker": "Ollama /api/embed timed out waiting for headers on this 16GB M1 run",
+      "outcome": "blocked locally"
+    },
+    {
+      "model": "nomic-embed-text",
+      "provider": "ollama",
+      "status": "completed",
+      "embedding_dimensions": 768,
+      "hybrid_hit_at_3": "8/8",
+      "hybrid_mrr": 0.938,
+      "raw_duplicate_hits_before_document_collapse": 736,
+      "total_seconds": 4.92,
+      "outcome": "selected local model for explicit core semantic mode"
+    }
+  ],
+  "gemini_benchmark": {
+    "source_report": "docs/evals/results/ockp-semantic-recall-gemini-promotion-benchmark.json",
+    "status": "benchmark_only",
+    "provider_dependency": "runtime_config:GEMINI_API_KEY",
+    "promotion_use": "not valid for local/offline default-search justification"
+  },
+  "source_sensitive_checks": {
+    "citation_fields": "pass in harness and runner tests",
+    "document_collapse": "pass; raw duplicate pressure remains high before collapse",
+    "stale_rebuild": "pass in harness freshness probe and runner tests",
+    "path_prefix_filter": "pass in adapter/core tests",
+    "tag_filter": "pass after oc-sloi adapter and core hardening",
+    "metadata_filter": "pass after oc-sloi adapter and core hardening",
+    "empty_corpus": "covered by semantic_search implementation status",
+    "provider_blocked": "pass in adapter/core tests",
+    "non_loopback_ollama_url_rejection": "pass in core tests",
+    "default_search_regression": "default openclerk retrieval search remains lexical"
+  },
+  "decision": "select explicit core semantic_search mode; do not promote default hybrid search"
+}

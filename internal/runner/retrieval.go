@@ -3,6 +3,8 @@ package runner
 import (
 	"context"
 	"fmt"
+	"net"
+	"net/url"
 	"strings"
 
 	"github.com/yazanabuashour/openclerk/internal/domain"
@@ -291,6 +293,15 @@ func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, n
 			HybridRetrieval: &report,
 			Summary:         "returned hybrid retrieval report",
 		}, nil
+	case RetrievalTaskActionSemanticSearch:
+		result, err := runSemanticSearch(ctx, client, normalized.SemanticSearch)
+		if err != nil {
+			return RetrievalTaskResult{}, err
+		}
+		return RetrievalTaskResult{
+			SemanticSearch: &result,
+			Summary:        fmt.Sprintf("returned %d semantic search hits", len(result.Hits)),
+		}, nil
 	default:
 		return RetrievalTaskResult{}, fmt.Errorf("unsupported retrieval task action %q", normalized.Action)
 	}
@@ -318,6 +329,7 @@ type normalizedRetrievalTaskRequest struct {
 	WorkflowGuide      WorkflowGuideOptions
 	StructuredStore    StructuredStoreOptions
 	HybridRetrieval    HybridRetrievalOptions
+	SemanticSearch     SemanticSearchOptions
 	Limit              int
 }
 
@@ -348,6 +360,7 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		WorkflowGuide:      request.WorkflowGuide,
 		StructuredStore:    request.StructuredStore,
 		HybridRetrieval:    request.HybridRetrieval,
+		SemanticSearch:     request.SemanticSearch,
 		Limit:              request.Limit,
 	}
 
@@ -364,7 +377,8 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		request.EvidenceBundle.Limit < 0 ||
 		request.DuplicateCandidate.Limit < 0 ||
 		request.StructuredStore.Limit < 0 ||
-		request.HybridRetrieval.Limit < 0 {
+		request.HybridRetrieval.Limit < 0 ||
+		request.SemanticSearch.Limit < 0 {
 		return normalizedRetrievalTaskRequest{}, "limit must be greater than or equal to 0"
 	}
 
@@ -512,6 +526,28 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 			return normalizedRetrievalTaskRequest{}, "hybrid_retrieval.query is required"
 		}
 		return normalized, ""
+	case RetrievalTaskActionSemanticSearch:
+		normalized.SemanticSearch.Query = strings.TrimSpace(request.SemanticSearch.Query)
+		normalized.SemanticSearch.PathPrefix = strings.TrimSpace(request.SemanticSearch.PathPrefix)
+		normalized.SemanticSearch.MetadataKey = strings.TrimSpace(request.SemanticSearch.MetadataKey)
+		normalized.SemanticSearch.MetadataValue = strings.TrimSpace(request.SemanticSearch.MetadataValue)
+		normalized.SemanticSearch.Tag = request.SemanticSearch.Tag
+		normalized.SemanticSearch.OllamaURL = strings.TrimRight(strings.TrimSpace(request.SemanticSearch.OllamaURL), "/")
+		normalized.SemanticSearch.EmbeddingModel = strings.TrimSpace(request.SemanticSearch.EmbeddingModel)
+		normalized.SemanticSearch.CacheDir = strings.TrimSpace(request.SemanticSearch.CacheDir)
+		if normalized.SemanticSearch.Query == "" {
+			return normalizedRetrievalTaskRequest{}, "semantic_search.query is required"
+		}
+		if (normalized.SemanticSearch.MetadataKey == "") != (normalized.SemanticSearch.MetadataValue == "") {
+			return normalizedRetrievalTaskRequest{}, "semantic_search.metadata_key and metadata_value must be provided together"
+		}
+		if rejection := normalizeSemanticSearchTagFilter(&normalized.SemanticSearch); rejection != "" {
+			return normalizedRetrievalTaskRequest{}, rejection
+		}
+		if rejection := validateSemanticSearchOllamaURL(normalized.SemanticSearch.OllamaURL); rejection != "" {
+			return normalizedRetrievalTaskRequest{}, rejection
+		}
+		return normalized, ""
 	default:
 		return normalizedRetrievalTaskRequest{}, fmt.Sprintf("unsupported retrieval task action %q", action)
 	}
@@ -519,6 +555,32 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 
 func normalizeSearchTagFilter(search *SearchOptions) string {
 	return normalizeTagFilter("search", search.Tag, search.tagProvided, &search.MetadataKey, &search.MetadataValue, &search.Tag)
+}
+
+func normalizeSemanticSearchTagFilter(search *SemanticSearchOptions) string {
+	return normalizeTagFilter("semantic_search", search.Tag, search.tagProvided, &search.MetadataKey, &search.MetadataValue, &search.Tag)
+}
+
+func validateSemanticSearchOllamaURL(raw string) string {
+	if strings.TrimSpace(raw) == "" {
+		return ""
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return "semantic_search.ollama_url must be a loopback HTTP URL"
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return "semantic_search.ollama_url must be a loopback HTTP URL"
+	}
+	host := parsed.Hostname()
+	if strings.EqualFold(host, "localhost") {
+		return ""
+	}
+	ip := net.ParseIP(host)
+	if ip != nil && ip.IsLoopback() {
+		return ""
+	}
+	return "semantic_search.ollama_url must be a loopback HTTP URL"
 }
 
 func normalizeTagFilter(fieldPrefix string, tag string, tagProvided bool, metadataKey *string, metadataValue *string, normalizedTag *string) string {

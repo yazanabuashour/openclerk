@@ -13,7 +13,7 @@
     {
       "type": "command",
       "name": "semantic-retrieval-adapter search",
-      "summary": "Read-only citation-bearing semantic/hybrid retrieval over OpenClerk documents using local Ollama or opt-in Gemini embeddings."
+      "summary": "Read-only citation-bearing semantic/hybrid retrieval over path-, tag-, or metadata-filtered OpenClerk documents using local Ollama or opt-in Gemini embeddings."
     }
   ],
   "requires": {

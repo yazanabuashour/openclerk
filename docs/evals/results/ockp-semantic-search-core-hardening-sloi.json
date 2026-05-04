@@ -1,0 +1,44 @@
+{
+  "schema_version": "openclerk-eval-summary.v1",
+  "bead": "oc-sloi",
+  "summary": "Core explicit semantic_search implementation and optional adapter hardening evidence.",
+  "implemented_surfaces": [
+    {
+      "surface": "openclerk retrieval semantic_search",
+      "status": "implemented_explicit_mode",
+      "default_search_changed": false,
+      "provider": "ollama",
+      "default_model": "nomic-embed-text",
+      "cache": "rebuildable user-cache artifact outside committed repo"
+    },
+    {
+      "surface": "modules/semantic-retrieval-adapter search",
+      "status": "hardened_optional_module",
+      "filters_added": [
+        "tag",
+        "metadata_key",
+        "metadata_value"
+      ]
+    }
+  ],
+  "checks": {
+    "adapter_tag_validation": "pass",
+    "adapter_metadata_validation": "pass",
+    "adapter_filtered_chunk_loading": "pass",
+    "adapter_cache_filter_isolation": "pass",
+    "core_semantic_tag_validation": "pass",
+    "core_semantic_metadata_validation": "pass",
+    "core_semantic_filtered_chunk_loading": "pass",
+    "core_semantic_cache_hit": "pass",
+    "core_semantic_stale_rebuild": "pass",
+    "core_semantic_provider_blocked": "pass",
+    "core_semantic_non_loopback_ollama_url_rejection": "pass",
+    "core_semantic_citations": "pass",
+    "gemini_hidden_fallback": "not implemented"
+  },
+  "test_commands": [
+    "mise exec -- go test ./cmd/openclerk ./internal/runner ./modules/semantic-retrieval-adapter"
+  ],
+  "privacy": "Core semantic_search uses local Ollama only. Gemini remains benchmark-only evidence and is not a hidden fallback.",
+  "decision": "semantic_search is explicit core mode; openclerk retrieval search remains lexical by default"
+}

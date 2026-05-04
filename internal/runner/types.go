@@ -43,6 +43,7 @@ const (
 	RetrievalTaskActionWorkflowGuide       = "workflow_guide_report"
 	RetrievalTaskActionStructuredStore     = "structured_store_report"
 	RetrievalTaskActionHybridRetrieval     = "hybrid_retrieval_report"
+	RetrievalTaskActionSemanticSearch      = "semantic_search"
 )
 
 type DocumentTaskRequest struct {
@@ -254,6 +255,7 @@ type RetrievalTaskRequest struct {
 	WorkflowGuide      WorkflowGuideOptions       `json:"workflow_guide,omitempty"`
 	StructuredStore    StructuredStoreOptions     `json:"structured_store,omitempty"`
 	HybridRetrieval    HybridRetrievalOptions     `json:"hybrid_retrieval,omitempty"`
+	SemanticSearch     SemanticSearchOptions      `json:"semantic_search,omitempty"`
 	Limit              int                        `json:"limit,omitempty"`
 }
 
@@ -265,6 +267,20 @@ type SearchOptions struct {
 	Tag           string `json:"tag,omitempty"`
 	Limit         int    `json:"limit,omitempty"`
 	Cursor        string `json:"cursor,omitempty"`
+
+	tagProvided bool
+}
+
+type SemanticSearchOptions struct {
+	Query          string `json:"query,omitempty"`
+	PathPrefix     string `json:"path_prefix,omitempty"`
+	MetadataKey    string `json:"metadata_key,omitempty"`
+	MetadataValue  string `json:"metadata_value,omitempty"`
+	Tag            string `json:"tag,omitempty"`
+	Limit          int    `json:"limit,omitempty"`
+	OllamaURL      string `json:"ollama_url,omitempty"`
+	EmbeddingModel string `json:"embedding_model,omitempty"`
+	CacheDir       string `json:"cache_dir,omitempty"`
 
 	tagProvided bool
 }
@@ -296,6 +312,23 @@ func (options *SearchOptions) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	*options = SearchOptions(decoded.searchOptionsAlias)
+	if decoded.Tag != nil {
+		options.Tag = *decoded.Tag
+		options.tagProvided = true
+	}
+	return nil
+}
+
+func (options *SemanticSearchOptions) UnmarshalJSON(data []byte) error {
+	type semanticSearchOptionsAlias SemanticSearchOptions
+	var decoded struct {
+		semanticSearchOptionsAlias
+		Tag *string `json:"tag"`
+	}
+	if err := decodeStrictJSON(data, &decoded); err != nil {
+		return err
+	}
+	*options = SemanticSearchOptions(decoded.semanticSearchOptionsAlias)
 	if decoded.Tag != nil {
 		options.Tag = *decoded.Tag
 		options.tagProvided = true
@@ -467,6 +500,7 @@ type RetrievalTaskResult struct {
 	WorkflowGuide      *WorkflowGuideReport       `json:"workflow_guide,omitempty"`
 	StructuredStore    *StructuredStoreReport     `json:"structured_store,omitempty"`
 	HybridRetrieval    *HybridRetrievalReport     `json:"hybrid_retrieval,omitempty"`
+	SemanticSearch     *SemanticSearchResult      `json:"semantic_search,omitempty"`
 	Summary            string                     `json:"summary"`
 }
 
@@ -735,6 +769,40 @@ type HybridRetrievalCandidate struct {
 	Capability     string   `json:"capability"`
 	UXQuality      string   `json:"ux_quality"`
 	Implementation []string `json:"implementation,omitempty"`
+}
+
+type SemanticSearchResult struct {
+	Query                string                 `json:"query"`
+	PathPrefix           string                 `json:"path_prefix,omitempty"`
+	Tag                  string                 `json:"tag,omitempty"`
+	MetadataKey          string                 `json:"metadata_key,omitempty"`
+	MetadataValue        string                 `json:"metadata_value,omitempty"`
+	Provider             SemanticProviderStatus `json:"provider"`
+	Cache                SemanticCacheStatus    `json:"cache"`
+	Ranking              string                 `json:"ranking"`
+	SearchStatus         string                 `json:"search_status"`
+	DuplicateChunks      int                    `json:"duplicate_chunks"`
+	Hits                 []SearchHit            `json:"hits,omitempty"`
+	PrivacyDisclosure    string                 `json:"privacy_disclosure"`
+	ValidationBoundaries string                 `json:"validation_boundaries"`
+	AuthorityLimits      string                 `json:"authority_limits"`
+	AgentHandoff         *AgentHandoff          `json:"agent_handoff,omitempty"`
+}
+
+type SemanticProviderStatus struct {
+	Provider      string `json:"provider"`
+	Model         string `json:"model"`
+	Status        string `json:"status"`
+	OllamaURL     string `json:"ollama_url,omitempty"`
+	EmbeddingDims int    `json:"embedding_dimensions,omitempty"`
+	ErrorSummary  string `json:"error_summary,omitempty"`
+}
+
+type SemanticCacheStatus struct {
+	Status       string `json:"status"`
+	CacheRef     string `json:"cache_ref,omitempty"`
+	ChunkCount   int    `json:"chunk_count"`
+	RebuiltCount int    `json:"rebuilt_count,omitempty"`
 }
 
 type AuditContradictionsResult struct {

@@ -36,6 +36,9 @@ var wordPattern = regexp.MustCompile(`[a-z0-9]+`)
 type searchRequest struct {
 	Query                     string `json:"query,omitempty"`
 	PathPrefix                string `json:"path_prefix,omitempty"`
+	Tag                       string `json:"tag,omitempty"`
+	MetadataKey               string `json:"metadata_key,omitempty"`
+	MetadataValue             string `json:"metadata_value,omitempty"`
 	Limit                     int    `json:"limit,omitempty"`
 	Provider                  string `json:"provider,omitempty"`
 	FallbackProvider          string `json:"fallback_provider,omitempty"`
@@ -45,6 +48,8 @@ type searchRequest struct {
 	GeminiConfigKey           string `json:"gemini_config_key,omitempty"`
 	EmbeddingOutputDimensions int    `json:"embedding_output_dimensions,omitempty"`
 	CacheDir                  string `json:"cache_dir,omitempty"`
+
+	tagProvided bool
 }
 
 type searchResponse struct {
@@ -52,6 +57,9 @@ type searchResponse struct {
 	Module               moduleMetadata `json:"module"`
 	Query                string         `json:"query"`
 	PathPrefix           string         `json:"path_prefix,omitempty"`
+	Tag                  string         `json:"tag,omitempty"`
+	MetadataKey          string         `json:"metadata_key,omitempty"`
+	MetadataValue        string         `json:"metadata_value,omitempty"`
 	Provider             providerStatus `json:"provider"`
 	Cache                cacheStatus    `json:"cache"`
 	Results              []semanticHit  `json:"results,omitempty"`
@@ -180,6 +188,23 @@ func (e geminiHTTPError) Error() string {
 	return fmt.Sprintf("gemini returned HTTP %d: %s", e.StatusCode, e.Body)
 }
 
+func (request *searchRequest) UnmarshalJSON(data []byte) error {
+	type searchRequestAlias searchRequest
+	var decoded searchRequestAlias
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&decoded); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*request = searchRequest(decoded)
+	_, request.tagProvided = raw["tag"]
+	return nil
+}
+
 func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
 }
@@ -231,6 +256,15 @@ func executeSearch(ctx context.Context, config runclient.Config, request searchR
 	if unsafePrefix(request.PathPrefix) {
 		return searchResponse{}, errors.New("path_prefix must stay inside the vault root")
 	}
+	if request.tagProvided && request.Tag == "" {
+		return searchResponse{}, errors.New("tag must be non-empty")
+	}
+	if request.Tag != "" && (request.MetadataKey != "" || request.MetadataValue != "") {
+		return searchResponse{}, errors.New("tag cannot be combined with metadata_key or metadata_value")
+	}
+	if (request.MetadataKey == "") != (request.MetadataValue == "") {
+		return searchResponse{}, errors.New("metadata_key and metadata_value must be provided together")
+	}
 	paths, err := runclient.ResolvePaths(config)
 	if err != nil {
 		return searchResponse{}, err
@@ -242,7 +276,7 @@ func executeSearch(ctx context.Context, config runclient.Config, request searchR
 	defer func() {
 		_ = client.Close()
 	}()
-	chunks, err := loadChunks(ctx, client, request.PathPrefix)
+	chunks, err := loadChunks(ctx, client, request)
 	if err != nil {
 		return searchResponse{}, err
 	}
@@ -325,6 +359,9 @@ func executeSearch(ctx context.Context, config runclient.Config, request searchR
 func normalizeRequest(request searchRequest) searchRequest {
 	request.Query = strings.TrimSpace(request.Query)
 	request.PathPrefix = normalizePrefix(request.PathPrefix)
+	request.Tag = strings.TrimSpace(request.Tag)
+	request.MetadataKey = strings.TrimSpace(request.MetadataKey)
+	request.MetadataValue = strings.TrimSpace(request.MetadataValue)
 	request.Provider = strings.ToLower(strings.TrimSpace(request.Provider))
 	if request.Provider == "" {
 		request.Provider = providerOllama
@@ -395,6 +432,9 @@ func baseResponse(request searchRequest, provider providerStatus, cache cacheSta
 		},
 		Query:                request.Query,
 		PathPrefix:           request.PathPrefix,
+		Tag:                  request.Tag,
+		MetadataKey:          request.MetadataKey,
+		MetadataValue:        request.MetadataValue,
 		Provider:             provider,
 		Cache:                cache,
 		Ranking:              "hybrid_rrf_vector_lexical",
@@ -412,11 +452,18 @@ func baseResponse(request searchRequest, provider providerStatus, cache cacheSta
 	}
 }
 
-func loadChunks(ctx context.Context, client *runclient.Client, pathPrefix string) ([]semanticChunk, error) {
+func loadChunks(ctx context.Context, client *runclient.Client, request searchRequest) ([]semanticChunk, error) {
 	documents := []domain.DocumentSummary{}
 	cursor := ""
 	for {
-		result, err := client.ListDocuments(ctx, domain.DocumentListQuery{PathPrefix: pathPrefix, Limit: 100, Cursor: cursor})
+		result, err := client.ListDocuments(ctx, domain.DocumentListQuery{
+			PathPrefix:    request.PathPrefix,
+			MetadataKey:   request.MetadataKey,
+			MetadataValue: request.MetadataValue,
+			Tag:           request.Tag,
+			Limit:         100,
+			Cursor:        cursor,
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -484,7 +531,16 @@ func chunksForDocument(doc domain.Document) []semanticChunk {
 
 func cacheForRequest(request searchRequest, chunks []semanticChunk) (cacheFile, string, string) {
 	corpusHash := corpusHash(chunks)
-	key := hashString(strings.Join([]string{request.Provider, request.EmbeddingModel, fmt.Sprint(request.EmbeddingOutputDimensions), request.PathPrefix, corpusHash}, "\n"))
+	key := hashString(strings.Join([]string{
+		request.Provider,
+		request.EmbeddingModel,
+		fmt.Sprint(request.EmbeddingOutputDimensions),
+		request.PathPrefix,
+		request.Tag,
+		request.MetadataKey,
+		request.MetadataValue,
+		corpusHash,
+	}, "\n"))
 	cacheDir := strings.TrimSpace(request.CacheDir)
 	if cacheDir == "" {
 		if userCache, err := os.UserCacheDir(); err == nil {

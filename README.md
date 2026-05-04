@@ -162,6 +162,10 @@ requiring agents to choreograph many primitives:
   the current citation-bearing lexical baseline with candidate-surface
   guidance for hybrid/vector retrieval decisions. It returns `agent_handoff`
   and does not create vectors, call embedding APIs, or change default ranking.
+- `openclerk retrieval` `semantic_search` is explicit local/offline semantic
+  retrieval. It uses loopback Ollama embeddings only, returns citation-bearing
+  hybrid-ranked hits with provider/cache status, and keeps default `search`
+  lexical.
 
 Validation rejections are JSON results with `rejected: true`. Runtime failures
 exit non-zero and write errors to stderr.

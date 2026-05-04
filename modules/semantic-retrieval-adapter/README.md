@@ -15,6 +15,7 @@ Request:
 {
   "query": "semantic recall citation quality",
   "path_prefix": "docs/architecture/",
+  "tag": "semantic-retrieval",
   "limit": 10,
   "provider": "ollama",
   "fallback_provider": "gemini"
@@ -22,9 +23,14 @@ Request:
 ```
 
 The adapter reads OpenClerk documents through the embedded read-only runner
-client, builds citation-preserving chunks, embeds them with Ollama or Gemini,
-stores a rebuildable cache under the user cache directory, and returns
+client, applies path-prefix, tag, or metadata filters before chunking, builds
+citation-preserving chunks, embeds them with Ollama or Gemini, stores a
+rebuildable cache under the user cache directory, and returns
 `semantic_retrieval_adapter.v1` JSON with hybrid RRF ranking and citations.
+
+Filter rules match core search validation: `tag` must be non-empty when
+provided, `metadata_key` and `metadata_value` must be provided together, and
+`tag` cannot be combined with metadata filters.
 
 ## Boundaries
 

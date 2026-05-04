@@ -147,6 +147,153 @@ func TestSemanticRetrievalAdapterPathPrefixAndStaleCache(t *testing.T) {
 	}
 }
 
+func TestSemanticRetrievalAdapterTagAndMetadataFilters(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	createModuleDocument(t, ctx, dbPath, "docs/architecture/semantic.md", "Semantic Retrieval", strings.TrimSpace(`---
+tag: semantic-local
+owner: architecture
+---
+# Semantic Retrieval
+
+## Summary
+Semantic recall citations stay local.
+`)+"\n")
+	createModuleDocument(t, ctx, dbPath, "docs/architecture/archive.md", "Archived Semantic Retrieval", strings.TrimSpace(`---
+tag: semantic-local
+owner: archive
+---
+# Archived Semantic Retrieval
+
+## Summary
+Archived semantic recall must stay out of owner-scoped module results.
+`)+"\n")
+	createModuleDocument(t, ctx, dbPath, "docs/architecture/lexical.md", "Lexical Retrieval", strings.TrimSpace(`---
+tag: lexical-local
+owner: architecture
+---
+# Lexical Retrieval
+
+## Summary
+Lexical retrieval should stay out of semantic tag-scoped module results.
+`)+"\n")
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/embed" {
+			http.NotFound(w, r)
+			return
+		}
+		var req struct {
+			Input []string `json:"input"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		vectors := make([][]float64, 0, len(req.Input))
+		for _, input := range req.Input {
+			lower := strings.ToLower(input)
+			switch {
+			case strings.Contains(lower, "semantic recall"):
+				vectors = append(vectors, []float64{1, 0, 0})
+			case strings.Contains(lower, "lexical retrieval"):
+				vectors = append(vectors, []float64{0, 1, 0})
+			default:
+				vectors = append(vectors, []float64{0, 0, 1})
+			}
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"embeddings": vectors})
+	}))
+	defer server.Close()
+
+	tagged, err := executeSearch(ctx, runclient.Config{DatabasePath: dbPath}, searchRequest{
+		Query:          "semantic recall",
+		PathPrefix:     "docs/architecture/",
+		Tag:            "semantic-local",
+		Limit:          5,
+		Provider:       providerOllama,
+		OllamaURL:      server.URL,
+		EmbeddingModel: "embeddinggemma",
+		CacheDir:       t.TempDir(),
+	})
+	if err != nil {
+		t.Fatalf("tag search: %v", err)
+	}
+	if tagged.Tag != "semantic-local" || len(tagged.Results) != 2 {
+		t.Fatalf("tagged response = %+v", tagged)
+	}
+	for _, hit := range tagged.Results {
+		if hit.Citations[0].Path == "docs/architecture/lexical.md" {
+			t.Fatalf("tag filter leaked lexical hit: %+v", tagged.Results)
+		}
+	}
+
+	metadata, err := executeSearch(ctx, runclient.Config{DatabasePath: dbPath}, searchRequest{
+		Query:          "semantic recall",
+		PathPrefix:     "docs/architecture/",
+		MetadataKey:    "owner",
+		MetadataValue:  "architecture",
+		Limit:          5,
+		Provider:       providerOllama,
+		OllamaURL:      server.URL,
+		EmbeddingModel: "embeddinggemma",
+		CacheDir:       t.TempDir(),
+	})
+	if err != nil {
+		t.Fatalf("metadata search: %v", err)
+	}
+	if metadata.MetadataKey != "owner" || metadata.MetadataValue != "architecture" || len(metadata.Results) != 2 {
+		t.Fatalf("metadata response = %+v", metadata)
+	}
+	for _, hit := range metadata.Results {
+		if hit.Citations[0].Path == "docs/architecture/archive.md" {
+			t.Fatalf("metadata filter leaked archive hit: %+v", metadata.Results)
+		}
+	}
+}
+
+func TestSemanticRetrievalAdapterFilterValidation(t *testing.T) {
+	t.Parallel()
+
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "openclerk.sqlite")}
+	cases := []struct {
+		name    string
+		request searchRequest
+		want    string
+	}{
+		{
+			name:    "empty tag",
+			request: searchRequest{Query: "semantic", Tag: " ", tagProvided: true, Limit: 5},
+			want:    "tag must be non-empty",
+		},
+		{
+			name:    "tag with metadata",
+			request: searchRequest{Query: "semantic", Tag: "semantic-local", MetadataKey: "owner", MetadataValue: "architecture", Limit: 5},
+			want:    "tag cannot be combined with metadata_key or metadata_value",
+		},
+		{
+			name:    "metadata missing value",
+			request: searchRequest{Query: "semantic", MetadataKey: "owner", Limit: 5},
+			want:    "metadata_key and metadata_value must be provided together",
+		},
+		{
+			name:    "metadata missing key",
+			request: searchRequest{Query: "semantic", MetadataValue: "architecture", Limit: 5},
+			want:    "metadata_key and metadata_value must be provided together",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := executeSearch(context.Background(), config, tc.request)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("expected %q, got %v", tc.want, err)
+			}
+		})
+	}
+}
+
 func TestSemanticRetrievalAdapterProviderBlockedWithoutFallback(t *testing.T) {
 	t.Parallel()
 
