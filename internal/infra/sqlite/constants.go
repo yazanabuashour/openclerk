@@ -6,6 +6,7 @@ const (
 	configKeyVaultRoot                = "vault_root"
 	configKeyLayoutConventionVersion  = "layout_convention_version"
 	configKeyProjectionRebuildPending = "projection_rebuild_pending"
+	configKeyFTSRebuildPending        = "fts_rebuild_pending"
 	defaultLayoutConventionVersion    = "root_v1"
 	rootSynthesisPathPrefix           = "synthesis/"
 	maxSourceDownloadBytes            = 50 << 20

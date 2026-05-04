@@ -1,0 +1,207 @@
+{
+  "metadata": {
+    "generated_at": "2026-05-04T04:41:16.668147Z",
+    "lane": "scale-ladder-validation",
+    "mode": "scale-ladder",
+    "tier": "100mb",
+    "seed": 53,
+    "harness": "maintainer-only OpenClerk embedded runtime maturity harness; reduced reports only",
+    "run_root_artifact_reference": "\u003crun-root\u003e",
+    "raw_logs_committed": false,
+    "raw_content_committed": false
+  },
+  "corpus": {
+    "target_bytes": 104857600,
+    "generated_bytes": 104975477,
+    "sqlite_storage_bytes": 461978536,
+    "documents": 800,
+    "source_documents": 240,
+    "synthesis_documents": 160,
+    "decision_documents": 80,
+    "duplicate_marked_documents": 80,
+    "stale_marked_documents": 80,
+    "tagged_documents": 800,
+    "projection_state_sample_count": 100,
+    "provenance_event_sample_count": 100,
+    "counting_policy": "Counts are derived from runner-visible document summaries and metadata; reduced reports do not include document paths, titles, snippets, or private roots."
+  },
+  "timings": {
+    "generate_seconds": 0.43,
+    "import_sync_seconds": 4.06,
+    "reopen_rebuild_seconds": 0.3,
+    "provenance_check_seconds": 0.01,
+    "search_total_seconds": 0.25
+  },
+  "sync_diagnostics": {
+    "import_sync": {
+      "status": "completed",
+      "last_phase": "completed",
+      "mode": "vault_sync",
+      "paths_scanned": 800,
+      "documents_created": 800,
+      "documents_updated": 0,
+      "documents_unchanged": 0,
+      "documents_pruned": 0,
+      "bytes_read": 104975477,
+      "chunks_written": 1120,
+      "fts_rows_written": 1120,
+      "fts_strategy": "bulk_rebuild",
+      "fts_bootstrap": true,
+      "fts_rebuild_pending": false,
+      "fts_rebuild_skipped": false,
+      "projection_bootstrap": false,
+      "projection_rebuild_skipped": false,
+      "scan_seconds": 0,
+      "prune_seconds": 0,
+      "document_read_parse_seconds": 0.16,
+      "document_write_seconds": 1.18,
+      "document_record_write_seconds": 0.43,
+      "chunk_write_seconds": 0.45,
+      "provenance_write_seconds": 0.31,
+      "incremental_fts_write_seconds": 0,
+      "bulk_fts_rebuild_seconds": 1.31,
+      "projection_rebuild_seconds": 0.82,
+      "total_seconds": 4.06,
+      "projection_rebuilds": [
+        {
+          "projection": "graph",
+          "seconds": 0.23
+        },
+        {
+          "projection": "records",
+          "seconds": 0.17
+        },
+        {
+          "projection": "services",
+          "seconds": 0.19
+        },
+        {
+          "projection": "decisions",
+          "seconds": 0.16
+        },
+        {
+          "projection": "synthesis",
+          "seconds": 0.07
+        }
+      ],
+      "reduced_report_safe": true,
+      "evidence_posture": "reduced counters and timings only; excludes document paths, titles, snippets, raw content, database paths, vault roots, and machine-absolute paths"
+    },
+    "reopen_sync": {
+      "status": "completed",
+      "last_phase": "completed",
+      "mode": "vault_sync",
+      "paths_scanned": 800,
+      "documents_created": 0,
+      "documents_updated": 0,
+      "documents_unchanged": 800,
+      "documents_pruned": 0,
+      "bytes_read": 104975477,
+      "chunks_written": 0,
+      "fts_rows_written": 0,
+      "fts_strategy": "skipped_no_changes",
+      "fts_bootstrap": false,
+      "fts_rebuild_pending": false,
+      "fts_rebuild_skipped": true,
+      "projection_bootstrap": false,
+      "projection_rebuild_skipped": true,
+      "scan_seconds": 0,
+      "prune_seconds": 0,
+      "document_read_parse_seconds": 0.14,
+      "document_write_seconds": 0,
+      "document_record_write_seconds": 0,
+      "chunk_write_seconds": 0,
+      "provenance_write_seconds": 0,
+      "incremental_fts_write_seconds": 0,
+      "bulk_fts_rebuild_seconds": 0,
+      "projection_rebuild_seconds": 0,
+      "total_seconds": 0.3,
+      "reduced_report_safe": true,
+      "evidence_posture": "reduced counters and timings only; excludes document paths, titles, snippets, raw content, database paths, vault roots, and machine-absolute paths"
+    }
+  },
+  "read_probes": [
+    {
+      "name": "list-documents",
+      "seconds": 0,
+      "result_count": 50,
+      "status": "completed",
+      "evidence_posture": "runner-visible summaries counted without emitting paths or titles"
+    },
+    {
+      "name": "get-document",
+      "seconds": 0,
+      "result_count": 1,
+      "status": "completed",
+      "evidence_posture": "document body was read for timing only and is excluded from reduced reports"
+    },
+    {
+      "name": "fts-search",
+      "query_reference": "scale ladder authority marker seed 53",
+      "seconds": 0.13,
+      "result_count": 10,
+      "status": "completed",
+      "evidence_posture": "hit counts only; reduced report excludes snippets, paths, titles, doc ids, and chunk ids"
+    },
+    {
+      "name": "fts-search",
+      "query_reference": "scale ladder synthesis freshness marker",
+      "seconds": 0.1,
+      "result_count": 10,
+      "status": "completed",
+      "evidence_posture": "hit counts only; reduced report excludes snippets, paths, titles, doc ids, and chunk ids"
+    },
+    {
+      "name": "fts-search",
+      "query_reference": "scale ladder duplicate candidate marker",
+      "seconds": 0.02,
+      "result_count": 10,
+      "status": "completed",
+      "evidence_posture": "hit counts only; reduced report excludes snippets, paths, titles, doc ids, and chunk ids"
+    },
+    {
+      "name": "projection-synthesis-sample",
+      "seconds": 0,
+      "result_count": 100,
+      "status": "completed",
+      "evidence_posture": "projection freshness count only; reduced report excludes projection refs"
+    },
+    {
+      "name": "provenance-sample",
+      "seconds": 0.01,
+      "result_count": 100,
+      "status": "completed",
+      "evidence_posture": "provenance event count only; reduced report excludes source refs and event ids"
+    }
+  ],
+  "checks": {
+    "reduced_report_only": true,
+    "raw_logs_committed": false,
+    "raw_content_committed": false,
+    "machine_absolute_artifact_refs": false,
+    "routine_agent_bypass_events_available": false,
+    "boundary": "This harness validates local runtime behavior and reduced-report hygiene; routine-agent bypass checks require an agent eval row with event logs."
+  },
+  "outcomes": [
+    {
+      "name": "reduced-report-boundary",
+      "status": "completed",
+      "safety_pass": "pass",
+      "capability_pass": "pass",
+      "ux_quality": "not_agent_ux_evidence",
+      "performance": "not_applicable",
+      "evidence_posture": "repo-relative or neutral artifact references only; raw content and raw logs are not committed",
+      "details": "Report intentionally excludes document paths, titles, snippets, private vault roots, and machine-absolute run roots."
+    },
+    {
+      "name": "runtime-maturity-readiness",
+      "status": "completed",
+      "safety_pass": "pass",
+      "capability_pass": "pass",
+      "ux_quality": "not_agent_ux_evidence",
+      "performance": "recorded",
+      "evidence_posture": "SQLite FTS, list/get, projection, and provenance probes executed through embedded OpenClerk runtime APIs.",
+      "details": "Use these numbers as decision input only; promotion decisions still need safety, capability, UX, performance, and evidence posture recorded separately."
+    }
+  ]
+}

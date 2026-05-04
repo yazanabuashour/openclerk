@@ -98,6 +98,12 @@ alpha signal synthesis
 	if initialDiagnostics.ChunksWritten == 0 || initialDiagnostics.FTSRowsWritten == 0 {
 		t.Fatalf("initial diagnostics did not record chunk/FTS writes: %+v", initialDiagnostics)
 	}
+	if initialDiagnostics.FTSStrategy != ftsStrategyBulkRebuild || initialDiagnostics.FTSRebuildSkipped {
+		t.Fatalf("initial FTS diagnostics = %+v, want bulk rebuild", initialDiagnostics)
+	}
+	if initialDiagnostics.IncrementalFTSWriteSeconds != 0 {
+		t.Fatalf("initial incremental FTS seconds = %.2f, want deferred bulk rebuild", initialDiagnostics.IncrementalFTSWriteSeconds)
+	}
 	if len(initialDiagnostics.ProjectionRebuilds) == 0 || initialDiagnostics.ProjectionRebuildSkipped {
 		t.Fatalf("initial diagnostics did not record projection rebuilds: %+v", initialDiagnostics)
 	}
@@ -125,6 +131,9 @@ alpha signal synthesis
 	}
 	if reopenDiagnostics.ChunksWritten != 0 || reopenDiagnostics.FTSRowsWritten != 0 {
 		t.Fatalf("reopen wrote chunks/FTS rows: %+v", reopenDiagnostics)
+	}
+	if reopenDiagnostics.FTSStrategy != ftsStrategySkippedNoChanges || !reopenDiagnostics.FTSRebuildSkipped {
+		t.Fatalf("reopen FTS diagnostics = %+v, want rebuild skipped", reopenDiagnostics)
 	}
 	if !reopenDiagnostics.ProjectionRebuildSkipped || len(reopenDiagnostics.ProjectionRebuilds) != 0 {
 		t.Fatalf("reopen projection diagnostics = %+v, want rebuild skipped", reopenDiagnostics)
@@ -199,6 +208,182 @@ Production service.
 	}
 	if pending {
 		t.Fatalf("projection rebuild pending = true after successful recovery")
+	}
+}
+
+func TestSyncVaultRebuildsFTSAfterInterruptedDeferredImport(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	writeVaultFile(t, vaultRoot, "sources/alpha.md", "# Alpha\n\nalpha interrupted marker\n")
+
+	store, err := NewUnsynced(ctx, Config{
+		Backend:      domain.BackendOpenClerk,
+		DatabasePath: dbPath,
+		VaultRoot:    vaultRoot,
+	})
+	if err != nil {
+		t.Fatalf("open unsynced store: %v", err)
+	}
+	diagnostics := newSyncDiagnostics()
+	if _, err := store.syncDocumentFromDiskWithOptions(ctx, "sources/alpha.md", "", documentSyncOptions{
+		RebuildProjections: false,
+		DeferFTS:           true,
+		Diagnostics:        &diagnostics,
+	}); err != nil {
+		t.Fatalf("sync document with deferred FTS: %v", err)
+	}
+	if diagnostics.FTSRowsWritten != 0 || diagnostics.IncrementalFTSWriteSeconds != 0 {
+		t.Fatalf("deferred FTS diagnostics = %+v, want no incremental writes", diagnostics)
+	}
+	pending, err := store.ftsRebuildPending(ctx)
+	if err != nil {
+		t.Fatalf("check pending FTS rebuild: %v", err)
+	}
+	if !pending {
+		t.Fatalf("FTS rebuild pending = false, want true after deferred import")
+	}
+	if err := store.Close(); err != nil {
+		t.Fatalf("close interrupted store: %v", err)
+	}
+
+	diagnosticsPath := filepath.Join(t.TempDir(), "recovered-sync.json")
+	reopened, err := New(ctx, Config{
+		Backend:             domain.BackendOpenClerk,
+		DatabasePath:        dbPath,
+		VaultRoot:           vaultRoot,
+		SyncDiagnosticsPath: diagnosticsPath,
+	})
+	if err != nil {
+		t.Fatalf("reopen store: %v", err)
+	}
+	defer func() {
+		_ = reopened.Close()
+	}()
+
+	search, err := reopened.Search(ctx, domain.SearchQuery{Text: "interrupted marker", Limit: 10})
+	if err != nil {
+		t.Fatalf("search after FTS rebuild: %v", err)
+	}
+	if len(search.Hits) != 1 {
+		t.Fatalf("search after FTS rebuild hits = %d, want 1", len(search.Hits))
+	}
+	pending, err = reopened.ftsRebuildPending(ctx)
+	if err != nil {
+		t.Fatalf("check pending FTS rebuild after recovery: %v", err)
+	}
+	if pending {
+		t.Fatalf("FTS rebuild pending = true after successful recovery")
+	}
+	recoveryDiagnostics := readSyncDiagnosticsForTest(t, diagnosticsPath)
+	if recoveryDiagnostics.FTSStrategy != ftsStrategyBulkRebuild || recoveryDiagnostics.FTSRebuildPending || !recoveryDiagnostics.FTSBootstrap {
+		t.Fatalf("recovery FTS diagnostics = %+v, want completed bulk rebuild", recoveryDiagnostics)
+	}
+	if recoveryDiagnostics.FTSRowsWritten == 0 {
+		t.Fatalf("recovery FTS rows written = 0, want rebuilt rows")
+	}
+}
+
+func TestSyncVaultRebuildsFTSWhenCountsMismatch(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	writeVaultFile(t, vaultRoot, "sources/alpha.md", "# Alpha\n\nalpha mismatch marker\n")
+
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	if err := store.Close(); err != nil {
+		t.Fatalf("close initial store: %v", err)
+	}
+
+	corrupt, err := NewUnsynced(ctx, Config{
+		Backend:      domain.BackendOpenClerk,
+		DatabasePath: dbPath,
+		VaultRoot:    vaultRoot,
+	})
+	if err != nil {
+		t.Fatalf("open unsynced store for mismatch setup: %v", err)
+	}
+	if _, err := corrupt.db.ExecContext(ctx, `DELETE FROM chunk_fts`); err != nil {
+		t.Fatalf("delete FTS rows for mismatch setup: %v", err)
+	}
+	if err := corrupt.Close(); err != nil {
+		t.Fatalf("close mismatch setup store: %v", err)
+	}
+
+	diagnosticsPath := filepath.Join(t.TempDir(), "mismatch-sync.json")
+	reopened, err := New(ctx, Config{
+		Backend:             domain.BackendOpenClerk,
+		DatabasePath:        dbPath,
+		VaultRoot:           vaultRoot,
+		SyncDiagnosticsPath: diagnosticsPath,
+	})
+	if err != nil {
+		t.Fatalf("reopen store after mismatch: %v", err)
+	}
+	defer func() {
+		_ = reopened.Close()
+	}()
+
+	search, err := reopened.Search(ctx, domain.SearchQuery{Text: "mismatch marker", Limit: 10})
+	if err != nil {
+		t.Fatalf("search after mismatch rebuild: %v", err)
+	}
+	if len(search.Hits) != 1 {
+		t.Fatalf("search after mismatch rebuild hits = %d, want 1", len(search.Hits))
+	}
+	diagnostics := readSyncDiagnosticsForTest(t, diagnosticsPath)
+	if diagnostics.FTSStrategy != ftsStrategyBulkRebuild || !diagnostics.FTSBootstrap || diagnostics.FTSRebuildPending {
+		t.Fatalf("mismatch FTS diagnostics = %+v, want bootstrap bulk rebuild without pending flag", diagnostics)
+	}
+}
+
+func TestSyncDocumentFromDiskUsesIncrementalFTS(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	writeVaultFile(t, vaultRoot, "sources/alpha.md", "# Alpha\n\nalpha incremental marker\n")
+
+	store, err := NewUnsynced(ctx, Config{
+		Backend:      domain.BackendOpenClerk,
+		DatabasePath: dbPath,
+		VaultRoot:    vaultRoot,
+	})
+	if err != nil {
+		t.Fatalf("open unsynced store: %v", err)
+	}
+	defer func() {
+		_ = store.Close()
+	}()
+
+	diagnostics := newSyncDiagnostics()
+	if _, err := store.syncDocumentFromDiskWithOptions(ctx, "sources/alpha.md", "", documentSyncOptions{
+		RebuildProjections: false,
+		Diagnostics:        &diagnostics,
+	}); err != nil {
+		t.Fatalf("sync document with incremental FTS: %v", err)
+	}
+	if diagnostics.FTSStrategy != ftsStrategyIncrementalRows || diagnostics.FTSRowsWritten == 0 {
+		t.Fatalf("incremental FTS diagnostics = %+v, want row writes", diagnostics)
+	}
+	pending, err := store.ftsRebuildPending(ctx)
+	if err != nil {
+		t.Fatalf("check pending FTS rebuild: %v", err)
+	}
+	if pending {
+		t.Fatalf("FTS rebuild pending = true after incremental sync")
+	}
+	search, err := store.Search(ctx, domain.SearchQuery{Text: "incremental marker", Limit: 10})
+	if err != nil {
+		t.Fatalf("search after incremental sync: %v", err)
+	}
+	if len(search.Hits) != 1 {
+		t.Fatalf("search after incremental sync hits = %d, want 1", len(search.Hits))
 	}
 }
 

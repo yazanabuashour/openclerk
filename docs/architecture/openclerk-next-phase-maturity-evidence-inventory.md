@@ -18,6 +18,7 @@ API, storage change, or retrieval/indexing decision.
 | [`docs/evals/results/ockp-real-vault-dogfood.md`](../evals/results/ockp-real-vault-dogfood.md) | Initial `oc-oa53` reduced real-vault timing report completed with reduced-report safety checks passing. | The maturity harness can report local vault counts and timings without emitting private paths, private queries, titles, snippets, document ids, chunk ids, raw roots, or raw logs. | It is maintainer-harness timing evidence, not Codex routine-agent command telemetry. |
 | [`docs/evals/results/ockp-scale-ladder-10mb.md`](../evals/results/ockp-scale-ladder-10mb.md) | Initial `oc-oa53` 10 MB scale-ladder report completed with reduced-report safety checks passing. | The new maintainer harness can generate a deterministic synthetic corpus, sync it through the embedded OpenClerk runtime, and record reduced counts/timings without committing generated corpus content or machine-local paths. | 100 MB did not complete in-session and is tracked by `oc-oa53.12`; 1 GB remains unjustified. |
 | [`docs/evals/results/ockp-scale-ladder-100mb-timeout.md`](../evals/results/ockp-scale-ladder-100mb-timeout.md) | Initial `oc-oa53` 100 MB attempts stalled before a completed reduced runtime report. | The scale ladder exposed a performance or harness cliff that must be investigated before 1 GB or release-gate promotion. | It is timeout/stall evidence only, not a successful 100 MB report. |
+| [`docs/evals/results/ockp-scale-ladder-100mb-fts-write-tuned.md`](../evals/results/ockp-scale-ladder-100mb-fts-write-tuned.md) and [`docs/evals/results/ockp-scale-ladder-1gb-fts-write-tuned.md`](../evals/results/ockp-scale-ladder-1gb-fts-write-tuned.md) | `oc-oa53.12.1` FTS write-path tuning completed 100 MB import/sync in 4.06s and 1 GB import/sync in 68.06s, with reduced diagnostics for bulk FTS rebuild and no-op reopen behavior. | Current lexical SQLite FTS can handle the synthetic 1 GB maturity ladder after full-import FTS writes are deferred and rebuilt in bulk. | This is synthetic maturity evidence, not a routine release gate or direct real-vault agent UX measurement. |
 | [`CONTEXT.md`](../../CONTEXT.md) | Records the current domain vocabulary: AgentOps, runner, vault, canonical docs, source docs, synthesis docs, provenance, projection state, promoted records, and decision records. | Provides the local vocabulary and boundaries that maturity reports must use. | It is architecture context, not eval evidence. |
 
 ## Validated V1 Behavior
@@ -33,13 +34,16 @@ API, storage change, or retrieval/indexing decision.
   `evidence_bundle_report`, `duplicate_candidate_report`,
   `memory_router_recall_report`, and `ingest_source_url` plan/create/update
   behavior.
+- Scale-ladder maturity evidence now covers deterministic synthetic 10 MB,
+  100 MB, and 1 GB corpora through reduced reports.
 - Reports use reduced artifacts with `<run-root>` placeholders and do not
   commit raw logs.
 
 ## Deferred Future Vision
 
 - Representative private/real-vault dogfood is not yet proven.
-- Larger corpus behavior at 10 MB, 100 MB, and 1 GB is not yet proven.
+- Larger corpus behavior is proven only for the deterministic synthetic maturity
+  ladder, not as a release gate or private-vault UX claim.
 - Hybrid/vector retrieval is not justified by the current evidence. It remains
   a candidate only if real-vault or scale-ladder reports show lexical FTS
   relevance, latency, or workflow failures that tuning cannot address.
@@ -53,13 +57,12 @@ API, storage change, or retrieval/indexing decision.
   [`docs/evals/real-vault-dogfood.md`](../evals/real-vault-dogfood.md), then
   record safety, capability, UX quality, performance, and evidence posture
   separately.
-- Scale ladder: run the deterministic synthetic ladder described in
+- Scale ladder: keep the deterministic synthetic ladder described in
   [`docs/evals/scale-ladder-validation.md`](../evals/scale-ladder-validation.md)
-  for 10 MB and 100 MB first. Run 1 GB only after smaller tiers show it will
-  produce meaningful evidence.
-- Retrieval/indexing decision: decide from those reports whether to keep
-  lexical SQLite FTS, tune current indexes, create hybrid/vector
-  candidate-comparison Beads, defer, or kill the scale track.
+  as maturity evidence, not a mandatory release gate.
+- Retrieval/indexing decision: continue lexical SQLite FTS unless future
+  real-vault or scale-ladder evidence shows relevance, latency, auditability, or
+  workflow failures that current-path tuning cannot address.
 
 The first pass decision is recorded in
 [`openclerk-next-phase-maturity-validation-decision.md`](openclerk-next-phase-maturity-validation-decision.md).

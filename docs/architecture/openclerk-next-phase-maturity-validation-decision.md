@@ -5,7 +5,7 @@ decision_status: accepted
 decision_scope: maturity-validation
 decision_owner: platform
 decision_date: 2026-05-04
-source_refs: docs/architecture/openclerk-next-phase-maturity-evidence-inventory.md, docs/evals/real-vault-dogfood.md, docs/evals/scale-ladder-validation.md, docs/evals/results/ockp-real-vault-agentops-trial.md, docs/evals/results/ockp-real-vault-dogfood.md, docs/evals/results/ockp-scale-ladder-10mb.md, docs/evals/results/ockp-scale-ladder-100mb-timeout.md, docs/evals/results/ockp-scale-ladder-100mb.md, docs/evals/results/ockp-scale-ladder-1gb.md
+source_refs: docs/architecture/openclerk-next-phase-maturity-evidence-inventory.md, docs/evals/real-vault-dogfood.md, docs/evals/scale-ladder-validation.md, docs/evals/results/ockp-real-vault-agentops-trial.md, docs/evals/results/ockp-real-vault-dogfood.md, docs/evals/results/ockp-scale-ladder-10mb.md, docs/evals/results/ockp-scale-ladder-100mb-timeout.md, docs/evals/results/ockp-scale-ladder-100mb.md, docs/evals/results/ockp-scale-ladder-1gb.md, docs/evals/results/ockp-scale-ladder-100mb-fts-write-tuned.md, docs/evals/results/ockp-scale-ladder-1gb-fts-write-tuned.md
 ---
 # Decision: OpenClerk Next-Phase Maturity Validation
 
@@ -29,6 +29,8 @@ skill behavior, hybrid/vector retrieval, memory transport, or release gate.
 | Initial 100 MB timeout | [`docs/evals/results/ockp-scale-ladder-100mb-timeout.md`](../evals/results/ockp-scale-ladder-100mb-timeout.md) | Pass for reduced-report boundary. | Incomplete: no completed reduced runtime report. | Not agent UX evidence. | Performance cliff observed: full run exceeded 10 minutes; `--skip-reopen` rerun exceeded 6 minutes. | Timeout/stall evidence only; superseded by the `oc-oa53.12` diagnostic run. |
 | Tuned 100 MB scale ladder | [`docs/evals/results/ockp-scale-ladder-100mb.md`](../evals/results/ockp-scale-ladder-100mb.md) | Pass: reduced report only, no raw generated corpus, logs, or machine-local artifact refs. | Pass: deterministic generated corpus synced and read probes completed. | Not agent UX evidence. | Import/sync 19.38s; reopen/no-op sync 0.39s; FTS probes 0.28s total. | Synthetic scale evidence over 800 generated docs and about 100 MB corpus, with reduced sync diagnostics. |
 | 1 GB scale ladder | [`docs/evals/results/ockp-scale-ladder-1gb.md`](../evals/results/ockp-scale-ladder-1gb.md) | Pass: reduced report only, no raw generated corpus, logs, or machine-local artifact refs. | Pass: deterministic generated corpus synced and read probes completed. | Not agent UX evidence. | Import/sync 1657.81s; reopen/no-op sync 4.91s; FTS probes 8.88s total. | Synthetic scale evidence over 8,183 generated docs and about 1 GB corpus, with reduced sync diagnostics. |
+| FTS-write-tuned 100 MB scale ladder | [`docs/evals/results/ockp-scale-ladder-100mb-fts-write-tuned.md`](../evals/results/ockp-scale-ladder-100mb-fts-write-tuned.md) | Pass: reduced report only, no raw generated corpus, logs, or machine-local artifact refs. | Pass: deterministic generated corpus synced and read probes completed. | Not agent UX evidence. | Import/sync 4.06s; reopen/no-op sync 0.30s; FTS probes 0.25s total. | Synthetic scale evidence with bulk FTS rebuild diagnostics; incremental FTS write time was 0.00s during full import. |
+| FTS-write-tuned 1 GB scale ladder | [`docs/evals/results/ockp-scale-ladder-1gb-fts-write-tuned.md`](../evals/results/ockp-scale-ladder-1gb-fts-write-tuned.md) | Pass: reduced report only, no raw generated corpus, logs, or machine-local artifact refs. | Pass: deterministic generated corpus synced and read probes completed. | Not direct agent UX evidence; below the 600s guardrail used for routine usability pressure. | Import/sync 68.06s; reopen/no-op sync 5.97s; FTS probes 4.40s total. | Synthetic scale evidence over 8,183 generated docs and about 1 GB corpus; 1 GB import is about 1.6x byte-linear relative to tuned 100 MB. |
 
 ## Representative Real-Vault Detail
 
@@ -52,20 +54,19 @@ now. The sanitized real-vault trial and reduced timing report did not show a
 capability gap or UX gap that justifies new runner-owned surfaces. No
 candidate-comparison Beads are needed from the tested real-vault workflows.
 
-Retrieval/indexing decision: continue with lexical SQLite FTS for now, and
-tune the current import/FTS write path before considering hybrid/vector
-retrieval. `oc-oa53.12` showed that the original 100 MB cliff was caused by
-full-sync document import repeatedly rebuilding projections and lacking
-interruption-surviving progress diagnostics. After tuning, 100 MB completed.
-The 1 GB tier also completed, but it is import-bound: document and FTS writes
-accounted for most of the 1657.81s sync time. This is not evidence that
-semantic/vector retrieval would solve the bottleneck.
+Retrieval/indexing decision: continue with lexical SQLite FTS for now. `oc-oa53.12`
+showed that the original 100 MB cliff was caused by full-sync document import
+repeatedly rebuilding projections and lacking interruption-surviving progress
+diagnostics. `oc-oa53.12.1` then showed that the 1 GB import-bound result was
+primarily the current FTS write shape, not a retrieval-mode failure: deferring
+full-import FTS rows and bulk-rebuilding `chunk_fts` reduced 1 GB import/sync
+from 1657.81s to 68.06s.
 
-The 1 GB tier is justified as maturity evidence only after the tuned 100 MB
-completion. A 10-minute cutoff is not a valid correctness threshold for 1 GB;
-it can only be a checkpoint for deciding whether enough reduced progress
-diagnostics exist. The completed 1 GB run establishes that the current path is
-functionally capable but too slow for routine release-gate use at that scale.
+The 1 GB tier remains maturity evidence rather than a release gate. A 10-minute
+cutoff is not a correctness threshold, but the tuned 1 GB import is below that
+guardrail and scales about 1.6x worse than byte-linear relative to the tuned
+100 MB run. This supports continued current-path SQLite FTS tuning before any
+hybrid/vector candidate comparison.
 
 LLM-wiki next surfaces: keep the current mapping to existing source intake,
 source-linked synthesis, search/list/get, graph/document links, provenance,
@@ -91,16 +92,15 @@ workflow ceremony after the promoted workflow actions already added
 `duplicate_candidate_report`, `memory_router_recall_report`, and
 `ingest_source_url` plan mode.
 
-The real taste debt is performance and observability at larger corpus sizes.
+The real taste debt was performance and observability at larger corpus sizes.
 `oc-oa53.12` improved observability with reduced sync diagnostics and moved
-100 MB from timeout to completion, but 1 GB remains expensive because import
-and FTS writes dominate runtime. The evaluated hybrid/vector shape is not
-selected because the slow evidence is import/write cost rather than retrieval
-relevance.
+100 MB from timeout to completion. `oc-oa53.12.1` reduced the 1 GB import/write
+cost enough that the remaining larger cost is projection rebuild plus bulk FTS
+maintenance, not retrieval relevance.
 
 Beads searches before closing this decision found no existing hybrid/vector,
 LLM-wiki, or release-gate candidate work matching the non-promotion outcomes.
-The scale-ladder follow-up is linked as `oc-oa53.12`.
+The scale-ladder follow-ups are linked as `oc-oa53.12` and `oc-oa53.12.1`.
 
 ## Compatibility
 

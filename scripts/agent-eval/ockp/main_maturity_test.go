@@ -70,6 +70,12 @@ func TestExecuteScaleLadderMaturityWritesReducedReports(t *testing.T) {
 	if rep.SyncDiagnostics.ImportSync.PathsScanned == 0 || rep.SyncDiagnostics.ImportSync.DocumentsCreated == 0 {
 		t.Fatalf("missing import sync diagnostics: %+v", rep.SyncDiagnostics.ImportSync)
 	}
+	if rep.SyncDiagnostics.ImportSync.FTSStrategy == "" || rep.SyncDiagnostics.ImportSync.FTSRowsWritten == 0 {
+		t.Fatalf("missing FTS sync diagnostics: %+v", rep.SyncDiagnostics.ImportSync)
+	}
+	if !strings.Contains(string(markdownBytes), "bulk_fts_rebuild_seconds") {
+		t.Fatalf("maturity Markdown did not include FTS timing diagnostics: %s", markdownBytes)
+	}
 	if !rep.SyncDiagnostics.ImportSync.ReducedReportSafe {
 		t.Fatalf("sync diagnostics not marked reduced-report safe: %+v", rep.SyncDiagnostics.ImportSync)
 	}

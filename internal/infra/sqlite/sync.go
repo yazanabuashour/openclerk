@@ -15,6 +15,7 @@ import (
 
 type documentSyncOptions struct {
 	RebuildProjections bool
+	DeferFTS           bool
 	Diagnostics        *SyncDiagnostics
 	Tx                 *sql.Tx
 }
@@ -28,7 +29,14 @@ type documentSyncResult struct {
 	FTSRowsWritten int
 }
 
-const syncVaultDocumentBatchSize = 200
+const (
+	syncVaultDocumentBatchSize = 200
+
+	ftsStrategyPending          = "pending"
+	ftsStrategyBulkRebuild      = "bulk_rebuild"
+	ftsStrategyIncrementalRows  = "incremental_rows"
+	ftsStrategySkippedNoChanges = "skipped_no_changes"
+)
 
 func (s *Store) syncVault(ctx context.Context) error {
 	totalStart := time.Now()
@@ -90,6 +98,7 @@ func (s *Store) syncVault(ctx context.Context) error {
 		for _, relPath := range paths[start:end] {
 			if _, err := s.syncDocumentFromDiskWithOptions(ctx, relPath, "", documentSyncOptions{
 				RebuildProjections: false,
+				DeferFTS:           true,
 				Diagnostics:        &diagnostics,
 				Tx:                 tx,
 			}); err != nil {
@@ -105,6 +114,15 @@ func (s *Store) syncVault(ctx context.Context) error {
 		if err := writeSyncDiagnostics(s.syncDiagnosticsPath, diagnostics); err != nil {
 			return err
 		}
+	}
+
+	diagnostics.LastPhase = "fts_rebuild_check"
+	diagnostics.TotalSeconds = syncSecondsSince(totalStart)
+	if err := writeSyncDiagnostics(s.syncDiagnosticsPath, diagnostics); err != nil {
+		return err
+	}
+	if err := s.rebuildChunkFTSIfNeeded(ctx, &diagnostics, totalStart); err != nil {
+		return err
 	}
 
 	shouldRebuild := diagnostics.changedDocuments() > 0
@@ -184,10 +202,10 @@ func (s *Store) pruneMissingDocuments(ctx context.Context, livePaths []string) (
 	if err := s.markProjectionRebuildPending(ctx, tx, s.now().UTC()); err != nil {
 		return 0, err
 	}
+	if err := s.markFTSRebuildPending(ctx, tx, s.now().UTC()); err != nil {
+		return 0, err
+	}
 	for _, docID := range staleDocIDs {
-		if _, err := tx.ExecContext(ctx, `DELETE FROM chunk_fts WHERE doc_id = ?`, docID); err != nil {
-			return 0, domain.InternalError("delete missing document chunks from index", err)
-		}
 		if _, err := tx.ExecContext(ctx, `DELETE FROM documents WHERE doc_id = ?`, docID); err != nil {
 			return 0, domain.InternalError("delete missing document", err)
 		}
@@ -285,12 +303,18 @@ WHERE doc_id = ?`, docID).Scan(
 		return result, nil
 	}
 	writeStart := time.Now()
+	recordWriteStart := time.Now()
 	if err := s.markProjectionRebuildPending(ctx, tx, now); err != nil {
 		return documentSyncResult{}, err
 	}
+	if options.DeferFTS {
+		if err := s.markFTSRebuildPending(ctx, tx, now); err != nil {
+			return documentSyncResult{}, err
+		}
+	}
 	if _, err := tx.ExecContext(ctx, `
-INSERT INTO documents (doc_id, path, title, body, headings_json, metadata_json, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	INSERT INTO documents (doc_id, path, title, body, headings_json, metadata_json, created_at, updated_at)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(doc_id) DO UPDATE SET
 	path = excluded.path,
 	title = excluded.title,
@@ -323,10 +347,22 @@ VALUES (?, ?, ?)`,
 			return documentSyncResult{}, domain.InternalError("insert document metadata", err)
 		}
 	}
-
-	if _, err := tx.ExecContext(ctx, `DELETE FROM chunk_fts WHERE doc_id = ?`, docID); err != nil {
-		return documentSyncResult{}, domain.InternalError("delete indexed chunks", err)
+	if options.Diagnostics != nil {
+		options.Diagnostics.DocumentRecordWriteSeconds += syncSecondsSince(recordWriteStart)
 	}
+
+	if !options.DeferFTS {
+		ftsWriteStart := time.Now()
+		if _, err := tx.ExecContext(ctx, `DELETE FROM chunk_fts WHERE doc_id = ?`, docID); err != nil {
+			return documentSyncResult{}, domain.InternalError("delete indexed chunks", err)
+		}
+		if options.Diagnostics != nil {
+			options.Diagnostics.FTSStrategy = ftsStrategyIncrementalRows
+			options.Diagnostics.IncrementalFTSWriteSeconds += syncSecondsSince(ftsWriteStart)
+		}
+	}
+
+	chunkWriteStart := time.Now()
 	if _, err := tx.ExecContext(ctx, `DELETE FROM chunks WHERE doc_id = ?`, docID); err != nil {
 		return documentSyncResult{}, domain.InternalError("delete chunks", err)
 	}
@@ -346,20 +382,34 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`,
 			return documentSyncResult{}, domain.InternalError("insert chunk", err)
 		}
 		result.ChunksWritten++
-		if _, err := tx.ExecContext(ctx, `
-INSERT INTO chunk_fts (chunk_id, doc_id, path, heading, content)
-VALUES (?, ?, ?, ?, ?)`,
-			chunkID,
-			docID,
-			relPath,
-			sec.Heading,
-			sec.Content,
-		); err != nil {
-			return documentSyncResult{}, domain.InternalError("insert chunk index", err)
+	}
+	if options.Diagnostics != nil {
+		options.Diagnostics.ChunkWriteSeconds += syncSecondsSince(chunkWriteStart)
+	}
+	if !options.DeferFTS {
+		ftsWriteStart := time.Now()
+		for _, sec := range sections {
+			chunkID := chunkIDForSection(docID, sec)
+			if _, err := tx.ExecContext(ctx, `
+	INSERT INTO chunk_fts (chunk_id, doc_id, path, heading, content)
+	VALUES (?, ?, ?, ?, ?)`,
+				chunkID,
+				docID,
+				relPath,
+				sec.Heading,
+				sec.Content,
+			); err != nil {
+				return documentSyncResult{}, domain.InternalError("insert chunk index", err)
+			}
+			result.FTSRowsWritten++
 		}
-		result.FTSRowsWritten++
+		if options.Diagnostics != nil {
+			options.Diagnostics.FTSStrategy = ftsStrategyIncrementalRows
+			options.Diagnostics.IncrementalFTSWriteSeconds += syncSecondsSince(ftsWriteStart)
+		}
 	}
 
+	provenanceWriteStart := time.Now()
 	contentVersion := hashID("document-version", relPath, title, body, string(headingsJSON), string(metadataJSON))
 	if contentChanged {
 		if err := insertProvenanceEvent(ctx, tx, domain.ProvenanceEvent{
@@ -487,6 +537,9 @@ VALUES (?, ?, ?, ?, ?)`,
 			}
 		}
 	}
+	if options.Diagnostics != nil {
+		options.Diagnostics.ProvenanceWriteSeconds += syncSecondsSince(provenanceWriteStart)
+	}
 
 	if eventType == "document_created" {
 		result.Created = true
@@ -518,6 +571,89 @@ VALUES (?, ?, ?, ?, ?)`,
 		}
 	}
 	return result, nil
+}
+
+func (s *Store) rebuildChunkFTSIfNeeded(ctx context.Context, diagnostics *SyncDiagnostics, totalStart time.Time) error {
+	pending, err := s.ftsRebuildPending(ctx)
+	if err != nil {
+		return err
+	}
+	chunkRows, ftsRows, err := s.chunkFTSCounts(ctx)
+	if err != nil {
+		return err
+	}
+	countMismatch := chunkRows != ftsRows
+	changedDocuments := 0
+	if diagnostics != nil {
+		changedDocuments = diagnostics.changedDocuments()
+		diagnostics.FTSRebuildPending = pending
+		diagnostics.FTSBootstrap = pending || countMismatch
+	}
+	if changedDocuments == 0 && !pending && !countMismatch {
+		if diagnostics != nil {
+			diagnostics.FTSStrategy = ftsStrategySkippedNoChanges
+			diagnostics.FTSRebuildSkipped = true
+		}
+		return nil
+	}
+	if diagnostics != nil {
+		diagnostics.FTSStrategy = ftsStrategyBulkRebuild
+		diagnostics.FTSRebuildSkipped = false
+		diagnostics.LastPhase = "fts_rebuild"
+		diagnostics.TotalSeconds = syncSecondsSince(totalStart)
+		if err := writeSyncDiagnostics(s.syncDiagnosticsPath, *diagnostics); err != nil {
+			return err
+		}
+	}
+	return s.rebuildChunkFTS(ctx, diagnostics)
+}
+
+func (s *Store) rebuildChunkFTS(ctx context.Context, diagnostics *SyncDiagnostics) error {
+	var chunkRows int
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM chunks`).Scan(&chunkRows); err != nil {
+		return domain.InternalError("count chunks for FTS rebuild", err)
+	}
+	start := time.Now()
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return domain.InternalError("begin FTS rebuild", err)
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+	if _, err := tx.ExecContext(ctx, `DELETE FROM chunk_fts`); err != nil {
+		return domain.InternalError("delete chunk FTS rows", err)
+	}
+	if _, err := tx.ExecContext(ctx, `
+	INSERT INTO chunk_fts (chunk_id, doc_id, path, heading, content)
+	SELECT chunk_id, doc_id, path, heading, content
+	FROM chunks`); err != nil {
+		return domain.InternalError("bulk rebuild chunk FTS", err)
+	}
+	if err := s.clearFTSRebuildPendingTx(ctx, tx); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return domain.InternalError("commit FTS rebuild", err)
+	}
+	if diagnostics != nil {
+		diagnostics.FTSRowsWritten += chunkRows
+		diagnostics.BulkFTSRebuildSeconds += syncSecondsSince(start)
+		diagnostics.FTSRebuildPending = false
+	}
+	return nil
+}
+
+func (s *Store) chunkFTSCounts(ctx context.Context) (int, int, error) {
+	var chunkRows int
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM chunks`).Scan(&chunkRows); err != nil {
+		return 0, 0, domain.InternalError("count chunks for FTS bootstrap", err)
+	}
+	var ftsRows int
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM chunk_fts`).Scan(&ftsRows); err != nil {
+		return 0, 0, domain.InternalError("count FTS rows for bootstrap", err)
+	}
+	return chunkRows, ftsRows, nil
 }
 
 func (s *Store) rebuildAllProjections(ctx context.Context, diagnostics *SyncDiagnostics) error {
@@ -594,12 +730,28 @@ func (s *Store) markProjectionRebuildPending(ctx context.Context, tx *sql.Tx, no
 	return upsertRuntimeConfigValueTx(ctx, tx, configKeyProjectionRebuildPending, "true", now.UTC().Format(time.RFC3339Nano))
 }
 
+func (s *Store) markFTSRebuildPending(ctx context.Context, tx *sql.Tx, now time.Time) error {
+	return upsertRuntimeConfigValueTx(ctx, tx, configKeyFTSRebuildPending, "true", now.UTC().Format(time.RFC3339Nano))
+}
+
 func (s *Store) clearProjectionRebuildPending(ctx context.Context) error {
 	return upsertRuntimeConfigValue(ctx, s.db, configKeyProjectionRebuildPending, "false", s.now().UTC().Format(time.RFC3339Nano))
 }
 
+func (s *Store) clearFTSRebuildPendingTx(ctx context.Context, tx *sql.Tx) error {
+	return upsertRuntimeConfigValueTx(ctx, tx, configKeyFTSRebuildPending, "false", s.now().UTC().Format(time.RFC3339Nano))
+}
+
 func (s *Store) projectionRebuildPending(ctx context.Context) (bool, error) {
 	value, err := runtimeConfigValue(ctx, s.db, configKeyProjectionRebuildPending)
+	if err != nil {
+		return false, err
+	}
+	return strings.EqualFold(strings.TrimSpace(value), "true"), nil
+}
+
+func (s *Store) ftsRebuildPending(ctx context.Context) (bool, error) {
+	value, err := runtimeConfigValue(ctx, s.db, configKeyFTSRebuildPending)
 	if err != nil {
 		return false, err
 	}
