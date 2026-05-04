@@ -48,6 +48,7 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 				"transcript",
 				"compile_synthesis",
 				"web_search_plan",
+				"artifact_candidate_plan",
 				"git_lifecycle_report",
 				"--git-checkpoints",
 				"body_facts",

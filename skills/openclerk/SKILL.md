@@ -37,6 +37,9 @@ matches the request:
 - Harness-supplied web search planning: document `web_search_plan`, then answer
   from `web_search_plan.agent_handoff`; approved fetch/write remains
   `ingest_source_url`.
+- Artifact candidate intake: document `artifact_candidate_plan`, then answer
+  from `artifact_candidate_plan.agent_handoff`; approved durable writes remain
+  `create_document` or `ingest_source_url`.
 - Source-sensitive audit explain/repair: retrieval `source_audit_report`, then
   answer from `source_audit.agent_handoff`.
 - Records, decisions, provenance, and projection evidence bundles: retrieval
@@ -125,7 +128,7 @@ bundle contents that the user did not supply.
 Keep workflow-specific procedure out of this skill. Apply these compact
 policies and let runner results drive the answer:
 
-- Candidate documents: preserve explicit user path/title/body/type/naming instructions; fill omitted fields only from supplied content; validate with `openclerk document` before presenting a candidate; show `Path:`, `Title:`, and `Body preview:`; state no document was created; ask for approval before durable writes; for note-like candidates without an explicit path, use `notes/candidates/<slug-from-title>.md`, derive a concise singular noun phrase title, and Include `type: note` frontmatter plus a `# <Title>` heading.
+- Candidate documents and artifacts: preserve explicit user path/title/body/type/naming instructions; fill omitted fields only from supplied content; validate with `openclerk document` before presenting a candidate; show `Path:`, `Title:`, and `Body preview:`; state no document was created; ask for approval before durable writes; for note-like candidates without an explicit path, use `notes/candidates/<slug-from-title>.md`, derive a concise singular noun phrase title, and Include `type: note` frontmatter plus a `# <Title>` heading. Prefer `artifact_candidate_plan` when explicit content or public-source handoff context needs tags, fields, confidence, duplicate status, or create/ingest handoff.
 - Duplicate checks: when duplicate risk is requested or plausible, use runner-visible evidence before validating or writing; report the likely target, evidence inspected, and that no document was created or updated; ask whether to update the existing target or create a confirmed new path.
 - Public URL/source intake: use `web_search_plan` for supplied search results and `ingest_source_url` for HTTP/HTTPS PDF and public web sources. Do not fetch URLs with browser, HTTP, filesystem, or other non-runner tools; when placement is missing, propose source/synthesis paths and ask for approval before durable fetch or write.
 - Video/YouTube source intake: use `ingest_video_url` only with user-supplied transcript text and provenance; do not acquire media or transcripts externally.
@@ -146,7 +149,8 @@ openclerk document
 ```
 
 Common actions are `validate`, `create_document`, `ingest_source_url`,
-`ingest_video_url`, `web_search_plan`, `list_documents`, `get_document`,
+`ingest_video_url`, `web_search_plan`, `artifact_candidate_plan`,
+`list_documents`, `get_document`,
 `append_document`, `replace_section`, `resolve_paths`, `inspect_layout`,
 `compile_synthesis`, and `git_lifecycle_report`.
 Use `openclerk document --help` for primitive and promoted workflow-action

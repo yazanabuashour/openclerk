@@ -21,6 +21,7 @@ const (
 	DocumentTaskActionInspectLayout    = "inspect_layout"
 	DocumentTaskActionGitLifecycle     = "git_lifecycle_report"
 	DocumentTaskActionWebSearchPlan    = "web_search_plan"
+	DocumentTaskActionArtifactPlan     = "artifact_candidate_plan"
 
 	RetrievalTaskActionValidate            = "validate"
 	RetrievalTaskActionSearch              = "search"
@@ -52,6 +53,7 @@ type DocumentTaskRequest struct {
 	Synthesis     CompileSynthesisInput `json:"synthesis,omitempty"`
 	GitLifecycle  GitLifecycleOptions   `json:"git_lifecycle,omitempty"`
 	WebSearch     WebSearchPlanOptions  `json:"web_search,omitempty"`
+	Artifact      ArtifactPlanOptions   `json:"artifact,omitempty"`
 	Path          string                `json:"path,omitempty"`
 	Title         string                `json:"title,omitempty"`
 	Body          string                `json:"body,omitempty"`
@@ -222,6 +224,7 @@ type DocumentTaskResult struct {
 	CompileSynthesis *CompileSynthesisResult `json:"compile_synthesis,omitempty"`
 	GitLifecycle     *GitLifecycleReport     `json:"git_lifecycle,omitempty"`
 	WebSearchPlan    *WebSearchPlan          `json:"web_search_plan,omitempty"`
+	ArtifactPlan     *ArtifactCandidatePlan  `json:"artifact_candidate_plan,omitempty"`
 	Documents        []DocumentSummary       `json:"documents,omitempty"`
 	Paths            *Paths                  `json:"paths,omitempty"`
 	Layout           *KnowledgeLayout        `json:"layout,omitempty"`
@@ -426,6 +429,21 @@ type WebSearchResultInput struct {
 	AccessStatus string `json:"access_status,omitempty"`
 }
 
+type ArtifactPlanOptions struct {
+	Content        string            `json:"content,omitempty"`
+	SourceURL      string            `json:"source_url,omitempty"`
+	SourceType     string            `json:"source_type,omitempty"`
+	ArtifactKind   string            `json:"artifact_kind,omitempty"`
+	Path           string            `json:"path,omitempty"`
+	Title          string            `json:"title,omitempty"`
+	Body           string            `json:"body,omitempty"`
+	Tags           []string          `json:"tags,omitempty"`
+	Fields         map[string]string `json:"fields,omitempty"`
+	DuplicateQuery string            `json:"duplicate_query,omitempty"`
+	PathPrefix     string            `json:"path_prefix,omitempty"`
+	Limit          int               `json:"limit,omitempty"`
+}
+
 type RetrievalTaskResult struct {
 	Rejected           bool                       `json:"rejected"`
 	RejectionReason    string                     `json:"rejection_reason,omitempty"`
@@ -523,6 +541,31 @@ type WebSearchCandidate struct {
 	CandidateSynthesisPath  string           `json:"candidate_synthesis_path,omitempty"`
 	ExistingSource          *DocumentSummary `json:"existing_source,omitempty"`
 	NextIngestSourceRequest string           `json:"next_ingest_source_request,omitempty"`
+}
+
+type ArtifactCandidatePlan struct {
+	ArtifactKind            string            `json:"artifact_kind"`
+	SourceType              string            `json:"source_type,omitempty"`
+	SourceURL               string            `json:"source_url,omitempty"`
+	CandidatePath           string            `json:"candidate_path,omitempty"`
+	CandidateTitle          string            `json:"candidate_title,omitempty"`
+	BodyPreview             string            `json:"body_preview,omitempty"`
+	Tags                    []string          `json:"tags,omitempty"`
+	MetadataFields          map[string]string `json:"metadata_fields,omitempty"`
+	DuplicateSearch         *SearchResult     `json:"duplicate_search,omitempty"`
+	LikelyDuplicate         *SearchHit        `json:"likely_duplicate,omitempty"`
+	ExistingSource          *DocumentSummary  `json:"existing_source,omitempty"`
+	DuplicateStatus         string            `json:"duplicate_status"`
+	Confidence              string            `json:"confidence"`
+	ConfidenceReasons       []string          `json:"confidence_reasons,omitempty"`
+	FetchStatus             string            `json:"fetch_status"`
+	WriteStatus             string            `json:"write_status"`
+	ApprovalBoundary        string            `json:"approval_boundary"`
+	ValidationBoundaries    string            `json:"validation_boundaries"`
+	AuthorityLimits         string            `json:"authority_limits"`
+	NextCreateRequest       string            `json:"next_create_document_request,omitempty"`
+	NextIngestSourceRequest string            `json:"next_ingest_source_request,omitempty"`
+	AgentHandoff            *AgentHandoff     `json:"agent_handoff,omitempty"`
 }
 
 type AgentHandoff struct {

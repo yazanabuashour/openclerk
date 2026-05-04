@@ -147,6 +147,15 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 			WebSearchPlan: &plan,
 			Summary:       webSearchPlanSummary(plan),
 		}, nil
+	case DocumentTaskActionArtifactPlan:
+		plan, err := runArtifactCandidatePlan(ctx, client, normalized.Artifact)
+		if err != nil {
+			return DocumentTaskResult{}, err
+		}
+		return DocumentTaskResult{
+			ArtifactPlan: &plan,
+			Summary:      artifactCandidatePlanSummary(plan),
+		}, nil
 	case DocumentTaskActionInspectLayout:
 		layout, err := inspectKnowledgeLayout(ctx, client)
 		if err != nil {
@@ -284,6 +293,7 @@ type normalizedDocumentTaskRequest struct {
 	Synthesis    CompileSynthesisInput
 	GitLifecycle GitLifecycleOptions
 	WebSearch    WebSearchPlanOptions
+	Artifact     ArtifactPlanOptions
 	DocID        string
 	Content      string
 	Heading      string
@@ -303,6 +313,7 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		Synthesis:    trimCompileSynthesisInput(compileSynthesisInputFromRequest(request)),
 		GitLifecycle: trimGitLifecycleOptions(request.GitLifecycle),
 		WebSearch:    trimWebSearchPlanOptions(request.WebSearch),
+		Artifact:     trimArtifactPlanOptions(request.Artifact),
 		DocID:        strings.TrimSpace(request.DocID),
 		Content:      request.Content,
 		Heading:      strings.TrimSpace(request.Heading),
@@ -316,6 +327,9 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		return normalizedDocumentTaskRequest{}, "limit must be greater than or equal to 0"
 	}
 	if request.WebSearch.Limit < 0 {
+		return normalizedDocumentTaskRequest{}, "limit must be greater than or equal to 0"
+	}
+	if request.Artifact.Limit < 0 {
 		return normalizedDocumentTaskRequest{}, "limit must be greater than or equal to 0"
 	}
 
@@ -412,6 +426,11 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 			if rejection := validateWebSearchResultInput(result); rejection != "" {
 				return normalizedDocumentTaskRequest{}, rejection
 			}
+		}
+		return normalized, ""
+	case DocumentTaskActionArtifactPlan:
+		if rejection := validateArtifactPlanOptions(normalized.Artifact); rejection != "" {
+			return normalizedDocumentTaskRequest{}, rejection
 		}
 		return normalized, ""
 	default:
@@ -546,6 +565,40 @@ func trimWebSearchPlanOptions(input WebSearchPlanOptions) WebSearchPlanOptions {
 	}
 }
 
+func trimArtifactPlanOptions(input ArtifactPlanOptions) ArtifactPlanOptions {
+	tags := make([]string, 0, len(input.Tags))
+	for _, tag := range input.Tags {
+		if trimmed := strings.TrimSpace(tag); trimmed != "" {
+			tags = append(tags, trimmed)
+		}
+	}
+	fields := make(map[string]string, len(input.Fields))
+	for key, value := range input.Fields {
+		trimmedKey := strings.TrimSpace(key)
+		if trimmedKey == "" {
+			continue
+		}
+		fields[trimmedKey] = strings.TrimSpace(value)
+	}
+	if len(fields) == 0 {
+		fields = nil
+	}
+	return ArtifactPlanOptions{
+		Content:        input.Content,
+		SourceURL:      strings.TrimSpace(input.SourceURL),
+		SourceType:     strings.TrimSpace(input.SourceType),
+		ArtifactKind:   strings.TrimSpace(input.ArtifactKind),
+		Path:           normalizeVaultRelativePath(input.Path),
+		Title:          strings.TrimSpace(input.Title),
+		Body:           input.Body,
+		Tags:           tags,
+		Fields:         fields,
+		DuplicateQuery: strings.TrimSpace(input.DuplicateQuery),
+		PathPrefix:     normalizeVaultRelativePrefix(input.PathPrefix),
+		Limit:          input.Limit,
+	}
+}
+
 func normalizeVaultRelativePath(raw string) string {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" || filepath.IsAbs(trimmed) || strings.HasPrefix(trimmed, "/") {
@@ -554,6 +607,22 @@ func normalizeVaultRelativePath(raw string) string {
 	clean := path.Clean(filepath.ToSlash(trimmed))
 	if clean == "." {
 		return ""
+	}
+	return clean
+}
+
+func normalizeVaultRelativePrefix(raw string) string {
+	trimmed := strings.TrimSpace(filepath.ToSlash(raw))
+	if trimmed == "" || filepath.IsAbs(trimmed) || strings.HasPrefix(trimmed, "/") {
+		return trimmed
+	}
+	trailingSlash := strings.HasSuffix(trimmed, "/")
+	clean := path.Clean(trimmed)
+	if clean == "." {
+		return ""
+	}
+	if trailingSlash && clean != "." && clean != ".." && !strings.HasSuffix(clean, "/") {
+		clean += "/"
 	}
 	return clean
 }
@@ -578,6 +647,49 @@ func validateWebSearchResultInput(input WebSearchResultInput) string {
 	default:
 		return "web_search.results.access_status must be public, blocked, authenticated, private, or unknown"
 	}
+}
+
+func validateArtifactPlanOptions(input ArtifactPlanOptions) string {
+	if strings.TrimSpace(input.Content) == "" && strings.TrimSpace(input.Body) == "" && input.SourceURL == "" {
+		return "artifact.content, artifact.body, or artifact.source_url is required"
+	}
+	if input.SourceURL != "" {
+		parsed, err := url.Parse(input.SourceURL)
+		if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+			return "artifact.source_url must be a valid http or https URL"
+		}
+		if parsed.Scheme != "http" && parsed.Scheme != "https" {
+			return "artifact.source_url must use http or https"
+		}
+	}
+	if input.SourceType != "" {
+		switch input.SourceType {
+		case "explicit_content", "public_url", "web", "pdf":
+		default:
+			return "artifact.source_type must be explicit_content, public_url, web, or pdf"
+		}
+	}
+	if input.ArtifactKind != "" {
+		switch input.ArtifactKind {
+		case "note", "invoice", "receipt", "legal_document", "transcript", "source_summary", "unknown":
+		default:
+			return "artifact.artifact_kind must be note, invoice, receipt, legal_document, transcript, source_summary, or unknown"
+		}
+	}
+	if input.Path != "" {
+		if filepath.IsAbs(input.Path) || strings.HasPrefix(input.Path, "/") || input.Path == "." || input.Path == ".." || strings.HasPrefix(input.Path, "../") {
+			return "artifact.path must stay inside the vault root"
+		}
+		if path.Ext(input.Path) != ".md" {
+			return "artifact.path must end with .md"
+		}
+	}
+	if input.PathPrefix != "" {
+		if filepath.IsAbs(input.PathPrefix) || strings.HasPrefix(input.PathPrefix, "/") || input.PathPrefix == "." || input.PathPrefix == ".." || strings.HasPrefix(input.PathPrefix, "../") {
+			return "artifact.path_prefix must stay inside the vault root"
+		}
+	}
+	return ""
 }
 
 func normalizeCompileSynthesisMode(raw string) string {

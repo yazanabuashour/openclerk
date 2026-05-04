@@ -122,6 +122,11 @@ requiring agents to choreograph many primitives:
   harness-supplied public web search results into ranked URL candidates with
   duplicate and placement hints. Approved public fetch/write still uses
   `ingest_source_url`.
+- `openclerk document` `artifact_candidate_plan` is read-only and plans
+  artifact path, title, body preview, tags, metadata fields, duplicate
+  evidence, confidence, and approved create/ingest handoff from explicit
+  content or public-source handoff context. It does not OCR, parse opaque
+  files, fetch URLs, or write durable documents.
 - `openclerk document` `compile_synthesis` creates or updates exactly one
   source-linked synthesis target from either explicit `body` markdown or
   runner-assembled `body_facts`, defaults the only supported

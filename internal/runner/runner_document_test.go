@@ -371,6 +371,195 @@ func TestDocumentTaskWebSearchPlanRejectsInvalidInputs(t *testing.T) {
 	}
 }
 
+func TestDocumentTaskArtifactCandidatePlanReturnsCandidate(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionArtifactPlan,
+		Artifact: runner.ArtifactPlanOptions{
+			Content:      "# April Invoice\n\nVendor: Acme Services\nAmount due: 42 USD\n",
+			ArtifactKind: "invoice",
+			Fields: map[string]string{
+				"vendor_hint": "Acme Services",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("artifact candidate plan: %v", err)
+	}
+	plan := result.ArtifactPlan
+	if plan == nil ||
+		plan.WriteStatus != "planned_no_write" ||
+		plan.FetchStatus != "planned_no_fetch" ||
+		plan.ArtifactKind != "invoice" ||
+		plan.SourceType != "explicit_content" ||
+		plan.CandidatePath != "artifacts/invoices/april-invoice.md" ||
+		plan.CandidateTitle != "April Invoice" ||
+		plan.Confidence != "medium" ||
+		plan.MetadataFields["vendor_hint"] != "Acme Services" ||
+		!containsString(plan.Tags, "invoice") ||
+		!strings.Contains(plan.BodyPreview, "# April Invoice") ||
+		!strings.Contains(plan.NextCreateRequest, "create_document") ||
+		plan.NextIngestSourceRequest != "" ||
+		plan.AgentHandoff == nil ||
+		!strings.Contains(plan.ValidationBoundaries, "no OCR") {
+		t.Fatalf("artifact candidate plan result = %+v", plan)
+	}
+}
+
+func TestDocumentTaskArtifactCandidatePlanPreservesOverridesAndDuplicateBoundary(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "artifacts/receipts/existing-coffee-receipt.md", "Existing Coffee Receipt", strings.TrimSpace(`---
+type: artifact
+artifact_kind: receipt
+tag: receipt
+---
+# Existing Coffee Receipt
+
+Coffee receipt total paid by the support team.
+`)+"\n")
+
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionArtifactPlan,
+		Artifact: runner.ArtifactPlanOptions{
+			Content:        "Coffee receipt total paid by the support team.",
+			ArtifactKind:   "receipt",
+			Path:           "notes/manual/override.md",
+			Title:          "Manual Override",
+			Tags:           []string{"finance"},
+			Fields:         map[string]string{"type": "note", "owner": "ap"},
+			DuplicateQuery: "coffee receipt total paid",
+			PathPrefix:     "artifacts/receipts/",
+		},
+	})
+	if err != nil {
+		t.Fatalf("artifact override duplicate plan: %v", err)
+	}
+	plan := result.ArtifactPlan
+	if plan == nil ||
+		plan.CandidatePath != "notes/manual/override.md" ||
+		plan.CandidateTitle != "Manual Override" ||
+		plan.MetadataFields["type"] != "note" ||
+		plan.MetadataFields["owner"] != "ap" ||
+		!containsString(plan.Tags, "finance") ||
+		plan.LikelyDuplicate == nil ||
+		plan.DuplicateStatus != "likely_duplicate_candidate_no_write" ||
+		plan.NextCreateRequest != "" ||
+		!strings.Contains(plan.AgentHandoff.FollowUpPrimitiveInspection, "update-versus-new") {
+		t.Fatalf("artifact override duplicate plan result = %+v", plan)
+	}
+}
+
+func TestDocumentTaskArtifactCandidatePlanPreservesPathPrefixDirectoryBoundary(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "artifacts/receipts-old/decoy-coffee-receipt.md", "Decoy Coffee Receipt", strings.TrimSpace(`---
+type: artifact
+artifact_kind: receipt
+tag: receipt
+---
+# Decoy Coffee Receipt
+
+Coffee receipt total paid by the support team.
+`)+"\n")
+
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionArtifactPlan,
+		Artifact: runner.ArtifactPlanOptions{
+			Content:        "# Coffee Receipt\n\nCoffee receipt total paid by the support team.",
+			ArtifactKind:   "receipt",
+			DuplicateQuery: "coffee receipt total paid",
+			PathPrefix:     "artifacts/receipts/",
+		},
+	})
+	if err != nil {
+		t.Fatalf("artifact path prefix boundary plan: %v", err)
+	}
+	plan := result.ArtifactPlan
+	if plan == nil ||
+		plan.LikelyDuplicate != nil ||
+		plan.DuplicateStatus != "no_duplicate_found" ||
+		plan.NextCreateRequest == "" {
+		t.Fatalf("artifact path prefix boundary result = %+v", plan)
+	}
+}
+
+func TestDocumentTaskArtifactCandidatePlanSourceURLHandoffDoesNotFetch(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "sources/web/existing-artifact-source.md", "Existing Artifact Source", strings.TrimSpace(`---
+type: source
+source_url: https://Example.test/artifact#section
+source_type: web
+---
+# Existing Artifact Source
+
+Existing source evidence.
+`)+"\n")
+
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionArtifactPlan,
+		Artifact: runner.ArtifactPlanOptions{
+			SourceURL:    "https://Example.test/artifact#section",
+			ArtifactKind: "source_summary",
+		},
+	})
+	if err != nil {
+		t.Fatalf("artifact source URL plan: %v", err)
+	}
+	plan := result.ArtifactPlan
+	if plan == nil ||
+		plan.SourceURL != "https://example.test/artifact" ||
+		plan.BodyPreview != "" ||
+		plan.Confidence != "low" ||
+		plan.ExistingSource == nil ||
+		plan.ExistingSource.Path != "sources/web/existing-artifact-source.md" ||
+		plan.DuplicateStatus != "existing_source_url_found_no_write" ||
+		!strings.Contains(plan.NextIngestSourceRequest, `"mode":"update"`) ||
+		plan.NextCreateRequest != "" ||
+		!strings.Contains(plan.ApprovalBoundary, "public fetch") {
+		t.Fatalf("artifact source URL plan result = %+v", plan)
+	}
+}
+
+func TestDocumentTaskArtifactCandidatePlanRejectsInvalidInputs(t *testing.T) {
+	t.Parallel()
+
+	result, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionArtifactPlan,
+		Artifact: runner.ArtifactPlanOptions{
+			Content: "Opaque file placeholder",
+			Path:    "../escape.md",
+		},
+	})
+	if err != nil {
+		t.Fatalf("artifact invalid path: %v", err)
+	}
+	if !result.Rejected || result.RejectionReason != "artifact.path must stay inside the vault root" {
+		t.Fatalf("invalid artifact path result = %+v", result)
+	}
+
+	missing, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.DocumentTaskRequest{
+		Action:   runner.DocumentTaskActionArtifactPlan,
+		Artifact: runner.ArtifactPlanOptions{ArtifactKind: "invoice"},
+	})
+	if err != nil {
+		t.Fatalf("artifact missing content: %v", err)
+	}
+	if !missing.Rejected || missing.RejectionReason != "artifact.content, artifact.body, or artifact.source_url is required" {
+		t.Fatalf("missing artifact content result = %+v", missing)
+	}
+}
+
 func TestDocumentTaskCompileSynthesisCreatesAndUpdatesOneTarget(t *testing.T) {
 	t.Parallel()
 

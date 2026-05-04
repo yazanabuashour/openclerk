@@ -43,6 +43,15 @@ type workflowGuideSelection struct {
 func selectWorkflowGuideCandidate(intent string) workflowGuideSelection {
 	normalized := strings.ToLower(intent)
 	switch {
+	case containsAny(normalized, "artifact", "invoice", "receipt", "legal document", "transcript", "auto-file", "autofile", "candidate path", "body preview", "metadata field", "tags"):
+		return workflowGuideSelection{
+			Surface:        "artifact_candidate_plan",
+			RunnerDomain:   "document",
+			RequestShape:   `{"action":"artifact_candidate_plan","artifact":{"content":"...","artifact_kind":"note","tags":["..."],"fields":{"type":"note"},"limit":5}}`,
+			UseWhen:        "use for read-only candidate path/title/body preview/tag/field planning from explicit content or public-source handoff context",
+			DoNotUseFor:    []string{"opaque file parsing", "OCR", "local file reads", "durable document writes", "private or authenticated acquisition"},
+			HandoffSummary: "Use document artifact_candidate_plan for proposal-first intake; approved writes still flow through create_document or ingest_source_url.",
+		}
 	case containsAny(normalized, "duplicate", "already exists", "update existing", "update versus new", "same note"):
 		return workflowGuideSelection{
 			Surface:        "duplicate_candidate_report",
@@ -169,6 +178,13 @@ func workflowGuideCandidates() []WorkflowGuideCandidate {
 			SelectionRule:  "use when an adjacent mode on an existing action preserves the natural workflow surface",
 			Boundary:       "public read/fetch/inspect permission is separate from durable-write approval",
 			RequestExample: `{"action":"ingest_source_url","source":{"url":"https://example.test/page.html","mode":"plan","source_type":"web"}}`,
+		},
+		{
+			Surface:        "artifact_candidate_plan",
+			Status:         "promoted_for_artifact_intake_planning",
+			SelectionRule:  "use when explicit artifact content or public-source handoff context needs candidate path, title, body preview, tags, fields, confidence, and duplicate evidence before approval",
+			Boundary:       "read-only planning only; no OCR, opaque parsing, local file reads, fetches, or durable writes",
+			RequestExample: `{"action":"artifact_candidate_plan","artifact":{"content":"...","artifact_kind":"receipt","tags":["finance"],"limit":5}}`,
 		},
 		{
 			Surface:        "promoted_workflow_action_with_agent_handoff",
