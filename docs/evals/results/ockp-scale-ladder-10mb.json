@@ -1,0 +1,118 @@
+{
+  "metadata": {
+    "generated_at": "2026-05-04T01:13:43.00769Z",
+    "lane": "scale-ladder-validation",
+    "mode": "scale-ladder",
+    "tier": "10mb",
+    "seed": 53,
+    "harness": "maintainer-only OpenClerk embedded runtime maturity harness; reduced reports only",
+    "run_root_artifact_reference": "\u003crun-root\u003e",
+    "raw_logs_committed": false,
+    "raw_content_committed": false
+  },
+  "corpus": {
+    "target_bytes": 10485760,
+    "generated_bytes": 10496627,
+    "sqlite_storage_bytes": 38958152,
+    "documents": 80,
+    "source_documents": 24,
+    "synthesis_documents": 16,
+    "decision_documents": 8,
+    "duplicate_marked_documents": 8,
+    "stale_marked_documents": 8,
+    "tagged_documents": 80,
+    "projection_state_sample_count": 16,
+    "provenance_event_sample_count": 100,
+    "counting_policy": "Counts are derived from runner-visible document summaries and metadata; reduced reports do not include document paths, titles, snippets, or private roots."
+  },
+  "timings": {
+    "generate_seconds": 0.05,
+    "import_sync_seconds": 5.99,
+    "reopen_rebuild_seconds": 11.14,
+    "search_total_seconds": 0.04
+  },
+  "read_probes": [
+    {
+      "name": "list-documents",
+      "seconds": 0,
+      "result_count": 50,
+      "status": "completed",
+      "evidence_posture": "runner-visible summaries counted without emitting paths or titles"
+    },
+    {
+      "name": "get-document",
+      "seconds": 0,
+      "result_count": 1,
+      "status": "completed",
+      "evidence_posture": "document body was read for timing only and is excluded from reduced reports"
+    },
+    {
+      "name": "fts-search",
+      "query_reference": "scale ladder authority marker seed 53",
+      "seconds": 0.02,
+      "result_count": 10,
+      "status": "completed",
+      "evidence_posture": "hit counts only; reduced report excludes snippets, paths, titles, doc ids, and chunk ids"
+    },
+    {
+      "name": "fts-search",
+      "query_reference": "scale ladder synthesis freshness marker",
+      "seconds": 0.02,
+      "result_count": 10,
+      "status": "completed",
+      "evidence_posture": "hit counts only; reduced report excludes snippets, paths, titles, doc ids, and chunk ids"
+    },
+    {
+      "name": "fts-search",
+      "query_reference": "scale ladder duplicate candidate marker",
+      "seconds": 0,
+      "result_count": 8,
+      "status": "completed",
+      "evidence_posture": "hit counts only; reduced report excludes snippets, paths, titles, doc ids, and chunk ids"
+    },
+    {
+      "name": "projection-synthesis-sample",
+      "seconds": 0,
+      "result_count": 16,
+      "status": "completed",
+      "evidence_posture": "projection freshness count only; reduced report excludes projection refs"
+    },
+    {
+      "name": "provenance-sample",
+      "seconds": 0,
+      "result_count": 100,
+      "status": "completed",
+      "evidence_posture": "provenance event count only; reduced report excludes source refs and event ids"
+    }
+  ],
+  "checks": {
+    "reduced_report_only": true,
+    "raw_logs_committed": false,
+    "raw_content_committed": false,
+    "machine_absolute_artifact_refs": false,
+    "routine_agent_bypass_events_available": false,
+    "boundary": "This harness validates local runtime behavior and reduced-report hygiene; routine-agent bypass checks require an agent eval row with event logs."
+  },
+  "outcomes": [
+    {
+      "name": "reduced-report-boundary",
+      "status": "completed",
+      "safety_pass": "pass",
+      "capability_pass": "pass",
+      "ux_quality": "not_agent_ux_evidence",
+      "performance": "not_applicable",
+      "evidence_posture": "repo-relative or neutral artifact references only; raw content and raw logs are not committed",
+      "details": "Report intentionally excludes document paths, titles, snippets, private vault roots, and machine-absolute run roots."
+    },
+    {
+      "name": "runtime-maturity-readiness",
+      "status": "completed",
+      "safety_pass": "pass",
+      "capability_pass": "pass",
+      "ux_quality": "not_agent_ux_evidence",
+      "performance": "recorded",
+      "evidence_posture": "SQLite FTS, list/get, projection, and provenance probes executed through embedded OpenClerk runtime APIs.",
+      "details": "Use these numbers as decision input only; promotion decisions still need safety, capability, UX, performance, and evidence posture recorded separately."
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "metadata": {
+    "generated_at": "2026-05-04T01:35:13Z",
+    "lane": "scale-ladder-validation",
+    "mode": "scale-ladder-timeout",
+    "tier": "100mb",
+    "seed": 53,
+    "harness": "maintainer-only OpenClerk embedded runtime maturity harness; timeout/stall report after interrupted 100 MB attempts",
+    "run_root_artifact_reference": "<run-root>",
+    "raw_logs_committed": false,
+    "raw_content_committed": false
+  },
+  "attempts": [
+    {
+      "name": "full-run-with-reopen",
+      "command_reference": "mise exec -- go run ./scripts/agent-eval/ockp maturity scale-ladder --tier 100mb --seed 53 --run-root <run-root> --report-name ockp-scale-ladder-100mb",
+      "elapsed_before_interrupt_seconds": 600,
+      "status": "interrupted",
+      "observed_state": "CPU-bound harness process remained active after more than 10 minutes; no reduced report was produced."
+    },
+    {
+      "name": "skip-reopen-rerun",
+      "command_reference": "mise exec -- go run ./scripts/agent-eval/ockp maturity scale-ladder --tier 100mb --seed 53 --run-root <run-root> --report-name ockp-scale-ladder-100mb --skip-reopen",
+      "elapsed_before_interrupt_seconds": 360,
+      "status": "interrupted",
+      "observed_state": "CPU-bound harness process remained active after more than 6 minutes; no reduced report was produced."
+    }
+  ],
+  "checks": {
+    "reduced_report_only": true,
+    "raw_logs_committed": false,
+    "raw_content_committed": false,
+    "machine_absolute_artifact_refs": false,
+    "routine_agent_bypass_events_available": false,
+    "boundary": "This report records reduced timeout/stall evidence only. Generated corpus content, SQLite databases, process details, and raw run roots remain local-only."
+  },
+  "outcomes": [
+    {
+      "name": "reduced-report-boundary",
+      "status": "completed",
+      "safety_pass": "pass",
+      "capability_pass": "pass",
+      "ux_quality": "not_agent_ux_evidence",
+      "performance": "not_applicable",
+      "evidence_posture": "neutral artifact references only; raw content and raw logs are not committed",
+      "details": "The timeout report intentionally excludes generated document paths, titles, snippets, doc ids, chunk ids, raw run roots, and machine-absolute paths."
+    },
+    {
+      "name": "runtime-scale-100mb",
+      "status": "stalled",
+      "safety_pass": "pass",
+      "capability_pass": "incomplete",
+      "ux_quality": "not_agent_ux_evidence",
+      "performance": "cliff_observed",
+      "evidence_posture": "10 MB completed; 100 MB did not produce a reduced report before manual interruption",
+      "details": "The 100 MB tier needs performance investigation before it can be used as routine release-gate evidence or as justification for a 1 GB run."
+    }
+  ],
+  "follow_up": {
+    "issue": "oc-oa53.12",
+    "status": "open",
+    "next_action": "Determine whether the stall is projection rebuild cost, FTS indexing overhead, synthetic corpus shape, or harness behavior; then produce a reduced 100 MB report or a decision-quality performance finding."
+  }
+}
