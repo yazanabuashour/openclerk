@@ -3,17 +3,18 @@ package sqlite
 import "regexp"
 
 const (
-	configKeyVaultRoot               = "vault_root"
-	configKeyLayoutConventionVersion = "layout_convention_version"
-	defaultLayoutConventionVersion   = "root_v1"
-	rootSynthesisPathPrefix          = "synthesis/"
-	maxSourceDownloadBytes           = 50 << 20
-	sourceURLModeCreate              = "create"
-	sourceURLModeUpdate              = "update"
-	sourceTypePDF                    = "pdf"
-	sourceTypeWeb                    = "web"
-	evalSourceFixtureRootEnv         = "OPENCLERK_EVAL_SOURCE_FIXTURE_ROOT"
-	evalSourceFixtureHost            = "openclerk-eval.local"
+	configKeyVaultRoot                = "vault_root"
+	configKeyLayoutConventionVersion  = "layout_convention_version"
+	configKeyProjectionRebuildPending = "projection_rebuild_pending"
+	defaultLayoutConventionVersion    = "root_v1"
+	rootSynthesisPathPrefix           = "synthesis/"
+	maxSourceDownloadBytes            = 50 << 20
+	sourceURLModeCreate               = "create"
+	sourceURLModeUpdate               = "update"
+	sourceTypePDF                     = "pdf"
+	sourceTypeWeb                     = "web"
+	evalSourceFixtureRootEnv          = "OPENCLERK_EVAL_SOURCE_FIXTURE_ROOT"
+	evalSourceFixtureHost             = "openclerk-eval.local"
 )
 
 var (

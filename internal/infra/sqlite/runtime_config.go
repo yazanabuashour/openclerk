@@ -12,9 +12,10 @@ import (
 )
 
 type Config struct {
-	Backend      domain.BackendKind
-	DatabasePath string
-	VaultRoot    string
+	Backend             domain.BackendKind
+	DatabasePath        string
+	VaultRoot           string
+	SyncDiagnosticsPath string
 }
 
 type RuntimeConfig struct {
@@ -157,6 +158,18 @@ func runtimeConfigValue(ctx context.Context, db *sql.DB, key string) (string, er
 
 func upsertRuntimeConfigValue(ctx context.Context, db *sql.DB, key string, value string, updatedAt string) error {
 	if _, err := db.ExecContext(ctx, `
+INSERT INTO runtime_config (key_name, value_text, updated_at)
+VALUES (?, ?, ?)
+ON CONFLICT(key_name) DO UPDATE SET
+	value_text = excluded.value_text,
+	updated_at = excluded.updated_at`, key, value, updatedAt); err != nil {
+		return domain.InternalError("upsert runtime config", err)
+	}
+	return nil
+}
+
+func upsertRuntimeConfigValueTx(ctx context.Context, tx *sql.Tx, key string, value string, updatedAt string) error {
+	if _, err := tx.ExecContext(ctx, `
 INSERT INTO runtime_config (key_name, value_text, updated_at)
 VALUES (?, ?, ?)
 ON CONFLICT(key_name) DO UPDATE SET

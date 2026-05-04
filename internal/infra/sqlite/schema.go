@@ -226,6 +226,11 @@ func (s *Store) initSchema(ctx context.Context) error {
 			details_json TEXT NOT NULL,
 			PRIMARY KEY (projection_name, ref_kind, ref_id)
 		);`,
+		`CREATE INDEX IF NOT EXISTS idx_documents_path ON documents(path);`,
+		`CREATE INDEX IF NOT EXISTS idx_document_metadata_key_value_doc ON document_metadata(key_name, value_text, doc_id);`,
+		`CREATE INDEX IF NOT EXISTS idx_chunks_doc_id ON chunks(doc_id);`,
+		`CREATE INDEX IF NOT EXISTS idx_provenance_events_ref ON provenance_events(ref_kind, ref_id, event_type);`,
+		`CREATE INDEX IF NOT EXISTS idx_projection_states_projection ON projection_states(projection_name, ref_kind, ref_id);`,
 	}
 	for _, statement := range statements {
 		if _, err := s.db.ExecContext(ctx, statement); err != nil {

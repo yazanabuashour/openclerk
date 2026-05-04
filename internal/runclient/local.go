@@ -23,7 +23,8 @@ const (
 
 // Config controls where the internal runtime stores SQLite-backed OpenClerk data.
 type Config struct {
-	DatabasePath string
+	DatabasePath        string
+	SyncDiagnosticsPath string
 }
 
 // Paths describes the resolved runtime locations on disk.
@@ -136,9 +137,10 @@ func newRuntimeWithMode(backend domain.BackendKind, cfg Config, mode runtimeOpen
 		return nil, err
 	}
 	sqliteConfig := sqlite.Config{
-		Backend:      backend,
-		DatabasePath: paths.DatabasePath,
-		VaultRoot:    paths.VaultRoot,
+		Backend:             backend,
+		DatabasePath:        paths.DatabasePath,
+		VaultRoot:           paths.VaultRoot,
+		SyncDiagnosticsPath: cfg.SyncDiagnosticsPath,
 	}
 	var store *sqlite.Store
 	switch mode {

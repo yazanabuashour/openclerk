@@ -1,31 +1,106 @@
 {
   "metadata": {
-    "generated_at": "2026-05-04T01:37:01.314023Z",
-    "lane": "representative-real-vault-dogfood",
-    "mode": "real-vault",
+    "generated_at": "2026-05-04T03:48:02.006701Z",
+    "lane": "scale-ladder-validation",
+    "mode": "scale-ladder",
+    "tier": "1gb",
+    "seed": 53,
     "harness": "maintainer-only OpenClerk embedded runtime maturity harness; reduced reports only",
     "run_root_artifact_reference": "\u003crun-root\u003e",
-    "private_vault_artifact_reference": "\u003cprivate-vault\u003e",
     "raw_logs_committed": false,
     "raw_content_committed": false
   },
   "corpus": {
-    "sqlite_storage_bytes": 38966392,
-    "documents": 80,
-    "source_documents": 24,
-    "synthesis_documents": 16,
-    "decision_documents": 8,
-    "duplicate_marked_documents": 8,
-    "stale_marked_documents": 8,
-    "tagged_documents": 80,
-    "projection_state_sample_count": 16,
+    "target_bytes": 1073741824,
+    "generated_bytes": 1073813879,
+    "sqlite_storage_bytes": 3566196128,
+    "documents": 8183,
+    "source_documents": 2455,
+    "synthesis_documents": 1637,
+    "decision_documents": 819,
+    "duplicate_marked_documents": 818,
+    "stale_marked_documents": 818,
+    "tagged_documents": 8183,
+    "projection_state_sample_count": 100,
     "provenance_event_sample_count": 100,
     "counting_policy": "Counts are derived from runner-visible document summaries and metadata; reduced reports do not include document paths, titles, snippets, or private roots."
   },
   "timings": {
-    "import_sync_seconds": 5.9,
-    "reopen_rebuild_seconds": 11.05,
-    "search_total_seconds": 0.04
+    "generate_seconds": 3.57,
+    "import_sync_seconds": 1657.81,
+    "reopen_rebuild_seconds": 4.91,
+    "provenance_check_seconds": 0.09,
+    "search_total_seconds": 8.88
+  },
+  "sync_diagnostics": {
+    "import_sync": {
+      "status": "completed",
+      "last_phase": "completed",
+      "mode": "vault_sync",
+      "paths_scanned": 8183,
+      "documents_created": 8183,
+      "documents_updated": 0,
+      "documents_unchanged": 0,
+      "documents_pruned": 0,
+      "bytes_read": 1073813879,
+      "chunks_written": 11457,
+      "fts_rows_written": 11457,
+      "projection_bootstrap": false,
+      "projection_rebuild_skipped": false,
+      "scan_seconds": 0.01,
+      "prune_seconds": 0,
+      "document_read_parse_seconds": 0.10999999999999999,
+      "document_write_seconds": 1580.2099999999023,
+      "projection_rebuild_seconds": 56.58,
+      "total_seconds": 1657.8,
+      "projection_rebuilds": [
+        {
+          "projection": "graph",
+          "seconds": 13.77
+        },
+        {
+          "projection": "records",
+          "seconds": 14.48
+        },
+        {
+          "projection": "services",
+          "seconds": 15.29
+        },
+        {
+          "projection": "decisions",
+          "seconds": 8.57
+        },
+        {
+          "projection": "synthesis",
+          "seconds": 4.47
+        }
+      ],
+      "reduced_report_safe": true,
+      "evidence_posture": "reduced counters and timings only; excludes document paths, titles, snippets, raw content, database paths, vault roots, and machine-absolute paths"
+    },
+    "reopen_sync": {
+      "status": "completed",
+      "last_phase": "completed",
+      "mode": "vault_sync",
+      "paths_scanned": 8183,
+      "documents_created": 0,
+      "documents_updated": 0,
+      "documents_unchanged": 8183,
+      "documents_pruned": 0,
+      "bytes_read": 1073813879,
+      "chunks_written": 0,
+      "fts_rows_written": 0,
+      "projection_bootstrap": false,
+      "projection_rebuild_skipped": true,
+      "scan_seconds": 0.04,
+      "prune_seconds": 0.02,
+      "document_read_parse_seconds": 0,
+      "document_write_seconds": 0,
+      "projection_rebuild_seconds": 0,
+      "total_seconds": 4.91,
+      "reduced_report_safe": true,
+      "evidence_posture": "reduced counters and timings only; excludes document paths, titles, snippets, raw content, database paths, vault roots, and machine-absolute paths"
+    }
   },
   "read_probes": [
     {
@@ -44,38 +119,38 @@
     },
     {
       "name": "fts-search",
-      "query_reference": "private-query-1",
-      "seconds": 0.02,
+      "query_reference": "scale ladder authority marker seed 53",
+      "seconds": 6.38,
       "result_count": 10,
       "status": "completed",
       "evidence_posture": "hit counts only; reduced report excludes snippets, paths, titles, doc ids, and chunk ids"
     },
     {
       "name": "fts-search",
-      "query_reference": "private-query-2",
-      "seconds": 0.02,
+      "query_reference": "scale ladder synthesis freshness marker",
+      "seconds": 2.36,
       "result_count": 10,
       "status": "completed",
       "evidence_posture": "hit counts only; reduced report excludes snippets, paths, titles, doc ids, and chunk ids"
     },
     {
       "name": "fts-search",
-      "query_reference": "private-query-3",
-      "seconds": 0,
-      "result_count": 8,
+      "query_reference": "scale ladder duplicate candidate marker",
+      "seconds": 0.14,
+      "result_count": 10,
       "status": "completed",
       "evidence_posture": "hit counts only; reduced report excludes snippets, paths, titles, doc ids, and chunk ids"
     },
     {
       "name": "projection-synthesis-sample",
       "seconds": 0,
-      "result_count": 16,
+      "result_count": 100,
       "status": "completed",
       "evidence_posture": "projection freshness count only; reduced report excludes projection refs"
     },
     {
       "name": "provenance-sample",
-      "seconds": 0,
+      "seconds": 0.09,
       "result_count": 100,
       "status": "completed",
       "evidence_posture": "provenance event count only; reduced report excludes source refs and event ids"

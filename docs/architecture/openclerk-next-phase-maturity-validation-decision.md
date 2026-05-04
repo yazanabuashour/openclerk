@@ -5,7 +5,7 @@ decision_status: accepted
 decision_scope: maturity-validation
 decision_owner: platform
 decision_date: 2026-05-04
-source_refs: docs/architecture/openclerk-next-phase-maturity-evidence-inventory.md, docs/evals/real-vault-dogfood.md, docs/evals/scale-ladder-validation.md, docs/evals/results/ockp-real-vault-agentops-trial.md, docs/evals/results/ockp-real-vault-dogfood.md, docs/evals/results/ockp-scale-ladder-10mb.md, docs/evals/results/ockp-scale-ladder-100mb-timeout.md
+source_refs: docs/architecture/openclerk-next-phase-maturity-evidence-inventory.md, docs/evals/real-vault-dogfood.md, docs/evals/scale-ladder-validation.md, docs/evals/results/ockp-real-vault-agentops-trial.md, docs/evals/results/ockp-real-vault-dogfood.md, docs/evals/results/ockp-scale-ladder-10mb.md, docs/evals/results/ockp-scale-ladder-100mb-timeout.md, docs/evals/results/ockp-scale-ladder-100mb.md, docs/evals/results/ockp-scale-ladder-1gb.md
 ---
 # Decision: OpenClerk Next-Phase Maturity Validation
 
@@ -26,7 +26,9 @@ skill behavior, hybrid/vector retrieval, memory transport, or release gate.
 | Sanitized real-vault trial | [`docs/evals/results/ockp-real-vault-agentops-trial.md`](../evals/results/ockp-real-vault-agentops-trial.md) | Pass: workflow used installed runner JSON and no direct SQLite, direct vault inspection, broad repo search, HTTP/MCP, source-built runner path during workflow execution, copied vault files, screenshots, or raw logs as evidence. | Pass for tested workflows: source discovery, synthesis create/update, freshness/provenance inspection, decision-record lookup, stale or duplicate synthesis detection. | Acceptable for this sanitized evidence pass; no new routine surface is justified. | Reduced report does not include numeric latency; future real-vault refreshes should use the new maturity harness for timing. | Sanitized aggregate real-vault evidence; private paths, titles, snippets, citations, document IDs, and raw JSON remain local-only. |
 | Reduced real-vault maturity timing | [`docs/evals/results/ockp-real-vault-dogfood.md`](../evals/results/ockp-real-vault-dogfood.md) | Pass: reduced report only, no raw vault content, logs, private query text, or machine-local artifact refs. | Pass: local representative vault synced and read probes completed. | Not agent UX evidence; command count is represented as 7 read probes, not Codex command telemetry. | Import/sync 5.90s; reopen/rebuild 11.05s; FTS probes 0.04s total. | Local representative reduced report with `<private-vault>` placeholder; routine-agent bypass events are not available from this maintainer harness. |
 | 10 MB scale ladder | [`docs/evals/results/ockp-scale-ladder-10mb.md`](../evals/results/ockp-scale-ladder-10mb.md) | Pass: reduced report only, no raw generated corpus, logs, or machine-local artifact refs. | Pass: deterministic generated corpus synced and read probes completed. | Not agent UX evidence. | Import/sync 5.99s; reopen/rebuild 11.14s; FTS probes 0.04s total. | Synthetic scale evidence over 80 generated docs and about 10 MB corpus. |
-| 100 MB scale ladder | [`docs/evals/results/ockp-scale-ladder-100mb-timeout.md`](../evals/results/ockp-scale-ladder-100mb-timeout.md) | Pass for reduced-report boundary. | Incomplete: no completed reduced runtime report. | Not agent UX evidence. | Performance cliff observed: full run exceeded 10 minutes; `--skip-reopen` rerun exceeded 6 minutes. | Timeout/stall evidence only; follow-up `oc-oa53.12` owns diagnosis. |
+| Initial 100 MB timeout | [`docs/evals/results/ockp-scale-ladder-100mb-timeout.md`](../evals/results/ockp-scale-ladder-100mb-timeout.md) | Pass for reduced-report boundary. | Incomplete: no completed reduced runtime report. | Not agent UX evidence. | Performance cliff observed: full run exceeded 10 minutes; `--skip-reopen` rerun exceeded 6 minutes. | Timeout/stall evidence only; superseded by the `oc-oa53.12` diagnostic run. |
+| Tuned 100 MB scale ladder | [`docs/evals/results/ockp-scale-ladder-100mb.md`](../evals/results/ockp-scale-ladder-100mb.md) | Pass: reduced report only, no raw generated corpus, logs, or machine-local artifact refs. | Pass: deterministic generated corpus synced and read probes completed. | Not agent UX evidence. | Import/sync 19.38s; reopen/no-op sync 0.39s; FTS probes 0.28s total. | Synthetic scale evidence over 800 generated docs and about 100 MB corpus, with reduced sync diagnostics. |
+| 1 GB scale ladder | [`docs/evals/results/ockp-scale-ladder-1gb.md`](../evals/results/ockp-scale-ladder-1gb.md) | Pass: reduced report only, no raw generated corpus, logs, or machine-local artifact refs. | Pass: deterministic generated corpus synced and read probes completed. | Not agent UX evidence. | Import/sync 1657.81s; reopen/no-op sync 4.91s; FTS probes 8.88s total. | Synthetic scale evidence over 8,183 generated docs and about 1 GB corpus, with reduced sync diagnostics. |
 
 ## Representative Real-Vault Detail
 
@@ -50,17 +52,20 @@ now. The sanitized real-vault trial and reduced timing report did not show a
 capability gap or UX gap that justifies new runner-owned surfaces. No
 candidate-comparison Beads are needed from the tested real-vault workflows.
 
-Retrieval/indexing decision: tune or diagnose the current SQLite FTS and
-projection path before considering hybrid/vector retrieval. The 10 MB tier
-passed, but the 100 MB tier stalled before producing a completed reduced
-report. This is performance evidence, not evidence that semantic/vector
-retrieval would solve the problem. `oc-oa53.12` remains the required follow-up
-to determine whether the issue is projection rebuild cost, FTS indexing
-overhead, synthetic corpus shape, or harness behavior.
+Retrieval/indexing decision: continue with lexical SQLite FTS for now, and
+tune the current import/FTS write path before considering hybrid/vector
+retrieval. `oc-oa53.12` showed that the original 100 MB cliff was caused by
+full-sync document import repeatedly rebuilding projections and lacking
+interruption-surviving progress diagnostics. After tuning, 100 MB completed.
+The 1 GB tier also completed, but it is import-bound: document and FTS writes
+accounted for most of the 1657.81s sync time. This is not evidence that
+semantic/vector retrieval would solve the bottleneck.
 
-The 1 GB tier is not justified now. Running it before `oc-oa53.12` resolves
-the 100 MB cliff would likely consume time without producing new decision
-quality. The correct outcome for `oc-oa53.8` is `not_run_blocked_by_100mb`.
+The 1 GB tier is justified as maturity evidence only after the tuned 100 MB
+completion. A 10-minute cutoff is not a valid correctness threshold for 1 GB;
+it can only be a checkpoint for deciding whether enough reduced progress
+diagnostics exist. The completed 1 GB run establishes that the current path is
+functionally capable but too slow for routine release-gate use at that scale.
 
 LLM-wiki next surfaces: keep the current mapping to existing source intake,
 source-linked synthesis, search/list/get, graph/document links, provenance,
@@ -73,8 +78,9 @@ candidate-comparison need remains.
 Release-gate policy: keep the full production gate and repo-docs dogfood as
 the mandatory pre-release evidence. Do not make real-vault dogfood or scale
 ladder mandatory yet. Real-vault and scale reports should remain maturity
-evidence until the real-vault timing refresh and 100 MB diagnosis are complete.
-No release-doc update is warranted by this evidence.
+evidence. The 100 MB and 1 GB scale reports are useful maturity inputs, but
+their runtime profile is too expensive for a mandatory release gate. No
+release-doc update is warranted by this evidence.
 
 ## Taste Review
 
@@ -85,12 +91,12 @@ workflow ceremony after the promoted workflow actions already added
 `duplicate_candidate_report`, `memory_router_recall_report`, and
 `ingest_source_url` plan mode.
 
-The real taste debt is performance and observability at larger corpus sizes:
-the 100 MB scale ladder stalled without a completed report. The evaluated
-hybrid/vector shape is not selected because the failing evidence is import,
-projection, or harness cost rather than retrieval relevance. The valid
-follow-up category is: need exists, evaluated shape is incomplete, existing
-follow-up `oc-oa53.12` required.
+The real taste debt is performance and observability at larger corpus sizes.
+`oc-oa53.12` improved observability with reduced sync diagnostics and moved
+100 MB from timeout to completion, but 1 GB remains expensive because import
+and FTS writes dominate runtime. The evaluated hybrid/vector shape is not
+selected because the slow evidence is import/write cost rather than retrieval
+relevance.
 
 Beads searches before closing this decision found no existing hybrid/vector,
 LLM-wiki, or release-gate candidate work matching the non-promotion outcomes.

@@ -9,10 +9,11 @@ import (
 )
 
 type Store struct {
-	db        *sql.DB
-	backend   domain.BackendKind
-	vaultRoot string
-	now       func() time.Time
+	db                  *sql.DB
+	backend             domain.BackendKind
+	vaultRoot           string
+	syncDiagnosticsPath string
+	now                 func() time.Time
 }
 
 func New(ctx context.Context, cfg Config) (*Store, error) {
@@ -47,10 +48,11 @@ func newStore(ctx context.Context, cfg Config, syncVault bool) (*Store, error) {
 	}
 
 	store := &Store{
-		db:        db,
-		backend:   cfg.Backend,
-		vaultRoot: cfg.VaultRoot,
-		now:       time.Now,
+		db:                  db,
+		backend:             cfg.Backend,
+		vaultRoot:           cfg.VaultRoot,
+		syncDiagnosticsPath: cfg.SyncDiagnosticsPath,
+		now:                 time.Now,
 	}
 	if err := store.initSchema(ctx); err != nil {
 		_ = db.Close()

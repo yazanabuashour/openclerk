@@ -67,6 +67,12 @@ func TestExecuteScaleLadderMaturityWritesReducedReports(t *testing.T) {
 	if rep.Checks.RawContentCommitted || rep.Checks.MachineAbsoluteArtifactRefs {
 		t.Fatalf("unsafe report checks: %+v", rep.Checks)
 	}
+	if rep.SyncDiagnostics.ImportSync.PathsScanned == 0 || rep.SyncDiagnostics.ImportSync.DocumentsCreated == 0 {
+		t.Fatalf("missing import sync diagnostics: %+v", rep.SyncDiagnostics.ImportSync)
+	}
+	if !rep.SyncDiagnostics.ImportSync.ReducedReportSafe {
+		t.Fatalf("sync diagnostics not marked reduced-report safe: %+v", rep.SyncDiagnostics.ImportSync)
+	}
 }
 
 func TestExecuteRealVaultMaturityRedactsPrivateInputs(t *testing.T) {
@@ -105,6 +111,9 @@ func TestExecuteRealVaultMaturityRedactsPrivateInputs(t *testing.T) {
 	}
 	if !strings.Contains(jsonContent, "private-query-1") {
 		t.Fatalf("real-vault report did not use neutral private query reference: %s", jsonContent)
+	}
+	if !strings.Contains(markdownContent, "## Sync Diagnostics") {
+		t.Fatalf("real-vault report did not include sync diagnostics: %s", markdownContent)
 	}
 }
 

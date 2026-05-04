@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/yazanabuashour/openclerk/internal/domain"
+	"github.com/yazanabuashour/openclerk/internal/infra/sqlite"
 	"github.com/yazanabuashour/openclerk/internal/runclient"
 )
 
@@ -25,12 +27,13 @@ type generatedCorpusSummary struct {
 }
 
 type maturityReport struct {
-	Metadata   maturityReportMetadata `json:"metadata"`
-	Corpus     maturityCorpusSummary  `json:"corpus"`
-	Timings    maturityTimingSummary  `json:"timings"`
-	ReadProbes []maturityReadProbe    `json:"read_probes"`
-	Checks     maturityChecks         `json:"checks"`
-	Outcomes   []maturityOutcome      `json:"outcomes"`
+	Metadata        maturityReportMetadata  `json:"metadata"`
+	Corpus          maturityCorpusSummary   `json:"corpus"`
+	Timings         maturityTimingSummary   `json:"timings"`
+	SyncDiagnostics maturitySyncDiagnostics `json:"sync_diagnostics"`
+	ReadProbes      []maturityReadProbe     `json:"read_probes"`
+	Checks          maturityChecks          `json:"checks"`
+	Outcomes        []maturityOutcome       `json:"outcomes"`
 }
 
 type maturityReportMetadata struct {
@@ -71,6 +74,11 @@ type maturityTimingSummary struct {
 	ProjectionCheckSeconds float64 `json:"projection_check_seconds,omitempty"`
 	ProvenanceCheckSeconds float64 `json:"provenance_check_seconds,omitempty"`
 	SearchTotalSeconds     float64 `json:"search_total_seconds,omitempty"`
+}
+
+type maturitySyncDiagnostics struct {
+	ImportSync sqlite.SyncDiagnostics  `json:"import_sync"`
+	ReopenSync *sqlite.SyncDiagnostics `json:"reopen_sync,omitempty"`
 }
 
 type maturityReadProbe struct {
@@ -133,7 +141,11 @@ func executeMaturity(ctx context.Context, config maturityConfig, stdout io.Write
 		return fmt.Errorf("private vault root must be a directory")
 	}
 
-	runnerConfig := runclient.Config{DatabasePath: dbPath}
+	importDiagnosticsPath := filepath.Join(runRoot, "sync-diagnostics-import.json")
+	runnerConfig := runclient.Config{
+		DatabasePath:        dbPath,
+		SyncDiagnosticsPath: importDiagnosticsPath,
+	}
 	if _, err := runclient.InitializePaths(runnerConfig, vaultRoot); err != nil {
 		return fmt.Errorf("initialize maturity runtime paths: %w", err)
 	}
@@ -144,6 +156,11 @@ func executeMaturity(ctx context.Context, config maturityConfig, stdout io.Write
 	if err != nil {
 		return fmt.Errorf("sync maturity vault: %w", err)
 	}
+	importDiagnostics, err := readSyncDiagnostics(importDiagnosticsPath)
+	if err != nil {
+		_ = client.Close()
+		return err
+	}
 
 	report, err := buildMaturityReport(ctx, config, client, dbPath, generated)
 	if err != nil {
@@ -152,18 +169,30 @@ func executeMaturity(ctx context.Context, config maturityConfig, stdout io.Write
 	}
 	report.Timings.GenerateSeconds = generateSeconds
 	report.Timings.ImportSyncSeconds = importSeconds
+	report.SyncDiagnostics.ImportSync = importDiagnostics
 
 	if !config.SkipReopen {
 		if err := client.Close(); err != nil {
 			return fmt.Errorf("close maturity runtime before reopen: %w", err)
 		}
 		client = nil
+		reopenDiagnosticsPath := filepath.Join(runRoot, "sync-diagnostics-reopen.json")
+		reopenConfig := runclient.Config{
+			DatabasePath:        dbPath,
+			SyncDiagnosticsPath: reopenDiagnosticsPath,
+		}
 		reopenStart := time.Now()
-		reopened, err := runclient.Open(runnerConfig)
+		reopened, err := runclient.Open(reopenConfig)
 		report.Timings.ReopenRebuildSeconds = roundSeconds(time.Since(reopenStart).Seconds())
 		if err != nil {
 			return fmt.Errorf("reopen maturity runtime: %w", err)
 		}
+		reopenDiagnostics, err := readSyncDiagnostics(reopenDiagnosticsPath)
+		if err != nil {
+			_ = reopened.Close()
+			return err
+		}
+		report.SyncDiagnostics.ReopenSync = &reopenDiagnostics
 		if err := reopened.Close(); err != nil {
 			return fmt.Errorf("close reopened maturity runtime: %w", err)
 		}
@@ -189,6 +218,18 @@ func executeMaturity(ctx context.Context, config maturityConfig, stdout io.Write
 		return err
 	}
 	return nil
+}
+
+func readSyncDiagnostics(path string) (sqlite.SyncDiagnostics, error) {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return sqlite.SyncDiagnostics{}, fmt.Errorf("read sync diagnostics: %w", err)
+	}
+	var diagnostics sqlite.SyncDiagnostics
+	if err := json.Unmarshal(content, &diagnostics); err != nil {
+		return sqlite.SyncDiagnostics{}, fmt.Errorf("decode sync diagnostics: %w", err)
+	}
+	return diagnostics, nil
 }
 
 func buildMaturityReport(ctx context.Context, config maturityConfig, client *runclient.Client, dbPath string, generated generatedCorpusSummary) (maturityReport, error) {
@@ -674,6 +715,12 @@ func writeMaturityMarkdownReport(path string, rep maturityReport) error {
 	fmt.Fprintf(&b, "| provenance_check | %.2f |\n", rep.Timings.ProvenanceCheckSeconds)
 	fmt.Fprintf(&b, "| search_total | %.2f |\n\n", rep.Timings.SearchTotalSeconds)
 
+	b.WriteString("## Sync Diagnostics\n\n")
+	writeSyncDiagnosticsMarkdown(&b, "import_sync", &rep.SyncDiagnostics.ImportSync)
+	if rep.SyncDiagnostics.ReopenSync != nil {
+		writeSyncDiagnosticsMarkdown(&b, "reopen_sync", rep.SyncDiagnostics.ReopenSync)
+	}
+
 	b.WriteString("## Read Probes\n\n")
 	b.WriteString("| Probe | Query reference | Status | Results | Seconds | Evidence posture |\n| --- | --- | --- | ---: | ---: | --- |\n")
 	for _, probe := range rep.ReadProbes {
@@ -707,4 +754,39 @@ func writeMaturityMarkdownReport(path string, rep maturityReport) error {
 		return fmt.Errorf("write maturity Markdown report: %w", err)
 	}
 	return nil
+}
+
+func writeSyncDiagnosticsMarkdown(b *strings.Builder, label string, diagnostics *sqlite.SyncDiagnostics) {
+	if diagnostics == nil {
+		return
+	}
+	fmt.Fprintf(b, "### `%s`\n\n", label)
+	b.WriteString("| Metric | Value |\n| --- | ---: |\n")
+	fmt.Fprintf(b, "| status | `%s` |\n", diagnostics.Status)
+	fmt.Fprintf(b, "| last_phase | `%s` |\n", diagnostics.LastPhase)
+	fmt.Fprintf(b, "| paths_scanned | %d |\n", diagnostics.PathsScanned)
+	fmt.Fprintf(b, "| documents_created | %d |\n", diagnostics.DocumentsCreated)
+	fmt.Fprintf(b, "| documents_updated | %d |\n", diagnostics.DocumentsUpdated)
+	fmt.Fprintf(b, "| documents_unchanged | %d |\n", diagnostics.DocumentsUnchanged)
+	fmt.Fprintf(b, "| documents_pruned | %d |\n", diagnostics.DocumentsPruned)
+	fmt.Fprintf(b, "| bytes_read | %d |\n", diagnostics.BytesRead)
+	fmt.Fprintf(b, "| chunks_written | %d |\n", diagnostics.ChunksWritten)
+	fmt.Fprintf(b, "| fts_rows_written | %d |\n", diagnostics.FTSRowsWritten)
+	fmt.Fprintf(b, "| projection_bootstrap | %t |\n", diagnostics.ProjectionBootstrap)
+	fmt.Fprintf(b, "| projection_rebuild_skipped | %t |\n", diagnostics.ProjectionRebuildSkipped)
+	fmt.Fprintf(b, "| scan_seconds | %.2f |\n", diagnostics.ScanSeconds)
+	fmt.Fprintf(b, "| prune_seconds | %.2f |\n", diagnostics.PruneSeconds)
+	fmt.Fprintf(b, "| document_read_parse_seconds | %.2f |\n", diagnostics.DocumentReadParseSeconds)
+	fmt.Fprintf(b, "| document_write_seconds | %.2f |\n", diagnostics.DocumentWriteSeconds)
+	fmt.Fprintf(b, "| projection_rebuild_seconds | %.2f |\n", diagnostics.ProjectionRebuildSeconds)
+	fmt.Fprintf(b, "| total_seconds | %.2f |\n\n", diagnostics.TotalSeconds)
+	if len(diagnostics.ProjectionRebuilds) == 0 {
+		b.WriteString("Projection rebuilds: none.\n\n")
+		return
+	}
+	b.WriteString("| Projection | Seconds |\n| --- | ---: |\n")
+	for _, rebuild := range diagnostics.ProjectionRebuilds {
+		fmt.Fprintf(b, "| `%s` | %.2f |\n", rebuild.Projection, rebuild.Seconds)
+	}
+	b.WriteString("\n")
 }

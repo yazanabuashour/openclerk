@@ -76,6 +76,8 @@ Each reduced report records:
 - generation time
 - import/sync time
 - reopen/rebuild time unless `--skip-reopen` is used
+- reduced sync diagnostics for scan, document writes, FTS writes, projection
+  rebuilds, and no-op reopen behavior
 - FTS search timing and hit counts
 - `list_documents` and `get_document` timing
 - synthesis projection-state sample timing and count
@@ -119,3 +121,24 @@ The first-pass decision is
 [`docs/architecture/openclerk-next-phase-maturity-validation-decision.md`](../architecture/openclerk-next-phase-maturity-validation-decision.md):
 do not run 1 GB yet, and diagnose or tune the current SQLite FTS/projection
 path before considering hybrid/vector retrieval.
+
+## `oc-oa53.12` Follow-Up Evidence
+
+`oc-oa53.12` diagnosed the initial 100 MB timeout as a sync/projection
+implementation issue rather than a retrieval-mode issue. Full-vault sync now
+imports documents in batches, rebuilds projections once after import, skips
+chunk/FTS writes for unchanged documents during reopen, and writes reduced
+progress diagnostics during sync so interrupted runs still leave local
+phase-level evidence.
+
+The tuned 100 MB report is
+[`docs/evals/results/ockp-scale-ladder-100mb.md`](results/ockp-scale-ladder-100mb.md).
+It completed with import/sync 19.38s, reopen/no-op sync 0.39s, and FTS probes
+0.28s total.
+
+The 1 GB report is
+[`docs/evals/results/ockp-scale-ladder-1gb.md`](results/ockp-scale-ladder-1gb.md).
+It completed with import/sync 1657.81s, reopen/no-op sync 4.91s, and FTS probes
+8.88s total. The 1 GB result should not be judged by a fixed 10-minute cutoff:
+the completed reduced report shows the current path is functionally capable but
+import-bound at this scale.

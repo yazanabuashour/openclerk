@@ -13,8 +13,29 @@ import (
 	"time"
 )
 
+type documentSyncOptions struct {
+	RebuildProjections bool
+	Diagnostics        *SyncDiagnostics
+	Tx                 *sql.Tx
+}
+
+type documentSyncResult struct {
+	Created        bool
+	Updated        bool
+	Unchanged      bool
+	BytesRead      int64
+	ChunksWritten  int
+	FTSRowsWritten int
+}
+
+const syncVaultDocumentBatchSize = 200
+
 func (s *Store) syncVault(ctx context.Context) error {
+	totalStart := time.Now()
+	diagnostics := newSyncDiagnostics()
+
 	paths := make([]string, 0, 32)
+	scanStart := time.Now()
 	err := filepath.WalkDir(s.vaultRoot, func(absPath string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -36,30 +57,88 @@ func (s *Store) syncVault(ctx context.Context) error {
 		return domain.InternalError("scan vault root", err)
 	}
 	sort.Strings(paths)
-	if err := s.pruneMissingDocuments(ctx, paths); err != nil {
+	diagnostics.ScanSeconds = syncSecondsSince(scanStart)
+	diagnostics.PathsScanned = len(paths)
+	diagnostics.LastPhase = "scan_complete"
+	diagnostics.TotalSeconds = syncSecondsSince(totalStart)
+	if err := writeSyncDiagnostics(s.syncDiagnosticsPath, diagnostics); err != nil {
 		return err
 	}
-	for _, relPath := range paths {
-		if err := s.syncDocumentFromDisk(ctx, relPath, ""); err != nil {
+
+	pruneStart := time.Now()
+	diagnostics.LastPhase = "prune"
+	pruned, err := s.pruneMissingDocuments(ctx, paths)
+	diagnostics.PruneSeconds = syncSecondsSince(pruneStart)
+	diagnostics.DocumentsPruned = pruned
+	if err != nil {
+		return err
+	}
+	diagnostics.LastPhase = "document_import"
+	diagnostics.TotalSeconds = syncSecondsSince(totalStart)
+	if err := writeSyncDiagnostics(s.syncDiagnosticsPath, diagnostics); err != nil {
+		return err
+	}
+	for start := 0; start < len(paths); start += syncVaultDocumentBatchSize {
+		end := start + syncVaultDocumentBatchSize
+		if end > len(paths) {
+			end = len(paths)
+		}
+		tx, err := s.db.BeginTx(ctx, nil)
+		if err != nil {
+			return domain.InternalError("begin vault sync batch", err)
+		}
+		for _, relPath := range paths[start:end] {
+			if _, err := s.syncDocumentFromDiskWithOptions(ctx, relPath, "", documentSyncOptions{
+				RebuildProjections: false,
+				Diagnostics:        &diagnostics,
+				Tx:                 tx,
+			}); err != nil {
+				_ = tx.Rollback()
+				return err
+			}
+		}
+		if err := tx.Commit(); err != nil {
+			_ = tx.Rollback()
+			return domain.InternalError("commit vault sync batch", err)
+		}
+		diagnostics.TotalSeconds = syncSecondsSince(totalStart)
+		if err := writeSyncDiagnostics(s.syncDiagnosticsPath, diagnostics); err != nil {
 			return err
 		}
 	}
-	if err := s.rebuildGraph(ctx); err != nil {
-		return err
+
+	shouldRebuild := diagnostics.changedDocuments() > 0
+	if !shouldRebuild {
+		bootstrap, err := s.needsProjectionBootstrap(ctx)
+		if err != nil {
+			return err
+		}
+		diagnostics.ProjectionBootstrap = bootstrap
+		shouldRebuild = bootstrap
 	}
-	if err := s.rebuildRecords(ctx); err != nil {
-		return err
+	if shouldRebuild {
+		diagnostics.LastPhase = "projection_rebuild"
+		diagnostics.TotalSeconds = syncSecondsSince(totalStart)
+		if err := writeSyncDiagnostics(s.syncDiagnosticsPath, diagnostics); err != nil {
+			return err
+		}
+		if err := s.rebuildAllProjections(ctx, &diagnostics); err != nil {
+			return err
+		}
+		if err := s.clearProjectionRebuildPending(ctx); err != nil {
+			return err
+		}
+	} else {
+		diagnostics.ProjectionRebuildSkipped = true
 	}
-	if err := s.rebuildServices(ctx); err != nil {
-		return err
-	}
-	if err := s.rebuildDecisions(ctx); err != nil {
-		return err
-	}
-	return s.rebuildSynthesis(ctx)
+
+	diagnostics.Status = "completed"
+	diagnostics.LastPhase = "completed"
+	diagnostics.TotalSeconds = syncSecondsSince(totalStart)
+	return writeSyncDiagnostics(s.syncDiagnosticsPath, diagnostics)
 }
 
-func (s *Store) pruneMissingDocuments(ctx context.Context, livePaths []string) error {
+func (s *Store) pruneMissingDocuments(ctx context.Context, livePaths []string) (int, error) {
 	live := make(map[string]struct{}, len(livePaths))
 	for _, relPath := range livePaths {
 		live[relPath] = struct{}{}
@@ -67,7 +146,7 @@ func (s *Store) pruneMissingDocuments(ctx context.Context, livePaths []string) e
 
 	rows, err := s.db.QueryContext(ctx, `SELECT doc_id, path FROM documents`)
 	if err != nil {
-		return domain.InternalError("query existing documents for pruning", err)
+		return 0, domain.InternalError("query existing documents for pruning", err)
 	}
 	defer func() {
 		_ = rows.Close()
@@ -80,7 +159,7 @@ func (s *Store) pruneMissingDocuments(ctx context.Context, livePaths []string) e
 			path  string
 		)
 		if err := rows.Scan(&docID, &path); err != nil {
-			return domain.InternalError("scan existing document for pruning", err)
+			return 0, domain.InternalError("scan existing document for pruning", err)
 		}
 		if _, ok := live[path]; ok {
 			continue
@@ -88,38 +167,49 @@ func (s *Store) pruneMissingDocuments(ctx context.Context, livePaths []string) e
 		staleDocIDs = append(staleDocIDs, docID)
 	}
 	if err := rows.Err(); err != nil {
-		return domain.InternalError("iterate existing documents for pruning", err)
+		return 0, domain.InternalError("iterate existing documents for pruning", err)
 	}
 	if len(staleDocIDs) == 0 {
-		return nil
+		return 0, nil
 	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return domain.InternalError("begin prune missing documents", err)
+		return 0, domain.InternalError("begin prune missing documents", err)
 	}
 	defer func() {
 		_ = tx.Rollback()
 	}()
 
+	if err := s.markProjectionRebuildPending(ctx, tx, s.now().UTC()); err != nil {
+		return 0, err
+	}
 	for _, docID := range staleDocIDs {
 		if _, err := tx.ExecContext(ctx, `DELETE FROM chunk_fts WHERE doc_id = ?`, docID); err != nil {
-			return domain.InternalError("delete missing document chunks from index", err)
+			return 0, domain.InternalError("delete missing document chunks from index", err)
 		}
 		if _, err := tx.ExecContext(ctx, `DELETE FROM documents WHERE doc_id = ?`, docID); err != nil {
-			return domain.InternalError("delete missing document", err)
+			return 0, domain.InternalError("delete missing document", err)
 		}
 	}
 	if err := tx.Commit(); err != nil {
-		return domain.InternalError("commit prune missing documents", err)
+		return 0, domain.InternalError("commit prune missing documents", err)
 	}
-	return nil
+	return len(staleDocIDs), nil
 }
 
 func (s *Store) syncDocumentFromDisk(ctx context.Context, relPath string, preferredTitle string) error {
+	_, err := s.syncDocumentFromDiskWithOptions(ctx, relPath, preferredTitle, documentSyncOptions{
+		RebuildProjections: true,
+	})
+	return err
+}
+
+func (s *Store) syncDocumentFromDiskWithOptions(ctx context.Context, relPath string, preferredTitle string, options documentSyncOptions) (documentSyncResult, error) {
+	readParseStart := time.Now()
 	bodyBytes, err := osReadFile(filepath.Join(s.vaultRoot, filepath.FromSlash(relPath)))
 	if err != nil {
-		return domain.InternalError("read document from disk", err)
+		return documentSyncResult{}, domain.InternalError("read document from disk", err)
 	}
 	body := string(bodyBytes)
 	headings, sections, frontmatter := parseMarkdown(body, relPath)
@@ -127,13 +217,27 @@ func (s *Store) syncDocumentFromDisk(ctx context.Context, relPath string, prefer
 	now := s.now().UTC()
 	headingsJSON, _ := json.Marshal(headings)
 	metadataJSON, _ := json.Marshal(frontmatter)
+	result := documentSyncResult{
+		BytesRead: int64(len(bodyBytes)),
+	}
+	if options.Diagnostics != nil {
+		options.Diagnostics.BytesRead += result.BytesRead
+		options.Diagnostics.DocumentReadParseSeconds += syncSecondsSince(readParseStart)
+	}
 
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return domain.InternalError("begin transaction", err)
+	tx := options.Tx
+	ownTx := tx == nil
+	if ownTx {
+		var err error
+		tx, err = s.db.BeginTx(ctx, nil)
+		if err != nil {
+			return documentSyncResult{}, domain.InternalError("begin transaction", err)
+		}
 	}
 	defer func() {
-		_ = tx.Rollback()
+		if ownTx {
+			_ = tx.Rollback()
+		}
 	}()
 
 	createdAt := now.Format(time.RFC3339Nano)
@@ -160,7 +264,7 @@ WHERE doc_id = ?`, docID).Scan(
 		createdAt = createdAtExisting
 		eventType = "document_updated"
 	} else if !errors.Is(err, sql.ErrNoRows) {
-		return domain.InternalError("query existing document timestamp", err)
+		return documentSyncResult{}, domain.InternalError("query existing document timestamp", err)
 	}
 	previousFrontmatter := map[string]string{}
 	if eventType == "document_updated" {
@@ -174,7 +278,15 @@ WHERE doc_id = ?`, docID).Scan(
 		existingHeadingsJSON != string(headingsJSON) ||
 		existingMetadataJSON != string(metadataJSON)
 	if !contentChanged {
-		updatedAt = updatedAtExisting
+		result.Unchanged = true
+		if options.Diagnostics != nil {
+			options.Diagnostics.DocumentsUnchanged++
+		}
+		return result, nil
+	}
+	writeStart := time.Now()
+	if err := s.markProjectionRebuildPending(ctx, tx, now); err != nil {
+		return documentSyncResult{}, err
 	}
 	if _, err := tx.ExecContext(ctx, `
 INSERT INTO documents (doc_id, path, title, body, headings_json, metadata_json, created_at, updated_at)
@@ -195,10 +307,10 @@ ON CONFLICT(doc_id) DO UPDATE SET
 		createdAt,
 		updatedAt,
 	); err != nil {
-		return domain.InternalError("upsert document", err)
+		return documentSyncResult{}, domain.InternalError("upsert document", err)
 	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM document_metadata WHERE doc_id = ?`, docID); err != nil {
-		return domain.InternalError("delete document metadata", err)
+		return documentSyncResult{}, domain.InternalError("delete document metadata", err)
 	}
 	for key, value := range frontmatter {
 		if _, err := tx.ExecContext(ctx, `
@@ -208,15 +320,15 @@ VALUES (?, ?, ?)`,
 			strings.ToLower(strings.TrimSpace(key)),
 			strings.TrimSpace(value),
 		); err != nil {
-			return domain.InternalError("insert document metadata", err)
+			return documentSyncResult{}, domain.InternalError("insert document metadata", err)
 		}
 	}
 
 	if _, err := tx.ExecContext(ctx, `DELETE FROM chunk_fts WHERE doc_id = ?`, docID); err != nil {
-		return domain.InternalError("delete indexed chunks", err)
+		return documentSyncResult{}, domain.InternalError("delete indexed chunks", err)
 	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM chunks WHERE doc_id = ?`, docID); err != nil {
-		return domain.InternalError("delete chunks", err)
+		return documentSyncResult{}, domain.InternalError("delete chunks", err)
 	}
 	for _, sec := range sections {
 		chunkID := chunkIDForSection(docID, sec)
@@ -231,8 +343,9 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`,
 			sec.LineStart,
 			sec.LineEnd,
 		); err != nil {
-			return domain.InternalError("insert chunk", err)
+			return documentSyncResult{}, domain.InternalError("insert chunk", err)
 		}
+		result.ChunksWritten++
 		if _, err := tx.ExecContext(ctx, `
 INSERT INTO chunk_fts (chunk_id, doc_id, path, heading, content)
 VALUES (?, ?, ?, ?, ?)`,
@@ -242,8 +355,9 @@ VALUES (?, ?, ?, ?, ?)`,
 			sec.Heading,
 			sec.Content,
 		); err != nil {
-			return domain.InternalError("insert chunk index", err)
+			return documentSyncResult{}, domain.InternalError("insert chunk index", err)
 		}
+		result.FTSRowsWritten++
 	}
 
 	contentVersion := hashID("document-version", relPath, title, body, string(headingsJSON), string(metadataJSON))
@@ -259,7 +373,7 @@ VALUES (?, ?, ?, ?, ?)`,
 				"path": relPath,
 			},
 		}); err != nil {
-			return domain.InternalError("record provenance event", err)
+			return documentSyncResult{}, domain.InternalError("record provenance event", err)
 		}
 		if !isSynthesisDocument(relPath, frontmatter) {
 			sourceEventType := "source_created"
@@ -279,7 +393,7 @@ VALUES (?, ?, ?, ?, ?)`,
 				OccurredAt: now,
 				Details:    sourceDetails,
 			}); err != nil {
-				return domain.InternalError("record source provenance event", err)
+				return documentSyncResult{}, domain.InternalError("record source provenance event", err)
 			}
 		}
 	}
@@ -296,7 +410,7 @@ VALUES (?, ?, ?, ?, ?)`,
 				"path": relPath,
 			},
 		}); err != nil {
-			return domain.InternalError("mark graph projection stale", err)
+			return documentSyncResult{}, domain.InternalError("mark graph projection stale", err)
 		}
 		if err := insertProvenanceEvent(ctx, tx, domain.ProvenanceEvent{
 			EventID:    hashID("event", "projection_invalidated", "graph", docID, now.Format(time.RFC3339Nano), contentVersion),
@@ -310,7 +424,7 @@ VALUES (?, ?, ?, ?, ?)`,
 				"path":       relPath,
 			},
 		}); err != nil {
-			return domain.InternalError("record graph invalidation event", err)
+			return documentSyncResult{}, domain.InternalError("record graph invalidation event", err)
 		}
 	}
 	if contentChanged && supportsRecords(s.backend) {
@@ -329,7 +443,7 @@ VALUES (?, ?, ?, ?, ?)`,
 					"path":       relPath,
 				},
 			}); err != nil {
-				return domain.InternalError("record records invalidation event", err)
+				return documentSyncResult{}, domain.InternalError("record records invalidation event", err)
 			}
 		}
 	}
@@ -349,7 +463,7 @@ VALUES (?, ?, ?, ?, ?)`,
 					"path":       relPath,
 				},
 			}); err != nil {
-				return domain.InternalError("record services invalidation event", err)
+				return documentSyncResult{}, domain.InternalError("record services invalidation event", err)
 			}
 		}
 	}
@@ -369,27 +483,171 @@ VALUES (?, ?, ?, ?, ?)`,
 					"path":       relPath,
 				},
 			}); err != nil {
-				return domain.InternalError("record decisions invalidation event", err)
+				return documentSyncResult{}, domain.InternalError("record decisions invalidation event", err)
 			}
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
-		return domain.InternalError("commit document sync", err)
+	if eventType == "document_created" {
+		result.Created = true
+		if options.Diagnostics != nil {
+			options.Diagnostics.DocumentsCreated++
+		}
+	} else {
+		result.Updated = true
+		if options.Diagnostics != nil {
+			options.Diagnostics.DocumentsUpdated++
+		}
 	}
-	if err := s.rebuildGraph(ctx); err != nil {
-		return err
+	if options.Diagnostics != nil {
+		options.Diagnostics.ChunksWritten += result.ChunksWritten
+		options.Diagnostics.FTSRowsWritten += result.FTSRowsWritten
+		options.Diagnostics.DocumentWriteSeconds += syncSecondsSince(writeStart)
 	}
-	if err := s.rebuildRecords(ctx); err != nil {
-		return err
+	if ownTx {
+		if err := tx.Commit(); err != nil {
+			return documentSyncResult{}, domain.InternalError("commit document sync", err)
+		}
 	}
-	if err := s.rebuildServices(ctx); err != nil {
-		return err
+	if ownTx && options.RebuildProjections {
+		if err := s.rebuildAllProjections(ctx, options.Diagnostics); err != nil {
+			return documentSyncResult{}, err
+		}
+		if err := s.clearProjectionRebuildPending(ctx); err != nil {
+			return documentSyncResult{}, err
+		}
 	}
-	if err := s.rebuildDecisions(ctx); err != nil {
-		return err
+	return result, nil
+}
+
+func (s *Store) rebuildAllProjections(ctx context.Context, diagnostics *SyncDiagnostics) error {
+	rebuilders := []struct {
+		name      string
+		supported bool
+		rebuild   func(context.Context) error
+	}{
+		{name: "graph", supported: supportsGraph(s.backend), rebuild: s.rebuildGraph},
+		{name: "records", supported: supportsRecords(s.backend), rebuild: s.rebuildRecords},
+		{name: "services", supported: supportsServices(s.backend), rebuild: s.rebuildServices},
+		{name: "decisions", supported: supportsDecisions(s.backend), rebuild: s.rebuildDecisions},
+		{name: "synthesis", supported: true, rebuild: s.rebuildSynthesis},
 	}
-	return s.rebuildSynthesis(ctx)
+	for _, rebuilder := range rebuilders {
+		if !rebuilder.supported {
+			continue
+		}
+		start := time.Now()
+		if err := rebuilder.rebuild(ctx); err != nil {
+			return err
+		}
+		seconds := syncSecondsSince(start)
+		if diagnostics != nil {
+			diagnostics.ProjectionRebuildSeconds += seconds
+			diagnostics.ProjectionRebuilds = append(diagnostics.ProjectionRebuilds, ProjectionRebuildDiagnostics{
+				Projection: rebuilder.name,
+				Seconds:    seconds,
+			})
+		}
+	}
+	return nil
+}
+
+func (s *Store) needsProjectionBootstrap(ctx context.Context) (bool, error) {
+	pending, err := s.projectionRebuildPending(ctx)
+	if err != nil {
+		return false, err
+	}
+	if pending {
+		return true, nil
+	}
+	var documentCount int
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM documents`).Scan(&documentCount); err != nil {
+		return false, domain.InternalError("count documents for projection bootstrap", err)
+	}
+	if documentCount == 0 {
+		return false, nil
+	}
+	var projectionCount int
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM projection_states`).Scan(&projectionCount); err != nil {
+		return false, domain.InternalError("count projection states for bootstrap", err)
+	}
+	if projectionCount == 0 {
+		return true, nil
+	}
+	if supportsGraph(s.backend) {
+		graphNeedsBootstrap, err := s.graphProjectionNeedsBootstrap(ctx, documentCount)
+		if err != nil {
+			return false, err
+		}
+		if graphNeedsBootstrap {
+			return true, nil
+		}
+	}
+	synthesisNeedsBootstrap, err := s.synthesisProjectionNeedsBootstrap(ctx)
+	if err != nil {
+		return false, err
+	}
+	return synthesisNeedsBootstrap, nil
+}
+
+func (s *Store) markProjectionRebuildPending(ctx context.Context, tx *sql.Tx, now time.Time) error {
+	return upsertRuntimeConfigValueTx(ctx, tx, configKeyProjectionRebuildPending, "true", now.UTC().Format(time.RFC3339Nano))
+}
+
+func (s *Store) clearProjectionRebuildPending(ctx context.Context) error {
+	return upsertRuntimeConfigValue(ctx, s.db, configKeyProjectionRebuildPending, "false", s.now().UTC().Format(time.RFC3339Nano))
+}
+
+func (s *Store) projectionRebuildPending(ctx context.Context) (bool, error) {
+	value, err := runtimeConfigValue(ctx, s.db, configKeyProjectionRebuildPending)
+	if err != nil {
+		return false, err
+	}
+	return strings.EqualFold(strings.TrimSpace(value), "true"), nil
+}
+
+func (s *Store) graphProjectionNeedsBootstrap(ctx context.Context, documentCount int) (bool, error) {
+	var graphCount int
+	if err := s.db.QueryRowContext(ctx, `
+SELECT COUNT(*)
+FROM projection_states
+WHERE projection_name = 'graph'
+	AND ref_kind = 'document'`).Scan(&graphCount); err != nil {
+		return false, domain.InternalError("count graph projection states for bootstrap", err)
+	}
+	if graphCount != documentCount {
+		return true, nil
+	}
+	var staleGraphCount int
+	if err := s.db.QueryRowContext(ctx, `
+SELECT COUNT(*)
+FROM projection_states
+WHERE projection_name = 'graph'
+	AND freshness = 'stale'`).Scan(&staleGraphCount); err != nil {
+		return false, domain.InternalError("count stale graph projection states for bootstrap", err)
+	}
+	return staleGraphCount > 0, nil
+}
+
+func (s *Store) synthesisProjectionNeedsBootstrap(ctx context.Context) (bool, error) {
+	var synthesisDocuments int
+	if err := s.db.QueryRowContext(ctx, `
+SELECT COUNT(*)
+FROM documents AS d
+JOIN document_metadata AS m ON m.doc_id = d.doc_id
+WHERE d.path LIKE 'synthesis/%'
+	AND m.key_name = 'type'
+	AND lower(m.value_text) = 'synthesis'`).Scan(&synthesisDocuments); err != nil {
+		return false, domain.InternalError("count synthesis documents for projection bootstrap", err)
+	}
+	var synthesisProjections int
+	if err := s.db.QueryRowContext(ctx, `
+SELECT COUNT(*)
+FROM projection_states
+WHERE projection_name = 'synthesis'`).Scan(&synthesisProjections); err != nil {
+		return false, domain.InternalError("count synthesis projection states for bootstrap", err)
+	}
+	return synthesisDocuments != synthesisProjections, nil
 }
 
 func (s *Store) loadAllDocuments(ctx context.Context) ([]domain.Document, error) {
