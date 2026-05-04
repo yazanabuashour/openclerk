@@ -1,0 +1,50 @@
+{
+  "lane": "artifact-local-path-candidate-plan",
+  "generated_at": "2026-05-04T00:00:00Z",
+  "schema_version": "artifact_local_path_candidate_plan_eval.v1",
+  "action": "artifact_candidate_plan",
+  "input_shape": {
+    "artifact.local_path": "<explicit-user-local-file>",
+    "artifact.artifact_kind": "receipt"
+  },
+  "parser": {
+    "supported": [
+      "UTF-8 text",
+      "markdown",
+      "text-bearing PDF"
+    ],
+    "unsupported": [
+      "image OCR",
+      "scanned PDF OCR",
+      "opaque binary parsing"
+    ]
+  },
+  "result": {
+    "rejected": false,
+    "source_type": "local_artifact",
+    "source_ref": "user_supplied_local_artifact",
+    "file_name": "receipt.txt",
+    "mime_type": "text/plain",
+    "text_status": "extracted",
+    "parser": "utf8_text",
+    "candidate_path": "artifacts/receipts/vendor-receipt.md",
+    "candidate_title": "Vendor Receipt",
+    "duplicate_status": "no_duplicate_found",
+    "confidence": "medium",
+    "write_status": "planned_no_write",
+    "next_create_document_request_present": true
+  },
+  "checks": {
+    "local_path_committed": false,
+    "durable_write_performed": false,
+    "ocr_performed": false,
+    "unsupported_binary_accepted": false,
+    "machine_absolute_artifact_refs": false
+  },
+  "taste_review": {
+    "safety_pass": "yes",
+    "capability_pass": "yes_for_text_and_text_pdf_candidate_planning",
+    "ux_quality": "improved_plan_then_approve"
+  },
+  "validation_boundary": "Read-only explicit local artifact planning; durable writes still require approval through create_document or ingest_source_url."
+}

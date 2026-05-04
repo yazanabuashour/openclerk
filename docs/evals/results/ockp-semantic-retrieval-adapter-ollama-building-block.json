@@ -1,0 +1,52 @@
+{
+  "lane": "semantic-retrieval-adapter",
+  "generated_at": "2026-05-04T00:00:00Z",
+  "schema_version": "semantic_retrieval_adapter_eval.v1",
+  "module": "modules/semantic-retrieval-adapter",
+  "command": "semantic-retrieval-adapter search",
+  "provider": {
+    "provider": "ollama",
+    "model": "embeddinggemma",
+    "status": "completed",
+    "embedding_dimensions": 768,
+    "privacy_disclosure": "local Ollama embeddings keep corpus/query text on this machine"
+  },
+  "cache": {
+    "status": "rebuilt",
+    "cache_ref": "user_cache:semantic-retrieval-adapter/<cache-key>.json",
+    "committed": false,
+    "rebuildable": true
+  },
+  "fixture": {
+    "documents": 2,
+    "chunks": 4,
+    "paths": [
+      "docs/architecture/hybrid.md",
+      "docs/architecture/lexical.md"
+    ]
+  },
+  "result": {
+    "search_status": "completed",
+    "ranking": "hybrid_rrf_vector_lexical",
+    "hit_count": 2,
+    "duplicate_chunks": 2,
+    "top_citations": [
+      "docs/architecture/lexical.md",
+      "docs/architecture/hybrid.md"
+    ],
+    "citation_bearing": true
+  },
+  "checks": {
+    "core_search_default_changed": false,
+    "core_runner_schema_changed": false,
+    "provider_key_committed": false,
+    "cache_committed": false,
+    "machine_absolute_artifact_refs": false
+  },
+  "taste_review": {
+    "safety_pass": "yes",
+    "capability_pass": "yes_for_optional_building_block",
+    "ux_quality": "acceptable_as_optional_module"
+  },
+  "validation_boundary": "Optional module evidence only; no OpenClerk core schema migration, durable vector store, provider config write, default search ranking change, or committed cache."
+}

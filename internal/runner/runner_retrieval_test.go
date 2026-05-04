@@ -2,6 +2,7 @@ package runner_test
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"github.com/yazanabuashour/openclerk/internal/runclient"
 	"github.com/yazanabuashour/openclerk/internal/runner"
@@ -1584,4 +1585,90 @@ func searchResultContainsPath(hits []runner.SearchHit, path string) bool {
 		}
 	}
 	return false
+}
+
+func TestRetrievalSearchZeroHitLexicalFallbackPreservesFiltersAndCitations(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "docs/architecture/semantic-target.md", "Semantic Target", strings.TrimSpace(`---
+tag: semantic-recall
+---
+# Semantic Target
+
+## Summary
+Hybrid retrieval architecture evidence says vector ranking should preserve citation quality.
+`)+"\n")
+	createDocument(t, ctx, config, "docs/architecture/semantic-duplicate.md", "Semantic Duplicate", strings.TrimSpace(`---
+tag: semantic-recall
+---
+# Semantic Duplicate
+
+## Summary
+Hybrid retrieval architecture evidence duplicate chunk.
+
+## Details
+Hybrid retrieval architecture evidence duplicate chunk.
+`)+"\n")
+	createDocument(t, ctx, config, "archive/semantic-target.md", "Archived Semantic Target", strings.TrimSpace(`---
+tag: semantic-recall
+---
+# Archived Semantic Target
+
+## Summary
+Hybrid retrieval architecture evidence archived copy.
+`)+"\n")
+
+	result, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
+			Text:       "architecture vector citations",
+			PathPrefix: "docs/architecture/",
+			Tag:        "semantic-recall",
+			Limit:      10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("fallback search: %v", err)
+	}
+	if result.Search == nil ||
+		!searchResultContainsPath(result.Search.Hits, "docs/architecture/semantic-target.md") ||
+		searchResultContainsPath(result.Search.Hits, "archive/semantic-target.md") {
+		t.Fatalf("fallback search result = %+v", result.Search)
+	}
+	seen := map[string]bool{}
+	for _, hit := range result.Search.Hits {
+		if len(hit.Citations) == 0 || hit.Citations[0].LineStart == 0 || hit.Citations[0].Path == "" {
+			t.Fatalf("hit missing citation: %+v", hit)
+		}
+		if seen[hit.Citations[0].Path] {
+			t.Fatalf("fallback did not collapse duplicate document hits: %+v", result.Search.Hits)
+		}
+		seen[hit.Citations[0].Path] = true
+	}
+}
+
+func TestRetrievalSearchZeroHitFallbackDoesNotReplaceLaterEmptyFTSPage(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "docs/architecture/exact.md", "Exact Match", "# Exact Match\n\n## Summary\nRed blue exact phrase.\n")
+	createDocument(t, ctx, config, "docs/architecture/token-decoy.md", "Token Decoy", "# Token Decoy\n\n## Summary\nRed only token overlap.\n")
+
+	result, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{
+			Text:   "red blue",
+			Limit:  10,
+			Cursor: base64.RawURLEncoding.EncodeToString([]byte("1")),
+		},
+	})
+	if err != nil {
+		t.Fatalf("cursor search: %v", err)
+	}
+	if result.Search == nil || len(result.Search.Hits) != 0 {
+		t.Fatalf("later empty FTS page should not be replaced by fallback hits: %+v", result.Search)
+	}
 }

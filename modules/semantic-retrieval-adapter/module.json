@@ -1,0 +1,67 @@
+{
+  "schema_version": "openclerk-module.v1",
+  "module": {
+    "name": "semantic-retrieval-adapter",
+    "version": "0.1.0",
+    "kind": "retrieval_adapter"
+  },
+  "openclerk_contract": {
+    "min_version": "0.1.0",
+    "max_version": "<next-breaking-contract>"
+  },
+  "provides": [
+    {
+      "type": "command",
+      "name": "semantic-retrieval-adapter search",
+      "summary": "Read-only citation-bearing semantic/hybrid retrieval over OpenClerk documents using local Ollama or opt-in Gemini embeddings."
+    }
+  ],
+  "requires": {
+    "credentials": [
+      "GEMINI_API_KEY only when provider is gemini, or when fallback_provider is explicitly gemini and Ollama is unavailable"
+    ],
+    "environment": [],
+    "tools": [
+      "ollama when provider is ollama"
+    ],
+    "network": "none for Ollama; provider egress for Gemini",
+    "schedule": "external"
+  },
+  "authority": {
+    "default": "read_only",
+    "durable_writes": "forbidden",
+    "forbidden": [
+      "change_openclerk_search_default",
+      "write_provider_config",
+      "commit_embedding_cache",
+      "write_documents",
+      "mutate_vault",
+      "direct_sqlite_mutation"
+    ]
+  },
+  "artifacts": {
+    "committed_examples": "reduced_public_only",
+    "paths": "repo_relative_or_placeholder",
+    "outputs": [
+      "semantic_retrieval_adapter.v1 search JSON"
+    ],
+    "cache": "rebuildable user-cache artifact outside committed repo"
+  },
+  "install": {
+    "package": "repo module command",
+    "steps": [
+      "Build or run modules/semantic-retrieval-adapter separately from OpenClerk core.",
+      "Use provider ollama for local/offline search when Ollama and an embedding model are installed.",
+      "Use provider gemini only with explicit opt-in and runtime_config:GEMINI_API_KEY."
+    ],
+    "uninstall": "Remove the module binary and optional user-cache directory without changing OpenClerk core."
+  },
+  "compatibility": {
+    "openclerk_runner": "uses OpenClerk read-only document primitives and returns citations",
+    "search_default": "does not replace openclerk retrieval search",
+    "schema": "does not add core runner request or response fields"
+  },
+  "release": {
+    "status": "supported_optional_module_candidate"
+  }
+}

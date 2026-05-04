@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"path"
@@ -150,6 +151,14 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 	case DocumentTaskActionArtifactPlan:
 		plan, err := runArtifactCandidatePlan(ctx, client, normalized.Artifact)
 		if err != nil {
+			var domainErr *domain.Error
+			if errors.As(err, &domainErr) && domainErr.Code == "validation_error" {
+				return DocumentTaskResult{
+					Rejected:        true,
+					RejectionReason: domainErr.Message,
+					Summary:         domainErr.Message,
+				}, nil
+			}
 			return DocumentTaskResult{}, err
 		}
 		return DocumentTaskResult{
@@ -585,6 +594,7 @@ func trimArtifactPlanOptions(input ArtifactPlanOptions) ArtifactPlanOptions {
 	}
 	return ArtifactPlanOptions{
 		Content:        input.Content,
+		LocalPath:      strings.TrimSpace(input.LocalPath),
 		SourceURL:      strings.TrimSpace(input.SourceURL),
 		SourceType:     strings.TrimSpace(input.SourceType),
 		ArtifactKind:   strings.TrimSpace(input.ArtifactKind),
@@ -650,8 +660,13 @@ func validateWebSearchResultInput(input WebSearchResultInput) string {
 }
 
 func validateArtifactPlanOptions(input ArtifactPlanOptions) string {
-	if strings.TrimSpace(input.Content) == "" && strings.TrimSpace(input.Body) == "" && input.SourceURL == "" {
-		return "artifact.content, artifact.body, or artifact.source_url is required"
+	if strings.TrimSpace(input.Content) == "" && strings.TrimSpace(input.Body) == "" && input.SourceURL == "" && input.LocalPath == "" {
+		return "artifact.content, artifact.body, artifact.source_url, or artifact.local_path is required"
+	}
+	if input.LocalPath != "" {
+		if strings.HasPrefix(input.LocalPath, "~") {
+			return "artifact.local_path must be an explicit path, not home-relative"
+		}
 	}
 	if input.SourceURL != "" {
 		parsed, err := url.Parse(input.SourceURL)
@@ -664,9 +679,9 @@ func validateArtifactPlanOptions(input ArtifactPlanOptions) string {
 	}
 	if input.SourceType != "" {
 		switch input.SourceType {
-		case "explicit_content", "public_url", "web", "pdf":
+		case "explicit_content", "public_url", "web", "pdf", "local_artifact":
 		default:
-			return "artifact.source_type must be explicit_content, public_url, web, or pdf"
+			return "artifact.source_type must be explicit_content, public_url, web, pdf, or local_artifact"
 		}
 	}
 	if input.ArtifactKind != "" {

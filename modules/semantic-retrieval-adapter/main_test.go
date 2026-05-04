@@ -1,0 +1,211 @@
+package main
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/yazanabuashour/openclerk/internal/runclient"
+	"github.com/yazanabuashour/openclerk/internal/runner"
+)
+
+func TestSemanticRetrievalAdapterOllamaSearchUsesCacheAndCitations(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	createModuleDocument(t, ctx, dbPath, "docs/architecture/hybrid.md", "Hybrid Retrieval", "# Hybrid Retrieval\n\n## Summary\nSemantic recall vector ranking evidence should preserve citations.\n")
+	createModuleDocument(t, ctx, dbPath, "docs/architecture/lexical.md", "Lexical Search", "# Lexical Search\n\n## Summary\nExact lexical lookup evidence stays local.\n")
+
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/embed" {
+			http.NotFound(w, r)
+			return
+		}
+		requests++
+		var req struct {
+			Input []string `json:"input"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		vectors := make([][]float64, 0, len(req.Input))
+		for _, input := range req.Input {
+			if strings.Contains(strings.ToLower(input), "semantic recall") {
+				vectors = append(vectors, []float64{1, 0, 0})
+			} else {
+				vectors = append(vectors, []float64{0, 1, 0})
+			}
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"embeddings": vectors})
+	}))
+	defer server.Close()
+
+	req := searchRequest{
+		Query:          "semantic recall",
+		PathPrefix:     "docs/architecture/",
+		Limit:          5,
+		Provider:       providerOllama,
+		OllamaURL:      server.URL,
+		EmbeddingModel: "embeddinggemma",
+		CacheDir:       t.TempDir(),
+	}
+	first, err := executeSearch(ctx, runclient.Config{DatabasePath: dbPath}, req)
+	if err != nil {
+		t.Fatalf("first search: %v", err)
+	}
+	if first.SearchStatus != "completed" || first.Provider.Provider != providerOllama || first.Cache.Status != "rebuilt" ||
+		len(first.Results) == 0 || first.Results[0].Citations[0].Path != "docs/architecture/hybrid.md" {
+		t.Fatalf("first response = %+v", first)
+	}
+	second, err := executeSearch(ctx, runclient.Config{DatabasePath: dbPath}, req)
+	if err != nil {
+		t.Fatalf("second search: %v", err)
+	}
+	if second.Cache.Status != "hit" || requests != 3 {
+		t.Fatalf("cache did not avoid document re-embedding, second=%+v requests=%d", second.Cache, requests)
+	}
+}
+
+func TestSemanticRetrievalAdapterRejectsUnsafePrefix(t *testing.T) {
+	t.Parallel()
+
+	_, err := executeSearch(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "openclerk.sqlite")}, searchRequest{
+		Query:      "semantic",
+		PathPrefix: "../private",
+		Limit:      5,
+	})
+	if err == nil || !strings.Contains(err.Error(), "path_prefix") {
+		t.Fatalf("expected unsafe prefix rejection, got %v", err)
+	}
+}
+
+func TestSemanticRetrievalAdapterDoesNotDefaultRemoteFallback(t *testing.T) {
+	t.Parallel()
+
+	request := normalizeRequest(searchRequest{Provider: providerOllama})
+	if request.FallbackProvider != "" {
+		t.Fatalf("unexpected implicit fallback provider %q", request.FallbackProvider)
+	}
+}
+
+func TestSemanticRetrievalAdapterGeminiRetriesAndRedactsCredential(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	createModuleDocument(t, ctx, dbPath, "docs/architecture/semantic.md", "Semantic Retrieval", "# Semantic Retrieval\n\n## Summary\nSemantic recall evidence keeps citations.\n")
+	writeModuleRuntimeConfig(t, dbPath, "GEMINI_API_KEY", "test-secret-gemini-key")
+	cacheDir := t.TempDir()
+
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/models/gemini-embedding-001:batchEmbedContents" {
+			http.NotFound(w, r)
+			return
+		}
+		requests++
+		if requests == 1 {
+			w.Header().Set("Retry-After", "0.001")
+			http.Error(w, "rate limited", http.StatusTooManyRequests)
+			return
+		}
+		var req struct {
+			Requests []json.RawMessage `json:"requests"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode gemini request: %v", err)
+		}
+		embeddings := make([]map[string]any, 0, len(req.Requests))
+		for range req.Requests {
+			embeddings = append(embeddings, map[string]any{"values": []float64{1, 0, 0}})
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"embeddings": embeddings})
+	}))
+	defer server.Close()
+
+	response, err := executeSearch(ctx, runclient.Config{DatabasePath: dbPath}, searchRequest{
+		Query:                     "semantic recall",
+		Limit:                     5,
+		Provider:                  providerGemini,
+		EmbeddingModel:            "gemini-embedding-001",
+		GeminiAPIBase:             server.URL,
+		EmbeddingOutputDimensions: 3,
+		CacheDir:                  cacheDir,
+	})
+	if err != nil {
+		t.Fatalf("gemini search: %v", err)
+	}
+	encoded, err := json.Marshal(response)
+	if err != nil {
+		t.Fatalf("marshal response: %v", err)
+	}
+	if response.SearchStatus != "completed" ||
+		response.Provider.Provider != providerGemini ||
+		response.Provider.CredentialRef != "runtime_config:GEMINI_API_KEY" ||
+		response.Provider.RetryCount == 0 ||
+		strings.Contains(string(encoded), "test-secret-gemini-key") ||
+		len(response.Results) == 0 ||
+		response.Results[0].Citations[0].Path != "docs/architecture/semantic.md" {
+		t.Fatalf("gemini response = %s", encoded)
+	}
+
+	cached, err := executeSearch(ctx, runclient.Config{DatabasePath: dbPath}, searchRequest{
+		Query:                     "semantic recall",
+		Limit:                     5,
+		Provider:                  providerGemini,
+		EmbeddingModel:            "gemini-embedding-001",
+		GeminiAPIBase:             server.URL,
+		EmbeddingOutputDimensions: 3,
+		CacheDir:                  cacheDir,
+	})
+	if err != nil {
+		t.Fatalf("cached gemini search: %v", err)
+	}
+	if cached.Cache.Status != "hit" || cached.Provider.CredentialRef != "runtime_config:GEMINI_API_KEY" {
+		t.Fatalf("cached gemini response = %+v", cached)
+	}
+}
+
+func createModuleDocument(t *testing.T, ctx context.Context, dbPath string, path string, title string, body string) {
+	t.Helper()
+	if _, err := runclient.InitializePaths(runclient.Config{DatabasePath: dbPath}, filepath.Join(filepath.Dir(dbPath), "vault")); err != nil {
+		t.Fatalf("initialize paths: %v", err)
+	}
+	result, err := runner.RunDocumentTask(ctx, runclient.Config{DatabasePath: dbPath}, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionCreate,
+		Document: runner.DocumentInput{
+			Path:  path,
+			Title: title,
+			Body:  body,
+		},
+	})
+	if err != nil {
+		t.Fatalf("create document: %v", err)
+	}
+	if result.Rejected {
+		t.Fatalf("create rejected: %+v", result)
+	}
+}
+
+func writeModuleRuntimeConfig(t *testing.T, dbPath string, key string, value string) {
+	t.Helper()
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	defer func() {
+		_ = db.Close()
+	}()
+	_, err = db.Exec(`INSERT OR REPLACE INTO runtime_config (key_name, value_text, updated_at) VALUES (?, ?, ?)`, key, value, time.Now().UTC().Format(time.RFC3339))
+	if err != nil {
+		t.Fatalf("write runtime config: %v", err)
+	}
+}

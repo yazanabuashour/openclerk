@@ -183,7 +183,7 @@ func workflowGuideCandidates() []WorkflowGuideCandidate {
 			Surface:        "artifact_candidate_plan",
 			Status:         "promoted_for_artifact_intake_planning",
 			SelectionRule:  "use when explicit artifact content or public-source handoff context needs candidate path, title, body preview, tags, fields, confidence, and duplicate evidence before approval",
-			Boundary:       "read-only planning only; no OCR, opaque parsing, local file reads, fetches, or durable writes",
+			Boundary:       "read-only planning only; local file inspection only through explicit artifact.local_path and limited text/PDF parsers; no OCR, opaque parsing, fetches, or durable writes",
 			RequestExample: `{"action":"artifact_candidate_plan","artifact":{"content":"...","artifact_kind":"receipt","tags":["finance"],"limit":5}}`,
 		},
 		{

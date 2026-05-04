@@ -555,8 +555,112 @@ func TestDocumentTaskArtifactCandidatePlanRejectsInvalidInputs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("artifact missing content: %v", err)
 	}
-	if !missing.Rejected || missing.RejectionReason != "artifact.content, artifact.body, or artifact.source_url is required" {
+	if !missing.Rejected || missing.RejectionReason != "artifact.content, artifact.body, artifact.source_url, or artifact.local_path is required" {
 		t.Fatalf("missing artifact content result = %+v", missing)
+	}
+}
+
+func TestDocumentTaskArtifactCandidatePlanReadsExplicitLocalTextArtifact(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	artifactPath := filepath.Join(t.TempDir(), "receipt.txt")
+	if err := os.WriteFile(artifactPath, []byte("Coffee receipt\nTotal paid: 42 USD\n"), 0o644); err != nil {
+		t.Fatalf("write local artifact: %v", err)
+	}
+
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionArtifactPlan,
+		Artifact: runner.ArtifactPlanOptions{
+			LocalPath:    artifactPath,
+			ArtifactKind: "receipt",
+		},
+	})
+	if err != nil {
+		t.Fatalf("artifact local plan: %v", err)
+	}
+	plan := result.ArtifactPlan
+	if plan == nil ||
+		plan.LocalArtifact == nil ||
+		plan.LocalArtifact.SourceRef != "user_supplied_local_artifact" ||
+		plan.LocalArtifact.TextStatus != "extracted" ||
+		plan.WriteStatus != "planned_no_write" ||
+		!strings.Contains(plan.BodyPreview, "Total paid: 42 USD") ||
+		!strings.Contains(plan.ValidationBoundaries, "artifact.local_path") ||
+		!strings.Contains(plan.NextCreateRequest, "create_document") {
+		t.Fatalf("local artifact plan = %+v", plan)
+	}
+}
+
+func TestDocumentTaskArtifactCandidatePlanReadsExplicitLocalPDFArtifact(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	artifactPath := filepath.Join(t.TempDir(), "artifact.pdf")
+	if err := os.WriteFile(artifactPath, minimalPDF("Artifact PDF", "OpenClerk Test", "Parser promotion evidence text"), 0o644); err != nil {
+		t.Fatalf("write local PDF: %v", err)
+	}
+
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionArtifactPlan,
+		Artifact: runner.ArtifactPlanOptions{
+			LocalPath:    artifactPath,
+			ArtifactKind: "source_summary",
+		},
+	})
+	if err != nil {
+		t.Fatalf("artifact local PDF plan: %v", err)
+	}
+	if result.ArtifactPlan == nil ||
+		result.ArtifactPlan.LocalArtifact == nil ||
+		result.ArtifactPlan.LocalArtifact.MIMEType != "application/pdf" ||
+		result.ArtifactPlan.LocalArtifact.PageCount != 1 ||
+		!strings.Contains(strings.ReplaceAll(result.ArtifactPlan.BodyPreview, " ", ""), "Parserpromotionevidencetext") {
+		t.Fatalf("local PDF artifact plan = %+v", result.ArtifactPlan)
+	}
+}
+
+func TestDocumentTaskArtifactCandidatePlanRejectsUnsupportedLocalOCRArtifact(t *testing.T) {
+	t.Parallel()
+
+	artifactPath := filepath.Join(t.TempDir(), "receipt.png")
+	if err := os.WriteFile(artifactPath, []byte{0x89, 0x50, 0x4e, 0x47}, 0o644); err != nil {
+		t.Fatalf("write local image: %v", err)
+	}
+	result, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionArtifactPlan,
+		Artifact: runner.ArtifactPlanOptions{
+			LocalPath: artifactPath,
+		},
+	})
+	if err != nil {
+		t.Fatalf("artifact unsupported local plan: %v", err)
+	}
+	if !result.Rejected || !strings.Contains(result.RejectionReason, "OCR/image parsing is unsupported") {
+		t.Fatalf("unsupported local artifact result = %+v", result)
+	}
+}
+
+func TestDocumentTaskArtifactCandidatePlanRejectsNonRegularLocalArtifact(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionArtifactPlan,
+		Artifact: runner.ArtifactPlanOptions{
+			LocalPath:    os.DevNull,
+			ArtifactKind: "receipt",
+			Limit:        5,
+		},
+	})
+	if err != nil {
+		t.Fatalf("artifact plan non-regular local file: %v", err)
+	}
+	if !result.Rejected || result.RejectionReason != "artifact.local_path must be a regular file" {
+		t.Fatalf("non-regular local artifact result = %+v", result)
 	}
 }
 

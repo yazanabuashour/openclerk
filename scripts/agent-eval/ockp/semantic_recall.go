@@ -413,6 +413,12 @@ func executeSemanticRecall(ctx context.Context, config semanticRecallConfig, std
 		if err != nil {
 			return err
 		}
+		if config.Mode == semanticRecallModeLexicalFallback && baseline.HitAt3 > 0 {
+			report.Checks.ProductionSearchDefaultChanged = true
+			report.Checks.Boundary = "maintainer harness; current openclerk retrieval search now includes the regression-gated zero-hit lexical fallback, no embedding store, provider embedding default, or JSON schema change"
+			baseline.Description = "Installed OpenClerk Search with SQLite FTS plus regression-gated zero-hit lexical fallback; no schema change."
+			baseline.ValidationBoundary = "uses embedded OpenClerk runtime only; zero-hit fallback is lexical and citation-bearing; no embedding store, provider default, or JSON schema change"
+		}
 		report.Methods = append(report.Methods, baseline)
 	}
 	if config.Mode == semanticRecallModeLexicalFallback || config.Mode == semanticRecallModeAll {
@@ -1121,6 +1127,12 @@ func semanticRecallOutcomes(report semanticRecallReport) []maturityOutcome {
 	if lexicalCompleted {
 		capability := "partial"
 		details := "lexical fallback produced reduced recall evidence without embeddings; promotion still requires source-sensitive regression review before default ranking changes"
+		performance := "low_cost_eval_only"
+		if report.Checks.ProductionSearchDefaultChanged {
+			capability = "pass_for_zero_hit_fallback"
+			details = "current production Search includes the regression-gated zero-hit lexical fallback; alias expansion remains eval-only"
+			performance = "low_cost_production_fallback"
+		}
 		if lexicalHitAt3 == 0 {
 			capability = "fail"
 			details = "lexical fallback did not recover expected docs on the semantic-recall pressure set"
@@ -1131,7 +1143,7 @@ func semanticRecallOutcomes(report semanticRecallReport) []maturityOutcome {
 			SafetyPass:      "pass",
 			CapabilityPass:  capability,
 			UXQuality:       "pass_if_invisible_in_search",
-			Performance:     "low_cost_eval_only",
+			Performance:     performance,
 			EvidencePosture: "reduced query-row metrics; no vector or provider calls",
 			Details:         details,
 		})

@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"math"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -31,7 +32,15 @@ func (s *Store) Search(ctx context.Context, query domain.SearchQuery) (domain.Se
 	if (query.MetadataKey == "") != (query.MetadataValue == "") {
 		return domain.SearchResult{}, domain.ValidationError("metadataKey and metadataValue must be provided together", nil)
 	}
-	return s.lexicalSearch(ctx, query, limit, decodeCursor(query.Cursor))
+	offset := decodeCursor(query.Cursor)
+	result, err := s.lexicalSearch(ctx, query, limit, offset)
+	if err != nil {
+		return domain.SearchResult{}, err
+	}
+	if len(result.Hits) > 0 || offset > 0 {
+		return result, nil
+	}
+	return s.lexicalTokenFallbackSearch(ctx, query, limit, offset)
 }
 
 func (s *Store) ListDocuments(ctx context.Context, query domain.DocumentListQuery) (domain.DocumentListResult, error) {
@@ -353,6 +362,138 @@ LIMIT ? OFFSET ?`
 		return domain.SearchResult{}, domain.InternalError("iterate lexical results", err)
 	}
 	return paginateSearchResults(hits, limit, offset), nil
+}
+
+func (s *Store) lexicalTokenFallbackSearch(ctx context.Context, query domain.SearchQuery, limit int, offset int) (domain.SearchResult, error) {
+	tokens := searchFallbackTokens(query.Text)
+	if len(tokens) == 0 {
+		return domain.SearchResult{}, nil
+	}
+	baseQuery := `
+SELECT c.chunk_id, c.doc_id, d.title, c.path, c.heading, c.content, c.line_start, c.line_end
+FROM chunks c
+JOIN documents d ON d.doc_id = c.doc_id`
+	whereClause, args := filteredDocumentClauses(query)
+	if whereClause != "" {
+		baseQuery += "\nWHERE " + whereClause
+	}
+	baseQuery += "\nORDER BY d.path, c.line_start, c.chunk_id"
+	rows, err := s.db.QueryContext(ctx, baseQuery, args...)
+	if err != nil {
+		return domain.SearchResult{}, domain.InternalError("run lexical fallback search", err)
+	}
+	defer func() {
+		_ = rows.Close()
+	}()
+	hits := []domain.SearchHit{}
+	for rows.Next() {
+		var (
+			hit       domain.SearchHit
+			pathValue string
+			heading   string
+			content   string
+			lineStart int
+			lineEnd   int
+		)
+		if err := rows.Scan(&hit.ChunkID, &hit.DocID, &hit.Title, &pathValue, &heading, &content, &lineStart, &lineEnd); err != nil {
+			return domain.SearchResult{}, domain.InternalError("scan lexical fallback result", err)
+		}
+		score := searchFallbackScore(tokens, hit.Title, pathValue, heading, content)
+		if score <= 0 {
+			continue
+		}
+		hit.Score = score
+		hit.Snippet = snippetForSearch(content, query.Text)
+		hit.Citations = []domain.Citation{{
+			DocID:     hit.DocID,
+			ChunkID:   hit.ChunkID,
+			Path:      pathValue,
+			Heading:   heading,
+			LineStart: lineStart,
+			LineEnd:   lineEnd,
+		}}
+		hits = append(hits, hit)
+	}
+	if err := rows.Err(); err != nil {
+		return domain.SearchResult{}, domain.InternalError("iterate lexical fallback results", err)
+	}
+	sort.SliceStable(hits, func(i, j int) bool {
+		if hits[i].Score == hits[j].Score {
+			left := ""
+			right := ""
+			if len(hits[i].Citations) > 0 {
+				left = hits[i].Citations[0].Path + hits[i].ChunkID
+			}
+			if len(hits[j].Citations) > 0 {
+				right = hits[j].Citations[0].Path + hits[j].ChunkID
+			}
+			return left < right
+		}
+		return hits[i].Score > hits[j].Score
+	})
+	return paginateSearchResults(collapseSearchHitsByDocument(hits), limit, offset), nil
+}
+
+func collapseSearchHitsByDocument(hits []domain.SearchHit) []domain.SearchHit {
+	seen := map[string]struct{}{}
+	collapsed := make([]domain.SearchHit, 0, len(hits))
+	for _, hit := range hits {
+		pathValue := ""
+		if len(hit.Citations) > 0 {
+			pathValue = hit.Citations[0].Path
+		}
+		key := pathValue
+		if key == "" {
+			key = hit.DocID
+		}
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		collapsed = append(collapsed, hit)
+	}
+	return collapsed
+}
+
+func searchFallbackScore(tokens []string, title string, pathValue string, heading string, content string) float64 {
+	titleTokens := stringSet(searchFallbackTokens(title))
+	pathTokens := stringSet(searchFallbackTokens(pathValue))
+	headingTokens := stringSet(searchFallbackTokens(heading))
+	contentTokens := stringSet(searchFallbackTokens(content))
+	score := 0.0
+	for _, token := range tokens {
+		if _, ok := titleTokens[token]; ok {
+			score += 3
+		}
+		if _, ok := headingTokens[token]; ok {
+			score += 2
+		}
+		if _, ok := pathTokens[token]; ok {
+			score += 1.5
+		}
+		if _, ok := contentTokens[token]; ok {
+			score += 1
+		}
+	}
+	return score
+}
+
+func searchFallbackTokens(text string) []string {
+	raw := wordPattern.FindAllString(strings.ToLower(text), -1)
+	tokens := []string{}
+	for _, token := range raw {
+		if _, stop := searchFallbackStopwords()[token]; stop {
+			continue
+		}
+		tokens = append(tokens, token)
+	}
+	return tokens
+}
+
+func searchFallbackStopwords() map[string]struct{} {
+	return map[string]struct{}{
+		"a": {}, "an": {}, "and": {}, "are": {}, "as": {}, "at": {}, "be": {}, "before": {}, "between": {}, "by": {}, "for": {}, "from": {}, "in": {}, "into": {}, "is": {}, "it": {}, "no": {}, "not": {}, "of": {}, "on": {}, "or": {}, "should": {}, "that": {}, "the": {}, "then": {}, "through": {}, "to": {}, "use": {}, "when": {}, "where": {}, "with": {}, "without": {},
+	}
 }
 
 func filteredDocumentClauses(query domain.SearchQuery) (string, []any) {

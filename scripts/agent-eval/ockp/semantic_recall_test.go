@@ -357,8 +357,8 @@ func TestExecuteSemanticRecallLexicalFallbackWritesReducedReports(t *testing.T) 
 	for _, content := range []string{jsonContent, markdownContent} {
 		assertReducedReportForTest(t, content, runRoot)
 		if !strings.Contains(content, "lexical_token_overlap_fallback") ||
-			strings.Contains(content, `"production_search_default_changed": true`) {
-			t.Fatalf("semantic recall report missing lexical fallback or changed default: %s", content)
+			!strings.Contains(content, "production_search_default_changed") {
+			t.Fatalf("semantic recall report missing lexical fallback or production-search check: %s", content)
 		}
 	}
 }

@@ -234,7 +234,8 @@ func documentUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, `  web_search_plan: {"action":"web_search_plan","web_search":{"query":"example source","results":[{"url":"https://example.test/page.html","title":"Example","snippet":"Search snippet"}],"limit":10}}`)
 	_, _ = fmt.Fprintln(w, "  Read-only. Plans harness-supplied public URL candidates with duplicate and placement hints; approved fetch/write still uses ingest_source_url.")
 	_, _ = fmt.Fprintln(w, `  artifact_candidate_plan: {"action":"artifact_candidate_plan","artifact":{"content":"# Receipt\n\nTotal paid: 42 USD","artifact_kind":"receipt","tags":["finance"],"fields":{"owner":"ap"},"limit":5}}`)
-	_, _ = fmt.Fprintln(w, "  Read-only. Plans artifact path, title, body preview, tags, metadata fields, duplicate evidence, confidence, and approved create/ingest handoff; no OCR, opaque parsing, fetch, or write.")
+	_, _ = fmt.Fprintln(w, `  artifact_candidate_plan local file: {"action":"artifact_candidate_plan","artifact":{"local_path":"<explicit-user-local-file>","artifact_kind":"receipt","limit":5}}`)
+	_, _ = fmt.Fprintln(w, "  Read-only. Plans artifact path, title, body preview, tags, metadata fields, duplicate evidence, confidence, and approved create/ingest handoff; explicit local_path inspection is limited to UTF-8 text, markdown, or text-bearing PDF; no OCR, opaque parsing, fetch, or write.")
 }
 
 func retrievalUsage(w io.Writer) {

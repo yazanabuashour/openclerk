@@ -431,6 +431,7 @@ type WebSearchResultInput struct {
 
 type ArtifactPlanOptions struct {
 	Content        string            `json:"content,omitempty"`
+	LocalPath      string            `json:"local_path,omitempty"`
 	SourceURL      string            `json:"source_url,omitempty"`
 	SourceType     string            `json:"source_type,omitempty"`
 	ArtifactKind   string            `json:"artifact_kind,omitempty"`
@@ -547,6 +548,7 @@ type ArtifactCandidatePlan struct {
 	ArtifactKind            string            `json:"artifact_kind"`
 	SourceType              string            `json:"source_type,omitempty"`
 	SourceURL               string            `json:"source_url,omitempty"`
+	LocalArtifact           *LocalArtifact    `json:"local_artifact,omitempty"`
 	CandidatePath           string            `json:"candidate_path,omitempty"`
 	CandidateTitle          string            `json:"candidate_title,omitempty"`
 	BodyPreview             string            `json:"body_preview,omitempty"`
@@ -566,6 +568,19 @@ type ArtifactCandidatePlan struct {
 	NextCreateRequest       string            `json:"next_create_document_request,omitempty"`
 	NextIngestSourceRequest string            `json:"next_ingest_source_request,omitempty"`
 	AgentHandoff            *AgentHandoff     `json:"agent_handoff,omitempty"`
+}
+
+type LocalArtifact struct {
+	SourceRef         string `json:"source_ref"`
+	FileName          string `json:"file_name"`
+	MIMEType          string `json:"mime_type"`
+	SizeBytes         int64  `json:"size_bytes"`
+	SHA256            string `json:"sha256"`
+	Parser            string `json:"parser"`
+	TextStatus        string `json:"text_status"`
+	Confidence        string `json:"confidence"`
+	PageCount         int    `json:"page_count,omitempty"`
+	UnsupportedReason string `json:"unsupported_reason,omitempty"`
 }
 
 type AgentHandoff struct {
