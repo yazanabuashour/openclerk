@@ -8,6 +8,17 @@ Evaluate `oc-uj2y.2` candidate surfaces for hybrid embedding/vector retrieval:
 current lexical FTS, mode-flag-only search, durable local vector index,
 external/hosted vector stores, and a read-only runner report.
 
+Required references:
+
+- docs/architecture/agent-knowledge-plane.md
+- https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f#file-llm-wiki-md
+- https://mitchellh.com/writing/building-block-economy
+- https://developers.openai.com/api/docs/guides/prompt-guidance
+- https://openai.com/index/harness-engineering/
+- https://developers.openai.com/api/docs/guides/embeddings
+- https://developers.openai.com/api/docs/guides/retrieval
+- https://docs.mem0.ai/open-source/overview
+
 ## Result
 
 Promote `hybrid_retrieval_report` as a read-only decision-support runner
@@ -65,3 +76,11 @@ Promote `openclerk retrieval` `hybrid_retrieval_report`.
 
 Do not promote a durable embedding store, vector DB, OpenAI vector-store
 integration, hosted retrieval path, or default hybrid ranking yet.
+
+## Closure
+
+Remaining work is represented by linked beads:
+
+- `oc-tnnw.1.4` promotion decision.
+- `oc-tnnw.1.5` conditional implementation only if promoted.
+- `oc-tnnw.1.6` iteration and follow-up bead creation.

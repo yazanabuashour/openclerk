@@ -57,11 +57,26 @@ explicit overrides, duplicate handling, and approval-before-write visible.
   vault-relative markdown paths.
 - Search runner-visible duplicate evidence only through the installed runner
   client.
+- Preserve explicit user path, title, body, tags, and fields over generated
+  values.
+- Keep configurable defaults visible in the returned plan and never let them
+  override explicit user values.
+- Do not perform source-control writes; checkpointing remains a separate
+  `git_lifecycle_report` operation behind its explicit checkpoint gate.
 - Return `agent_handoff` with evidence, validation boundaries, authority limits,
   and next-step guidance.
 - Update runner help, README, skill guidance, tests, and decision docs.
 
-## Non-Promotion Follow-Up
+## Follow-up Beads
 
-Not required. This is a promotion outcome, not `keep-as-reference`, `defer`,
-`more evidence`, `none viable yet`, or another non-promotion result.
+Created: none.
+
+Linked existing:
+
+- `oc-tnnw.7.5` for conditional implementation verification of the promoted
+  planning action.
+- `oc-tnnw.7.6` for the final iteration/follow-up check before parent closure.
+
+No additional follow-up is required for this decision because it is a promotion
+outcome, the selected read-only surface is already scoped, and source-control
+automation stays delegated to the existing `git_lifecycle_report` surface.

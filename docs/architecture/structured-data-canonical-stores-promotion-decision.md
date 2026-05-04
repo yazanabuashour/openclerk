@@ -17,6 +17,17 @@ Accept `structured_store_report` as the promoted read-only surface for
 Do not promote independent non-document canonical stores, durable structured
 writes, external connectors, or domain-specific tables from this track.
 
+Required references:
+
+- docs/architecture/agent-knowledge-plane.md
+- https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f#file-llm-wiki-md
+- https://mitchellh.com/writing/building-block-economy
+- https://developers.openai.com/api/docs/guides/prompt-guidance
+- https://openai.com/index/harness-engineering/
+- https://developers.openai.com/api/docs/guides/embeddings
+- https://developers.openai.com/api/docs/guides/retrieval
+- https://docs.mem0.ai/open-source/overview
+
 ## Safety Pass
 
 Pass. The selected report is read-only and forbids durable writes, independent
@@ -75,3 +86,21 @@ handling, provenance, freshness, local-first behavior,
 approval-before-durable-write, and explicit authority reconciliation with
 canonical markdown. If none of the candidate shapes preserve these boundaries,
 record `none viable yet`.
+
+## Follow-up Beads
+
+Search performed before close:
+
+- `bd search "independent canonical store"`: found this track's implementation
+  and iteration beads, `oc-tnnw.2.5` and `oc-tnnw.2.6`, plus the current
+  decision and parent epic.
+- `bd search "domain-specific store"`: no separate existing bead found.
+
+Created: none. The decision promotes the read-only report and does not identify
+a qualified domain that currently needs an independent canonical store.
+
+Linked existing:
+
+- `oc-tnnw.2.5` for conditional implementation verification of the promoted
+  read-only report.
+- `oc-tnnw.2.6` for the final iteration/follow-up check before parent closure.

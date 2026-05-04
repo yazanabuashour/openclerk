@@ -9,6 +9,17 @@ non-document canonical stores: current primitives, existing typed record
 actions, independent canonical tables, external stores, and the proposed
 `structured_store_report`.
 
+Required references:
+
+- docs/architecture/agent-knowledge-plane.md
+- https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f#file-llm-wiki-md
+- https://mitchellh.com/writing/building-block-economy
+- https://developers.openai.com/api/docs/guides/prompt-guidance
+- https://openai.com/index/harness-engineering/
+- https://developers.openai.com/api/docs/guides/embeddings
+- https://developers.openai.com/api/docs/guides/retrieval
+- https://docs.mem0.ai/open-source/overview
+
 ## Result
 
 Promote `structured_store_report` as a read-only decision-support surface.
@@ -66,3 +77,11 @@ Select `structured_store_report` as the promoted surface for this track. Keep
 future independent stores blocked until a domain-specific track proves schema,
 write approval, correction, duplicate handling, provenance, freshness,
 local-first behavior, and markdown reconciliation.
+
+## Closure
+
+Remaining work is represented by linked beads:
+
+- `oc-tnnw.2.4` promotion decision.
+- `oc-tnnw.2.5` conditional implementation only if promoted.
+- `oc-tnnw.2.6` iteration and follow-up bead creation.

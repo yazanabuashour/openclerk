@@ -45,11 +45,32 @@ Reference URLs:
 - https://developers.openai.com/api/docs/guides/retrieval
 - https://docs.mem0.ai/open-source/overview
 
+## Authority And Approval Boundaries
+
+Public read/fetch/inspect permission is not durable-write approval. A runner
+request may inspect current citation-bearing search results for a user-provided
+query, but durable retrieval infrastructure remains a separate promotion
+decision because it would add stored embeddings, index refresh behavior,
+provider configuration, or new ranking semantics.
+
+Hard boundaries:
+
+- canonical markdown and promoted records remain authoritative
+- retrieval hits must keep document/chunk citations and provenance context
+- stale index invalidation must be explicit before any durable vector store
+- duplicate handling cannot rely on embedding similarity as truth
+- local/offline behavior must be preserved for routine OpenClerk use
+- embedding provenance and rebuild cost must be visible in reduced reports
+- durable writes, external providers, purchases/actions, or privileged access
+  require explicit approval at the promoted surface
+
 ## Candidates
 
 | Candidate | Safety | Capability | UX quality | Decision |
 | --- | --- | --- | --- | --- |
 | Keep lexical FTS as default | Pass. Local, citation-bearing, no new store. | Pass for exact/source-sensitive lookup and existing scale evidence. | Acceptable for routine search. | Keep as default. |
+| Embedding-only retrieval | Fails as a product default because embeddings would obscure exact authority and duplicate boundaries without lexical citations. | Could improve paraphrase recall, but cannot stand alone for source-grounded answers. | Poor taste: normal users expect cited source lookup, not opaque semantic matches. | Do not promote. |
+| True hybrid lexical plus vector ranking | Potentially viable only with local index provenance, stale-index invalidation, rebuild cost, citation regression, duplicate, and privacy evidence. | Could improve semantic recall while retaining lexical anchors. | Potentially good if hidden behind natural `search`; poor if users must manage retrieval infrastructure. | Future POC only. |
 | Add only `search.mode` with `lexical`/`hybrid` | Pass only if `hybrid` is not misleading. | Weak without a real second signal. | Poor taste: a normal user expects the mode to change retrieval quality. | Do not promote. |
 | Durable local vector index | Potentially viable. Needs embedding provenance, stale-index invalidation, rebuild cost, compression, and citation regression evidence. | Could improve semantic recall. | Useful only after index operations are hidden behind runner behavior. | Not promoted yet. |
 | External or hosted vector store | Local-first risk unless opt-in with a stronger privacy and authority model. | Useful as benchmark/reference. | Too much provider ceremony for routine local users. | Reference only. |
@@ -83,3 +104,21 @@ freshness, provenance, local-first operation, import/reopen performance, and
 Kill or defer any vector path that needs direct SQLite/vault access, obscures
 source authority, loses citations, requires routine provider setup, or makes a
 normal user manage retrieval infrastructure before a clear quality win exists.
+
+Safety, capability, and UX quality remain separate gates:
+
+- Safety pass requires runner-only access, citation preservation, local-first
+  operation, explicit embedding provenance, stale-index invalidation, duplicate
+  handling, and approval before durable writes.
+- Capability pass requires measured recall or workflow gains over lexical FTS,
+  not just the presence of embeddings or a mode flag.
+- UX quality pass requires a simpler normal-user surface than the deferred
+  infrastructure menu; ordinary retrieval should remain natural `search`.
+
+Remaining work is represented by linked beads:
+
+- `oc-tnnw.1.2` POC for the selected real hybrid/vector shape.
+- `oc-tnnw.1.3` eval for safety, capability, and UX quality.
+- `oc-tnnw.1.4` promotion decision.
+- `oc-tnnw.1.5` conditional implementation only if promoted.
+- `oc-tnnw.1.6` iteration and follow-up bead creation.

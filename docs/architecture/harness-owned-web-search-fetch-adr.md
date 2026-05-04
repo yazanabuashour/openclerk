@@ -42,9 +42,11 @@ evidence, and approved fetch/write must still flow through `ingest_source_url`.
 | Option | Safety | Capability | UX quality | Decision posture |
 | --- | --- | --- | --- | --- |
 | Current primitives only | Safe, because fetch/write already stays in `ingest_source_url`. | Can work if the agent separately handles search results and placement. | Too ceremonial for routine search-to-source capture. | Reference only. |
-| Runner live web search provider | Needs provider abstraction, deterministic fixtures, privacy and egress policy, freshness model, and rate/error handling. | Could find candidates itself. | Good later, too broad now. | Defer. |
+| Planner-only `web_search_plan` | Safe: the runner receives harness-owned public results, ranks and dedupes them, and does not fetch or write. | Coordinates URL candidates with `ingest_source_url` and access/placement hints. | Good; one action replaces prompt choreography. | Promote. |
+| Runner provider adapter | Needs provider config, privacy/egress disclosure, rate-limit behavior, freshness model, `access_status`, source dedupe, and deterministic fixtures. | Could find candidates itself. | Good later, but too broad for this track. | Defer. |
+| Configured hosted search API | Same provider risks plus account/API-key handling and external availability. | Could improve discovery breadth. | Too much provider ceremony before planner evidence is exhausted. | Defer/reference. |
+| Local/no-network mode | Safe and offline. | Cannot discover fresh public sources; can only plan over caller-supplied or cached candidates. | Useful fallback but not live search. | Keep as planner-only behavior. |
 | Browser automation or HTTP bypass | Violates runner-owned fetch and public/private boundaries. | Can inspect pages, but outside OpenClerk's installed runner contract. | Unsafe for routine work. | Kill. |
-| Read-only search-result planner | Safe if search results are harness-supplied and the runner only ranks, normalizes, deduplicates, and proposes placement. | Coordinates public URL candidates with `ingest_source_url`. | Good; removes prompt choreography while preserving approval boundaries. | Promote. |
 
 ## Promoted Candidate
 
@@ -57,6 +59,12 @@ the harness, validates public HTTP/HTTPS URLs, infers `web` or `pdf`, checks
 runner-visible duplicate source URLs, proposes source/asset/synthesis
 placement hints, and returns an `agent_handoff`.
 
+Public read/search permission is enough for the harness to supply public URL
+candidates and for the runner to inspect their metadata. It is not durable
+write approval. Approved fetch/write remains a second step through
+`ingest_source_url`, where citations, source refs, provenance, and projection
+freshness become product evidence.
+
 ## Safety Constraints
 
 - No live search provider call inside the runner.
@@ -65,6 +73,8 @@ placement hints, and returns an `agent_handoff`.
 - No durable source write or synthesis write.
 - No private/authenticated page handling beyond marking it unsupported.
 - Search snippets are discovery hints only, not citations or source evidence.
+- Provider config, egress disclosure, rate limits, freshness, and access-status
+  semantics must be proven before any live provider adapter is promoted.
 - Durable fetch/write remains `ingest_source_url` after approval.
 - Source claims require citations/source refs, provenance, and projection
   freshness after approved ingestion.
@@ -80,6 +90,24 @@ canonical evidence, writes before approval, handles private/authenticated
 content as routine input, hides duplicate status, or requires direct SQLite,
 raw vault inspection, source-built runners, browser automation, HTTP/MCP
 bypasses, or unsupported transports.
+
+Safety, capability, and UX quality remain separate gates:
+
+- Safety pass requires public-only result metadata, explicit access status,
+  dedupe hints, no fetch/write, no snippets-as-citations, and approval before
+  durable ingestion.
+- Capability pass requires materially better search-to-source candidate
+  selection than manual prompt choreography.
+- UX quality pass requires a normal user to avoid provider menus and path
+  construction unless live-provider evidence justifies that complexity.
+
+Remaining work is represented by linked beads:
+
+- `oc-tnnw.4.2` POC for planner/provider candidate evidence.
+- `oc-tnnw.4.3` eval for safety, capability, and UX quality.
+- `oc-tnnw.4.4` promotion decision.
+- `oc-tnnw.4.5` conditional implementation only if promoted.
+- `oc-tnnw.4.6` iteration and follow-up bead creation.
 
 ## Non-Goals
 

@@ -12,6 +12,17 @@ The governing ADR is
 The targeted reduced report is
 [`results/ockp-heterogeneous-artifact-ingestion-pressure.md`](results/ockp-heterogeneous-artifact-ingestion-pressure.md).
 
+Required references:
+
+- [`../architecture/agent-knowledge-plane.md`](../architecture/agent-knowledge-plane.md)
+- <https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f#file-llm-wiki-md>
+- <https://mitchellh.com/writing/building-block-economy>
+- <https://developers.openai.com/api/docs/guides/prompt-guidance>
+- <https://openai.com/index/harness-engineering/>
+- <https://developers.openai.com/api/docs/guides/embeddings>
+- <https://developers.openai.com/api/docs/guides/retrieval>
+- <https://docs.mem0.ai/open-source/overview>
+
 ## Candidate Surfaces
 
 Current PDF URL ingestion remains the compatibility baseline:
@@ -25,6 +36,37 @@ count, capture timestamp, PDF metadata, and citation-bearing source evidence.
 Missing `source.mode` means `create`; duplicate creates reject; explicit
 `source.mode: "update"` targets an existing normalized `source.url`; mismatched
 path or asset hints conflict without writing.
+
+Explicit user-provided content remains the safest non-parser baseline:
+
+```json
+{"action":"create_document","document":{"path":"transcripts/demo.md","title":"Demo Transcript","body":"# Demo Transcript\n\nUser-approved transcript text."}}
+```
+
+This shape preserves approval-before-write because the caller supplies the
+content to be made canonical. It does not prove artifact byte acquisition,
+OCR/parser provenance, duplicate asset detection, or local file policy.
+
+A local artifact registry could look like:
+
+```json
+{"action":"artifact_candidate_plan","artifact":{"uri":"file://<artifact>","kind":"receipt","path_hint":"receipts/vendor.md","asset_path_hint":"assets/receipts/vendor.pdf"}}
+```
+
+This remains unpromoted because local files need exact asset policy,
+duplicate handling, source provenance, unsupported-file behavior, and
+approval-before-record-write semantics before any durable registry exists.
+
+Parser/OCR candidate extraction could look like:
+
+```json
+{"action":"artifact_candidate_plan","artifact":{"kind":"image","uri":"file://<artifact>","extract":"ocr","mode":"plan"}}
+```
+
+Any OCR/parser output would be candidate text only. A future surface would need
+local-first parsing, extraction provenance, confidence/failure posture,
+unsupported-kind rejection, and explicit approval before writing canonical
+markdown or promoted records.
 
 Artifact-specific actions could look like:
 
@@ -104,3 +146,10 @@ video/YouTube transcription, OCR-heavy receipts, local file import, or richer
 media metadata. That promotion remains deferred until targeted eval evidence
 shows repeated runner capability gaps and the exact surface is named in a
 promotion decision.
+
+Remaining work is represented by linked beads:
+
+- `oc-tnnw.5.3` eval for safety, capability, and UX quality.
+- `oc-tnnw.5.4` promotion decision.
+- `oc-tnnw.5.5` conditional implementation only if promoted.
+- `oc-tnnw.5.6` iteration and follow-up bead creation.

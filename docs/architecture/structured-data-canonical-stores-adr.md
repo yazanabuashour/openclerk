@@ -23,6 +23,7 @@ source refs, and human review.
 
 Required reference URLs:
 
+- docs/architecture/agent-knowledge-plane.md
 - https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f#file-llm-wiki-md
 - https://mitchellh.com/writing/building-block-economy
 - https://developers.openai.com/api/docs/guides/prompt-guidance
@@ -30,6 +31,40 @@ Required reference URLs:
 - https://developers.openai.com/api/docs/guides/embeddings
 - https://developers.openai.com/api/docs/guides/retrieval
 - https://docs.mem0.ai/open-source/overview
+
+## Authority And Approval Boundaries
+
+Read/fetch/inspect permission is enough for a runner report to inspect current
+records, typed projections, provenance, and projection freshness. It is not
+approval to create a new canonical table, migrate user data into a hidden
+store, add a connector, or let derived rows outrank visible markdown-backed
+records.
+
+Durable structured writes require an exact promoted surface with:
+
+- approval before write
+- domain schema and validation
+- correction and delete lifecycle
+- duplicate handling
+- provenance and freshness inspection
+- local-first storage behavior
+- citation or source-ref authority back to canonical markdown or approved
+  records
+
+## Projection Versus Independent Store
+
+A report or projection is enough when the domain can be rebuilt from visible
+canonical markdown, such as service records, decision records, generic facts,
+and source-linked summaries. The projection may add query ergonomics, typed
+filters, and freshness inspection, but it remains derived and repairable from
+the docs layer.
+
+An independent canonical store is justified only when markdown-backed records
+are structurally insufficient for a domain: dense measurements, high-volume
+time-series facts, correction-heavy observations, or imported records whose
+identity and conflict semantics cannot be faithfully represented as prose plus
+frontmatter. This ADR does not find enough domain-specific evidence to promote
+one of those stores.
 
 ## Candidate Options
 
@@ -71,3 +106,21 @@ source authority model.
 Kill any candidate that makes hidden tables or external stores outrank visible
 canonical evidence, hides citations/provenance/freshness, or requires routine
 direct storage access.
+
+Safety, capability, and UX quality remain separate gates:
+
+- Safety pass requires runner-only access, markdown/approved-record authority,
+  provenance and freshness inspection, duplicate handling, and approval before
+  durable writes.
+- Capability pass requires a domain-specific reason that projections or
+  reports cannot faithfully answer the workflow.
+- UX quality pass requires the normal user surface to stay simpler than a menu
+  of backend storage choices.
+
+Remaining work is represented by linked beads:
+
+- `oc-tnnw.2.2` POC for structured-store candidate evidence.
+- `oc-tnnw.2.3` eval for safety, capability, and UX quality.
+- `oc-tnnw.2.4` promotion decision.
+- `oc-tnnw.2.5` conditional implementation only if promoted.
+- `oc-tnnw.2.6` iteration and follow-up bead creation.

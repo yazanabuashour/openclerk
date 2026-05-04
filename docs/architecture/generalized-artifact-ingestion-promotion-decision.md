@@ -25,6 +25,17 @@ Evidence:
 - [`../evals/artifact-ingestion-architecture-options-poc.md`](../evals/artifact-ingestion-architecture-options-poc.md)
 - [`../evals/results/ockp-heterogeneous-artifact-ingestion-pressure.md`](../evals/results/ockp-heterogeneous-artifact-ingestion-pressure.md)
 
+Required references:
+
+- [`agent-knowledge-plane.md`](agent-knowledge-plane.md)
+- <https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f#file-llm-wiki-md>
+- <https://mitchellh.com/writing/building-block-economy>
+- <https://developers.openai.com/api/docs/guides/prompt-guidance>
+- <https://openai.com/index/harness-engineering/>
+- <https://developers.openai.com/api/docs/guides/embeddings>
+- <https://developers.openai.com/api/docs/guides/retrieval>
+- <https://docs.mem0.ai/open-source/overview>
+
 ## Decision
 
 Do not promote `ingest_artifact`, artifact-specific ingestion actions, parser
@@ -85,7 +96,30 @@ A future promotion must name:
 - provenance events and projection freshness semantics
 - targeted eval scenarios that repeatedly fail without the proposed surface
 
-No follow-up implementation Beads are filed from this decision because the
-evidence does not justify promotion. Follow-up repair work may be filed only
-for eval data hygiene or verifier coverage, not for a production ingestion
-surface.
+## Follow-up Beads
+
+Search performed before close:
+
+- `bd search "OCR artifact ingestion"`: no existing bead found.
+- `bd search "local file artifact"`: no existing bead found.
+- `bd search "native media transcript"`: no existing bead found.
+- `bd search "unsupported artifact kind"`: no existing bead found.
+
+Created:
+
+- `oc-w7xa` compares parser-backed local artifact and OCR ingestion surfaces;
+  it is deferred until 2026-06-04 because the current evidence does not justify
+  immediate production implementation.
+
+Linked existing:
+
+- `oc-tnnw.5.5` for conditional implementation handling after this
+  non-promotion decision.
+- `oc-tnnw.5.6` for the final iteration/follow-up check before parent closure.
+
+No implementation Beads are filed from this decision because the evidence does
+not justify promotion. Future repair work may be filed for eval data hygiene or
+verifier coverage; production ingestion work must go through `oc-w7xa` or a
+more specific candidate-surface comparison that preserves source provenance,
+duplicate handling, unsupported-file behavior, local-first parsing, asset
+policy, and approval before durable records are written.

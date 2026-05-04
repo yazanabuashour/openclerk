@@ -37,6 +37,23 @@ enables local checkpoints. It is a local storage checkpoint for caller-named
 paths, not approval to write knowledge content, restore content, or replace
 OpenClerk provenance.
 
+Rejected checkpoint-default candidate:
+
+```json
+{"action":"git_lifecycle_report","git_lifecycle":{"mode":"checkpoint","paths":["notes/git-lifecycle.md"],"message":"openclerk: checkpoint git lifecycle note"}}
+```
+
+This shape would become default-enabled through persisted SQLite config instead
+of the `--git-checkpoints` or `OPENCLERK_GIT_CHECKPOINTS=1` invocation gate.
+The POC rejects it because checkpoint commits are durable local writes. A
+persisted default can make a later runner invocation commit unexpectedly, while
+the explicit gate keeps the write boundary visible.
+
+Restore/rollback candidates are intentionally represented only as rejected
+validation pressure. The POC does not create a restore plan or write restored
+bytes because that would be destructive storage mutation outside the promoted
+surface.
+
 ## Fixture Shape
 
 The deterministic unit fixture creates a local vault bound to an OpenClerk
@@ -64,3 +81,10 @@ machine-absolute paths are committed.
 The POC passes only if safety pass, capability pass, and UX quality are recorded
 separately in the eval result and the promotion decision names exact defaults,
 config gates, write boundaries, and restore non-goals.
+
+Remaining work is represented by linked beads:
+
+- `oc-tnnw.3.3` eval for safety, capability, and UX quality.
+- `oc-tnnw.3.4` promotion decision.
+- `oc-tnnw.3.5` conditional implementation only if promoted.
+- `oc-tnnw.3.6` iteration and follow-up bead creation.

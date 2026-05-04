@@ -46,6 +46,7 @@ boundaries.
 | Current primitives plus manual Git | Safe when the operator does it, but routine agents leave the runner to inspect storage. | Can answer status/history and create commits. | Too ad hoc for a runner-owned lifecycle workflow. | Reference only. |
 | Read-only Git status/history report | Safe if it emits metadata only and no raw diffs. | Answers local dirty state and storage-history questions. | Good for routine inspection. | Promote as part of a narrow lifecycle report. |
 | Explicit local checkpoint mode | Safe if disabled by default, path-scoped, local-only, and never pushes/switches/restores. | Creates a local storage checkpoint around approved durable writes. | Good; avoids surprising Git commands after every write. | Promote behind config. |
+| SQLite-configured default-enabled checkpoints | Risky because config persistence can make future durable writes commit unexpectedly. | Would reduce CLI/env setup after initial opt-in. | Mixed; simpler after setup, but surprising if a normal user forgets the persisted default. | Do not promote here; keep explicit gate. |
 | Automatic checkpoint on every OpenClerk write | Risky because it can commit surprising changes or over-serialize local work. | Creates checkpoints without caller ceremony. | Convenient but too implicit. | Do not promote. |
 | Restore/rollback from Git | Dangerous because it is destructive storage mutation and not semantic lifecycle repair. | Can recover bytes, but cannot prove source authority or projection freshness. | Too broad for this track. | Defer/kill for this surface. |
 
@@ -73,7 +74,17 @@ Default behavior:
 - checkpoint writes are disabled by default.
 - checkpoint writes require `--git-checkpoints` or
   `OPENCLERK_GIT_CHECKPOINTS=1`.
+- this ADR explicitly rejects replacing that explicit gate with a SQLite
+  default-enabled config flag because durable checkpoint commits are writes and
+  should remain visible at the invocation boundary until stronger UX evidence
+  proves persisted opt-in is safe.
 - checkpoint mode requires `git_lifecycle.paths` and `git_lifecycle.message`.
+
+Read-only `status` and `history` inspection can run from ordinary runner
+permission because they expose metadata only. `checkpoint` is a durable local
+write and requires both an approved document/write context and the explicit
+checkpoint gate. Restore/rollback would be destructive durable mutation and is
+outside the promoted surface.
 
 ## Safety Constraints
 
@@ -99,6 +110,24 @@ Kill or defer any candidate that treats Git as canonical truth, hides
 provenance/freshness, commits broad unrelated paths, runs remote operations,
 changes branches, restores bytes, exposes private raw diffs, or asks routine
 agents to leave the installed runner.
+
+Safety, capability, and UX quality remain separate gates:
+
+- Safety pass requires local-only runner execution, path scoping, no raw diffs,
+  no restore, no branch/remote operations, and explicit approval before
+  checkpoint writes.
+- Capability pass requires useful status/history/checkpoint metadata for
+  OpenClerk-authored durable writes without making Git product truth.
+- UX quality pass requires a simpler normal-user lifecycle surface than direct
+  Git while avoiding surprising background commits.
+
+Remaining work is represented by linked beads:
+
+- `oc-tnnw.3.2` POC for status/history/checkpoint evidence.
+- `oc-tnnw.3.3` eval for safety, capability, and UX quality.
+- `oc-tnnw.3.4` promotion decision.
+- `oc-tnnw.3.5` conditional implementation only if promoted.
+- `oc-tnnw.3.6` iteration and follow-up bead creation.
 
 ## Non-Goals
 

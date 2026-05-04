@@ -20,6 +20,18 @@ Required references:
 
 ## Candidate Surface
 
+Compared shapes:
+
+| Shape | What It Proves | What It Does Not Prove |
+| --- | --- | --- |
+| Planner-only `web_search_plan` | Harness-supplied public results can be ranked, deduped, normalized, and prepared for approved `ingest_source_url`. | Live search discovery, provider config, rate-limit handling, or network freshness. |
+| Runner provider adapter | Potential future live discovery shape with a provider abstraction. | Safety until privacy/egress disclosure, rate limits, freshness, access status, and deterministic fixtures exist. |
+| Configured hosted search API | Possible broad public search source. | Local-first routine behavior or low-ceremony setup. |
+| Local/no-network mode | Offline safety using caller-supplied candidates. | Fresh public discovery. |
+| Browser/HTTP bypass | Nothing acceptable for routine OpenClerk operation. | Runner-only access, public/private boundaries, and durable-write approval. |
+
+Selected candidate:
+
 ```json
 {"action":"web_search_plan","web_search":{"query":"public source planning evidence","results":[{"url":"https://example.test/new-report.pdf","title":"New Report","snippet":"Public report search snippet."}],"limit":10}}
 ```
@@ -61,3 +73,10 @@ corpus, database, raw logs, private content, or machine-absolute paths.
 The eval report must record safety pass, capability pass, UX quality,
 performance posture, and evidence posture separately. Promotion must keep
 approved fetch/write in `ingest_source_url`.
+
+Remaining work is represented by linked beads:
+
+- `oc-tnnw.4.3` eval for safety, capability, and UX quality.
+- `oc-tnnw.4.4` promotion decision.
+- `oc-tnnw.4.5` conditional implementation only if promoted.
+- `oc-tnnw.4.6` iteration and follow-up bead creation.

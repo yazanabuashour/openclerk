@@ -6,11 +6,24 @@ This POC supports `oc-uj2y.2`. It compares candidate surfaces for hybrid
 embedding/vector retrieval without live embedding calls, generated corpora, raw
 logs, or product behavior changes before the decision.
 
+Required references:
+
+- docs/architecture/agent-knowledge-plane.md
+- https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f#file-llm-wiki-md
+- https://mitchellh.com/writing/building-block-economy
+- https://developers.openai.com/api/docs/guides/prompt-guidance
+- https://openai.com/index/harness-engineering/
+- https://developers.openai.com/api/docs/guides/embeddings
+- https://developers.openai.com/api/docs/guides/retrieval
+- https://docs.mem0.ai/open-source/overview
+
 ## Candidate Shapes
 
 | Shape | What It Proves | What It Does Not Prove |
 | --- | --- | --- |
 | Current lexical FTS baseline | Citation-bearing retrieval, local-first behavior, stable doc/chunk IDs, existing scale posture. | Semantic recall gains for paraphrases or concept matches. |
+| Embedding-only retrieval | A possible semantic-recall signal for paraphrase and concept queries. | Source authority, duplicate handling, exact citation grounding, and freshness unless paired with canonical docs and index provenance. |
+| True hybrid lexical plus vector ranking | The future shape most likely to improve recall while preserving lexical citation anchors. | Real product value until tested against stale-index invalidation, embedding provenance, rebuild cost, duplicate pressure, privacy/offline behavior, and citation regression. |
 | Search mode flag only | JSON contract feasibility. | Retrieval quality; without a second signal it is ceremonial UX. |
 | Durable local vector index | Possible future semantic recall lane. | Freshness, rebuild cost, compression quality, and citation regression until a real index POC exists. |
 | Hosted or external vector store | Useful benchmark/reference shape. | Local-first routine operation or approval boundaries. |
@@ -45,3 +58,14 @@ vectors, OpenAI vector stores, and memory stores before asking a source-grounded
 question. The natural surface stays `search`. The promoted POC only helps
 agents and maintainers evaluate whether the next retrieval infrastructure step
 has enough evidence to justify itself.
+
+## Closure
+
+Safety pass, capability pass, and UX quality are recorded separately in
+`docs/evals/results/ockp-hybrid-retrieval-candidate-comparison.md`. Remaining
+work is represented by linked beads:
+
+- `oc-tnnw.1.3` eval for safety, capability, and UX quality.
+- `oc-tnnw.1.4` promotion decision.
+- `oc-tnnw.1.5` conditional implementation only if promoted.
+- `oc-tnnw.1.6` iteration and follow-up bead creation.

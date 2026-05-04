@@ -19,6 +19,17 @@ guidance for hybrid/vector retrieval decisions. It does not promote durable
 vector storage, external vector databases, OpenAI vector stores, live embedding
 API calls, memory writes, or default ranking changes.
 
+Required references:
+
+- docs/architecture/agent-knowledge-plane.md
+- https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f#file-llm-wiki-md
+- https://mitchellh.com/writing/building-block-economy
+- https://developers.openai.com/api/docs/guides/prompt-guidance
+- https://openai.com/index/harness-engineering/
+- https://developers.openai.com/api/docs/guides/embeddings
+- https://developers.openai.com/api/docs/guides/retrieval
+- https://docs.mem0.ai/open-source/overview
+
 ## Safety Pass
 
 Pass. The implementation stays local-first and runner-only, performs no
@@ -74,3 +85,23 @@ Before promoting durable hybrid ranking, file or execute follow-up work that
 compares local vector storage, hosted vector stores, OpenAI vector stores, and
 lexical-only FTS on recall, citation correctness, provenance, freshness,
 import cost, reopen cost, and 100 MB/1 GB behavior.
+
+## Follow-up Beads
+
+Search performed before close:
+
+- `bd search "durable vector retrieval"`: no separate existing bead found.
+- `bd search "hybrid vector retrieval follow-up"`: no separate existing bead
+  found.
+
+Created by this decision: none. This decision promotes the read-only report and
+does not assert that durable hybrid/vector retrieval is validated by the
+pre-POC lexical scale evidence alone.
+
+Linked existing:
+
+- `oc-tnnw.1.5` for conditional implementation verification of the promoted
+  read-only report.
+- `oc-tnnw.1.6` for the final iteration/follow-up check before parent closure.
+- `oc-9ijx` for the later semantic-recall implementation candidate comparison
+  after `oc-rlg7` and `oc-ye6w` found a real paraphrase/synonym recall gap.

@@ -29,6 +29,9 @@ fetch/write remains `ingest_source_url`.
 | Public web search result | Pass: no browser or HTTP bypass. | Pass: proposes `sources/web/*.md` placement. | Pass: avoids manual path choreography. | Unit fixture completes inside normal runner test time. | Source authority begins after `ingest_source_url`. |
 | Duplicate URL result | Pass: uses runner-visible document metadata only. | Pass: returns existing source and no new synthesis path. | Pass: makes duplicate handling explicit before writes. | Unit fixture completes inside normal runner test time. | Duplicate hint is metadata evidence, not fetched content. |
 | Authenticated/private result | Pass: marks unsupported and does not fetch. | Pass: public-only boundary is visible. | Pass: no surprising browser or account-state request. | Unit fixture completes inside normal runner test time. | Private/authenticated pages need a separate approved policy. |
+| Planner-only local/no-network mode | Pass: no network provider, browser, fetch, or write. | Partial: plans supplied candidates only, so freshness depends on the harness result set. | Pass: works without provider setup. | Unit fixture completes inside normal runner test time. | Search result metadata is discovery context only. |
+| Runner provider adapter | Not proven: would need provider config, egress/privacy disclosure, rate-limit behavior, freshness model, and `access_status` semantics. | Potential future pass for live discovery. | Deferred: provider setup adds ceremony. | Not implemented. | No provider claims recorded. |
+| Configured hosted search API | Not proven: adds account/API-key handling and external availability. | Potential broad discovery reference. | Deferred/reference only. | Not implemented. | No hosted-search evidence recorded. |
 | Invalid URL / negative limit | Pass: JSON rejection before storage work. | Pass: invalid requests do not run a fetch path. | Pass: exact rejection text. | No storage work after rejection. | No bypass. |
 
 ## Taste Check
@@ -61,3 +64,11 @@ mise exec -- go test ./internal/runner ./cmd/openclerk ./internal/skilltest
 - Capability pass: pass.
 - UX quality: promote read-only deterministic planning.
 - Live search provider: not promoted.
+
+## Closure
+
+Remaining work is represented by linked beads:
+
+- `oc-tnnw.4.4` promotion decision.
+- `oc-tnnw.4.5` conditional implementation only if promoted.
+- `oc-tnnw.4.6` iteration and follow-up bead creation.

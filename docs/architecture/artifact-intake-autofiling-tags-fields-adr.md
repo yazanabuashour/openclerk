@@ -31,6 +31,21 @@ a read-only planning action that uses explicit user content or runner-supported
 public-source handoff context, then leaves durable writes to existing approved
 write actions.
 
+The source-control boundary is the same: planning may suggest checkpoint
+context, but Git status/history/checkpoint behavior belongs to
+`git_lifecycle_report` and checkpoint commits require the explicit
+`--git-checkpoints` or `OPENCLERK_GIT_CHECKPOINTS=1` gate. This ADR does not
+authorize automatic commits, branch operations, restore, or remote operations.
+
+## Candidate Options
+
+| Candidate | Safety | Capability | UX quality | Decision |
+| --- | --- | --- | --- | --- |
+| Extend existing natural runner actions only | Pass, because current create/fetch actions preserve explicit approval. | Can work when the caller supplies exact path, title, tags, fields, and body. | Too ceremonial for routine artifact organization. | Keep as write path. |
+| Dedicated read-only planning surface | Pass if it returns confidence, provenance, duplicate evidence, and no-write next requests. | Handles path, title, tags, fields, source handoff, and approval boundaries together. | Good: normal users get an inspectable candidate before durable writes. | Promote `artifact_candidate_plan`. |
+| Dedicated durable organizing action | Not proven; could move, retag, or rewrite canonical docs unexpectedly. | Could reduce steps if approvals and diffs were exact. | Risky before review and rollback surfaces mature. | Do not promote. |
+| Automatic source-control checkpointing | Not safe here; source-control writes must stay explicit and gated. | Could preserve local storage history. | Surprising if coupled to organization planning. | Use `git_lifecycle_report` only. |
+
 ## Decision
 
 Promote a read-only `openclerk document` action named
@@ -52,6 +67,11 @@ The action plans:
 No durable write, URL fetch, OCR, opaque file parse, local file read, browser
 automation, direct vault inspection, direct SQLite access, or source-built runner
 path is permitted.
+
+Public read/fetch/inspect permission is not durable organization approval.
+Plans may inspect explicit user content, public URL handoff context, and
+runner-visible duplicate metadata, but path creation, metadata/tag writes,
+source ingestion, and checkpoint commits remain separate approved actions.
 
 ## Supported Inputs
 
@@ -83,6 +103,10 @@ Explicit user values win.
 - `artifact.tags` are preserved first; inferred tags may be appended.
 - `artifact.fields` override inferred metadata keys with the same name.
 
+Configurable defaults may influence generated candidates only when they remain
+visible in the plan. They must not override explicit user values, and they must
+not create durable organization changes without approval.
+
 ## Confidence Policy
 
 High confidence requires explicit path, title, and body. Medium confidence is
@@ -112,3 +136,23 @@ This decision does not promote:
 - durable tag or metadata authority outside canonical markdown frontmatter
 - autonomous writes
 - vector memory, embedding stores, or hidden ranking authority
+
+## Closure
+
+Safety, capability, and UX quality remain separate gates:
+
+- Safety pass requires explicit override precedence, visible defaults,
+  confidence/provenance in returned plans, duplicate evidence, and approval
+  before durable organization changes.
+- Capability pass requires better path/title/tag/field planning than manual
+  prompt choreography while keeping existing write actions authoritative.
+- UX quality pass requires a normal user to receive a useful candidate without
+  learning path policy or source-control gates.
+
+Remaining work is represented by linked beads:
+
+- `oc-tnnw.7.2` POC for naming/tagging/organizing/source-control evidence.
+- `oc-tnnw.7.3` eval for safety, capability, and UX quality.
+- `oc-tnnw.7.4` promotion decision.
+- `oc-tnnw.7.5` conditional implementation only if promoted.
+- `oc-tnnw.7.6` iteration and follow-up bead creation.

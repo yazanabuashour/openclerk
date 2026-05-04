@@ -48,6 +48,9 @@ Defaults and config:
 - `checkpoint` is disabled by default.
 - `checkpoint` requires `--git-checkpoints` or
   `OPENCLERK_GIT_CHECKPOINTS=1`.
+- replacing that explicit gate with SQLite-configured default-enabled
+  checkpoints is not promoted because it can make future durable local commits
+  surprising after a persisted opt-in.
 - `checkpoint` requires explicit vault-relative `paths` and a one-line
   `message`.
 
@@ -90,17 +93,25 @@ unchanged unless the caller explicitly asks for `git_lifecycle_report`.
 Existing installs do not create checkpoints unless the caller enables the
 config gate and asks for checkpoint mode.
 
-## Follow-Up Search
+## Follow-up Beads
 
-The non-promoted restore/review-queue portion remains a future lifecycle need,
-but this track promotes a complete checkpoint/reporting surface. Before
-closing the decision, existing follow-up work was checked by Beads search:
+The non-promoted restore/review-queue portion remains outside this promoted
+surface. Before closing the decision, existing follow-up work was checked by
+Beads search:
 
-- `bd search "git lifecycle restore" --status all`
-- `bd search "git checkpoint restore plan" --status all`
-- `bd search "document lifecycle restore queue" --status all`
+- `bd search "git lifecycle restore"`: no separate existing bead found.
+- `bd search "SQLite git checkpoint config"`: no separate existing bead found.
 
-No implementation follow-up is authorized here for restore. If future evidence
-shows checkpoint/reporting is safe and useful but users still need restore-plan
-or review-queue UX, open a candidate-surface comparison before implementing
-restore behavior.
+Created: none. The decision promotes the complete status/history/explicit
+checkpoint surface and does not authorize restore or SQLite default-enabled
+checkpoint behavior.
+
+Linked existing:
+
+- `oc-tnnw.3.5` for conditional implementation verification of the promoted
+  report/checkpoint surface.
+- `oc-tnnw.3.6` for the final iteration/follow-up check before parent closure.
+
+If future evidence shows users still need restore-plan, review-queue, or
+persisted checkpoint-default UX, open a candidate-surface comparison before
+implementing restore or default-enabled checkpoint behavior.

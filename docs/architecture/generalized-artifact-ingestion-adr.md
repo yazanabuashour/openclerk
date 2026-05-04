@@ -19,6 +19,17 @@ Supporting evidence:
 - [`../evals/results/ockp-heterogeneous-artifact-ingestion-pressure.md`](../evals/results/ockp-heterogeneous-artifact-ingestion-pressure.md)
 - [`generalized-artifact-ingestion-promotion-decision.md`](generalized-artifact-ingestion-promotion-decision.md)
 
+Required references:
+
+- [`agent-knowledge-plane.md`](agent-knowledge-plane.md)
+- <https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f#file-llm-wiki-md>
+- <https://mitchellh.com/writing/building-block-economy>
+- <https://developers.openai.com/api/docs/guides/prompt-guidance>
+- <https://openai.com/index/harness-engineering/>
+- <https://developers.openai.com/api/docs/guides/embeddings>
+- <https://developers.openai.com/api/docs/guides/retrieval>
+- <https://docs.mem0.ai/open-source/overview>
+
 ## Context
 
 OpenClerk already supports local-first AgentOps workflows through the installed
@@ -60,6 +71,17 @@ records unless a later decision explicitly promotes a typed domain.
 Use the following runner-surface options as the comparison frame for POC and
 eval evidence:
 
+- **Explicit user-provided content:** accept user-supplied title/body or
+  transcript text through existing document actions. This is enough when the
+  user has already extracted faithful content and can approve a durable
+  markdown write.
+- **Local artifact registry:** consider a runner-visible asset registry only if
+  artifact identity, duplicate detection, and asset provenance cannot be
+  represented by current markdown plus asset paths.
+- **Parser/OCR candidate extraction:** consider local-first parser or OCR
+  candidates only as proposed extracted text with source provenance, confidence
+  posture, unsupported-file behavior, and approval before any canonical record
+  write.
 - **Keep `ingest_source_url` only:** preserve the PDF and public web URL
   ingestion contract and model other non-PDF artifacts as canonical markdown
   or source-linked synthesis.
@@ -74,6 +96,12 @@ eval evidence:
 - **Keep as skill/eval reference:** use artifact pressure to harden guidance
   and eval coverage when existing document/retrieval workflows are sufficient.
 
+Public read/fetch/inspect permission is not durable-write approval. A public
+URL can be fetched through the existing runner after approval, and explicit
+user-provided text can be inspected as candidate content, but parser/OCR output,
+local artifact metadata, and extracted records remain candidates until the user
+approves the canonical markdown or promoted-record write.
+
 Promotion requires targeted AgentOps eval evidence showing that existing
 `openclerk document` and `openclerk retrieval` workflows are structurally
 insufficient, not merely verbose, underdocumented, or missing fixture data.
@@ -85,6 +113,12 @@ insufficient, not merely verbose, underdocumented, or missing fixture data.
 - Canonical markdown source docs and promoted records remain authority.
 - Source-sensitive claims preserve citations, source paths, `doc_id`,
   `chunk_id`, source refs, or equivalent stable identifiers.
+- Parser/OCR output must carry source provenance and cannot become canonical
+  without approval.
+- Unsupported file kinds must reject or plan explicitly; they must not fall
+  back to direct local file reads, OCR bypasses, or opaque artifact parsing.
+- Duplicate handling must compare source URLs, asset hints, canonical paths,
+  and runner-visible metadata before creating new records.
 - Provenance and projection freshness remain inspectable for source updates,
   derived records, and source-linked synthesis.
 - Missing required source-ingestion fields clarify without tools; invalid
@@ -116,3 +150,22 @@ Promote only after the POC and targeted eval record repeated
 `runner_capability_gap` failures and the promotion decision names the exact
 surface, request/response shape, compatibility rules, failure modes, and
 follow-up implementation Beads.
+
+Safety, capability, and UX quality remain separate gates:
+
+- Safety pass requires runner-only access, source provenance for extracted
+  text, duplicate handling, unsupported-file behavior, local-first parsing, and
+  approval before durable records are written.
+- Capability pass requires repeated proof that explicit user-provided content,
+  current source URL ingestion, and canonical markdown workflows cannot express
+  the artifact need.
+- UX quality pass requires reducing real artifact workflow ceremony without
+  hiding parser uncertainty, provenance, or durable-write approval.
+
+Remaining work is represented by linked beads:
+
+- `oc-tnnw.5.2` POC for artifact/OCR candidate evidence.
+- `oc-tnnw.5.3` eval for safety, capability, and UX quality.
+- `oc-tnnw.5.4` promotion decision.
+- `oc-tnnw.5.5` conditional implementation only if promoted.
+- `oc-tnnw.5.6` iteration and follow-up bead creation.

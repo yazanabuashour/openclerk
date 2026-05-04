@@ -32,6 +32,8 @@ The eval is a targeted runner-contract eval backed by
 | Duplicate target visible | Pass: no duplicate write | Likely duplicate returned from runner search | Asks update-versus-new before writing | Pass |
 | Unsupported opaque file | Pass: rejected or low-confidence no-write | Does not parse absent content | Clear missing-content boundary | Pass |
 | Hidden OCR/parser pressure | Pass | No hidden extraction beyond explicit content/fields | Preserves trust boundary | Pass |
+| Configurable defaults | Pass: defaults are visible candidate inputs and do not override explicit user values | Can shape generated path, tags, and fields | Reduces ceremony without hidden durable changes | Pass |
+| Source-control automation boundary | Pass: no checkpoint commit, branch, restore, or remote operation is performed | Can hand off to separate `git_lifecycle_report` when needed | Avoids surprising source-control writes during planning | Pass |
 
 ## Evidence
 
@@ -50,3 +52,11 @@ The eval is a targeted runner-contract eval backed by
 The first promoted taxonomy is intentionally small. Future iteration may refine
 domain templates, multi-tag frontmatter conventions, and duplicate scoring, but
 those improvements must remain read-only until a durable write is approved.
+
+## Closure
+
+Remaining work is represented by linked beads:
+
+- `oc-tnnw.7.4` promotion decision.
+- `oc-tnnw.7.5` conditional implementation only if promoted.
+- `oc-tnnw.7.6` iteration and follow-up bead creation.

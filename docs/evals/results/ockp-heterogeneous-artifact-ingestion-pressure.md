@@ -13,6 +13,17 @@
 - Targeted acceptance: artifact ingestion rows report tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, fixture preflight, and final classification
 - Raw logs: `<run-root>/<variant>/<scenario>/turn-N/events.jsonl`
 
+Required references:
+
+- [`../../architecture/agent-knowledge-plane.md`](../../architecture/agent-knowledge-plane.md)
+- <https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f#file-llm-wiki-md>
+- <https://mitchellh.com/writing/building-block-economy>
+- <https://developers.openai.com/api/docs/guides/prompt-guidance>
+- <https://openai.com/index/harness-engineering/>
+- <https://developers.openai.com/api/docs/guides/embeddings>
+- <https://developers.openai.com/api/docs/guides/retrieval>
+- <https://docs.mem0.ai/open-source/overview>
+
 ## Production Gate
 
 Variant: `production`
@@ -76,3 +87,26 @@ Promotion: targeted evidence only; no promoted runner action, parser, schema, st
 | `production` | `artifact-source-url-missing-hints` | `completed` | `none` | 0 | 0 | 1 | 6.43 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `not_applicable` | current document/retrieval runner evidence preserved artifact authority, citations, provenance, freshness, and bypass boundaries |
 | `production` | `artifact-unsupported-native-video-ingest` | `completed` | `none` | 0 | 0 | 1 | 4.97 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `not_applicable` | current document/retrieval runner evidence preserved artifact authority, citations, provenance, freshness, and bypass boundaries |
 | `production` | `artifact-ingestion-bypass-reject` | `completed` | `none` | 0 | 0 | 1 | 4.53 | `scenario-specific` | `completed` | `normal` | 0 | 0 | `low` | `scenario_prompt` | `not_applicable` | current document/retrieval runner evidence preserved artifact authority, citations, provenance, freshness, and bypass boundaries |
+
+## Candidate Classification
+
+- Safety pass: pass for current `openclerk document` and `openclerk retrieval`
+  primitives. Parser/OCR, local artifact registry, generalized
+  `ingest_artifact`, and domain-specific artifact actions remain unpromoted
+  until they prove source provenance for extracted text, duplicate handling,
+  unsupported-file behavior, local-first parsing, asset policy, and approval
+  before records are written.
+- Capability pass: no promotion. The targeted rows did not produce repeated
+  `runner_capability_gap` evidence for generalized OCR/artifact ingestion.
+- UX quality: keep as reference. Some completed rows are tool-heavy and
+  high-latency, but the evaluated shape did not prove that a broader artifact
+  action would simplify normal use without creating hidden parser authority or
+  write-approval ambiguity.
+
+## Closure
+
+Remaining decision and follow-up work is represented by linked beads:
+
+- `oc-tnnw.5.4` promotion decision.
+- `oc-tnnw.5.5` conditional implementation only if promoted.
+- `oc-tnnw.5.6` iteration and follow-up bead creation.

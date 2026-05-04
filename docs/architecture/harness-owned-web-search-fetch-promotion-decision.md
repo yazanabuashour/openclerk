@@ -82,9 +82,27 @@ Existing `ingest_source_url` behavior remains unchanged. Existing public URL
 fetch/write still requires approval and must use `ingest_source_url`.
 `web_search_plan` is read-only and safe to call before approval.
 
-## Follow-Up
+## Follow-up Beads
 
 Do not implement live search or provider configuration from this decision.
+Before closing the decision, existing follow-up work was checked by Beads
+search:
+
+- `bd search "live web search provider"`: found this track's implementation
+  and iteration beads, `oc-tnnw.4.5` and `oc-tnnw.4.6`, plus the current
+  decision and parent epic.
+- `bd search "web search provider adapter"`: no separate existing bead found.
+
+Created: none. The planner-only surface is complete for the current UX debt,
+and no live-provider adapter has enough safety, provider-config, egress,
+freshness, rate-limit, access-status, citation, or durable-write evidence.
+
+Linked existing:
+
+- `oc-tnnw.4.5` for conditional implementation verification of the promoted
+  planner-only surface.
+- `oc-tnnw.4.6` for the final iteration/follow-up check before parent closure.
+
 Future iteration may compare provider abstraction candidates after the
 read-only planner has real use evidence. That comparison must choose, defer,
 kill, or record `none viable yet` and must preserve runner-only access,
