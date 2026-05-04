@@ -259,6 +259,15 @@ func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, n
 			DuplicateCandidate: &report,
 			Summary:            "returned duplicate candidate report",
 		}, nil
+	case RetrievalTaskActionStructuredStore:
+		report, err := runStructuredStoreReport(ctx, client, normalized.StructuredStore)
+		if err != nil {
+			return RetrievalTaskResult{}, err
+		}
+		return RetrievalTaskResult{
+			StructuredStore: &report,
+			Summary:         "returned structured store report",
+		}, nil
 	case RetrievalTaskActionHybridRetrieval:
 		report, err := runHybridRetrievalReport(ctx, client, normalized.HybridRetrieval)
 		if err != nil {
@@ -292,6 +301,7 @@ type normalizedRetrievalTaskRequest struct {
 	SourceAudit        SourceAuditReportOptions
 	EvidenceBundle     EvidenceBundleOptions
 	DuplicateCandidate DuplicateCandidateOptions
+	StructuredStore    StructuredStoreOptions
 	HybridRetrieval    HybridRetrievalOptions
 	Limit              int
 }
@@ -320,6 +330,7 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		SourceAudit:        request.SourceAudit,
 		EvidenceBundle:     request.EvidenceBundle,
 		DuplicateCandidate: request.DuplicateCandidate,
+		StructuredStore:    request.StructuredStore,
 		HybridRetrieval:    request.HybridRetrieval,
 		Limit:              request.Limit,
 	}
@@ -336,6 +347,7 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		request.SourceAudit.Limit < 0 ||
 		request.EvidenceBundle.Limit < 0 ||
 		request.DuplicateCandidate.Limit < 0 ||
+		request.StructuredStore.Limit < 0 ||
 		request.HybridRetrieval.Limit < 0 {
 		return normalizedRetrievalTaskRequest{}, "limit must be greater than or equal to 0"
 	}
@@ -449,6 +461,26 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		normalized.DuplicateCandidate.PathPrefix = strings.TrimSpace(request.DuplicateCandidate.PathPrefix)
 		if normalized.DuplicateCandidate.Query == "" {
 			return normalizedRetrievalTaskRequest{}, "duplicate_candidate.query is required"
+		}
+		return normalized, ""
+	case RetrievalTaskActionStructuredStore:
+		normalized.StructuredStore.Domain = strings.TrimSpace(request.StructuredStore.Domain)
+		normalized.StructuredStore.Query = strings.TrimSpace(request.StructuredStore.Query)
+		normalized.StructuredStore.EntityType = strings.TrimSpace(request.StructuredStore.EntityType)
+		normalized.StructuredStore.Status = strings.TrimSpace(request.StructuredStore.Status)
+		normalized.StructuredStore.Owner = strings.TrimSpace(request.StructuredStore.Owner)
+		normalized.StructuredStore.Interface = strings.TrimSpace(request.StructuredStore.Interface)
+		normalized.StructuredStore.Scope = strings.TrimSpace(request.StructuredStore.Scope)
+		if normalized.StructuredStore.Domain == "" {
+			normalized.StructuredStore.Domain = "records"
+		}
+		if normalized.StructuredStore.Domain != "records" &&
+			normalized.StructuredStore.Domain != "services" &&
+			normalized.StructuredStore.Domain != "decisions" {
+			return normalizedRetrievalTaskRequest{}, "structured_store.domain must be records, services, or decisions"
+		}
+		if rejection := structuredStoreFilterRejection(normalized.StructuredStore); rejection != "" {
+			return normalizedRetrievalTaskRequest{}, rejection
 		}
 		return normalized, ""
 	case RetrievalTaskActionHybridRetrieval:

@@ -205,7 +205,7 @@ func usage(stderr io.Writer) {
 	_, _ = fmt.Fprintln(stderr, "       openclerk document --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk retrieval --help")
 	_, _ = fmt.Fprintln(stderr, "document/retrieval read strict JSON from stdin and use configured paths by default; pass --db only for an explicit dataset.")
-	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, ingest_source_url plan, source_audit_report, evidence_bundle_report, duplicate_candidate_report, memory_router_recall_report, hybrid_retrieval_report")
+	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, ingest_source_url plan, source_audit_report, evidence_bundle_report, duplicate_candidate_report, memory_router_recall_report, structured_store_report, hybrid_retrieval_report")
 }
 
 func documentUsage(w io.Writer) {
@@ -243,6 +243,8 @@ func retrievalUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  Read-only. Returns duplicate_candidate.agent_handoff with likely target, evidence inspected, no-write status, and approval boundary.")
 	_, _ = fmt.Fprintln(w, `  memory_router_recall_report: {"action":"memory_router_recall_report","memory_router_recall":{"query":"memory router temporal recall session promotion feedback weighting routing canonical docs","limit":10}}`)
 	_, _ = fmt.Fprintln(w, "  Read-only. Returns memory_router_recall.agent_handoff with canonical refs, stale-session posture, feedback weighting, provenance, freshness, and authority limits.")
+	_, _ = fmt.Fprintln(w, `  structured_store_report: {"action":"structured_store_report","structured_store":{"domain":"records","query":"structured canonical record evidence","entity_type":"tool","limit":10}}`)
+	_, _ = fmt.Fprintln(w, "  Read-only. Returns structured_store.agent_handoff with promoted record/service/decision projection evidence, candidate-store boundaries, freshness, and authority limits.")
 	_, _ = fmt.Fprintln(w, `  hybrid_retrieval_report: {"action":"hybrid_retrieval_report","hybrid_retrieval":{"query":"semantic recall citation quality","path_prefix":"docs/","limit":10}}`)
 	_, _ = fmt.Fprintln(w, "  Read-only. Returns hybrid_retrieval.agent_handoff with lexical baseline evidence and candidate-surface boundaries; it does not create vectors or change default ranking.")
 }

@@ -37,6 +37,7 @@ const (
 	RetrievalTaskActionSourceAuditReport   = "source_audit_report"
 	RetrievalTaskActionEvidenceBundle      = "evidence_bundle_report"
 	RetrievalTaskActionDuplicateCandidate  = "duplicate_candidate_report"
+	RetrievalTaskActionStructuredStore     = "structured_store_report"
 	RetrievalTaskActionHybridRetrieval     = "hybrid_retrieval_report"
 )
 
@@ -240,6 +241,7 @@ type RetrievalTaskRequest struct {
 	SourceAudit        SourceAuditReportOptions   `json:"source_audit,omitempty"`
 	EvidenceBundle     EvidenceBundleOptions      `json:"evidence_bundle,omitempty"`
 	DuplicateCandidate DuplicateCandidateOptions  `json:"duplicate_candidate,omitempty"`
+	StructuredStore    StructuredStoreOptions     `json:"structured_store,omitempty"`
 	HybridRetrieval    HybridRetrievalOptions     `json:"hybrid_retrieval,omitempty"`
 	Limit              int                        `json:"limit,omitempty"`
 }
@@ -374,6 +376,17 @@ type DuplicateCandidateOptions struct {
 	Limit      int    `json:"limit,omitempty"`
 }
 
+type StructuredStoreOptions struct {
+	Domain     string `json:"domain,omitempty"`
+	Query      string `json:"query,omitempty"`
+	EntityType string `json:"entity_type,omitempty"`
+	Status     string `json:"status,omitempty"`
+	Owner      string `json:"owner,omitempty"`
+	Interface  string `json:"interface,omitempty"`
+	Scope      string `json:"scope,omitempty"`
+	Limit      int    `json:"limit,omitempty"`
+}
+
 type HybridRetrievalOptions struct {
 	Query      string `json:"query,omitempty"`
 	PathPrefix string `json:"path_prefix,omitempty"`
@@ -399,6 +412,7 @@ type RetrievalTaskResult struct {
 	SourceAudit        *SourceAuditReport         `json:"source_audit,omitempty"`
 	EvidenceBundle     *EvidenceBundleReport      `json:"evidence_bundle,omitempty"`
 	DuplicateCandidate *DuplicateCandidateReport  `json:"duplicate_candidate,omitempty"`
+	StructuredStore    *StructuredStoreReport     `json:"structured_store,omitempty"`
 	HybridRetrieval    *HybridRetrievalReport     `json:"hybrid_retrieval,omitempty"`
 	Summary            string                     `json:"summary"`
 }
@@ -491,6 +505,39 @@ type DuplicateCandidateReport struct {
 	ValidationBoundaries string            `json:"validation_boundaries"`
 	AuthorityLimits      string            `json:"authority_limits"`
 	AgentHandoff         *AgentHandoff     `json:"agent_handoff,omitempty"`
+}
+
+type StructuredStoreReport struct {
+	Domain               string                     `json:"domain"`
+	Query                string                     `json:"query,omitempty"`
+	EntityType           string                     `json:"entity_type,omitempty"`
+	Status               string                     `json:"status,omitempty"`
+	Owner                string                     `json:"owner,omitempty"`
+	Interface            string                     `json:"interface,omitempty"`
+	Scope                string                     `json:"scope,omitempty"`
+	Records              *RecordLookupResult        `json:"records,omitempty"`
+	Services             *ServiceLookupResult       `json:"services,omitempty"`
+	Decisions            *DecisionLookupResult      `json:"decisions,omitempty"`
+	Projections          *ProjectionStateList       `json:"projections,omitempty"`
+	CandidateSurfaces    []StructuredStoreCandidate `json:"candidate_surfaces,omitempty"`
+	Recommendation       string                     `json:"recommendation"`
+	SafetyPass           string                     `json:"safety_pass"`
+	CapabilityPass       string                     `json:"capability_pass"`
+	UXQuality            string                     `json:"ux_quality"`
+	EvidencePosture      string                     `json:"evidence_posture"`
+	ValidationBoundaries string                     `json:"validation_boundaries"`
+	AuthorityLimits      string                     `json:"authority_limits"`
+	EvidenceInspected    []string                   `json:"evidence_inspected,omitempty"`
+	AgentHandoff         *AgentHandoff              `json:"agent_handoff,omitempty"`
+}
+
+type StructuredStoreCandidate struct {
+	Surface        string   `json:"surface"`
+	Status         string   `json:"status"`
+	Safety         string   `json:"safety"`
+	Capability     string   `json:"capability"`
+	UXQuality      string   `json:"ux_quality"`
+	Implementation []string `json:"implementation,omitempty"`
 }
 
 type HybridRetrievalReport struct {

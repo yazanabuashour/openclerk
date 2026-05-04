@@ -45,6 +45,11 @@ matches the request:
 - Routine read-only memory/router recall reports: retrieval
   `memory_router_recall_report`, then answer from
   `memory_router_recall.agent_handoff` or returned evidence.
+- Structured data and non-document canonical-store decision support: retrieval
+  `structured_store_report`, then answer from
+  `structured_store.agent_handoff`. Do not claim independent canonical tables,
+  time-series stores, external connectors, or durable structured writes from
+  this report.
 - Hybrid/vector retrieval decision support: retrieval
   `hybrid_retrieval_report`, then answer from
   `hybrid_retrieval.agent_handoff`. Do not claim vector-ranked retrieval or
@@ -202,7 +207,8 @@ Common actions are `search`, `document_links`, `graph_neighborhood`,
 `decisions_lookup`, `decision_record`, `provenance_events`,
 `projection_states`, `audit_contradictions`, `source_audit_report`,
 `evidence_bundle_report`, `duplicate_candidate_report`, and
-`memory_router_recall_report`, and `hybrid_retrieval_report`. Use
+`memory_router_recall_report`, `structured_store_report`, and
+`hybrid_retrieval_report`. Use
 `openclerk retrieval --help` for promoted workflow-action request shape.
 
 Use search for source-grounded answers; document links and graph neighborhoods

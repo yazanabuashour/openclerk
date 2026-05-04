@@ -210,6 +210,126 @@ func TestRetrievalTaskHybridRetrievalReportIsReadOnly(t *testing.T) {
 	}
 }
 
+func TestRetrievalTaskStructuredStoreReportIsReadOnly(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "records/assets/structured-runner.md", "Structured Runner", strings.TrimSpace(`---
+entity_type: tool
+entity_name: Structured Runner
+entity_id: structured-runner
+---
+# Structured Runner
+
+## Summary
+Structured runner evidence stays in canonical markdown and projects into schema-backed records.
+
+## Facts
+- status: active
+`)+"\n")
+
+	result, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionStructuredStore,
+		StructuredStore: runner.StructuredStoreOptions{
+			Domain:     "records",
+			Query:      "Structured Runner",
+			EntityType: "tool",
+			Limit:      10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("structured store report: %v", err)
+	}
+	if result.Rejected || result.StructuredStore == nil {
+		t.Fatalf("structured store result = %+v", result)
+	}
+	report := result.StructuredStore
+	if report.Records == nil ||
+		len(report.Records.Entities) != 1 ||
+		report.Records.Entities[0].EntityID != "structured-runner" ||
+		report.Projections == nil ||
+		len(report.Projections.Projections) == 0 ||
+		len(report.CandidateSurfaces) == 0 ||
+		report.AgentHandoff == nil ||
+		!containsString(report.EvidenceInspected, "domain:records") ||
+		!containsString(report.EvidenceInspected, "records:1") ||
+		!strings.Contains(report.Recommendation, "structured_store_report") ||
+		!strings.Contains(report.ValidationBoundaries, "read-only") ||
+		!strings.Contains(report.ValidationBoundaries, "does not create independent canonical tables") ||
+		!strings.Contains(report.AuthorityLimits, "canonical markdown") {
+		t.Fatalf("structured store report = %+v", report)
+	}
+	list, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{PathPrefix: "records/assets/", Limit: 10},
+	})
+	if err != nil {
+		t.Fatalf("list after structured store report: %v", err)
+	}
+	if len(list.Documents) != 1 {
+		t.Fatalf("structured store report mutated documents: %+v", list.Documents)
+	}
+}
+
+func TestRetrievalTaskStructuredStoreReportRejectsMissingFilter(t *testing.T) {
+	t.Parallel()
+
+	result, err := runner.RunRetrievalTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.RetrievalTaskRequest{
+		Action:          runner.RetrievalTaskActionStructuredStore,
+		StructuredStore: runner.StructuredStoreOptions{Domain: "records"},
+	})
+	if err != nil {
+		t.Fatalf("structured store reject: %v", err)
+	}
+	if !result.Rejected || result.RejectionReason != "structured_store.query is required for records domain" {
+		t.Fatalf("structured store rejection = %+v", result)
+	}
+}
+
+func TestRetrievalTaskStructuredStoreReportRejectsUnsupportedDomainFilter(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		options runner.StructuredStoreOptions
+		want    string
+	}{
+		{
+			name:    "services scope",
+			options: runner.StructuredStoreOptions{Domain: "services", Scope: "agentops"},
+			want:    "structured_store services domain supports query, status, owner, and interface only",
+		},
+		{
+			name:    "decisions interface",
+			options: runner.StructuredStoreOptions{Domain: "decisions", Interface: "JSON runner"},
+			want:    "structured_store decisions domain supports query, status, owner, and scope only",
+		},
+		{
+			name:    "records owner",
+			options: runner.StructuredStoreOptions{Domain: "records", Query: "structured runner", Owner: "platform"},
+			want:    "structured_store records domain supports query and entity_type only",
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			result, err := runner.RunRetrievalTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.RetrievalTaskRequest{
+				Action:          runner.RetrievalTaskActionStructuredStore,
+				StructuredStore: tt.options,
+			})
+			if err != nil {
+				t.Fatalf("structured store unsupported filter reject: %v", err)
+			}
+			if !result.Rejected || result.RejectionReason != tt.want {
+				t.Fatalf("structured store rejection = %+v, want %q", result, tt.want)
+			}
+		})
+	}
+}
+
 func TestRetrievalTaskHybridRetrievalReportRejectsMissingQuery(t *testing.T) {
 	t.Parallel()
 
