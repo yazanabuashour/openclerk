@@ -4,7 +4,7 @@ title: "Research: Agent-First Knowledge Plane Architecture (2026-04-07)"
 type: "research"
 status: "active"
 modality: "markdown"
-updated_at: "2026-04-23T00:00:00Z"
+updated_at: "2026-05-04T00:00:00Z"
 tags: ["research","architecture","vault","mem0","knowledge-plane","agentops","provenance","truth-maintenance","llm-wiki","source-linked-synthesis"]
 aliases: ["Agent-first knowledge architecture","Knowledge plane architecture","Docs records memory router","LLM Wiki alignment"]
 ---
@@ -27,6 +27,34 @@ Related repo references:
 - [AgentOps-Only Knowledge Plane Direction](eval-backed-knowledge-plane-adr.md)
 - [OpenClerk Next-Phase Maturity Validation](openclerk-next-phase-maturity-validation-decision.md)
 - [Deferred Capability Promotion Gates](deferred-capability-promotion-gates.md)
+
+## May 4, 2026 Roadmap Tracker Update
+
+Beads epic `oc-uj2y` tracks the next agent-first knowledge-plane roadmap. The
+roadmap is intentionally evidence-gated: each capability track must proceed
+through ADR, POC, eval, promotion decision, conditional implementation, and
+iteration before product behavior changes.
+
+The active tracks are:
+
+- hybrid embedding and vector retrieval
+- memory architecture and recall
+- structured data and non-document canonical stores
+- skill reduction into runner heuristics
+- Git-backed version control and lifecycle
+- harness-owned web search and fetch
+- artifact intake, auto-filing, tags, and fields
+
+This tracker does not promote any new runner action, storage layer, parser, web
+search behavior, memory system, vector store, or durable-write surface by
+itself. The production boundary remains the installed OpenClerk JSON runner;
+routine agents must not bypass it through direct SQLite, source-built binaries,
+HTTP/MCP variants, private implementation paths, or raw vault/file inspection.
+
+For every non-promotion outcome, the decision bead must separate safety pass,
+capability pass, and UX quality. If a real workflow need remains, the decision
+must run `bd search` for existing follow-up work and create or link
+candidate-surface comparison Beads before closing or handing off.
 
 ## April 2026 Direction Update
 
