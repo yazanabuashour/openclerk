@@ -19,6 +19,7 @@ const (
 	DocumentTaskActionReplaceSection   = "replace_section"
 	DocumentTaskActionResolvePaths     = "resolve_paths"
 	DocumentTaskActionInspectLayout    = "inspect_layout"
+	DocumentTaskActionGitLifecycle     = "git_lifecycle_report"
 
 	RetrievalTaskActionValidate            = "validate"
 	RetrievalTaskActionSearch              = "search"
@@ -48,6 +49,7 @@ type DocumentTaskRequest struct {
 	Source        SourceURLInput        `json:"source,omitempty"`
 	Video         VideoURLInput         `json:"video,omitempty"`
 	Synthesis     CompileSynthesisInput `json:"synthesis,omitempty"`
+	GitLifecycle  GitLifecycleOptions   `json:"git_lifecycle,omitempty"`
 	Path          string                `json:"path,omitempty"`
 	Title         string                `json:"title,omitempty"`
 	Body          string                `json:"body,omitempty"`
@@ -216,6 +218,7 @@ type DocumentTaskResult struct {
 	SourcePlacement  *SourcePlacementPlan    `json:"source_placement_plan,omitempty"`
 	VideoIngestion   *VideoIngestionResult   `json:"video_ingestion,omitempty"`
 	CompileSynthesis *CompileSynthesisResult `json:"compile_synthesis,omitempty"`
+	GitLifecycle     *GitLifecycleReport     `json:"git_lifecycle,omitempty"`
 	Documents        []DocumentSummary       `json:"documents,omitempty"`
 	Paths            *Paths                  `json:"paths,omitempty"`
 	Layout           *KnowledgeLayout        `json:"layout,omitempty"`
@@ -399,6 +402,13 @@ type HybridRetrievalOptions struct {
 	Limit      int    `json:"limit,omitempty"`
 }
 
+type GitLifecycleOptions struct {
+	Mode    string   `json:"mode,omitempty"`
+	Paths   []string `json:"paths,omitempty"`
+	Message string   `json:"message,omitempty"`
+	Limit   int      `json:"limit,omitempty"`
+}
+
 type RetrievalTaskResult struct {
 	Rejected           bool                       `json:"rejected"`
 	RejectionReason    string                     `json:"rejection_reason,omitempty"`
@@ -438,6 +448,36 @@ type CompileSynthesisResult struct {
 	ValidationBoundaries string            `json:"validation_boundaries"`
 	AuthorityLimits      string            `json:"authority_limits"`
 	AgentHandoff         *AgentHandoff     `json:"agent_handoff,omitempty"`
+}
+
+type GitLifecycleReport struct {
+	Mode                 string                   `json:"mode"`
+	GitStatus            string                   `json:"git_status"`
+	Branch               string                   `json:"branch,omitempty"`
+	Head                 string                   `json:"head,omitempty"`
+	Paths                []string                 `json:"paths,omitempty"`
+	DirtyPaths           []GitLifecyclePathStatus `json:"dirty_paths,omitempty"`
+	History              []GitLifecycleCommit     `json:"history,omitempty"`
+	CheckpointStatus     string                   `json:"checkpoint_status,omitempty"`
+	CommitID             string                   `json:"commit_id,omitempty"`
+	WriteStatus          string                   `json:"write_status"`
+	ApprovalBoundary     string                   `json:"approval_boundary"`
+	ValidationBoundaries string                   `json:"validation_boundaries"`
+	AuthorityLimits      string                   `json:"authority_limits"`
+	AgentHandoff         *AgentHandoff            `json:"agent_handoff,omitempty"`
+}
+
+type GitLifecyclePathStatus struct {
+	Path   string `json:"path"`
+	Status string `json:"status"`
+}
+
+type GitLifecycleCommit struct {
+	CommitID  string `json:"commit_id"`
+	ShortID   string `json:"short_id"`
+	Authored  string `json:"authored"`
+	Summary   string `json:"summary"`
+	PathScope string `json:"path_scope,omitempty"`
 }
 
 type AgentHandoff struct {

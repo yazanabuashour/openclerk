@@ -39,6 +39,32 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 		}, nil
 	}
 
+	if normalized.Action == DocumentTaskActionGitLifecycle && normalized.GitLifecycle.Mode == gitLifecycleModeCheckpoint {
+		var result DocumentTaskResult
+		err := runclient.WithWriteLock(ctx, config, func() error {
+			client, err := runclient.OpenForWrite(config)
+			if err != nil {
+				return err
+			}
+			defer func() {
+				_ = client.Close()
+			}()
+			report, err := runGitLifecycleReport(ctx, client.Paths().VaultRoot, normalized.GitLifecycle, config)
+			if err != nil {
+				return err
+			}
+			result = DocumentTaskResult{
+				GitLifecycle: &report,
+				Summary:      gitLifecycleSummary(report),
+			}
+			return nil
+		})
+		if err != nil {
+			return DocumentTaskResult{}, err
+		}
+		return result, nil
+	}
+
 	if isMutatingDocumentAction(normalized) {
 		var result DocumentTaskResult
 		err := runclient.WithWriteLock(ctx, config, func() error {
@@ -102,6 +128,15 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 		return DocumentTaskResult{
 			Document: &converted,
 			Summary:  fmt.Sprintf("returned document %s", converted.DocID),
+		}, nil
+	case DocumentTaskActionGitLifecycle:
+		report, err := runGitLifecycleReport(ctx, client.Paths().VaultRoot, normalized.GitLifecycle, config)
+		if err != nil {
+			return DocumentTaskResult{}, err
+		}
+		return DocumentTaskResult{
+			GitLifecycle: &report,
+			Summary:      gitLifecycleSummary(report),
 		}, nil
 	case DocumentTaskActionInspectLayout:
 		layout, err := inspectKnowledgeLayout(ctx, client)
@@ -233,15 +268,16 @@ func runMutatingDocumentTask(ctx context.Context, client *runclient.Client, norm
 }
 
 type normalizedDocumentTaskRequest struct {
-	Action    string
-	Document  DocumentInput
-	Source    SourceURLInput
-	Video     VideoURLInput
-	Synthesis CompileSynthesisInput
-	DocID     string
-	Content   string
-	Heading   string
-	List      DocumentListOptions
+	Action       string
+	Document     DocumentInput
+	Source       SourceURLInput
+	Video        VideoURLInput
+	Synthesis    CompileSynthesisInput
+	GitLifecycle GitLifecycleOptions
+	DocID        string
+	Content      string
+	Heading      string
+	List         DocumentListOptions
 }
 
 func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocumentTaskRequest, string) {
@@ -250,18 +286,22 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		action = DocumentTaskActionValidate
 	}
 	normalized := normalizedDocumentTaskRequest{
-		Action:    action,
-		Document:  request.Document,
-		Source:    trimSourceURLInput(request.Source),
-		Video:     trimVideoURLInput(request.Video),
-		Synthesis: trimCompileSynthesisInput(compileSynthesisInputFromRequest(request)),
-		DocID:     strings.TrimSpace(request.DocID),
-		Content:   request.Content,
-		Heading:   strings.TrimSpace(request.Heading),
-		List:      request.List,
+		Action:       action,
+		Document:     request.Document,
+		Source:       trimSourceURLInput(request.Source),
+		Video:        trimVideoURLInput(request.Video),
+		Synthesis:    trimCompileSynthesisInput(compileSynthesisInputFromRequest(request)),
+		GitLifecycle: trimGitLifecycleOptions(request.GitLifecycle),
+		DocID:        strings.TrimSpace(request.DocID),
+		Content:      request.Content,
+		Heading:      strings.TrimSpace(request.Heading),
+		List:         request.List,
 	}
 
 	if request.List.Limit < 0 {
+		return normalizedDocumentTaskRequest{}, "limit must be greater than or equal to 0"
+	}
+	if request.GitLifecycle.Limit < 0 {
 		return normalizedDocumentTaskRequest{}, "limit must be greater than or equal to 0"
 	}
 
@@ -321,6 +361,32 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		return normalized, ""
 	case DocumentTaskActionInspectLayout:
 		return normalized, ""
+	case DocumentTaskActionGitLifecycle:
+		if normalized.GitLifecycle.Mode == "" {
+			normalized.GitLifecycle.Mode = gitLifecycleModeStatus
+		}
+		for _, path := range normalized.GitLifecycle.Paths {
+			if path == "" || filepath.IsAbs(path) || strings.HasPrefix(path, "/") || path == ".." || strings.HasPrefix(path, "../") {
+				return normalizedDocumentTaskRequest{}, "git_lifecycle.paths entries must stay inside the vault root"
+			}
+			if isUnsafeGitLifecyclePath(path) {
+				return normalizedDocumentTaskRequest{}, "git_lifecycle.paths entries must be literal vault-relative paths"
+			}
+		}
+		switch normalized.GitLifecycle.Mode {
+		case gitLifecycleModeStatus, gitLifecycleModeHistory:
+			return normalized, ""
+		case gitLifecycleModeCheckpoint:
+			if len(normalized.GitLifecycle.Paths) == 0 {
+				return normalizedDocumentTaskRequest{}, "git_lifecycle.paths is required for checkpoint mode"
+			}
+			if strings.TrimSpace(normalized.GitLifecycle.Message) == "" {
+				return normalizedDocumentTaskRequest{}, "git_lifecycle.message is required for checkpoint mode"
+			}
+			return normalized, ""
+		default:
+			return normalizedDocumentTaskRequest{}, "git_lifecycle.mode must be status, history, or checkpoint"
+		}
 	default:
 		return normalizedDocumentTaskRequest{}, fmt.Sprintf("unsupported document task action %q", action)
 	}
@@ -417,6 +483,34 @@ func trimCompileSynthesisInput(input CompileSynthesisInput) CompileSynthesisInpu
 		FreshnessNote: strings.TrimSpace(input.FreshnessNote),
 		Mode:          normalizeCompileSynthesisMode(input.Mode),
 	}
+}
+
+func trimGitLifecycleOptions(input GitLifecycleOptions) GitLifecycleOptions {
+	paths := make([]string, 0, len(input.Paths))
+	for _, rawPath := range input.Paths {
+		clean := normalizeVaultRelativePath(rawPath)
+		if clean != "" {
+			paths = append(paths, clean)
+		}
+	}
+	return GitLifecycleOptions{
+		Mode:    strings.TrimSpace(input.Mode),
+		Paths:   paths,
+		Message: sanitizeGitLifecycleMessage(input.Message),
+		Limit:   input.Limit,
+	}
+}
+
+func normalizeVaultRelativePath(raw string) string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" || filepath.IsAbs(trimmed) || strings.HasPrefix(trimmed, "/") {
+		return trimmed
+	}
+	clean := path.Clean(filepath.ToSlash(trimmed))
+	if clean == "." {
+		return ""
+	}
+	return clean
 }
 
 func normalizeCompileSynthesisMode(raw string) string {

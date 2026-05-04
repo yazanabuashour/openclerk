@@ -25,6 +25,7 @@ const (
 type Config struct {
 	DatabasePath        string
 	SyncDiagnosticsPath string
+	GitCheckpoints      bool
 }
 
 // Paths describes the resolved runtime locations on disk.

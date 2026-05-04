@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -99,6 +100,143 @@ func TestDocumentTaskCreateListGetAndUpdate(t *testing.T) {
 
 	if _, err := json.Marshal(get); err != nil {
 		t.Fatalf("marshal document task result: %v", err)
+	}
+}
+
+func TestDocumentTaskGitLifecycleStatusAndHistory(t *testing.T) {
+	t.Parallel()
+
+	vaultRoot := initGitLifecycleTestRepo(t)
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	if _, err := runclient.InitializePaths(runclient.Config{DatabasePath: dbPath}, vaultRoot); err != nil {
+		t.Fatalf("initialize paths: %v", err)
+	}
+	config := runclient.Config{DatabasePath: dbPath}
+	ctx := context.Background()
+
+	created := createDocument(t, ctx, config, "notes/git-lifecycle.md", "Git Lifecycle", "# Git Lifecycle\n\n## Summary\nLocal checkpoint evidence.\n")
+	status, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGitLifecycle,
+		GitLifecycle: runner.GitLifecycleOptions{
+			Mode:  "status",
+			Paths: []string{"notes/git-lifecycle.md"},
+			Limit: 10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("git lifecycle status: %v", err)
+	}
+	if status.GitLifecycle == nil ||
+		status.GitLifecycle.WriteStatus != "no_write" ||
+		status.GitLifecycle.AgentHandoff == nil ||
+		!gitLifecycleDirtyPath(status.GitLifecycle.DirtyPaths, "notes/git-lifecycle.md") ||
+		!strings.Contains(status.GitLifecycle.AuthorityLimits, "storage-level history only") {
+		t.Fatalf("git lifecycle status result = %+v", status.GitLifecycle)
+	}
+
+	checkpoint, err := runner.RunDocumentTask(ctx, runclient.Config{DatabasePath: dbPath, GitCheckpoints: true}, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGitLifecycle,
+		GitLifecycle: runner.GitLifecycleOptions{
+			Mode:    "checkpoint",
+			Paths:   []string{"notes/git-lifecycle.md"},
+			Message: "openclerk: checkpoint git lifecycle note",
+		},
+	})
+	if err != nil {
+		t.Fatalf("git lifecycle checkpoint: %v", err)
+	}
+	if checkpoint.GitLifecycle == nil ||
+		checkpoint.GitLifecycle.CheckpointStatus != "created" ||
+		checkpoint.GitLifecycle.WriteStatus != "checkpoint_created" ||
+		checkpoint.GitLifecycle.CommitID == "" {
+		t.Fatalf("git lifecycle checkpoint result = %+v", checkpoint.GitLifecycle)
+	}
+
+	history, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGitLifecycle,
+		GitLifecycle: runner.GitLifecycleOptions{
+			Mode:  "history",
+			Paths: []string{"notes/git-lifecycle.md"},
+			Limit: 5,
+		},
+	})
+	if err != nil {
+		t.Fatalf("git lifecycle history: %v", err)
+	}
+	if history.GitLifecycle == nil ||
+		len(history.GitLifecycle.History) == 0 ||
+		!strings.Contains(history.GitLifecycle.History[0].Summary, "checkpoint git lifecycle note") {
+		t.Fatalf("git lifecycle history result = %+v", history.GitLifecycle)
+	}
+
+	if _, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action:  runner.DocumentTaskActionAppend,
+		DocID:   created.DocID,
+		Content: "## Update\nTracked worktree change.\n",
+	}); err != nil {
+		t.Fatalf("append tracked git lifecycle document: %v", err)
+	}
+	trackedStatus, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGitLifecycle,
+		GitLifecycle: runner.GitLifecycleOptions{
+			Mode:  "status",
+			Paths: []string{"notes/git-lifecycle.md"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("git lifecycle tracked status: %v", err)
+	}
+	if trackedStatus.GitLifecycle == nil ||
+		!gitLifecycleDirtyPath(trackedStatus.GitLifecycle.DirtyPaths, "notes/git-lifecycle.md") {
+		t.Fatalf("tracked git lifecycle status result = %+v", trackedStatus.GitLifecycle)
+	}
+}
+
+func TestDocumentTaskGitLifecycleCheckpointRequiresConfig(t *testing.T) {
+	t.Parallel()
+
+	vaultRoot := initGitLifecycleTestRepo(t)
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	if _, err := runclient.InitializePaths(runclient.Config{DatabasePath: dbPath}, vaultRoot); err != nil {
+		t.Fatalf("initialize paths: %v", err)
+	}
+	config := runclient.Config{DatabasePath: dbPath}
+	ctx := context.Background()
+	createDocument(t, ctx, config, "notes/no-checkpoint.md", "No Checkpoint", "# No Checkpoint\n\n## Summary\nUncheckpointed evidence.\n")
+
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGitLifecycle,
+		GitLifecycle: runner.GitLifecycleOptions{
+			Mode:    "checkpoint",
+			Paths:   []string{"notes/no-checkpoint.md"},
+			Message: "openclerk: should not checkpoint",
+		},
+	})
+	if err != nil {
+		t.Fatalf("git lifecycle checkpoint disabled: %v", err)
+	}
+	if result.GitLifecycle == nil ||
+		result.GitLifecycle.CheckpointStatus != "disabled" ||
+		result.GitLifecycle.WriteStatus != "rejected" {
+		t.Fatalf("git lifecycle disabled result = %+v", result.GitLifecycle)
+	}
+}
+
+func TestDocumentTaskGitLifecycleRejectsPathspecMagic(t *testing.T) {
+	t.Parallel()
+
+	result, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGitLifecycle,
+		GitLifecycle: runner.GitLifecycleOptions{
+			Mode:  "status",
+			Paths: []string{":(top,glob)**"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("git lifecycle pathspec validation: %v", err)
+	}
+	if !result.Rejected || result.RejectionReason != "git_lifecycle.paths entries must be literal vault-relative paths" {
+		t.Fatalf("pathspec validation result = %+v", result)
 	}
 }
 
@@ -1376,4 +1514,42 @@ Plural support handoffs tag list evidence must not match singular support-handof
 	if !empty.Rejected || empty.RejectionReason != "list.tag must be non-empty" {
 		t.Fatalf("empty list result = %+v", empty)
 	}
+}
+
+func initGitLifecycleTestRepo(t *testing.T) string {
+	t.Helper()
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git is required for git lifecycle tests")
+	}
+	vaultRoot := filepath.Join(t.TempDir(), "vault")
+	if err := os.MkdirAll(vaultRoot, 0o755); err != nil {
+		t.Fatalf("create vault root: %v", err)
+	}
+	runGitLifecycleTestCommand(t, vaultRoot, "init", "-b", "main")
+	runGitLifecycleTestCommand(t, vaultRoot, "config", "user.email", "openclerk@example.test")
+	runGitLifecycleTestCommand(t, vaultRoot, "config", "user.name", "OpenClerk Test")
+	if err := os.WriteFile(filepath.Join(vaultRoot, ".gitkeep"), []byte("openclerk test repo\n"), 0o644); err != nil {
+		t.Fatalf("write gitkeep: %v", err)
+	}
+	runGitLifecycleTestCommand(t, vaultRoot, "add", ".gitkeep")
+	runGitLifecycleTestCommand(t, vaultRoot, "commit", "-m", "initial")
+	return vaultRoot
+}
+
+func runGitLifecycleTestCommand(t *testing.T, dir string, args ...string) {
+	t.Helper()
+	cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %v: %v\n%s", args, err, string(output))
+	}
+}
+
+func gitLifecycleDirtyPath(statuses []runner.GitLifecyclePathStatus, path string) bool {
+	for _, status := range statuses {
+		if status.Path == path {
+			return true
+		}
+	}
+	return false
 }

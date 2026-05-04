@@ -126,7 +126,7 @@ policies and let runner results drive the answer:
 - Duplicate checks: when duplicate risk is requested or plausible, use runner-visible evidence before validating or writing; report the likely target, evidence inspected, and that no document was created or updated; ask whether to update the existing target or create a confirmed new path.
 - Public URL/source intake: use `ingest_source_url` for HTTP/HTTPS PDF and public web sources. Do not fetch URLs with browser, HTTP, filesystem, or other non-runner tools; when placement is missing, propose source/synthesis paths and ask for approval before durable fetch or write.
 - Video/YouTube source intake: use `ingest_video_url` only with user-supplied transcript text and provenance; do not acquire media or transcripts externally.
-- Document lifecycle review, rollback, restore, and semantic diff: stay inside `openclerk document` and `openclerk retrieval`. There is no public history, raw diff, review, restore, rollback, or lifecycle action. Before lifecycle repair, list the likely target collection, get the target document, then inspect provenance and projection freshness after any write.
+- Document lifecycle review, rollback, restore, and semantic diff: stay inside `openclerk document` and `openclerk retrieval`. Use `git_lifecycle_report` only for local Git status/history/checkpoints; it is storage history, not semantic provenance, and checkpoint mode needs explicit runner config. There is no public raw diff, restore, or rollback action.
 - Messy populated-vault retrieval: answer from runner-visible authority such as metadata-filtered authority results, active canonical sources, cited source paths, `doc_id`, and `chunk_id`; treat polluted, decoy, stale, draft, archived, duplicate, or candidate documents as non-authority unless runner-visible source authority says otherwise.
 - Synthesis maintenance: prefer `compile_synthesis`; use lower-level document and retrieval actions only for explicit primitive or manual cases; preserve `source_refs`, `## Sources`, `## Freshness`, provenance, and projection freshness.
 
@@ -144,7 +144,8 @@ openclerk document
 
 Common actions are `validate`, `create_document`, `ingest_source_url`,
 `ingest_video_url`, `list_documents`, `get_document`, `append_document`,
-`replace_section`, `resolve_paths`, `inspect_layout`, and `compile_synthesis`.
+`replace_section`, `resolve_paths`, `inspect_layout`, `compile_synthesis`, and
+`git_lifecycle_report`.
 Use `openclerk document --help` for primitive and promoted workflow-action
 request shapes, including source placement, source ingestion, and video fields.
 

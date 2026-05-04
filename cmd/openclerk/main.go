@@ -129,6 +129,7 @@ func parseConfig(name string, args []string, stderr io.Writer) (runclient.Config
 	fs := flag.NewFlagSet("openclerk "+name, flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	databasePath := fs.String("db", "", "OpenClerk SQLite database path")
+	gitCheckpoints := fs.Bool("git-checkpoints", false, "enable explicit local git checkpoint writes")
 	if err := fs.Parse(args); err != nil {
 		return runclient.Config{}, false
 	}
@@ -136,7 +137,7 @@ func parseConfig(name string, args []string, stderr io.Writer) (runclient.Config
 		_, _ = fmt.Fprintf(stderr, "unexpected positional arguments: %v\n", fs.Args())
 		return runclient.Config{}, false
 	}
-	return runclient.Config{DatabasePath: *databasePath}, true
+	return runclient.Config{DatabasePath: *databasePath, GitCheckpoints: *gitCheckpoints}, true
 }
 
 func wantsSubcommandHelp(args []string) bool {
@@ -205,11 +206,11 @@ func usage(stderr io.Writer) {
 	_, _ = fmt.Fprintln(stderr, "       openclerk document --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk retrieval --help")
 	_, _ = fmt.Fprintln(stderr, "document/retrieval read strict JSON from stdin and use configured paths by default; pass --db only for an explicit dataset.")
-	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, ingest_source_url plan, source_audit_report, evidence_bundle_report, duplicate_candidate_report, workflow_guide_report, memory_router_recall_report, structured_store_report, hybrid_retrieval_report")
+	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, ingest_source_url plan, git_lifecycle_report, source_audit_report, evidence_bundle_report, duplicate_candidate_report, workflow_guide_report, memory_router_recall_report, structured_store_report, hybrid_retrieval_report")
 }
 
 func documentUsage(w io.Writer) {
-	_, _ = fmt.Fprintln(w, "usage: openclerk document [--db path] < request.json")
+	_, _ = fmt.Fprintln(w, "usage: openclerk document [--db path] [--git-checkpoints] < request.json")
 	_, _ = fmt.Fprintln(w, "")
 	_, _ = fmt.Fprintln(w, "Reads one strict JSON object from stdin and writes one JSON result.")
 	_, _ = fmt.Fprintln(w, "Uses configured paths by default; pass --db only for an explicit dataset.")
@@ -227,6 +228,9 @@ func documentUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, `  compile_synthesis: {"action":"compile_synthesis","synthesis":{"path":"synthesis/example.md","title":"Example","source_refs":["sources/a.md"],"body":"...","body_facts":["..."],"freshness_note":"...","mode":"create_or_update"}}`)
 	_, _ = fmt.Fprintln(w, "  Requires path, title, non-empty source_refs, and either body or body_facts. mode defaults to create_or_update.")
 	_, _ = fmt.Fprintln(w, "  Returns compile_synthesis.agent_handoff with final-answer evidence; use primitives only after rejection or explicit drill-down.")
+	_, _ = fmt.Fprintln(w, `  git_lifecycle_report status/history: {"action":"git_lifecycle_report","git_lifecycle":{"mode":"status","paths":["synthesis/example.md"],"limit":10}}`)
+	_, _ = fmt.Fprintln(w, `  git_lifecycle_report checkpoint: {"action":"git_lifecycle_report","git_lifecycle":{"mode":"checkpoint","paths":["synthesis/example.md"],"message":"openclerk: update synthesis example"}}`)
+	_, _ = fmt.Fprintln(w, "  Status/history are read-only. Checkpoint requires --git-checkpoints or OPENCLERK_GIT_CHECKPOINTS=1, never pushes, switches branches, restores, or emits raw diffs.")
 }
 
 func retrievalUsage(w io.Writer) {

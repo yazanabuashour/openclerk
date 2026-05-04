@@ -70,6 +70,15 @@ func selectWorkflowGuideCandidate(intent string) workflowGuideSelection {
 			DoNotUseFor:    []string{"uncited claims", "duplicate synthesis creation", "unapproved durable writes"},
 			HandoffSummary: "Use document compile_synthesis for approved source-linked synthesis, then answer from compile_synthesis.agent_handoff.",
 		}
+	case containsAny(normalized, "git", "checkpoint", "version history", "storage history", "local history"):
+		return workflowGuideSelection{
+			Surface:        "git_lifecycle_report",
+			RunnerDomain:   "document",
+			RequestShape:   `{"action":"git_lifecycle_report","git_lifecycle":{"mode":"status","paths":["synthesis/example.md"],"limit":10}}`,
+			UseWhen:        "use for local Git status/history metadata or explicit local checkpoints around approved OpenClerk-authored durable writes",
+			DoNotUseFor:    []string{"restore", "rollback", "branch switching", "remote push", "semantic provenance replacement"},
+			HandoffSummary: "Use document git_lifecycle_report for storage-level status/history; checkpoint mode requires explicit runner config and never replaces provenance/freshness evidence.",
+		}
 	case containsAny(normalized, "source audit", "conflict", "contradiction", "stale source", "repair synthesis"):
 		return workflowGuideSelection{
 			Surface:        "source_audit_report",

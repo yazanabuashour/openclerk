@@ -125,6 +125,11 @@ requiring agents to choreograph many primitives:
   needed, and returns source evidence, duplicate status, provenance refs,
   projection freshness, write status, validation boundaries, authority limits,
   and `agent_handoff`.
+- `openclerk document` `git_lifecycle_report` reports local Git status/history
+  for vault-relative paths and can create an explicit local checkpoint when
+  `--git-checkpoints` or `OPENCLERK_GIT_CHECKPOINTS=1` is set. It never
+  pushes, switches branches, restores, or emits raw diffs; Git remains
+  storage-level history, not OpenClerk authority.
 - `openclerk retrieval` `source_audit_report` explains source-sensitive audit
   evidence and can repair only an existing synthesis target in
   `repair_existing` mode. It returns `agent_handoff` and is not a broad
