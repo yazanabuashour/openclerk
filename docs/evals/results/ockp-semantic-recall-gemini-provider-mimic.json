@@ -1,0 +1,604 @@
+{
+  "metadata": {
+    "lane": "semantic-recall",
+    "mode": "local-hybrid",
+    "generated_at": "2026-05-04T19:59:33.401194Z",
+    "harness": "scripts/agent-eval/ockp semantic-recall",
+    "run_root_artifact_reference": "\u003crun-root\u003e",
+    "report_name": "ockp-semantic-recall-gemini-provider-mimic",
+    "raw_logs_committed": false,
+    "raw_content_committed": false
+  },
+  "corpus": {
+    "documents": 12,
+    "chunks": 104,
+    "query_rows": 8,
+    "document_paths": [
+      "docs/architecture/agent-knowledge-plane.md",
+      "docs/architecture/artifact-intake-autofiling-tags-fields-adr.md",
+      "docs/architecture/eval-backed-knowledge-plane-adr.md",
+      "docs/architecture/generalized-artifact-ingestion-adr.md",
+      "docs/architecture/git-lifecycle-version-control-adr.md",
+      "docs/architecture/harness-owned-web-search-fetch-adr.md",
+      "docs/architecture/hybrid-retrieval-adr.md",
+      "docs/architecture/hybrid-retrieval-promotion-decision.md",
+      "docs/architecture/knowledge-configuration-v1-adr.md",
+      "docs/architecture/local-first-hybrid-retrieval-implementation-candidate-decision.md",
+      "docs/architecture/memory-architecture-recall-adr.md",
+      "docs/architecture/structured-data-canonical-stores-adr.md"
+    ],
+    "chunking_policy": "eval-only heading-section chunks parsed from committed docs copied into \u003crun-root\u003e; index text includes title, repo-relative path, heading, and section body",
+    "citation_policy": "reports reduced repo-relative path, heading, and line span citations; canonical markdown remains authority",
+    "source_references": [
+      "docs/evals/results/ockp-semantic-recall-hybrid-vector-prototype.md",
+      "docs/architecture/local-first-hybrid-retrieval-implementation-candidate-decision.md"
+    ]
+  },
+  "embedding_provider": {
+    "provider": "gemini",
+    "url": "https://generativelanguage.googleapis.com/v1beta",
+    "model": "gemini-embedding-001",
+    "status": "completed",
+    "credential_ref": "runtime_config:GEMINI_API_KEY",
+    "embedding_dimensions": 3072,
+    "output_dimensions": 3072,
+    "request_count": 34,
+    "retry_count": 6,
+    "backoff_seconds": 51.55
+  },
+  "methods": [
+    {
+      "method": "current_lexical_fts",
+      "status": "completed",
+      "description": "Installed OpenClerk SQLite FTS through current Search; no ranking or schema change.",
+      "hit_at_3": 0,
+      "mrr": 0,
+      "query_count": 8,
+      "raw_duplicate_hits": 0,
+      "total_seconds": 0,
+      "rows": [
+        {
+          "query_id": "wiki_synthesis",
+          "kind": "concept-recall",
+          "expected_path": "docs/architecture/agent-knowledge-plane.md",
+          "hit": false
+        },
+        {
+          "query_id": "semantic_retrieval_gap",
+          "kind": "paraphrase",
+          "expected_path": "docs/architecture/hybrid-retrieval-adr.md",
+          "hit": false
+        },
+        {
+          "query_id": "structured_rows_vs_notes",
+          "kind": "synonym-drift",
+          "expected_path": "docs/architecture/structured-data-canonical-stores-adr.md",
+          "hit": false
+        },
+        {
+          "query_id": "checkpoint_not_restore",
+          "kind": "indirect-source",
+          "expected_path": "docs/architecture/git-lifecycle-version-control-adr.md",
+          "hit": false
+        },
+        {
+          "query_id": "search_then_ingest",
+          "kind": "indirect-source",
+          "expected_path": "docs/architecture/harness-owned-web-search-fetch-adr.md",
+          "hit": false
+        },
+        {
+          "query_id": "ocr_uncertain_artifact",
+          "kind": "concept-recall",
+          "expected_path": "docs/architecture/generalized-artifact-ingestion-adr.md",
+          "hit": false
+        },
+        {
+          "query_id": "memory_no_hidden_truth",
+          "kind": "paraphrase",
+          "expected_path": "docs/architecture/memory-architecture-recall-adr.md",
+          "hit": false
+        },
+        {
+          "query_id": "plan_filename_tags",
+          "kind": "synonym-drift",
+          "expected_path": "docs/architecture/artifact-intake-autofiling-tags-fields-adr.md",
+          "hit": false
+        }
+      ],
+      "evidence_posture": "citation-bearing current lexical baseline; no vector evidence claimed",
+      "validation_boundary": "uses embedded OpenClerk runtime only; no direct SQLite reads, no raw vault inspection beyond copied eval corpus setup, no default ranking change",
+      "candidate_only": false
+    },
+    {
+      "method": "provider_mimic_vector_only",
+      "status": "completed",
+      "description": "Gemini provider-mimic vector-only chunk ranking.",
+      "hit_at_3": 8,
+      "mrr": 0.938,
+      "query_count": 8,
+      "raw_duplicate_hits": 736,
+      "total_seconds": 60.15,
+      "rows": [
+        {
+          "query_id": "wiki_synthesis",
+          "kind": "concept-recall",
+          "expected_path": "docs/architecture/agent-knowledge-plane.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/agent-knowledge-plane.md",
+              "heading": "Canonical and derived layers",
+              "line_start": 82,
+              "line_end": 206
+            },
+            {
+              "path": "docs/architecture/eval-backed-knowledge-plane-adr.md",
+              "heading": "Context",
+              "line_start": 17,
+              "line_end": 34
+            },
+            {
+              "path": "docs/architecture/knowledge-configuration-v1-adr.md",
+              "heading": "Context",
+              "line_start": 20,
+              "line_end": 39
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "semantic_retrieval_gap",
+          "kind": "paraphrase",
+          "expected_path": "docs/architecture/hybrid-retrieval-adr.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/hybrid-retrieval-adr.md",
+              "heading": "Candidates",
+              "line_start": 67,
+              "line_end": 78
+            },
+            {
+              "path": "docs/architecture/local-first-hybrid-retrieval-implementation-candidate-decision.md",
+              "heading": "Decision",
+              "line_start": 31,
+              "line_end": 48
+            },
+            {
+              "path": "docs/architecture/hybrid-retrieval-promotion-decision.md",
+              "heading": "UX Quality",
+              "line_start": 60,
+              "line_end": 65
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "structured_rows_vs_notes",
+          "kind": "synonym-drift",
+          "expected_path": "docs/architecture/structured-data-canonical-stores-adr.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/structured-data-canonical-stores-adr.md",
+              "heading": "Projection Versus Independent Store",
+              "line_start": 54,
+              "line_end": 68
+            },
+            {
+              "path": "docs/architecture/knowledge-configuration-v1-adr.md",
+              "heading": "V1 Concepts",
+              "line_start": 72,
+              "line_end": 114
+            },
+            {
+              "path": "docs/architecture/artifact-intake-autofiling-tags-fields-adr.md",
+              "heading": "Non-Goals",
+              "line_start": 128,
+              "line_end": 139
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "checkpoint_not_restore",
+          "kind": "indirect-source",
+          "expected_path": "docs/architecture/git-lifecycle-version-control-adr.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/git-lifecycle-version-control-adr.md",
+              "heading": "Context",
+              "line_start": 27,
+              "line_end": 41
+            },
+            {
+              "path": "docs/architecture/structured-data-canonical-stores-adr.md",
+              "heading": "Authority And Approval Boundaries",
+              "line_start": 35,
+              "line_end": 53
+            },
+            {
+              "path": "docs/architecture/hybrid-retrieval-adr.md",
+              "heading": "Authority And Approval Boundaries",
+              "line_start": 48,
+              "line_end": 66
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "search_then_ingest",
+          "kind": "indirect-source",
+          "expected_path": "docs/architecture/harness-owned-web-search-fetch-adr.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/harness-owned-web-search-fetch-adr.md",
+              "heading": "Promoted Candidate",
+              "line_start": 51,
+              "line_end": 67
+            },
+            {
+              "path": "docs/architecture/knowledge-configuration-v1-adr.md",
+              "heading": "`oc-v1ed` Web URL Intake Decision",
+              "line_start": 360,
+              "line_end": 399
+            },
+            {
+              "path": "docs/architecture/artifact-intake-autofiling-tags-fields-adr.md",
+              "heading": "Decision",
+              "line_start": 49,
+              "line_end": 75
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "ocr_uncertain_artifact",
+          "kind": "concept-recall",
+          "expected_path": "docs/architecture/generalized-artifact-ingestion-adr.md",
+          "rank": 2,
+          "top_citations": [
+            {
+              "path": "docs/architecture/artifact-intake-autofiling-tags-fields-adr.md",
+              "heading": "Confidence Policy",
+              "line_start": 110,
+              "line_end": 119
+            },
+            {
+              "path": "docs/architecture/generalized-artifact-ingestion-adr.md",
+              "heading": "Decision",
+              "line_start": 62,
+              "line_end": 108
+            },
+            {
+              "path": "docs/architecture/knowledge-configuration-v1-adr.md",
+              "heading": "`oc-n31` Contract Decision",
+              "line_start": 321,
+              "line_end": 359
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "memory_no_hidden_truth",
+          "kind": "paraphrase",
+          "expected_path": "docs/architecture/memory-architecture-recall-adr.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/memory-architecture-recall-adr.md",
+              "heading": "Decision",
+              "line_start": 51,
+              "line_end": 66
+            },
+            {
+              "path": "docs/architecture/eval-backed-knowledge-plane-adr.md",
+              "heading": "Invariants",
+              "line_start": 91,
+              "line_end": 112
+            },
+            {
+              "path": "docs/architecture/hybrid-retrieval-adr.md",
+              "heading": "Authority And Approval Boundaries",
+              "line_start": 48,
+              "line_end": 66
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "plan_filename_tags",
+          "kind": "synonym-drift",
+          "expected_path": "docs/architecture/artifact-intake-autofiling-tags-fields-adr.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/artifact-intake-autofiling-tags-fields-adr.md",
+              "heading": "Override Precedence",
+              "line_start": 95,
+              "line_end": 109
+            },
+            {
+              "path": "docs/architecture/generalized-artifact-ingestion-adr.md",
+              "heading": "Decision",
+              "line_start": 62,
+              "line_end": 108
+            },
+            {
+              "path": "docs/architecture/harness-owned-web-search-fetch-adr.md",
+              "heading": "Promotion And Kill Criteria",
+              "line_start": 82,
+              "line_end": 111
+            }
+          ],
+          "hit": true
+        }
+      ],
+      "evidence_posture": "provider-backed Gemini embedding mimic evidence; useful for vector/hybrid mechanics, not local/offline completion",
+      "validation_boundary": "eval-only Gemini provider call using redacted runtime_config credential; no durable embedding store, provider config write, or production ranking change",
+      "candidate_only": true
+    },
+    {
+      "method": "provider_mimic_hybrid_rrf",
+      "status": "completed",
+      "description": "RRF fusion over eval current lexical-token score and Gemini provider-mimic vector chunk ranks.",
+      "hit_at_3": 8,
+      "mrr": 0.938,
+      "query_count": 8,
+      "raw_duplicate_hits": 736,
+      "total_seconds": 60.15,
+      "rows": [
+        {
+          "query_id": "wiki_synthesis",
+          "kind": "concept-recall",
+          "expected_path": "docs/architecture/agent-knowledge-plane.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/agent-knowledge-plane.md",
+              "heading": "Summary",
+              "line_start": 3,
+              "line_end": 38
+            },
+            {
+              "path": "docs/architecture/eval-backed-knowledge-plane-adr.md",
+              "heading": "Context",
+              "line_start": 17,
+              "line_end": 34
+            },
+            {
+              "path": "docs/architecture/knowledge-configuration-v1-adr.md",
+              "heading": "Context",
+              "line_start": 20,
+              "line_end": 39
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "semantic_retrieval_gap",
+          "kind": "paraphrase",
+          "expected_path": "docs/architecture/hybrid-retrieval-adr.md",
+          "rank": 2,
+          "top_citations": [
+            {
+              "path": "docs/architecture/harness-owned-web-search-fetch-adr.md",
+              "heading": "Context",
+              "line_start": 27,
+              "line_end": 39
+            },
+            {
+              "path": "docs/architecture/hybrid-retrieval-adr.md",
+              "heading": "Candidates",
+              "line_start": 67,
+              "line_end": 78
+            },
+            {
+              "path": "docs/architecture/local-first-hybrid-retrieval-implementation-candidate-decision.md",
+              "heading": "Candidate Comparison",
+              "line_start": 49,
+              "line_end": 56
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "structured_rows_vs_notes",
+          "kind": "synonym-drift",
+          "expected_path": "docs/architecture/structured-data-canonical-stores-adr.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/structured-data-canonical-stores-adr.md",
+              "heading": "Authority And Approval Boundaries",
+              "line_start": 35,
+              "line_end": 53
+            },
+            {
+              "path": "docs/architecture/agent-knowledge-plane.md",
+              "heading": "Canonical and derived layers",
+              "line_start": 82,
+              "line_end": 206
+            },
+            {
+              "path": "docs/architecture/knowledge-configuration-v1-adr.md",
+              "heading": "V1 Concepts",
+              "line_start": 72,
+              "line_end": 114
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "checkpoint_not_restore",
+          "kind": "indirect-source",
+          "expected_path": "docs/architecture/git-lifecycle-version-control-adr.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/git-lifecycle-version-control-adr.md",
+              "heading": "Context",
+              "line_start": 27,
+              "line_end": 41
+            },
+            {
+              "path": "docs/architecture/structured-data-canonical-stores-adr.md",
+              "heading": "Authority And Approval Boundaries",
+              "line_start": 35,
+              "line_end": 53
+            },
+            {
+              "path": "docs/architecture/hybrid-retrieval-adr.md",
+              "heading": "Authority And Approval Boundaries",
+              "line_start": 48,
+              "line_end": 66
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "search_then_ingest",
+          "kind": "indirect-source",
+          "expected_path": "docs/architecture/harness-owned-web-search-fetch-adr.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/harness-owned-web-search-fetch-adr.md",
+              "heading": "Promoted Candidate",
+              "line_start": 51,
+              "line_end": 67
+            },
+            {
+              "path": "docs/architecture/knowledge-configuration-v1-adr.md",
+              "heading": "`oc-v1ed` Web URL Intake Decision",
+              "line_start": 360,
+              "line_end": 399
+            },
+            {
+              "path": "docs/architecture/generalized-artifact-ingestion-adr.md",
+              "heading": "Decision",
+              "line_start": 62,
+              "line_end": 108
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "ocr_uncertain_artifact",
+          "kind": "concept-recall",
+          "expected_path": "docs/architecture/generalized-artifact-ingestion-adr.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/generalized-artifact-ingestion-adr.md",
+              "heading": "Decision",
+              "line_start": 62,
+              "line_end": 108
+            },
+            {
+              "path": "docs/architecture/artifact-intake-autofiling-tags-fields-adr.md",
+              "heading": "Non-Goals",
+              "line_start": 128,
+              "line_end": 139
+            },
+            {
+              "path": "docs/architecture/knowledge-configuration-v1-adr.md",
+              "heading": "`oc-n31` Contract Decision",
+              "line_start": 321,
+              "line_end": 359
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "memory_no_hidden_truth",
+          "kind": "paraphrase",
+          "expected_path": "docs/architecture/memory-architecture-recall-adr.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/memory-architecture-recall-adr.md",
+              "heading": "Decision",
+              "line_start": 51,
+              "line_end": 66
+            },
+            {
+              "path": "docs/architecture/agent-knowledge-plane.md",
+              "heading": "Canonical and derived layers",
+              "line_start": 82,
+              "line_end": 206
+            },
+            {
+              "path": "docs/architecture/hybrid-retrieval-adr.md",
+              "heading": "Authority And Approval Boundaries",
+              "line_start": 48,
+              "line_end": 66
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "plan_filename_tags",
+          "kind": "synonym-drift",
+          "expected_path": "docs/architecture/artifact-intake-autofiling-tags-fields-adr.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/artifact-intake-autofiling-tags-fields-adr.md",
+              "heading": "Override Precedence",
+              "line_start": 95,
+              "line_end": 109
+            },
+            {
+              "path": "docs/architecture/generalized-artifact-ingestion-adr.md",
+              "heading": "Invariants",
+              "line_start": 109,
+              "line_end": 128
+            },
+            {
+              "path": "docs/architecture/harness-owned-web-search-fetch-adr.md",
+              "heading": "Options",
+              "line_start": 40,
+              "line_end": 50
+            }
+          ],
+          "hit": true
+        }
+      ],
+      "evidence_posture": "provider-backed Gemini embedding mimic evidence; useful for vector/hybrid mechanics, not local/offline completion",
+      "validation_boundary": "eval-only Gemini provider call using redacted runtime_config credential; no durable embedding store, provider config write, or production ranking change",
+      "candidate_only": true
+    }
+  ],
+  "freshness_probe": {
+    "status": "completed",
+    "changed_path": "docs/architecture/hybrid-retrieval-adr.md",
+    "stale_chunks": 1,
+    "rebuilt_chunks": 7,
+    "evidence_posture": "content-hash mismatch on copied \u003crun-root\u003e corpus detects stale local index rows and identifies affected chunks for rebuild",
+    "validation_boundary": "probe mutates only copied eval corpus under \u003crun-root\u003e; no production documents or durable indexes are changed"
+  },
+  "checks": {
+    "reduced_report_only": true,
+    "raw_logs_committed": false,
+    "raw_content_committed": false,
+    "machine_absolute_artifact_refs": false,
+    "production_search_default_changed": false,
+    "boundary": "eval-only maintainer harness; no openclerk document/retrieval JSON schema change, no durable embedding store, no provider embedding default, no production search ranking change"
+  },
+  "outcomes": [
+    {
+      "name": "provider-mimic-hybrid-poc",
+      "status": "recorded",
+      "safety_pass": "partial",
+      "capability_pass": "recorded_for_vector_mechanics",
+      "ux_quality": "pass_if_hidden_behind_search",
+      "performance": "recorded_provider_latency_and_retries",
+      "evidence_posture": "real Gemini provider-mimic embedding evidence with citations, duplicate counts, and freshness probe",
+      "details": "provider evidence does not satisfy local/offline oc-bq8c acceptance; rerun with local Ollama remains required"
+    }
+  ]
+}
