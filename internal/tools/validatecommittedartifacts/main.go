@@ -65,6 +65,9 @@ func validateCommittedArtifacts(root string) error {
 	if err := validateModuleDocumentation(root, files); err != nil {
 		return err
 	}
+	if err := validateLiveInstallSmokeReport(root); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -341,6 +344,110 @@ func validateNoRealVaultJSONReports(files []string) error {
 		rel = filepath.ToSlash(rel)
 		if strings.HasPrefix(rel, "docs/evals/results/ockp-real-vault") && strings.HasSuffix(rel, ".json") {
 			return fmt.Errorf("%s must stay local-only; commit only the sanitized markdown real-vault report", rel)
+		}
+	}
+	return nil
+}
+
+func validateLiveInstallSmokeReport(root string) error {
+	rel := filepath.ToSlash(filepath.Join("docs", "evals", "results", "ockp-live-install-upgrade-module-smoke.json"))
+	content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(rel)))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("%s is required; run scripts/validate-live-install-upgrade-module.sh", rel)
+		}
+		return fmt.Errorf("read %s: %w", rel, err)
+	}
+	var report struct {
+		SchemaVersion string `json:"schema_version"`
+		Install       struct {
+			Passed              bool   `json:"passed"`
+			InstallerInvocation string `json:"installer_invocation"`
+			BinaryPath          string `json:"binary_path"`
+			CommandPath         string `json:"command_path"`
+			VersionOutput       string `json:"version_output"`
+			HelpChecked         bool   `json:"help_checked"`
+		} `json:"install"`
+		Upgrade struct {
+			Passed        bool   `json:"passed"`
+			BinaryPath    string `json:"binary_path"`
+			CommandPath   string `json:"command_path"`
+			VersionOutput string `json:"version_output"`
+			HelpChecked   bool   `json:"help_checked"`
+		} `json:"upgrade"`
+		Skill struct {
+			Passed    bool   `json:"passed"`
+			SkillPath string `json:"skill_path"`
+			Source    string `json:"source"`
+		} `json:"skill"`
+		Module struct {
+			Passed            bool              `json:"passed"`
+			Provider          string            `json:"provider"`
+			ManifestPath      string            `json:"manifest_path"`
+			SkillPath         string            `json:"skill_path"`
+			InstallPassed     bool              `json:"install_passed"`
+			ConfigurePassed   bool              `json:"configure_passed"`
+			ListPassed        bool              `json:"list_passed"`
+			RemovePassed      bool              `json:"remove_passed"`
+			FinalListEmpty    bool              `json:"final_list_empty"`
+			ProviderConfig    map[string]string `json:"provider_config"`
+			VerificationState string            `json:"verification_state"`
+			RedactionState    string            `json:"redaction_state"`
+		} `json:"module"`
+		ValidationBoundaries string `json:"validation_boundaries"`
+	}
+	if err := json.Unmarshal(content, &report); err != nil {
+		return fmt.Errorf("decode %s: %w", rel, err)
+	}
+	if report.SchemaVersion != "openclerk-live-install-smoke.v1" {
+		return fmt.Errorf("%s schema_version = %q, want openclerk-live-install-smoke.v1", rel, report.SchemaVersion)
+	}
+	if !report.Install.Passed || !report.Upgrade.Passed || !report.Skill.Passed || !report.Module.Passed {
+		return fmt.Errorf("%s must pass install, upgrade, skill, and module smoke checks", rel)
+	}
+	for _, check := range []struct {
+		name        string
+		binaryPath  string
+		commandPath string
+		version     string
+		help        bool
+	}{
+		{name: "install", binaryPath: report.Install.BinaryPath, commandPath: report.Install.CommandPath, version: report.Install.VersionOutput, help: report.Install.HelpChecked},
+		{name: "upgrade", binaryPath: report.Upgrade.BinaryPath, commandPath: report.Upgrade.CommandPath, version: report.Upgrade.VersionOutput, help: report.Upgrade.HelpChecked},
+	} {
+		if check.binaryPath != "$HOME/.local/bin/openclerk" || check.commandPath != "$HOME/.local/bin/openclerk" {
+			return fmt.Errorf("%s %s must verify $HOME/.local/bin/openclerk binary and command path", rel, check.name)
+		}
+		if !strings.HasPrefix(check.version, "openclerk v") {
+			return fmt.Errorf("%s %s version output must report openclerk version", rel, check.name)
+		}
+		if !check.help {
+			return fmt.Errorf("%s %s must check openclerk --help", rel, check.name)
+		}
+	}
+	if !strings.Contains(report.Install.InstallerInvocation, "curl -fsSL https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh") {
+		return fmt.Errorf("%s install must record the documented installer invocation", rel)
+	}
+	if report.Skill.SkillPath != "$CODEX_HOME/skills/openclerk/SKILL.md" || report.Skill.Source != "skills/openclerk/SKILL.md" {
+		return fmt.Errorf("%s must verify the installed OpenClerk skill path and source", rel)
+	}
+	if report.Module.Provider != "ollama" ||
+		report.Module.ManifestPath != "modules/ollama-embeddings/module.json" ||
+		report.Module.SkillPath != "modules/ollama-embeddings/skill/ollama-embeddings/SKILL.md" ||
+		!report.Module.InstallPassed ||
+		!report.Module.ConfigurePassed ||
+		!report.Module.ListPassed ||
+		!report.Module.RemovePassed ||
+		!report.Module.FinalListEmpty ||
+		report.Module.ProviderConfig["embedding_model"] == "" ||
+		report.Module.ProviderConfig["ollama_url"] != "http://localhost:11434" ||
+		report.Module.VerificationState != "verified" ||
+		report.Module.RedactionState != "redacted" {
+		return fmt.Errorf("%s must verify ollama module install/config/list/remove with redacted verified state", rel)
+	}
+	for _, want := range []string{"temp HOME/CODEX_HOME", "no durable host install", "no network release fetch", "no direct SQLite edit"} {
+		if !strings.Contains(report.ValidationBoundaries, want) {
+			return fmt.Errorf("%s validation_boundaries missing %q", rel, want)
 		}
 	}
 	return nil

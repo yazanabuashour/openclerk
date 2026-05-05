@@ -171,3 +171,60 @@ Exact module commands live in ` + "`modules/docs/install.md`" + `.
 		t.Fatalf("validateModuleDocumentation missing module error = %v, want manifest reference rejection", err)
 	}
 }
+
+func TestValidateLiveInstallSmokeReport(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	report := `{
+  "schema_version": "openclerk-live-install-smoke.v1",
+  "install": {
+    "passed": true,
+    "installer_invocation": "sh -c \"$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh)\"",
+    "binary_path": "$HOME/.local/bin/openclerk",
+    "command_path": "$HOME/.local/bin/openclerk",
+    "version_output": "openclerk v0.0.0-smoke",
+    "help_checked": true
+  },
+  "upgrade": {
+    "passed": true,
+    "binary_path": "$HOME/.local/bin/openclerk",
+    "command_path": "$HOME/.local/bin/openclerk",
+    "version_output": "openclerk v0.0.0-smoke",
+    "help_checked": true
+  },
+  "skill": {
+    "passed": true,
+    "skill_path": "$CODEX_HOME/skills/openclerk/SKILL.md",
+    "source": "skills/openclerk/SKILL.md"
+  },
+  "module": {
+    "passed": true,
+    "provider": "ollama",
+    "manifest_path": "modules/ollama-embeddings/module.json",
+    "skill_path": "modules/ollama-embeddings/skill/ollama-embeddings/SKILL.md",
+    "install_passed": true,
+    "configure_passed": true,
+    "list_passed": true,
+    "remove_passed": true,
+    "final_list_empty": true,
+    "provider_config": {
+      "embedding_model": "nomic-embed-text",
+      "ollama_url": "http://localhost:11434"
+    },
+    "verification_state": "verified",
+    "redaction_state": "redacted"
+  },
+  "validation_boundaries": "local temp HOME/CODEX_HOME only; no durable host install; no network release fetch; no direct SQLite edit"
+}`
+	writeTestFile(t, root, "docs/evals/results/ockp-live-install-upgrade-module-smoke.json", report)
+	if err := validateLiveInstallSmokeReport(root); err != nil {
+		t.Fatalf("validateLiveInstallSmokeReport: %v", err)
+	}
+
+	writeTestFile(t, root, "docs/evals/results/ockp-live-install-upgrade-module-smoke.json", strings.Replace(report, `"remove_passed": true`, `"remove_passed": false`, 1))
+	err := validateLiveInstallSmokeReport(root)
+	if err == nil || !strings.Contains(err.Error(), "install/config/list/remove") {
+		t.Fatalf("validateLiveInstallSmokeReport missing remove error = %v, want install/config/list/remove rejection", err)
+	}
+}

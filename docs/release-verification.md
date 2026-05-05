@@ -37,6 +37,17 @@ gh release view --repo yazanabuashour/openclerk --json tagName --jq .tagName
 
 ## Smoke-Test an Install
 
+For current-checkout installer, upgrade, skill, and module-command regression
+coverage, run:
+
+```bash
+mise exec -- ./scripts/validate-live-install-upgrade-module.sh
+```
+
+This writes the reduced public report at
+`docs/evals/results/ockp-live-install-upgrade-module-smoke.md` and keeps raw
+temp paths out of committed artifacts.
+
 Install into a temporary directory, then verify the runner version and commands:
 
 ```bash

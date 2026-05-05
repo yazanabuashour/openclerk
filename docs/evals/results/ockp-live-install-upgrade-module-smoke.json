@@ -1,0 +1,64 @@
+{
+  "schema_version": "openclerk-live-install-smoke.v1",
+  "generated_at": "2026-05-05T04:36:58.339814Z",
+  "version": "v0.0.0-smoke",
+  "temp_environment": {
+    "home": "$HOME",
+    "codex_home": "$CODEX_HOME",
+    "database": "\u003ctemp-openclerk-db\u003e",
+    "install_dir": "$HOME/.local/bin"
+  },
+  "release_fixture": {
+    "transport": "local curl shim for GitHub release URLs",
+    "archive": "openclerk_0.0.0-smoke_darwin_arm64.tar.gz",
+    "checksum": "openclerk_0.0.0-smoke_checksums.txt",
+    "install_script": "dist/install.sh",
+    "real_binary": true,
+    "real_checksum": true,
+    "installer_source": "scripts/install.sh"
+  },
+  "install": {
+    "passed": true,
+    "installer_invocation": "sh -c \"$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh)\"",
+    "binary_path": "$HOME/.local/bin/openclerk",
+    "command_path": "$HOME/.local/bin/openclerk",
+    "version_output": "openclerk v0.0.0-smoke",
+    "help_checked": true
+  },
+  "upgrade": {
+    "passed": true,
+    "installer_invocation": "sh -c \"$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh)\"",
+    "binary_path": "$HOME/.local/bin/openclerk",
+    "command_path": "$HOME/.local/bin/openclerk",
+    "version_output": "openclerk v0.0.0-smoke",
+    "help_checked": true
+  },
+  "skill": {
+    "passed": true,
+    "skill_path": "$CODEX_HOME/skills/openclerk/SKILL.md",
+    "source": "skills/openclerk/SKILL.md"
+  },
+  "module": {
+    "passed": true,
+    "provider": "ollama",
+    "manifest_path": "modules/ollama-embeddings/module.json",
+    "skill_path": "modules/ollama-embeddings/skill/ollama-embeddings/SKILL.md",
+    "install_passed": true,
+    "configure_passed": true,
+    "list_passed": true,
+    "remove_passed": true,
+    "final_list_empty": true,
+    "provider_config": {
+      "embedding_model": "nomic-embed-text",
+      "ollama_url": "http://localhost:11434"
+    },
+    "verification_state": "verified",
+    "redaction_state": "redacted"
+  },
+  "validation_boundaries": "local temp HOME/CODEX_HOME only; release transport is a deterministic local fixture for the GitHub release URLs; no durable host install, no network release fetch, no external provider call, no direct SQLite edit, and no source-built runner invocation after install",
+  "artifact_placeholders": {
+    "$CODEX_HOME": "isolated temp Codex home",
+    "$HOME": "isolated temp home",
+    "\u003ctemp-openclerk-db\u003e": "isolated smoke database"
+  }
+}
