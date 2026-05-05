@@ -93,6 +93,67 @@ func TestOCRModuleRuntimeConfigVerifiesManifest(t *testing.T) {
 	}
 }
 
+func TestModuleRuntimeConfigConfigureRemoveAndList(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	semanticManifest := writeRunclientSemanticModuleManifest(t, t.TempDir(), "ollama")
+	ocrManifest := writeRunclientOCRModuleManifest(t, t.TempDir())
+	disabled := false
+
+	if _, err := InstallSemanticModule(ctx, config, SemanticModuleInstallInput{
+		Provider:     SemanticModuleProviderOllama,
+		ManifestPath: semanticManifest,
+		Command:      "semantic-retrieval-adapter",
+		ProviderConfig: map[string]string{
+			"embedding_model": "embeddinggemma",
+		},
+	}); err != nil {
+		t.Fatalf("install semantic module: %v", err)
+	}
+	if _, err := InstallOCRModule(ctx, config, SemanticModuleInstallInput{
+		Kind:         ModuleKindOCRProvider,
+		Provider:     OCRModuleProviderTesseract,
+		ManifestPath: ocrManifest,
+		Command:      "tesseract",
+	}); err != nil {
+		t.Fatalf("install OCR module: %v", err)
+	}
+	configured, err := ConfigureSemanticModule(ctx, config, SemanticModuleConfigureInput{
+		Provider:       SemanticModuleProviderOllama,
+		Enabled:        &disabled,
+		ProviderConfig: map[string]string{"ollama_url": "http://localhost:11434"},
+	})
+	if err != nil {
+		t.Fatalf("configure semantic module: %v", err)
+	}
+	if configured.Enabled || configured.ProviderConfig["embedding_model"] != "embeddinggemma" || configured.ProviderConfig["ollama_url"] != "http://localhost:11434" {
+		t.Fatalf("configured semantic module = %+v", configured)
+	}
+	list, err := ListSemanticModules(ctx, config)
+	if err != nil {
+		t.Fatalf("list modules: %v", err)
+	}
+	if len(list) != 2 {
+		t.Fatalf("module list length = %d, want 2; modules=%+v", len(list), list)
+	}
+	removed, err := RemoveOCRModule(ctx, config, OCRModuleProviderTesseract)
+	if err != nil {
+		t.Fatalf("remove OCR module: %v", err)
+	}
+	if removed.Enabled || removed.VerificationStatus != "removed" || removed.Kind != ModuleKindOCRProvider {
+		t.Fatalf("removed OCR module = %+v", removed)
+	}
+	list, err = ListSemanticModules(ctx, config)
+	if err != nil {
+		t.Fatalf("list modules after remove: %v", err)
+	}
+	if len(list) != 1 || list[0].Provider != SemanticModuleProviderOllama {
+		t.Fatalf("module list after remove = %+v", list)
+	}
+}
+
 func writeRunclientSemanticModuleManifest(t *testing.T, dir string, provider string) string {
 	t.Helper()
 	path := filepath.Join(dir, "module.json")

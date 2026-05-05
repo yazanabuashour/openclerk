@@ -543,16 +543,18 @@ func verifyOCRModuleManifest(path string, provider string, expectedName string) 
 	return manifest, sha, nil
 }
 
-func writeSemanticModuleConfig(ctx context.Context, cfg Config, config SemanticModuleConfig) error {
-	values := map[string]string{
-		"enabled":              fmt.Sprint(config.Enabled),
-		"module_name":          config.ModuleName,
-		"command":              config.Command,
-		"manifest_path":        config.ManifestPath,
-		"manifest_sha256":      config.ManifestSHA256,
-		"command_args_json":    mustMarshalString(config.CommandArgs),
-		"provider_config_json": mustMarshalString(config.ProviderConfig),
-	}
+type moduleRuntimeConfigStore struct {
+	label string
+	key   func(provider string, field string) string
+}
+
+var (
+	semanticModuleRuntimeConfig = moduleRuntimeConfigStore{label: "semantic module", key: semanticModuleKey}
+	ocrModuleRuntimeConfig      = moduleRuntimeConfigStore{label: "OCR module", key: ocrModuleKey}
+)
+
+func (store moduleRuntimeConfigStore) write(ctx context.Context, cfg Config, config SemanticModuleConfig) error {
+	values := moduleRuntimeConfigValues(config)
 	return withRuntimeConfigDB(ctx, cfg, true, func(db *sql.DB) error {
 		now := time.Now().UTC().Format(time.RFC3339Nano)
 		for key, value := range values {
@@ -561,112 +563,85 @@ INSERT INTO runtime_config (key_name, value_text, updated_at)
 VALUES (?, ?, ?)
 ON CONFLICT(key_name) DO UPDATE SET
 	value_text = excluded.value_text,
-	updated_at = excluded.updated_at`, semanticModuleKey(config.Provider, key), value, now); err != nil {
-				return domain.InternalError("write semantic module runtime config", err)
+	updated_at = excluded.updated_at`, store.key(config.Provider, key), value, now); err != nil {
+				return domain.InternalError("write "+store.label+" runtime config", err)
 			}
 		}
 		return nil
 	})
+}
+
+func moduleRuntimeConfigValues(config SemanticModuleConfig) map[string]string {
+	return map[string]string{
+		"enabled":              fmt.Sprint(config.Enabled),
+		"module_name":          config.ModuleName,
+		"command":              config.Command,
+		"manifest_path":        config.ManifestPath,
+		"manifest_sha256":      config.ManifestSHA256,
+		"command_args_json":    mustMarshalString(config.CommandArgs),
+		"provider_config_json": mustMarshalString(config.ProviderConfig),
+	}
+}
+
+func (store moduleRuntimeConfigStore) delete(ctx context.Context, cfg Config, provider string) error {
+	return withRuntimeConfigDB(ctx, cfg, true, func(db *sql.DB) error {
+		prefix := store.key(provider, "")
+		_, err := db.ExecContext(ctx, `DELETE FROM runtime_config WHERE key_name LIKE ?`, prefix+"%")
+		if err != nil {
+			return domain.InternalError("remove "+store.label+" runtime config", err)
+		}
+		return nil
+	})
+}
+
+func (store moduleRuntimeConfigStore) read(ctx context.Context, cfg Config, provider string) (map[string]string, error) {
+	values := map[string]string{}
+	err := withRuntimeConfigDB(ctx, cfg, false, func(db *sql.DB) error {
+		rows, err := db.QueryContext(ctx, `SELECT key_name, value_text FROM runtime_config WHERE key_name LIKE ?`, store.key(provider, "")+"%")
+		if err != nil {
+			return domain.InternalError("read "+store.label+" runtime config", err)
+		}
+		defer func() {
+			_ = rows.Close()
+		}()
+		prefix := store.key(provider, "")
+		for rows.Next() {
+			var key, value string
+			if err := rows.Scan(&key, &value); err != nil {
+				return domain.InternalError("scan "+store.label+" runtime config", err)
+			}
+			values[strings.TrimPrefix(key, prefix)] = value
+		}
+		if err := rows.Err(); err != nil {
+			return domain.InternalError("iterate "+store.label+" runtime config", err)
+		}
+		return nil
+	})
+	return values, err
+}
+
+func writeSemanticModuleConfig(ctx context.Context, cfg Config, config SemanticModuleConfig) error {
+	return semanticModuleRuntimeConfig.write(ctx, cfg, config)
 }
 
 func writeOCRModuleConfig(ctx context.Context, cfg Config, config SemanticModuleConfig) error {
-	values := map[string]string{
-		"enabled":              fmt.Sprint(config.Enabled),
-		"module_name":          config.ModuleName,
-		"command":              config.Command,
-		"manifest_path":        config.ManifestPath,
-		"manifest_sha256":      config.ManifestSHA256,
-		"command_args_json":    mustMarshalString(config.CommandArgs),
-		"provider_config_json": mustMarshalString(config.ProviderConfig),
-	}
-	return withRuntimeConfigDB(ctx, cfg, true, func(db *sql.DB) error {
-		now := time.Now().UTC().Format(time.RFC3339Nano)
-		for key, value := range values {
-			if _, err := db.ExecContext(ctx, `
-INSERT INTO runtime_config (key_name, value_text, updated_at)
-VALUES (?, ?, ?)
-ON CONFLICT(key_name) DO UPDATE SET
-	value_text = excluded.value_text,
-	updated_at = excluded.updated_at`, ocrModuleKey(config.Provider, key), value, now); err != nil {
-				return domain.InternalError("write OCR module runtime config", err)
-			}
-		}
-		return nil
-	})
+	return ocrModuleRuntimeConfig.write(ctx, cfg, config)
 }
 
 func deleteSemanticModuleConfig(ctx context.Context, cfg Config, provider string) error {
-	return withRuntimeConfigDB(ctx, cfg, true, func(db *sql.DB) error {
-		prefix := semanticModuleKey(provider, "")
-		_, err := db.ExecContext(ctx, `DELETE FROM runtime_config WHERE key_name LIKE ?`, prefix+"%")
-		if err != nil {
-			return domain.InternalError("remove semantic module runtime config", err)
-		}
-		return nil
-	})
+	return semanticModuleRuntimeConfig.delete(ctx, cfg, provider)
 }
 
 func deleteOCRModuleConfig(ctx context.Context, cfg Config, provider string) error {
-	return withRuntimeConfigDB(ctx, cfg, true, func(db *sql.DB) error {
-		prefix := ocrModuleKey(provider, "")
-		_, err := db.ExecContext(ctx, `DELETE FROM runtime_config WHERE key_name LIKE ?`, prefix+"%")
-		if err != nil {
-			return domain.InternalError("remove OCR module runtime config", err)
-		}
-		return nil
-	})
+	return ocrModuleRuntimeConfig.delete(ctx, cfg, provider)
 }
 
 func readSemanticModuleValues(ctx context.Context, cfg Config, provider string) (map[string]string, error) {
-	values := map[string]string{}
-	err := withRuntimeConfigDB(ctx, cfg, false, func(db *sql.DB) error {
-		rows, err := db.QueryContext(ctx, `SELECT key_name, value_text FROM runtime_config WHERE key_name LIKE ?`, semanticModuleKey(provider, "")+"%")
-		if err != nil {
-			return domain.InternalError("read semantic module runtime config", err)
-		}
-		defer func() {
-			_ = rows.Close()
-		}()
-		prefix := semanticModuleKey(provider, "")
-		for rows.Next() {
-			var key, value string
-			if err := rows.Scan(&key, &value); err != nil {
-				return domain.InternalError("scan semantic module runtime config", err)
-			}
-			values[strings.TrimPrefix(key, prefix)] = value
-		}
-		if err := rows.Err(); err != nil {
-			return domain.InternalError("iterate semantic module runtime config", err)
-		}
-		return nil
-	})
-	return values, err
+	return semanticModuleRuntimeConfig.read(ctx, cfg, provider)
 }
 
 func readOCRModuleValues(ctx context.Context, cfg Config, provider string) (map[string]string, error) {
-	values := map[string]string{}
-	err := withRuntimeConfigDB(ctx, cfg, false, func(db *sql.DB) error {
-		rows, err := db.QueryContext(ctx, `SELECT key_name, value_text FROM runtime_config WHERE key_name LIKE ?`, ocrModuleKey(provider, "")+"%")
-		if err != nil {
-			return domain.InternalError("read OCR module runtime config", err)
-		}
-		defer func() {
-			_ = rows.Close()
-		}()
-		prefix := ocrModuleKey(provider, "")
-		for rows.Next() {
-			var key, value string
-			if err := rows.Scan(&key, &value); err != nil {
-				return domain.InternalError("scan OCR module runtime config", err)
-			}
-			values[strings.TrimPrefix(key, prefix)] = value
-		}
-		if err := rows.Err(); err != nil {
-			return domain.InternalError("iterate OCR module runtime config", err)
-		}
-		return nil
-	})
-	return values, err
+	return ocrModuleRuntimeConfig.read(ctx, cfg, provider)
 }
 
 func withRuntimeConfigDB(ctx context.Context, cfg Config, write bool, fn func(*sql.DB) error) error {
