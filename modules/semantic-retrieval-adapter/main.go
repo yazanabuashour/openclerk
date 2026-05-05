@@ -799,27 +799,9 @@ func (c ollamaClient) embed(ctx context.Context, model string, input []string) (
 }
 
 func (c ollamaClient) postJSON(ctx context.Context, endpoint string, payload any, result any) error {
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+endpoint, bytes.NewReader(body))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		data, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
-		return fmt.Errorf("ollama %s returned HTTP %d: %s", endpoint, resp.StatusCode, strings.TrimSpace(string(data)))
-	}
-	return json.NewDecoder(resp.Body).Decode(result)
+	return postJSON(ctx, c.client, c.baseURL+endpoint, payload, result, nil, func(statusCode int, body string, _ http.Header) error {
+		return fmt.Errorf("ollama %s returned HTTP %d: %s", endpoint, statusCode, body)
+	})
 }
 
 func readGeminiAPIKey(ctx context.Context, dbPath string, keyName string) (string, string, error) {
@@ -935,17 +917,25 @@ func (c geminiClient) postJSONWithRetry(ctx context.Context, endpoint string, pa
 }
 
 func (c geminiClient) postJSON(ctx context.Context, endpoint string, payload any, result any) error {
+	return postJSON(ctx, c.httpClient, c.baseURL+endpoint, payload, result, map[string]string{"x-goog-api-key": c.apiKey}, func(statusCode int, body string, header http.Header) error {
+		return geminiHTTPError{StatusCode: statusCode, Body: body, RetryAfter: parseRetryAfter(header.Get("Retry-After"))}
+	})
+}
+
+func postJSON(ctx context.Context, client *http.Client, requestURL string, payload any, result any, headers map[string]string, errorResponse func(statusCode int, body string, header http.Header) error) error {
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+endpoint, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, requestURL, bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-goog-api-key", c.apiKey)
-	resp, err := c.httpClient.Do(req)
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -954,7 +944,7 @@ func (c geminiClient) postJSON(ctx context.Context, endpoint string, payload any
 	}()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		data, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
-		return geminiHTTPError{StatusCode: resp.StatusCode, Body: strings.TrimSpace(string(data)), RetryAfter: parseRetryAfter(resp.Header.Get("Retry-After"))}
+		return errorResponse(resp.StatusCode, strings.TrimSpace(string(data)), resp.Header)
 	}
 	return json.NewDecoder(resp.Body).Decode(result)
 }
