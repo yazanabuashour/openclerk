@@ -1,6 +1,6 @@
 ---
 name: OpenClerk
-description: Use OpenClerk through installed openclerk document and openclerk retrieval JSON runner. With explicit user content, validate a faithful candidate through the runner but do not write before approval. Bootstrap no-tools rule - if required fields are missing; if document path, title, or body is missing without explicit user content for a faithful candidate, duplicate-risk check, or public-link placement proposal; if numeric limit is negative; or if asked to bypass the runner with SQLite, raw vault/file/repo inspection, HTTP/MCP, legacy/source-built paths, unsupported transports, backend variants, module-cache inspection, rg, find, ls, external OCR, browser automation, local file reads, or opaque artifact parsing, this description is complete. For those invalid cases only, Do not open this skill file, run commands, use tools, or call the runner; respond with exactly one no-tools assistant answer naming the missing/invalid fields or unsupported workflow, and for missing fields ask the user to provide them.
+description: Use OpenClerk through installed openclerk document and openclerk retrieval JSON runner. With explicit user content or runner-supported public-source context, let the agent/OpenClerk propose path, title, body preview, tags, fields, and next approved request; do not write before approval. Bootstrap no-tools rule - if required fields, content/body, or update target are missing and no faithful candidate, duplicate-risk, artifact, or public-link placement proposal can be formed; if numeric limit is negative; or if bypass is requested with SQLite, raw vault/file/repo inspection, HTTP/MCP, legacy/source-built paths, unsupported transports, backend variants, module-cache inspection, rg, find, ls, external OCR, browser automation, local file reads, or opaque artifact parsing, this description is complete. For those invalid cases only, do not open this skill file, run commands, use tools, or call the runner; respond with exactly one no-tools assistant answer naming the missing/invalid fields or unsupported workflow.
 license: MIT
 compatibility: Requires local filesystem access and an installed openclerk binary on PATH.
 ---
@@ -101,19 +101,21 @@ handoff before doing follow-up primitive inspection.
 
 ## No-Tools Before Runners
 
-Before runners, answer exactly once with no tools when required fields are
-missing and no proposal exception applies, a numeric limit is negative, or the
-user asks for a bypass named in Core Guardrails. Do not guess missing fields.
-Ask for them by name, or reject the invalid/unsupported workflow and point
-back to the OpenClerk runner contract.
+Before runners, answer exactly once with no tools when missing content, missing
+update target, missing retrieval/source/video fields, low confidence, a
+negative numeric limit, or a Core Guardrails bypass makes runner-backed
+planning impossible. Ask for missing content or target fields by name, or
+reject the invalid/unsupported workflow and point back to the OpenClerk runner
+contract.
 
-Proposal exceptions are valid runner-backed work only when explicit user
-content is present:
+Proposal-first defaults are valid runner-backed work when explicit user content
+or runner-supported public-source context is present:
 
-- document create/validate without a path, title, or body may propose a
-  faithful candidate from pasted or explicitly supplied content; explicit
-  note/body content with missing path or title is valid runner-backed
-  propose-before-create work, not a no-tools missing-field case
+- document create/validate with omitted path, title, tags, fields, or final body
+  may propose a faithful candidate before any write; explicit user values win
+- artifact and note intake should use `artifact_candidate_plan` when omitted
+  path/title/body preview/tags/fields, confidence, duplicates, or create/ingest
+  handoff need one runner-owned plan
 - duplicate-risk checks may use runner-visible retrieval/list/get/provenance
   evidence before choosing update versus new
 - public-link placement may propose source and synthesis paths before durable
@@ -130,7 +132,7 @@ inspection, attachment contents, or bundle contents not returned by the runner.
 Keep workflow-specific procedure out of this skill. Apply these compact
 policies and let runner results drive the answer:
 
-- Candidate documents and artifacts: preserve explicit user path/title/body/type/naming instructions; fill omitted fields only from supplied content; validate with `openclerk document` before presenting a candidate; show `Path:`, `Title:`, and `Body preview:`; state no document was created; ask for approval before durable writes; for note-like candidates without an explicit path, use `notes/candidates/<slug-from-title>.md`, derive a concise singular noun phrase title, and Include `type: note` frontmatter plus a `# <Title>` heading. Prefer `artifact_candidate_plan` when explicit content or public-source handoff context needs tags, fields, confidence, duplicate status, or create/ingest handoff.
+- Candidate documents and artifacts: preserve explicit user path/title/body/type/tag/field/naming instructions; choose omitted path, title, body preview, tags, and fields from explicit content or runner-supported public-source context by default; use `artifact_candidate_plan` when tags, fields, confidence, duplicate status, or create/ingest handoff are relevant; otherwise validate with `openclerk document` before presenting a candidate; show `Path:`, `Title:`, and `Body preview:`; state no document was created; ask for approval before durable writes; for note-like candidates without an explicit path, use `notes/candidates/<slug-from-title>.md`, derive a concise singular noun phrase title, and Include `type: note` frontmatter plus a `# <Title>` heading.
 - OCR artifact review: text-extractable documents do not need OCR; use OCR review only for common images, scan-only PDFs, or PDFs whose embedded text is bad or partial, and treat returned OCR text as candidate evidence until durable-write approval.
 - Duplicate checks: when duplicate risk is requested or plausible, use runner-visible evidence before validating or writing; report the likely target, evidence inspected, and that no document was created or updated; ask whether to update the existing target or create a confirmed new path.
 - Public URL/source intake: use `web_search_plan` for supplied search results and `ingest_source_url` for HTTP/HTTPS PDF and public web sources. Do not fetch URLs with browser, HTTP, filesystem, or other non-runner tools; when placement is missing, propose source/synthesis paths and ask for approval before durable fetch or write.

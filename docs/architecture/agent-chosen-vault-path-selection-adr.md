@@ -82,14 +82,15 @@ The candidate naming/path/title policy to evaluate is:
 - source URL create/update semantics keep source and asset paths explicit or
   storage-backed; title/path autonomy must not invent a second source identity
 
-`oc-iat` confirms no promotion of this policy into product behavior. The
-current production contract still requires explicit `document.path`,
-`document.title`, and `document.body` for document creation, and explicit
-`source.path_hint` and `source.asset_path_hint` for source URL create mode. A
-URL-only, artifact-only, or ambiguous path/title request remains a no-tools
-clarification when required fields are missing, unless the request can be
-completed through an already valid existing `openclerk document` or
-`openclerk retrieval` workflow.
+`oc-iat` confirms no promotion of this policy into runner product behavior.
+`oc-wm04` later promotes the proposal-first skill surface only: agents may use
+runner planning to choose candidate path, title, body preview, tags, fields,
+and next approved request shape from explicit content or runner-supported
+public-source context. The production runner contract still requires explicit
+fields for durable `create_document`, source URL create, and other write
+actions, and durable writes still require approval. A URL-only, artifact-only,
+or ambiguous path/title request remains a no-tools clarification when no
+faithful proposal can be formed.
 
 The policy must preserve the v1 model that canonical markdown and promoted
 records are source authority. A path such as `sources/openai-harness-engineering.md`
@@ -202,10 +203,12 @@ change is needed.
 
 ## `oc-iat` Decision
 
-Decision: keep explicit/no-tools behavior and keep path/title autonomy as
-reference evidence only. Do not promote a constrained autonomy policy, runner
-action, schema, storage migration, skill behavior, public OpenClerk interface,
-or missing-field policy change from the path/title pressure lane.
+Decision: keep strict runner behavior and keep path/title autonomy as reference
+evidence for runner product behavior. Do not promote a constrained autonomy
+runner action, schema, storage migration, public OpenClerk interface, or
+durable-write missing-field policy change from the path/title pressure lane.
+The later `oc-wm04` skill change is limited to proposal-first planning with
+optional explicit overrides.
 
 The refreshed `oc-iat` decision evaluated both promotion paths. On the
 capability path, existing primitives expressed the selected workflows safely,
@@ -220,4 +223,5 @@ without hints, multi-source duplicate pressure, explicit overrides, duplicate
 risk, and metadata-authority pressure. Current `openclerk document` and
 `openclerk retrieval` workflows handled the pressure without a classified
 capability gap. Metadata and frontmatter remain authoritative over filename and
-path conventions, and explicit user naming instructions still win when present.
+path conventions, explicit user naming instructions still win when present, and
+candidate placement does not become durable authority until an approved write.

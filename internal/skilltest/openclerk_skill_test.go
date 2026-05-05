@@ -174,11 +174,13 @@ func TestOpenClerkSkillDescriptionContainsBootstrapNoToolsGuard(t *testing.T) {
 	}
 	for _, want := range []string{
 		"Bootstrap no-tools rule",
-		"required fields are missing",
-		"document path, title, or body is missing",
-		"explicit user content for a faithful candidate, duplicate-risk check, or public-link placement proposal",
+		"required fields, content/body, or update target are missing",
+		"no faithful candidate, duplicate-risk, artifact, or public-link placement proposal can be formed",
+		"agent/OpenClerk propose path, title, body preview, tags, fields",
+		"explicit user content or runner-supported public-source context",
+		"do not write before approval",
 		"numeric limit is negative",
-		"bypass the runner",
+		"bypass is requested",
 		"SQLite",
 		"raw vault/file/repo inspection",
 		"HTTP/MCP",
@@ -195,8 +197,7 @@ func TestOpenClerkSkillDescriptionContainsBootstrapNoToolsGuard(t *testing.T) {
 		"opaque artifact parsing",
 		"this description is complete",
 		"For those invalid cases only",
-		"With explicit user content, validate a faithful candidate through the runner but do not write before approval",
-		"Do not open this skill file",
+		"do not open this skill file",
 		"run commands",
 		"use tools",
 		"call the runner",
@@ -228,7 +229,9 @@ func TestOpenClerkSkillKeepsWorkflowPoliciesCompact(t *testing.T) {
 	normalized := strings.Join(strings.Fields(policySection), " ")
 	for _, want := range []string{
 		"Candidate documents",
-		"preserve explicit user path/title/body/type/naming instructions",
+		"preserve explicit user path/title/body/type/tag/field/naming instructions",
+		"choose omitted path, title, body preview, tags, and fields",
+		"`artifact_candidate_plan`",
 		"validate with `openclerk document` before presenting a candidate",
 		"`notes/candidates/<slug-from-title>.md`",
 		"concise singular noun phrase",

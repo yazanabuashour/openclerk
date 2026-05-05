@@ -11,11 +11,16 @@ decision_owner: platform
 
 Accepted as an agent interaction policy for routine OpenClerk knowledge intake.
 
-This ADR defines when an agent may infer `document.path`, `document.title`, and
-`document.body` from explicit user-provided content, and when it must ask first.
-It does not change the `openclerk document` or `openclerk retrieval` JSON
-schemas, the installed runner, storage behavior, public API, or shipped skill
-behavior.
+This ADR defines when an agent may infer or propose `document.path`,
+`document.title`, `document.body`, tags, and metadata fields from explicit
+user-provided content, and when it must ask first. It does not change the
+`openclerk document` or `openclerk retrieval` JSON schemas, the installed
+runner, storage behavior, or public API.
+
+`oc-wm04` updates the shipped skill policy to make proposal-first intake the
+default for supported content: the agent/OpenClerk may choose candidate path,
+title, body preview, tags, fields, and next approved request shape, while
+durable writes still require approval.
 
 Prior path/title autonomy evidence is reference-only. The `oc-iat` decision
 kept explicit/no-tools behavior and did not promote a constrained autonomy
@@ -36,28 +41,33 @@ and `document.body`. Source URL create mode requires explicit `source.url`,
 
 Users still issue natural intake requests such as "document this", "save this
 note", "capture these links", or "update the existing synthesis". Those
-requests can contain enough content to form a document body, but may omit the
-durable location, title, document kind, source hints, or update target. The
-agent policy must preserve a useful distinction:
+requests can contain enough content to form a document body, tags, fields, or
+source placement plan, but may omit the durable location, title, document kind,
+source hints, or update target. The agent policy must preserve a useful
+distinction:
 
-- infer from explicit user-provided content when the runner request is already
-  complete and unambiguous
+- propose defaults from explicit user-provided content or runner-supported
+  public-source context when a faithful no-write plan can be formed
 - ask before creating durable knowledge when required fields, target identity,
   placement, or body content are missing
 - reject lower-level bypasses and invalid values without tools
 
-The policy is intentionally agent-side. It tells agents how to interact before
-calling the strict runner; it does not make the runner guess missing fields.
+The policy is intentionally agent-side and planning-oriented. It tells agents
+how to interact before calling strict write actions; it does not make the
+runner guess missing fields for durable writes.
 
 ## Decision
 
-OpenClerk accepts a strict agent-side intake policy.
+OpenClerk accepts a proposal-first strict agent-side intake policy.
 
-Agents may use `openclerk document` or `openclerk retrieval` only when the
-required request fields are explicit or directly derivable from explicit
-user-provided content. Direct derivation means the agent is formatting,
-normalizing, or wrapping content the user supplied, not inventing durable
-placement, title, document kind, source identity, or body substance.
+Agents may use `openclerk document` or `openclerk retrieval` when the required
+request fields are explicit, directly derivable from explicit user-provided
+content, or valid for a read-only planning action such as
+`artifact_candidate_plan` or `ingest_source_url` plan mode. Direct derivation
+means the agent is formatting, normalizing, or wrapping content the user
+supplied. Planning may choose candidate placement, title, tags, fields, and body
+preview; durable write actions may not invent body substance, source identity,
+or update targets.
 
 Explicit user instructions override defaults. If the user supplies a
 vault-relative path, title, document body, source hint, update target, or
@@ -88,7 +98,10 @@ source refs.
 **Source URL ingestion with all hints:** The user supplies `source.url`,
 `source.path_hint`, and `source.asset_path_hint`, or supplies an exact runner
 JSON shape containing those fields. The agent may use source ingestion through
-the runner. URL-only intake remains missing required fields for create mode.
+the runner. URL-only intake may use `ingest_source_url` plan mode or
+`artifact_candidate_plan` to propose placement before any durable fetch/write;
+direct create mode still requires the runner's explicit source path and asset
+fields.
 
 **Existing-document updates:** The user identifies the existing document or
 provides a runner-visible way to find it, and the requested update operation is
@@ -101,10 +114,16 @@ from existing OpenClerk knowledge with valid retrieval fields. The agent may
 use `openclerk retrieval` or document list/get flows and answer from JSON
 results.
 
-**Ambiguous "document this" requests:** The user provides content or links but
-omits a required path, title, body, source hint, asset hint, document kind, or
-update target. The agent must ask for the missing required fields before using
-the runner. It may not turn ambiguity into autonomous autofiling.
+**Proposal-first "document this" requests:** The user provides enough explicit
+content or runner-supported public-source context to form a faithful candidate
+but omits path, title, tags, fields, or final body formatting. The agent should
+use a read-only proposal surface, show the candidate, and ask before writing.
+
+**Ambiguous or low-confidence intake:** The user omits body content, source
+evidence, transcript text, durable artifact type, or update target, or multiple
+runner-visible targets conflict. The agent must ask for the missing fields or
+target before using write actions. It may not turn ambiguity into autonomous
+autofiling.
 
 ## Interaction Modes
 
@@ -114,10 +133,9 @@ JSON result.
 
 **No-tools clarification:** Before using any runner or inspection tool, the
 agent gives one assistant response and no tools when a routine request is
-missing required fields. The response names the missing fields and asks the
-user to provide them. This applies to missing `document.path`,
-`document.title`, `document.body`, `source.url`, `source.path_hint`,
-`source.asset_path_hint`, retrieval fields, or an explicit update target.
+missing required content, source/video fields, retrieval fields, or an explicit
+update target and no faithful proposal can be formed. The response names the
+missing fields and asks the user to provide them.
 
 **Final-answer-only rejection:** Before using tools, the agent rejects invalid
 limits and requests to bypass the runner through routine lower-level runtime,
@@ -156,7 +174,7 @@ This ADR does not:
 - change `openclerk document` or `openclerk retrieval` request or response
   schemas
 - relax required document, retrieval, or source-ingestion fields
-- update `skills/openclerk/SKILL.md`
+- relax approval-before-write for durable creates, updates, ingests, or repairs
 - add storage migrations, background placement heuristics, or new indexes
 - let agents infer source identity, document kind, or durable authority from
   filenames alone
@@ -167,12 +185,12 @@ This ADR does not:
 
 ## Promotion Gates
 
-Any future relaxation, autonomous autofiling behavior, path/title/body
-recommendation surface, or new public runner action requires a separate
-implementation Bead and targeted AgentOps eval evidence. The evidence must show
-repeated `runner_capability_gap` failures where existing document and retrieval
-workflows are structurally insufficient, not merely awkward, underspecified,
-missing examples, missing fixture data, or missing skill guidance.
+Any future autonomous write behavior, broader autofiling behavior, or new public
+runner action requires a separate implementation Bead and targeted AgentOps eval
+evidence. The evidence must show repeated `runner_capability_gap` failures
+where existing document and retrieval workflows are structurally insufficient,
+not merely awkward, underspecified, missing examples, missing fixture data, or
+missing skill guidance.
 
 Promotion must preserve explicit user instruction precedence, no-tools
 validation, duplicate avoidance, metadata authority, citations or source refs,
@@ -222,14 +240,16 @@ quality and ergonomics row classified as `none`. Natural-intent proposal,
 scripted-control, duplicate-risk, and low-confidence rows pass while preserving
 approval-before-write and strict runner compatibility.
 
-Supported behavior remains unchanged:
+Supported behavior after `oc-wm04`:
 
-- ask once with no tools when required `document.path`, `document.title`,
-  `document.body`, source hints, retrieval fields, or update targets are
-  missing and no faithful propose-before-create candidate can be formed
-- use runner JSON only when strict required fields and targets are explicit or
-  directly derivable from explicit user-provided content
-- let explicit user path, title, body, source hints, and update targets
+- use proposal-first runner JSON when explicit content or runner-supported
+  public-source context can produce candidate path, title, body preview, tags,
+  fields, confidence, duplicate posture, and next approved request shape
+- ask once with no tools when required content, source/video fields, retrieval
+  fields, or update targets are missing and no faithful proposal can be formed
+- use durable-write runner JSON only when strict required fields and targets are
+  explicit, approved, and compatible with runner-visible authority
+- let explicit user path, title, body, tags, fields, source hints, and targets
   override defaults unless they conflict with runner-visible authority
 - perform duplicate, freshness, and provenance checks through existing
   runner-visible list/search/get, `projection_states`, and
@@ -240,12 +260,12 @@ Supported behavior remains unchanged:
 - never call `create_document`, `append_document`, or `replace_section` for a
   proposed candidate until the user approves the target and write
 
-Because no `runner_capability_gap` was found, `oc-umk` is not authorized to add
+Because no `runner_capability_gap` was found, this policy does not authorize
 runner, schema, storage, migration, public API, or direct-create work. The
-existing propose-before-create skill policy in `skills/openclerk/SKILL.md`
-is the complete promoted ergonomics surface after `oc-60s`. Any future
-direct-create, autofiling, or runner relaxation requires a separate decision
-with targeted eval evidence and exact implementation gates.
+proposal-first skill policy in `skills/openclerk/SKILL.md` is the promoted
+ergonomics surface. Any future direct-create, autonomous write, or runner
+relaxation requires a separate decision with targeted eval evidence and exact
+implementation gates.
 
 The later corrected candidate-generation track is recorded in
 [`agent-chosen-document-artifact-candidate-generation-adr.md`](agent-chosen-document-artifact-candidate-generation-adr.md).
