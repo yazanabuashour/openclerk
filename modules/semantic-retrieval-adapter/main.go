@@ -29,6 +29,9 @@ import (
 const (
 	providerOllama = "ollama"
 	providerGemini = "gemini"
+
+	ollamaEmbedBatchSize          = 4
+	semanticChunkTargetCharacters = 1800
 )
 
 var wordPattern = regexp.MustCompile(`[a-z0-9]+`)
@@ -139,6 +142,12 @@ type semanticChunk struct {
 	TextForIndex string    `json:"text_for_index"`
 	Hash         string    `json:"hash"`
 	Vector       []float64 `json:"vector,omitempty"`
+}
+
+type sectionPart struct {
+	lineStart int
+	lineEnd   int
+	lines     []string
 }
 
 type cacheFile struct {
@@ -512,26 +521,102 @@ func chunksForDocument(doc domain.Document) []semanticChunk {
 	if strings.TrimSpace(strings.Join(current.lines, "\n")) != "" {
 		sections = append(sections, current)
 	}
-	chunks := make([]semanticChunk, 0, len(sections))
+	chunks := []semanticChunk{}
 	for _, section := range sections {
-		content := strings.TrimSpace(strings.Join(section.lines, "\n"))
-		lineEnd := section.start + len(section.lines) - 1
-		indexText := strings.Join([]string{doc.Title, doc.Path, section.heading, content}, "\n")
+		chunks = append(chunks, chunksForSection(doc, section.heading, section.start, section.lines)...)
+	}
+	return chunks
+}
+
+func chunksForSection(doc domain.Document, heading string, start int, lines []string) []semanticChunk {
+	parts := splitSectionParts(start, lines)
+	chunks := make([]semanticChunk, 0, len(parts))
+	for idx, part := range parts {
+		content := strings.TrimSpace(strings.Join(part.lines, "\n"))
+		if content == "" {
+			continue
+		}
+		indexText := strings.Join([]string{doc.Title, doc.Path, heading, content}, "\n")
 		hash := hashString(indexText)
+		chunkIDMaterial := doc.DocID + "\n" + heading + "\n" + hash
+		if len(parts) > 1 {
+			chunkIDMaterial = fmt.Sprintf("%s\n%s\n%d\n%s", doc.DocID, heading, idx, hash)
+		}
 		chunks = append(chunks, semanticChunk{
-			ChunkID:      "chunk_" + hashString(doc.DocID + "\n" + section.heading + "\n" + hash)[:16],
+			ChunkID:      "chunk_" + hashString(chunkIDMaterial)[:16],
 			DocID:        doc.DocID,
 			Path:         doc.Path,
 			Title:        doc.Title,
-			Heading:      section.heading,
+			Heading:      heading,
 			Content:      content,
-			LineStart:    section.start,
-			LineEnd:      lineEnd,
+			LineStart:    part.lineStart,
+			LineEnd:      part.lineEnd,
 			TextForIndex: indexText,
 			Hash:         hash,
 		})
 	}
 	return chunks
+}
+
+func splitSectionParts(start int, lines []string) []sectionPart {
+	parts := []sectionPart{}
+	current := []string{}
+	currentStart := start
+	currentLength := 0
+	flush := func(end int) {
+		if strings.TrimSpace(strings.Join(current, "\n")) == "" {
+			current = nil
+			currentLength = 0
+			return
+		}
+		copied := append([]string(nil), current...)
+		parts = append(parts, sectionPart{lineStart: currentStart, lineEnd: end, lines: copied})
+		current = nil
+		currentLength = 0
+	}
+	for idx, line := range lines {
+		lineNo := start + idx
+		if len([]rune(line)) > semanticChunkTargetCharacters {
+			if len(current) > 0 {
+				flush(lineNo - 1)
+			}
+			for _, segment := range splitLongLine(line, semanticChunkTargetCharacters) {
+				parts = append(parts, sectionPart{lineStart: lineNo, lineEnd: lineNo, lines: []string{segment}})
+			}
+			currentStart = lineNo + 1
+			continue
+		}
+		lineLength := len([]rune(line)) + 1
+		if len(current) > 0 && currentLength+lineLength > semanticChunkTargetCharacters {
+			flush(lineNo - 1)
+			currentStart = lineNo
+		}
+		if len(current) == 0 {
+			currentStart = lineNo
+		}
+		current = append(current, line)
+		currentLength += lineLength
+	}
+	if len(current) > 0 {
+		flush(start + len(lines) - 1)
+	}
+	return parts
+}
+
+func splitLongLine(line string, limit int) []string {
+	if limit <= 0 {
+		return []string{line}
+	}
+	runes := []rune(line)
+	parts := []string{}
+	for len(runes) > limit {
+		parts = append(parts, string(runes[:limit]))
+		runes = runes[limit:]
+	}
+	if len(runes) > 0 || len(parts) == 0 {
+		parts = append(parts, string(runes))
+	}
+	return parts
 }
 
 func cacheForRequest(request searchRequest, chunks []semanticChunk) (cacheFile, string, string) {
@@ -625,7 +710,8 @@ func embedTexts(ctx context.Context, request searchRequest, dbPath string, input
 	switch request.Provider {
 	case providerOllama:
 		client := ollamaClient{baseURL: request.OllamaURL, client: &http.Client{Timeout: 60 * time.Second}}
-		vectors, err := client.embed(ctx, request.EmbeddingModel, inputs)
+		vectors, requestCount, err := client.embed(ctx, request.EmbeddingModel, inputs)
+		status.RequestCount = requestCount
 		if err != nil {
 			status.Status = "provider_blocked"
 			status.ErrorSummary = errorSummary(err)
@@ -787,15 +873,29 @@ func topPaths(hits []semanticHit, limit int) []string {
 	return paths
 }
 
-func (c ollamaClient) embed(ctx context.Context, model string, input []string) ([][]float64, error) {
-	var result ollamaEmbedResponse
-	if err := c.postJSON(ctx, "/api/embed", map[string]any{"model": model, "input": input}, &result); err != nil {
-		return nil, err
+func (c ollamaClient) embed(ctx context.Context, model string, input []string) ([][]float64, int, error) {
+	if len(input) == 0 {
+		return nil, 0, nil
 	}
-	if len(result.Embeddings) != len(input) {
-		return nil, fmt.Errorf("ollama returned %d embeddings for %d inputs", len(result.Embeddings), len(input))
+	vectors := make([][]float64, 0, len(input))
+	requestCount := 0
+	for start := 0; start < len(input); start += ollamaEmbedBatchSize {
+		end := start + ollamaEmbedBatchSize
+		if end > len(input) {
+			end = len(input)
+		}
+		batch := input[start:end]
+		var result ollamaEmbedResponse
+		requestCount++
+		if err := c.postJSON(ctx, "/api/embed", map[string]any{"model": model, "input": batch}, &result); err != nil {
+			return nil, requestCount, err
+		}
+		if len(result.Embeddings) != len(batch) {
+			return nil, requestCount, fmt.Errorf("ollama returned %d embeddings for %d inputs", len(result.Embeddings), len(batch))
+		}
+		vectors = append(vectors, result.Embeddings...)
 	}
-	return result.Embeddings, nil
+	return vectors, requestCount, nil
 }
 
 func (c ollamaClient) postJSON(ctx context.Context, endpoint string, payload any, result any) error {

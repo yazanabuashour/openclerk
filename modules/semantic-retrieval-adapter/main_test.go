@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/yazanabuashour/openclerk/internal/domain"
 	"github.com/yazanabuashour/openclerk/internal/runclient"
 	"github.com/yazanabuashour/openclerk/internal/runner"
 )
@@ -71,6 +73,89 @@ func TestSemanticRetrievalAdapterOllamaSearchUsesCacheAndCitations(t *testing.T)
 	}
 	if second.Cache.Status != "hit" || requests != 3 {
 		t.Fatalf("cache did not avoid document re-embedding, second=%+v requests=%d", second.Cache, requests)
+	}
+}
+
+func TestSemanticRetrievalAdapterOllamaEmbedsCorpusInBatches(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	for idx := 0; idx < ollamaEmbedBatchSize+1; idx++ {
+		createModuleDocument(t, ctx, dbPath, fmt.Sprintf("docs/batch/doc-%02d.md", idx), "Batch Document", "# Batch Document\n\n## Summary\nSemantic batch recall evidence stays citation-bearing.\n")
+	}
+
+	requests := 0
+	maxInputs := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/embed" {
+			http.NotFound(w, r)
+			return
+		}
+		requests++
+		var req struct {
+			Input []string `json:"input"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		if len(req.Input) > maxInputs {
+			maxInputs = len(req.Input)
+		}
+		vectors := make([][]float64, 0, len(req.Input))
+		for range req.Input {
+			vectors = append(vectors, []float64{1, 0, 0})
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"embeddings": vectors})
+	}))
+	defer server.Close()
+
+	response, err := executeSearch(ctx, runclient.Config{DatabasePath: dbPath}, searchRequest{
+		Query:          "semantic batch recall",
+		PathPrefix:     "docs/batch/",
+		Limit:          3,
+		Provider:       providerOllama,
+		OllamaURL:      server.URL,
+		EmbeddingModel: "embeddinggemma",
+		CacheDir:       t.TempDir(),
+	})
+	if err != nil {
+		t.Fatalf("search: %v", err)
+	}
+	expectedChunks := (ollamaEmbedBatchSize + 1) * 2
+	expectedRequests := (expectedChunks+ollamaEmbedBatchSize-1)/ollamaEmbedBatchSize + 1
+	if response.SearchStatus != "completed" || response.Cache.Status != "rebuilt" || response.Cache.RebuiltCount != expectedChunks {
+		t.Fatalf("response = %+v", response)
+	}
+	if maxInputs > ollamaEmbedBatchSize {
+		t.Fatalf("Ollama batch too large: maxInputs=%d batchSize=%d", maxInputs, ollamaEmbedBatchSize)
+	}
+	if requests != expectedRequests || response.Provider.RequestCount != expectedRequests {
+		t.Fatalf("requests=%d provider=%+v", requests, response.Provider)
+	}
+}
+
+func TestSemanticRetrievalAdapterSplitsLargeSectionsBeforeEmbedding(t *testing.T) {
+	t.Parallel()
+
+	longLines := strings.Repeat("Semantic recall evidence stays citation-bearing and local.\n", 120)
+	longSingleLine := strings.Repeat("semantic ", semanticChunkTargetCharacters*2)
+	chunks := chunksForDocument(domain.Document{
+		DocID: "doc_long",
+		Path:  "derived/text/long.md",
+		Title: "Long Extracted Text",
+		Body:  "# Long Extracted Text\n\n## Extracted Text\n" + longLines + "\n## Huge Line\n" + longSingleLine + "\n",
+	})
+	if len(chunks) < 5 {
+		t.Fatalf("expected large document to split into several chunks, got %d", len(chunks))
+	}
+	for _, chunk := range chunks {
+		if len([]rune(chunk.Content)) > semanticChunkTargetCharacters {
+			t.Fatalf("chunk %s content length = %d, want <= %d", chunk.ChunkID, len([]rune(chunk.Content)), semanticChunkTargetCharacters)
+		}
+		if chunk.LineStart < 1 || chunk.LineEnd < chunk.LineStart {
+			t.Fatalf("invalid citation lines: %+v", chunk)
+		}
 	}
 }
 
