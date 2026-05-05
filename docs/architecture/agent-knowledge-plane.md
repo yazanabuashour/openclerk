@@ -165,6 +165,22 @@ retrieval guidance for vector search as recall infrastructure, and Mem0 as a
 memory-system reference that OpenClerk deliberately does not turn into the
 canonical truth layer.
 
+### OCR and artifact extraction
+
+OCR remains outside current production behavior. The final OCR decision in
+[`ocr-module-final-decision.md`](ocr-module-final-decision.md) records
+`none viable yet` for implementation after comparing local OCR, Go bindings,
+open-source OCR models, Ollama vision, hosted vision, cloud document OCR, and
+external agent-model OCR.
+
+If OCR is reopened, it should follow the same building-block economy pattern as
+semantic retrieval: explicit optional modules, installed and manifest-verified
+before use, with read-only candidate output routed through
+`artifact_candidate_plan` OCR review. OCR output must remain candidate evidence
+until the user approves an existing durable write action. Core OpenClerk should
+not gain hidden OCR fallback, hidden model egress, committed OCR caches, parser
+truth, or a default local artifact extraction stack.
+
 ### Cognee alignment
 
 Cognee is a useful external reference for graph/vector AI memory engines, but
