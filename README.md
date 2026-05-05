@@ -1,247 +1,206 @@
 # OpenClerk
 
-OpenClerk is a local-first knowledge-plane runtime for agents. The supported
-agent path is a small `openclerk` runner plus a single-file skill.
+OpenClerk is a local-first knowledge-plane runtime for agents. The public
+surface is the `openclerk` JSON runner plus the OpenClerk skill.
 
 ## Install
 
-Tell your agent:
-
-```text
-Install OpenClerk from https://github.com/yazanabuashour/openclerk.
-Complete both required steps before reporting success:
-1. Install the openclerk runner binary into a durable user-level binary directory.
-   Use `OPENCLERK_INSTALL_DIR="$HOME/.local/bin"` for a normal user-level install.
-   Verify with `command -v openclerk` and `openclerk --version`, and confirm `command -v openclerk` resolves to that durable install target.
-   If `$HOME/.local/bin` is not on the user's future shell `PATH`, update the appropriate shell startup file and re-verify.
-2. Register the OpenClerk skill from skills/openclerk/SKILL.md using your native skill system.
-```
-
-For the latest release:
+Install the runner:
 
 ```bash
 OPENCLERK_INSTALL_DIR="$HOME/.local/bin" sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh)"
 ```
 
-For a pinned release:
+Install a pinned release:
 
 ```bash
 OPENCLERK_INSTALL_DIR="$HOME/.local/bin" OPENCLERK_VERSION=v0.2.3 sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/v0.2.3/install.sh)"
 ```
 
-A complete install has two parts:
-
-- `openclerk --version` succeeds
-- the matching skill is registered from `skills/openclerk/SKILL.md`,
-  `https://github.com/yazanabuashour/openclerk/tree/<tag>/skills/openclerk`,
-  or `openclerk_<version>_skill.tar.gz`
-
-Use the agent's native skill manager. OpenClerk does not require a specific
-skill path or agent implementation.
-
-## Upgrade
-
-Tell your agent:
-
-```text
-Upgrade OpenClerk from https://github.com/yazanabuashour/openclerk.
-Complete both required steps before reporting success:
-1. Upgrade the openclerk runner binary in its durable user-level binary directory.
-   Use `OPENCLERK_INSTALL_DIR="$HOME/.local/bin"` for a normal user-level install.
-   Do not upgrade it under `.codex/tmp`, `/tmp`, a repository checkout, or another ephemeral workspace.
-   Verify with `command -v openclerk` and `openclerk --version`, and confirm `command -v openclerk` resolves to that durable install target.
-   If `$HOME/.local/bin` is not on the user's future shell `PATH`, update the appropriate shell startup file and re-verify.
-2. Re-register the OpenClerk skill from skills/openclerk/SKILL.md using your native skill system.
-```
-
-Or upgrade the runner manually:
-
-```bash
-OPENCLERK_INSTALL_DIR="$HOME/.local/bin" sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh)"
-```
-
-Then verify the runner and re-register the matching skill:
+Register the skill from `skills/openclerk/SKILL.md` with the agent's native
+skill system. A complete install has both:
 
 ```bash
 command -v openclerk
 openclerk --version
 ```
 
-## AgentOps Architecture
+## Upgrade
 
-OpenClerk's agent-facing path is the AgentOps pattern: the skill gives the
-agent task policy, and the local runner performs stateful knowledge-plane
-operations through structured JSON. This keeps product rules close to the
-agent, avoids broad repo search and lower-level runtime bypasses, and leaves
-storage local instead of requiring a hosted service.
+Rerun the installer, then re-register the matching `skills/openclerk/SKILL.md`
+skill.
 
-## Agent Skill Budget
+## Runner
 
-`skills/openclerk/SKILL.md` is intentionally a thin activation, routing, and
-safety contract. It should tell agents when to use `openclerk document` and
-`openclerk retrieval`, define hard no-tools and bypass boundaries, and point
-routine work at runner-owned JSON surfaces.
-
-Long `SKILL.md` recipes are taste debt. If routine success depends on exact
-JSON, command ordering, or workflow-specific prompt choreography, that evidence
-should drive a candidate-surface comparison: keep primitives with a smaller
-skill, extend an existing runner action, or add a narrow workflow action with
-`agent_handoff`. Agents are expected to use their own autonomy with runner
-help, JSON results, and runner rejections once the safe surface is clear.
-
-## Runner Interface
-
-The skill sends structured JSON on stdin and reads structured JSON from stdout
-for these runner domains:
-
-```bash
-openclerk document
-openclerk retrieval
-```
-
-Example:
+OpenClerk reads one strict JSON object from stdin and writes one JSON result to
+stdout:
 
 ```bash
 printf '%s\n' '{"action":"search","search":{"text":"architecture","limit":10}}' |
   openclerk retrieval
 ```
 
-Promoted narrow workflow actions cover routine source-backed workflows without
-requiring agents to choreograph many primitives:
+Runner domains:
 
-- `openclerk document --help` and `openclerk retrieval --help` expose a compact
-  runner-owned action index for these promoted workflows, so routine agents do
-  not need long `SKILL.md` recipes or source inspection to find the request
-  shape.
-- `openclerk document` `ingest_source_url` supports read-only `plan` mode for
-  public-link placement before durable fetch/write. It returns candidate source
-  path hints, duplicate source status, synthesis-placement guidance,
-  no-fetch/no-write status, approval boundaries, and `agent_handoff`.
-- `openclerk document` `web_search_plan` is read-only and plans
-  harness-supplied public web search results into ranked URL candidates with
-  duplicate and placement hints. Approved public fetch/write still uses
-  `ingest_source_url`.
-- `openclerk document` `artifact_candidate_plan` is read-only and plans
-  artifact path, title, body preview, tags, metadata fields, duplicate
-  evidence, confidence, and approved create/ingest handoff from explicit
-  content or public-source handoff context. It does not OCR, parse opaque
-  files, fetch URLs, or write durable documents.
-- `openclerk document` `compile_synthesis` creates or updates exactly one
-  source-linked synthesis target from either explicit `body` markdown or
-  runner-assembled `body_facts`, defaults the only supported
-  `create_or_update` mode, builds required Sources/Freshness sections when
-  needed, and returns source evidence, duplicate status, provenance refs,
-  projection freshness, write status, validation boundaries, authority limits,
-  and `agent_handoff`.
-- `openclerk document` `git_lifecycle_report` reports local Git status/history
-  for vault-relative paths and can create an explicit local checkpoint when
-  `--git-checkpoints` or `OPENCLERK_GIT_CHECKPOINTS=1` is set. It never
-  pushes, switches branches, restores, or emits raw diffs; Git remains
-  storage-level history, not OpenClerk authority.
-- `openclerk retrieval` `source_audit_report` explains source-sensitive audit
-  evidence and can repair only an existing synthesis target in
-  `repair_existing` mode. It returns `agent_handoff` and is not a broad
-  contradiction engine.
-- `openclerk retrieval` `evidence_bundle_report` is read-only and packages
-  records, decisions, citations, provenance, projection freshness, validation
-  boundaries, authority limits, and `agent_handoff`.
-- `openclerk retrieval` `duplicate_candidate_report` is read-only and packages
-  the likely duplicate target, evidence inspected, no-write status, approval
-  boundary, validation boundaries, authority limits, and `agent_handoff`.
-- `openclerk retrieval` `workflow_guide_report` is read-only and maps routine
-  intent to the runner-owned surface to try next. It returns `agent_handoff`
-  and is a guide only; final answers still come from the selected action's
-  JSON result.
-- `openclerk retrieval` `structured_store_report` is read-only and packages
-  promoted record, service, or decision projection evidence with candidate
-  structured-store guidance, projection freshness, validation boundaries,
-  authority limits, and `agent_handoff`. It does not create independent
-  canonical tables or durable writes.
-- `openclerk retrieval` `hybrid_retrieval_report` is read-only and packages
-  the current citation-bearing lexical baseline with candidate-surface
-  guidance for hybrid/vector retrieval decisions. It returns `agent_handoff`
-  and does not create vectors, call embedding APIs, or change default ranking.
-- `openclerk retrieval` `semantic_search` is explicit local/offline semantic
-  retrieval. It uses loopback Ollama embeddings only, returns citation-bearing
-  hybrid-ranked hits with provider/cache status, and keeps default `search`
-  lexical.
+```bash
+openclerk document
+openclerk retrieval
+```
 
-Validation rejections are JSON results with `rejected: true`. Runtime failures
-exit non-zero and write errors to stderr.
+Use runner help for current request shapes:
+
+```bash
+openclerk document --help
+openclerk retrieval --help
+```
+
+`openclerk retrieval search` remains lexical and citation-bearing. Use the
+installed runner's help output for other supported actions.
+
+## Modules
+
+Module commands are available from the current source checkout and require a
+runner build that includes the `openclerk module` domain. Released runners
+through `v0.2.3` do not include this domain.
+
+```bash
+mise exec -- go build -o "$HOME/.local/bin/openclerk" ./cmd/openclerk
+openclerk module --help
+```
+
+Modules are optional building blocks. Installing a module stores only its
+enabled state, manifest digest, command, args, and redacted provider config in
+SQLite `runtime_config`. OpenClerk verifies the manifest before routing
+`semantic_search` through the module. Removing a module removes the OpenClerk
+registration; it does not delete unrelated credentials or external tools.
+
+Available installable modules:
+
+| Module | Provider | Purpose | Skill |
+| --- | --- | --- | --- |
+| `modules/ollama-embeddings/module.json` | `ollama` | Local-first semantic retrieval | `modules/ollama-embeddings/skill/ollama-embeddings/SKILL.md` |
+| `modules/gemini-embeddings/module.json` | `gemini` | Explicit opt-in provider semantic retrieval with retry/backoff | `modules/gemini-embeddings/skill/gemini-embeddings/SKILL.md` |
+
+Shared command used by both modules:
+
+```text
+semantic-retrieval-adapter search
+```
+
+The adapter lives at `modules/semantic-retrieval-adapter`. Install or build it
+separately from OpenClerk core and make `semantic-retrieval-adapter` available
+on `PATH` before registering a provider module.
+
+From a repo checkout:
+
+```bash
+mise exec -- go build -o "$HOME/.local/bin/semantic-retrieval-adapter" ./modules/semantic-retrieval-adapter
+command -v semantic-retrieval-adapter
+```
+
+### Agent Module Instructions
+
+Tell an agent:
+
+```text
+Install an OpenClerk module only through `openclerk module`.
+Do not edit SQLite directly.
+Use repo-relative manifest and skill paths in docs or reports.
+Register the module skill only when the host opts into that module.
+After install, verify with `openclerk module` list_modules and run explicit `semantic_search`.
+```
+
+Install Ollama embeddings:
+
+```bash
+printf '%s\n' '{"action":"install_module","module":{"provider":"ollama","manifest_path":"modules/ollama-embeddings/module.json","command":"semantic-retrieval-adapter","provider_config":{"embedding_model":"embeddinggemma","ollama_url":"http://localhost:11434"}}}' |
+  openclerk module
+```
+
+Install Gemini embeddings:
+
+```bash
+printf '%s\n' '{"action":"install_module","module":{"provider":"gemini","manifest_path":"modules/gemini-embeddings/module.json","command":"semantic-retrieval-adapter","provider_config":{"embedding_model":"gemini-embedding-001","gemini_api_base":"https://generativelanguage.googleapis.com/v1beta","embedding_output_dimensions":"3072"}}}' |
+  openclerk module
+```
+
+Configure a module:
+
+```bash
+printf '%s\n' '{"action":"configure_module","config":{"provider":"ollama","enabled":true,"provider_config":{"embedding_model":"embeddinggemma"}}}' |
+  openclerk module
+```
+
+List modules:
+
+```bash
+printf '%s\n' '{"action":"list_modules"}' | openclerk module
+```
+
+Remove a module:
+
+```bash
+printf '%s\n' '{"action":"remove_module","provider":"ollama"}' | openclerk module
+```
+
+Run explicit semantic search after a module is installed:
+
+```bash
+printf '%s\n' '{"action":"semantic_search","semantic_search":{"query":"semantic recall citation quality","path_prefix":"docs/","limit":10,"provider":"ollama"}}' |
+  openclerk retrieval
+```
+
+Gemini requires `runtime_config:GEMINI_API_KEY` in the target OpenClerk
+database. OpenClerk reports only the credential reference, request count, retry
+count, and backoff seconds; it does not print the key. There is no hidden
+provider fallback and no default semantic ranking promotion.
 
 ## Local Storage
 
-The default database is
-`${XDG_DATA_HOME:-~/.local/share}/openclerk/openclerk.sqlite`. The database
-stores the configured markdown vault root. Override the database location with
-`OPENCLERK_DATABASE_PATH` or `--db`.
+The default database is:
 
-When troubleshooting configuration after an upgrade or runner failure, inspect
-the effective database and vault paths before changing setup:
+```text
+${XDG_DATA_HOME:-~/.local/share}/openclerk/openclerk.sqlite
+```
+
+Override it with `OPENCLERK_DATABASE_PATH` or `--db`.
+
+Inspect configured paths:
 
 ```bash
 printf '%s\n' '{"action":"resolve_paths"}' | openclerk document
 printf '%s\n' '{"action":"inspect_layout"}' | openclerk document
 ```
 
-For an existing vault, bind it once during setup or intentionally rebind it:
+Bind an existing vault once:
 
 ```bash
 openclerk init --vault-root <vault-root>
 ```
 
-Do not use `init` as routine repair for document or retrieval errors; use
-`resolve_paths` and `inspect_layout` first to confirm which database and
-configured vault root the runner is using.
-
-## Eval Evidence
-
-The production runner/skill passed the current OpenClerk release gate:
-[`docs/evals/results/ockp-agentops-production.md`](docs/evals/results/ockp-agentops-production.md).
-The eval protocol is documented in
-[`docs/evals/agent-production.md`](docs/evals/agent-production.md).
-
-Architecture and deferred-capability decisions are preserved under
-[`docs/architecture`](docs/architecture).
-
 ## Development
 
-Use the full local toolchain for repository development:
+Use repo-pinned tools through `mise exec -- ...`:
 
 ```bash
 mise install
-printf '%s\n' '{"action":"resolve_paths"}' | \
-  OPENCLERK_DATABASE_PATH="$(mktemp -d)/openclerk.sqlite" mise exec -- go run ./cmd/openclerk document
 test -z "$(gofmt -l $(git ls-files '*.go'))"
-mise exec -- golangci-lint run
+mise exec -- golangci-lint run ./...
 mise exec -- go test ./...
+mise exec -- ./scripts/validate-committed-artifacts.sh
 mise exec -- ./scripts/validate-agent-skill.sh skills/openclerk
+mise exec -- ./scripts/validate-agent-skill.sh modules/ollama-embeddings/skill/ollama-embeddings
+mise exec -- ./scripts/validate-agent-skill.sh modules/gemini-embeddings/skill/gemini-embeddings
 mise exec -- ./scripts/validate-release-docs.sh v0.2.3
-mise exec -- go run ./scripts/agent-eval/ockp run --report-name ockp-agentops-production
-mise exec -- go run ./scripts/agent-eval/ockp run --parallel 4 --scenario repo-docs-agentops-retrieval,repo-docs-synthesis-maintenance,repo-docs-decision-records,repo-docs-release-readiness,repo-docs-tag-filter,repo-docs-memory-router-recall-report,repo-docs-release-synthesis-freshness --report-name ockp-repo-docs-dogfood
-mise exec -- go run ./scripts/agent-eval/ockp run --scenario compile-synthesis-workflow-action-natural --report-name ockp-compile-synthesis-workflow-action
-mise exec -- go run ./scripts/agent-eval/ockp run --scenario source-audit-workflow-action-natural --report-name ockp-source-audit-workflow-action
-mise exec -- go run ./scripts/agent-eval/ockp run --scenario evidence-bundle-workflow-action-natural --report-name ockp-evidence-bundle-workflow-action
 ```
-
-`golangci-lint` is pinned by `mise.toml`; use `mise exec -- golangci-lint run`
-for local checks.
 
 ## Releases
 
-Tagged `v0.y.z` releases publish platform binary archives, the skill archive,
-the installer, source archive, SHA256 checksums, an SBOM, and GitHub
-attestations. Published release assets are intended to be immutable going
-forward. See
-[`docs/release-verification.md`](docs/release-verification.md) for verification
-steps.
+Tagged releases publish platform archives, the skill archive, installer,
+source archive, checksums, SBOM, and GitHub attestations. See
+`docs/release-verification.md`.
 
 ## Contributing
 
-Outside contributors can work entirely through GitHub issues and pull requests.
-Beads is maintainer-only workflow tooling and is not required for community
-contributions.
-
-See `CONTRIBUTING.md` for contribution expectations, `CODE_OF_CONDUCT.md` for
-community standards, `SECURITY.md` for vulnerability reporting, and
-`docs/maintainers.md` for maintainer-only workflow details.
+See `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, and
+`docs/maintainers.md`.
