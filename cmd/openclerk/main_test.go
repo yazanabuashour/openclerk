@@ -61,6 +61,11 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 			args: []string{"retrieval", "--help"},
 			want: []string{"source_audit_report", "evidence_bundle_report", "duplicate_candidate_report", "workflow_guide_report", "memory_router_recall_report", "structured_store_report", "hybrid_retrieval_report", "semantic_search", "agent_handoff", "Read-only"},
 		},
+		{
+			name: "module",
+			args: []string{"module", "--help"},
+			want: []string{"install_module", "configure_module", "remove_module", "list_modules", "runtime_config:GEMINI_API_KEY", "redacted"},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			var stdout bytes.Buffer
@@ -75,6 +80,66 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestRunnerModuleInstallConfigureListRemoveJSON(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	manifestPath := writeCLISemanticModuleManifest(t, t.TempDir(), "gemini")
+	installRequest := `{"action":"install_module","module":{"provider":"gemini","manifest_path":"` + filepath.ToSlash(manifestPath) + `","command":"semantic-retrieval-adapter","provider_config":{"embedding_model":"gemini-embedding-001","gemini_api_base":"https://generativelanguage.googleapis.com/v1beta","api_key":"do-not-store"}}}`
+	var installResult moduleTaskResult
+	code, stderr := runJSON(t, []string{"module", "--db", dbPath}, installRequest, &installResult)
+	if code != 0 {
+		t.Fatalf("install exit = %d stderr=%s", code, stderr)
+	}
+	if installResult.Rejected ||
+		installResult.Module == nil ||
+		installResult.Module.Provider != "gemini" ||
+		!installResult.Module.Enabled ||
+		installResult.Module.ProviderConfig["credential_ref"] != "runtime_config:GEMINI_API_KEY" ||
+		installResult.Module.ProviderConfig["api_key"] != "" {
+		t.Fatalf("install result = %+v", installResult)
+	}
+
+	configureRequest := `{"action":"configure_module","config":{"provider":"gemini","enabled":false,"provider_config":{"embedding_output_dimensions":"3072"}}}`
+	var configureResult moduleTaskResult
+	code, stderr = runJSON(t, []string{"module", "--db", dbPath}, configureRequest, &configureResult)
+	if code != 0 {
+		t.Fatalf("configure exit = %d stderr=%s", code, stderr)
+	}
+	if configureResult.Module == nil ||
+		configureResult.Module.Enabled ||
+		configureResult.Module.ProviderConfig["embedding_output_dimensions"] != "3072" ||
+		configureResult.Module.ProviderConfig["credential_ref"] != "runtime_config:GEMINI_API_KEY" {
+		t.Fatalf("configure result = %+v", configureResult)
+	}
+
+	var listResult moduleTaskResult
+	code, stderr = runJSON(t, []string{"module", "--db", dbPath}, `{"action":"list_modules"}`, &listResult)
+	if code != 0 {
+		t.Fatalf("list exit = %d stderr=%s", code, stderr)
+	}
+	if len(listResult.Modules) != 1 || listResult.Modules[0].Provider != "gemini" || listResult.Modules[0].ProviderConfig["api_key"] != "" {
+		t.Fatalf("list result = %+v", listResult)
+	}
+
+	var removeResult moduleTaskResult
+	code, stderr = runJSON(t, []string{"module", "--db", dbPath}, `{"action":"remove_module","provider":"gemini"}`, &removeResult)
+	if code != 0 {
+		t.Fatalf("remove exit = %d stderr=%s", code, stderr)
+	}
+	if removeResult.Module == nil || removeResult.Module.Enabled {
+		t.Fatalf("remove result = %+v", removeResult)
+	}
+	var emptyList moduleTaskResult
+	code, stderr = runJSON(t, []string{"module", "--db", dbPath}, `{"action":"list_modules"}`, &emptyList)
+	if code != 0 {
+		t.Fatalf("empty list exit = %d stderr=%s", code, stderr)
+	}
+	if len(emptyList.Modules) != 0 {
+		t.Fatalf("empty list result = %+v", emptyList)
 	}
 }
 
@@ -579,4 +644,37 @@ func runJSON(t *testing.T, args []string, input string, output any) (int, string
 		}
 	}
 	return code, stderr.String()
+}
+
+func writeCLISemanticModuleManifest(t *testing.T, dir string, provider string) string {
+	t.Helper()
+	path := filepath.Join(dir, "module.json")
+	manifest := map[string]any{
+		"schema_version": "openclerk-module.v1",
+		"module": map[string]any{
+			"name":    provider + "-embeddings",
+			"version": "0.1.0",
+			"kind":    "embedding_provider",
+		},
+		"provides": []map[string]any{{
+			"type": "command",
+			"name": "semantic-retrieval-adapter search",
+		}},
+		"authority": map[string]any{
+			"default":        "read_only",
+			"durable_writes": "forbidden",
+			"forbidden":      []string{"write_documents", "change_openclerk_search_default"},
+		},
+		"release": map[string]any{
+			"status": "supported_optional_module",
+		},
+	}
+	data, err := json.Marshal(manifest)
+	if err != nil {
+		t.Fatalf("marshal manifest: %v", err)
+	}
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	return path
 }

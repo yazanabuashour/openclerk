@@ -1362,13 +1362,13 @@ func (c ollamaClient) postJSON(ctx context.Context, endpoint string, payload any
 func readGeminiAPIKeyFromRuntimeConfig(ctx context.Context, dbPath string, keyName string) (string, string, error) {
 	credentialRef := "runtime_config:" + keyName
 	if strings.TrimSpace(dbPath) == "" {
-		return "", credentialRef, errors.New("Gemini runtime config database is required")
+		return "", credentialRef, errors.New("gemini runtime config database is required")
 	}
 	if strings.TrimSpace(keyName) == "" {
-		return "", credentialRef, errors.New("Gemini runtime config key is required")
+		return "", credentialRef, errors.New("gemini runtime config key is required")
 	}
 	if _, err := os.Stat(dbPath); err != nil {
-		return "", credentialRef, fmt.Errorf("Gemini runtime config database unavailable")
+		return "", credentialRef, fmt.Errorf("gemini runtime config database unavailable")
 	}
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {

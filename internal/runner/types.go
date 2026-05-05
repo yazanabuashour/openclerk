@@ -272,15 +272,18 @@ type SearchOptions struct {
 }
 
 type SemanticSearchOptions struct {
-	Query          string `json:"query,omitempty"`
-	PathPrefix     string `json:"path_prefix,omitempty"`
-	MetadataKey    string `json:"metadata_key,omitempty"`
-	MetadataValue  string `json:"metadata_value,omitempty"`
-	Tag            string `json:"tag,omitempty"`
-	Limit          int    `json:"limit,omitempty"`
-	OllamaURL      string `json:"ollama_url,omitempty"`
-	EmbeddingModel string `json:"embedding_model,omitempty"`
-	CacheDir       string `json:"cache_dir,omitempty"`
+	Query                     string `json:"query,omitempty"`
+	PathPrefix                string `json:"path_prefix,omitempty"`
+	MetadataKey               string `json:"metadata_key,omitempty"`
+	MetadataValue             string `json:"metadata_value,omitempty"`
+	Tag                       string `json:"tag,omitempty"`
+	Limit                     int    `json:"limit,omitempty"`
+	Provider                  string `json:"provider,omitempty"`
+	OllamaURL                 string `json:"ollama_url,omitempty"`
+	EmbeddingModel            string `json:"embedding_model,omitempty"`
+	GeminiAPIBase             string `json:"gemini_api_base,omitempty"`
+	EmbeddingOutputDimensions int    `json:"embedding_output_dimensions,omitempty"`
+	CacheDir                  string `json:"cache_dir,omitempty"`
 
 	tagProvided bool
 }
@@ -790,12 +793,17 @@ type SemanticSearchResult struct {
 }
 
 type SemanticProviderStatus struct {
-	Provider      string `json:"provider"`
-	Model         string `json:"model"`
-	Status        string `json:"status"`
-	OllamaURL     string `json:"ollama_url,omitempty"`
-	EmbeddingDims int    `json:"embedding_dimensions,omitempty"`
-	ErrorSummary  string `json:"error_summary,omitempty"`
+	Provider         string  `json:"provider"`
+	Model            string  `json:"model"`
+	Status           string  `json:"status"`
+	OllamaURL        string  `json:"ollama_url,omitempty"`
+	CredentialRef    string  `json:"credential_ref,omitempty"`
+	EmbeddingDims    int     `json:"embedding_dimensions,omitempty"`
+	RequestCount     int     `json:"request_count,omitempty"`
+	RetryCount       int     `json:"retry_count,omitempty"`
+	BackoffSeconds   float64 `json:"backoff_seconds,omitempty"`
+	ErrorSummary     string  `json:"error_summary,omitempty"`
+	FallbackProvider string  `json:"fallback_provider,omitempty"`
 }
 
 type SemanticCacheStatus struct {

@@ -1,0 +1,89 @@
+{
+  "schema_version": "openclerk-module.v1",
+  "module": {
+    "name": "gemini-embeddings",
+    "version": "0.1.0",
+    "kind": "embedding_provider"
+  },
+  "openclerk_contract": {
+    "min_version": "0.2.0",
+    "max_version": "<next-breaking-contract>"
+  },
+  "provides": [
+    {
+      "type": "command",
+      "name": "semantic-retrieval-adapter search",
+      "summary": "Explicit opt-in Gemini embedding provider for citation-bearing OpenClerk semantic_search with retry/backoff."
+    },
+    {
+      "type": "skill",
+      "name": "gemini-embeddings",
+      "path": "modules/gemini-embeddings/skill/gemini-embeddings/SKILL.md",
+      "summary": "Optional module skill for installed Gemini semantic retrieval."
+    }
+  ],
+  "requires": {
+    "credentials": [
+      "runtime_config:GEMINI_API_KEY"
+    ],
+    "environment": [],
+    "tools": [
+      "semantic-retrieval-adapter"
+    ],
+    "network": "gemini_provider_egress",
+    "schedule": "external"
+  },
+  "authority": {
+    "default": "read_only",
+    "durable_writes": "forbidden",
+    "forbidden": [
+      "change_openclerk_search_default",
+      "write_provider_config_secret",
+      "commit_embedding_cache",
+      "write_documents",
+      "mutate_vault",
+      "direct_sqlite_mutation",
+      "implicit_remote_provider",
+      "fallback_without_explicit_provider"
+    ]
+  },
+  "artifacts": {
+    "committed_examples": "reduced_public_only",
+    "paths": "repo_relative_or_placeholder",
+    "outputs": [
+      "openclerk_semantic_retrieval.v1 JSON"
+    ],
+    "cache": "rebuildable user-cache artifact outside committed repo"
+  },
+  "install": {
+    "package": "module-release-archive",
+    "steps": [
+      "Install semantic-retrieval-adapter separately from OpenClerk core.",
+      "Install modules/gemini-embeddings/skill/gemini-embeddings/SKILL.md only when the host opts into the Gemini module skill.",
+      "Store GEMINI_API_KEY in runtime_config for the target database before use.",
+      "Register the module with openclerk module install_module and this manifest.",
+      "Configure gemini_api_base, embedding_model, and embedding_output_dimensions through openclerk module configure_module."
+    ],
+    "uninstall": "Run openclerk module remove_module for provider gemini, then remove the adapter binary, optional skill, and user-cache directory without changing OpenClerk core. Removing the provider module does not delete runtime_config:GEMINI_API_KEY."
+  },
+  "compatibility": {
+    "openclerk_runner": "routes explicit retrieval semantic_search provider gemini through verified module registration",
+    "skill": "does not replace skills/openclerk/SKILL.md",
+    "search_default": "does not replace openclerk retrieval search or promote default semantic ranking",
+    "schema": "returns the shared openclerk_semantic_retrieval.v1 contract with citations"
+  },
+  "release": {
+    "tag": "gemini-embeddings/v0.1.0",
+    "assets": [
+      "openclerk-module-gemini-embeddings_0.1.0_darwin_arm64.tar.gz",
+      "openclerk-module-gemini-embeddings_0.1.0_darwin_amd64.tar.gz",
+      "openclerk-module-gemini-embeddings_0.1.0_linux_amd64.tar.gz",
+      "openclerk-module-gemini-embeddings_0.1.0_linux_arm64.tar.gz",
+      "openclerk-module-gemini-embeddings_0.1.0_skill.tar.gz",
+      "openclerk-module-gemini-embeddings_0.1.0_source.tar.gz",
+      "openclerk-module-gemini-embeddings_0.1.0_checksums.txt",
+      "openclerk-module-gemini-embeddings_0.1.0_sbom.json"
+    ],
+    "status": "supported_optional_module"
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "schema_version": "openclerk-module.v1",
+  "module": {
+    "name": "ollama-embeddings",
+    "version": "0.1.0",
+    "kind": "embedding_provider"
+  },
+  "openclerk_contract": {
+    "min_version": "0.2.0",
+    "max_version": "<next-breaking-contract>"
+  },
+  "provides": [
+    {
+      "type": "command",
+      "name": "semantic-retrieval-adapter search",
+      "summary": "Local-first Ollama embedding provider for citation-bearing OpenClerk semantic_search."
+    },
+    {
+      "type": "skill",
+      "name": "ollama-embeddings",
+      "path": "modules/ollama-embeddings/skill/ollama-embeddings/SKILL.md",
+      "summary": "Optional module skill for installed Ollama semantic retrieval."
+    }
+  ],
+  "requires": {
+    "credentials": [],
+    "environment": [],
+    "tools": [
+      "ollama",
+      "semantic-retrieval-adapter"
+    ],
+    "network": "loopback_http_only",
+    "schedule": "external"
+  },
+  "authority": {
+    "default": "read_only",
+    "durable_writes": "forbidden",
+    "forbidden": [
+      "change_openclerk_search_default",
+      "write_provider_config_secret",
+      "commit_embedding_cache",
+      "write_documents",
+      "mutate_vault",
+      "direct_sqlite_mutation",
+      "remote_provider_fallback"
+    ]
+  },
+  "artifacts": {
+    "committed_examples": "reduced_public_only",
+    "paths": "repo_relative_or_placeholder",
+    "outputs": [
+      "openclerk_semantic_retrieval.v1 JSON"
+    ],
+    "cache": "rebuildable user-cache artifact outside committed repo"
+  },
+  "install": {
+    "package": "module-release-archive",
+    "steps": [
+      "Install semantic-retrieval-adapter separately from OpenClerk core.",
+      "Install modules/ollama-embeddings/skill/ollama-embeddings/SKILL.md only when the host opts into the Ollama module skill.",
+      "Register the module with openclerk module install_module and this manifest.",
+      "Configure ollama_url and embedding_model through openclerk module configure_module."
+    ],
+    "uninstall": "Run openclerk module remove_module for provider ollama, then remove the adapter binary, optional skill, and user-cache directory without changing OpenClerk core."
+  },
+  "compatibility": {
+    "openclerk_runner": "routes explicit retrieval semantic_search through verified module registration",
+    "skill": "does not replace skills/openclerk/SKILL.md",
+    "search_default": "does not replace openclerk retrieval search or promote default semantic ranking",
+    "schema": "returns the shared openclerk_semantic_retrieval.v1 contract with citations"
+  },
+  "release": {
+    "tag": "ollama-embeddings/v0.1.0",
+    "assets": [
+      "openclerk-module-ollama-embeddings_0.1.0_darwin_arm64.tar.gz",
+      "openclerk-module-ollama-embeddings_0.1.0_darwin_amd64.tar.gz",
+      "openclerk-module-ollama-embeddings_0.1.0_linux_amd64.tar.gz",
+      "openclerk-module-ollama-embeddings_0.1.0_linux_arm64.tar.gz",
+      "openclerk-module-ollama-embeddings_0.1.0_skill.tar.gz",
+      "openclerk-module-ollama-embeddings_0.1.0_source.tar.gz",
+      "openclerk-module-ollama-embeddings_0.1.0_checksums.txt",
+      "openclerk-module-ollama-embeddings_0.1.0_sbom.json"
+    ],
+    "status": "supported_optional_module"
+  }
+}

@@ -27,6 +27,8 @@ The product model is:
 - source-linked synthesis is the active next build slice for durable
   agent-maintained wiki pages
 - graph traversal is a derived docs capability behind AgentOps
+- semantic retrieval is an optional building-block capability behind AgentOps,
+  not a default search ranking change
 - promoted records are selective structured domains behind AgentOps, not the
   default storage shape
 - provenance and projection-state runner actions make derivation and freshness
@@ -135,6 +137,33 @@ Karpathy's LLM Wiki pattern maps cleanly onto OpenClerk, but OpenClerk should im
 | `log.md` | provenance events, projection states, and optional human-readable activity notes |
 
 The shared idea is that agents should maintain summaries, links, contradiction notes, and filed answers so knowledge compounds over time. The OpenClerk-specific constraint is that synthesis must stay inspectable through stable ids, citations, provenance events, and projection freshness. It should not become an opaque second truth system.
+
+### Semantic retrieval building blocks
+
+Semantic retrieval follows the same knowledge-plane boundary: it can accelerate
+recall, but it is not the authority layer. Core `openclerk retrieval search`
+remains lexical and citation-bearing. Explicit `semantic_search` routes only
+through installed, enabled, and manifest-verified optional modules.
+
+The supported initial modules are `modules/ollama-embeddings/module.json` and
+`modules/gemini-embeddings/module.json`, both backed by the shared
+`openclerk_semantic_retrieval.v1` contract from
+`modules/semantic-retrieval-adapter`. Core stores only module enabled state,
+manifest digest, command, command args, and redacted provider config in SQLite
+`runtime_config`. Gemini remains explicit opt-in and reads
+`runtime_config:GEMINI_API_KEY`; Ollama is the local-first default for explicit
+semantic_search after installation. There is no hidden provider fallback,
+committed embedding cache, durable core vector index, or default semantic
+ranking promotion.
+
+The direction is recorded in
+[`semantic-retrieval-building-blocks.md`](semantic-retrieval-building-blocks.md).
+It uses the LLM Wiki idea of optional search tooling over durable wiki
+artifacts, the building-block economy model of separately installable parts,
+OpenAI prompt/harness guidance for explicit testable surfaces, embeddings and
+retrieval guidance for vector search as recall infrastructure, and Mem0 as a
+memory-system reference that OpenClerk deliberately does not turn into the
+canonical truth layer.
 
 ### Cognee alignment
 

@@ -532,11 +532,19 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		normalized.SemanticSearch.MetadataKey = strings.TrimSpace(request.SemanticSearch.MetadataKey)
 		normalized.SemanticSearch.MetadataValue = strings.TrimSpace(request.SemanticSearch.MetadataValue)
 		normalized.SemanticSearch.Tag = request.SemanticSearch.Tag
+		normalized.SemanticSearch.Provider = strings.ToLower(strings.TrimSpace(request.SemanticSearch.Provider))
+		if normalized.SemanticSearch.Provider == "" {
+			normalized.SemanticSearch.Provider = runclient.SemanticModuleProviderOllama
+		}
 		normalized.SemanticSearch.OllamaURL = strings.TrimRight(strings.TrimSpace(request.SemanticSearch.OllamaURL), "/")
 		normalized.SemanticSearch.EmbeddingModel = strings.TrimSpace(request.SemanticSearch.EmbeddingModel)
+		normalized.SemanticSearch.GeminiAPIBase = strings.TrimRight(strings.TrimSpace(request.SemanticSearch.GeminiAPIBase), "/")
 		normalized.SemanticSearch.CacheDir = strings.TrimSpace(request.SemanticSearch.CacheDir)
 		if normalized.SemanticSearch.Query == "" {
 			return normalizedRetrievalTaskRequest{}, "semantic_search.query is required"
+		}
+		if normalized.SemanticSearch.Provider != runclient.SemanticModuleProviderOllama && normalized.SemanticSearch.Provider != runclient.SemanticModuleProviderGemini {
+			return normalizedRetrievalTaskRequest{}, "semantic_search.provider must be ollama or gemini"
 		}
 		if (normalized.SemanticSearch.MetadataKey == "") != (normalized.SemanticSearch.MetadataValue == "") {
 			return normalizedRetrievalTaskRequest{}, "semantic_search.metadata_key and metadata_value must be provided together"
@@ -544,8 +552,16 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		if rejection := normalizeSemanticSearchTagFilter(&normalized.SemanticSearch); rejection != "" {
 			return normalizedRetrievalTaskRequest{}, rejection
 		}
-		if rejection := validateSemanticSearchOllamaURL(normalized.SemanticSearch.OllamaURL); rejection != "" {
-			return normalizedRetrievalTaskRequest{}, rejection
+		if normalized.SemanticSearch.Provider == runclient.SemanticModuleProviderOllama {
+			if rejection := validateSemanticSearchOllamaURL(normalized.SemanticSearch.OllamaURL); rejection != "" {
+				return normalizedRetrievalTaskRequest{}, rejection
+			}
+		}
+		if normalized.SemanticSearch.Provider == runclient.SemanticModuleProviderGemini && strings.TrimSpace(normalized.SemanticSearch.OllamaURL) != "" {
+			return normalizedRetrievalTaskRequest{}, "semantic_search.ollama_url is only valid for provider ollama"
+		}
+		if normalized.SemanticSearch.EmbeddingOutputDimensions < 0 {
+			return normalizedRetrievalTaskRequest{}, "semantic_search.embedding_output_dimensions must be greater than or equal to 0"
 		}
 		return normalized, ""
 	default:

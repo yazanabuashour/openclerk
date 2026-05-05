@@ -18,7 +18,7 @@
   ],
   "requires": {
     "credentials": [
-      "GEMINI_API_KEY only when provider is gemini, or when fallback_provider is explicitly gemini and Ollama is unavailable"
+      "GEMINI_API_KEY only when provider is gemini"
     ],
     "environment": [],
     "tools": [
@@ -43,7 +43,7 @@
     "committed_examples": "reduced_public_only",
     "paths": "repo_relative_or_placeholder",
     "outputs": [
-      "semantic_retrieval_adapter.v1 search JSON"
+      "openclerk_semantic_retrieval.v1 search JSON"
     ],
     "cache": "rebuildable user-cache artifact outside committed repo"
   },
@@ -62,6 +62,6 @@
     "schema": "does not add core runner request or response fields"
   },
   "release": {
-    "status": "supported_optional_module_candidate"
+    "status": "supported_optional_module"
   }
 }

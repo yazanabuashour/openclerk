@@ -35,6 +35,8 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 		return 0
 	case "init":
 		return runInit(args[1:], stdout, stderr)
+	case "module":
+		return runModule(args[1:], stdin, stdout, stderr)
 	case "document":
 		return runDocument(args[1:], stdin, stdout, stderr)
 	case "retrieval":
@@ -71,6 +73,86 @@ func runInit(args []string, stdout io.Writer, stderr io.Writer) int {
 		return 1
 	}
 	return 0
+}
+
+type moduleTaskRequest struct {
+	Action   string                                 `json:"action"`
+	Module   runclient.SemanticModuleInstallInput   `json:"module,omitempty"`
+	Config   runclient.SemanticModuleConfigureInput `json:"config,omitempty"`
+	Provider string                                 `json:"provider,omitempty"`
+}
+
+type moduleTaskResult struct {
+	Rejected        bool                             `json:"rejected"`
+	RejectionReason string                           `json:"rejection_reason,omitempty"`
+	Module          *runclient.SemanticModuleConfig  `json:"module,omitempty"`
+	Modules         []runclient.SemanticModuleConfig `json:"modules,omitempty"`
+	Summary         string                           `json:"summary"`
+}
+
+func runModule(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
+	if wantsSubcommandHelp(args) {
+		moduleUsage(stdout)
+		return 0
+	}
+	config, ok := parseConfig("module", args, stderr)
+	if !ok {
+		return 2
+	}
+	var request moduleTaskRequest
+	if err := decodeRequest(stdin, &request); err != nil {
+		_, _ = fmt.Fprintf(stderr, "decode module request: %v\n", err)
+		return 1
+	}
+	result, err := runModuleTask(context.Background(), config, request)
+	if err != nil {
+		_, _ = fmt.Fprintf(stderr, "run module task: %v\n", err)
+		return 1
+	}
+	if err := json.NewEncoder(stdout).Encode(result); err != nil {
+		_, _ = fmt.Fprintf(stderr, "encode module result: %v\n", err)
+		return 1
+	}
+	return 0
+}
+
+func runModuleTask(ctx context.Context, config runclient.Config, request moduleTaskRequest) (moduleTaskResult, error) {
+	action := request.Action
+	if action == "" {
+		action = "list_modules"
+	}
+	switch action {
+	case "install_module":
+		module, err := runclient.InstallSemanticModule(ctx, config, request.Module)
+		if err != nil {
+			return moduleRejected(err), nil
+		}
+		return moduleTaskResult{Module: &module, Summary: "installed semantic module"}, nil
+	case "configure_module":
+		module, err := runclient.ConfigureSemanticModule(ctx, config, request.Config)
+		if err != nil {
+			return moduleRejected(err), nil
+		}
+		return moduleTaskResult{Module: &module, Summary: "configured semantic module"}, nil
+	case "remove_module":
+		module, err := runclient.RemoveSemanticModule(ctx, config, request.Provider)
+		if err != nil {
+			return moduleRejected(err), nil
+		}
+		return moduleTaskResult{Module: &module, Summary: "removed semantic module"}, nil
+	case "list_modules":
+		modules, err := runclient.ListSemanticModules(ctx, config)
+		if err != nil {
+			return moduleTaskResult{}, err
+		}
+		return moduleTaskResult{Modules: modules, Summary: fmt.Sprintf("returned %d semantic modules", len(modules))}, nil
+	default:
+		return moduleTaskResult{Rejected: true, RejectionReason: fmt.Sprintf("unsupported module action %q", action), Summary: fmt.Sprintf("unsupported module action %q", action)}, nil
+	}
+}
+
+func moduleRejected(err error) moduleTaskResult {
+	return moduleTaskResult{Rejected: true, RejectionReason: err.Error(), Summary: err.Error()}
 }
 
 func runDocument(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
@@ -201,12 +283,25 @@ func resolvedVersion(linkerVersion string, info *debug.BuildInfo, ok bool) strin
 }
 
 func usage(stderr io.Writer) {
-	_, _ = fmt.Fprintln(stderr, "usage: openclerk <version|init|document|retrieval> [--db path]")
+	_, _ = fmt.Fprintln(stderr, "usage: openclerk <version|init|module|document|retrieval> [--db path]")
 	_, _ = fmt.Fprintln(stderr, "       openclerk init [--db path] [--vault-root path]")
+	_, _ = fmt.Fprintln(stderr, "       openclerk module --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk document --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk retrieval --help")
 	_, _ = fmt.Fprintln(stderr, "document/retrieval read strict JSON from stdin and use configured paths by default; pass --db only for an explicit dataset.")
 	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, ingest_source_url plan, web_search_plan, artifact_candidate_plan, git_lifecycle_report, source_audit_report, evidence_bundle_report, duplicate_candidate_report, workflow_guide_report, memory_router_recall_report, structured_store_report, hybrid_retrieval_report, semantic_search")
+}
+
+func moduleUsage(w io.Writer) {
+	_, _ = fmt.Fprintln(w, "usage: openclerk module [--db path] < request.json")
+	_, _ = fmt.Fprintln(w, "")
+	_, _ = fmt.Fprintln(w, "Reads one strict JSON object from stdin and writes one JSON result.")
+	_, _ = fmt.Fprintln(w, "Manages optional semantic embedding modules through redacted runtime_config state.")
+	_, _ = fmt.Fprintln(w, `  install Ollama: {"action":"install_module","module":{"provider":"ollama","manifest_path":"modules/ollama-embeddings/module.json","command":"semantic-retrieval-adapter","provider_config":{"embedding_model":"embeddinggemma","ollama_url":"http://localhost:11434"}}}`)
+	_, _ = fmt.Fprintln(w, `  install Gemini: {"action":"install_module","module":{"provider":"gemini","manifest_path":"modules/gemini-embeddings/module.json","command":"semantic-retrieval-adapter","provider_config":{"embedding_model":"gemini-embedding-001","gemini_api_base":"https://generativelanguage.googleapis.com/v1beta","embedding_output_dimensions":"3072"}}}`)
+	_, _ = fmt.Fprintln(w, `  configure: {"action":"configure_module","config":{"provider":"ollama","enabled":true,"provider_config":{"embedding_model":"embeddinggemma"}}}`)
+	_, _ = fmt.Fprintln(w, `  remove/list: {"action":"remove_module","provider":"ollama"} | {"action":"list_modules"}`)
+	_, _ = fmt.Fprintln(w, "Gemini stores only redacted provider config and uses runtime_config:GEMINI_API_KEY from the configured database when explicitly selected.")
 }
 
 func documentUsage(w io.Writer) {
@@ -258,6 +353,6 @@ func retrievalUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  Read-only. Returns structured_store.agent_handoff with promoted record/service/decision projection evidence, candidate-store boundaries, freshness, and authority limits.")
 	_, _ = fmt.Fprintln(w, `  hybrid_retrieval_report: {"action":"hybrid_retrieval_report","hybrid_retrieval":{"query":"semantic recall citation quality","path_prefix":"docs/","limit":10}}`)
 	_, _ = fmt.Fprintln(w, "  Read-only. Returns hybrid_retrieval.agent_handoff with lexical baseline evidence and candidate-surface boundaries; it does not create vectors or change default ranking.")
-	_, _ = fmt.Fprintln(w, `  semantic_search: {"action":"semantic_search","semantic_search":{"query":"semantic recall citation quality","path_prefix":"docs/","limit":10,"embedding_model":"nomic-embed-text"}}`)
-	_, _ = fmt.Fprintln(w, "  Explicit local/offline mode. Uses loopback Ollama only, returns citation-bearing semantic_search hits with cache/provider status, and leaves default search lexical.")
+	_, _ = fmt.Fprintln(w, `  semantic_search: {"action":"semantic_search","semantic_search":{"query":"semantic recall citation quality","path_prefix":"docs/","limit":10,"provider":"ollama","embedding_model":"embeddinggemma"}}`)
+	_, _ = fmt.Fprintln(w, "  Explicit module-gated mode. Routes through an installed verified Ollama or Gemini module, returns citation-bearing semantic_search hits with cache/provider status, and leaves default search lexical.")
 }

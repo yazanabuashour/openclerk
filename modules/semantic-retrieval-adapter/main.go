@@ -285,9 +285,11 @@ func executeSearch(ctx context.Context, config runclient.Config, request searchR
 	}
 	provider := providerStatus{Provider: request.Provider, Model: request.EmbeddingModel, Status: "completed"}
 	cache, cachePath, cacheRef := cacheForRequest(request, chunks)
-	cached, cacheStatusValue := readCache(cachePath, cache, chunks)
+	cached, cacheReadStatus := readCache(cachePath, cache, chunks)
+	cacheStatusValue := cacheStatus{Status: cacheReadStatus.Status, CacheRef: cacheRef, ChunkCount: len(chunks)}
 	if len(cached) == 0 {
 		vectorChunks, status, err := embedChunks(ctx, request, paths.DatabasePath, chunks)
+		cacheHitAfterFallback := false
 		provider = status
 		if err != nil && request.FallbackProvider != "" && request.FallbackProvider != request.Provider {
 			originalFallbackProvider := request.FallbackProvider
@@ -307,6 +309,7 @@ func executeSearch(ctx context.Context, config runclient.Config, request searchR
 				}
 				err = nil
 				cacheStatusValue = cacheStatus{Status: "hit", CacheRef: cacheRef, ChunkCount: len(fallbackCached)}
+				cacheHitAfterFallback = true
 			} else {
 				vectorChunks, status, err = embedChunks(ctx, request, paths.DatabasePath, chunks)
 				status.FallbackProvider = originalFallbackProvider
@@ -320,10 +323,12 @@ func executeSearch(ctx context.Context, config runclient.Config, request searchR
 			return response, nil
 		}
 		chunks = vectorChunks
-		cache.Dimensions = provider.EmbeddingDims
-		cache.Chunks = chunks
-		_ = writeCache(cachePath, cache)
-		cacheStatusValue = cacheStatus{Status: "rebuilt", CacheRef: cacheRef, ChunkCount: len(chunks), RebuiltCount: len(chunks)}
+		if !cacheHitAfterFallback {
+			cache.Dimensions = provider.EmbeddingDims
+			cache.Chunks = chunks
+			_ = writeCache(cachePath, cache)
+			cacheStatusValue = cacheStatus{Status: "rebuilt", CacheRef: cacheRef, ChunkCount: len(chunks), RebuiltCount: len(chunks)}
+		}
 	} else {
 		chunks = cached
 		cacheStatusValue = cacheStatus{Status: "hit", CacheRef: cacheRef, ChunkCount: len(chunks)}
@@ -425,7 +430,7 @@ func baseResponse(request searchRequest, provider providerStatus, cache cacheSta
 		privacy = "Gemini provider embeddings send corpus/query text to a remote provider using redacted runtime_config credentials"
 	}
 	return searchResponse{
-		SchemaVersion: "semantic_retrieval_adapter.v1",
+		SchemaVersion: "openclerk_semantic_retrieval.v1",
 		Module: moduleMetadata{
 			Name:    "semantic-retrieval-adapter",
 			Version: "0.1.0",
