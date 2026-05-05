@@ -50,6 +50,25 @@ func classifyTargetedParallelRunnerResult(result jobResult) (string, string) {
 	return "skill_guidance_or_eval_coverage", "runner-visible parallel evidence existed, but the assistant answer or required runner steps did not satisfy the scenario"
 }
 
+func classifyTargetedInstallUpgradeModuleResult(result jobResult) (string, string) {
+	if result.Passed && result.Verification.Passed {
+		return "none", "install, upgrade, or module-agent instruction workflow completed through documented installed-runner checks without bypasses"
+	}
+	if len(populatedBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Scenario == moduleAgentInstallScenarioID && (result.Metrics.DirectSQLiteAccess || !result.Metrics.ModuleInstallUsed || !result.Metrics.ModuleListUsed) {
+		return "skill_guidance_or_eval_coverage", "module install scenario did not use install_module and list_modules through openclerk module"
+	}
+	if (result.Scenario == installInstructionsAgentScenarioID || result.Scenario == upgradeInstructionsAgentScenarioID) && (!result.Metrics.OpenClerkPathCheckUsed || !result.Metrics.OpenClerkVersionCheckUsed) {
+		return "skill_guidance_or_eval_coverage", "install or upgrade scenario did not verify command path and runner version"
+	}
+	if result.Verification.Passed {
+		return "runner_execution_failure", "scenario verification passed, but the job did not complete successfully"
+	}
+	return "skill_guidance_or_eval_coverage", "agent answer or required installed-runner checks did not satisfy the instruction scenario"
+}
+
 func classifyTargetedMemoryRouterRevisitResult(result jobResult) (string, string) {
 	if isFinalAnswerOnlyValidationScenario(result.Scenario) {
 		if result.Passed && result.Verification.Passed {

@@ -229,6 +229,17 @@ const (
 	parallelRunnerDecisionPath      = "docs/architecture/parallel-runner-concurrency.md"
 	parallelRunnerSearchText        = "parallel runner safe read contract evidence"
 
+	installUpgradeModuleLaneName       = "install-upgrade-module-agent-instructions"
+	installInstructionsAgentScenarioID = "install-instructions-agent"
+	upgradeInstructionsAgentScenarioID = "upgrade-instructions-agent"
+	moduleAgentInstallScenarioID       = "module-agent-install"
+	moduleAgentInstallProvider         = "ollama"
+	moduleAgentInstallManifestPath     = "modules/ollama-embeddings/module.json"
+	moduleAgentInstallSkillPath        = "modules/ollama-embeddings/skill/ollama-embeddings/SKILL.md"
+	moduleAgentInstallCommand          = "semantic-retrieval-adapter"
+	moduleAgentInstallEmbeddingModel   = "embeddinggemma"
+	moduleAgentInstallOllamaURL        = "http://localhost:11434"
+
 	documentHistoryNaturalScenarioID      = "document-lifecycle-natural-intent"
 	documentHistoryLaneName               = "document-history-review-controls-poc"
 	documentHistoryPolicyPath             = "notes/history-review/lifecycle-control.md"

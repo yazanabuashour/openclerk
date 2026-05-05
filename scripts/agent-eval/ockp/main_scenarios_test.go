@@ -503,6 +503,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	if lane != parallelRunnerLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, parallelRunnerLaneName)
 	}
+	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(installUpgradeModuleScenarioIDs(), ",")})
+	lane, releaseBlocking = reportLane(selected)
+	if lane != installUpgradeModuleLaneName || releaseBlocking {
+		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, installUpgradeModuleLaneName)
+	}
 	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(append(broadAuditScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject"), ",")})
 	lane, releaseBlocking = reportLane(selected)
 	if lane != broadAuditLaneName || releaseBlocking {

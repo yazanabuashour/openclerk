@@ -15,6 +15,7 @@ func reportLane(ids []string) (string, bool) {
 	highTouchRelationshipRecord := 0
 	relationshipRecordCandidate := 0
 	parallelRunner := 0
+	installUpgradeModule := 0
 	documentHistory := 0
 	highTouchDocumentLifecycle := 0
 	documentLifecycleRollbackCandidate := 0
@@ -90,6 +91,10 @@ func reportLane(ids []string) (string, bool) {
 		}
 		if isParallelRunnerScenario(id) {
 			parallelRunner++
+			continue
+		}
+		if isInstallUpgradeModuleScenario(id) {
+			installUpgradeModule++
 			continue
 		}
 		if isDocumentHistoryScenario(id) {
@@ -251,6 +256,9 @@ func reportLane(ids []string) (string, bool) {
 	if parallelRunner > 0 && parallelRunner == len(ids) {
 		return parallelRunnerLaneName, false
 	}
+	if installUpgradeModule > 0 && installUpgradeModule == len(ids) {
+		return installUpgradeModuleLaneName, false
+	}
 	if documentHistory > 0 && documentHistory+validation == len(ids) {
 		return documentHistoryLaneName, false
 	}
@@ -371,6 +379,9 @@ func reportLane(ids []string) (string, bool) {
 	if parallelRunner > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
+	if installUpgradeModule > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
 	if documentHistory > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
@@ -482,6 +493,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == parallelRunnerLaneName {
 		return "parallel runner rows report fresh startup and safe-read command UX, tool count, command count, assistant calls, wall time, guidance dependence, safety risks, and raw SQLite/runtime_config/upsert failure absence"
+	}
+	if lane == installUpgradeModuleLaneName {
+		return "install, upgrade, and module-agent rows report documented checklist use, command path and version verification, skill registration verification, module install/list actions, redacted module state, tool count, command count, assistant calls, wall time, safety risks, and no direct SQLite/source-built/module-cache bypasses"
 	}
 	if lane == documentHistoryLaneName {
 		return "document lifecycle rows report natural intent, scripted current-primitives controls, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, privacy handling, and capability/ergonomics classification"

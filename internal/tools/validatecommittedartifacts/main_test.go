@@ -101,3 +101,73 @@ func TestValidateNoRealVaultJSONReports(t *testing.T) {
 		t.Fatalf("validateNoRealVaultJSONReports error = %v, want local-only rejection", err)
 	}
 }
+
+func TestValidateReadmeModuleSectionRequiresAgentInstructionsFirst(t *testing.T) {
+	t.Parallel()
+
+	valid := "# OpenClerk\n\n## Modules\n\n### Agent Module Instructions\n\nTell an agent.\n\nAvailable installable modules:\n\nExact module commands live in `modules/docs/install.md`.\n"
+	if err := validateReadmeModuleSection(valid); err != nil {
+		t.Fatalf("validateReadmeModuleSection valid: %v", err)
+	}
+
+	lateAgent := "# OpenClerk\n\n## Modules\n\nAvailable installable modules:\n\n### Agent Module Instructions\n\nExact module commands live in `modules/docs/install.md`.\n"
+	err := validateReadmeModuleSection(lateAgent)
+	if err == nil || !strings.Contains(err.Error(), "beginning") {
+		t.Fatalf("validateReadmeModuleSection late agent error = %v, want beginning rejection", err)
+	}
+
+	inlineCommand := valid + "Install Ollama embeddings:\n"
+	err = validateReadmeModuleSection(inlineCommand)
+	if err == nil || !strings.Contains(err.Error(), "must not inline") {
+		t.Fatalf("validateReadmeModuleSection inline command error = %v, want inline rejection", err)
+	}
+}
+
+func TestValidateModuleDocumentationReferencesEmbeddingModules(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	readme := `# OpenClerk
+
+## Modules
+
+### Agent Module Instructions
+
+Tell an agent.
+
+Available installable modules:
+
+| Module | Skill |
+| --- | --- |
+| ` + "`modules/example-embeddings/module.json`" + ` | ` + "`modules/example-embeddings/skill/example/SKILL.md`" + ` |
+
+Exact module commands live in ` + "`modules/docs/install.md`" + `.
+`
+	moduleDoc := `# OpenClerk Module Install
+
+| Module | Skill |
+| --- | --- |
+| ` + "`modules/example-embeddings/module.json`" + ` | ` + "`modules/example-embeddings/skill/example/SKILL.md`" + ` |
+`
+	manifest := `{
+  "module": {"kind": "embedding_provider"},
+  "provides": [{"type": "skill", "path": "modules/example-embeddings/skill/example/SKILL.md"}]
+}`
+	writeTestFile(t, root, "README.md", readme)
+	writeTestFile(t, root, "modules/docs/install.md", moduleDoc)
+	writeTestFile(t, root, "modules/example-embeddings/module.json", manifest)
+	files := []string{
+		"README.md",
+		"modules/docs/install.md",
+		"modules/example-embeddings/module.json",
+	}
+	if err := validateModuleDocumentation(root, files); err != nil {
+		t.Fatalf("validateModuleDocumentation: %v", err)
+	}
+
+	writeTestFile(t, root, "modules/docs/install.md", "# OpenClerk Module Install\n")
+	err := validateModuleDocumentation(root, files)
+	if err == nil || !strings.Contains(err.Error(), "modules/docs/install.md must reference module manifest") {
+		t.Fatalf("validateModuleDocumentation missing module error = %v, want manifest reference rejection", err)
+	}
+}

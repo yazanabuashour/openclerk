@@ -336,6 +336,33 @@ func classifyCommand(command string, m *metrics) {
 	if commandContainsAction(actionText, "memory_router_recall_report") {
 		m.MemoryRouterRecallReportUsed = true
 	}
+	if strings.Contains(lower, "command -v openclerk") || strings.Contains(lower, "which openclerk") {
+		m.OpenClerkPathCheckUsed = true
+	}
+	if strings.Contains(lower, "openclerk --version") || strings.Contains(lower, "openclerk version") {
+		m.OpenClerkVersionCheckUsed = true
+	}
+	if isOpenClerkSkillCheckCommand(lower) {
+		m.OpenClerkSkillCheckUsed = true
+	}
+	if commandContainsAction(actionText, "semantic_search") {
+		m.SemanticSearchUsed = true
+	}
+	if commandContainsAction(actionText, "install_module") {
+		m.ModuleInstallUsed = true
+		m.ModuleProviders = append(m.ModuleProviders, actionFieldValues(actionText, "install_module", "provider")...)
+	}
+	if commandContainsAction(actionText, "configure_module") {
+		m.ModuleConfigureUsed = true
+		m.ModuleProviders = append(m.ModuleProviders, actionFieldValues(actionText, "configure_module", "provider")...)
+	}
+	if commandContainsAction(actionText, "list_modules") {
+		m.ModuleListUsed = true
+	}
+	if commandContainsAction(actionText, "remove_module") {
+		m.ModuleRemoveUsed = true
+		m.ModuleProviders = append(m.ModuleProviders, actionFieldValues(actionText, "remove_module", "provider")...)
+	}
 	if commandContainsAction(actionText, "compile_synthesis") {
 		m.CompileSynthesisUsed = true
 	}
@@ -389,6 +416,7 @@ func commandContainsWorkflowPrimitive(actionText string) bool {
 		"projection_states",
 		"audit_contradictions",
 		"memory_router_recall_report",
+		"semantic_search",
 	} {
 		if commandContainsAction(actionText, action) {
 			return true
@@ -396,6 +424,19 @@ func commandContainsWorkflowPrimitive(actionText string) bool {
 	}
 	return false
 }
+
+func isOpenClerkSkillCheckCommand(lower string) bool {
+	if !strings.Contains(lower, "skills/openclerk/skill.md") {
+		return false
+	}
+	for _, prefix := range []string{"test -f", "[ -f", "stat ", "cat ", "sed ", "head ", "tail "} {
+		if strings.Contains(lower, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
 func actionRefIDs(actionText string, action string) []string {
 	return actionFieldValues(actionText, action, "ref_id")
 }
@@ -689,6 +730,15 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.AuditContradictionsUsed = out.AuditContradictionsUsed || current.AuditContradictionsUsed
 		out.AuditContradictionsModes = append(out.AuditContradictionsModes, current.AuditContradictionsModes...)
 		out.MemoryRouterRecallReportUsed = out.MemoryRouterRecallReportUsed || current.MemoryRouterRecallReportUsed
+		out.OpenClerkPathCheckUsed = out.OpenClerkPathCheckUsed || current.OpenClerkPathCheckUsed
+		out.OpenClerkVersionCheckUsed = out.OpenClerkVersionCheckUsed || current.OpenClerkVersionCheckUsed
+		out.OpenClerkSkillCheckUsed = out.OpenClerkSkillCheckUsed || current.OpenClerkSkillCheckUsed
+		out.SemanticSearchUsed = out.SemanticSearchUsed || current.SemanticSearchUsed
+		out.ModuleInstallUsed = out.ModuleInstallUsed || current.ModuleInstallUsed
+		out.ModuleConfigureUsed = out.ModuleConfigureUsed || current.ModuleConfigureUsed
+		out.ModuleListUsed = out.ModuleListUsed || current.ModuleListUsed
+		out.ModuleRemoveUsed = out.ModuleRemoveUsed || current.ModuleRemoveUsed
+		out.ModuleProviders = append(out.ModuleProviders, current.ModuleProviders...)
 		out.CompileSynthesisUsed = out.CompileSynthesisUsed || current.CompileSynthesisUsed
 		out.SourceAuditReportUsed = out.SourceAuditReportUsed || current.SourceAuditReportUsed
 		out.SourceAuditReportModes = append(out.SourceAuditReportModes, current.SourceAuditReportModes...)

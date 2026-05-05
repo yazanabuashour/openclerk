@@ -22,7 +22,7 @@ func isRepoDocsDogfoodScenario(id string) bool {
 	}
 }
 func isReleaseBlockingScenario(id string) bool {
-	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isHighTouchMemoryRouterRecallScenario(id) && !isMemoryRouterRecallCandidateScenario(id) && !isMemoryRouterRecallReportScenario(id) && !isPromotedRecordDomainScenario(id) && !isHighTouchRelationshipRecordScenario(id) && !isRelationshipRecordCandidateScenario(id) && !isDocumentHistoryScenario(id) && !isHighTouchDocumentLifecycleScenario(id) && !isDocumentLifecycleRollbackCandidateScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isCaptureLowRiskScenario(id) && !isCaptureExplicitOverridesScenario(id) && !isCaptureDuplicateCandidateScenario(id) && !isTaggingScenario(id) && !isCaptureSaveThisNoteScenario(id) && !isCaptureDocumentLinksScenario(id) && !isSourceURLUpdateScenario(id) && !isWebURLIntakeScenario(id) && !isWebURLStaleRepairScenario(id) && !isWebURLStaleImpactScenario(id) && !isWebProductPageScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isUnsupportedArtifactKindScenario(id) && !isLocalFileArtifactScenario(id) && !isVideoYouTubeScenario(id) && !isNativeMediaTranscriptScenario(id) && !isSynthesisCompileScenario(id) && !isHighTouchCompileSynthesisScenario(id) && !isCompileSynthesisCandidateScenario(id) && !isCompileSynthesisWorkflowActionScenario(id) && !isBroadAuditScenario(id) && !isSourceAuditWorkflowActionScenario(id) && !isEvidenceBundleWorkflowActionScenario(id) && !isParallelRunnerScenario(id)
+	return !isPopulatedVaultScenario(id) && !isRepoDocsDogfoodScenario(id) && !isGraphSemanticsRevisitScenario(id) && !isMemoryRouterRevisitScenario(id) && !isHighTouchMemoryRouterRecallScenario(id) && !isMemoryRouterRecallCandidateScenario(id) && !isMemoryRouterRecallReportScenario(id) && !isPromotedRecordDomainScenario(id) && !isHighTouchRelationshipRecordScenario(id) && !isRelationshipRecordCandidateScenario(id) && !isDocumentHistoryScenario(id) && !isHighTouchDocumentLifecycleScenario(id) && !isDocumentLifecycleRollbackCandidateScenario(id) && !isAgentChosenPathScenario(id) && !isPathTitleAutonomyScenario(id) && !isCaptureLowRiskScenario(id) && !isCaptureExplicitOverridesScenario(id) && !isCaptureDuplicateCandidateScenario(id) && !isTaggingScenario(id) && !isCaptureSaveThisNoteScenario(id) && !isCaptureDocumentLinksScenario(id) && !isSourceURLUpdateScenario(id) && !isWebURLIntakeScenario(id) && !isWebURLStaleRepairScenario(id) && !isWebURLStaleImpactScenario(id) && !isWebProductPageScenario(id) && !isDocumentThisScenario(id) && !isDocumentArtifactCandidateScenario(id) && !isArtifactIngestionScenario(id) && !isUnsupportedArtifactKindScenario(id) && !isLocalFileArtifactScenario(id) && !isVideoYouTubeScenario(id) && !isNativeMediaTranscriptScenario(id) && !isSynthesisCompileScenario(id) && !isHighTouchCompileSynthesisScenario(id) && !isCompileSynthesisCandidateScenario(id) && !isCompileSynthesisWorkflowActionScenario(id) && !isBroadAuditScenario(id) && !isSourceAuditWorkflowActionScenario(id) && !isEvidenceBundleWorkflowActionScenario(id) && !isParallelRunnerScenario(id) && !isInstallUpgradeModuleScenario(id)
 }
 func isParallelRunnerScenario(id string) bool {
 	switch id {
@@ -31,6 +31,17 @@ func isParallelRunnerScenario(id string) bool {
 	default:
 		return false
 	}
+}
+func isInstallUpgradeModuleScenario(id string) bool {
+	switch id {
+	case installInstructionsAgentScenarioID, upgradeInstructionsAgentScenarioID, moduleAgentInstallScenarioID:
+		return true
+	default:
+		return false
+	}
+}
+func installUpgradeModuleScenarioIDs() []string {
+	return []string{installInstructionsAgentScenarioID, upgradeInstructionsAgentScenarioID, moduleAgentInstallScenarioID}
 }
 func isGraphSemanticsRevisitScenario(id string) bool {
 	switch id {
@@ -353,6 +364,21 @@ func allScenarios() []scenario {
 			ID:     parallelRunnerReadsScenarioID,
 			Title:  "Parallel runner safe reads",
 			Prompt: "Use the configured local OpenClerk data path. This is a valid runner verification task, not a missing-fields request; all required JSON request fields are provided below. Exercise safe parallel OpenClerk read workflows only with installed openclerk JSON commands; do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Run these read-only commands concurrently where possible: openclerk document list_documents with path_prefix notes/parallel-runner/ and limit 10; openclerk retrieval search for parallel runner safe read contract evidence with limit 10; openclerk retrieval services_lookup with services.text Parallel runner and limit 10; openclerk retrieval decisions_lookup with decisions.text parallel runner concurrency and limit 10; and openclerk retrieval projection_states with limit 20. Wait for all JSON results. In the final answer, mention parallel safe reads, notes/parallel-runner/read-contract.md, records/services/parallel-runner.md or service evidence, docs/architecture/parallel-runner-concurrency.md or decision evidence, no raw SQLite/runtime_config/upsert failure, and that no write command was run.",
+		},
+		{
+			ID:     installInstructionsAgentScenarioID,
+			Title:  "Install instructions agent verification",
+			Prompt: "Use the committed README install instructions and the installed eval OpenClerk environment. This is a valid install verification task, not a missing-fields request. The harness has already installed the runner and skill for this eval; do not use curl, wget, network fetches, package managers, repo search, rg, find, broad file search, direct vault inspection, direct file edits, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. You may inspect README.md and check the installed skill path. Run command -v openclerk, openclerk --version, and a direct file check for .agents/skills/openclerk/SKILL.md or $CODEX_HOME/skills/openclerk/SKILL.md with test -f, stat, or cat. In the final answer, mention install verified, command -v openclerk, openclerk --version, skills/openclerk/SKILL.md, and that no network install or durable write was run.",
+		},
+		{
+			ID:     upgradeInstructionsAgentScenarioID,
+			Title:  "Upgrade instructions agent verification",
+			Prompt: "Use the committed README upgrade instructions and the installed eval OpenClerk environment. This is a valid upgrade checklist verification task, not a missing-fields request. The harness has already provided the upgraded runner and matching skill for this eval; do not use curl, wget, network fetches, package managers, repo search, rg, find, broad file search, direct vault inspection, direct file edits, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Run command -v openclerk, openclerk --version, and a direct file check for .agents/skills/openclerk/SKILL.md or $CODEX_HOME/skills/openclerk/SKILL.md with test -f, stat, or cat. In the final answer, mention upgrade verified, command -v openclerk, openclerk --version, skill re-registered, skills/openclerk/SKILL.md, and that no network upgrade or durable write was run.",
+		},
+		{
+			ID:     moduleAgentInstallScenarioID,
+			Title:  "Module agent install instructions",
+			Prompt: "Use the README Agent Module Instructions and modules/docs/install.md. This is a valid module registration task, not a missing-fields request. Install the Ollama embeddings module registration only through openclerk module; do not edit SQLite directly, do not build the adapter during the eval, do not run provider semantic_search, and do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Run openclerk module install_module for provider ollama with manifest_path modules/ollama-embeddings/module.json, command semantic-retrieval-adapter, embedding_model embeddinggemma, and ollama_url http://localhost:11434. Then run openclerk module list_modules and answer from the JSON results. In the final answer, mention module-agent install verified, ollama, modules/ollama-embeddings/module.json, modules/ollama-embeddings/skill/ollama-embeddings/SKILL.md, list_modules, verified or redacted module state, and that no direct SQLite or provider semantic_search was used.",
 		},
 		{
 			ID:    ragRetrievalScenarioID,

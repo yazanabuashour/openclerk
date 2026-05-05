@@ -26,6 +26,7 @@ type Config struct {
 	DatabasePath        string
 	SyncDiagnosticsPath string
 	GitCheckpoints      bool
+	ModuleManifestRoot  string
 }
 
 // Paths describes the resolved runtime locations on disk.

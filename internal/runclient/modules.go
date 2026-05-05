@@ -63,7 +63,7 @@ func InstallSemanticModule(ctx context.Context, cfg Config, input SemanticModule
 		return SemanticModuleConfig{}, domain.ValidationError("module.command is required", nil)
 	}
 	manifestPath := filepath.Clean(input.ManifestPath)
-	manifest, manifestSHA, err := verifySemanticModuleManifest(manifestPath, provider, input.ModuleName)
+	manifest, manifestSHA, err := verifySemanticModuleManifest(resolveSemanticModuleManifestPath(cfg, manifestPath), provider, input.ModuleName)
 	if err != nil {
 		return SemanticModuleConfig{}, err
 	}
@@ -187,7 +187,7 @@ func ReadSemanticModuleConfig(ctx context.Context, cfg Config, provider string) 
 		config.VerificationStatus = "disabled"
 		return config, nil
 	}
-	if err := verifyInstalledSemanticModule(config); err != nil {
+	if err := verifyInstalledSemanticModule(cfg, config); err != nil {
 		config.VerificationStatus = "verification_failed"
 		return config, err
 	}
@@ -208,14 +208,14 @@ func normalizeSemanticModuleProvider(provider string) (string, error) {
 	}
 }
 
-func verifyInstalledSemanticModule(config SemanticModuleConfig) error {
+func verifyInstalledSemanticModule(cfg Config, config SemanticModuleConfig) error {
 	if strings.TrimSpace(config.Command) == "" {
 		return domain.ValidationError("semantic module command is missing", map[string]any{"provider": config.Provider})
 	}
 	if strings.TrimSpace(config.ManifestPath) == "" || strings.TrimSpace(config.ManifestSHA256) == "" {
 		return domain.ValidationError("semantic module manifest verification is missing", map[string]any{"provider": config.Provider})
 	}
-	manifest, sha, err := verifySemanticModuleManifest(config.ManifestPath, config.Provider, config.ModuleName)
+	manifest, sha, err := verifySemanticModuleManifest(resolveSemanticModuleManifestPath(cfg, config.ManifestPath), config.Provider, config.ModuleName)
 	if err != nil {
 		return err
 	}
@@ -223,6 +223,13 @@ func verifyInstalledSemanticModule(config SemanticModuleConfig) error {
 		return domain.ValidationError("semantic module manifest digest changed", map[string]any{"provider": config.Provider, "module": manifest.Module.Name})
 	}
 	return nil
+}
+
+func resolveSemanticModuleManifestPath(cfg Config, manifestPath string) string {
+	if cfg.ModuleManifestRoot == "" || filepath.IsAbs(manifestPath) {
+		return manifestPath
+	}
+	return filepath.Join(cfg.ModuleManifestRoot, manifestPath)
 }
 
 type semanticModuleManifest struct {

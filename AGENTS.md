@@ -47,8 +47,9 @@ bd close <id>         # Complete work
 4. **Prepare review** - Run `git status`, summarize changed files and quality gates, and confirm no commit or push has been performed
 5. **Codex review** - Run the review command once:
    ```bash
-   codex --search -m gpt-5.5 -c 'model_reasoning_effort="high"' review --uncommitted "If you find issues, address the findings."
+   codex --search -m gpt-5.5 -c 'model_reasoning_effort="high"' review --uncommitted
    ```
+   If the review finds issues, address the findings.
 6. **Commit reviewed changes** - After the review command completes, stage the intended files and create a local commit
 7. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash

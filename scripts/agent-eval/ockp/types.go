@@ -158,6 +158,15 @@ type metrics struct {
 	AuditContradictionsUsed         bool           `json:"audit_contradictions_used"`
 	AuditContradictionsModes        []string       `json:"audit_contradictions_modes,omitempty"`
 	MemoryRouterRecallReportUsed    bool           `json:"memory_router_recall_report_used"`
+	OpenClerkPathCheckUsed          bool           `json:"openclerk_path_check_used"`
+	OpenClerkVersionCheckUsed       bool           `json:"openclerk_version_check_used"`
+	OpenClerkSkillCheckUsed         bool           `json:"openclerk_skill_check_used"`
+	SemanticSearchUsed              bool           `json:"semantic_search_used"`
+	ModuleInstallUsed               bool           `json:"module_install_used"`
+	ModuleConfigureUsed             bool           `json:"module_configure_used"`
+	ModuleListUsed                  bool           `json:"module_list_used"`
+	ModuleRemoveUsed                bool           `json:"module_remove_used"`
+	ModuleProviders                 []string       `json:"module_providers,omitempty"`
 	CompileSynthesisUsed            bool           `json:"compile_synthesis_used"`
 	SourceAuditReportUsed           bool           `json:"source_audit_report_used"`
 	SourceAuditReportModes          []string       `json:"source_audit_report_modes,omitempty"`

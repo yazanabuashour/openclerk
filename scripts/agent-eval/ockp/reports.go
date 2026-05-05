@@ -91,7 +91,7 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	if releaseBlocking {
 		return nil
 	}
-	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != highTouchMemoryRouterRecallLaneName && lane != memoryRouterRecallCandidateLaneName && lane != memoryRouterRecallReportLaneName && lane != promotedRecordDomainLaneName && lane != highTouchRelationshipRecordLaneName && lane != relationshipRecordCandidateLaneName && lane != parallelRunnerLaneName && lane != documentHistoryLaneName && lane != highTouchDocumentLifecycleLaneName && lane != documentLifecycleRollbackCandidateLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != captureLowRiskLaneName && lane != captureExplicitOverridesLaneName && lane != captureDuplicateCandidateLaneName && lane != taggingLaneName && lane != captureSaveThisNoteLaneName && lane != captureDocumentLinksLaneName && lane != sourceURLUpdateLaneName && lane != webURLIntakeLaneName && lane != webURLStaleRepairLaneName && lane != webURLStaleImpactLaneName && lane != webProductPageLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != unsupportedArtifactKindLaneName && lane != localFileArtifactLaneName && lane != videoYouTubeLaneName && lane != nativeMediaTranscriptLaneName && lane != synthesisCompileLaneName && lane != highTouchCompileSynthesisLaneName && lane != compileSynthesisCandidateLaneName && lane != compileSynthesisWorkflowActionLaneName && lane != broadAuditLaneName && lane != sourceAuditWorkflowActionLaneName && lane != evidenceBundleWorkflowActionLaneName {
+	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != highTouchMemoryRouterRecallLaneName && lane != memoryRouterRecallCandidateLaneName && lane != memoryRouterRecallReportLaneName && lane != promotedRecordDomainLaneName && lane != highTouchRelationshipRecordLaneName && lane != relationshipRecordCandidateLaneName && lane != parallelRunnerLaneName && lane != installUpgradeModuleLaneName && lane != documentHistoryLaneName && lane != highTouchDocumentLifecycleLaneName && lane != documentLifecycleRollbackCandidateLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != captureLowRiskLaneName && lane != captureExplicitOverridesLaneName && lane != captureDuplicateCandidateLaneName && lane != taggingLaneName && lane != captureSaveThisNoteLaneName && lane != captureDocumentLinksLaneName && lane != sourceURLUpdateLaneName && lane != webURLIntakeLaneName && lane != webURLStaleRepairLaneName && lane != webURLStaleImpactLaneName && lane != webProductPageLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != unsupportedArtifactKindLaneName && lane != localFileArtifactLaneName && lane != videoYouTubeLaneName && lane != nativeMediaTranscriptLaneName && lane != synthesisCompileLaneName && lane != highTouchCompileSynthesisLaneName && lane != compileSynthesisCandidateLaneName && lane != compileSynthesisWorkflowActionLaneName && lane != broadAuditLaneName && lane != sourceAuditWorkflowActionLaneName && lane != evidenceBundleWorkflowActionLaneName {
 		return nil
 	}
 	summary := targetedLaneSummary{
@@ -101,6 +101,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	}
 	if lane == documentArtifactCandidateLaneName {
 		summary.PublicSurface = []string{"skills/openclerk/SKILL.md", "openclerk document", "openclerk retrieval"}
+	}
+	if lane == installUpgradeModuleLaneName {
+		summary.PublicSurface = []string{"README.md", "skills/openclerk/SKILL.md", "openclerk module", "modules/docs/install.md"}
 	}
 	for _, result := range results {
 		include := false
@@ -139,6 +142,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		case parallelRunnerLaneName:
 			include = isParallelRunnerScenario(result.Scenario)
 			classification, posture = classifyTargetedParallelRunnerResult(result)
+		case installUpgradeModuleLaneName:
+			include = isInstallUpgradeModuleScenario(result.Scenario)
+			classification, posture = classifyTargetedInstallUpgradeModuleResult(result)
 		case documentHistoryLaneName:
 			include = isDocumentHistoryScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
 			classification, posture = classifyTargetedDocumentHistoryResult(result)
@@ -299,6 +305,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	case parallelRunnerLaneName:
 		summary.Decision = "relax_skill_guidance_for_safe_parallel_reads"
 		summary.Promotion = "targeted parallel runner UX evidence for documented safe read/startup workflows; no public JSON schema, storage schema, or write-concurrency expansion"
+	case installUpgradeModuleLaneName:
+		summary.Decision = "track_install_upgrade_module_agent_instructions"
+		summary.Promotion = "targeted install, upgrade, and module-agent instruction evidence only; no installer transport, module schema, storage schema, provider behavior, or default semantic ranking change from this eval"
 	case documentHistoryLaneName:
 		summary.Decision = documentHistoryDecision(summary.ScenarioClassifications)
 		summary.Promotion = "targeted document lifecycle evidence only; no promoted history, diff, review, restore, rollback, schema, migration, storage behavior, or public API change from this eval"

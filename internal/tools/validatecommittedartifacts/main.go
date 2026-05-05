@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -61,6 +62,9 @@ func validateCommittedArtifacts(root string) error {
 	if err := validateNoRealVaultJSONReports(files); err != nil {
 		return err
 	}
+	if err := validateModuleDocumentation(root, files); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -107,6 +111,7 @@ func isPublicArtifactPath(rel string) bool {
 		return false
 	}
 	if strings.HasPrefix(rel, "docs/") ||
+		strings.HasPrefix(rel, "modules/docs/") ||
 		strings.HasPrefix(rel, "skills/") ||
 		strings.HasPrefix(rel, ".github/") {
 		return true
@@ -145,6 +150,142 @@ func validatePublicArtifactText(rel string, text string) error {
 		}
 	}
 	return nil
+}
+
+func validateModuleDocumentation(root string, files []string) error {
+	read := func(rel string) (string, error) {
+		content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(rel)))
+		if err != nil {
+			if os.IsNotExist(err) {
+				return "", fmt.Errorf("%s not found", rel)
+			}
+			return "", fmt.Errorf("read %s: %w", rel, err)
+		}
+		return strings.ReplaceAll(string(content), "\r\n", "\n"), nil
+	}
+	readme, err := read("README.md")
+	if err != nil {
+		return err
+	}
+	if err := validateReadmeModuleSection(readme); err != nil {
+		return err
+	}
+	moduleInstallDoc, err := read("modules/docs/install.md")
+	if err != nil {
+		return err
+	}
+	modules, err := documentedEmbeddingModules(root, files)
+	if err != nil {
+		return err
+	}
+	if len(modules) == 0 {
+		return errors.New("module docs validation found no embedding provider module manifests")
+	}
+	for _, module := range modules {
+		for _, target := range []struct {
+			name string
+			text string
+		}{
+			{name: "README.md", text: readme},
+			{name: "modules/docs/install.md", text: moduleInstallDoc},
+		} {
+			if !strings.Contains(target.text, module.ManifestPath) {
+				return fmt.Errorf("%s must reference module manifest %s", target.name, module.ManifestPath)
+			}
+			if !strings.Contains(target.text, module.SkillPath) {
+				return fmt.Errorf("%s must reference module skill %s", target.name, module.SkillPath)
+			}
+		}
+	}
+	return nil
+}
+
+func validateReadmeModuleSection(readme string) error {
+	modulesIndex := strings.Index(readme, "\n## Modules\n")
+	agentIndex := strings.Index(readme, "\n### Agent Module Instructions\n")
+	availableIndex := strings.Index(readme, "\nAvailable installable modules:\n")
+	linkIndex := strings.Index(readme, "`modules/docs/install.md`")
+	if modulesIndex < 0 {
+		return errors.New("README.md must include ## Modules")
+	}
+	if agentIndex < 0 {
+		return errors.New("README.md module section must include ### Agent Module Instructions")
+	}
+	if availableIndex < 0 {
+		return errors.New("README.md module section must include available installable modules")
+	}
+	if modulesIndex >= agentIndex || agentIndex >= availableIndex {
+		return errors.New("README.md must put Agent Module Instructions at the beginning of the Modules section")
+	}
+	if linkIndex < 0 {
+		return errors.New("README.md module section must link to modules/docs/install.md")
+	}
+	for _, forbidden := range []string{
+		"Module commands are available from the current source checkout",
+		"Released runners through",
+		"mise exec -- go build -o \"$HOME/.local/bin/openclerk\" ./cmd/openclerk",
+		"Install Ollama embeddings:",
+		"Install Gemini embeddings:",
+		"Configure a module:",
+		"Remove a module:",
+		`{"action":"install_module"`,
+	} {
+		if strings.Contains(readme, forbidden) {
+			return fmt.Errorf("README.md module section must not inline module implementation detail %q", forbidden)
+		}
+	}
+	return nil
+}
+
+type documentedModule struct {
+	ManifestPath string
+	SkillPath    string
+}
+
+func documentedEmbeddingModules(root string, files []string) ([]documentedModule, error) {
+	out := []documentedModule{}
+	for _, rel := range files {
+		rel = filepath.ToSlash(rel)
+		if !strings.HasPrefix(rel, "modules/") || !strings.HasSuffix(rel, "/module.json") {
+			continue
+		}
+		module, err := readDocumentedModule(root, rel)
+		if err != nil {
+			return nil, err
+		}
+		if module.ManifestPath != "" {
+			out = append(out, module)
+		}
+	}
+	return out, nil
+}
+
+func readDocumentedModule(root string, rel string) (documentedModule, error) {
+	content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(rel)))
+	if err != nil {
+		return documentedModule{}, fmt.Errorf("read %s: %w", rel, err)
+	}
+	var manifest struct {
+		Module struct {
+			Kind string `json:"kind"`
+		} `json:"module"`
+		Provides []struct {
+			Type string `json:"type"`
+			Path string `json:"path"`
+		} `json:"provides"`
+	}
+	if err := json.Unmarshal(content, &manifest); err != nil {
+		return documentedModule{}, fmt.Errorf("decode %s: %w", rel, err)
+	}
+	if manifest.Module.Kind != "embedding_provider" {
+		return documentedModule{}, nil
+	}
+	for _, provided := range manifest.Provides {
+		if provided.Type == "skill" && strings.TrimSpace(provided.Path) != "" {
+			return documentedModule{ManifestPath: rel, SkillPath: filepath.ToSlash(provided.Path)}, nil
+		}
+	}
+	return documentedModule{}, fmt.Errorf("%s embedding provider manifest must provide a skill path", rel)
 }
 
 func containsRunRootPlaceholder(line string) bool {
