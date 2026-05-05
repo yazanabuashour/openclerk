@@ -14,7 +14,7 @@ OPENCLERK_INSTALL_DIR="$HOME/.local/bin" sh -c "$(curl -fsSL https://github.com/
 Install a pinned release:
 
 ```bash
-OPENCLERK_INSTALL_DIR="$HOME/.local/bin" OPENCLERK_VERSION=v0.2.3 sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/v0.2.3/install.sh)"
+OPENCLERK_INSTALL_DIR="$HOME/.local/bin" OPENCLERK_VERSION=v0.2.4 sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/v0.2.4/install.sh)"
 ```
 
 Register the matching `skills/openclerk/SKILL.md` with the agent's native skill

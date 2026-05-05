@@ -53,8 +53,8 @@ Install into a temporary directory, then verify the runner version and commands:
 ```bash
 install_dir="$(mktemp -d)"
 OPENCLERK_INSTALL_DIR="$install_dir" \
-  OPENCLERK_VERSION=v0.2.3 \
-  sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/v0.2.3/install.sh)"
+  OPENCLERK_VERSION=v0.2.4 \
+  sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/v0.2.4/install.sh)"
 
 export PATH="$install_dir:$PATH"
 command -v openclerk

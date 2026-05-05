@@ -1,6 +1,6 @@
 ---
 name: OpenClerk
-description: Use OpenClerk through installed openclerk document and openclerk retrieval JSON runner. With explicit user content or runner-supported public-source context, let the agent/OpenClerk propose path, title, body preview, tags, fields, and next approved request; do not write before approval. Bootstrap no-tools rule - if required fields, content/body, or update target are missing and no faithful candidate, duplicate-risk, artifact, or public-link placement proposal can be formed; if numeric limit is negative; or if bypass is requested with SQLite, raw vault/file/repo inspection, HTTP/MCP, legacy/source-built paths, unsupported transports, backend variants, module-cache inspection, rg, find, ls, external OCR, browser automation, local file reads, or opaque artifact parsing, this description is complete. For those invalid cases only, do not open this skill file, run commands, use tools, or call the runner; respond with exactly one no-tools assistant answer naming the missing/invalid fields or unsupported workflow.
+description: Use installed openclerk document and openclerk retrieval JSON. With explicit user content or runner-supported public-source context, let the agent/OpenClerk propose path, title, body preview, tags, fields, and next approved request; do not write before approval. Bootstrap no-tools rule - if required fields, content/body, or update target are missing and no faithful candidate, duplicate-risk, artifact, or public-link placement proposal can be formed; if numeric limit is negative; or if bypass is requested with SQLite, raw vault/file/repo inspection, HTTP/MCP, legacy/source-built paths, unsupported transports, backend variants, module-cache inspection, rg, find, ls, external OCR, browser automation, local file reads, or opaque artifact parsing, this description is complete. For those invalid cases only, do not open this skill file, run commands, use tools, or call the runner; respond with exactly one no-tools assistant answer naming the missing/invalid fields or unsupported workflow, and ask for missing fields.
 license: MIT
 compatibility: Requires local filesystem access and an installed openclerk binary on PATH.
 ---
@@ -30,8 +30,10 @@ workflow-action comparison, not a reason to expand this file.
 Prefer a promoted workflow action over manual primitive choreography when it
 matches the request:
 
-- Source-linked synthesis create/update: document `compile_synthesis`, then
-  answer from `compile_synthesis.agent_handoff`.
+- Source-linked synthesis create/update: document `compile_synthesis` once
+  with the user-provided target, title, source refs, and requested claims as
+  `body_facts` or body text, preserving stated source roles; then answer from
+  `compile_synthesis.agent_handoff`.
 - Source URL placement before durable fetch/write: document
   `ingest_source_url` with `mode: "plan"`, then answer from
   `source_placement_plan.agent_handoff`.
@@ -44,8 +46,8 @@ matches the request:
 - Source-sensitive audit explain/repair: retrieval `source_audit_report`, then
   answer from `source_audit.agent_handoff`.
 - Records, decisions, provenance, and projection evidence bundles: retrieval
-  `evidence_bundle_report`, then answer from
-  `evidence_bundle.agent_handoff`.
+  `evidence_bundle_report` once with query/entity/projection together; do not
+  split into multiple calls; answer from `evidence_bundle.agent_handoff`.
 - Duplicate update-versus-new clarification: retrieval
   `duplicate_candidate_report`, then answer from
   `duplicate_candidate.agent_handoff`.
@@ -67,14 +69,17 @@ matches the request:
 
 Use lower-level primitives for explicit primitive requests, advanced/manual
 cases, unsupported workflow-action inputs, and follow-up inspection after a
-runner rejection. For promoted workflow actions, answer from the returned
-handoff before doing follow-up primitive inspection.
+runner rejection. For promoted workflow actions, answer from the first
+successful returned handoff; do not repeat the same action or inspect
+follow-up primitives unless the result rejects or the user asks for more.
 
 ## Core Guardrails
 
 - Answer routine OpenClerk requests only from runner JSON results. Use the
   configured environment; pass `--db` only when the user explicitly names a
   dataset.
+- When the user says runner and data path are configured, skip setup checks
+  (`command -v`, `--version`, `resolve_paths`, `capabilities`, skill path).
 - Treat every runner path as vault-relative, such as
   `notes/projects/example.md`, `sources/example.md`, or `synthesis/`. Never
   use storage roots, machine-absolute paths, `.openclerk-eval/vault`, or
@@ -108,6 +113,10 @@ planning impossible. Ask for missing content or target fields by name, or
 reject the invalid/unsupported workflow and point back to the OpenClerk runner
 contract.
 
+For strict document creation without enough content or context for
+proposal-first planning, answer: missing `path`, `title`, and `body`; please
+provide them. Do not call `validate`, `create_document`, or discovery.
+
 Proposal-first defaults are valid runner-backed work when explicit user content
 or runner-supported public-source context is present:
 
@@ -139,7 +148,7 @@ policies and let runner results drive the answer:
 - Video/YouTube source intake: use `ingest_video_url` only with user-supplied transcript text and provenance; do not acquire media or transcripts externally.
 - Document lifecycle review, rollback, restore, and semantic diff: stay inside `openclerk document` and `openclerk retrieval`. Use `git_lifecycle_report` only for local Git status/history/checkpoints; it is storage history, not semantic provenance, and checkpoint mode needs explicit runner config. There is no public raw diff, restore, or rollback action.
 - Messy populated-vault retrieval: answer from runner-visible authority such as metadata-filtered authority results, active canonical sources, cited source paths, `doc_id`, and `chunk_id`; treat polluted, decoy, stale, draft, archived, duplicate, or candidate documents as non-authority unless runner-visible source authority says otherwise.
-- Synthesis maintenance: prefer `compile_synthesis`; use lower-level document and retrieval actions only for explicit primitive or manual cases; preserve `source_refs`, `## Sources`, `## Freshness`, provenance, and projection freshness.
+- Synthesis maintenance: prefer `compile_synthesis`; include requested outcome claims in `body_facts` or `body`; use lower-level document and retrieval actions only for explicit primitive or manual cases; preserve `source_refs`, `## Sources`, `## Freshness`, provenance, and projection freshness.
 
 Detailed versions of these workflows belong in runner actions, compact runner
 help, maintainer/eval docs, or follow-up candidate-surface comparisons, not in
@@ -156,15 +165,6 @@ openclerk document
 Common actions are `validate`, `create_document`, `ingest_source_url`, `ingest_video_url`, `web_search_plan`, `artifact_candidate_plan`, `list_documents`, `get_document`, `append_document`, `replace_section`, `resolve_paths`, `inspect_layout`, `compile_synthesis`, and `git_lifecycle_report`.
 Use `openclerk document --help` for primitive and promoted workflow-action
 request shapes, including source placement, source ingestion, and video fields.
-
-Minimal request shapes:
-
-```json
-{"action":"validate","document":{"path":"notes/example.md","title":"Example","body":"# Example\n\nBody."}}
-{"action":"list_documents","list":{"path_prefix":"notes/","limit":20}}
-{"action":"get_document","doc_id":"doc_id_from_json"}
-{"action":"replace_section","doc_id":"doc_id_from_json","heading":"Summary","content":"Updated summary."}
-```
 
 Validation rejections are JSON results with `rejected: true` and
 `rejection_reason`; runtime failures exit non-zero and write errors to stderr.

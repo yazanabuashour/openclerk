@@ -221,6 +221,7 @@ func classifyCommand(command string, m *metrics) {
 			*target = append(*target, evidence)
 		}
 	}
+	openClerkSkillCheck := isOpenClerkSkillCheckCommand(lower)
 	if strings.Contains(command, "client.gen.go") || strings.Contains(command, "openapi.gen.go") || strings.Contains(command, "internal/api/openapi.gen.go") {
 		m.GeneratedFileInspection = true
 		addEvidence(&m.GeneratedFileEvidence)
@@ -229,7 +230,7 @@ func classifyCommand(command string, m *metrics) {
 		m.ModuleCacheInspection = true
 		addEvidence(&m.ModuleCacheEvidence)
 	}
-	if strings.Contains(command, "rg --files") || isBroadFindCommand(command) {
+	if !openClerkSkillCheck && (strings.Contains(command, "rg --files") || isBroadFindCommand(command)) {
 		m.BroadRepoSearch = true
 		addEvidence(&m.BroadRepoSearchEvidence)
 	}
@@ -342,7 +343,7 @@ func classifyCommand(command string, m *metrics) {
 	if strings.Contains(lower, "openclerk --version") || strings.Contains(lower, "openclerk version") {
 		m.OpenClerkVersionCheckUsed = true
 	}
-	if isOpenClerkSkillCheckCommand(lower) {
+	if openClerkSkillCheck {
 		m.OpenClerkSkillCheckUsed = true
 	}
 	if commandContainsAction(actionText, "semantic_search") {
@@ -426,10 +427,10 @@ func commandContainsWorkflowPrimitive(actionText string) bool {
 }
 
 func isOpenClerkSkillCheckCommand(lower string) bool {
-	if !strings.Contains(lower, "skills/openclerk/skill.md") {
+	if !strings.Contains(lower, "openclerk") || !strings.Contains(lower, "skill") {
 		return false
 	}
-	for _, prefix := range []string{"test -f", "[ -f", "stat ", "cat ", "sed ", "head ", "tail "} {
+	for _, prefix := range []string{"test -f", "[ -f", "stat ", "cat ", "sed ", "head ", "tail ", "rg --files"} {
 		if strings.Contains(lower, prefix) {
 			return true
 		}

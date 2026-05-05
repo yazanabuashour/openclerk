@@ -917,6 +917,45 @@ func TestDocumentTaskCompileSynthesisBuildsBodyFromFacts(t *testing.T) {
 	}
 }
 
+func TestDocumentTaskCompileSynthesisAddsSourceRoleFacts(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "sources/role-current.md", "Role current", "---\nsupersedes: sources/role-old.md\n---\n# Role current\n\n## Summary\nCurrent compile_synthesis revisit guidance says promoted compile_synthesis handles routine synthesis refresh.\n")
+	createDocument(t, ctx, config, "sources/role-old.md", "Role old", "---\nstatus: superseded\nsuperseded_by: sources/role-current.md\n---\n# Role old\n\n## Summary\nOld source.\n")
+
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionCompileSynthesis,
+		Synthesis: runner.CompileSynthesisInput{
+			Path:       "synthesis/role-built.md",
+			Title:      "Role Built",
+			SourceRefs: []string{"sources/role-current.md", "sources/role-old.md"},
+			BodyFacts:  []string{"Role-aware compile_synthesis body."},
+			Mode:       "create_or_update",
+		},
+	})
+	if err != nil {
+		t.Fatalf("compile synthesis role facts: %v", err)
+	}
+	get, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGet,
+		DocID:  result.CompileSynthesis.DocumentID,
+	})
+	if err != nil {
+		t.Fatalf("get role-built synthesis: %v", err)
+	}
+	for _, want := range []string{
+		"- Current source: sources/role-current.md",
+		"- Current compile_synthesis revisit decision: promoted compile_synthesis handles routine synthesis refresh.",
+		"- Superseded source: sources/role-old.md",
+	} {
+		if get.Document == nil || !strings.Contains(get.Document.Body, want) {
+			t.Fatalf("role-built body missing %q:\n%s", want, get.Document.Body)
+		}
+	}
+}
+
 func TestDocumentTaskCompileSynthesisRejectsMissingFields(t *testing.T) {
 	t.Parallel()
 

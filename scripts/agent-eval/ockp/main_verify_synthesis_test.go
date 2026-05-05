@@ -321,6 +321,38 @@ func TestVerifyHighTouchCompileSynthesisNaturalRequiresProvenance(t *testing.T) 
 	}
 }
 
+func TestVerifyCompileSynthesisWorkflowActionRequiresDecisionSummary(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: compileSynthesisWorkflowActionScenarioID}); err != nil {
+		t.Fatalf("seed compile synthesis workflow action scenario: %v", err)
+	}
+	replaceSeedSection(t, ctx, paths, synthesisCompilePath, "Summary", "Current source: "+synthesisCompileCurrentSrc+"\n\nSuperseded source: "+synthesisCompileOldSrc)
+	workflowMetrics := metrics{
+		AssistantCalls:       1,
+		CompileSynthesisUsed: true,
+		EventTypeCounts:      map[string]int{},
+		CommandExecutions:    3,
+		ToolCalls:            3,
+	}
+	finalAnswer := "compile_synthesis updated " + synthesisCompilePath + " from " + synthesisCompileCurrentSrc + "; duplicate status ok, provenance refs recorded, freshness is fresh, validation boundaries and authority limits preserved."
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: compileSynthesisWorkflowActionScenarioID}, 1, finalAnswer, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify compile synthesis workflow action without decision summary: %v", err)
+	}
+	if result.Passed || result.DatabasePass || !strings.Contains(result.Details, "missing compile_synthesis decision summary") {
+		t.Fatalf("compile synthesis workflow action passed without decision summary: %+v", result)
+	}
+	replaceSeedSection(t, ctx, paths, synthesisCompilePath, "Summary", "Promoted compile_synthesis handles the routine workflow while primitives remain for manual cases.\n\nCurrent source: "+synthesisCompileCurrentSrc+"\n\nSuperseded source: "+synthesisCompileOldSrc)
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: compileSynthesisWorkflowActionScenarioID}, 1, finalAnswer, workflowMetrics)
+	if err != nil {
+		t.Fatalf("verify compile synthesis workflow action with decision summary: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("compile synthesis workflow action failed with decision summary: %+v", result)
+	}
+}
+
 func TestVerifyCompileSynthesisResponseCandidateRequiresContractAndWorkflow(t *testing.T) {
 	ctx := context.Background()
 	paths := scenarioPaths(t.TempDir())

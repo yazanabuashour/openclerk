@@ -11,7 +11,11 @@ import (
 )
 
 func runCompileSynthesis(ctx context.Context, client *runclient.Client, input CompileSynthesisInput) (CompileSynthesisResult, error) {
-	body := compileSynthesisBody(input)
+	sourceEvidence, sourceRoleFacts, err := compileSynthesisSourceEvidence(ctx, client, input.SourceRefs)
+	if err != nil {
+		return CompileSynthesisResult{}, err
+	}
+	body := compileSynthesisBody(compileSynthesisInputWithSourceRoleFacts(input, sourceRoleFacts))
 	candidates, matches, err := compileSynthesisCandidates(ctx, client, input.Path)
 	if err != nil {
 		return CompileSynthesisResult{}, err
@@ -60,10 +64,6 @@ func runCompileSynthesis(ctx context.Context, client *runclient.Client, input Co
 		return CompileSynthesisResult{}, err
 	}
 
-	sourceEvidence, err := compileSynthesisSourceEvidence(ctx, client, input.SourceRefs)
-	if err != nil {
-		return CompileSynthesisResult{}, err
-	}
 	projectionFreshness, err := compileSynthesisProjectionFreshness(ctx, client, document.DocID)
 	if err != nil {
 		return CompileSynthesisResult{}, err
@@ -170,6 +170,27 @@ func compileSynthesisAssembledContent(title string, sourceRefs []string, summary
 	return strings.Join(lines, "\n")
 }
 
+func compileSynthesisInputWithSourceRoleFacts(input CompileSynthesisInput, sourceRoleFacts []string) CompileSynthesisInput {
+	if len(sourceRoleFacts) == 0 {
+		return input
+	}
+	if body := strings.TrimSpace(input.Body); body != "" {
+		for _, fact := range sourceRoleFacts {
+			if !strings.Contains(body, fact) {
+				body += "\n" + fact
+			}
+		}
+		input.Body = body
+		return input
+	}
+	for _, fact := range sourceRoleFacts {
+		if !stringSliceContains(input.BodyFacts, fact) {
+			input.BodyFacts = append(input.BodyFacts, fact)
+		}
+	}
+	return input
+}
+
 func compileSynthesisBodyHasRequiredSections(body string) bool {
 	hasSources := strings.Contains(body, "\n## Sources") || strings.HasPrefix(body, "## Sources")
 	hasFreshness := strings.Contains(body, "\n## Freshness") || strings.HasPrefix(body, "## Freshness")
@@ -220,12 +241,13 @@ func compileSynthesisCandidates(ctx context.Context, client *runclient.Client, t
 	return candidatePaths, targetMatches, nil
 }
 
-func compileSynthesisSourceEvidence(ctx context.Context, client *runclient.Client, sourceRefs []string) ([]Citation, error) {
+func compileSynthesisSourceEvidence(ctx context.Context, client *runclient.Client, sourceRefs []string) ([]Citation, []string, error) {
 	citations := []Citation{}
+	roleFacts := []string{}
 	for _, ref := range sourceRefs {
 		document, ok, err := auditDocumentByPath(ctx, client, ref)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if !ok {
 			citations = append(citations, Citation{Path: ref})
@@ -235,8 +257,47 @@ func compileSynthesisSourceEvidence(ctx context.Context, client *runclient.Clien
 			DocID: document.DocID,
 			Path:  document.Path,
 		})
+		switch {
+		case strings.EqualFold(strings.TrimSpace(document.Metadata["status"]), "superseded") ||
+			strings.TrimSpace(document.Metadata["superseded_by"]) != "":
+			roleFacts = appendUniqueString(roleFacts, "Superseded source: "+document.Path)
+		case strings.TrimSpace(document.Metadata["supersedes"]) != "":
+			roleFacts = appendUniqueString(roleFacts, "Current source: "+document.Path)
+			if summaryFact := compileSynthesisCurrentSourceSummaryFact(document.Body); summaryFact != "" {
+				roleFacts = appendUniqueString(roleFacts, summaryFact)
+			}
+		}
 	}
-	return citations, nil
+	return citations, roleFacts, nil
+}
+
+func compileSynthesisCurrentSourceSummaryFact(body string) string {
+	summary := compileSynthesisSummarySection(body)
+	const revisitPrefix = "Current compile_synthesis revisit guidance says "
+	if strings.HasPrefix(strings.ToLower(summary), strings.ToLower(revisitPrefix)) {
+		return "Current compile_synthesis revisit decision: " + strings.TrimSpace(summary[len(revisitPrefix):])
+	}
+	return ""
+}
+
+func compileSynthesisSummarySection(body string) string {
+	lines := strings.Split(stripFrontmatter(body), "\n")
+	inSummary := false
+	summaryLines := []string{}
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "## ") {
+			if inSummary {
+				break
+			}
+			inSummary = strings.EqualFold(strings.TrimSpace(strings.TrimPrefix(trimmed, "## ")), "Summary")
+			continue
+		}
+		if inSummary && trimmed != "" {
+			summaryLines = append(summaryLines, strings.TrimPrefix(trimmed, "- "))
+		}
+	}
+	return strings.TrimSpace(strings.Join(summaryLines, " "))
 }
 
 func compileSynthesisProjectionFreshness(ctx context.Context, client *runclient.Client, docID string) ([]ProjectionState, error) {

@@ -142,7 +142,7 @@ mise exec -- ./scripts/validate-agent-skill.sh skills/openclerk
 mise exec -- ./scripts/validate-agent-skill.sh modules/ollama-embeddings/skill/ollama-embeddings
 mise exec -- ./scripts/validate-agent-skill.sh modules/gemini-embeddings/skill/gemini-embeddings
 mise exec -- ./scripts/validate-agent-skill.sh modules/tesseract-ocr/skill/tesseract-ocr
-mise exec -- ./scripts/validate-release-docs.sh v0.2.3
+mise exec -- ./scripts/validate-release-docs.sh v0.2.4
 ```
 
 ## Releases

@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-const testInstallVersion = "v0.2.3"
+const testInstallVersion = "v0.2.4"
 
 func TestInstallDefaultsToHomeLocalBinWhenPathContainsWritableTempDir(t *testing.T) {
 	toolsDir := writeInstallTestTools(t)
@@ -156,16 +156,16 @@ while [ "$#" -gt 0 ]; do
   shift || true
 done
 if [ -z "$output" ]; then
-  printf '%s\n' '{"tag_name":"v0.2.3"}'
+  printf '%s\n' '{"tag_name":"v0.2.4"}'
   exit 0
 fi
 case "$output" in
   *checksums.txt)
     {
-      printf '%s  %s\n' mock openclerk_0.2.3_darwin_amd64.tar.gz
-      printf '%s  %s\n' mock openclerk_0.2.3_darwin_arm64.tar.gz
-      printf '%s  %s\n' mock openclerk_0.2.3_linux_amd64.tar.gz
-      printf '%s  %s\n' mock openclerk_0.2.3_linux_arm64.tar.gz
+      printf '%s  %s\n' mock openclerk_0.2.4_darwin_amd64.tar.gz
+      printf '%s  %s\n' mock openclerk_0.2.4_darwin_arm64.tar.gz
+      printf '%s  %s\n' mock openclerk_0.2.4_linux_amd64.tar.gz
+      printf '%s  %s\n' mock openclerk_0.2.4_linux_arm64.tar.gz
     } > "$output"
     ;;
   *)
@@ -186,7 +186,7 @@ mkdir -p "$asset_dir"
 cat > "$asset_dir/openclerk" <<'EOF'
 #!/bin/sh
 case "$1" in
-  --version) printf '%s\n' 'openclerk v0.2.3' ;;
+  --version) printf '%s\n' 'openclerk v0.2.4' ;;
   --help) printf '%s\n' 'OpenClerk help' ;;
   *) printf '%s\n' 'OpenClerk mock' ;;
 esac

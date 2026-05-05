@@ -176,6 +176,17 @@ func TestNormalizeActionTextHandlesShellEscapedJSON(t *testing.T) {
 	}
 }
 
+func TestClassifyCommandTreatsOpenClerkSkillDiscoveryAsSkillCheck(t *testing.T) {
+	metrics := emptyMetrics()
+	classifyCommand(`/bin/zsh -lc "rg --files /tmp/openclerk-eval | rg '/SKILL\\.md$|/openclerk/'"`, &metrics)
+	if !metrics.OpenClerkSkillCheckUsed {
+		t.Fatalf("expected OpenClerk skill check metric: %+v", metrics)
+	}
+	if metrics.BroadRepoSearch {
+		t.Fatalf("skill discovery should not be broad repo search: %+v", metrics)
+	}
+}
+
 func TestClassifyCommandFlagsGenericNativeMediaFetches(t *testing.T) {
 	for name, command := range map[string]string{
 		"python_urlopen": `python -c 'import urllib.request; urllib.request.urlopen("https://video.example.test/watch?v=native-demo").read()'`,
