@@ -9,8 +9,9 @@ OpenClerk modules are optional building blocks. Install them only through
 | --- | --- | --- |
 | `modules/ollama-embeddings/module.json` | `ollama` | `modules/ollama-embeddings/skill/ollama-embeddings/SKILL.md` |
 | `modules/gemini-embeddings/module.json` | `gemini` | `modules/gemini-embeddings/skill/gemini-embeddings/SKILL.md` |
+| `modules/tesseract-ocr/module.json` | `tesseract` | `modules/tesseract-ocr/skill/tesseract-ocr/SKILL.md` |
 
-Both modules use:
+Embedding modules use:
 
 ```text
 semantic-retrieval-adapter search
@@ -25,6 +26,10 @@ mise exec -- go build -o "$HOME/.local/bin/semantic-retrieval-adapter" ./modules
 command -v semantic-retrieval-adapter
 ```
 
+The OCR module uses `tesseract` for image OCR and `ocrmypdf` for PDF OCR.
+Install those tools separately and make both commands available on `PATH`
+before registering the module.
+
 ## Register Modules
 
 Install Ollama embeddings:
@@ -38,6 +43,13 @@ Install Gemini embeddings:
 
 ```bash
 printf '%s\n' '{"action":"install_module","module":{"provider":"gemini","manifest_path":"modules/gemini-embeddings/module.json","command":"semantic-retrieval-adapter","provider_config":{"embedding_model":"gemini-embedding-001","gemini_api_base":"https://generativelanguage.googleapis.com/v1beta","embedding_output_dimensions":"3072"}}}' |
+  openclerk module
+```
+
+Install local Tesseract OCR:
+
+```bash
+printf '%s\n' '{"action":"install_module","module":{"kind":"ocr_provider","provider":"tesseract","manifest_path":"modules/tesseract-ocr/module.json","command":"tesseract","provider_config":{"ocrmypdf_command":"ocrmypdf","language":"eng"}}}' |
   openclerk module
 ```
 
@@ -76,3 +88,22 @@ count, and backoff seconds; it does not print the key.
 There is no hidden provider fallback and no default semantic ranking promotion.
 Removing a module removes OpenClerk's registration for that provider; it does
 not delete unrelated credentials, external tools, or user-cache artifacts.
+
+## Use OCR Review
+
+Text-extractable documents do not need OCR. Use normal
+`artifact_candidate_plan` local artifact planning for UTF-8 text, markdown, and
+text-bearing PDFs.
+
+Use OCR review only for common image files, scan-only PDFs, or PDFs whose
+embedded text is bad or partial:
+
+```bash
+printf '%s\n' '{"action":"artifact_candidate_plan","artifact":{"local_path":"<explicit-user-local-file>","artifact_kind":"receipt","text_extraction":"ocr_review","ocr_provider":"tesseract","limit":5}}' |
+  openclerk document
+```
+
+OCR review is read-only candidate planning. It reports extractor identity,
+versions, language, provenance, warnings, duplicate status, and
+`planned_no_write`; durable writes still require approval through
+`create_document` or `ingest_source_url`.

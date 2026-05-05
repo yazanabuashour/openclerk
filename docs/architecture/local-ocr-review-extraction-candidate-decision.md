@@ -14,6 +14,13 @@ source_refs: docs/evals/local-ocr-review-extraction-candidates.md, docs/evals/re
 Accepted as the durable non-promotion decision for `oc-s3wg` and the local
 OCR/scanned-PDF artifact-candidate path.
 
+Supersession note: this historical non-promotion was superseded on
+2026-05-05 by [`ocr-module-final-decision.md`](ocr-module-final-decision.md),
+which promotes the optional local `modules/tesseract-ocr/module.json` module
+for explicit `artifact_candidate_plan` OCR review. The constraints below remain
+historical evidence for why hidden core OCR, model egress, OCR caches, and
+domain-field extraction were not promoted.
+
 Do not add runtime OCR, multimodal model calls, scanned-PDF OCR fallback,
 image parsing, Tesseract, OCRmyPDF, Poppler rendering, Go OCR bindings,
 domain-specific receipt or invoice OCR fields, parser pipelines, storage

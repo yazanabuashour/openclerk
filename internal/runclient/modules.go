@@ -20,9 +20,14 @@ import (
 const (
 	SemanticModuleProviderOllama = "ollama"
 	SemanticModuleProviderGemini = "gemini"
+	OCRModuleProviderTesseract   = "tesseract"
+
+	ModuleKindEmbeddingProvider = "embedding_provider"
+	ModuleKindOCRProvider       = "ocr_provider"
 )
 
 type SemanticModuleConfig struct {
+	Kind               string            `json:"kind,omitempty"`
 	Provider           string            `json:"provider"`
 	ModuleName         string            `json:"module_name"`
 	Enabled            bool              `json:"enabled"`
@@ -36,6 +41,7 @@ type SemanticModuleConfig struct {
 }
 
 type SemanticModuleInstallInput struct {
+	Kind           string            `json:"kind,omitempty"`
 	Provider       string            `json:"provider"`
 	ModuleName     string            `json:"module_name,omitempty"`
 	ManifestPath   string            `json:"manifest_path"`
@@ -46,12 +52,16 @@ type SemanticModuleInstallInput struct {
 }
 
 type SemanticModuleConfigureInput struct {
+	Kind           string            `json:"kind,omitempty"`
 	Provider       string            `json:"provider"`
 	ProviderConfig map[string]string `json:"provider_config,omitempty"`
 	Enabled        *bool             `json:"enabled,omitempty"`
 }
 
 func InstallSemanticModule(ctx context.Context, cfg Config, input SemanticModuleInstallInput) (SemanticModuleConfig, error) {
+	if moduleInstallKind(input.Kind, input.Provider) == ModuleKindOCRProvider {
+		return InstallOCRModule(ctx, cfg, input)
+	}
 	provider, err := normalizeSemanticModuleProvider(input.Provider)
 	if err != nil {
 		return SemanticModuleConfig{}, err
@@ -72,6 +82,7 @@ func InstallSemanticModule(ctx context.Context, cfg Config, input SemanticModule
 		enabled = *input.Enabled
 	}
 	config := SemanticModuleConfig{
+		Kind:               ModuleKindEmbeddingProvider,
 		Provider:           provider,
 		ModuleName:         manifest.Module.Name,
 		Enabled:            enabled,
@@ -90,6 +101,9 @@ func InstallSemanticModule(ctx context.Context, cfg Config, input SemanticModule
 }
 
 func ConfigureSemanticModule(ctx context.Context, cfg Config, input SemanticModuleConfigureInput) (SemanticModuleConfig, error) {
+	if moduleInstallKind(input.Kind, input.Provider) == ModuleKindOCRProvider {
+		return ConfigureOCRModule(ctx, cfg, input)
+	}
 	provider, err := normalizeSemanticModuleProvider(input.Provider)
 	if err != nil {
 		return SemanticModuleConfig{}, err
@@ -121,6 +135,9 @@ func ConfigureSemanticModule(ctx context.Context, cfg Config, input SemanticModu
 }
 
 func RemoveSemanticModule(ctx context.Context, cfg Config, provider string) (SemanticModuleConfig, error) {
+	if strings.EqualFold(strings.TrimSpace(provider), OCRModuleProviderTesseract) {
+		return RemoveOCRModule(ctx, cfg, provider)
+	}
 	normalized, err := normalizeSemanticModuleProvider(provider)
 	if err != nil {
 		return SemanticModuleConfig{}, err
@@ -152,6 +169,13 @@ func ListSemanticModules(ctx context.Context, cfg Config) ([]SemanticModuleConfi
 			modules = append(modules, config)
 		}
 	}
+	ocrConfig, err := ReadOCRModuleConfig(ctx, cfg, OCRModuleProviderTesseract)
+	if err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(ocrConfig.ModuleName) != "" {
+		modules = append(modules, ocrConfig)
+	}
 	return modules, nil
 }
 
@@ -165,6 +189,7 @@ func ReadSemanticModuleConfig(ctx context.Context, cfg Config, provider string) 
 		return SemanticModuleConfig{}, err
 	}
 	config := SemanticModuleConfig{
+		Kind:               ModuleKindEmbeddingProvider,
 		Provider:           normalized,
 		ModuleName:         values["module_name"],
 		Enabled:            values["enabled"] == "true",
@@ -195,6 +220,139 @@ func ReadSemanticModuleConfig(ctx context.Context, cfg Config, provider string) 
 	return config, nil
 }
 
+func InstallOCRModule(ctx context.Context, cfg Config, input SemanticModuleInstallInput) (SemanticModuleConfig, error) {
+	provider, err := normalizeOCRModuleProvider(input.Provider)
+	if err != nil {
+		return SemanticModuleConfig{}, err
+	}
+	if strings.TrimSpace(input.ManifestPath) == "" {
+		return SemanticModuleConfig{}, domain.ValidationError("module.manifest_path is required", nil)
+	}
+	if strings.TrimSpace(input.Command) == "" {
+		return SemanticModuleConfig{}, domain.ValidationError("module.command is required", nil)
+	}
+	manifestPath := filepath.Clean(input.ManifestPath)
+	manifest, manifestSHA, err := verifyOCRModuleManifest(resolveSemanticModuleManifestPath(cfg, manifestPath), provider, input.ModuleName)
+	if err != nil {
+		return SemanticModuleConfig{}, err
+	}
+	enabled := true
+	if input.Enabled != nil {
+		enabled = *input.Enabled
+	}
+	config := SemanticModuleConfig{
+		Kind:               ModuleKindOCRProvider,
+		Provider:           provider,
+		ModuleName:         manifest.Module.Name,
+		Enabled:            enabled,
+		Command:            strings.TrimSpace(input.Command),
+		CommandArgs:        sanitizedArgs(input.CommandArgs),
+		ManifestPath:       manifestPath,
+		ManifestSHA256:     manifestSHA,
+		ProviderConfig:     redactedProviderConfig(provider, input.ProviderConfig),
+		VerificationStatus: "verified",
+		RedactionStatus:    "redacted",
+	}
+	if err := writeOCRModuleConfig(ctx, cfg, config); err != nil {
+		return SemanticModuleConfig{}, err
+	}
+	return config, nil
+}
+
+func ConfigureOCRModule(ctx context.Context, cfg Config, input SemanticModuleConfigureInput) (SemanticModuleConfig, error) {
+	provider, err := normalizeOCRModuleProvider(input.Provider)
+	if err != nil {
+		return SemanticModuleConfig{}, err
+	}
+	current, err := ReadOCRModuleConfig(ctx, cfg, provider)
+	if err != nil {
+		return SemanticModuleConfig{}, err
+	}
+	if strings.TrimSpace(current.ModuleName) == "" {
+		return SemanticModuleConfig{}, domain.ValidationError("OCR module is not installed", map[string]any{"provider": provider})
+	}
+	if input.Enabled != nil {
+		current.Enabled = *input.Enabled
+	}
+	merged := map[string]string{}
+	for key, value := range current.ProviderConfig {
+		merged[key] = value
+	}
+	for key, value := range redactedProviderConfig(provider, input.ProviderConfig) {
+		merged[key] = value
+	}
+	current.ProviderConfig = merged
+	current.VerificationStatus = "verified"
+	current.RedactionStatus = "redacted"
+	if err := writeOCRModuleConfig(ctx, cfg, current); err != nil {
+		return SemanticModuleConfig{}, err
+	}
+	return current, nil
+}
+
+func RemoveOCRModule(ctx context.Context, cfg Config, provider string) (SemanticModuleConfig, error) {
+	normalized, err := normalizeOCRModuleProvider(provider)
+	if err != nil {
+		return SemanticModuleConfig{}, err
+	}
+	current, err := ReadOCRModuleConfig(ctx, cfg, normalized)
+	if err != nil {
+		return SemanticModuleConfig{}, err
+	}
+	if strings.TrimSpace(current.ModuleName) == "" {
+		current.Provider = normalized
+		current.Kind = ModuleKindOCRProvider
+	}
+	if err := deleteOCRModuleConfig(ctx, cfg, normalized); err != nil {
+		return SemanticModuleConfig{}, err
+	}
+	current.Enabled = false
+	current.VerificationStatus = "removed"
+	current.RedactionStatus = "redacted"
+	return current, nil
+}
+
+func ReadOCRModuleConfig(ctx context.Context, cfg Config, provider string) (SemanticModuleConfig, error) {
+	normalized, err := normalizeOCRModuleProvider(provider)
+	if err != nil {
+		return SemanticModuleConfig{}, err
+	}
+	values, err := readOCRModuleValues(ctx, cfg, normalized)
+	if err != nil {
+		return SemanticModuleConfig{}, err
+	}
+	config := SemanticModuleConfig{
+		Kind:               ModuleKindOCRProvider,
+		Provider:           normalized,
+		ModuleName:         values["module_name"],
+		Enabled:            values["enabled"] == "true",
+		Command:            values["command"],
+		ManifestPath:       values["manifest_path"],
+		ManifestSHA256:     values["manifest_sha256"],
+		ProviderConfig:     map[string]string{},
+		VerificationStatus: "not_installed",
+		RedactionStatus:    "redacted",
+	}
+	_ = json.Unmarshal([]byte(values["command_args_json"]), &config.CommandArgs)
+	_ = json.Unmarshal([]byte(values["provider_config_json"]), &config.ProviderConfig)
+	if config.ProviderConfig == nil {
+		config.ProviderConfig = map[string]string{}
+	}
+	if strings.TrimSpace(config.ModuleName) == "" {
+		return config, nil
+	}
+	if !config.Enabled {
+		config.VerificationStatus = "disabled"
+		return config, nil
+	}
+	if err := verifyInstalledOCRModule(cfg, config); err != nil {
+		config.VerificationStatus = "verification_failed"
+		return config, err
+	}
+	config.VerificationStatus = "verified"
+	return config, nil
+}
+
 func normalizeSemanticModuleProvider(provider string) (string, error) {
 	normalized := strings.ToLower(strings.TrimSpace(provider))
 	if normalized == "" {
@@ -205,6 +363,30 @@ func normalizeSemanticModuleProvider(provider string) (string, error) {
 		return normalized, nil
 	default:
 		return "", domain.ValidationError("module.provider must be ollama or gemini", nil)
+	}
+}
+
+func moduleInstallKind(kind string, provider string) string {
+	normalizedKind := strings.ToLower(strings.TrimSpace(kind))
+	if normalizedKind != "" {
+		return normalizedKind
+	}
+	if strings.EqualFold(strings.TrimSpace(provider), OCRModuleProviderTesseract) {
+		return ModuleKindOCRProvider
+	}
+	return ModuleKindEmbeddingProvider
+}
+
+func normalizeOCRModuleProvider(provider string) (string, error) {
+	normalized := strings.ToLower(strings.TrimSpace(provider))
+	if normalized == "" {
+		normalized = OCRModuleProviderTesseract
+	}
+	switch normalized {
+	case OCRModuleProviderTesseract:
+		return normalized, nil
+	default:
+		return "", domain.ValidationError("OCR module.provider must be tesseract", nil)
 	}
 }
 
@@ -221,6 +403,23 @@ func verifyInstalledSemanticModule(cfg Config, config SemanticModuleConfig) erro
 	}
 	if sha != config.ManifestSHA256 {
 		return domain.ValidationError("semantic module manifest digest changed", map[string]any{"provider": config.Provider, "module": manifest.Module.Name})
+	}
+	return nil
+}
+
+func verifyInstalledOCRModule(cfg Config, config SemanticModuleConfig) error {
+	if strings.TrimSpace(config.Command) == "" {
+		return domain.ValidationError("OCR module command is missing", map[string]any{"provider": config.Provider})
+	}
+	if strings.TrimSpace(config.ManifestPath) == "" || strings.TrimSpace(config.ManifestSHA256) == "" {
+		return domain.ValidationError("OCR module manifest verification is missing", map[string]any{"provider": config.Provider})
+	}
+	manifest, sha, err := verifyOCRModuleManifest(resolveSemanticModuleManifestPath(cfg, config.ManifestPath), config.Provider, config.ModuleName)
+	if err != nil {
+		return err
+	}
+	if sha != config.ManifestSHA256 {
+		return domain.ValidationError("OCR module manifest digest changed", map[string]any{"provider": config.Provider, "module": manifest.Module.Name})
 	}
 	return nil
 }
@@ -299,6 +498,51 @@ func verifySemanticModuleManifest(path string, provider string, expectedName str
 	return manifest, sha, nil
 }
 
+func verifyOCRModuleManifest(path string, provider string, expectedName string) (semanticModuleManifest, string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return semanticModuleManifest{}, "", domain.InternalError("read OCR module manifest", err)
+	}
+	sum := sha256.Sum256(data)
+	sha := hex.EncodeToString(sum[:])
+	var manifest semanticModuleManifest
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		return semanticModuleManifest{}, "", domain.ValidationError("decode OCR module manifest", map[string]any{"error": err.Error()})
+	}
+	if manifest.SchemaVersion != "openclerk-module.v1" {
+		return semanticModuleManifest{}, "", domain.ValidationError("OCR module manifest schema_version must be openclerk-module.v1", nil)
+	}
+	if strings.TrimSpace(manifest.Module.Name) == "" {
+		return semanticModuleManifest{}, "", domain.ValidationError("OCR module manifest module.name is required", nil)
+	}
+	if strings.TrimSpace(expectedName) != "" && strings.TrimSpace(expectedName) != manifest.Module.Name {
+		return semanticModuleManifest{}, "", domain.ValidationError("OCR module manifest module.name mismatch", map[string]any{"expected": expectedName, "actual": manifest.Module.Name})
+	}
+	if !strings.Contains(manifest.Module.Name, provider) {
+		return semanticModuleManifest{}, "", domain.ValidationError("OCR module manifest module.name must identify the provider", map[string]any{"provider": provider, "module": manifest.Module.Name})
+	}
+	if manifest.Module.Kind != ModuleKindOCRProvider {
+		return semanticModuleManifest{}, "", domain.ValidationError("OCR module manifest module.kind must be ocr_provider", nil)
+	}
+	if manifest.Authority.Default != "read_only" || manifest.Authority.DurableWrites != "forbidden" {
+		return semanticModuleManifest{}, "", domain.ValidationError("OCR module manifest must be read-only and forbid durable writes", nil)
+	}
+	if manifest.Release.Status != "supported_optional_module" {
+		return semanticModuleManifest{}, "", domain.ValidationError("OCR module manifest release.status must be supported_optional_module", nil)
+	}
+	hasOCR := false
+	for _, provided := range manifest.Provides {
+		if provided.Type == "command" && strings.Contains(strings.ToLower(provided.Name), "ocr") {
+			hasOCR = true
+			break
+		}
+	}
+	if !hasOCR {
+		return semanticModuleManifest{}, "", domain.ValidationError("OCR module manifest must provide an OCR command", nil)
+	}
+	return manifest, sha, nil
+}
+
 func writeSemanticModuleConfig(ctx context.Context, cfg Config, config SemanticModuleConfig) error {
 	values := map[string]string{
 		"enabled":              fmt.Sprint(config.Enabled),
@@ -325,12 +569,49 @@ ON CONFLICT(key_name) DO UPDATE SET
 	})
 }
 
+func writeOCRModuleConfig(ctx context.Context, cfg Config, config SemanticModuleConfig) error {
+	values := map[string]string{
+		"enabled":              fmt.Sprint(config.Enabled),
+		"module_name":          config.ModuleName,
+		"command":              config.Command,
+		"manifest_path":        config.ManifestPath,
+		"manifest_sha256":      config.ManifestSHA256,
+		"command_args_json":    mustMarshalString(config.CommandArgs),
+		"provider_config_json": mustMarshalString(config.ProviderConfig),
+	}
+	return withRuntimeConfigDB(ctx, cfg, true, func(db *sql.DB) error {
+		now := time.Now().UTC().Format(time.RFC3339Nano)
+		for key, value := range values {
+			if _, err := db.ExecContext(ctx, `
+INSERT INTO runtime_config (key_name, value_text, updated_at)
+VALUES (?, ?, ?)
+ON CONFLICT(key_name) DO UPDATE SET
+	value_text = excluded.value_text,
+	updated_at = excluded.updated_at`, ocrModuleKey(config.Provider, key), value, now); err != nil {
+				return domain.InternalError("write OCR module runtime config", err)
+			}
+		}
+		return nil
+	})
+}
+
 func deleteSemanticModuleConfig(ctx context.Context, cfg Config, provider string) error {
 	return withRuntimeConfigDB(ctx, cfg, true, func(db *sql.DB) error {
 		prefix := semanticModuleKey(provider, "")
 		_, err := db.ExecContext(ctx, `DELETE FROM runtime_config WHERE key_name LIKE ?`, prefix+"%")
 		if err != nil {
 			return domain.InternalError("remove semantic module runtime config", err)
+		}
+		return nil
+	})
+}
+
+func deleteOCRModuleConfig(ctx context.Context, cfg Config, provider string) error {
+	return withRuntimeConfigDB(ctx, cfg, true, func(db *sql.DB) error {
+		prefix := ocrModuleKey(provider, "")
+		_, err := db.ExecContext(ctx, `DELETE FROM runtime_config WHERE key_name LIKE ?`, prefix+"%")
+		if err != nil {
+			return domain.InternalError("remove OCR module runtime config", err)
 		}
 		return nil
 	})
@@ -356,6 +637,32 @@ func readSemanticModuleValues(ctx context.Context, cfg Config, provider string) 
 		}
 		if err := rows.Err(); err != nil {
 			return domain.InternalError("iterate semantic module runtime config", err)
+		}
+		return nil
+	})
+	return values, err
+}
+
+func readOCRModuleValues(ctx context.Context, cfg Config, provider string) (map[string]string, error) {
+	values := map[string]string{}
+	err := withRuntimeConfigDB(ctx, cfg, false, func(db *sql.DB) error {
+		rows, err := db.QueryContext(ctx, `SELECT key_name, value_text FROM runtime_config WHERE key_name LIKE ?`, ocrModuleKey(provider, "")+"%")
+		if err != nil {
+			return domain.InternalError("read OCR module runtime config", err)
+		}
+		defer func() {
+			_ = rows.Close()
+		}()
+		prefix := ocrModuleKey(provider, "")
+		for rows.Next() {
+			var key, value string
+			if err := rows.Scan(&key, &value); err != nil {
+				return domain.InternalError("scan OCR module runtime config", err)
+			}
+			values[strings.TrimPrefix(key, prefix)] = value
+		}
+		if err := rows.Err(); err != nil {
+			return domain.InternalError("iterate OCR module runtime config", err)
 		}
 		return nil
 	})
@@ -399,6 +706,10 @@ func withRuntimeConfigDB(ctx context.Context, cfg Config, write bool, fn func(*s
 
 func semanticModuleKey(provider string, field string) string {
 	return "semantic_module." + provider + "." + field
+}
+
+func ocrModuleKey(provider string, field string) string {
+	return "ocr_module." + provider + "." + field
 }
 
 func redactedProviderConfig(provider string, values map[string]string) map[string]string {

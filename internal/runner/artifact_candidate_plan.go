@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/json"
@@ -8,11 +9,13 @@ import (
 	"mime"
 	"net/http"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/yazanabuashour/openclerk/internal/domain"
@@ -21,15 +24,39 @@ import (
 )
 
 const (
-	artifactPlanValidationBoundaries = "read-only artifact candidate planning; local file inspection only when artifact.local_path is explicitly supplied, limited to UTF-8 text/markdown/text-bearing PDF; no OCR, no opaque file parsing, no browser automation, no HTTP fetch, no durable document write, no direct vault inspection, no direct SQLite, no source-built runner, and no unsupported transport"
+	artifactPlanValidationBoundaries = "read-only artifact candidate planning; local file inspection only when artifact.local_path is explicitly supplied, limited to UTF-8 text/markdown/text-bearing PDF; no OCR unless explicit text_extraction=ocr_review routes through an installed verified local OCR module; no opaque file parsing, no browser automation, no HTTP fetch, no durable document write, no direct vault inspection, no direct SQLite, no source-built runner, and no unsupported transport"
 	artifactPlanAuthorityLimits      = "candidate path, title, tags, fields, and body preview are planning hints from explicit content or approved runner handoff context only; canonical markdown, citations, provenance, freshness, and projections become authority only after approved runner writes"
 )
 
-func runArtifactCandidatePlan(ctx context.Context, client *runclient.Client, options ArtifactPlanOptions) (ArtifactCandidatePlan, error) {
+func runArtifactCandidatePlan(ctx context.Context, client *runclient.Client, config runclient.Config, options ArtifactPlanOptions) (ArtifactCandidatePlan, error) {
+	if artifactOCRReviewRequested(options) && strings.TrimSpace(options.LocalPath) != "" {
+		localArtifact, extractedContent, ocrExtraction, err := inspectLocalArtifactWithOCR(ctx, client, config, options)
+		if err != nil {
+			return ArtifactCandidatePlan{}, err
+		}
+		options.Content = extractedContent
+		if options.SourceType == "" {
+			options.SourceType = "local_artifact"
+		}
+		options.Fields = cloneArtifactFields(options.Fields)
+		options.Fields["text_extraction"] = "ocr_review"
+		options.Fields["ocr_provider"] = ocrExtraction.Provider
+		options.Fields["ocr_module"] = ocrExtraction.ModuleName
+		options.Fields["ocr_provenance"] = ocrExtraction.Provenance
+		if ocrExtraction.PDFExtractor != "" {
+			options.Fields["ocr_pdf_extractor"] = ocrExtraction.PDFExtractor
+		}
+		return runArtifactCandidatePlanFromInspected(ctx, client, options, localArtifact, extractedContent, ocrExtraction)
+	}
+
 	localArtifact, extractedContent, err := inspectLocalArtifact(options.LocalPath)
 	if err != nil {
 		return ArtifactCandidatePlan{}, err
 	}
+	return runArtifactCandidatePlanFromInspected(ctx, client, options, localArtifact, extractedContent, nil)
+}
+
+func runArtifactCandidatePlanFromInspected(ctx context.Context, client *runclient.Client, options ArtifactPlanOptions, localArtifact *LocalArtifact, extractedContent string, ocrExtraction *OCRExtraction) (ArtifactCandidatePlan, error) {
 	if strings.TrimSpace(options.Content) == "" && strings.TrimSpace(options.Body) == "" && extractedContent != "" {
 		options.Content = extractedContent
 		if options.SourceType == "" {
@@ -67,6 +94,7 @@ func runArtifactCandidatePlan(ctx context.Context, client *runclient.Client, opt
 		SourceType:              sourceType,
 		SourceURL:               sourceURL,
 		LocalArtifact:           localArtifact,
+		OCRExtraction:           ocrExtraction,
 		CandidatePath:           candidatePath,
 		CandidateTitle:          title,
 		BodyPreview:             bodyPreview,
@@ -88,6 +116,18 @@ func runArtifactCandidatePlan(ctx context.Context, client *runclient.Client, opt
 	}
 	plan.AgentHandoff = artifactCandidatePlanHandoff(plan)
 	return plan, nil
+}
+
+func artifactOCRReviewRequested(options ArtifactPlanOptions) bool {
+	return strings.EqualFold(strings.TrimSpace(options.TextExtraction), "ocr_review")
+}
+
+func cloneArtifactFields(fields map[string]string) map[string]string {
+	cloned := map[string]string{}
+	for key, value := range fields {
+		cloned[key] = value
+	}
+	return cloned
 }
 
 func inspectLocalArtifact(localPath string) (*LocalArtifact, string, error) {
@@ -203,6 +243,191 @@ func extractLocalArtifactPDF(localPath string) (string, int, error) {
 		return "", pages, domain.ValidationError("artifact.local_path PDF has no extractable text; OCR is unsupported", nil)
 	}
 	return extracted + "\n", pages, nil
+}
+
+func inspectLocalArtifactWithOCR(ctx context.Context, client *runclient.Client, config runclient.Config, options ArtifactPlanOptions) (*LocalArtifact, string, *OCRExtraction, error) {
+	provider := strings.ToLower(strings.TrimSpace(options.OCRProvider))
+	if provider == "" {
+		provider = runclient.OCRModuleProviderTesseract
+	}
+	if provider != runclient.OCRModuleProviderTesseract {
+		return nil, "", nil, domain.ValidationError("artifact.ocr_provider must be tesseract", nil)
+	}
+	moduleConfig, err := runclient.ReadOCRModuleConfig(ctx, runclient.Config{
+		DatabasePath:       client.Paths().DatabasePath,
+		ModuleManifestRoot: config.ModuleManifestRoot,
+	}, provider)
+	if err != nil {
+		return nil, "", nil, err
+	}
+	if strings.TrimSpace(moduleConfig.ModuleName) == "" {
+		return nil, "", nil, domain.ValidationError("OCR module is not installed", map[string]any{"provider": provider})
+	}
+	if !moduleConfig.Enabled {
+		return nil, "", nil, domain.ValidationError("OCR module is disabled", map[string]any{"provider": provider})
+	}
+	if moduleConfig.VerificationStatus != "verified" {
+		return nil, "", nil, domain.ValidationError("OCR module is not verified", map[string]any{"provider": provider, "verification_status": moduleConfig.VerificationStatus})
+	}
+	info, err := os.Stat(options.LocalPath)
+	if err != nil {
+		return nil, "", nil, domain.ValidationError("artifact.local_path is not readable", nil)
+	}
+	if info.IsDir() {
+		return nil, "", nil, domain.ValidationError("artifact.local_path must be a file", nil)
+	}
+	if !info.Mode().IsRegular() {
+		return nil, "", nil, domain.ValidationError("artifact.local_path must be a regular file", nil)
+	}
+	const maxOCRArtifactBytes = 25 * 1024 * 1024
+	if info.Size() > maxOCRArtifactBytes {
+		return nil, "", nil, domain.ValidationError("artifact.local_path exceeds 25MB OCR review limit", nil)
+	}
+	data, err := os.ReadFile(options.LocalPath)
+	if err != nil {
+		return nil, "", nil, domain.ValidationError("artifact.local_path is not readable", nil)
+	}
+	sum := sha256.Sum256(data)
+	local := &LocalArtifact{
+		SourceRef: "user_supplied_local_artifact",
+		FileName:  filepath.Base(options.LocalPath),
+		SizeBytes: info.Size(),
+		SHA256:    fmt.Sprintf("%x", sum[:]),
+	}
+	language := firstNonEmptyOCRString(moduleConfig.ProviderConfig["language"], "eng")
+	tesseractCommand := firstNonEmptyOCRString(moduleConfig.Command, "tesseract")
+	ocrmypdfCommand := firstNonEmptyOCRString(moduleConfig.ProviderConfig["ocrmypdf_command"], "ocrmypdf")
+	tesseractVersion := firstVersionLine(ctx, tesseractCommand, "--version")
+	ocrmypdfVersion := ""
+	ext := strings.ToLower(filepath.Ext(options.LocalPath))
+	var text string
+	pageCount := 0
+	switch ext {
+	case ".pdf":
+		text, pageCount, ocrmypdfVersion, err = extractPDFWithOCR(ctx, options.LocalPath, ocrmypdfCommand, language)
+		local.MIMEType = "application/pdf"
+		local.Parser = "ocrmypdf + tesseract"
+	case ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".webp":
+		text, err = extractImageWithOCR(ctx, options.LocalPath, tesseractCommand, language)
+		pageCount = 1
+		local.MIMEType = localArtifactMIME(ext, data)
+		local.Parser = "tesseract"
+	default:
+		return nil, "", nil, domain.ValidationError("artifact.local_path OCR review supports PDF and common image files only", nil)
+	}
+	if err != nil {
+		return nil, "", nil, err
+	}
+	extracted := strings.TrimSpace(text)
+	if extracted == "" {
+		return nil, "", nil, domain.ValidationError("OCR review produced no extracted text", nil)
+	}
+	local.TextStatus = "ocr_review_extracted"
+	local.Confidence = "medium"
+	local.PageCount = pageCount
+	ocr := &OCRExtraction{
+		Provider:            provider,
+		ModuleName:          moduleConfig.ModuleName,
+		TextStatus:          "review_required",
+		Extractor:           "tesseract",
+		ExtractorVersion:    tesseractVersion,
+		PDFExtractor:        pdfExtractorName(ext, ocrmypdfCommand),
+		PDFExtractorVersion: ocrmypdfVersion,
+		Language:            language,
+		PageCount:           pageCount,
+		Confidence:          "medium",
+		PrivacyPosture:      "local_process_no_network",
+		Provenance:          "explicit artifact.local_path OCR review through verified local module; candidate text only, no durable write",
+		Warnings:            []string{"OCR text requires review before create_document or ingest_source_url approval"},
+	}
+	return local, extracted + "\n", ocr, nil
+}
+
+func extractImageWithOCR(ctx context.Context, localPath string, command string, language string) (string, error) {
+	ocrCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+	args := []string{localPath, "stdout", "-l", language, "--psm", "6"}
+	cmd := exec.CommandContext(ocrCtx, command, args...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		if ocrCtx.Err() == context.DeadlineExceeded {
+			return "", domain.ValidationError("OCR review timed out", nil)
+		}
+		return "", domain.ValidationError("OCR image extraction failed", map[string]any{"error": strings.TrimSpace(stderr.String())})
+	}
+	return stdout.String(), nil
+}
+
+func extractPDFWithOCR(ctx context.Context, localPath string, command string, language string) (string, int, string, error) {
+	ocrCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	defer cancel()
+	tempDir, err := os.MkdirTemp("", "openclerk-ocr-*")
+	if err != nil {
+		return "", 0, "", domain.InternalError("create OCR temp dir", err)
+	}
+	defer func() {
+		_ = os.RemoveAll(tempDir)
+	}()
+	sidecarPath := filepath.Join(tempDir, "sidecar.txt")
+	outputPath := filepath.Join(tempDir, "ocr.pdf")
+	args := []string{"--sidecar", sidecarPath, "--force-ocr", "-l", language, localPath, outputPath}
+	cmd := exec.CommandContext(ocrCtx, command, args...)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		if ocrCtx.Err() == context.DeadlineExceeded {
+			return "", 0, "", domain.ValidationError("OCR review timed out", nil)
+		}
+		return "", 0, "", domain.ValidationError("OCR PDF extraction failed", map[string]any{"error": strings.TrimSpace(stderr.String())})
+	}
+	data, err := os.ReadFile(sidecarPath)
+	if err != nil {
+		return "", 0, "", domain.InternalError("read OCR sidecar text", err)
+	}
+	pageCount := 0
+	if reader, err := pdf.Open(localPath); err == nil {
+		pageCount = reader.NumPage()
+	}
+	return string(data), pageCount, firstVersionLine(ctx, command, "--version"), nil
+}
+
+func firstVersionLine(ctx context.Context, command string, args ...string) string {
+	versionCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(versionCtx, command, args...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return ""
+	}
+	output := strings.TrimSpace(stdout.String())
+	if output == "" {
+		output = strings.TrimSpace(stderr.String())
+	}
+	lines := strings.Split(output, "\n")
+	if len(lines) == 0 {
+		return ""
+	}
+	return strings.TrimSpace(lines[0])
+}
+
+func firstNonEmptyOCRString(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
+}
+
+func pdfExtractorName(ext string, command string) string {
+	if ext == ".pdf" {
+		return filepath.Base(command)
+	}
+	return ""
 }
 
 func inferArtifactKind(explicit string, content string, body string) string {

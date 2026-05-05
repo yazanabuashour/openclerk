@@ -1,6 +1,6 @@
 ---
 name: OpenClerk
-description: Use OpenClerk through installed openclerk document and openclerk retrieval JSON runner. With explicit user content, validate a faithful candidate through the runner but do not write before approval. Bootstrap no-tools rule - if required fields are missing; if document path, title, or body is missing without explicit user content for a faithful candidate, duplicate-risk check, or public-link placement proposal; if numeric limit is negative; or if asked to bypass the runner with SQLite, raw vault/file/repo inspection, HTTP/MCP, legacy/source-built paths, unsupported transports, backend variants, module-cache inspection, rg, find, ls, OCR, browser automation, local file reads, or opaque artifact parsing, this description is complete. For those invalid cases only, Do not open this skill file, run commands, use tools, or call the runner; respond with exactly one no-tools assistant answer naming the missing/invalid fields or unsupported workflow, and for missing fields ask the user to provide them.
+description: Use OpenClerk through installed openclerk document and openclerk retrieval JSON runner. With explicit user content, validate a faithful candidate through the runner but do not write before approval. Bootstrap no-tools rule - if required fields are missing; if document path, title, or body is missing without explicit user content for a faithful candidate, duplicate-risk check, or public-link placement proposal; if numeric limit is negative; or if asked to bypass the runner with SQLite, raw vault/file/repo inspection, HTTP/MCP, legacy/source-built paths, unsupported transports, backend variants, module-cache inspection, rg, find, ls, external OCR, browser automation, local file reads, or opaque artifact parsing, this description is complete. For those invalid cases only, Do not open this skill file, run commands, use tools, or call the runner; respond with exactly one no-tools assistant answer naming the missing/invalid fields or unsupported workflow, and for missing fields ask the user to provide them.
 license: MIT
 compatibility: Requires local filesystem access and an installed openclerk binary on PATH.
 ---
@@ -37,9 +37,9 @@ matches the request:
 - Harness-supplied web search planning: document `web_search_plan`, then answer
   from `web_search_plan.agent_handoff`; approved fetch/write remains
   `ingest_source_url`.
-- Artifact candidate intake: document `artifact_candidate_plan`, then answer
-  from `artifact_candidate_plan.agent_handoff`; approved durable writes remain
-  `create_document` or `ingest_source_url`.
+- Artifact candidate intake and explicit local OCR review: document
+  `artifact_candidate_plan`, then answer from `artifact_candidate_plan.agent_handoff`;
+  approved durable writes remain `create_document` or `ingest_source_url`.
 - Source-sensitive audit explain/repair: retrieval `source_audit_report`, then
   answer from `source_audit.agent_handoff`.
 - Records, decisions, provenance, and projection evidence bundles: retrieval
@@ -83,9 +83,9 @@ handoff before doing follow-up primitive inspection.
   module-cache docs, SQLite, vault files, or `.openclerk-eval/vault` directly
   for routine tasks. Do not use repo search, `rg --files`, `find`, `ls`,
   `openclerk --help`, HTTP/MCP, legacy/source-built paths, unsupported
-  transports, browser automation, OCR, PPTX parsing, email/chat/form/bundle
-  parsing, local file reads, or external acquisition tools as substitutes for
-  runner JSON.
+  transports, browser automation, external OCR, PPTX parsing,
+  email/chat/form/bundle parsing, direct local file reads, or external
+  acquisition tools as substitutes for runner JSON.
 - Parallelize runner commands only for documented safe reads:
   `resolve_paths`, `list_documents`, `get_document`, `inspect_layout`,
   retrieval read actions, `source_audit_report` with `mode: "explain"`, and
@@ -118,11 +118,11 @@ content is present:
 - public-link placement may propose source and synthesis paths before durable
   fetch or write
 
-Opaque screenshots, images, slide decks or PPTX files, email archives,
-exported chats, forms, and bundles are unsupported as opaque input unless the
-user pasted or explicitly supplied preservable text/body content. Do not claim
-parser truth, OCR results, hidden file inspection, attachment contents, or
-bundle contents that the user did not supply.
+Opaque screenshots, images, slide decks or PPTX files, email archives, exported
+chats, forms, and bundles are unsupported as opaque input unless the user pasted
+preservable text/body content or requested runner-backed OCR review for a local
+image/PDF path. Do not claim parser truth, external OCR results, hidden file
+inspection, attachment contents, or bundle contents not returned by the runner.
 
 ## Workflow Policies
 
@@ -130,6 +130,7 @@ Keep workflow-specific procedure out of this skill. Apply these compact
 policies and let runner results drive the answer:
 
 - Candidate documents and artifacts: preserve explicit user path/title/body/type/naming instructions; fill omitted fields only from supplied content; validate with `openclerk document` before presenting a candidate; show `Path:`, `Title:`, and `Body preview:`; state no document was created; ask for approval before durable writes; for note-like candidates without an explicit path, use `notes/candidates/<slug-from-title>.md`, derive a concise singular noun phrase title, and Include `type: note` frontmatter plus a `# <Title>` heading. Prefer `artifact_candidate_plan` when explicit content or public-source handoff context needs tags, fields, confidence, duplicate status, or create/ingest handoff.
+- OCR artifact review: text-extractable documents do not need OCR; use OCR review only for common images, scan-only PDFs, or PDFs whose embedded text is bad or partial, and treat returned OCR text as candidate evidence until durable-write approval.
 - Duplicate checks: when duplicate risk is requested or plausible, use runner-visible evidence before validating or writing; report the likely target, evidence inspected, and that no document was created or updated; ask whether to update the existing target or create a confirmed new path.
 - Public URL/source intake: use `web_search_plan` for supplied search results and `ingest_source_url` for HTTP/HTTPS PDF and public web sources. Do not fetch URLs with browser, HTTP, filesystem, or other non-runner tools; when placement is missing, propose source/synthesis paths and ask for approval before durable fetch or write.
 - Video/YouTube source intake: use `ingest_video_url` only with user-supplied transcript text and provenance; do not acquire media or transcripts externally.
@@ -149,11 +150,7 @@ Run document tasks with:
 openclerk document
 ```
 
-Common actions are `validate`, `create_document`, `ingest_source_url`,
-`ingest_video_url`, `web_search_plan`, `artifact_candidate_plan`,
-`list_documents`, `get_document`,
-`append_document`, `replace_section`, `resolve_paths`, `inspect_layout`,
-`compile_synthesis`, and `git_lifecycle_report`.
+Common actions are `validate`, `create_document`, `ingest_source_url`, `ingest_video_url`, `web_search_plan`, `artifact_candidate_plan`, `list_documents`, `get_document`, `append_document`, `replace_section`, `resolve_paths`, `inspect_layout`, `compile_synthesis`, and `git_lifecycle_report`.
 Use `openclerk document --help` for primitive and promoted workflow-action
 request shapes, including source placement, source ingestion, and video fields.
 

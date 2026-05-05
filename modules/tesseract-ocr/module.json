@@ -1,0 +1,86 @@
+{
+  "schema_version": "openclerk-module.v1",
+  "module": {
+    "name": "tesseract-ocr",
+    "version": "0.1.0",
+    "kind": "ocr_provider"
+  },
+  "openclerk_contract": {
+    "min_version": "0.2.0",
+    "max_version": "<next-breaking-contract>"
+  },
+  "provides": [
+    {
+      "type": "command",
+      "name": "tesseract ocr",
+      "summary": "Local-first OCR review for OpenClerk artifact_candidate_plan over common image files."
+    },
+    {
+      "type": "command",
+      "name": "ocrmypdf ocr",
+      "summary": "Local-first scanned-PDF OCR review sidecar extraction for OpenClerk artifact_candidate_plan."
+    },
+    {
+      "type": "skill",
+      "name": "tesseract-ocr",
+      "path": "modules/tesseract-ocr/skill/tesseract-ocr/SKILL.md",
+      "summary": "Optional module skill for installed local OCR review."
+    }
+  ],
+  "requires": {
+    "credentials": [],
+    "environment": [],
+    "tools": [
+      "tesseract",
+      "ocrmypdf"
+    ],
+    "network": "none",
+    "schedule": "external"
+  },
+  "authority": {
+    "default": "read_only",
+    "durable_writes": "forbidden",
+    "forbidden": [
+      "write_documents",
+      "mutate_vault",
+      "direct_sqlite_mutation",
+      "remote_provider_fallback",
+      "commit_ocr_cache",
+      "hidden_cloud_egress",
+      "approval_free_durable_write"
+    ]
+  },
+  "artifacts": {
+    "committed_examples": "synthetic_public_only",
+    "paths": "repo_relative_or_placeholder",
+    "outputs": [
+      "openclerk_artifact_ocr.v1 candidate text inside artifact_candidate_plan"
+    ],
+    "cache": "temporary process-local files only; no committed OCR cache"
+  },
+  "install": {
+    "package": "module-release-archive",
+    "steps": [
+      "Install tesseract and ocrmypdf outside OpenClerk core.",
+      "Register the module with openclerk module install_module and this manifest.",
+      "Configure language, tesseract command, and ocrmypdf command through openclerk module configure_module."
+    ],
+    "uninstall": "Run openclerk module remove_module for provider tesseract, then remove optional tools and any temporary user-cache directories without changing OpenClerk core."
+  },
+  "compatibility": {
+    "openclerk_runner": "routes explicit document artifact_candidate_plan text_extraction ocr_review through verified module registration",
+    "skill": "does not replace skills/openclerk/SKILL.md",
+    "schema": "returns reviewed candidate text and OCR provenance in artifact_candidate_plan; durable writes still require existing create_document or ingest_source_url approval"
+  },
+  "release": {
+    "tag": "tesseract-ocr/v0.1.0",
+    "assets": [
+      "openclerk-module-tesseract-ocr_0.1.0_darwin_arm64.tar.gz",
+      "openclerk-module-tesseract-ocr_0.1.0_linux_amd64.tar.gz",
+      "openclerk-module-tesseract-ocr_0.1.0_source.tar.gz",
+      "openclerk-module-tesseract-ocr_0.1.0_checksums.txt",
+      "openclerk-module-tesseract-ocr_0.1.0_sbom.json"
+    ],
+    "status": "supported_optional_module"
+  }
+}

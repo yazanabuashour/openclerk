@@ -13,6 +13,11 @@ source_refs: docs/evals/local-artifact-ocr-platform-policy-comparison.md, docs/e
 
 Accepted as the explicit kill decision for `oc-hbu5`.
 
+Supersession note: this historical kill decision was superseded on 2026-05-05
+by [`ocr-module-final-decision.md`](ocr-module-final-decision.md), which keeps
+hidden OpenClerk-owned core OCR killed but promotes explicit optional local OCR
+review through `modules/tesseract-ocr/module.json`.
+
 Do not add OpenClerk-owned OCR-capable local artifact extraction, model/provider
 egress over local artifacts, local OCR runtime management, scanned-PDF OCR
 fallback, Tesseract, OCRmyPDF, Poppler rendering, Go OCR bindings,

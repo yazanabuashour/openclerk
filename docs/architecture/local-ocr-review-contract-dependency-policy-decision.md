@@ -13,6 +13,12 @@ source_refs: docs/evals/local-ocr-review-contract-dependency-policy.md, docs/eva
 
 Accepted as a non-implementation decision for `oc-i8yk`.
 
+Supersession note: this historical non-implementation decision was superseded
+on 2026-05-05 by [`ocr-module-final-decision.md`](ocr-module-final-decision.md),
+which implements the local OCR engine comparison as the optional
+`modules/tesseract-ocr/module.json` module. The contract and dependency gates
+below remain the evidence basis for that promoted shape.
+
 Do not add runtime OCR, multimodal model calls, scanned-PDF OCR fallback,
 image parsing, domain-specific receipt or invoice OCR actions, parser
 pipelines, storage migrations, public APIs, shipped skill behavior, or product

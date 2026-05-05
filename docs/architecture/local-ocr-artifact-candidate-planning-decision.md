@@ -13,6 +13,13 @@ source_refs: docs/evals/local-ocr-artifact-candidate-planning-poc.md, docs/evals
 
 Accepted as a non-promotion decision for `oc-d1pm`.
 
+Supersession note: this historical non-promotion was superseded on
+2026-05-05 by [`ocr-module-final-decision.md`](ocr-module-final-decision.md),
+which promotes the optional local `modules/tesseract-ocr/module.json` module
+for explicit `artifact_candidate_plan` OCR review. The constraints below remain
+historical evidence for why OCR stayed out of hidden core parsing and durable
+writes.
+
 Do not add runtime OCR, scanned-PDF OCR fallback, image parsing, domain-specific
 receipt or invoice OCR actions, generalized artifact ingestion, parser
 pipelines, storage migrations, asset registry behavior, public APIs, shipped

@@ -127,19 +127,19 @@ func runModuleTask(ctx context.Context, config runclient.Config, request moduleT
 		if err != nil {
 			return moduleRejected(err), nil
 		}
-		return moduleTaskResult{Module: &module, Summary: "installed semantic module"}, nil
+		return moduleTaskResult{Module: &module, Summary: fmt.Sprintf("installed %s module", module.Kind)}, nil
 	case "configure_module":
 		module, err := runclient.ConfigureSemanticModule(ctx, config, request.Config)
 		if err != nil {
 			return moduleRejected(err), nil
 		}
-		return moduleTaskResult{Module: &module, Summary: "configured semantic module"}, nil
+		return moduleTaskResult{Module: &module, Summary: fmt.Sprintf("configured %s module", module.Kind)}, nil
 	case "remove_module":
 		module, err := runclient.RemoveSemanticModule(ctx, config, request.Provider)
 		if err != nil {
 			return moduleRejected(err), nil
 		}
-		return moduleTaskResult{Module: &module, Summary: "removed semantic module"}, nil
+		return moduleTaskResult{Module: &module, Summary: fmt.Sprintf("removed %s module", module.Kind)}, nil
 	case "list_modules":
 		modules, err := runclient.ListSemanticModules(ctx, config)
 		if err != nil {
@@ -296,9 +296,10 @@ func moduleUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "usage: openclerk module [--db path] < request.json")
 	_, _ = fmt.Fprintln(w, "")
 	_, _ = fmt.Fprintln(w, "Reads one strict JSON object from stdin and writes one JSON result.")
-	_, _ = fmt.Fprintln(w, "Manages optional semantic embedding modules through redacted runtime_config state.")
+	_, _ = fmt.Fprintln(w, "Manages optional embedding and OCR modules through redacted runtime_config state.")
 	_, _ = fmt.Fprintln(w, `  install Ollama: {"action":"install_module","module":{"provider":"ollama","manifest_path":"modules/ollama-embeddings/module.json","command":"semantic-retrieval-adapter","provider_config":{"embedding_model":"embeddinggemma","ollama_url":"http://localhost:11434"}}}`)
 	_, _ = fmt.Fprintln(w, `  install Gemini: {"action":"install_module","module":{"provider":"gemini","manifest_path":"modules/gemini-embeddings/module.json","command":"semantic-retrieval-adapter","provider_config":{"embedding_model":"gemini-embedding-001","gemini_api_base":"https://generativelanguage.googleapis.com/v1beta","embedding_output_dimensions":"3072"}}}`)
+	_, _ = fmt.Fprintln(w, `  install Tesseract OCR: {"action":"install_module","module":{"kind":"ocr_provider","provider":"tesseract","manifest_path":"modules/tesseract-ocr/module.json","command":"tesseract","provider_config":{"ocrmypdf_command":"ocrmypdf","language":"eng"}}}`)
 	_, _ = fmt.Fprintln(w, `  configure: {"action":"configure_module","config":{"provider":"ollama","enabled":true,"provider_config":{"embedding_model":"embeddinggemma"}}}`)
 	_, _ = fmt.Fprintln(w, `  remove/list: {"action":"remove_module","provider":"ollama"} | {"action":"list_modules"}`)
 	_, _ = fmt.Fprintln(w, "Gemini stores only redacted provider config and uses runtime_config:GEMINI_API_KEY from the configured database when explicitly selected.")

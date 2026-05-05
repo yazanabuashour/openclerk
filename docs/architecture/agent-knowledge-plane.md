@@ -167,19 +167,24 @@ canonical truth layer.
 
 ### OCR and artifact extraction
 
-OCR remains outside current production behavior. The final OCR decision in
-[`ocr-module-final-decision.md`](ocr-module-final-decision.md) records
-`none viable yet` for implementation after comparing local OCR, Go bindings,
-open-source OCR models, Ollama vision, hosted vision, cloud document OCR, and
-external agent-model OCR.
+OCR follows the same building-block economy pattern as semantic retrieval:
+explicit optional modules, installed and manifest-verified before use, with
+read-only candidate output routed through `artifact_candidate_plan` OCR review.
+The final OCR decision in
+[`ocr-module-final-decision.md`](ocr-module-final-decision.md) promotes the
+local `modules/tesseract-ocr/module.json` module for common image files and
+PDF OCR review.
 
-If OCR is reopened, it should follow the same building-block economy pattern as
-semantic retrieval: explicit optional modules, installed and manifest-verified
-before use, with read-only candidate output routed through
-`artifact_candidate_plan` OCR review. OCR output must remain candidate evidence
-until the user approves an existing durable write action. Core OpenClerk should
-not gain hidden OCR fallback, hidden model egress, committed OCR caches, parser
-truth, or a default local artifact extraction stack.
+OpenClerk distinguishes text-extractable documents from scan-only or suspect
+documents. UTF-8 text, markdown, and text-bearing PDFs use the normal
+non-OCR local artifact path. Common images, scan-only PDFs, and bad or partial
+PDF text require explicit `artifact.text_extraction: "ocr_review"` with
+`artifact.ocr_provider: "tesseract"`.
+
+OCR output remains candidate evidence until the user approves an existing
+durable write action. Core OpenClerk does not gain hidden OCR fallback, hidden
+model egress, committed OCR caches, parser truth, or a default local artifact
+extraction stack.
 
 ### Cognee alignment
 

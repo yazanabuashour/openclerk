@@ -11,16 +11,18 @@ source_refs: docs/architecture/agent-knowledge-plane.md, docs/architecture/seman
 
 ## Status
 
-Accepted as the final comparison frame for `oc-n286`.
+Accepted as the final comparison frame for `oc-n286` and the promoted local
+module shape for `oc-6eqz`.
 
-This ADR does not add OCR runtime behavior, module manifests, runner fields,
-storage migrations, public APIs, product code, shipped skill behavior, model
-egress, local artifact parsing, or durable writes.
+This ADR authorizes only optional local OCR review through
+`modules/tesseract-ocr`. It does not authorize hidden core OCR, model egress,
+cloud OCR, storage migrations, OCR caches, public durable-write APIs, or parser
+truth.
 
 ## Decision
 
-If OCR is ever implemented in OpenClerk, it must use the optional building-block
-module pattern rather than core-owned hidden extraction.
+OCR in OpenClerk uses the optional building-block module pattern rather than
+core-owned hidden extraction.
 
 The natural product surface remains the existing read-only
 `artifact_candidate_plan` local artifact planning action with an explicit OCR
@@ -30,9 +32,9 @@ review mode:
 {"action":"artifact_candidate_plan","artifact":{"local_path":"<explicit-user-local-file>","artifact_kind":"receipt","text_extraction":"ocr_review","limit":5}}
 ```
 
-That shape stays unpromoted until a later decision proves an OCR provider can
-meet all gates. OCR output would be candidate evidence only. Durable writes
-would still require approved `create_document` or `ingest_source_url`.
+That shape is promoted for the local `tesseract` provider. OCR output is
+candidate evidence only. Durable writes still require approved
+`create_document` or `ingest_source_url`.
 
 The shared module contract would be `openclerk_artifact_ocr.v1`:
 
@@ -61,8 +63,8 @@ Evaluate OCR as separately installable parts, not as a core parser stack:
 
 | Candidate | Role | Initial outcome |
 | --- | --- | --- |
-| Tesseract image OCR module | Local-first image text extraction. | Compare, but do not promote without installed dependency, language data, version reporting, fixtures, and confidence behavior. |
-| OCRmyPDF/Tesseract scanned-PDF module | Local-first searchable PDF and scanned-PDF text layer path. | Compare, but do not promote without dependency and page-rendering policy. |
+| Tesseract image OCR module | Local-first image text extraction. | Promote through `modules/tesseract-ocr`. |
+| OCRmyPDF/Tesseract scanned-PDF module | Local-first searchable PDF and scanned-PDF text layer path. | Promote through `modules/tesseract-ocr`. |
 | Go OCR bindings such as gosseract | Go adapter over native OCR. | Compare as packaging shape only; it does not remove the Tesseract dependency. |
 | PaddleOCR module | Open-source OCR/layout model path. | Compare for capability; do not promote without packaging, runtime, model asset, and fixture proof. |
 | Ollama vision module | Local multimodal OCR through installed Ollama. | Compare only when a vision model is installed and fixture quality is proven. |
@@ -96,8 +98,10 @@ truth layer for OCR.
 Existing behavior remains unchanged:
 
 - `artifact_candidate_plan` supports explicit supplied text, markdown, and
-  text-bearing PDF planning.
-- `text_extraction` remains unrecognized by the runner.
-- OCR/image parsing, scanned-PDF OCR fallback, and opaque binary parsing remain
-  unsupported.
-- No OCR module manifests are supported or installable from this ADR.
+  text-bearing PDF planning without OCR.
+- `text_extraction: "ocr_review"` is recognized only for explicit local OCR
+  review through an installed, enabled, and verified OCR module.
+- Scan-only PDFs, bad/partial text-bearing PDFs, and common images require
+  explicit OCR review; there is no hidden fallback.
+- `modules/tesseract-ocr/module.json` is supported and installable from this
+  ADR. Other OCR module families require separate evidence and promotion.

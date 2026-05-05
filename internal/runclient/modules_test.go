@@ -50,6 +50,49 @@ func TestSemanticModuleRuntimeConfigRedactsAndVerifiesManifest(t *testing.T) {
 	}
 }
 
+func TestOCRModuleRuntimeConfigVerifiesManifest(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	manifestPath := writeRunclientOCRModuleManifest(t, t.TempDir())
+	installed, err := InstallOCRModule(ctx, config, SemanticModuleInstallInput{
+		Kind:         ModuleKindOCRProvider,
+		Provider:     OCRModuleProviderTesseract,
+		ManifestPath: manifestPath,
+		Command:      "tesseract",
+		ProviderConfig: map[string]string{
+			"ocrmypdf_command": "ocrmypdf",
+			"language":         "eng",
+		},
+	})
+	if err != nil {
+		t.Fatalf("install OCR module: %v", err)
+	}
+	if installed.Kind != ModuleKindOCRProvider ||
+		installed.Provider != OCRModuleProviderTesseract ||
+		installed.ProviderConfig["language"] != "eng" ||
+		installed.VerificationStatus != "verified" {
+		t.Fatalf("installed OCR config = %+v", installed)
+	}
+
+	read, err := ReadOCRModuleConfig(ctx, config, OCRModuleProviderTesseract)
+	if err != nil {
+		t.Fatalf("read OCR module: %v", err)
+	}
+	if !read.Enabled || read.ManifestSHA256 == "" || read.Kind != ModuleKindOCRProvider {
+		t.Fatalf("read OCR config = %+v", read)
+	}
+
+	if err := os.WriteFile(manifestPath, []byte(strings.ReplaceAll(string(mustReadFile(t, manifestPath)), "0.1.0", "0.1.1")), 0o600); err != nil {
+		t.Fatalf("mutate manifest: %v", err)
+	}
+	changed, err := ReadOCRModuleConfig(ctx, config, OCRModuleProviderTesseract)
+	if err == nil || !strings.Contains(err.Error(), "digest changed") || changed.VerificationStatus != "verification_failed" {
+		t.Fatalf("changed OCR config=%+v err=%v", changed, err)
+	}
+}
+
 func writeRunclientSemanticModuleManifest(t *testing.T, dir string, provider string) string {
 	t.Helper()
 	path := filepath.Join(dir, "module.json")
@@ -79,6 +122,39 @@ func writeRunclientSemanticModuleManifest(t *testing.T, dir string, provider str
 	}
 	if err := os.WriteFile(path, data, 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
+	}
+	return path
+}
+
+func writeRunclientOCRModuleManifest(t *testing.T, dir string) string {
+	t.Helper()
+	path := filepath.Join(dir, "module.json")
+	manifest := map[string]any{
+		"schema_version": "openclerk-module.v1",
+		"module": map[string]any{
+			"name":    "tesseract-ocr",
+			"version": "0.1.0",
+			"kind":    ModuleKindOCRProvider,
+		},
+		"provides": []map[string]any{{
+			"type": "command",
+			"name": "tesseract ocr",
+		}},
+		"authority": map[string]any{
+			"default":        "read_only",
+			"durable_writes": "forbidden",
+			"forbidden":      []string{"write_documents", "hidden_cloud_egress"},
+		},
+		"release": map[string]any{
+			"status": "supported_optional_module",
+		},
+	}
+	data, err := json.Marshal(manifest)
+	if err != nil {
+		t.Fatalf("marshal OCR manifest: %v", err)
+	}
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		t.Fatalf("write OCR manifest: %v", err)
 	}
 	return path
 }

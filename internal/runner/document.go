@@ -149,7 +149,7 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 			Summary:       webSearchPlanSummary(plan),
 		}, nil
 	case DocumentTaskActionArtifactPlan:
-		plan, err := runArtifactCandidatePlan(ctx, client, normalized.Artifact)
+		plan, err := runArtifactCandidatePlan(ctx, client, config, normalized.Artifact)
 		if err != nil {
 			var domainErr *domain.Error
 			if errors.As(err, &domainErr) && domainErr.Code == "validation_error" {
@@ -598,6 +598,8 @@ func trimArtifactPlanOptions(input ArtifactPlanOptions) ArtifactPlanOptions {
 		SourceURL:      strings.TrimSpace(input.SourceURL),
 		SourceType:     strings.TrimSpace(input.SourceType),
 		ArtifactKind:   strings.TrimSpace(input.ArtifactKind),
+		TextExtraction: strings.TrimSpace(input.TextExtraction),
+		OCRProvider:    strings.TrimSpace(input.OCRProvider),
 		Path:           normalizeVaultRelativePath(input.Path),
 		Title:          strings.TrimSpace(input.Title),
 		Body:           input.Body,
@@ -683,6 +685,22 @@ func validateArtifactPlanOptions(input ArtifactPlanOptions) string {
 		default:
 			return "artifact.source_type must be explicit_content, public_url, web, pdf, or local_artifact"
 		}
+	}
+	if input.TextExtraction != "" {
+		switch input.TextExtraction {
+		case "ocr_review":
+			if input.LocalPath == "" {
+				return "artifact.local_path is required for artifact.text_extraction ocr_review"
+			}
+		default:
+			return "artifact.text_extraction must be ocr_review"
+		}
+	}
+	if input.OCRProvider != "" && input.TextExtraction == "" {
+		return "artifact.ocr_provider requires artifact.text_extraction ocr_review"
+	}
+	if input.OCRProvider != "" && input.OCRProvider != runclient.OCRModuleProviderTesseract {
+		return "artifact.ocr_provider must be tesseract"
 	}
 	if input.ArtifactKind != "" {
 		switch input.ArtifactKind {

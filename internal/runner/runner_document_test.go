@@ -558,6 +558,34 @@ func TestDocumentTaskArtifactCandidatePlanRejectsInvalidInputs(t *testing.T) {
 	if !missing.Rejected || missing.RejectionReason != "artifact.content, artifact.body, artifact.source_url, or artifact.local_path is required" {
 		t.Fatalf("missing artifact content result = %+v", missing)
 	}
+
+	ocrProviderOnly, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionArtifactPlan,
+		Artifact: runner.ArtifactPlanOptions{
+			Content:     "Receipt text",
+			OCRProvider: "tesseract",
+		},
+	})
+	if err != nil {
+		t.Fatalf("artifact OCR provider-only reject: %v", err)
+	}
+	if !ocrProviderOnly.Rejected || ocrProviderOnly.RejectionReason != "artifact.ocr_provider requires artifact.text_extraction ocr_review" {
+		t.Fatalf("OCR provider-only result = %+v", ocrProviderOnly)
+	}
+
+	ocrReviewWithoutLocalPath, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionArtifactPlan,
+		Artifact: runner.ArtifactPlanOptions{
+			Content:        "Receipt text",
+			TextExtraction: "ocr_review",
+		},
+	})
+	if err != nil {
+		t.Fatalf("artifact OCR review without local path reject: %v", err)
+	}
+	if !ocrReviewWithoutLocalPath.Rejected || ocrReviewWithoutLocalPath.RejectionReason != "artifact.local_path is required for artifact.text_extraction ocr_review" {
+		t.Fatalf("OCR review without local path result = %+v", ocrReviewWithoutLocalPath)
+	}
 }
 
 func TestDocumentTaskArtifactCandidatePlanReadsExplicitLocalTextArtifact(t *testing.T) {
@@ -641,6 +669,92 @@ func TestDocumentTaskArtifactCandidatePlanRejectsUnsupportedLocalOCRArtifact(t *
 	if !result.Rejected || !strings.Contains(result.RejectionReason, "OCR/image parsing is unsupported") {
 		t.Fatalf("unsupported local artifact result = %+v", result)
 	}
+}
+
+func TestDocumentTaskArtifactCandidatePlanRejectsOCRReviewWithoutModule(t *testing.T) {
+	t.Parallel()
+
+	artifactPath := filepath.Join(t.TempDir(), "receipt.png")
+	if err := os.WriteFile(artifactPath, []byte{0x89, 0x50, 0x4e, 0x47}, 0o644); err != nil {
+		t.Fatalf("write local image: %v", err)
+	}
+	result, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionArtifactPlan,
+		Artifact: runner.ArtifactPlanOptions{
+			LocalPath:      artifactPath,
+			TextExtraction: "ocr_review",
+			OCRProvider:    "tesseract",
+		},
+	})
+	if err != nil {
+		t.Fatalf("artifact OCR review without module: %v", err)
+	}
+	if !result.Rejected || !strings.Contains(result.RejectionReason, "OCR module is not installed") {
+		t.Fatalf("OCR review without module result = %+v", result)
+	}
+}
+
+func TestDocumentTaskArtifactCandidatePlanOCRReviewLocalImageAndScannedPDF(t *testing.T) {
+	t.Parallel()
+	requireOCRFixtureTools(t)
+
+	ctx := context.Background()
+	manifestRoot := t.TempDir()
+	manifestDir := filepath.Join(manifestRoot, "modules", "tesseract-ocr")
+	if err := os.MkdirAll(manifestDir, 0o755); err != nil {
+		t.Fatalf("create OCR manifest dir: %v", err)
+	}
+	config := runclient.Config{
+		DatabasePath:       filepath.Join(t.TempDir(), "data", "openclerk.sqlite"),
+		ModuleManifestRoot: manifestRoot,
+	}
+	manifestPath := writeRunnerOCRModuleManifest(t, manifestDir)
+	manifestRelPath, err := filepath.Rel(manifestRoot, manifestPath)
+	if err != nil {
+		t.Fatalf("rel OCR manifest path: %v", err)
+	}
+	if _, err := runclient.InstallOCRModule(ctx, config, runclient.SemanticModuleInstallInput{
+		Kind:         runclient.ModuleKindOCRProvider,
+		Provider:     runclient.OCRModuleProviderTesseract,
+		ManifestPath: filepath.ToSlash(manifestRelPath),
+		Command:      "tesseract",
+		ProviderConfig: map[string]string{
+			"ocrmypdf_command": "ocrmypdf",
+			"language":         "eng",
+		},
+	}); err != nil {
+		t.Fatalf("install OCR module: %v", err)
+	}
+	fixtureDir := t.TempDir()
+	imagePath, pdfPath := writeOCRFixtureArtifacts(t, fixtureDir)
+
+	imageResult, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionArtifactPlan,
+		Artifact: runner.ArtifactPlanOptions{
+			LocalPath:      imagePath,
+			ArtifactKind:   "receipt",
+			TextExtraction: "ocr_review",
+			OCRProvider:    "tesseract",
+		},
+	})
+	if err != nil {
+		t.Fatalf("image OCR plan: %v", err)
+	}
+	assertOCRPlan(t, imageResult, "OC-7781")
+
+	pdfResult, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionArtifactPlan,
+		Artifact: runner.ArtifactPlanOptions{
+			LocalPath:      pdfPath,
+			ArtifactKind:   "receipt",
+			TextExtraction: "ocr_review",
+			OCRProvider:    "tesseract",
+		},
+	})
+	if err != nil {
+		t.Fatalf("PDF OCR plan: %v", err)
+	}
+	assertOCRPlan(t, pdfResult, "Total paid 42 USD")
 }
 
 func TestDocumentTaskArtifactCandidatePlanRejectsNonRegularLocalArtifact(t *testing.T) {
@@ -1958,6 +2072,95 @@ func initGitLifecycleTestRepo(t *testing.T) string {
 	runGitLifecycleTestCommand(t, vaultRoot, "add", ".gitkeep")
 	runGitLifecycleTestCommand(t, vaultRoot, "commit", "-m", "initial")
 	return vaultRoot
+}
+
+func requireOCRFixtureTools(t *testing.T) {
+	t.Helper()
+	for _, tool := range []string{"tesseract", "ocrmypdf", "img2pdf", "python3"} {
+		if _, err := exec.LookPath(tool); err != nil {
+			t.Skipf("%s not available", tool)
+		}
+	}
+	cmd := exec.Command("python3", "-c", "import PIL")
+	if err := cmd.Run(); err != nil {
+		t.Skip("python3 PIL package not available")
+	}
+}
+
+func writeOCRFixtureArtifacts(t *testing.T, dir string) (string, string) {
+	t.Helper()
+	script := `import sys
+from PIL import Image, ImageDraw, ImageFont
+root=sys.argv[1]
+text="OPENCLERK OCR FIXTURE\nReceipt ID OC-7781\nTotal paid 42 USD\nScanned image evidence"
+img=Image.new("RGB",(1200,700),"white")
+d=ImageDraw.Draw(img)
+try:
+    font=ImageFont.truetype("Arial.ttf",54)
+except Exception:
+    font=ImageFont.load_default(size=54)
+d.multiline_text((80,90),text,fill="black",font=font,spacing=24)
+img.save(root+"/receipt.png")
+`
+	if output, err := exec.Command("python3", "-c", script, dir).CombinedOutput(); err != nil {
+		t.Fatalf("write OCR image fixture: %v\n%s", err, string(output))
+	}
+	imagePath := filepath.Join(dir, "receipt.png")
+	pdfPath := filepath.Join(dir, "scanned.pdf")
+	if output, err := exec.Command("img2pdf", imagePath, "-o", pdfPath).CombinedOutput(); err != nil {
+		t.Fatalf("write OCR PDF fixture: %v\n%s", err, string(output))
+	}
+	return imagePath, pdfPath
+}
+
+func writeRunnerOCRModuleManifest(t *testing.T, dir string) string {
+	t.Helper()
+	path := filepath.Join(dir, "module.json")
+	manifest := map[string]any{
+		"schema_version": "openclerk-module.v1",
+		"module": map[string]any{
+			"name":    "tesseract-ocr",
+			"version": "0.1.0",
+			"kind":    "ocr_provider",
+		},
+		"provides": []map[string]any{{
+			"type": "command",
+			"name": "tesseract ocr",
+		}},
+		"authority": map[string]any{
+			"default":        "read_only",
+			"durable_writes": "forbidden",
+			"forbidden":      []string{"write_documents", "hidden_cloud_egress"},
+		},
+		"release": map[string]any{
+			"status": "supported_optional_module",
+		},
+	}
+	data, err := json.Marshal(manifest)
+	if err != nil {
+		t.Fatalf("marshal OCR manifest: %v", err)
+	}
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		t.Fatalf("write OCR manifest: %v", err)
+	}
+	return path
+}
+
+func assertOCRPlan(t *testing.T, result runner.DocumentTaskResult, wantText string) {
+	t.Helper()
+	plan := result.ArtifactPlan
+	if result.Rejected ||
+		plan == nil ||
+		plan.OCRExtraction == nil ||
+		plan.OCRExtraction.Provider != "tesseract" ||
+		plan.OCRExtraction.PrivacyPosture != "local_process_no_network" ||
+		plan.LocalArtifact == nil ||
+		plan.LocalArtifact.TextStatus != "ocr_review_extracted" ||
+		!strings.Contains(plan.BodyPreview, wantText) ||
+		plan.WriteStatus != "planned_no_write" ||
+		!strings.Contains(plan.NextCreateRequest, "create_document") {
+		t.Fatalf("OCR artifact plan = %+v", result)
+	}
 }
 
 func runGitLifecycleTestCommand(t *testing.T, dir string, args ...string) {

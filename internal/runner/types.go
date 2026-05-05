@@ -471,6 +471,8 @@ type ArtifactPlanOptions struct {
 	SourceURL      string            `json:"source_url,omitempty"`
 	SourceType     string            `json:"source_type,omitempty"`
 	ArtifactKind   string            `json:"artifact_kind,omitempty"`
+	TextExtraction string            `json:"text_extraction,omitempty"`
+	OCRProvider    string            `json:"ocr_provider,omitempty"`
 	Path           string            `json:"path,omitempty"`
 	Title          string            `json:"title,omitempty"`
 	Body           string            `json:"body,omitempty"`
@@ -586,6 +588,7 @@ type ArtifactCandidatePlan struct {
 	SourceType              string            `json:"source_type,omitempty"`
 	SourceURL               string            `json:"source_url,omitempty"`
 	LocalArtifact           *LocalArtifact    `json:"local_artifact,omitempty"`
+	OCRExtraction           *OCRExtraction    `json:"ocr_extraction,omitempty"`
 	CandidatePath           string            `json:"candidate_path,omitempty"`
 	CandidateTitle          string            `json:"candidate_title,omitempty"`
 	BodyPreview             string            `json:"body_preview,omitempty"`
@@ -618,6 +621,22 @@ type LocalArtifact struct {
 	Confidence        string `json:"confidence"`
 	PageCount         int    `json:"page_count,omitempty"`
 	UnsupportedReason string `json:"unsupported_reason,omitempty"`
+}
+
+type OCRExtraction struct {
+	Provider            string   `json:"provider"`
+	ModuleName          string   `json:"module_name"`
+	TextStatus          string   `json:"text_status"`
+	Extractor           string   `json:"extractor"`
+	ExtractorVersion    string   `json:"extractor_version,omitempty"`
+	PDFExtractor        string   `json:"pdf_extractor,omitempty"`
+	PDFExtractorVersion string   `json:"pdf_extractor_version,omitempty"`
+	Language            string   `json:"language,omitempty"`
+	PageCount           int      `json:"page_count,omitempty"`
+	Confidence          string   `json:"confidence"`
+	PrivacyPosture      string   `json:"privacy_posture"`
+	Provenance          string   `json:"provenance"`
+	Warnings            []string `json:"warnings,omitempty"`
 }
 
 type AgentHandoff struct {

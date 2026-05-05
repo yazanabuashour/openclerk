@@ -3,33 +3,37 @@
 ## Summary
 
 `oc-n286` compared OCR as optional OpenClerk building blocks rather than core
-artifact parsing. The final implementation outcome is `none viable yet`.
+artifact parsing. The final implementation outcome is a promoted optional
+local `tesseract-ocr` module.
 
-This result keeps the prior OpenClerk-owned OCR extraction kill decision intact
-for core behavior while recording the only acceptable future shape: explicit
-`artifact_candidate_plan` OCR review routed through installed, enabled, and
-manifest-verified optional OCR modules.
+This result keeps the prior OpenClerk-owned hidden OCR extraction kill decision
+intact for default core behavior while implementing explicit
+`artifact_candidate_plan` OCR review through an installed, enabled, and
+manifest-verified optional module.
 
 ## Local Probe Result
 
 | Check | Result |
 | --- | --- |
-| Tesseract | unavailable |
-| OCRmyPDF | unavailable |
+| Tesseract | available; `tesseract 5.5.2` |
+| Tesseract languages | `eng`, `osd`, `snum` |
+| OCRmyPDF | available; `ocrmypdf 17.4.2` |
 | Poppler PDF helpers | available |
 | Ollama | available |
 | Ollama vision model | unavailable; installed models are embedding-only |
 | Cloud OCR key | unavailable for this run |
 
-No extraction, model call, cloud egress, private artifact upload, durable write,
-module registration, direct SQLite access, vault mutation, or module-cache
-inspection was performed.
+Temporary synthetic fixture extraction was performed for an image and scanned
+PDF containing `Receipt ID OC-7781` and `Total paid 42 USD`. The text was
+recovered through Tesseract image OCR and OCRmyPDF sidecar text. No model call,
+cloud egress, private artifact upload, durable write, direct SQLite access,
+vault mutation, or module-cache inspection was performed.
 
 ## Decision Result
 
 | Candidate family | Result |
 | --- | --- |
-| Tesseract/OCRmyPDF local OCR | Do not promote. Local-first posture is good, but dependencies and fixture quality are unproven here. |
+| Tesseract/OCRmyPDF local OCR | Promote as `modules/tesseract-ocr` for explicit local OCR review of common images and PDFs. |
 | Go OCR bindings | Kill as standalone answer. Bindings do not remove native dependency and language-data burden. |
 | PaddleOCR/open-source model OCR | Keep as reference pressure. Capability is plausible but packaging/runtime evidence is missing. |
 | Ollama vision OCR | Do not promote now. Ollama exists, but no installed vision model or fixture evidence exists. |
@@ -39,34 +43,32 @@ inspection was performed.
 
 ## Gate Results
 
-Safety pass: pass for non-promotion. Current production behavior preserves
-runner-only access, local-first default behavior, no hidden local parser truth,
-no hidden cloud egress, duplicate checks for supplied text, unsupported-file
-rejection, and approval-before-write.
+Safety pass: pass. Current default behavior preserves runner-only access,
+local-first default behavior, no hidden local parser truth, no hidden cloud
+egress, unsupported-file rejection, duplicate checks, and
+approval-before-write. OCR adds only explicit local module execution with
+`planned_no_write`.
 
-Capability pass: partial. OpenClerk still does not recover text from scanned
-images or scanned PDFs. It can safely handle user-supplied reviewed text,
-markdown, UTF-8 text, and text-bearing PDF candidates.
+Capability pass: pass for generic OCR candidate text from common image files
+and scanned or force-OCR PDFs. Text-extractable documents continue to use the
+normal non-OCR path.
 
-UX quality: acceptable as a final boundary for current evidence. A normal user
-would expect a simpler OCR surface, and optional OCR modules remain the best
-taste fit, but no candidate currently passes enough dependency, provenance,
-egress, confidence, duplicate, and fixture gates to justify implementation.
+UX quality: pass. A normal user gets a simpler surface: no OCR for documents
+with embedded text, explicit OCR review for scan-only images/PDFs or bad PDF
+text, and no new durable-write ceremony.
 
 ## Implementation Authorization
 
-Do not implement:
+Implement only:
 
-- OCR module manifests
-- OCR provider adapters
-- `artifact_candidate_plan.text_extraction`
-- scanned-PDF OCR fallback
-- Tesseract, OCRmyPDF, Poppler rendering, PaddleOCR, Ollama vision, OpenAI
-  vision, Mistral OCR, Textract, Azure, or Google OCR integrations
-- storage migrations or OCR caches
-- shipped skill behavior
-- public API changes
+- `modules/tesseract-ocr/module.json`
+- optional module install/config/list/remove support for `kind:
+  "ocr_provider"` and provider `tesseract`
+- `artifact_candidate_plan` fields `text_extraction: "ocr_review"` and
+  `ocr_provider: "tesseract"`
+- local Tesseract image OCR and OCRmyPDF scanned-PDF or force-PDF OCR
+- returned `ocr_extraction` provenance, versions, language, warnings, privacy
+  posture, and `planned_no_write`
 
-Future OCR work must start from a new evidence track where at least one module
-candidate is installed or credentialed, fixture-tested, and accepted by a
-promotion decision before product code is written.
+Do not implement cloud OCR, hosted model OCR, Ollama vision OCR, PaddleOCR,
+structured OCR fields, storage migrations, or OCR caches from this result.

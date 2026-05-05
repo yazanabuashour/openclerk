@@ -143,6 +143,35 @@ func TestRunnerModuleInstallConfigureListRemoveJSON(t *testing.T) {
 	}
 }
 
+func TestRunnerModuleInstallTesseractOCRJSON(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	manifestPath := writeCLIOCRModuleManifest(t, t.TempDir())
+	installRequest := `{"action":"install_module","module":{"kind":"ocr_provider","provider":"tesseract","manifest_path":"` + filepath.ToSlash(manifestPath) + `","command":"tesseract","provider_config":{"ocrmypdf_command":"ocrmypdf","language":"eng"}}}`
+	var installResult moduleTaskResult
+	code, stderr := runJSON(t, []string{"module", "--db", dbPath}, installRequest, &installResult)
+	if code != 0 {
+		t.Fatalf("install OCR exit = %d stderr=%s", code, stderr)
+	}
+	if installResult.Rejected ||
+		installResult.Module == nil ||
+		installResult.Module.Kind != "ocr_provider" ||
+		installResult.Module.Provider != "tesseract" ||
+		installResult.Module.ProviderConfig["language"] != "eng" {
+		t.Fatalf("install OCR result = %+v", installResult)
+	}
+
+	var listResult moduleTaskResult
+	code, stderr = runJSON(t, []string{"module", "--db", dbPath}, `{"action":"list_modules"}`, &listResult)
+	if code != 0 {
+		t.Fatalf("list OCR exit = %d stderr=%s", code, stderr)
+	}
+	if len(listResult.Modules) != 1 || listResult.Modules[0].Kind != "ocr_provider" {
+		t.Fatalf("list OCR result = %+v", listResult)
+	}
+}
+
 func TestResolvedVersion(t *testing.T) {
 	t.Parallel()
 
@@ -675,6 +704,39 @@ func writeCLISemanticModuleManifest(t *testing.T, dir string, provider string) s
 	}
 	if err := os.WriteFile(path, data, 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
+	}
+	return path
+}
+
+func writeCLIOCRModuleManifest(t *testing.T, dir string) string {
+	t.Helper()
+	path := filepath.Join(dir, "module.json")
+	manifest := map[string]any{
+		"schema_version": "openclerk-module.v1",
+		"module": map[string]any{
+			"name":    "tesseract-ocr",
+			"version": "0.1.0",
+			"kind":    "ocr_provider",
+		},
+		"provides": []map[string]any{{
+			"type": "command",
+			"name": "tesseract ocr",
+		}},
+		"authority": map[string]any{
+			"default":        "read_only",
+			"durable_writes": "forbidden",
+			"forbidden":      []string{"write_documents", "hidden_cloud_egress"},
+		},
+		"release": map[string]any{
+			"status": "supported_optional_module",
+		},
+	}
+	data, err := json.Marshal(manifest)
+	if err != nil {
+		t.Fatalf("marshal OCR manifest: %v", err)
+	}
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		t.Fatalf("write OCR manifest: %v", err)
 	}
 	return path
 }
