@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
 	"path"
 	"strconv"
 	"strings"
@@ -624,15 +623,8 @@ func normalizeVaultRelativePrefix(raw string) string {
 }
 
 func validateWebSearchResultInput(input WebSearchResultInput) string {
-	if input.URL == "" {
-		return "web_search.results.url is required"
-	}
-	parsed, err := url.Parse(input.URL)
-	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
-		return "web_search.results.url must be a valid http or https URL"
-	}
-	if parsed.Scheme != "http" && parsed.Scheme != "https" {
-		return "web_search.results.url must use http or https"
+	if _, rejection := validateRequiredRunnerHTTPURL(input.URL, "web_search.results.url"); rejection != "" {
+		return rejection
 	}
 	if input.SourceType != "" && input.SourceType != "web" && input.SourceType != "pdf" {
 		return "web_search.results.source_type must be web or pdf"
@@ -654,14 +646,8 @@ func validateArtifactPlanOptions(input ArtifactPlanOptions) string {
 			return "artifact.local_path must be an explicit path, not home-relative"
 		}
 	}
-	if input.SourceURL != "" {
-		parsed, err := url.Parse(input.SourceURL)
-		if err != nil || parsed.Scheme == "" || parsed.Host == "" {
-			return "artifact.source_url must be a valid http or https URL"
-		}
-		if parsed.Scheme != "http" && parsed.Scheme != "https" {
-			return "artifact.source_url must use http or https"
-		}
+	if _, rejection := validateOptionalRunnerHTTPURL(input.SourceURL, "artifact.source_url"); rejection != "" {
+		return rejection
 	}
 	if input.SourceType != "" {
 		switch input.SourceType {
@@ -775,15 +761,9 @@ func validateCompileSynthesisInput(input CompileSynthesisInput) string {
 }
 
 func validateSourceURLInput(input SourceURLInput) string {
-	if input.URL == "" {
-		return "source.url is required"
-	}
-	parsed, err := url.Parse(input.URL)
-	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
-		return "source.url must be a valid http or https URL"
-	}
-	if parsed.Scheme != "http" && parsed.Scheme != "https" {
-		return "source.url must use http or https"
+	parsed, rejection := validateRequiredRunnerHTTPURL(input.URL, "source.url")
+	if rejection != "" {
+		return rejection
 	}
 	mode := input.Mode
 	if mode == "" {
@@ -818,15 +798,8 @@ func validateSourceURLInput(input SourceURLInput) string {
 }
 
 func validateVideoURLInput(input VideoURLInput) string {
-	if input.URL == "" {
-		return "video.url is required"
-	}
-	parsed, err := url.Parse(input.URL)
-	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
-		return "video.url must be a valid http or https URL"
-	}
-	if parsed.Scheme != "http" && parsed.Scheme != "https" {
-		return "video.url must use http or https"
+	if _, rejection := validateRequiredRunnerHTTPURL(input.URL, "video.url"); rejection != "" {
+		return rejection
 	}
 	mode := input.Mode
 	if mode == "" {

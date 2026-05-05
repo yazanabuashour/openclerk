@@ -3,8 +3,6 @@ package runner
 import (
 	"context"
 	"fmt"
-	"net"
-	"net/url"
 	"strings"
 
 	"github.com/yazanabuashour/openclerk/internal/domain"
@@ -580,25 +578,7 @@ func normalizeSemanticSearchTagFilter(search *SemanticSearchOptions) string {
 }
 
 func validateSemanticSearchOllamaURL(raw string) string {
-	if strings.TrimSpace(raw) == "" {
-		return ""
-	}
-	parsed, err := url.Parse(raw)
-	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
-		return "semantic_search.ollama_url must be a loopback HTTP URL"
-	}
-	if parsed.Scheme != "http" && parsed.Scheme != "https" {
-		return "semantic_search.ollama_url must be a loopback HTTP URL"
-	}
-	host := parsed.Hostname()
-	if strings.EqualFold(host, "localhost") {
-		return ""
-	}
-	ip := net.ParseIP(host)
-	if ip != nil && ip.IsLoopback() {
-		return ""
-	}
-	return "semantic_search.ollama_url must be a loopback HTTP URL"
+	return validateOptionalRunnerLoopbackHTTPURL(raw, "semantic_search.ollama_url")
 }
 
 func normalizeTagFilter(fieldPrefix string, tag string, tagProvided bool, metadataKey *string, metadataValue *string, normalizedTag *string) string {
