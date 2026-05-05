@@ -5,19 +5,17 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/yazanabuashour/openclerk/internal/domain"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/yazanabuashour/openclerk/internal/domain"
 )
 
 func (s *Store) ListProvenanceEvents(ctx context.Context, query domain.ProvenanceEventQuery) (domain.ProvenanceEventResult, error) {
-	limit := query.Limit
-	if limit == 0 {
-		limit = 20
-	}
-	if limit < 1 || limit > 100 {
-		return domain.ProvenanceEventResult{}, domain.ValidationError("limit must be between 1 and 100", map[string]any{"limit": limit})
+	limit, err := normalizePageLimit(query.Limit, 20)
+	if err != nil {
+		return domain.ProvenanceEventResult{}, err
 	}
 
 	sqlQuery := `
@@ -72,12 +70,7 @@ LIMIT ? OFFSET ?`
 		return domain.ProvenanceEventResult{}, domain.InternalError("iterate provenance events", err)
 	}
 
-	pageInfo := domain.PageInfo{}
-	if len(events) > limit {
-		pageInfo.HasMore = true
-		pageInfo.NextCursor = encodeCursor(offset + limit)
-		events = events[:limit]
-	}
+	events, pageInfo := paginateSlice(events, limit, offset)
 	return domain.ProvenanceEventResult{Events: events, PageInfo: pageInfo}, nil
 }
 

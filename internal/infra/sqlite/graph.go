@@ -57,9 +57,9 @@ func (s *Store) GraphNeighborhood(ctx context.Context, input domain.GraphNeighbo
 			return domain.GraphNeighborhood{}, domain.ValidationError("docId, chunkId, or nodeId is required", nil)
 		}
 	}
-	limit := input.Limit
-	if limit == 0 {
-		limit = 20
+	limit, err := normalizePageLimit(input.Limit, 20)
+	if err != nil {
+		return domain.GraphNeighborhood{}, err
 	}
 	rows, err := s.db.QueryContext(ctx, `
 SELECT edge_id, from_node_id, to_node_id, kind, evidence_doc_id, evidence_chunk_id, evidence_path, evidence_heading, evidence_line_start, evidence_line_end

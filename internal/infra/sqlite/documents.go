@@ -5,12 +5,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"github.com/yazanabuashour/openclerk/internal/domain"
 	"io/fs"
 	"math"
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/yazanabuashour/openclerk/internal/domain"
 )
 
 func (s *Store) Search(ctx context.Context, query domain.SearchQuery) (domain.SearchResult, error) {
@@ -22,12 +23,9 @@ func (s *Store) Search(ctx context.Context, query domain.SearchQuery) (domain.Se
 	if strings.TrimSpace(query.Text) == "" {
 		return domain.SearchResult{}, domain.ValidationError("search text is required", nil)
 	}
-	limit := query.Limit
-	if limit == 0 {
-		limit = 10
-	}
-	if limit < 1 || limit > 100 {
-		return domain.SearchResult{}, domain.ValidationError("limit must be between 1 and 100", map[string]any{"limit": limit})
+	limit, err := normalizePageLimit(query.Limit, 10)
+	if err != nil {
+		return domain.SearchResult{}, err
 	}
 	if (query.MetadataKey == "") != (query.MetadataValue == "") {
 		return domain.SearchResult{}, domain.ValidationError("metadataKey and metadataValue must be provided together", nil)
@@ -52,12 +50,9 @@ func (s *Store) ListDocuments(ctx context.Context, query domain.DocumentListQuer
 	if (query.MetadataKey == "") != (query.MetadataValue == "") {
 		return domain.DocumentListResult{}, domain.ValidationError("metadataKey and metadataValue must be provided together", nil)
 	}
-	limit := query.Limit
-	if limit == 0 {
-		limit = 20
-	}
-	if limit < 1 || limit > 100 {
-		return domain.DocumentListResult{}, domain.ValidationError("limit must be between 1 and 100", map[string]any{"limit": limit})
+	limit, err := normalizePageLimit(query.Limit, 20)
+	if err != nil {
+		return domain.DocumentListResult{}, err
 	}
 
 	sqlQuery := `
@@ -109,13 +104,8 @@ LIMIT ? OFFSET ?`
 		return domain.DocumentListResult{}, domain.InternalError("iterate document registry rows", err)
 	}
 
-	pageInfo := domain.PageInfo{}
 	offset := decodeCursor(query.Cursor)
-	if len(documents) > limit {
-		pageInfo.HasMore = true
-		pageInfo.NextCursor = encodeCursor(offset + limit)
-		documents = documents[:limit]
-	}
+	documents, pageInfo := paginateSlice(documents, limit, offset)
 	return domain.DocumentListResult{Documents: documents, PageInfo: pageInfo}, nil
 }
 
@@ -530,12 +520,7 @@ func snippetForSearch(content string, query string) string {
 }
 
 func paginateSearchResults(hits []domain.SearchHit, limit int, offset int) domain.SearchResult {
-	pageInfo := domain.PageInfo{}
-	if len(hits) > limit {
-		pageInfo.HasMore = true
-		pageInfo.NextCursor = encodeCursor(offset + limit)
-		hits = hits[:limit]
-	}
+	hits, pageInfo := paginateSlice(hits, limit, offset)
 	for idx := range hits {
 		hits[idx].Rank = offset + idx + 1
 	}

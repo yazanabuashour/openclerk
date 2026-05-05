@@ -4,10 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/yazanabuashour/openclerk/internal/domain"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/yazanabuashour/openclerk/internal/domain"
 )
 
 type serviceProjection struct {
@@ -23,12 +24,9 @@ func (s *Store) ServicesLookup(ctx context.Context, input domain.ServiceLookupIn
 	if !supportsServices(s.backend) {
 		return domain.ServiceLookupResult{}, domain.UnsupportedError("services extension", s.backend)
 	}
-	limit := input.Limit
-	if limit == 0 {
-		limit = 10
-	}
-	if limit < 1 || limit > 100 {
-		return domain.ServiceLookupResult{}, domain.ValidationError("limit must be between 1 and 100", map[string]any{"limit": limit})
+	limit, err := normalizePageLimit(input.Limit, 10)
+	if err != nil {
+		return domain.ServiceLookupResult{}, err
 	}
 	offset := decodeCursor(input.Cursor)
 
@@ -90,12 +88,7 @@ LIMIT ? OFFSET ?`
 		}
 		services[idx] = loaded
 	}
-	pageInfo := domain.PageInfo{}
-	if len(services) > limit {
-		pageInfo.HasMore = true
-		pageInfo.NextCursor = encodeCursor(offset + limit)
-		services = services[:limit]
-	}
+	services, pageInfo := paginateSlice(services, limit, offset)
 	return domain.ServiceLookupResult{Services: services, PageInfo: pageInfo}, nil
 }
 

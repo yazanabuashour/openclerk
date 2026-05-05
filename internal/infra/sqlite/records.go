@@ -5,9 +5,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/yazanabuashour/openclerk/internal/domain"
 	"strings"
 	"time"
+
+	"github.com/yazanabuashour/openclerk/internal/domain"
 )
 
 func (s *Store) RecordsLookup(ctx context.Context, input domain.RecordLookupInput) (domain.RecordLookupResult, error) {
@@ -17,9 +18,9 @@ func (s *Store) RecordsLookup(ctx context.Context, input domain.RecordLookupInpu
 	if strings.TrimSpace(input.Text) == "" {
 		return domain.RecordLookupResult{}, domain.ValidationError("lookup text is required", nil)
 	}
-	limit := input.Limit
-	if limit == 0 {
-		limit = 10
+	limit, err := normalizePageLimit(input.Limit, 10)
+	if err != nil {
+		return domain.RecordLookupResult{}, err
 	}
 	offset := decodeCursor(input.Cursor)
 
@@ -66,12 +67,7 @@ LIMIT ? OFFSET ?`, condition)
 		}
 		entities[idx] = loaded
 	}
-	pageInfo := domain.PageInfo{}
-	if len(entities) > limit {
-		pageInfo.HasMore = true
-		pageInfo.NextCursor = encodeCursor(offset + limit)
-		entities = entities[:limit]
-	}
+	entities, pageInfo := paginateSlice(entities, limit, offset)
 	return domain.RecordLookupResult{Entities: entities, PageInfo: pageInfo}, nil
 }
 

@@ -4,9 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"github.com/yazanabuashour/openclerk/internal/domain"
 	"strings"
 	"time"
+
+	"github.com/yazanabuashour/openclerk/internal/domain"
 )
 
 type storedProjectionState struct {
@@ -15,12 +16,9 @@ type storedProjectionState struct {
 }
 
 func (s *Store) ListProjectionStates(ctx context.Context, query domain.ProjectionStateQuery) (domain.ProjectionStateResult, error) {
-	limit := query.Limit
-	if limit == 0 {
-		limit = 20
-	}
-	if limit < 1 || limit > 100 {
-		return domain.ProjectionStateResult{}, domain.ValidationError("limit must be between 1 and 100", map[string]any{"limit": limit})
+	limit, err := normalizePageLimit(query.Limit, 20)
+	if err != nil {
+		return domain.ProjectionStateResult{}, err
 	}
 
 	sqlQuery := `
@@ -75,12 +73,7 @@ LIMIT ? OFFSET ?`
 		return domain.ProjectionStateResult{}, domain.InternalError("iterate projection states", err)
 	}
 
-	pageInfo := domain.PageInfo{}
-	if len(projections) > limit {
-		pageInfo.HasMore = true
-		pageInfo.NextCursor = encodeCursor(offset + limit)
-		projections = projections[:limit]
-	}
+	projections, pageInfo := paginateSlice(projections, limit, offset)
 	return domain.ProjectionStateResult{Projections: projections, PageInfo: pageInfo}, nil
 }
 

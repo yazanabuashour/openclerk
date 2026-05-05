@@ -4,10 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/yazanabuashour/openclerk/internal/domain"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/yazanabuashour/openclerk/internal/domain"
 )
 
 type decisionProjection struct {
@@ -26,12 +27,9 @@ func (s *Store) DecisionsLookup(ctx context.Context, input domain.DecisionLookup
 	if !supportsDecisions(s.backend) {
 		return domain.DecisionLookupResult{}, domain.UnsupportedError("decisions extension", s.backend)
 	}
-	limit := input.Limit
-	if limit == 0 {
-		limit = 10
-	}
-	if limit < 1 || limit > 100 {
-		return domain.DecisionLookupResult{}, domain.ValidationError("limit must be between 1 and 100", map[string]any{"limit": limit})
+	limit, err := normalizePageLimit(input.Limit, 10)
+	if err != nil {
+		return domain.DecisionLookupResult{}, err
 	}
 	offset := decodeCursor(input.Cursor)
 
@@ -108,12 +106,7 @@ LIMIT ? OFFSET ?`
 		}
 		decisions[idx] = loaded
 	}
-	pageInfo := domain.PageInfo{}
-	if len(decisions) > limit {
-		pageInfo.HasMore = true
-		pageInfo.NextCursor = encodeCursor(offset + limit)
-		decisions = decisions[:limit]
-	}
+	decisions, pageInfo := paginateSlice(decisions, limit, offset)
 	return domain.DecisionLookupResult{Decisions: decisions, PageInfo: pageInfo}, nil
 }
 
