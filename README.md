@@ -5,30 +5,30 @@ surface is the `openclerk` JSON runner plus the OpenClerk skill.
 
 ## Install
 
-Install the runner:
+Tell your agent:
 
-```bash
-OPENCLERK_INSTALL_DIR="$HOME/.local/bin" sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh)"
+```text
+Install OpenClerk into $HOME/.local/bin from the latest release unless I
+specify a version. Register skills/openclerk/SKILL.md with your native skill
+system. Verify command -v openclerk, openclerk --version, and the installed
+skill path. Do not report OpenClerk installed until both the runner and skill
+are installed.
 ```
 
-Install a pinned release:
-
-```bash
-OPENCLERK_INSTALL_DIR="$HOME/.local/bin" OPENCLERK_VERSION=v0.2.3 sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/v0.2.3/install.sh)"
-```
-
-Register the skill from `skills/openclerk/SKILL.md` with the agent's native
-skill system. A complete install has both:
-
-```bash
-command -v openclerk
-openclerk --version
-```
+Detailed install commands live in `docs/install.md`.
 
 ## Upgrade
 
-Rerun the installer, then re-register the matching `skills/openclerk/SKILL.md`
-skill.
+Tell your agent:
+
+```text
+Upgrade OpenClerk by rerunning the installer for the latest or requested
+version. Keep the durable runner location, re-register the matching
+skills/openclerk/SKILL.md skill, and verify command -v openclerk,
+openclerk --version, and the installed skill path.
+```
+
+Detailed upgrade commands live in `docs/install.md`.
 
 ## Runner
 
@@ -61,7 +61,7 @@ installed runner's help output for other supported actions.
 
 ### Agent Module Instructions
 
-Tell an agent:
+Tell your agent:
 
 ```text
 Install an OpenClerk module only through `openclerk module`.
@@ -71,11 +71,8 @@ Register the module skill only when the host opts into that module.
 After install, verify with `openclerk module` list_modules and explicit `semantic_search`.
 ```
 
-Modules are optional building blocks. Installing a module stores only its
-enabled state, manifest digest, command, args, and redacted provider config in
-SQLite `runtime_config`. OpenClerk verifies the manifest before routing
-`semantic_search` through the module. Removing a module removes the OpenClerk
-registration; it does not delete unrelated credentials or external tools.
+Modules are optional building blocks. OpenClerk verifies the manifest before
+routing `semantic_search` through an installed provider module.
 
 Available installable modules:
 

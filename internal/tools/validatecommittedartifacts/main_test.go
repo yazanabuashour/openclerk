@@ -105,7 +105,7 @@ func TestValidateNoRealVaultJSONReports(t *testing.T) {
 func TestValidateReadmeModuleSectionRequiresAgentInstructionsFirst(t *testing.T) {
 	t.Parallel()
 
-	valid := "# OpenClerk\n\n## Modules\n\n### Agent Module Instructions\n\nTell an agent.\n\nAvailable installable modules:\n\nExact module commands live in `modules/docs/install.md`.\n"
+	valid := "# OpenClerk\n\n## Modules\n\n### Agent Module Instructions\n\nTell your agent.\n\nAvailable installable modules:\n\nExact module commands live in `modules/docs/install.md`.\n"
 	if err := validateReadmeModuleSection(valid); err != nil {
 		t.Fatalf("validateReadmeModuleSection valid: %v", err)
 	}
@@ -133,7 +133,7 @@ func TestValidateModuleDocumentationReferencesEmbeddingModules(t *testing.T) {
 
 ### Agent Module Instructions
 
-Tell an agent.
+Tell your agent.
 
 Available installable modules:
 
