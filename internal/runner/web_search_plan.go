@@ -15,13 +15,7 @@ const (
 )
 
 func runWebSearchPlan(ctx context.Context, client *runclient.Client, options WebSearchPlanOptions) (WebSearchPlan, error) {
-	limit := options.Limit
-	if limit == 0 {
-		limit = 10
-	}
-	if limit > 20 {
-		limit = 20
-	}
+	limit := cappedRunnerLimit(options.Limit, 10, 20)
 	if limit > len(options.Results) {
 		limit = len(options.Results)
 	}

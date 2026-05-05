@@ -39,10 +39,7 @@ func runMemoryRouterRecallReport(ctx context.Context, client *runclient.Client, 
 	if query == "" {
 		query = defaultMemoryRouterRecallQuery
 	}
-	limit := options.Limit
-	if limit == 0 {
-		limit = 10
-	}
+	limit := defaultRunnerLimit(options.Limit, 10)
 
 	search, err := client.Search(ctx, domain.SearchQuery{
 		Text:  query,

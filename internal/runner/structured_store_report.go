@@ -15,12 +15,9 @@ const (
 )
 
 func runStructuredStoreReport(ctx context.Context, client *runclient.Client, options StructuredStoreOptions) (StructuredStoreReport, error) {
-	limit := options.Limit
-	if limit == 0 {
-		limit = 10
-	}
-	if limit < 1 || limit > 100 {
-		return StructuredStoreReport{}, domain.ValidationError("structured_store.limit must be between 1 and 100", map[string]any{"limit": limit})
+	limit, err := boundedRunnerLimit(options.Limit, 10, 100, "structured_store")
+	if err != nil {
+		return StructuredStoreReport{}, err
 	}
 
 	domainName := options.Domain

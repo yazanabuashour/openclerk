@@ -101,9 +101,7 @@ func normalizeSemanticModuleSearchOptions(options SemanticSearchOptions) Semanti
 	options.EmbeddingModel = strings.TrimSpace(options.EmbeddingModel)
 	options.GeminiAPIBase = strings.TrimRight(strings.TrimSpace(options.GeminiAPIBase), "/")
 	options.CacheDir = strings.TrimSpace(options.CacheDir)
-	if options.Limit == 0 {
-		options.Limit = 10
-	}
+	options.Limit = defaultRunnerLimit(options.Limit, 10)
 	return options
 }
 

@@ -364,22 +364,24 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		Limit:              request.Limit,
 	}
 
-	if request.Limit < 0 ||
-		request.Search.Limit < 0 ||
-		request.Records.Limit < 0 ||
-		request.Services.Limit < 0 ||
-		request.Decisions.Limit < 0 ||
-		request.Provenance.Limit < 0 ||
-		request.Projection.Limit < 0 ||
-		request.Audit.Limit < 0 ||
-		request.MemoryRouterRecall.Limit < 0 ||
-		request.SourceAudit.Limit < 0 ||
-		request.EvidenceBundle.Limit < 0 ||
-		request.DuplicateCandidate.Limit < 0 ||
-		request.StructuredStore.Limit < 0 ||
-		request.HybridRetrieval.Limit < 0 ||
-		request.SemanticSearch.Limit < 0 {
-		return normalizedRetrievalTaskRequest{}, "limit must be greater than or equal to 0"
+	if rejection := rejectNegativeRunnerLimits(
+		request.Limit,
+		request.Search.Limit,
+		request.Records.Limit,
+		request.Services.Limit,
+		request.Decisions.Limit,
+		request.Provenance.Limit,
+		request.Projection.Limit,
+		request.Audit.Limit,
+		request.MemoryRouterRecall.Limit,
+		request.SourceAudit.Limit,
+		request.EvidenceBundle.Limit,
+		request.DuplicateCandidate.Limit,
+		request.StructuredStore.Limit,
+		request.HybridRetrieval.Limit,
+		request.SemanticSearch.Limit,
+	); rejection != "" {
+		return normalizedRetrievalTaskRequest{}, rejection
 	}
 
 	switch action {

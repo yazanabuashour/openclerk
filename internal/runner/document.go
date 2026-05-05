@@ -328,17 +328,13 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		List:         request.List,
 	}
 
-	if request.List.Limit < 0 {
-		return normalizedDocumentTaskRequest{}, "limit must be greater than or equal to 0"
-	}
-	if request.GitLifecycle.Limit < 0 {
-		return normalizedDocumentTaskRequest{}, "limit must be greater than or equal to 0"
-	}
-	if request.WebSearch.Limit < 0 {
-		return normalizedDocumentTaskRequest{}, "limit must be greater than or equal to 0"
-	}
-	if request.Artifact.Limit < 0 {
-		return normalizedDocumentTaskRequest{}, "limit must be greater than or equal to 0"
+	if rejection := rejectNegativeRunnerLimits(
+		request.List.Limit,
+		request.GitLifecycle.Limit,
+		request.WebSearch.Limit,
+		request.Artifact.Limit,
+	); rejection != "" {
+		return normalizedDocumentTaskRequest{}, rejection
 	}
 
 	switch action {

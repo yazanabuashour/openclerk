@@ -10,10 +10,7 @@ import (
 )
 
 func runEvidenceBundleReport(ctx context.Context, client *runclient.Client, options EvidenceBundleOptions) (EvidenceBundleReport, error) {
-	limit := options.Limit
-	if limit == 0 {
-		limit = 10
-	}
+	limit := defaultRunnerLimit(options.Limit, 10)
 	report := EvidenceBundleReport{
 		QuerySummary:         evidenceBundleQuerySummary(options),
 		ValidationBoundaries: evidenceBundleValidationBoundaries(),

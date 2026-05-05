@@ -28,13 +28,7 @@ func runGitLifecycleReport(ctx context.Context, vaultRoot string, options GitLif
 	if mode == "" {
 		mode = gitLifecycleModeStatus
 	}
-	limit := options.Limit
-	if limit == 0 {
-		limit = 10
-	}
-	if limit > 50 {
-		limit = 50
-	}
+	limit := cappedRunnerLimit(options.Limit, 10, 50)
 	report := GitLifecycleReport{
 		Mode:                 mode,
 		Paths:                options.Paths,

@@ -662,13 +662,7 @@ func artifactDuplicateEvidence(ctx context.Context, client *runclient.Client, op
 	if query == "" {
 		return nil, nil, nil
 	}
-	limit := options.Limit
-	if limit == 0 {
-		limit = 5
-	}
-	if limit > 10 {
-		limit = 10
-	}
+	limit := cappedRunnerLimit(options.Limit, 5, 10)
 	pathPrefix := options.PathPrefix
 	if pathPrefix == "" && candidatePath != "" {
 		pathPrefix = path.Dir(candidatePath)

@@ -14,12 +14,9 @@ const (
 )
 
 func runHybridRetrievalReport(ctx context.Context, client *runclient.Client, options HybridRetrievalOptions) (HybridRetrievalReport, error) {
-	limit := options.Limit
-	if limit == 0 {
-		limit = 10
-	}
-	if limit < 1 || limit > 100 {
-		return HybridRetrievalReport{}, domain.ValidationError("hybrid_retrieval.limit must be between 1 and 100", map[string]any{"limit": limit})
+	limit, err := boundedRunnerLimit(options.Limit, 10, 100, "hybrid_retrieval")
+	if err != nil {
+		return HybridRetrievalReport{}, err
 	}
 
 	search, err := client.Search(ctx, domain.SearchQuery{

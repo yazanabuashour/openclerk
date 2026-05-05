@@ -16,10 +16,7 @@ const (
 )
 
 func runAuditContradictions(ctx context.Context, client *runclient.Client, options AuditContradictionsOptions) (AuditContradictionsResult, error) {
-	limit := options.Limit
-	if limit == 0 {
-		limit = 10
-	}
+	limit := defaultRunnerLimit(options.Limit, 10)
 	result := AuditContradictionsResult{
 		Query:                 options.Query,
 		TargetPath:            options.TargetPath,

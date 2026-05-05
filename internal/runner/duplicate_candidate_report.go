@@ -10,10 +10,7 @@ import (
 )
 
 func runDuplicateCandidateReport(ctx context.Context, client *runclient.Client, options DuplicateCandidateOptions) (DuplicateCandidateReport, error) {
-	limit := options.Limit
-	if limit == 0 {
-		limit = 10
-	}
+	limit := defaultRunnerLimit(options.Limit, 10)
 	search, err := client.Search(ctx, domain.SearchQuery{
 		Text:       options.Query,
 		PathPrefix: options.PathPrefix,
