@@ -33,6 +33,8 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 	case "version", "--version":
 		writeVersion(stdout)
 		return 0
+	case "capabilities":
+		return runCapabilities(args[1:], stdout, stderr)
 	case "init":
 		return runInit(args[1:], stdout, stderr)
 	case "module":
@@ -45,6 +47,171 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 		_, _ = fmt.Fprintf(stderr, "unknown openclerk command %q\n", args[0])
 		usage(stderr)
 		return 2
+	}
+}
+
+type capabilitiesResult struct {
+	SchemaVersion   string                 `json:"schema_version"`
+	Product         string                 `json:"product"`
+	Summary         string                 `json:"summary"`
+	NorthStar       string                 `json:"north_star"`
+	Principles      []string               `json:"principles"`
+	Boundaries      []string               `json:"boundaries"`
+	Domains         []capabilityDomain     `json:"domains"`
+	ExtensionPoints []capabilityExtension  `json:"extension_points"`
+	AgentHandoff    capabilityAgentHandoff `json:"agent_handoff"`
+}
+
+type capabilityDomain struct {
+	Name      string             `json:"name"`
+	Command   string             `json:"command"`
+	Posture   string             `json:"posture"`
+	Primitive []capabilityAction `json:"primitive_actions"`
+	Workflow  []capabilityAction `json:"workflow_actions"`
+}
+
+type capabilityAction struct {
+	Action   string `json:"action"`
+	Purpose  string `json:"purpose"`
+	Posture  string `json:"posture"`
+	Handoff  string `json:"handoff,omitempty"`
+	Requires string `json:"requires,omitempty"`
+}
+
+type capabilityExtension struct {
+	Name         string `json:"name"`
+	Kind         string `json:"kind"`
+	ManifestPath string `json:"manifest_path"`
+	SkillPath    string `json:"skill_path"`
+	Posture      string `json:"posture"`
+}
+
+type capabilityAgentHandoff struct {
+	AnswerSummary        string   `json:"answer_summary"`
+	SelectionGuidance    []string `json:"selection_guidance"`
+	ValidationBoundaries []string `json:"validation_boundaries"`
+	AuthorityLimits      []string `json:"authority_limits"`
+}
+
+func runCapabilities(args []string, stdout io.Writer, stderr io.Writer) int {
+	if len(args) != 0 {
+		_, _ = fmt.Fprintf(stderr, "unexpected positional arguments: %v\n", args)
+		_, _ = fmt.Fprintln(stderr, "usage: openclerk capabilities")
+		return 2
+	}
+	if err := json.NewEncoder(stdout).Encode(buildCapabilitiesResult()); err != nil {
+		_, _ = fmt.Fprintf(stderr, "encode capabilities result: %v\n", err)
+		return 1
+	}
+	return 0
+}
+
+func buildCapabilitiesResult() capabilitiesResult {
+	return capabilitiesResult{
+		SchemaVersion: "openclerk-capabilities.v1",
+		Product:       "openclerk",
+		Summary:       "Local-first knowledge-plane building blocks for agent assembly.",
+		NorthStar:     "https://mitchellh.com/writing/building-block-economy",
+		Principles: []string{
+			"Expose high-quality, well-documented runner primitives that agents can compose.",
+			"Promote repeated ceremonial workflows into compact runner actions with agent_handoff.",
+			"Keep mainline behavior narrow, stable, local-first, citation-bearing, and approval-aware.",
+			"Ship optional provider functionality as verified modules rather than hidden core defaults.",
+		},
+		Boundaries: []string{
+			"Canonical markdown, citations, provenance, and projection freshness remain authority.",
+			"Public read/fetch/inspect permission is separate from durable-write approval.",
+			"No direct SQLite, raw vault inspection, unsupported transports, or source-built runner bypasses.",
+			"Default retrieval search remains lexical; semantic ranking is explicit and module-gated.",
+		},
+		Domains: []capabilityDomain{
+			{
+				Name:    "document",
+				Command: "openclerk document",
+				Posture: "strict JSON runner for validation, source intake, document mutation, placement planning, and document-side workflow blocks",
+				Primitive: []capabilityAction{
+					{Action: "validate", Purpose: "validate a candidate document without writing", Posture: "read_only"},
+					{Action: "create_document", Purpose: "create an approved vault-relative markdown document", Posture: "durable_write_requires_approval"},
+					{Action: "ingest_source_url", Purpose: "plan, create, or update public web/PDF source notes through the runner", Posture: "plan_read_only_or_approved_write"},
+					{Action: "ingest_video_url", Purpose: "create or update video source notes from supplied transcripts", Posture: "approved_write_with_user_supplied_transcript"},
+					{Action: "list_documents", Purpose: "list runner-visible documents", Posture: "read_only"},
+					{Action: "get_document", Purpose: "read one runner-visible document by doc_id", Posture: "read_only"},
+					{Action: "append_document", Purpose: "append approved content to an existing document", Posture: "durable_write_requires_approval"},
+					{Action: "replace_section", Purpose: "replace an approved markdown section", Posture: "durable_write_requires_approval"},
+					{Action: "resolve_paths", Purpose: "show configured database and vault paths", Posture: "read_only_diagnostic"},
+					{Action: "inspect_layout", Purpose: "inspect configured OpenClerk layout", Posture: "read_only_diagnostic"},
+				},
+				Workflow: []capabilityAction{
+					{Action: "compile_synthesis", Purpose: "create or update source-linked synthesis with freshness and source refs", Posture: "durable_write_requires_approval", Handoff: "compile_synthesis.agent_handoff"},
+					{Action: "web_search_plan", Purpose: "plan harness-supplied public search-result intake before fetch/write", Posture: "read_only", Handoff: "web_search_plan.agent_handoff"},
+					{Action: "artifact_candidate_plan", Purpose: "plan artifact path, title, body preview, tags, fields, duplicates, and create/ingest handoff", Posture: "read_only", Handoff: "artifact_candidate_plan.agent_handoff"},
+					{Action: "git_lifecycle_report", Purpose: "report local storage status/history or create explicit local checkpoints", Posture: "read_only_or_explicit_checkpoint"},
+				},
+			},
+			{
+				Name:    "retrieval",
+				Command: "openclerk retrieval",
+				Posture: "strict JSON runner for citation-bearing lookup, provenance, projections, and retrieval-side workflow blocks",
+				Primitive: []capabilityAction{
+					{Action: "validate", Purpose: "validate a retrieval request without querying storage", Posture: "read_only"},
+					{Action: "search", Purpose: "lexical citation-bearing document search", Posture: "read_only"},
+					{Action: "document_links", Purpose: "inspect markdown relationship links", Posture: "read_only"},
+					{Action: "graph_neighborhood", Purpose: "inspect nearby relationship graph evidence", Posture: "read_only"},
+					{Action: "records_lookup", Purpose: "lookup promoted record projections", Posture: "read_only"},
+					{Action: "record_entity", Purpose: "read a promoted record entity projection", Posture: "read_only"},
+					{Action: "services_lookup", Purpose: "lookup promoted service projections", Posture: "read_only"},
+					{Action: "service_record", Purpose: "read a promoted service record projection", Posture: "read_only"},
+					{Action: "decisions_lookup", Purpose: "lookup promoted decision projections", Posture: "read_only"},
+					{Action: "decision_record", Purpose: "read a promoted decision record projection", Posture: "read_only"},
+					{Action: "provenance_events", Purpose: "inspect derivation and write provenance", Posture: "read_only"},
+					{Action: "projection_states", Purpose: "inspect projection freshness state", Posture: "read_only"},
+				},
+				Workflow: []capabilityAction{
+					{Action: "audit_contradictions", Purpose: "plan or repair existing contradiction-audit synthesis with source authority visible", Posture: "read_only_or_existing_target_repair"},
+					{Action: "source_audit_report", Purpose: "explain source-sensitive gaps or repair an existing synthesis target", Posture: "read_only_or_existing_target_repair", Handoff: "source_audit.agent_handoff"},
+					{Action: "evidence_bundle_report", Purpose: "package citations, provenance, projection freshness, and authority limits", Posture: "read_only", Handoff: "evidence_bundle.agent_handoff"},
+					{Action: "duplicate_candidate_report", Purpose: "choose update-versus-new evidence before durable writes", Posture: "read_only", Handoff: "duplicate_candidate.agent_handoff"},
+					{Action: "workflow_guide_report", Purpose: "select the natural runner surface for an intent", Posture: "read_only", Handoff: "workflow_guide.agent_handoff"},
+					{Action: "memory_router_recall_report", Purpose: "package routine memory/router recall evidence without memory transports", Posture: "read_only", Handoff: "memory_router_recall.agent_handoff"},
+					{Action: "structured_store_report", Purpose: "review structured-data and canonical-store evidence", Posture: "read_only", Handoff: "structured_store.agent_handoff"},
+					{Action: "hybrid_retrieval_report", Purpose: "review lexical baseline and hybrid/vector candidate boundaries", Posture: "read_only", Handoff: "hybrid_retrieval.agent_handoff"},
+					{Action: "semantic_search", Purpose: "run explicit citation-bearing semantic search through a verified provider module", Posture: "module_gated_read_only", Handoff: "semantic_search.agent_handoff", Requires: "installed enabled embedding provider module"},
+				},
+			},
+			{
+				Name:    "module",
+				Command: "openclerk module",
+				Posture: "strict JSON runner for optional verified provider building blocks with redacted runtime configuration",
+				Primitive: []capabilityAction{
+					{Action: "install_module", Purpose: "verify and register a provider module manifest", Posture: "configuration_write"},
+					{Action: "configure_module", Purpose: "enable, disable, or update redacted provider defaults", Posture: "configuration_write"},
+					{Action: "remove_module", Purpose: "remove OpenClerk module registration without deleting unrelated provider state", Posture: "configuration_write"},
+					{Action: "list_modules", Purpose: "list verified module/provider state", Posture: "read_only"},
+				},
+				Workflow: []capabilityAction{},
+			},
+		},
+		ExtensionPoints: []capabilityExtension{
+			{Name: "ollama-embeddings", Kind: "embedding_provider", ManifestPath: "modules/ollama-embeddings/module.json", SkillPath: "modules/ollama-embeddings/skill/ollama-embeddings/SKILL.md", Posture: "local_first_optional_module"},
+			{Name: "gemini-embeddings", Kind: "embedding_provider", ManifestPath: "modules/gemini-embeddings/module.json", SkillPath: "modules/gemini-embeddings/skill/gemini-embeddings/SKILL.md", Posture: "explicit_remote_provider_opt_in"},
+			{Name: "tesseract-ocr", Kind: "ocr_provider", ManifestPath: "modules/tesseract-ocr/module.json", SkillPath: "modules/tesseract-ocr/skill/tesseract-ocr/SKILL.md", Posture: "local_ocr_review_optional_module"},
+		},
+		AgentHandoff: capabilityAgentHandoff{
+			AnswerSummary: "Use OpenClerk as a narrow mainline runner plus composable document, retrieval, and module building blocks.",
+			SelectionGuidance: []string{
+				"Start with promoted workflow actions when they match the user intent.",
+				"Use primitives for explicit manual work, advanced inspection, or after a workflow action rejects.",
+				"Use optional modules only after install/list verifies the module boundary.",
+			},
+			ValidationBoundaries: []string{
+				"Capabilities are a static discovery manifest, not evidence from a user vault.",
+				"Run the selected document, retrieval, or module action for task-specific results.",
+			},
+			AuthorityLimits: []string{
+				"Do not answer source-sensitive user questions from the capabilities manifest alone.",
+				"Use returned citations, provenance, projection freshness, validation boundaries, and authority limits from the selected runner action.",
+			},
+		},
 	}
 }
 
@@ -283,8 +450,9 @@ func resolvedVersion(linkerVersion string, info *debug.BuildInfo, ok bool) strin
 }
 
 func usage(stderr io.Writer) {
-	_, _ = fmt.Fprintln(stderr, "usage: openclerk <version|init|module|document|retrieval> [--db path]")
+	_, _ = fmt.Fprintln(stderr, "usage: openclerk <version|capabilities|init|module|document|retrieval> [--db path]")
 	_, _ = fmt.Fprintln(stderr, "       openclerk init [--db path] [--vault-root path]")
+	_, _ = fmt.Fprintln(stderr, "       openclerk capabilities")
 	_, _ = fmt.Fprintln(stderr, "       openclerk module --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk document --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk retrieval --help")

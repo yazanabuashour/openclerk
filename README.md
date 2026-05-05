@@ -57,6 +57,25 @@ openclerk retrieval --help
 `openclerk retrieval search` remains lexical and citation-bearing. Use the
 installed runner's help output for other supported actions.
 
+## Building Blocks
+
+OpenClerk is intended to be assembled by agents as a small set of high-quality
+runner blocks, not expanded into a hidden all-in-one application surface. The
+mainline runner stays narrow and local-first; repeated high-touch workflows
+become compact JSON actions with `agent_handoff`; optional provider behavior
+ships as verified modules.
+
+Inspect the current machine-readable block inventory:
+
+```bash
+openclerk capabilities
+```
+
+That manifest lists document, retrieval, and module domains; primitive and
+promoted workflow actions; optional extension modules; and the boundaries that
+keep public read/fetch permission, durable-write approval, citations,
+provenance, freshness, and local-first behavior separate.
+
 ## Modules
 
 ### Agent Module Instructions

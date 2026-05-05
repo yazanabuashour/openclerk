@@ -12,16 +12,17 @@ production interface is AgentOps: this Skills-compatible router plus the
 installed JSON runner.
 
 ```bash
+openclerk capabilities
 openclerk document
 openclerk retrieval
 ```
 
-`SKILL.md` is an activation, routing, and safety contract. It is not the
-durable home for long workflow recipes. Once a request is safely inside the
-runner contract, use agent autonomy with runner JSON results, runner
-rejections, returned `agent_handoff`, and compact `openclerk document --help`
-or `openclerk retrieval --help` output. Repeated exact JSON, command ordering,
-or scenario-specific choreography is product UX evidence for a runner
+`SKILL.md` is an activation, routing, and safety contract, not the durable home
+for long workflow recipes. Once a request is safely inside the runner contract,
+use agent autonomy with runner JSON results, runner rejections, returned
+`agent_handoff`, `openclerk capabilities` for static surface discovery, and
+compact runner help. Repeated exact JSON, command ordering, or
+scenario-specific choreography is product UX evidence for a runner
 workflow-action comparison, not a reason to expand this file.
 
 ## Action Index

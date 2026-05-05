@@ -28,6 +28,40 @@ func TestRunnerVersion(t *testing.T) {
 	}
 }
 
+func TestCapabilitiesManifestShowsBuildingBlocks(t *testing.T) {
+	t.Parallel()
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := run([]string{"capabilities"}, strings.NewReader(""), &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("capabilities exit = %d stderr=%s", code, stderr.String())
+	}
+	var result capabilitiesResult
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		t.Fatalf("decode capabilities: %v\n%s", err, stdout.String())
+	}
+	if result.SchemaVersion != "openclerk-capabilities.v1" ||
+		result.NorthStar != "https://mitchellh.com/writing/building-block-economy" {
+		t.Fatalf("capabilities identity = %+v", result)
+	}
+	if !containsString(result.Principles, "Expose high-quality, well-documented runner primitives that agents can compose.") ||
+		!containsString(result.Boundaries, "Default retrieval search remains lexical; semantic ranking is explicit and module-gated.") {
+		t.Fatalf("capabilities missing building-block principles or boundaries: %+v", result)
+	}
+	if !hasCapabilityAction(result, "document", "compile_synthesis") ||
+		!hasCapabilityAction(result, "retrieval", "audit_contradictions") ||
+		!hasCapabilityAction(result, "retrieval", "semantic_search") ||
+		!hasCapabilityAction(result, "module", "install_module") {
+		t.Fatalf("capabilities missing expected document/retrieval/module actions: %+v", result.Domains)
+	}
+	if !hasCapabilityExtension(result, "ollama-embeddings", "modules/ollama-embeddings/module.json") ||
+		!hasCapabilityExtension(result, "gemini-embeddings", "modules/gemini-embeddings/module.json") ||
+		!hasCapabilityExtension(result, "tesseract-ocr", "modules/tesseract-ocr/module.json") {
+		t.Fatalf("capabilities missing expected module extension points: %+v", result.ExtensionPoints)
+	}
+}
+
 func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 	t.Parallel()
 
@@ -81,6 +115,38 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 			}
 		})
 	}
+}
+
+func containsString(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
+}
+
+func hasCapabilityAction(result capabilitiesResult, domainName string, action string) bool {
+	for _, domain := range result.Domains {
+		if domain.Name != domainName {
+			continue
+		}
+		for _, candidate := range append(domain.Primitive, domain.Workflow...) {
+			if candidate.Action == action {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func hasCapabilityExtension(result capabilitiesResult, name string, manifestPath string) bool {
+	for _, extension := range result.ExtensionPoints {
+		if extension.Name == name && extension.ManifestPath == manifestPath {
+			return true
+		}
+	}
+	return false
 }
 
 func TestRunnerModuleInstallConfigureListRemoveJSON(t *testing.T) {
