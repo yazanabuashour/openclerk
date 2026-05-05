@@ -11,6 +11,7 @@ or implementation authorization.
 
 Governing evidence:
 
+- [`docs/evals/results/ockp-local-ocr-artifact-fixture-evidence.md`](results/ockp-local-ocr-artifact-fixture-evidence.md)
 - [`docs/evals/results/ockp-artifact-local-path-candidate-plan-promotion.md`](results/ockp-artifact-local-path-candidate-plan-promotion.md)
 - [`docs/architecture/local-artifact-candidate-plan-promotion-decision.md`](../architecture/local-artifact-candidate-plan-promotion-decision.md)
 - [`docs/architecture/parser-ocr-artifact-ingestion-candidate-comparison-decision.md`](../architecture/parser-ocr-artifact-ingestion-candidate-comparison-decision.md)
@@ -93,3 +94,10 @@ candidate planning remain valid OpenClerk needs, and the best future surface is
 an explicit review-mode extension of `artifact_candidate_plan`, but the current
 evidence does not prove confidence, provenance, correction, duplicate, or
 review behavior strongly enough to promote runtime OCR.
+
+Follow-up fixture evidence in
+[`docs/evals/results/ockp-local-ocr-artifact-fixture-evidence.md`](results/ockp-local-ocr-artifact-fixture-evidence.md)
+keeps this outcome unchanged: `none viable yet` remains selected, no product
+implementation Bead is justified, and deferred follow-up `oc-i8yk` tracks the
+next OCR/scanned-PDF contract pass for a concrete OCR dependency and correction
+workflow.
