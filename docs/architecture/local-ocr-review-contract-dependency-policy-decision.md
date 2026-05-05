@@ -97,6 +97,11 @@ Created follow-up:
 - `oc-s3wg`: evaluate OCR review extraction candidates for
   `artifact_candidate_plan`.
 
+`oc-s3wg` completed that extraction-candidate comparison in
+[`docs/architecture/local-ocr-review-extraction-candidate-decision.md`](local-ocr-review-extraction-candidate-decision.md).
+It selected durable non-promotion for this OCR/scanned-PDF path and filed no
+product implementation Bead.
+
 ## Compatibility
 
 Existing behavior remains unchanged:

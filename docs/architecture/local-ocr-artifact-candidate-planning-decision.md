@@ -103,6 +103,12 @@ candidate, kept local OCR engines as the required local-first comparison, and
 filed follow-up `oc-s3wg` for targeted promotion evidence. It filed no product
 implementation Bead.
 
+`oc-s3wg` completed that comparison in
+[`docs/architecture/local-ocr-review-extraction-candidate-decision.md`](local-ocr-review-extraction-candidate-decision.md).
+It selected durable non-promotion for the local OCR/scanned-PDF
+artifact-candidate path, kept current OCR rejection behavior unchanged, and
+filed no product implementation Bead.
+
 ## Compatibility
 
 Existing behavior remains unchanged:
