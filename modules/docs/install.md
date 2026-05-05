@@ -1,15 +1,62 @@
-# OpenClerk Module Install
+# OpenClerk Module Install and Upgrade
 
 OpenClerk modules are optional building blocks. Install them only through
 `openclerk module`; do not edit SQLite directly.
 
 ## Available Modules
 
-| Module | Provider | Skill |
-| --- | --- | --- |
-| `modules/ollama-embeddings/module.json` | `ollama` | `modules/ollama-embeddings/skill/ollama-embeddings/SKILL.md` |
-| `modules/gemini-embeddings/module.json` | `gemini` | `modules/gemini-embeddings/skill/gemini-embeddings/SKILL.md` |
-| `modules/tesseract-ocr/module.json` | `tesseract` | `modules/tesseract-ocr/skill/tesseract-ocr/SKILL.md` |
+| Module name | Provider | Command | Manifest | Skill |
+| --- | --- | --- | --- | --- |
+| `ollama-embeddings` | `ollama` | `semantic-retrieval-adapter` | `modules/ollama-embeddings/module.json` | `modules/ollama-embeddings/skill/ollama-embeddings/SKILL.md` |
+| `gemini-embeddings` | `gemini` | `semantic-retrieval-adapter` | `modules/gemini-embeddings/module.json` | `modules/gemini-embeddings/skill/gemini-embeddings/SKILL.md` |
+| `tesseract-ocr` | `tesseract` | `tesseract` | `modules/tesseract-ocr/module.json` | `modules/tesseract-ocr/skill/tesseract-ocr/SKILL.md` |
+
+## Install a Module Release
+
+Run a module installer to install the latest module release:
+
+```bash
+OPENCLERK_MODULE=ollama-embeddings sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/ollama-embeddings%2Fv0.1.0/install-module.sh)"
+```
+
+Set `OPENCLERK_MODULE_VERSION` to install a pinned module release:
+
+```bash
+OPENCLERK_MODULE=ollama-embeddings OPENCLERK_MODULE_VERSION=v0.1.0 sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/ollama-embeddings%2Fv0.1.0/install-module.sh)"
+```
+
+The installer downloads the module archive, verifies checksums, installs
+bundled commands into `OPENCLERK_INSTALL_DIR` or `$HOME/.local/bin`, installs
+module files under `${XDG_DATA_HOME:-$HOME/.local/share}/openclerk/modules`,
+and prints the registration command to run with `openclerk module`.
+
+## Upgrade a Module Release
+
+Rerun a module installer for the latest or requested version:
+
+```bash
+OPENCLERK_MODULE=ollama-embeddings sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/ollama-embeddings%2Fv0.1.0/install-module.sh)"
+```
+
+Then refresh registration with `openclerk module` using the installed manifest
+path printed by the installer. Preserve any existing provider config from:
+
+```bash
+printf '%s\n' '{"action":"list_modules"}' | openclerk module
+```
+
+Module-only releases are for module code, manifests, and skills. Use a normal
+OpenClerk core release when the `openclerk` runner contract or module
+registration semantics change.
+
+Maintainers build module release assets with:
+
+```bash
+mise exec -- ./scripts/build-module-release-bundle.sh ollama-embeddings v0.1.0 dist
+```
+
+Published module releases include `scripts/install-module.sh` as
+`install-module.sh`.
 
 Embedding modules use:
 
@@ -30,7 +77,7 @@ The OCR module uses `tesseract` for image OCR and `ocrmypdf` for PDF OCR.
 Install those tools separately and make both commands available on `PATH`
 before registering the module.
 
-## Register Modules
+## Register or Refresh Module Registration
 
 Install Ollama embeddings:
 

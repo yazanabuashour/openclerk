@@ -105,7 +105,7 @@ func TestValidateNoRealVaultJSONReports(t *testing.T) {
 func TestValidateReadmeModuleSectionRequiresAgentInstructionsFirst(t *testing.T) {
 	t.Parallel()
 
-	valid := "# OpenClerk\n\n## Modules\n\n### Agent Module Instructions\n\nTell your agent.\n\nAvailable installable modules:\n\nExact module commands live in `modules/docs/install.md`.\n"
+	valid := "# OpenClerk\n\n## Modules\n\n### Agent Module Instructions\n\nInstall prompt:\n\n<module-provider> <module-manifest-path> <module-command> <module-skill-path>\n\nUpgrade prompt:\n\n<module-name> <module-version-or-latest> <module-provider>\n\nAvailable installable modules:\n\nExact module commands live in `modules/docs/install.md`.\n"
 	if err := validateReadmeModuleSection(valid); err != nil {
 		t.Fatalf("validateReadmeModuleSection valid: %v", err)
 	}
@@ -121,6 +121,25 @@ func TestValidateReadmeModuleSectionRequiresAgentInstructionsFirst(t *testing.T)
 	if err == nil || !strings.Contains(err.Error(), "must not inline") {
 		t.Fatalf("validateReadmeModuleSection inline command error = %v, want inline rejection", err)
 	}
+
+	theater := strings.Replace(valid, "Install prompt:", "Tell your agent:\n\nInstall prompt:", 1)
+	err = validateReadmeModuleSection(theater)
+	if err == nil || !strings.Contains(err.Error(), "Tell your agent") {
+		t.Fatalf("validateReadmeModuleSection theater error = %v, want tell your agent rejection", err)
+	}
+}
+
+func TestValidateModuleInstallDocRequiresInstallUpgradeSections(t *testing.T) {
+	t.Parallel()
+
+	valid := "# OpenClerk Module Install\n\n## Install a Module Release\n\nscripts/install-module.sh\n\n## Upgrade a Module Release\n\n## Register or Refresh Module Registration\n\nscripts/build-module-release-bundle.sh\n"
+	if err := validateModuleInstallDoc(valid); err != nil {
+		t.Fatalf("validateModuleInstallDoc valid: %v", err)
+	}
+	err := validateModuleInstallDoc(strings.Replace(valid, "## Upgrade a Module Release\n", "", 1))
+	if err == nil || !strings.Contains(err.Error(), "Upgrade") {
+		t.Fatalf("validateModuleInstallDoc missing upgrade error = %v, want upgrade rejection", err)
+	}
 }
 
 func TestValidateModuleDocumentationReferencesEmbeddingModules(t *testing.T) {
@@ -133,7 +152,13 @@ func TestValidateModuleDocumentationReferencesEmbeddingModules(t *testing.T) {
 
 ### Agent Module Instructions
 
-Tell your agent.
+Install prompt:
+
+<module-provider> <module-manifest-path> <module-command> <module-skill-path>
+
+Upgrade prompt:
+
+<module-name> <module-version-or-latest> <module-provider>
 
 Available installable modules:
 
@@ -144,6 +169,16 @@ Available installable modules:
 Exact module commands live in ` + "`modules/docs/install.md`" + `.
 `
 	moduleDoc := `# OpenClerk Module Install
+
+## Install a Module Release
+
+scripts/install-module.sh
+
+## Upgrade a Module Release
+
+## Register or Refresh Module Registration
+
+scripts/build-module-release-bundle.sh
 
 | Module | Skill |
 | --- | --- |
@@ -165,7 +200,7 @@ Exact module commands live in ` + "`modules/docs/install.md`" + `.
 		t.Fatalf("validateModuleDocumentation: %v", err)
 	}
 
-	writeTestFile(t, root, "modules/docs/install.md", "# OpenClerk Module Install\n")
+	writeTestFile(t, root, "modules/docs/install.md", "# OpenClerk Module Install\n\n## Install a Module Release\n\nscripts/install-module.sh\n\n## Upgrade a Module Release\n\n## Register or Refresh Module Registration\n\nscripts/build-module-release-bundle.sh\n")
 	err := validateModuleDocumentation(root, files)
 	if err == nil || !strings.Contains(err.Error(), "modules/docs/install.md must reference module manifest") {
 		t.Fatalf("validateModuleDocumentation missing module error = %v, want manifest reference rejection", err)

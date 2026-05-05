@@ -80,16 +80,22 @@ provenance, freshness, and local-first behavior separate.
 
 ### Agent Module Instructions
 
-Tell your agent:
+Install prompt:
 
 ```text
-Install an OpenClerk module only through `openclerk module`.
-Do not edit SQLite directly.
-Use repo-relative manifest and skill paths in docs or reports.
-Register the module skill only when the host opts into that module.
-After install, verify with `openclerk module` list_modules and the explicit
-module action: `semantic_search` for embedding modules or
-`artifact_candidate_plan` with `text_extraction:"ocr_review"` for OCR.
+Install the OpenClerk module <module-provider> using <module-manifest-path>.
+Use command <module-command>, register skill <module-skill-path> only if I opt
+into that module, and verify with `openclerk module` list_modules. Do not edit
+SQLite directly.
+```
+
+Upgrade prompt:
+
+```text
+Upgrade OpenClerk module <module-name> to <module-version-or-latest>. Preserve
+the current provider config for <module-provider>, refresh registration with
+`openclerk module` install_module, and verify with list_modules. Do not edit
+SQLite directly.
 ```
 
 Modules are optional building blocks. OpenClerk verifies the manifest before
@@ -97,13 +103,14 @@ routing `semantic_search` or OCR review through an installed provider module.
 
 Available installable modules:
 
-| Module | Provider | Purpose | Skill |
-| --- | --- | --- | --- |
-| `modules/ollama-embeddings/module.json` | `ollama` | Local-first semantic retrieval | `modules/ollama-embeddings/skill/ollama-embeddings/SKILL.md` |
-| `modules/gemini-embeddings/module.json` | `gemini` | Explicit opt-in provider semantic retrieval with retry/backoff | `modules/gemini-embeddings/skill/gemini-embeddings/SKILL.md` |
-| `modules/tesseract-ocr/module.json` | `tesseract` | Local OCR review for images and scan-only or force-OCR PDFs | `modules/tesseract-ocr/skill/tesseract-ocr/SKILL.md` |
+| Module name | Provider | Command | Manifest | Skill |
+| --- | --- | --- | --- | --- |
+| `ollama-embeddings` | `ollama` | `semantic-retrieval-adapter` | `modules/ollama-embeddings/module.json` | `modules/ollama-embeddings/skill/ollama-embeddings/SKILL.md` |
+| `gemini-embeddings` | `gemini` | `semantic-retrieval-adapter` | `modules/gemini-embeddings/module.json` | `modules/gemini-embeddings/skill/gemini-embeddings/SKILL.md` |
+| `tesseract-ocr` | `tesseract` | `tesseract` | `modules/tesseract-ocr/module.json` | `modules/tesseract-ocr/skill/tesseract-ocr/SKILL.md` |
 
-Exact module commands and provider setup live in `modules/docs/install.md`.
+Exact install, upgrade, and provider setup commands live in
+`modules/docs/install.md`.
 
 ## Local Storage
 

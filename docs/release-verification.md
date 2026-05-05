@@ -15,6 +15,13 @@ that release assets were produced by this repository's workflow.
 Release assets are intended to be immutable once published. If an artifact is
 wrong, ship a new patch release instead of mutating the existing release.
 
+Module-only releases use tags such as `ollama-embeddings/v0.1.0`,
+`gemini-embeddings/v0.1.0`, or `tesseract-ocr/v0.1.0`. They publish
+`openclerk-module-<module>_<version>_<os>_<arch>.tar.gz`, module skill/source
+archives, checksums, SBOM, and `install-module.sh`. Embedding module archives
+bundle `semantic-retrieval-adapter`; OCR module archives do not bundle external
+OCR tools.
+
 ## Verify a Release
 
 Download the assets from the GitHub Release page for the tag you want to verify,
@@ -26,6 +33,15 @@ gh attestation verify openclerk_<version>_<os>_<arch>.tar.gz --repo yazanabuasho
 gh attestation verify openclerk_<version>_skill.tar.gz --repo yazanabuashour/openclerk
 gh attestation verify openclerk_<version>_source.tar.gz --repo yazanabuashour/openclerk
 gh attestation verify install.sh --repo yazanabuashour/openclerk
+```
+
+For a module release, verify the module assets instead:
+
+```bash
+shasum -a 256 -c openclerk-module-<module>_<version>_checksums.txt
+gh attestation verify openclerk-module-<module>_<version>_<os>_<arch>.tar.gz --repo yazanabuashour/openclerk
+gh attestation verify openclerk-module-<module>_<version>_source.tar.gz --repo yazanabuashour/openclerk
+gh attestation verify install-module.sh --repo yazanabuashour/openclerk
 ```
 
 For the latest release, verify GitHub's latest pointer resolves to the expected

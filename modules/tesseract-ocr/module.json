@@ -76,10 +76,14 @@
     "tag": "tesseract-ocr/v0.1.0",
     "assets": [
       "openclerk-module-tesseract-ocr_0.1.0_darwin_arm64.tar.gz",
+      "openclerk-module-tesseract-ocr_0.1.0_darwin_amd64.tar.gz",
       "openclerk-module-tesseract-ocr_0.1.0_linux_amd64.tar.gz",
+      "openclerk-module-tesseract-ocr_0.1.0_linux_arm64.tar.gz",
+      "openclerk-module-tesseract-ocr_0.1.0_skill.tar.gz",
       "openclerk-module-tesseract-ocr_0.1.0_source.tar.gz",
       "openclerk-module-tesseract-ocr_0.1.0_checksums.txt",
-      "openclerk-module-tesseract-ocr_0.1.0_sbom.json"
+      "openclerk-module-tesseract-ocr_0.1.0_sbom.json",
+      "install-module.sh"
     ],
     "status": "supported_optional_module"
   }

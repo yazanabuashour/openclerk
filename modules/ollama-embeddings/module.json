@@ -79,7 +79,8 @@
       "openclerk-module-ollama-embeddings_0.1.0_skill.tar.gz",
       "openclerk-module-ollama-embeddings_0.1.0_source.tar.gz",
       "openclerk-module-ollama-embeddings_0.1.0_checksums.txt",
-      "openclerk-module-ollama-embeddings_0.1.0_sbom.json"
+      "openclerk-module-ollama-embeddings_0.1.0_sbom.json",
+      "install-module.sh"
     ],
     "status": "supported_optional_module"
   }

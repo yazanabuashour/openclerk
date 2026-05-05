@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - "v*"
+      - "ollama-embeddings/v*"
+      - "gemini-embeddings/v*"
+      - "tesseract-ocr/v*"
 
 jobs:
   verify-release:
@@ -22,13 +25,21 @@ jobs:
           check-latest: true
 
       - name: Validate release notes and changelog
+        if: startsWith(github.ref_name, 'v')
         run: ./scripts/validate-release-docs.sh "${GITHUB_REF_NAME}"
 
       - name: Validate committed artifacts
         run: ./scripts/validate-committed-artifacts.sh
 
       - name: Validate Agent Skill
+        if: startsWith(github.ref_name, 'v')
         run: ./scripts/validate-agent-skill.sh skills/openclerk
+
+      - name: Validate Module Skill
+        if: ${{ !startsWith(github.ref_name, 'v') }}
+        run: |
+          module="${GITHUB_REF_NAME%%/v*}"
+          ./scripts/validate-agent-skill.sh "modules/${module}/skill/${module}"
 
       - name: Check formatting
         run: test -z "$(gofmt -l $(git ls-files '*.go'))"
@@ -65,23 +76,49 @@ jobs:
       - name: Prepare release metadata
         id: meta
         run: |
-          version="${GITHUB_REF_NAME#v}"
-          archive="openclerk_${version}_source.tar.gz"
-          skill="openclerk_${version}_skill.tar.gz"
-          checksum="openclerk_${version}_checksums.txt"
-          sbom="openclerk_${version}_sbom.json"
-          installer="install.sh"
-          assets_json="$(printf '%s\n' \
-            "${installer}" \
-            "${checksum}" \
-            "openclerk_${version}_darwin_amd64.tar.gz" \
-            "openclerk_${version}_darwin_arm64.tar.gz" \
-            "openclerk_${version}_linux_amd64.tar.gz" \
-            "openclerk_${version}_linux_arm64.tar.gz" \
-            "${sbom}" \
-            "${skill}" \
-            "${archive}" \
-            | jq -R . | jq -cs .)"
+          if [[ "${GITHUB_REF_NAME}" == v* ]]; then
+            version="${GITHUB_REF_NAME#v}"
+            archive="openclerk_${version}_source.tar.gz"
+            skill="openclerk_${version}_skill.tar.gz"
+            checksum="openclerk_${version}_checksums.txt"
+            sbom="openclerk_${version}_sbom.json"
+            installer="install.sh"
+            notes_file="docs/release-notes/${GITHUB_REF_NAME}.md"
+            assets_json="$(printf '%s\n' \
+              "${installer}" \
+              "${checksum}" \
+              "openclerk_${version}_darwin_amd64.tar.gz" \
+              "openclerk_${version}_darwin_arm64.tar.gz" \
+              "openclerk_${version}_linux_amd64.tar.gz" \
+              "openclerk_${version}_linux_arm64.tar.gz" \
+              "${sbom}" \
+              "${skill}" \
+              "${archive}" \
+              | jq -R . | jq -cs .)"
+          else
+            module="${GITHUB_REF_NAME%%/v*}"
+            version="${GITHUB_REF_NAME##*/}"
+            asset_version="${version#v}"
+            prefix="openclerk-module-${module}_${asset_version}"
+            archive="${prefix}_source.tar.gz"
+            skill="${prefix}_skill.tar.gz"
+            checksum="${prefix}_checksums.txt"
+            sbom="${prefix}_sbom.json"
+            installer="install-module.sh"
+            notes_file="dist/.release-notes.md"
+            assets_json="$(printf '%s\n' \
+              "${installer}" \
+              "${checksum}" \
+              "${prefix}_darwin_amd64.tar.gz" \
+              "${prefix}_darwin_arm64.tar.gz" \
+              "${prefix}_linux_amd64.tar.gz" \
+              "${prefix}_linux_arm64.tar.gz" \
+              "${sbom}" \
+              "${skill}" \
+              "${archive}" \
+              | jq -R . | jq -cs .)"
+            echo "module=${module}" >> "${GITHUB_OUTPUT}"
+          fi
 
           {
             echo "archive=${archive}"
@@ -89,17 +126,32 @@ jobs:
             echo "checksum=${checksum}"
             echo "sbom=${sbom}"
             echo "installer=${installer}"
+            echo "notes_file=${notes_file}"
             echo "assets_json=${assets_json}"
           } >> "${GITHUB_OUTPUT}"
 
       - name: Build release assets
-        run: bash ./scripts/build-release-bundle.sh "${GITHUB_REF_NAME}" dist
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == v* ]]; then
+            bash ./scripts/build-release-bundle.sh "${GITHUB_REF_NAME}" dist
+          else
+            module="${GITHUB_REF_NAME%%/v*}"
+            version="${GITHUB_REF_NAME##*/}"
+            bash ./scripts/build-module-release-bundle.sh "${module}" "${version}" dist
+            {
+              echo "# ${module} ${version}"
+              echo ""
+              echo "Module-only OpenClerk release for ${module}."
+              echo ""
+              echo "Use install-module.sh from this release to install or upgrade the module package, then refresh registration with openclerk module."
+            } > dist/.release-notes.md
+          fi
 
       - name: Create draft GitHub Release from tag
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          notes_file="docs/release-notes/${GITHUB_REF_NAME}.md"
+          notes_file="${{ steps.meta.outputs.notes_file }}"
           release_json="$(gh release view "${GITHUB_REF_NAME}" --json isDraft 2>/dev/null || true)"
           if [ -n "${release_json}" ]; then
             is_draft="$(printf '%s\n' "${release_json}" | jq -r '.isDraft')"
@@ -148,6 +200,7 @@ jobs:
           subject-path: dist/*
 
       - name: Attest SBOM
+        if: startsWith(github.ref_name, 'v')
         uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e
         with:
           subject-path: dist/${{ steps.meta.outputs.archive }}
@@ -156,7 +209,12 @@ jobs:
       - name: Publish draft GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release edit "${GITHUB_REF_NAME}" --draft=false --latest
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == v* ]]; then
+            gh release edit "${GITHUB_REF_NAME}" --draft=false --latest
+          else
+            gh release edit "${GITHUB_REF_NAME}" --draft=false --latest=false
+          fi
 
       - name: Verify published GitHub Release
         env:
@@ -168,5 +226,7 @@ jobs:
           [ "${is_draft}" = "false" ] || { echo "Release ${GITHUB_REF_NAME} is still draft" >&2; exit 1; }
           [ "${is_prerelease}" = "false" ] || { echo "Release ${GITHUB_REF_NAME} is prerelease" >&2; exit 1; }
 
-          latest_tag="$(gh release view --json tagName --jq '.tagName')"
-          [ "${latest_tag}" = "${GITHUB_REF_NAME}" ] || { echo "Latest release is ${latest_tag}, expected ${GITHUB_REF_NAME}" >&2; exit 1; }
+          if [[ "${GITHUB_REF_NAME}" == v* ]]; then
+            latest_tag="$(gh release view --json tagName --jq '.tagName')"
+            [ "${latest_tag}" = "${GITHUB_REF_NAME}" ] || { echo "Latest release is ${latest_tag}, expected ${GITHUB_REF_NAME}" >&2; exit 1; }
+          fi

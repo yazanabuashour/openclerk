@@ -82,7 +82,8 @@
       "openclerk-module-gemini-embeddings_0.1.0_skill.tar.gz",
       "openclerk-module-gemini-embeddings_0.1.0_source.tar.gz",
       "openclerk-module-gemini-embeddings_0.1.0_checksums.txt",
-      "openclerk-module-gemini-embeddings_0.1.0_sbom.json"
+      "openclerk-module-gemini-embeddings_0.1.0_sbom.json",
+      "install-module.sh"
     ],
     "status": "supported_optional_module"
   }

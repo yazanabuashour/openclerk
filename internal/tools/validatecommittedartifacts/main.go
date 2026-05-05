@@ -177,6 +177,9 @@ func validateModuleDocumentation(root string, files []string) error {
 	if err != nil {
 		return err
 	}
+	if err := validateModuleInstallDoc(moduleInstallDoc); err != nil {
+		return err
+	}
 	modules, err := documentedEmbeddingModules(root, files)
 	if err != nil {
 		return err
@@ -223,7 +226,24 @@ func validateReadmeModuleSection(readme string) error {
 	if linkIndex < 0 {
 		return errors.New("README.md module section must link to modules/docs/install.md")
 	}
+	moduleSection := readme[modulesIndex:]
+	required := []string{
+		"Install prompt:",
+		"Upgrade prompt:",
+		"<module-provider>",
+		"<module-manifest-path>",
+		"<module-command>",
+		"<module-skill-path>",
+		"<module-name>",
+		"<module-version-or-latest>",
+	}
+	for _, want := range required {
+		if !strings.Contains(moduleSection, want) {
+			return fmt.Errorf("README.md module section missing concise agent module instruction placeholder %q", want)
+		}
+	}
 	for _, forbidden := range []string{
+		"Tell your agent:",
 		"Module commands are available from the current source checkout",
 		"Released runners through",
 		"mise exec -- go build -o \"$HOME/.local/bin/openclerk\" ./cmd/openclerk",
@@ -233,8 +253,23 @@ func validateReadmeModuleSection(readme string) error {
 		"Remove a module:",
 		`{"action":"install_module"`,
 	} {
-		if strings.Contains(readme, forbidden) {
+		if strings.Contains(moduleSection, forbidden) {
 			return fmt.Errorf("README.md module section must not inline module implementation detail %q", forbidden)
+		}
+	}
+	return nil
+}
+
+func validateModuleInstallDoc(text string) error {
+	for _, want := range []string{
+		"## Install a Module Release",
+		"## Upgrade a Module Release",
+		"## Register or Refresh Module Registration",
+		"scripts/build-module-release-bundle.sh",
+		"scripts/install-module.sh",
+	} {
+		if !strings.Contains(text, want) {
+			return fmt.Errorf("modules/docs/install.md missing module install/upgrade guidance %q", want)
 		}
 	}
 	return nil
