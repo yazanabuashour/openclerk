@@ -5,7 +5,7 @@ decision_status: accepted
 decision_scope: artifact-candidate-plan-local-ocr
 decision_owner: agentops
 decision_date: 2026-05-04
-source_refs: docs/evals/local-ocr-artifact-candidate-planning-poc.md, docs/evals/results/ockp-local-ocr-artifact-fixture-evidence.md, docs/evals/results/ockp-artifact-local-path-candidate-plan-promotion.md, docs/architecture/local-artifact-candidate-plan-promotion-decision.md, docs/architecture/parser-ocr-artifact-ingestion-candidate-comparison-decision.md
+source_refs: docs/evals/local-ocr-artifact-candidate-planning-poc.md, docs/evals/results/ockp-local-ocr-artifact-fixture-evidence.md, docs/evals/results/ockp-local-ocr-review-contract-dependency-policy.md, docs/evals/results/ockp-artifact-local-path-candidate-plan-promotion.md, docs/architecture/local-artifact-candidate-plan-promotion-decision.md, docs/architecture/parser-ocr-artifact-ingestion-candidate-comparison-decision.md
 ---
 # Decision: Local OCR Artifact Candidate Planning
 
@@ -22,6 +22,7 @@ Evidence:
 
 - [`docs/evals/local-ocr-artifact-candidate-planning-poc.md`](../evals/local-ocr-artifact-candidate-planning-poc.md)
 - [`docs/evals/results/ockp-local-ocr-artifact-fixture-evidence.md`](../evals/results/ockp-local-ocr-artifact-fixture-evidence.md)
+- [`docs/evals/results/ockp-local-ocr-review-contract-dependency-policy.md`](../evals/results/ockp-local-ocr-review-contract-dependency-policy.md)
 - [`docs/evals/results/ockp-artifact-local-path-candidate-plan-promotion.md`](../evals/results/ockp-artifact-local-path-candidate-plan-promotion.md)
 - [`docs/architecture/local-artifact-candidate-plan-promotion-decision.md`](local-artifact-candidate-plan-promotion-decision.md)
 - [`docs/architecture/parser-ocr-artifact-ingestion-candidate-comparison-decision.md`](parser-ocr-artifact-ingestion-candidate-comparison-decision.md)
@@ -94,6 +95,13 @@ Created follow-up:
 It selected `none viable yet`, filed no product implementation Bead, and
 created deferred follow-up `oc-i8yk` for the next OCR review contract and
 dependency-policy pass.
+
+`oc-i8yk` completed that design pass in
+[`docs/architecture/local-ocr-review-contract-dependency-policy-decision.md`](local-ocr-review-contract-dependency-policy-decision.md).
+It selected model-assisted OCR review as the simplest future evidence
+candidate, kept local OCR engines as the required local-first comparison, and
+filed follow-up `oc-s3wg` for targeted promotion evidence. It filed no product
+implementation Bead.
 
 ## Compatibility
 
