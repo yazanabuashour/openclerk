@@ -154,6 +154,42 @@ func TestModuleRuntimeConfigConfigureRemoveAndList(t *testing.T) {
 	}
 }
 
+func TestModuleManifestValidationRejectsSharedPolicyViolations(t *testing.T) {
+	t.Parallel()
+
+	t.Run("semantic expected name mismatch", func(t *testing.T) {
+		t.Parallel()
+
+		manifestPath := writeRunclientSemanticModuleManifest(t, t.TempDir(), "gemini")
+		_, _, err := verifySemanticModuleManifest(manifestPath, "gemini", "gemini-search")
+		if err == nil || !strings.Contains(err.Error(), "semantic module manifest module.name mismatch") {
+			t.Fatalf("err = %v, want semantic name mismatch", err)
+		}
+	})
+
+	t.Run("semantic missing command", func(t *testing.T) {
+		t.Parallel()
+
+		manifestPath := writeRunclientSemanticModuleManifest(t, t.TempDir(), "gemini")
+		replaceManifestFile(t, manifestPath, "semantic-retrieval-adapter search", "semantic-retrieval-adapter index")
+		_, _, err := verifySemanticModuleManifest(manifestPath, "gemini", "")
+		if err == nil || !strings.Contains(err.Error(), "semantic module manifest must provide a search command") {
+			t.Fatalf("err = %v, want semantic command validation", err)
+		}
+	})
+
+	t.Run("ocr durable writes", func(t *testing.T) {
+		t.Parallel()
+
+		manifestPath := writeRunclientOCRModuleManifest(t, t.TempDir())
+		replaceManifestFile(t, manifestPath, `"durable_writes":"forbidden"`, `"durable_writes":"allowed"`)
+		_, _, err := verifyOCRModuleManifest(manifestPath, OCRModuleProviderTesseract, "")
+		if err == nil || !strings.Contains(err.Error(), "OCR module manifest must be read-only and forbid durable writes") {
+			t.Fatalf("err = %v, want OCR authority validation", err)
+		}
+	})
+}
+
 func writeRunclientSemanticModuleManifest(t *testing.T, dir string, provider string) string {
 	t.Helper()
 	path := filepath.Join(dir, "module.json")
@@ -218,6 +254,17 @@ func writeRunclientOCRModuleManifest(t *testing.T, dir string) string {
 		t.Fatalf("write OCR manifest: %v", err)
 	}
 	return path
+}
+
+func replaceManifestFile(t *testing.T, path string, old string, replacement string) {
+	t.Helper()
+	data := string(mustReadFile(t, path))
+	if !strings.Contains(data, old) {
+		t.Fatalf("manifest %s does not contain %q", path, old)
+	}
+	if err := os.WriteFile(path, []byte(strings.ReplaceAll(data, old, replacement)), 0o600); err != nil {
+		t.Fatalf("mutate manifest: %v", err)
+	}
 }
 
 func mustReadFile(t *testing.T, path string) []byte {

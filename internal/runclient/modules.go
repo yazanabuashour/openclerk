@@ -452,95 +452,91 @@ type semanticModuleManifest struct {
 	} `json:"release"`
 }
 
+type moduleManifestPolicy struct {
+	label                   string
+	kind                    string
+	providerMatches         func(moduleName string, provider string) bool
+	providesRequiredCommand func(command string) bool
+	missingCommandMessage   string
+}
+
+var (
+	semanticModuleManifestPolicy = moduleManifestPolicy{
+		label:                   "semantic module",
+		kind:                    ModuleKindEmbeddingProvider,
+		providerMatches:         semanticModuleProviderMatches,
+		providesRequiredCommand: func(command string) bool { return strings.Contains(command, " search") },
+		missingCommandMessage:   "semantic module manifest must provide a search command",
+	}
+	ocrModuleManifestPolicy = moduleManifestPolicy{
+		label: "OCR module",
+		kind:  ModuleKindOCRProvider,
+		providerMatches: func(moduleName string, provider string) bool {
+			return strings.Contains(moduleName, provider)
+		},
+		providesRequiredCommand: func(command string) bool {
+			return strings.Contains(strings.ToLower(command), "ocr")
+		},
+		missingCommandMessage: "OCR module manifest must provide an OCR command",
+	}
+)
+
 func verifySemanticModuleManifest(path string, provider string, expectedName string) (semanticModuleManifest, string, error) {
+	return verifyModuleManifest(path, provider, expectedName, semanticModuleManifestPolicy)
+}
+
+func verifyOCRModuleManifest(path string, provider string, expectedName string) (semanticModuleManifest, string, error) {
+	return verifyModuleManifest(path, provider, expectedName, ocrModuleManifestPolicy)
+}
+
+func verifyModuleManifest(path string, provider string, expectedName string, policy moduleManifestPolicy) (semanticModuleManifest, string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return semanticModuleManifest{}, "", domain.InternalError("read semantic module manifest", err)
+		return semanticModuleManifest{}, "", domain.InternalError("read "+policy.label+" manifest", err)
 	}
 	sum := sha256.Sum256(data)
 	sha := hex.EncodeToString(sum[:])
 	var manifest semanticModuleManifest
 	if err := json.Unmarshal(data, &manifest); err != nil {
-		return semanticModuleManifest{}, "", domain.ValidationError("decode semantic module manifest", map[string]any{"error": err.Error()})
+		return semanticModuleManifest{}, "", domain.ValidationError("decode "+policy.label+" manifest", map[string]any{"error": err.Error()})
 	}
 	if manifest.SchemaVersion != "openclerk-module.v1" {
-		return semanticModuleManifest{}, "", domain.ValidationError("semantic module manifest schema_version must be openclerk-module.v1", nil)
+		return semanticModuleManifest{}, "", domain.ValidationError(policy.label+" manifest schema_version must be openclerk-module.v1", nil)
 	}
 	if strings.TrimSpace(manifest.Module.Name) == "" {
-		return semanticModuleManifest{}, "", domain.ValidationError("semantic module manifest module.name is required", nil)
+		return semanticModuleManifest{}, "", domain.ValidationError(policy.label+" manifest module.name is required", nil)
 	}
 	if strings.TrimSpace(expectedName) != "" && strings.TrimSpace(expectedName) != manifest.Module.Name {
-		return semanticModuleManifest{}, "", domain.ValidationError("semantic module manifest module.name mismatch", map[string]any{"expected": expectedName, "actual": manifest.Module.Name})
+		return semanticModuleManifest{}, "", domain.ValidationError(policy.label+" manifest module.name mismatch", map[string]any{"expected": expectedName, "actual": manifest.Module.Name})
 	}
-	wantSuffix := "-" + provider
-	if !strings.Contains(manifest.Module.Name, provider) && !strings.HasSuffix(manifest.Module.Name, wantSuffix) {
-		return semanticModuleManifest{}, "", domain.ValidationError("semantic module manifest module.name must identify the provider", map[string]any{"provider": provider, "module": manifest.Module.Name})
+	if !policy.providerMatches(manifest.Module.Name, provider) {
+		return semanticModuleManifest{}, "", domain.ValidationError(policy.label+" manifest module.name must identify the provider", map[string]any{"provider": provider, "module": manifest.Module.Name})
 	}
-	if manifest.Module.Kind != "embedding_provider" {
-		return semanticModuleManifest{}, "", domain.ValidationError("semantic module manifest module.kind must be embedding_provider", nil)
+	if manifest.Module.Kind != policy.kind {
+		return semanticModuleManifest{}, "", domain.ValidationError(policy.label+" manifest module.kind must be "+policy.kind, nil)
 	}
 	if manifest.Authority.Default != "read_only" || manifest.Authority.DurableWrites != "forbidden" {
-		return semanticModuleManifest{}, "", domain.ValidationError("semantic module manifest must be read-only and forbid durable writes", nil)
+		return semanticModuleManifest{}, "", domain.ValidationError(policy.label+" manifest must be read-only and forbid durable writes", nil)
 	}
 	if manifest.Release.Status != "supported_optional_module" {
-		return semanticModuleManifest{}, "", domain.ValidationError("semantic module manifest release.status must be supported_optional_module", nil)
+		return semanticModuleManifest{}, "", domain.ValidationError(policy.label+" manifest release.status must be supported_optional_module", nil)
 	}
-	hasSearch := false
+	hasRequiredCommand := false
 	for _, provided := range manifest.Provides {
-		if provided.Type == "command" && strings.Contains(provided.Name, " search") {
-			hasSearch = true
+		if provided.Type == "command" && policy.providesRequiredCommand(provided.Name) {
+			hasRequiredCommand = true
 			break
 		}
 	}
-	if !hasSearch {
-		return semanticModuleManifest{}, "", domain.ValidationError("semantic module manifest must provide a search command", nil)
+	if !hasRequiredCommand {
+		return semanticModuleManifest{}, "", domain.ValidationError(policy.missingCommandMessage, nil)
 	}
 	return manifest, sha, nil
 }
 
-func verifyOCRModuleManifest(path string, provider string, expectedName string) (semanticModuleManifest, string, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return semanticModuleManifest{}, "", domain.InternalError("read OCR module manifest", err)
-	}
-	sum := sha256.Sum256(data)
-	sha := hex.EncodeToString(sum[:])
-	var manifest semanticModuleManifest
-	if err := json.Unmarshal(data, &manifest); err != nil {
-		return semanticModuleManifest{}, "", domain.ValidationError("decode OCR module manifest", map[string]any{"error": err.Error()})
-	}
-	if manifest.SchemaVersion != "openclerk-module.v1" {
-		return semanticModuleManifest{}, "", domain.ValidationError("OCR module manifest schema_version must be openclerk-module.v1", nil)
-	}
-	if strings.TrimSpace(manifest.Module.Name) == "" {
-		return semanticModuleManifest{}, "", domain.ValidationError("OCR module manifest module.name is required", nil)
-	}
-	if strings.TrimSpace(expectedName) != "" && strings.TrimSpace(expectedName) != manifest.Module.Name {
-		return semanticModuleManifest{}, "", domain.ValidationError("OCR module manifest module.name mismatch", map[string]any{"expected": expectedName, "actual": manifest.Module.Name})
-	}
-	if !strings.Contains(manifest.Module.Name, provider) {
-		return semanticModuleManifest{}, "", domain.ValidationError("OCR module manifest module.name must identify the provider", map[string]any{"provider": provider, "module": manifest.Module.Name})
-	}
-	if manifest.Module.Kind != ModuleKindOCRProvider {
-		return semanticModuleManifest{}, "", domain.ValidationError("OCR module manifest module.kind must be ocr_provider", nil)
-	}
-	if manifest.Authority.Default != "read_only" || manifest.Authority.DurableWrites != "forbidden" {
-		return semanticModuleManifest{}, "", domain.ValidationError("OCR module manifest must be read-only and forbid durable writes", nil)
-	}
-	if manifest.Release.Status != "supported_optional_module" {
-		return semanticModuleManifest{}, "", domain.ValidationError("OCR module manifest release.status must be supported_optional_module", nil)
-	}
-	hasOCR := false
-	for _, provided := range manifest.Provides {
-		if provided.Type == "command" && strings.Contains(strings.ToLower(provided.Name), "ocr") {
-			hasOCR = true
-			break
-		}
-	}
-	if !hasOCR {
-		return semanticModuleManifest{}, "", domain.ValidationError("OCR module manifest must provide an OCR command", nil)
-	}
-	return manifest, sha, nil
+func semanticModuleProviderMatches(moduleName string, provider string) bool {
+	wantSuffix := "-" + provider
+	return strings.Contains(moduleName, provider) || strings.HasSuffix(moduleName, wantSuffix)
 }
 
 type moduleRuntimeConfigStore struct {
