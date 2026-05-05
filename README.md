@@ -12,7 +12,6 @@ Install OpenClerk from https://github.com/yazanabuashour/openclerk.
 Complete both required steps before reporting success:
 1. Install the openclerk runner binary into a durable user-level binary directory.
    Use `OPENCLERK_INSTALL_DIR="$HOME/.local/bin"` for a normal user-level install.
-   Do not install it under `.codex/tmp`, `/tmp`, a repository checkout, or another ephemeral workspace.
    Verify with `command -v openclerk` and `openclerk --version`, and confirm `command -v openclerk` resolves to that durable install target.
    If `$HOME/.local/bin` is not on the user's future shell `PATH`, update the appropriate shell startup file and re-verify.
 2. Register the OpenClerk skill from skills/openclerk/SKILL.md using your native skill system.
