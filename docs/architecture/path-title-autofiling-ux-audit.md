@@ -91,7 +91,7 @@ future eval-design framing is
 | `oc-k6eb` | Duplicate candidate update vs new path | Can duplicate-risk wording be smoother while preserving runner-visible lookup and no duplicate writes? | [`path-title-capture-ceremony-eval-design.md`](../evals/path-title-capture-ceremony-eval-design.md) |
 | `oc-mjpz` | Explicit overrides in smoother autofiling | Do future smoother flows preserve explicit path/title/type/body instructions and fail validation instead of silently rewriting them? | [`path-title-capture-ceremony-eval-design.md`](../evals/path-title-capture-ceremony-eval-design.md) |
 | `oc-18oo` | Low-risk capture ceremony | Is approval-before-create still the right UX for low-risk capture, or is it ceremonial despite passing safety checks? | [`path-title-capture-ceremony-eval-design.md`](../evals/path-title-capture-ceremony-eval-design.md) |
-| `oc-11yz` | Remaining write surfaces | Which proposal-first shapes are viable for video transcript intake, source-linked synthesis, existing-document update targeting, and checkpoint guidance? | Follow-up candidate-surface comparison |
+| `oc-11yz` | Remaining write surfaces | Which proposal-first shapes are viable for video transcript intake, source-linked synthesis, existing-document update targeting, and checkpoint guidance? | [`remaining-write-surfaces-proposal-first-comparison.md`](remaining-write-surfaces-proposal-first-comparison.md) |
 
 These follow-ups are eval/design scoped. They do not authorize implementation.
 Any future behavior change still needs targeted eval evidence and an explicit
