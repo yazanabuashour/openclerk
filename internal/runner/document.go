@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/url"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -402,11 +401,12 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		if normalized.GitLifecycle.Mode == "" {
 			normalized.GitLifecycle.Mode = gitLifecycleModeStatus
 		}
-		for _, path := range normalized.GitLifecycle.Paths {
-			if path == "" || filepath.IsAbs(path) || strings.HasPrefix(path, "/") || path == ".." || strings.HasPrefix(path, "../") {
+		for _, vaultPath := range normalized.GitLifecycle.Paths {
+			_, issue := domain.NormalizeVaultRelativePath(vaultPath)
+			if issue != domain.VaultPathOK {
 				return normalizedDocumentTaskRequest{}, "git_lifecycle.paths entries must stay inside the vault root"
 			}
-			if isUnsafeGitLifecyclePath(path) {
+			if isUnsafeGitLifecyclePath(vaultPath) {
 				return normalizedDocumentTaskRequest{}, "git_lifecycle.paths entries must be literal vault-relative paths"
 			}
 		}
@@ -489,8 +489,8 @@ func normalizeDocumentListTagFilter(list *DocumentListOptions) string {
 func trimSourceURLInput(input SourceURLInput) SourceURLInput {
 	return SourceURLInput{
 		URL:           strings.TrimSpace(input.URL),
-		PathHint:      strings.TrimSpace(input.PathHint),
-		AssetPathHint: strings.TrimSpace(input.AssetPathHint),
+		PathHint:      normalizeVaultRelativePath(input.PathHint),
+		AssetPathHint: normalizeVaultRelativePath(input.AssetPathHint),
 		Title:         strings.TrimSpace(input.Title),
 		Mode:          strings.TrimSpace(input.Mode),
 		SourceType:    strings.TrimSpace(input.SourceType),
@@ -500,8 +500,8 @@ func trimSourceURLInput(input SourceURLInput) SourceURLInput {
 func trimVideoURLInput(input VideoURLInput) VideoURLInput {
 	return VideoURLInput{
 		URL:           strings.TrimSpace(input.URL),
-		PathHint:      strings.TrimSpace(input.PathHint),
-		AssetPathHint: strings.TrimSpace(input.AssetPathHint),
+		PathHint:      normalizeVaultRelativePath(input.PathHint),
+		AssetPathHint: normalizeVaultRelativePath(input.AssetPathHint),
 		Title:         strings.TrimSpace(input.Title),
 		Mode:          strings.TrimSpace(input.Mode),
 		Transcript: VideoTranscriptInput{
@@ -612,29 +612,17 @@ func trimArtifactPlanOptions(input ArtifactPlanOptions) ArtifactPlanOptions {
 }
 
 func normalizeVaultRelativePath(raw string) string {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" || filepath.IsAbs(trimmed) || strings.HasPrefix(trimmed, "/") {
-		return trimmed
-	}
-	clean := path.Clean(filepath.ToSlash(trimmed))
-	if clean == "." {
-		return ""
+	clean, issue := domain.NormalizeOptionalVaultRelativePath(raw)
+	if issue != domain.VaultPathOK {
+		return strings.TrimSpace(raw)
 	}
 	return clean
 }
 
 func normalizeVaultRelativePrefix(raw string) string {
-	trimmed := strings.TrimSpace(filepath.ToSlash(raw))
-	if trimmed == "" || filepath.IsAbs(trimmed) || strings.HasPrefix(trimmed, "/") {
-		return trimmed
-	}
-	trailingSlash := strings.HasSuffix(trimmed, "/")
-	clean := path.Clean(trimmed)
-	if clean == "." {
-		return ""
-	}
-	if trailingSlash && clean != "." && clean != ".." && !strings.HasSuffix(clean, "/") {
-		clean += "/"
+	clean, issue := domain.NormalizeOptionalVaultRelativePrefix(raw)
+	if issue != domain.VaultPathOK {
+		return strings.TrimSpace(raw)
 	}
 	return clean
 }
@@ -710,7 +698,8 @@ func validateArtifactPlanOptions(input ArtifactPlanOptions) string {
 		}
 	}
 	if input.Path != "" {
-		if filepath.IsAbs(input.Path) || strings.HasPrefix(input.Path, "/") || input.Path == "." || input.Path == ".." || strings.HasPrefix(input.Path, "../") {
+		_, issue := domain.NormalizeVaultRelativePath(input.Path)
+		if issue != domain.VaultPathOK {
 			return "artifact.path must stay inside the vault root"
 		}
 		if path.Ext(input.Path) != ".md" {
@@ -718,7 +707,8 @@ func validateArtifactPlanOptions(input ArtifactPlanOptions) string {
 		}
 	}
 	if input.PathPrefix != "" {
-		if filepath.IsAbs(input.PathPrefix) || strings.HasPrefix(input.PathPrefix, "/") || input.PathPrefix == "." || input.PathPrefix == ".." || strings.HasPrefix(input.PathPrefix, "../") {
+		_, issue := domain.NormalizeVaultRelativePath(input.PathPrefix)
+		if issue != domain.VaultPathOK {
 			return "artifact.path_prefix must stay inside the vault root"
 		}
 	}
@@ -734,12 +724,9 @@ func normalizeCompileSynthesisMode(raw string) string {
 }
 
 func normalizeCompileSynthesisMarkdownPath(raw string) string {
-	if raw == "" || filepath.IsAbs(raw) || strings.HasPrefix(raw, "/") {
-		return raw
-	}
-	clean := path.Clean(filepath.ToSlash(raw))
-	if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
-		return clean
+	clean, issue := domain.NormalizeOptionalVaultRelativePath(raw)
+	if issue != domain.VaultPathOK {
+		return strings.TrimSpace(raw)
 	}
 	if path.Ext(clean) == "" {
 		clean += ".md"
@@ -751,7 +738,8 @@ func validateCompileSynthesisInput(input CompileSynthesisInput) string {
 	if input.Path == "" {
 		return "synthesis.path is required"
 	}
-	if filepath.IsAbs(input.Path) || strings.HasPrefix(input.Path, "/") || input.Path == "." || input.Path == ".." || strings.HasPrefix(input.Path, "../") {
+	_, issue := domain.NormalizeVaultRelativePath(input.Path)
+	if issue != domain.VaultPathOK {
 		return "synthesis.path must stay inside the vault root"
 	}
 	if !strings.HasPrefix(input.Path, "synthesis/") {
@@ -770,7 +758,8 @@ func validateCompileSynthesisInput(input CompileSynthesisInput) string {
 		if ref == "" {
 			return "synthesis.source_refs entries must be non-empty"
 		}
-		if filepath.IsAbs(ref) || strings.HasPrefix(ref, "/") || ref == "." || ref == ".." || strings.HasPrefix(ref, "../") {
+		_, issue := domain.NormalizeVaultRelativePath(ref)
+		if issue != domain.VaultPathOK {
 			return "synthesis.source_refs entries must stay inside the vault root"
 		}
 		if !strings.HasPrefix(ref, "sources/") {
@@ -874,15 +863,9 @@ func validateVideoURLInput(input VideoURLInput) string {
 }
 
 func validateSourcePathHint(pathHint string) string {
-	if strings.TrimSpace(pathHint) == "" {
-		return "source.path_hint is required"
-	}
-	if filepath.IsAbs(pathHint) || strings.HasPrefix(strings.TrimSpace(pathHint), "/") {
-		return "source.path_hint must be relative to the vault root"
-	}
-	clean := path.Clean(filepath.ToSlash(strings.TrimSpace(pathHint)))
-	if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
-		return "source.path_hint must stay inside the vault root"
+	clean, rejection := validateRequiredVaultPath(pathHint, "source.path_hint is required", "source.path_hint must be relative to the vault root", "source.path_hint must stay inside the vault root")
+	if rejection != "" {
+		return rejection
 	}
 	if !strings.HasPrefix(clean, "sources/") || path.Ext(clean) != ".md" {
 		return "source.path_hint must be a vault-relative sources/*.md path"
@@ -891,15 +874,9 @@ func validateSourcePathHint(pathHint string) string {
 }
 
 func validateVideoPathHint(pathHint string) string {
-	if strings.TrimSpace(pathHint) == "" {
-		return "video.path_hint is required"
-	}
-	if filepath.IsAbs(pathHint) || strings.HasPrefix(strings.TrimSpace(pathHint), "/") {
-		return "video.path_hint must be relative to the vault root"
-	}
-	clean := path.Clean(filepath.ToSlash(strings.TrimSpace(pathHint)))
-	if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
-		return "video.path_hint must stay inside the vault root"
+	clean, rejection := validateRequiredVaultPath(pathHint, "video.path_hint is required", "video.path_hint must be relative to the vault root", "video.path_hint must stay inside the vault root")
+	if rejection != "" {
+		return rejection
 	}
 	if !strings.HasPrefix(clean, "sources/") || path.Ext(clean) != ".md" {
 		return "video.path_hint must be a vault-relative sources/*.md path"
@@ -908,15 +885,9 @@ func validateVideoPathHint(pathHint string) string {
 }
 
 func validateAssetPathHint(pathHint string) string {
-	if strings.TrimSpace(pathHint) == "" {
-		return "source.asset_path_hint is required"
-	}
-	if filepath.IsAbs(pathHint) || strings.HasPrefix(strings.TrimSpace(pathHint), "/") {
-		return "source.asset_path_hint must be relative to the vault root"
-	}
-	clean := path.Clean(filepath.ToSlash(strings.TrimSpace(pathHint)))
-	if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
-		return "source.asset_path_hint must stay inside the vault root"
+	clean, rejection := validateRequiredVaultPath(pathHint, "source.asset_path_hint is required", "source.asset_path_hint must be relative to the vault root", "source.asset_path_hint must stay inside the vault root")
+	if rejection != "" {
+		return rejection
 	}
 	if !strings.HasPrefix(clean, "assets/") || path.Ext(clean) != ".pdf" {
 		return "source.asset_path_hint must be a vault-relative assets/**/*.pdf path"
@@ -925,17 +896,28 @@ func validateAssetPathHint(pathHint string) string {
 }
 
 func validateVideoAssetPathHint(pathHint string) string {
-	if filepath.IsAbs(pathHint) || strings.HasPrefix(strings.TrimSpace(pathHint), "/") {
-		return "video.asset_path_hint must be relative to the vault root"
-	}
-	clean := path.Clean(filepath.ToSlash(strings.TrimSpace(pathHint)))
-	if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
-		return "video.asset_path_hint must stay inside the vault root"
+	clean, rejection := validateRequiredVaultPath(pathHint, "video.asset_path_hint is required", "video.asset_path_hint must be relative to the vault root", "video.asset_path_hint must stay inside the vault root")
+	if rejection != "" {
+		return rejection
 	}
 	if !strings.HasPrefix(clean, "assets/") || path.Ext(clean) != ".json" {
 		return "video.asset_path_hint must be a vault-relative assets/**/*.json path"
 	}
 	return ""
+}
+
+func validateRequiredVaultPath(raw string, requiredMessage string, relativeMessage string, stayInsideMessage string) (string, string) {
+	clean, issue := domain.NormalizeVaultRelativePath(raw)
+	switch issue {
+	case domain.VaultPathOK:
+		return clean, ""
+	case domain.VaultPathMissing:
+		return "", requiredMessage
+	case domain.VaultPathAbsolute:
+		return "", relativeMessage
+	default:
+		return "", stayInsideMessage
+	}
 }
 
 func validateDocumentInput(input DocumentInput) string {

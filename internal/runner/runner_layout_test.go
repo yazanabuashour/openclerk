@@ -2,11 +2,12 @@ package runner_test
 
 import (
 	"context"
-	"github.com/yazanabuashour/openclerk/internal/runclient"
-	"github.com/yazanabuashour/openclerk/internal/runner"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/yazanabuashour/openclerk/internal/runclient"
+	"github.com/yazanabuashour/openclerk/internal/runner"
 )
 
 func TestDocumentTaskInspectLayout(t *testing.T) {
@@ -66,7 +67,7 @@ func TestDocumentTaskInspectLayoutUsesRootRelativeSourceAndSynthesisPaths(t *tes
 type: synthesis
 status: active
 freshness: fresh
-source_refs: "sources/runner.md"
+source_refs: "sources\\runner.md"
 ---
 # Runner Synthesis
 

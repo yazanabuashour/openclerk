@@ -5,11 +5,12 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/yazanabuashour/openclerk/internal/domain"
 	"path"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/yazanabuashour/openclerk/internal/domain"
 )
 
 func (s *Store) GetDocumentLinks(ctx context.Context, docID string) (domain.DocumentLinks, error) {
@@ -351,7 +352,14 @@ func resolveLinkPath(docPath string, target string) string {
 	if target == "" {
 		return ""
 	}
-	resolved := path.Clean(path.Join(path.Dir(docPath), target))
+	target = strings.ReplaceAll(target, "\\", "/")
+	if _, issue := domain.NormalizeVaultRelativePath(target); issue == domain.VaultPathAbsolute {
+		return ""
+	}
+	resolved, issue := domain.NormalizeVaultRelativePath(path.Join(path.Dir(docPath), target))
+	if issue != domain.VaultPathOK {
+		return ""
+	}
 	if path.Ext(resolved) == "" {
 		resolved += ".md"
 	}

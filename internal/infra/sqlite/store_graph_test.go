@@ -2,10 +2,11 @@ package sqlite
 
 import (
 	"context"
-	"github.com/yazanabuashour/openclerk/internal/domain"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/yazanabuashour/openclerk/internal/domain"
 )
 
 func TestGraphNeighborhoodIncludesOutgoingLinksForChunk(t *testing.T) {
@@ -107,5 +108,58 @@ See the [reference](reference.md) again before writing synthesis.
 `),
 	}); err != nil {
 		t.Fatalf("create source document with duplicate links: %v", err)
+	}
+}
+
+func TestResolveLinkPathUsesVaultPathPolicy(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		doc    string
+		target string
+		want   string
+	}{
+		{
+			name:   "relative markdown path",
+			doc:    "docs/guide.md",
+			target: "reference",
+			want:   "docs/reference.md",
+		},
+		{
+			name:   "normalizes backslash target",
+			doc:    "docs/guide.md",
+			target: `references\runner.md`,
+			want:   "docs/references/runner.md",
+		},
+		{
+			name:   "rejects root absolute target",
+			doc:    "docs/guide.md",
+			target: "/reference.md",
+			want:   "",
+		},
+		{
+			name:   "rejects windows absolute target",
+			doc:    "docs/guide.md",
+			target: `C:\reference.md`,
+			want:   "",
+		},
+		{
+			name:   "rejects root escape",
+			doc:    "guide.md",
+			target: "../reference.md",
+			want:   "",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := resolveLinkPath(tt.doc, tt.target); got != tt.want {
+				t.Fatalf("resolveLinkPath(%q, %q) = %q, want %q", tt.doc, tt.target, got, tt.want)
+			}
+		})
 	}
 }

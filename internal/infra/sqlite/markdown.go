@@ -4,12 +4,12 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	"github.com/yazanabuashour/openclerk/internal/domain"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/yazanabuashour/openclerk/internal/domain"
 )
 
 type section struct {
@@ -294,8 +294,8 @@ func normalizeReferencePath(value string) string {
 	if value == "" || strings.HasPrefix(value, "doc:") {
 		return value
 	}
-	clean := path.Clean(filepath.ToSlash(value))
-	if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
+	clean, issue := domain.NormalizeVaultRelativePath(value)
+	if issue != domain.VaultPathOK {
 		return ""
 	}
 	if path.Ext(clean) == "" {

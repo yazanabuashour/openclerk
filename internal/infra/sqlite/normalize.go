@@ -1,22 +1,21 @@
 package sqlite
 
 import (
-	"github.com/yazanabuashour/openclerk/internal/domain"
 	"net/url"
 	"path"
-	"path/filepath"
 	"strings"
+
+	"github.com/yazanabuashour/openclerk/internal/domain"
 )
 
 func normalizePath(raw string) (string, error) {
-	if strings.TrimSpace(raw) == "" {
+	clean, issue := domain.NormalizeVaultRelativePath(raw)
+	switch issue {
+	case domain.VaultPathMissing:
 		return "", domain.ValidationError("path is required", nil)
-	}
-	if filepath.IsAbs(raw) {
+	case domain.VaultPathAbsolute:
 		return "", domain.ValidationError("path must be repo-relative to the vault root", map[string]any{"path": raw})
-	}
-	clean := path.Clean(filepath.ToSlash(raw))
-	if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
+	case domain.VaultPathEscapesRoot:
 		return "", domain.ValidationError("path must stay inside the vault root", map[string]any{"path": raw})
 	}
 	if ext := path.Ext(clean); ext == "" {
@@ -112,14 +111,13 @@ func normalizeVideoAssetPath(raw string) (string, error) {
 }
 
 func normalizeStrictVaultPath(raw string) (string, error) {
-	if strings.TrimSpace(raw) == "" {
+	clean, issue := domain.NormalizeVaultRelativePath(raw)
+	switch issue {
+	case domain.VaultPathMissing:
 		return "", domain.ValidationError("path hint is required", nil)
-	}
-	if filepath.IsAbs(raw) || strings.HasPrefix(strings.TrimSpace(raw), "/") {
+	case domain.VaultPathAbsolute:
 		return "", domain.ValidationError("path hint must be relative to the vault root", map[string]any{"path": raw})
-	}
-	clean := path.Clean(filepath.ToSlash(strings.TrimSpace(raw)))
-	if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
+	case domain.VaultPathEscapesRoot:
 		return "", domain.ValidationError("path hint must stay inside the vault root", map[string]any{"path": raw})
 	}
 	return clean, nil

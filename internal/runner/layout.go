@@ -326,10 +326,8 @@ func splitLayoutCSV(value string) []string {
 		if clean == "" {
 			continue
 		}
-		clean = path.Clean(strings.ReplaceAll(clean, "\\", "/"))
-		if clean == "." || strings.HasPrefix(clean, "../") || strings.HasPrefix(clean, "/") {
-			out = append(out, clean)
-			continue
+		if normalized, issue := domain.NormalizeVaultRelativePath(clean); issue == domain.VaultPathOK {
+			clean = normalized
 		}
 		if _, ok := seen[clean]; ok {
 			continue

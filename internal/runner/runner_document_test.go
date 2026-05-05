@@ -982,6 +982,33 @@ func TestDocumentTaskIngestSourceURLPlanModeIsReadOnly(t *testing.T) {
 	}
 }
 
+func TestDocumentTaskIngestSourceURLNormalizesVaultPathSeparators(t *testing.T) {
+	fixtureRoot := t.TempDir()
+	fixturePath := filepath.Join(fixtureRoot, "web", "runner-product.html")
+	if err := os.MkdirAll(filepath.Dir(fixturePath), 0o755); err != nil {
+		t.Fatalf("mkdir web fixture: %v", err)
+	}
+	if err := os.WriteFile(fixturePath, []byte(`<!doctype html><html><head><title>Runner Web Title</title></head><body><h1>Runner Web Title</h1><p>Runner evidence.</p></body></html>`), 0o644); err != nil {
+		t.Fatalf("write web fixture: %v", err)
+	}
+	t.Setenv("OPENCLERK_EVAL_SOURCE_FIXTURE_ROOT", fixtureRoot)
+
+	result, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestSourceURL,
+		Source: runner.SourceURLInput{
+			URL:        "http://openclerk-eval.local/web/runner-product.html",
+			PathHint:   `sources\web\runner-product.md`,
+			SourceType: "web",
+		},
+	})
+	if err != nil {
+		t.Fatalf("ingest source URL with backslash path hints: %v", err)
+	}
+	if result.Rejected || result.Ingestion == nil || result.Ingestion.SourcePath != "sources/web/runner-product.md" {
+		t.Fatalf("ingestion result = %+v", result)
+	}
+}
+
 func TestDocumentTaskIngestSourceURLPlanModeReportsExistingSource(t *testing.T) {
 	fixtureRoot := t.TempDir()
 	fixturePath := filepath.Join(fixtureRoot, "web", "existing.html")
