@@ -222,6 +222,62 @@ func TestDocumentTaskGitLifecycleCheckpointRequiresConfig(t *testing.T) {
 	}
 }
 
+func TestDocumentTaskGitLifecycleUnavailableForNestedVault(t *testing.T) {
+	t.Parallel()
+
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git is required for git lifecycle tests")
+	}
+	parent := t.TempDir()
+	runGitLifecycleTestCommand(t, parent, "init")
+	runGitLifecycleTestCommand(t, parent, "config", "user.name", "OpenClerk Test")
+	runGitLifecycleTestCommand(t, parent, "config", "user.email", "openclerk@example.test")
+	if err := os.WriteFile(filepath.Join(parent, "outside.md"), []byte("outside\n"), 0o644); err != nil {
+		t.Fatalf("write outside file: %v", err)
+	}
+	runGitLifecycleTestCommand(t, parent, "add", "outside.md")
+	runGitLifecycleTestCommand(t, parent, "commit", "-m", "outside")
+
+	vaultRoot := filepath.Join(parent, "vault")
+	if err := os.MkdirAll(filepath.Join(vaultRoot, "notes"), 0o755); err != nil {
+		t.Fatalf("mkdir vault: %v", err)
+	}
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	if _, err := runclient.InitializePaths(runclient.Config{DatabasePath: dbPath}, vaultRoot); err != nil {
+		t.Fatalf("initialize paths: %v", err)
+	}
+	config := runclient.Config{DatabasePath: dbPath}
+	ctx := context.Background()
+	createDocument(t, ctx, config, "notes/nested.md", "Nested", "# Nested\n")
+
+	status, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action:       runner.DocumentTaskActionGitLifecycle,
+		GitLifecycle: runner.GitLifecycleOptions{Mode: "status"},
+	})
+	if err != nil {
+		t.Fatalf("git lifecycle nested status: %v", err)
+	}
+	if status.GitLifecycle == nil ||
+		status.GitLifecycle.GitStatus != "unavailable" ||
+		len(status.GitLifecycle.DirtyPaths) != 0 {
+		t.Fatalf("nested status result = %+v", status.GitLifecycle)
+	}
+
+	history, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action:       runner.DocumentTaskActionGitLifecycle,
+		GitLifecycle: runner.GitLifecycleOptions{Mode: "history"},
+	})
+	if err != nil {
+		t.Fatalf("git lifecycle nested history: %v", err)
+	}
+	if history.GitLifecycle == nil ||
+		history.GitLifecycle.GitStatus != "unavailable" ||
+		len(history.GitLifecycle.DirtyPaths) != 0 ||
+		len(history.GitLifecycle.History) != 0 {
+		t.Fatalf("nested history result = %+v", history.GitLifecycle)
+	}
+}
+
 func TestDocumentTaskGitLifecycleRejectsPathspecMagic(t *testing.T) {
 	t.Parallel()
 

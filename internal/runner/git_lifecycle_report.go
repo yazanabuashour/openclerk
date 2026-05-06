@@ -105,6 +105,29 @@ func inspectGitLifecycleRepo(ctx context.Context, vaultRoot string) (gitLifecycl
 	if err != nil || strings.TrimSpace(inside) != "true" {
 		return gitLifecycleRepo{}, errGitLifecycleUnavailable
 	}
+	topLevel, err := runGitLifecycleCommand(ctx, vaultRoot, "rev-parse", "--show-toplevel")
+	if err != nil {
+		return gitLifecycleRepo{}, errGitLifecycleUnavailable
+	}
+	vaultAbs, err := filepath.Abs(vaultRoot)
+	if err != nil {
+		return gitLifecycleRepo{}, errGitLifecycleUnavailable
+	}
+	vaultResolved, err := filepath.EvalSymlinks(vaultAbs)
+	if err != nil {
+		vaultResolved = vaultAbs
+	}
+	topLevelRoot := strings.TrimSpace(topLevel)
+	if topLevelRoot == "" {
+		return gitLifecycleRepo{}, errGitLifecycleUnavailable
+	}
+	topLevelResolved, err := filepath.EvalSymlinks(topLevelRoot)
+	if err != nil {
+		topLevelResolved = topLevelRoot
+	}
+	if filepath.Clean(vaultResolved) != filepath.Clean(topLevelResolved) {
+		return gitLifecycleRepo{}, errGitLifecycleUnavailable
+	}
 	branch, err := runGitLifecycleCommand(ctx, vaultRoot, "branch", "--show-current")
 	if err != nil {
 		return gitLifecycleRepo{}, err
