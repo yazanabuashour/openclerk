@@ -37,11 +37,7 @@ bd close <id>         # Complete work
 
 ## Work Item Completion
 
-A **work item** is one logical bead, task, story, or other coherent unit of work. **When completing each work item**, complete the workflow below through review, local commit, verification, and handoff before starting unrelated work or handing off. Push only when the maintainer or task explicitly asks for remote publication. If a single thread completes multiple independent beads/tasks/stories, repeat this workflow once for each completed work item.
-
-For a batch of independent security findings, eval findings, ADR findings, or CSV/reported issues, treat **each finding** as its own review checkpoint even when one parent Bead tracks the batch. Work one finding at a time: validate whether the finding is real, make only the fix or disposition change for that finding, run the relevant quality gates, run the Codex review command once for that finding's uncommitted delta, address any review findings for that checkpoint, then commit that reviewed checkpoint before starting the next independent finding. Do not save all findings for one terminal review at the end of the batch. If two findings are inseparable, group only those findings in one checkpoint and state why.
-
-If a finding is invalid and requires no file changes, record the disposition in the Bead notes or commit context before moving to the next finding; no Codex review is needed for an unchanged invalid-finding disposition. If the review for one checkpoint surfaces a related bug, fix it as part of that same checkpoint before moving on, but do not rerun the same checkpoint review as a loop.
+A **work item** is one logical bead, task, story, or other coherent unit of work. **When completing each work item**, complete the workflow below through review, local commit, verification, and handoff before starting unrelated work or handing off. Push only when the maintainer or task explicitly asks for remote publication. If a single thread completes multiple independent beads/tasks/stories, repeat this workflow once for each completed work item. If a work item contains multiple independent logical checkpoints, complete the review workflow for each checkpoint before moving to the next; a checkpoint is the smallest coherent unit whose changes can be reviewed on their own, such as one bug fix, one finding, one migration step, or one separable behavior change.
 
 **MANDATORY WORKFLOW:**
 
@@ -69,7 +65,7 @@ If a finding is invalid and requires no file changes, record the disposition in 
 **CRITICAL RULES:**
 - Do not push to a remote unless the maintainer or task explicitly requested remote publication
 - Run the Codex review command once per work item or review checkpoint; do not rerun the same checkpoint review as a workflow loop
-- For multi-finding batches, run Codex review after each valid finding fix/checkpoint before moving to the next independent finding
+- For multi-checkpoint work, run quality gates, Codex review, and commit after each independent checkpoint before starting the next
 - Do NOT commit before quality gates and the Codex review command are complete
 - After the review command completes, stage and commit the intended files; if remote publication was requested, pull/rebase, run `bd dolt push`, and `git push`
 - If a requested push fails, resolve and retry until it succeeds or report the blocker
