@@ -198,11 +198,12 @@ func evidenceBundleHandoff(report EvidenceBundleReport) *AgentHandoff {
 	}
 	return &AgentHandoff{
 		AnswerSummary: fmt.Sprintf(
-			"evidence_bundle_report returned %s with %d records, %d decisions, %d citations, %d provenance events, and %s",
+			"evidence_bundle_report returned %s with %d records, %d decisions, %d citations (%s), %d provenance events, %s, read-only behavior, validation boundaries, and authority limits",
 			report.QuerySummary,
 			recordCount,
 			decisionCount,
 			len(report.Citations),
+			citationPathSummary(report.Citations),
 			provenanceCount,
 			projectionListFreshnessSummary(report.Projections),
 		),

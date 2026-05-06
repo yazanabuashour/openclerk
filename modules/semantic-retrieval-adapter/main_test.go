@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -74,6 +73,30 @@ func TestSemanticRetrievalAdapterOllamaSearchUsesCacheAndCitations(t *testing.T)
 	}
 	if second.Cache.Status != "hit" || requests != 3 {
 		t.Fatalf("cache did not avoid document re-embedding, second=%+v requests=%d", second.Cache, requests)
+	}
+}
+
+func TestSemanticRetrievalAdapterModuleVersionLabel(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{name: "source default", in: "0.1.0", want: "0.1.0"},
+		{name: "release tag ldflag", in: "v0.1.1", want: "0.1.1"},
+		{name: "blank fallback", in: " ", want: "0.1.0"},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := adapterVersionLabel(tc.in); got != tc.want {
+				t.Fatalf("adapterVersionLabel(%q) = %q, want %q", tc.in, got, tc.want)
+			}
+		})
 	}
 }
 
@@ -674,21 +697,6 @@ func createModuleDocument(t *testing.T, ctx context.Context, dbPath string, path
 		t.Fatalf("create missing document: %+v", result)
 	}
 	return result.Document.DocID
-}
-
-func writeModuleRuntimeConfig(t *testing.T, dbPath string, key string, value string) {
-	t.Helper()
-	db, err := sql.Open("sqlite", dbPath)
-	if err != nil {
-		t.Fatalf("open db: %v", err)
-	}
-	defer func() {
-		_ = db.Close()
-	}()
-	_, err = db.Exec(`INSERT OR REPLACE INTO runtime_config (key_name, value_text, updated_at) VALUES (?, ?, ?)`, key, value, time.Now().UTC().Format(time.RFC3339))
-	if err != nil {
-		t.Fatalf("write runtime config: %v", err)
-	}
 }
 
 func appendModuleDocument(t *testing.T, ctx context.Context, dbPath string, docID string, content string) {

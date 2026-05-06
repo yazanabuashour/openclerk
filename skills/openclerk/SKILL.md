@@ -43,11 +43,12 @@ matches the request:
 - Artifact candidate intake and explicit local OCR review: document
   `artifact_candidate_plan`, then answer from `artifact_candidate_plan.agent_handoff`;
   approved durable writes remain `create_document` or `ingest_source_url`.
-- Source-sensitive audit explain/repair: retrieval `source_audit_report`, then
-  answer from `source_audit.agent_handoff`.
+- Source-sensitive audit explain/repair: retrieval
+  `{"action":"source_audit_report","source_audit":{"query":"...","target_path":"...","mode":"explain|repair_existing","conflict_query":"...","limit":10}}`,
+  then answer from `source_audit.agent_handoff`.
 - Records, decisions, provenance, and projection evidence bundles: retrieval
-  `evidence_bundle_report` once with query/entity/projection together; do not
-  split into multiple calls; answer from `evidence_bundle.agent_handoff`.
+  `evidence_bundle_report` once; do not repeat, check skill paths, or inspect
+  primitives; answer from `evidence_bundle.agent_handoff` fields.
 - Duplicate update-versus-new clarification: retrieval
   `duplicate_candidate_report`, then answer from
   `duplicate_candidate.agent_handoff`.
@@ -153,7 +154,6 @@ policies and let runner results drive the answer:
 Detailed versions of these workflows belong in runner actions, compact runner
 help, maintainer/eval docs, or follow-up candidate-surface comparisons, not in
 this file.
-
 ## Document Tasks
 
 Run document tasks with:

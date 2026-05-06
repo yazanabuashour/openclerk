@@ -194,8 +194,9 @@ func auditRepairSummaryContent(currentSourcePaths []string, supersededSourcePath
 		return "", false
 	}
 	return strings.Join([]string{
-		"Current source selected from projection evidence: " + currentSourcePaths[0] + ".",
-		"Superseded source retained for audit context: " + supersededSourcePaths[0] + ".",
+		"Current audit guidance: use the installed openclerk JSON runner.",
+		"Current source: " + currentSourcePaths[0],
+		"Superseded source: " + supersededSourcePaths[0],
 		"Audit repair did not choose unresolved claims beyond source classification.",
 	}, "\n"), true
 }

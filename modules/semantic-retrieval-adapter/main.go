@@ -40,7 +40,12 @@ const (
 	maxSemanticChunks             = 5000
 )
 
-var wordPattern = regexp.MustCompile(`[a-z0-9]+`)
+const defaultAdapterVersion = "0.1.0"
+
+var (
+	version     = defaultAdapterVersion
+	wordPattern = regexp.MustCompile(`[a-z0-9]+`)
+)
 
 type searchRequest struct {
 	Query                     string `json:"query,omitempty"`
@@ -546,7 +551,7 @@ func baseResponse(request searchRequest, provider providerStatus, cache cacheSta
 		SchemaVersion: "openclerk_semantic_retrieval.v1",
 		Module: moduleMetadata{
 			Name:    "semantic-retrieval-adapter",
-			Version: "0.1.0",
+			Version: adapterVersionLabel(version),
 		},
 		Query:                request.Query,
 		PathPrefix:           request.PathPrefix,
@@ -568,6 +573,14 @@ func baseResponse(request searchRequest, provider providerStatus, cache cacheSta
 			FollowUpPrimitiveInspection: "use openclerk retrieval search, get_document, provenance_events, and projection_states for authority drill-down before durable writes",
 		},
 	}
+}
+
+func adapterVersionLabel(stampedVersion string) string {
+	label := strings.TrimSpace(stampedVersion)
+	if label == "" {
+		return defaultAdapterVersion
+	}
+	return strings.TrimPrefix(label, "v")
 }
 
 func loadChunks(ctx context.Context, client *runclient.Client, request searchRequest) ([]semanticChunk, error) {

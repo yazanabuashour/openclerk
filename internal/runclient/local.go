@@ -137,10 +137,6 @@ func newWriteRuntime(backend domain.BackendKind, cfg Config) (*Runtime, error) {
 	return newRuntimeWithMode(backend, cfg, runtimeOpenUnsynced)
 }
 
-func newReadOnlyRuntime(backend domain.BackendKind, cfg Config) (*Runtime, error) {
-	return newRuntimeWithMode(backend, cfg, runtimeOpenReadOnly)
-}
-
 type runtimeOpenMode int
 
 const (

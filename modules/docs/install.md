@@ -16,13 +16,13 @@ OpenClerk modules are optional building blocks. Install them only through
 Run a module installer to install the latest module release:
 
 ```bash
-OPENCLERK_MODULE=ollama-embeddings sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/ollama-embeddings%2Fv0.1.0/install-module.sh)"
+OPENCLERK_MODULE=ollama-embeddings sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/ollama-embeddings%2Fv0.1.1/install-module.sh)"
 ```
 
 Set `OPENCLERK_MODULE_VERSION` to install a pinned module release:
 
 ```bash
-OPENCLERK_MODULE=ollama-embeddings OPENCLERK_MODULE_VERSION=v0.1.0 sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/ollama-embeddings%2Fv0.1.0/install-module.sh)"
+OPENCLERK_MODULE=ollama-embeddings OPENCLERK_MODULE_VERSION=v0.1.1 sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/ollama-embeddings%2Fv0.1.1/install-module.sh)"
 ```
 
 The installer downloads the module archive, verifies checksums, installs
@@ -35,7 +35,7 @@ and prints the registration command to run with `openclerk module`.
 Rerun a module installer for the latest or requested version:
 
 ```bash
-OPENCLERK_MODULE=ollama-embeddings sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/ollama-embeddings%2Fv0.1.0/install-module.sh)"
+OPENCLERK_MODULE=ollama-embeddings sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/ollama-embeddings%2Fv0.1.1/install-module.sh)"
 ```
 
 Then refresh registration with `openclerk module` using the installed manifest
@@ -52,7 +52,7 @@ registration semantics change.
 Maintainers build module release assets with:
 
 ```bash
-mise exec -- ./scripts/build-module-release-bundle.sh ollama-embeddings v0.1.0 dist
+mise exec -- ./scripts/build-module-release-bundle.sh ollama-embeddings v0.1.1 dist
 ```
 
 Published module releases include `scripts/install-module.sh` as

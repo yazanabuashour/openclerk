@@ -53,7 +53,7 @@ Do not report OpenClerk installed until both the runner and skill are installed.
 **Then bind your vault and verify retrieval:**
 
 ```bash
-openclerk init --vault-root ~/notes
+openclerk init --vault-root path/to/vault
 printf '%s\n' '{"action":"search","search":{"text":"architecture","limit":5}}' \
   | openclerk retrieval
 ```
@@ -74,35 +74,45 @@ These are the eval-worthy surfaces in priority order:
 Report correctness, tool call count, and wall time. That's how the maintainers
 gate new features.
 
-## Building blocks
+## Modules
 
 OpenClerk follows the [building block economy](https://mitchellh.com/writing/building-block-economy)
 model deliberately. The mainline runner stays narrow. Optional behavior ships
 as separately installed, manifest-verified modules:
 
-| Module | Provider | Adds |
-|---|---|---|
-| `ollama-embeddings` | Local Ollama | Semantic search (local-first) |
-| `gemini-embeddings` | Gemini API | Semantic search (cloud opt-in) |
-| `tesseract-ocr` | Tesseract | OCR review for images and scan-only PDFs |
+### Agent Module Instructions
+
+Install prompt:
+
+```text
+Install the OpenClerk module <module-provider> using <module-manifest-path>.
+Use <module-command> on PATH, register <module-skill-path>, and verify with `openclerk module` list_modules. Do not pass command_args or edit SQLite directly.
+```
+
+Upgrade prompt:
+
+```text
+Upgrade the OpenClerk module <module-name> to <module-version-or-latest>.
+Refresh registration through `openclerk module`, preserve existing provider config, and verify with list_modules. Do not edit SQLite directly.
+```
+
+Available installable modules:
+
+| Module name | Provider | Adds | Manifest | Skill |
+|---|---|---|---|---|
+| `ollama-embeddings` | `ollama` | Semantic search (local-first) | `modules/ollama-embeddings/module.json` | `modules/ollama-embeddings/skill/ollama-embeddings/SKILL.md` |
+| `gemini-embeddings` | `gemini` | Semantic search (cloud opt-in) | `modules/gemini-embeddings/module.json` | `modules/gemini-embeddings/skill/gemini-embeddings/SKILL.md` |
+| `tesseract-ocr` | `tesseract` | OCR review for images and scan-only PDFs | `modules/tesseract-ocr/module.json` | `modules/tesseract-ocr/skill/tesseract-ocr/SKILL.md` |
 
 Core lexical search and citation behavior require no modules. Semantic search
 is explicit opt-in — it accelerates recall, it does not become the authority
-layer. No hidden provider fallback. No committed embedding cache.
+layer. No hidden provider fallback. No committed embedding cache. Full module
+install guidance lives in `modules/docs/install.md`.
 
 Inspect the current block inventory:
 
 ```bash
 openclerk capabilities
-```
-
-Install a module (tell your agent):
-
-```text
-Install the OpenClerk module ollama using modules/ollama-embeddings/module.json.
-Use semantic-retrieval-adapter on PATH, register the module skill, and verify
-with `openclerk module` list_modules. Do not pass command_args or edit SQLite
-directly.
 ```
 
 ## What is explicitly not supported yet

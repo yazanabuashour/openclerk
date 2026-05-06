@@ -1,6 +1,6 @@
 {
   "schema_version": "openclerk-live-install-smoke.v1",
-  "generated_at": "2026-05-05T19:12:02.924798Z",
+  "generated_at": "2026-05-06T16:02:58.016099Z",
   "version": "v0.0.0-smoke",
   "temp_environment": {
     "home": "$HOME",
