@@ -155,7 +155,7 @@ func scenarioPaths(repoDir string) evalPaths {
 }
 func evalPathsFor(runDir string, paths evalPaths, cache cacheConfig) evalPaths {
 	out := paths
-	out.CodexHome = filepath.Join(runDir, "codex-home")
+	out.CodexHome = filepath.Join(filepath.Dir(runDir), filepath.Base(runDir)+"-codex-home")
 	out.ZDotDir = filepath.Join(runDir, "zdotdir")
 	out.Temp = filepath.Join(runDir, "tmp")
 	if cache.Mode == cacheModeShared {
@@ -169,17 +169,17 @@ func evalPathsFor(runDir string, paths evalPaths, cache cacheConfig) evalPaths {
 }
 func runScenarioTurn(ctx context.Context, config runConfig, repoDir string, runDir string, paths evalPaths, job evalJob, turn scenarioTurn, turnIndex int, sessionID string, cache cacheConfig, fixtures *sourceURLUpdateFixtures) (turnResult, parsedTurn, error) {
 	turnDir := filepath.Join(runDir, fmt.Sprintf("turn-%d", turnIndex))
-	if err := os.MkdirAll(turnDir, 0o755); err != nil {
+	if err := os.MkdirAll(turnDir, 0o700); err != nil {
 		return turnResult{}, parsedTurn{}, err
 	}
 	eventsPath := filepath.Join(turnDir, "events.jsonl")
 	stderrPath := filepath.Join(turnDir, "stderr.log")
-	stdoutFile, err := os.Create(eventsPath)
+	stdoutFile, err := os.OpenFile(eventsPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 	if err != nil {
 		return turnResult{}, parsedTurn{}, err
 	}
 	defer func() { _ = stdoutFile.Close() }()
-	stderrFile, err := os.Create(stderrPath)
+	stderrFile, err := os.OpenFile(stderrPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 	if err != nil {
 		return turnResult{}, parsedTurn{}, err
 	}
@@ -229,7 +229,6 @@ func codexArgsForTurn(codexBin string, repoDir string, runDir string, sc scenari
 	baseConfig := []string{
 		"-m", modelName,
 		"-c", fmt.Sprintf("model_reasoning_effort=%q", reasoningEffort),
-		"-c", "shell_environment_policy.inherit=all",
 	}
 	writableRoots := codexWritableRoots(runDir, cache)
 	if len(scenarioTurns(sc)) == 1 {
@@ -271,6 +270,7 @@ func evalEnv(runDir string, paths evalPaths, cache cacheConfig) []string {
 		"OPENCLERK_DATA_DIR",
 		"OPENCLERK_DATABASE_PATH",
 		evalSourceFixtureRootEnv,
+		evalSourceFixtureEnableEnv,
 		"OPENCLERK_VAULT_ROOT",
 		"GOCACHE",
 		"GOMODCACHE",
@@ -286,6 +286,7 @@ func evalEnv(runDir string, paths evalPaths, cache cacheConfig) []string {
 		"CODEX_HOME="+effective.CodexHome,
 		"ZDOTDIR="+effective.ZDotDir,
 		"OPENCLERK_DATABASE_PATH="+effective.DatabasePath,
+		evalSourceFixtureEnableEnv+"=1",
 		evalSourceFixtureRootEnv+"="+evalSourceFixtureRoot(runDir),
 		"GOCACHE="+effective.GoCache,
 		"GOMODCACHE="+effective.GoModCache,
@@ -309,18 +310,34 @@ func filteredEnv(env []string, keys ...string) []string {
 			if _, blockedKey := blocked[key]; blockedKey {
 				continue
 			}
+			if isSecretEnvKey(key) {
+				continue
+			}
 		}
 		filtered = append(filtered, entry)
 	}
 	return filtered
 }
+
+func isSecretEnvKey(key string) bool {
+	upper := strings.ToUpper(strings.TrimSpace(key))
+	if upper == "" {
+		return false
+	}
+	for _, marker := range []string{"TOKEN", "SECRET", "PASSWORD", "CREDENTIAL", "AUTH", "API_KEY", "ACCESS_KEY"} {
+		if strings.Contains(upper, marker) {
+			return true
+		}
+	}
+	return false
+}
 func prepareRunDir(runDir string, cache cacheConfig) error {
-	if err := os.MkdirAll(runDir, 0o755); err != nil {
+	if err := os.MkdirAll(runDir, 0o700); err != nil {
 		return err
 	}
 	paths := evalPathsFor(runDir, evalPaths{}, cache)
 	for _, dir := range []string{paths.ZDotDir, paths.Temp} {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
 			return err
 		}
 	}

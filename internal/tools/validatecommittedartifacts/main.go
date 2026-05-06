@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,14 +22,15 @@ var (
 	realVaultDocPathPattern   = regexp.MustCompile(`\b(sources|synthesis|notes|transcripts|articles|meetings|blogs|receipts|invoices|legal|contracts)/[A-Za-z0-9._/-]+\.md\b`)
 	realVaultDocIDPattern     = regexp.MustCompile(`\bdoc_[A-Za-z0-9][A-Za-z0-9_-]*\b`)
 	realVaultChunkIDPattern   = regexp.MustCompile(`\bchunk_[A-Za-z0-9][A-Za-z0-9_-]*\b`)
+	slugTokenPattern          = regexp.MustCompile(`\b[a-z0-9][a-z0-9-]{20,}\b`)
 )
 
-var privateResearchNames = []string{
-	"agent-first-knowledge-plane-architecture-2026-04-07",
-	"full-operator-stack-architecture-2026-03-09",
-	"agentic-vault-retrieval-architecture-2026-03-09",
-	"mem0-openclaw-self-hosting-vault-comparison-2026-04-06",
-	"open-source-canonical-notes-documents-for-agents-2026-04-06",
+var privateResearchNameHashes = map[string]struct{}{
+	"de7b169e2dab278337cf5d127e06e6430caaa3673d52252f28b0e39c61764f8e": {},
+	"6d8e52e24eda4d45426f8a6ea87d3dbafd97f9fb096aebc6222c936af6da4395": {},
+	"22362e88567b0f8783335d08d5548f56c52c86c2e8f5fd4becb9f2bbefbf513c": {},
+	"d33e740cde66125c2fba0ca7363cacbbec6dfce65714295f3bf24b001f43d69e": {},
+	"866fffc2a236eab6dd849b4b820853f8c883899c2d1153e402d0af76af9cae97": {},
 }
 
 func main() {
@@ -140,10 +143,8 @@ func validatePublicArtifactText(rel string, text string) error {
 		if match := privateNotesPathPattern.FindString(line); match != "" {
 			return fmt.Errorf("%s:%d contains private notes path %q", rel, lineNumber, strings.TrimSpace(match))
 		}
-		for _, name := range privateResearchNames {
-			if strings.Contains(line, name) {
-				return fmt.Errorf("%s:%d contains private research note reference %q", rel, lineNumber, name)
-			}
+		if containsPrivateResearchName(line) {
+			return fmt.Errorf("%s:%d contains private research note reference", rel, lineNumber)
 		}
 		if strings.Contains(line, "events.jsonl") && !containsRunRootPlaceholder(line) {
 			return fmt.Errorf("%s:%d references raw eval logs without <run-root> placeholder", rel, lineNumber)
@@ -153,6 +154,16 @@ func validatePublicArtifactText(rel string, text string) error {
 		}
 	}
 	return nil
+}
+
+func containsPrivateResearchName(line string) bool {
+	for _, token := range slugTokenPattern.FindAllString(strings.ToLower(line), -1) {
+		sum := sha256.Sum256([]byte(token))
+		if _, ok := privateResearchNameHashes[hex.EncodeToString(sum[:])]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 func validateModuleDocumentation(root string, files []string) error {

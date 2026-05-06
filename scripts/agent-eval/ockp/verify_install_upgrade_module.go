@@ -115,9 +115,11 @@ func verifyModuleAgentInstall(ctx context.Context, paths evalPaths, finalMessage
 
 func installedEvalSkillPath(paths evalPaths) (string, bool) {
 	repoRoot := evalRepoRoot(paths)
+	runRoot := filepath.Dir(repoRoot)
 	for _, candidate := range []string{
 		filepath.Join(repoRoot, ".agents", "skills", "openclerk", "SKILL.md"),
-		filepath.Join(filepath.Dir(repoRoot), "codex-home", "skills", "openclerk", "SKILL.md"),
+		filepath.Join(filepath.Dir(runRoot), filepath.Base(runRoot)+"-codex-home", "skills", "openclerk", "SKILL.md"),
+		filepath.Join(runRoot, "codex-home", "skills", "openclerk", "SKILL.md"),
 	} {
 		if _, err := os.Stat(candidate); err == nil {
 			return candidate, true

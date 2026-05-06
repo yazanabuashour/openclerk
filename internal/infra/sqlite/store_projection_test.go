@@ -54,6 +54,91 @@ Production service for routine local knowledge tasks.
 	}
 }
 
+func TestServicesProjectionSkipsDuplicateServiceIDs(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+
+	for _, doc := range []struct {
+		path  string
+		title string
+		name  string
+	}{
+		{"records/services/a-runner.md", "A Runner", "A Runner"},
+		{"records/services/b-runner.md", "B Runner", "B Runner"},
+	} {
+		if _, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+			Path:  doc.path,
+			Title: doc.title,
+			Body: strings.TrimSpace(`---
+service_id: duplicate-runner
+service_name: `+doc.name+`
+service_status: active
+service_owner: runner
+service_interface: JSON runner
+---
+# `+doc.title+`
+
+## Summary
+Duplicate service projection should not brick rebuild.
+`) + "\n",
+		}); err != nil {
+			t.Fatalf("create %s: %v", doc.path, err)
+		}
+	}
+
+	services, err := store.ServicesLookup(ctx, domain.ServiceLookupInput{Text: "Duplicate", Limit: 10})
+	if err != nil {
+		t.Fatalf("services lookup with duplicate IDs: %v", err)
+	}
+	if len(services.Services) != 1 || services.Services[0].ServiceID != "duplicate-runner" {
+		t.Fatalf("services = %+v, want one duplicate-runner record", services.Services)
+	}
+	events, err := store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{
+		RefKind: "service",
+		RefID:   "duplicate-runner",
+		Limit:   10,
+	})
+	if err != nil {
+		t.Fatalf("list duplicate service provenance: %v", err)
+	}
+	if got := duplicateServiceSkipEventCount(events.Events); got != 1 {
+		t.Fatalf("duplicate skip event count = %d, want 1", got)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatalf("close store before rebuild: %v", err)
+	}
+
+	store = openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	events, err = store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{
+		RefKind: "service",
+		RefID:   "duplicate-runner",
+		Limit:   10,
+	})
+	if err != nil {
+		t.Fatalf("list duplicate service provenance after rebuild: %v", err)
+	}
+	if got := duplicateServiceSkipEventCount(events.Events); got != 1 {
+		t.Fatalf("duplicate skip event count after rebuild = %d, want 1", got)
+	}
+}
+
+func duplicateServiceSkipEventCount(events []domain.ProvenanceEvent) int {
+	count := 0
+	for _, event := range events {
+		if event.EventType == "service_duplicate_skipped" {
+			count++
+		}
+	}
+	return count
+}
+
 func TestDecisionProjectionLookupAndSupersessionFreshness(t *testing.T) {
 	t.Parallel()
 

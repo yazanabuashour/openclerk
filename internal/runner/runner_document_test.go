@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"github.com/yazanabuashour/openclerk/internal/runclient"
 	"github.com/yazanabuashour/openclerk/internal/runner"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -409,6 +407,22 @@ func TestDocumentTaskWebSearchPlanRejectsInvalidInputs(t *testing.T) {
 		t.Fatalf("invalid URL result = %+v", result)
 	}
 
+	privateURL, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionWebSearchPlan,
+		WebSearch: runner.WebSearchPlanOptions{
+			Query: "private source",
+			Results: []runner.WebSearchResultInput{
+				{URL: "http://127.0.0.1/internal.pdf", SourceType: "pdf"},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("web search private URL input: %v", err)
+	}
+	if !privateURL.Rejected || privateURL.RejectionReason != "web_search.results.url must be publicly fetchable" {
+		t.Fatalf("private URL result = %+v", privateURL)
+	}
+
 	negative, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionWebSearchPlan,
 		WebSearch: runner.WebSearchPlanOptions{
@@ -613,6 +627,20 @@ func TestDocumentTaskArtifactCandidatePlanRejectsInvalidInputs(t *testing.T) {
 	}
 	if !missing.Rejected || missing.RejectionReason != "artifact.content, artifact.body, artifact.source_url, or artifact.local_path is required" {
 		t.Fatalf("missing artifact content result = %+v", missing)
+	}
+
+	privateURL, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionArtifactPlan,
+		Artifact: runner.ArtifactPlanOptions{
+			SourceURL:  "http://169.254.169.254/latest/meta-data/report.pdf",
+			SourceType: "pdf",
+		},
+	})
+	if err != nil {
+		t.Fatalf("artifact private source URL reject: %v", err)
+	}
+	if !privateURL.Rejected || privateURL.RejectionReason != "artifact.source_url must be publicly fetchable" {
+		t.Fatalf("private artifact URL result = %+v", privateURL)
 	}
 
 	ocrProviderOnly, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.DocumentTaskRequest{
@@ -1077,6 +1105,25 @@ func TestDocumentTaskIngestSourceURLPlanModeIsReadOnly(t *testing.T) {
 	}
 }
 
+func TestDocumentTaskIngestSourceURLPlanRejectsPrivateURL(t *testing.T) {
+	t.Parallel()
+
+	result, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestSourceURL,
+		Source: runner.SourceURLInput{
+			URL:        "http://127.0.0.1/internal.pdf",
+			Mode:       "plan",
+			SourceType: "pdf",
+		},
+	})
+	if err != nil {
+		t.Fatalf("private source placement plan reject: %v", err)
+	}
+	if !result.Rejected || result.RejectionReason != "source.url must be publicly fetchable" {
+		t.Fatalf("private source placement result = %+v", result)
+	}
+}
+
 func TestDocumentTaskIngestSourceURLNormalizesVaultPathSeparators(t *testing.T) {
 	fixtureRoot := t.TempDir()
 	fixturePath := filepath.Join(fixtureRoot, "web", "runner-product.html")
@@ -1086,6 +1133,7 @@ func TestDocumentTaskIngestSourceURLNormalizesVaultPathSeparators(t *testing.T) 
 	if err := os.WriteFile(fixturePath, []byte(`<!doctype html><html><head><title>Runner Web Title</title></head><body><h1>Runner Web Title</h1><p>Runner evidence.</p></body></html>`), 0o644); err != nil {
 		t.Fatalf("write web fixture: %v", err)
 	}
+	t.Setenv("OPENCLERK_ENABLE_EVAL_SOURCE_FIXTURES", "1")
 	t.Setenv("OPENCLERK_EVAL_SOURCE_FIXTURE_ROOT", fixtureRoot)
 
 	result, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.DocumentTaskRequest{
@@ -1113,6 +1161,7 @@ func TestDocumentTaskIngestSourceURLPlanModeReportsExistingSource(t *testing.T) 
 	if err := os.WriteFile(fixturePath, []byte(`<!doctype html><html><head><title>Existing Source</title></head><body><h1>Existing Source</h1><p>Existing source evidence.</p></body></html>`), 0o644); err != nil {
 		t.Fatalf("write web fixture: %v", err)
 	}
+	t.Setenv("OPENCLERK_ENABLE_EVAL_SOURCE_FIXTURES", "1")
 	t.Setenv("OPENCLERK_EVAL_SOURCE_FIXTURE_ROOT", fixtureRoot)
 
 	ctx := context.Background()
@@ -1259,6 +1308,12 @@ Checked.
 			path:      "synthesis/valid.md",
 			sourceRef: "sources/../notes/source.md",
 			want:      "synthesis.source_refs entries must be under sources/",
+		},
+		{
+			name:      "source ref separator",
+			path:      "synthesis/valid.md",
+			sourceRef: "sources/source.md, sources/injected.md",
+			want:      "synthesis.source_refs entries must be single vault-relative paths without separators",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1564,6 +1619,28 @@ func TestDocumentTaskRejectsInvalidVideoURLIngestBeforeRuntimeFiles(t *testing.T
 	}
 }
 
+func TestDocumentTaskIngestVideoURLAllowsPrivateSuppliedTranscriptURL(t *testing.T) {
+	t.Parallel()
+
+	result, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestVideoURL,
+		Video: runner.VideoURLInput{
+			URL:      "http://127.0.0.1/private-meeting",
+			PathHint: "sources/video-youtube/private-meeting.md",
+			Transcript: runner.VideoTranscriptInput{
+				Text:   "Private meeting supplied transcript evidence.",
+				Policy: "supplied",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("ingest private supplied transcript URL: %v", err)
+	}
+	if result.Rejected || result.VideoIngestion == nil || result.VideoIngestion.SourceURL != "http://127.0.0.1/private-meeting" {
+		t.Fatalf("result = %+v, want private supplied transcript URL accepted", result)
+	}
+}
+
 func TestDocumentTaskIngestSourceURLUpdateStaleImpactResponse(t *testing.T) {
 	fixtureRoot := t.TempDir()
 	fixturePath := filepath.Join(fixtureRoot, "web", "runner-product.html")
@@ -1573,6 +1650,7 @@ func TestDocumentTaskIngestSourceURLUpdateStaleImpactResponse(t *testing.T) {
 	if err := os.WriteFile(fixturePath, []byte(`<!doctype html><html><head><title>Runner Web Title</title></head><body><h1>Runner Web Title</h1><p>Initial runner evidence.</p></body></html>`), 0o644); err != nil {
 		t.Fatalf("write web fixture: %v", err)
 	}
+	t.Setenv("OPENCLERK_ENABLE_EVAL_SOURCE_FIXTURES", "1")
 	t.Setenv("OPENCLERK_EVAL_SOURCE_FIXTURE_ROOT", fixtureRoot)
 
 	ctx := context.Background()
@@ -1684,14 +1762,18 @@ func runnerSourceProvenanceRefsInclude(refs []runner.SourceProvenanceRef, eventT
 }
 
 func TestDocumentTaskIngestSourceURLPDF(t *testing.T) {
-	t.Parallel()
-
 	pdfBytes := minimalPDF("Runner Intake PDF Title", "OpenClerk Test", "Runner intake unique text")
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain")
-		_, _ = w.Write(pdfBytes)
-	}))
-	t.Cleanup(server.Close)
+	fixtureRoot := t.TempDir()
+	fixturePath := filepath.Join(fixtureRoot, "pdf", "runner.pdf")
+	if err := os.MkdirAll(filepath.Dir(fixturePath), 0o755); err != nil {
+		t.Fatalf("mkdir PDF fixture: %v", err)
+	}
+	if err := os.WriteFile(fixturePath, pdfBytes, 0o644); err != nil {
+		t.Fatalf("write PDF fixture: %v", err)
+	}
+	t.Setenv("OPENCLERK_ENABLE_EVAL_SOURCE_FIXTURES", "1")
+	t.Setenv("OPENCLERK_EVAL_SOURCE_FIXTURE_ROOT", fixtureRoot)
+	sourceURL := "http://openclerk-eval.local/pdf/runner.pdf"
 
 	ctx := context.Background()
 	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
@@ -1699,7 +1781,7 @@ func TestDocumentTaskIngestSourceURLPDF(t *testing.T) {
 	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionIngestSourceURL,
 		Source: runner.SourceURLInput{
-			URL:           server.URL + "/runner.pdf",
+			URL:           sourceURL,
 			PathHint:      "sources/runner-ingest.md",
 			AssetPathHint: "assets/sources/runner-ingest.pdf",
 			Title:         "Runner Ingest Override",
@@ -1739,7 +1821,7 @@ func TestDocumentTaskIngestSourceURLPDF(t *testing.T) {
 		t.Fatalf("get ingested document: %v", err)
 	}
 	if get.Document == nil ||
-		get.Document.Metadata["source_url"] != server.URL+"/runner.pdf" ||
+		get.Document.Metadata["source_url"] != sourceURL ||
 		get.Document.Metadata["asset_path"] != "assets/sources/runner-ingest.pdf" ||
 		get.Document.Metadata["source_type"] != "pdf" ||
 		get.Document.Metadata["mime_type"] != "application/pdf" ||
@@ -1778,14 +1860,14 @@ func TestDocumentTaskIngestSourceURLPDF(t *testing.T) {
 	if provenance.Provenance == nil || len(provenance.Provenance.Events) == 0 {
 		t.Fatalf("provenance = %+v", provenance.Provenance)
 	}
-	if got := provenance.Provenance.Events[0].Details["source_url"]; got != server.URL+"/runner.pdf" {
+	if got := provenance.Provenance.Events[0].Details["source_url"]; got != sourceURL {
 		t.Fatalf("source provenance details = %+v", provenance.Provenance.Events[0].Details)
 	}
 
 	sameUpdate, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionIngestSourceURL,
 		Source: runner.SourceURLInput{
-			URL:  server.URL + "/runner.pdf",
+			URL:  sourceURL,
 			Mode: "update",
 		},
 	})
@@ -1803,7 +1885,7 @@ func TestDocumentTaskIngestSourceURLPDF(t *testing.T) {
 	duplicate, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionIngestSourceURL,
 		Source: runner.SourceURLInput{
-			URL:           server.URL + "/runner.pdf",
+			URL:           sourceURL,
 			PathHint:      "sources/runner-duplicate.md",
 			AssetPathHint: "assets/sources/runner-duplicate.pdf",
 		},
@@ -1834,6 +1916,7 @@ func TestDocumentTaskIngestSourceURLWeb(t *testing.T) {
 	if err := os.WriteFile(fixturePath, []byte(htmlBody), 0o644); err != nil {
 		t.Fatalf("write web fixture: %v", err)
 	}
+	t.Setenv("OPENCLERK_ENABLE_EVAL_SOURCE_FIXTURES", "1")
 	t.Setenv("OPENCLERK_EVAL_SOURCE_FIXTURE_ROOT", fixtureRoot)
 	sourceURL := "http://openclerk-eval.local/web/runner-product.html?ref=tracker"
 
@@ -2043,18 +2126,21 @@ func TestDocumentTaskIngestVideoURLSuppliedTranscript(t *testing.T) {
 }
 
 func TestDocumentTaskRejectsNonPDFSourceURL(t *testing.T) {
-	t.Parallel()
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain")
-		_, _ = w.Write([]byte("not a PDF"))
-	}))
-	t.Cleanup(server.Close)
+	fixtureRoot := t.TempDir()
+	fixturePath := filepath.Join(fixtureRoot, "pdf", "not-pdf.txt")
+	if err := os.MkdirAll(filepath.Dir(fixturePath), 0o755); err != nil {
+		t.Fatalf("mkdir non-PDF fixture: %v", err)
+	}
+	if err := os.WriteFile(fixturePath, []byte("not a PDF"), 0o644); err != nil {
+		t.Fatalf("write non-PDF fixture: %v", err)
+	}
+	t.Setenv("OPENCLERK_ENABLE_EVAL_SOURCE_FIXTURES", "1")
+	t.Setenv("OPENCLERK_EVAL_SOURCE_FIXTURE_ROOT", fixtureRoot)
 
 	_, err := runner.RunDocumentTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionIngestSourceURL,
 		Source: runner.SourceURLInput{
-			URL:           server.URL + "/not-pdf.txt",
+			URL:           "http://openclerk-eval.local/pdf/not-pdf.txt",
 			PathHint:      "sources/not-pdf.md",
 			AssetPathHint: "assets/sources/not-pdf.pdf",
 			SourceType:    "pdf",

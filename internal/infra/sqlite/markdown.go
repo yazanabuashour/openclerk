@@ -325,7 +325,7 @@ func firstNRunes(value string, limit int) string {
 }
 
 func ensureDir(dir string) error {
-	return osMkdirAll(dir, 0o755)
+	return osMkdirAll(dir, 0o700)
 }
 
 func nullIfEmpty(value string) any {

@@ -129,7 +129,7 @@ func memoryRouterRecallDocs(ctx context.Context, client *runclient.Client, limit
 				DocID:     summary.DocID,
 				Body:      doc.Body,
 				Found:     true,
-				Inspected: true,
+				Inspected: memoryRouterDocHasEvidence(summary.Path, doc.Body),
 			}
 			remaining--
 		}
@@ -168,7 +168,7 @@ func memoryRouterRecallSynthesis(ctx context.Context, client *runclient.Client, 
 				DocID:     summary.DocID,
 				Body:      doc.Body,
 				Found:     true,
-				Inspected: true,
+				Inspected: memoryRouterDocHasEvidence(summary.Path, doc.Body),
 			}, nil
 		}
 
@@ -178,6 +178,23 @@ func memoryRouterRecallSynthesis(ctx context.Context, client *runclient.Client, 
 		cursor = list.PageInfo.NextCursor
 	}
 	return memoryRouterRecallDoc{Path: memoryRouterSynthesisPath}, nil
+}
+
+func memoryRouterDocHasEvidence(path string, body string) bool {
+	lower := strings.ToLower(body)
+	required := map[string][]string{
+		memoryRouterSessionPath:   {"session", "observation"},
+		memoryRouterTemporalPath:  {"temporal"},
+		memoryRouterFeedbackPath:  {"feedback"},
+		memoryRouterRoutingPath:   {"routing"},
+		memoryRouterSynthesisPath: {"memory", "router"},
+	}
+	for _, token := range required[path] {
+		if !strings.Contains(lower, token) {
+			return false
+		}
+	}
+	return true
 }
 
 func assembleMemoryRouterRecallReport(query string, searchHits int, docs map[string]memoryRouterRecallDoc, synthesis memoryRouterRecallDoc, provenanceRefs []string, provenanceEvents []domain.ProvenanceEvent, projections []domain.ProjectionState) MemoryRouterRecallReport {

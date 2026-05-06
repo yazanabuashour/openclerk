@@ -5,7 +5,9 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"maps"
 	"mime"
 	"net/http"
@@ -27,7 +29,28 @@ import (
 const (
 	artifactPlanValidationBoundaries = "read-only artifact candidate planning; local file inspection only when artifact.local_path is explicitly supplied, limited to UTF-8 text/markdown/text-bearing PDF; no OCR unless explicit text_extraction=ocr_review routes through an installed verified local OCR module; no opaque file parsing, no browser automation, no HTTP fetch, no durable document write, no direct vault inspection, no direct SQLite, no source-built runner, and no unsupported transport"
 	artifactPlanAuthorityLimits      = "candidate path, title, tags, fields, and body preview are planning hints from explicit content or approved runner handoff context only; canonical markdown, citations, provenance, freshness, and projections become authority only after approved runner writes"
+	maxOCRExtractedTextBytes         = 2 * 1024 * 1024
 )
+
+type limitedOCRBuffer struct {
+	buffer bytes.Buffer
+	limit  int
+}
+
+func (b *limitedOCRBuffer) Write(p []byte) (int, error) {
+	if b.limit > 0 && b.buffer.Len()+len(p) > b.limit {
+		remaining := b.limit - b.buffer.Len()
+		if remaining > 0 {
+			_, _ = b.buffer.Write(p[:remaining])
+		}
+		return len(p), domain.ValidationError("OCR review output exceeds maximum supported text size", map[string]any{"max_bytes": b.limit})
+	}
+	return b.buffer.Write(p)
+}
+
+func (b *limitedOCRBuffer) String() string {
+	return b.buffer.String()
+}
 
 func runArtifactCandidatePlan(ctx context.Context, client *runclient.Client, config runclient.Config, options ArtifactPlanOptions) (ArtifactCandidatePlan, error) {
 	if artifactOCRReviewRequested(options) && strings.TrimSpace(options.LocalPath) != "" {
@@ -355,12 +378,18 @@ func extractImageWithOCR(ctx context.Context, localPath string, command string, 
 	defer cancel()
 	args := []string{localPath, "stdout", "-l", language, "--psm", "6"}
 	cmd := exec.CommandContext(ocrCtx, command, args...)
-	var stdout, stderr bytes.Buffer
+	var stdout limitedOCRBuffer
+	stdout.limit = maxOCRExtractedTextBytes
+	var stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
 		if ocrCtx.Err() == context.DeadlineExceeded {
 			return "", domain.ValidationError("OCR review timed out", nil)
+		}
+		var domainErr *domain.Error
+		if errors.As(err, &domainErr) {
+			return "", domainErr
 		}
 		return "", domain.ValidationError("OCR image extraction failed", map[string]any{"error": strings.TrimSpace(stderr.String())})
 	}
@@ -389,9 +418,19 @@ func extractPDFWithOCR(ctx context.Context, localPath string, command string, la
 		}
 		return "", 0, "", domain.ValidationError("OCR PDF extraction failed", map[string]any{"error": strings.TrimSpace(stderr.String())})
 	}
-	data, err := os.ReadFile(sidecarPath)
+	sidecar, err := os.Open(sidecarPath)
+	if err != nil {
+		return "", 0, "", domain.InternalError("open OCR sidecar text", err)
+	}
+	defer func() {
+		_ = sidecar.Close()
+	}()
+	data, err := io.ReadAll(io.LimitReader(sidecar, maxOCRExtractedTextBytes+1))
 	if err != nil {
 		return "", 0, "", domain.InternalError("read OCR sidecar text", err)
+	}
+	if len(data) > maxOCRExtractedTextBytes {
+		return "", 0, "", domain.ValidationError("OCR review output exceeds maximum supported text size", map[string]any{"max_bytes": maxOCRExtractedTextBytes})
 	}
 	pageCount := 0
 	if reader, err := pdf.Open(localPath); err == nil {

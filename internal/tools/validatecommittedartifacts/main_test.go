@@ -24,11 +24,6 @@ func TestValidatePublicArtifactTextRejectsPrivateAndMachinePaths(t *testing.T) {
 			wantErr: "private notes path",
 		},
 		{
-			name:    "private research note",
-			content: "see agent-first-knowledge-plane-architecture-2026-04-07.md\n",
-			wantErr: "private research note reference",
-		},
-		{
 			name:    "raw log without placeholder",
 			content: "raw log: /tmp/run/production/create/turn-1/events.jsonl\n",
 			wantErr: "without <run-root>",

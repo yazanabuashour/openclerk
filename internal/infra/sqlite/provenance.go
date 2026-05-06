@@ -106,6 +106,27 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`,
 	return domain.InternalError("insert provenance event", fmt.Errorf("provenance event id collision: %s", baseEventID))
 }
 
+func insertProvenanceEventIfAbsent(ctx context.Context, tx *sql.Tx, event domain.ProvenanceEvent) error {
+	detailsJSON, err := json.Marshal(event.Details)
+	if err != nil {
+		return domain.InternalError("encode provenance event details", err)
+	}
+	if _, err := tx.ExecContext(ctx, `
+INSERT OR IGNORE INTO provenance_events (event_id, event_type, ref_kind, ref_id, source_ref, occurred_at, details_json)
+VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		event.EventID,
+		event.EventType,
+		event.RefKind,
+		event.RefID,
+		event.SourceRef,
+		event.OccurredAt.UTC().Format(time.RFC3339Nano),
+		string(detailsJSON),
+	); err != nil {
+		return domain.InternalError("insert provenance event", err)
+	}
+	return nil
+}
+
 func isProvenanceEventIDConflict(err error) bool {
 	message := err.Error()
 	return strings.Contains(message, "provenance_events.event_id") &&

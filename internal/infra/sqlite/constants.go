@@ -15,6 +15,7 @@ const (
 	sourceTypePDF                     = "pdf"
 	sourceTypeWeb                     = "web"
 	evalSourceFixtureRootEnv          = "OPENCLERK_EVAL_SOURCE_FIXTURE_ROOT"
+	evalSourceFixtureEnableEnv        = "OPENCLERK_ENABLE_EVAL_SOURCE_FIXTURES"
 	evalSourceFixtureHost             = "openclerk-eval.local"
 )
 

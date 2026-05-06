@@ -58,9 +58,19 @@ type noteMutationLabels struct {
 }
 
 var sourceHTTPClient = defaultSourceHTTPClient
+var allowPrivateSourceHostsForTests = false
+
+const maxSourceURLUpdateImpactRefs = 200
 
 func defaultSourceHTTPClient(checkRedirect func(*http.Request, []*http.Request) error) *http.Client {
-	return &http.Client{Timeout: 30 * time.Second, CheckRedirect: checkRedirect}
+	return &http.Client{
+		Timeout:       30 * time.Second,
+		CheckRedirect: checkRedirect,
+		Transport: &http.Transport{
+			Proxy:       http.ProxyFromEnvironment,
+			DialContext: dialPublicSourceContext,
+		},
+	}
 }
 
 func (s *Store) IngestSourceURL(ctx context.Context, input domain.SourceURLInput) (domain.SourceIngestionResult, error) {
@@ -272,10 +282,9 @@ func (s *Store) updateSourceURL(ctx context.Context, input domain.SourceURLInput
 }
 
 func (s *Store) updatePDFSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string, document domain.Document) (domain.SourceIngestionResult, error) {
-	sourcePath := document.Path
-	assetPath := strings.TrimSpace(document.Metadata["asset_path"])
-	if assetPath == "" {
-		return domain.SourceIngestionResult{}, domain.InternalError("source document is missing asset path", fmt.Errorf("source_url %q", sourceURL))
+	sourcePath, assetPath, err := validateStoredPDFSourceDocument(s.vaultRoot, document, sourceURL)
+	if err != nil {
+		return domain.SourceIngestionResult{}, err
 	}
 	if strings.TrimSpace(input.PathHint) != "" {
 		requestPath, err := normalizeSourceDocumentPath(input.PathHint)
@@ -296,6 +305,9 @@ func (s *Store) updatePDFSourceURL(ctx context.Context, input domain.SourceURLIn
 		}
 	}
 	assetAbsPath := filepath.Join(s.vaultRoot, filepath.FromSlash(assetPath))
+	if err := validateExistingVaultFile(s.vaultRoot, assetAbsPath, "validate existing source asset"); err != nil {
+		return domain.SourceIngestionResult{}, err
+	}
 	if _, err := osStat(assetAbsPath); err != nil {
 		return domain.SourceIngestionResult{}, domain.InternalError("validate existing source asset", err)
 	}
@@ -327,6 +339,9 @@ func (s *Store) updatePDFSourceURL(ctx context.Context, input domain.SourceURLIn
 	}
 
 	sourceAbsPath := filepath.Join(s.vaultRoot, filepath.FromSlash(sourcePath))
+	if err := validateExistingVaultFile(s.vaultRoot, sourceAbsPath, "validate existing source document"); err != nil {
+		return domain.SourceIngestionResult{}, err
+	}
 	oldBody := document.Body
 	oldAssetBytes, err := osReadFile(assetAbsPath)
 	if err != nil {
@@ -371,7 +386,10 @@ func (s *Store) updatePDFSourceURL(ctx context.Context, input domain.SourceURLIn
 }
 
 func (s *Store) updateWebSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string, document domain.Document) (domain.SourceIngestionResult, error) {
-	sourcePath := document.Path
+	sourcePath, err := validateStoredWebSourceDocument(s.vaultRoot, document, sourceURL)
+	if err != nil {
+		return domain.SourceIngestionResult{}, err
+	}
 	if strings.TrimSpace(input.PathHint) != "" {
 		requestPath, err := normalizeSourceDocumentPath(input.PathHint)
 		if err != nil {
@@ -402,6 +420,9 @@ func (s *Store) updateWebSourceURL(ctx context.Context, input domain.SourceURLIn
 		return domain.SourceIngestionResult{}, err
 	}
 	sourceAbsPath := filepath.Join(s.vaultRoot, filepath.FromSlash(sourcePath))
+	if err := validateExistingVaultFile(s.vaultRoot, sourceAbsPath, "validate existing web source document"); err != nil {
+		return domain.SourceIngestionResult{}, err
+	}
 	oldBody := document.Body
 	capturedAt := s.now().UTC()
 	title := resolvedSourceTitle(input.Title, extracted.Title, sourcePath)
@@ -470,6 +491,9 @@ func (s *Store) withSourceURLUpdateImpact(ctx context.Context, result domain.Sou
 			if !strings.EqualFold(projection.Freshness, "stale") || !sourcePathListContains(staleRefs, result.SourcePath) {
 				continue
 			}
+			if len(result.StaleDependents) >= maxSourceURLUpdateImpactRefs {
+				continue
+			}
 			dependentPath := strings.TrimSpace(projection.Details["synthesis_path"])
 			result.StaleDependents = append(result.StaleDependents, domain.SourceStaleDependent{
 				Path:            dependentPath,
@@ -517,6 +541,9 @@ func (s *Store) withSourceURLUpdateImpact(ctx context.Context, result domain.Sou
 		}
 	}
 	result.NoRepairWarning = "Source refresh did not repair dependent synthesis: " + strings.Join(paths, ", ")
+	if len(result.StaleDependents) >= maxSourceURLUpdateImpactRefs {
+		result.NoRepairWarning += fmt.Sprintf("; response capped at %d stale dependents", maxSourceURLUpdateImpactRefs)
+	}
 	return result, nil
 }
 
@@ -620,6 +647,18 @@ func (s *Store) sourceIngestionResultFromDocument(ctx context.Context, document 
 		sourceType = sourceTypePDF
 	}
 	assetPath := strings.TrimSpace(document.Metadata["asset_path"])
+	var err error
+	switch sourceType {
+	case sourceTypePDF:
+		_, assetPath, err = validateStoredPDFSourceDocument(s.vaultRoot, document, sourceURL)
+	case sourceTypeWeb:
+		_, err = validateStoredWebSourceDocument(s.vaultRoot, document, sourceURL)
+	default:
+		err = domain.ConflictError("source URL belongs to an unsupported source type", map[string]any{"source_url": sourceURL, "source_type": sourceType, "path": document.Path})
+	}
+	if err != nil {
+		return domain.SourceIngestionResult{}, err
+	}
 	derivedPath := strings.TrimSpace(document.Metadata["derived_path"])
 	if derivedPath == "" {
 		derivedPath = document.Path
@@ -759,10 +798,8 @@ func downloadSource(ctx context.Context, sourceURL string, requestedType string)
 	if err != nil {
 		return sourceDownload{}, err
 	}
-	if shouldValidatePublicSourceHost(parsedURL, requestedType) {
-		if err := validatePublicSourceHost(ctx, parsedURL); err != nil {
-			return sourceDownload{}, err
-		}
+	if err := validatePublicSourceHost(ctx, parsedURL); err != nil {
+		return sourceDownload{}, err
 	}
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, sourceURL, nil)
 	if err != nil {
@@ -770,9 +807,6 @@ func downloadSource(ctx context.Context, sourceURL string, requestedType string)
 	}
 	var redirectValidationErr error
 	client := sourceHTTPClient(func(request *http.Request, _ []*http.Request) error {
-		if requestedType != sourceTypeWeb {
-			return nil
-		}
 		if request == nil || request.URL == nil {
 			redirectValidationErr = domain.ValidationError("source url must be fetchable", map[string]any{"url": sourceURL})
 			return redirectValidationErr
@@ -816,14 +850,12 @@ func downloadSource(ctx context.Context, sourceURL string, requestedType string)
 	if err != nil {
 		return sourceDownload{}, err
 	}
-	if kind == sourceTypeWeb {
-		finalURL := response.Request.URL
-		if finalURL == nil {
-			finalURL = parsedURL
-		}
-		if err := validateSourceFetchURLTarget(ctx, finalURL); err != nil {
-			return sourceDownload{}, err
-		}
+	finalURL := response.Request.URL
+	if finalURL == nil {
+		finalURL = parsedURL
+	}
+	if err := validateSourceFetchURLTarget(ctx, finalURL); err != nil {
+		return sourceDownload{}, err
 	}
 	return sourceDownload{Body: body, MIMEType: mimeType, SourceType: kind}, nil
 }
@@ -839,17 +871,10 @@ func validateSourceFetchURL(sourceURL string) (*url.URL, error) {
 	return parsed, nil
 }
 
-func shouldValidatePublicSourceHost(parsed *url.URL, requestedType string) bool {
-	if requestedType == sourceTypeWeb {
-		return true
-	}
-	if requestedType == sourceTypePDF {
-		return false
-	}
-	return !strings.EqualFold(path.Ext(parsed.EscapedPath()), ".pdf")
-}
-
 func validatePublicSourceHost(ctx context.Context, parsed *url.URL) error {
+	if allowPrivateSourceHostsForTests {
+		return nil
+	}
 	host := strings.TrimSpace(parsed.Hostname())
 	if host == "" {
 		return domain.ValidationError("source url must be fetchable", map[string]any{"url": parsed.String()})
@@ -886,6 +911,52 @@ func validateSourceFetchURLTarget(ctx context.Context, parsed *url.URL) error {
 	return validatePublicSourceHost(ctx, parsed)
 }
 
+func dialPublicSourceContext(ctx context.Context, network string, address string) (net.Conn, error) {
+	if allowPrivateSourceHostsForTests {
+		dialer := &net.Dialer{Timeout: 30 * time.Second}
+		return dialer.DialContext(ctx, network, address)
+	}
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return nil, err
+	}
+	parsed := &url.URL{Scheme: "http", Host: net.JoinHostPort(host, port)}
+	if err := validatePublicSourceHost(ctx, parsed); err != nil {
+		return nil, err
+	}
+	ips := []net.IP{}
+	if ip := net.ParseIP(host); ip != nil {
+		ips = append(ips, ip)
+	} else {
+		addrs, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+		if err != nil {
+			return nil, domain.ValidationError("source URL host must resolve publicly", map[string]any{"host": host})
+		}
+		for _, addr := range addrs {
+			if !isPublicSourceIP(addr.IP) {
+				return nil, domain.ValidationError("source URL must be publicly fetchable", map[string]any{"host": host})
+			}
+			ips = append(ips, addr.IP)
+		}
+	}
+	if len(ips) == 0 {
+		return nil, domain.ValidationError("source URL host must resolve publicly", map[string]any{"host": host})
+	}
+	dialer := &net.Dialer{Timeout: 30 * time.Second}
+	var lastErr error
+	for _, ip := range ips {
+		if !isPublicSourceIP(ip) {
+			return nil, domain.ValidationError("source URL must be publicly fetchable", map[string]any{"host": host})
+		}
+		conn, err := dialer.DialContext(ctx, network, net.JoinHostPort(ip.String(), port))
+		if err == nil {
+			return conn, nil
+		}
+		lastErr = err
+	}
+	return nil, lastErr
+}
+
 func isPublicSourceIP(ip net.IP) bool {
 	return ip != nil &&
 		!ip.IsUnspecified() &&
@@ -896,7 +967,85 @@ func isPublicSourceIP(ip net.IP) bool {
 		!ip.IsMulticast()
 }
 
+func validateStoredPDFSourceDocument(vaultRoot string, document domain.Document, sourceURL string) (string, string, error) {
+	sourcePath, err := validateStoredSourceDocument(vaultRoot, document, sourceURL, sourceTypePDF)
+	if err != nil {
+		return "", "", err
+	}
+	assetPath, err := normalizeSourceAssetPath(document.Metadata["asset_path"])
+	if err != nil {
+		return "", "", domain.ConflictError("source document has invalid asset_path metadata", map[string]any{"source_url": sourceURL, "path": document.Path})
+	}
+	assetAbsPath := filepath.Join(vaultRoot, filepath.FromSlash(assetPath))
+	if err := validateExistingVaultFile(vaultRoot, assetAbsPath, "validate existing source asset"); err != nil {
+		return "", "", err
+	}
+	return sourcePath, assetPath, nil
+}
+
+func validateStoredWebSourceDocument(vaultRoot string, document domain.Document, sourceURL string) (string, error) {
+	sourcePath, err := validateStoredSourceDocument(vaultRoot, document, sourceURL, sourceTypeWeb)
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(document.Metadata["asset_path"]) != "" {
+		return "", domain.ConflictError("web source document has unexpected asset_path metadata", map[string]any{"source_url": sourceURL, "path": document.Path})
+	}
+	return sourcePath, nil
+}
+
+func validateStoredSourceDocument(vaultRoot string, document domain.Document, sourceURL string, sourceType string) (string, error) {
+	sourcePath, err := normalizeSourceDocumentPath(document.Path)
+	if err != nil {
+		return "", domain.ConflictError("source document has invalid path", map[string]any{"source_url": sourceURL, "path": document.Path})
+	}
+	required := map[string]string{
+		"type":        "source",
+		"source_type": sourceType,
+		"modality":    "markdown",
+		"source_url":  sourceURL,
+	}
+	for key, want := range required {
+		if got := strings.TrimSpace(document.Metadata[key]); got != want {
+			return "", domain.ConflictError("source document metadata does not match ingestion-owned source", map[string]any{"source_url": sourceURL, "path": document.Path, "key": key})
+		}
+	}
+	if derived := strings.TrimSpace(document.Metadata["derived_path"]); derived != "" && derived != sourcePath {
+		return "", domain.ConflictError("source document has invalid derived_path metadata", map[string]any{"source_url": sourceURL, "path": document.Path})
+	}
+	sourceAbsPath := filepath.Join(vaultRoot, filepath.FromSlash(sourcePath))
+	if err := validateExistingVaultFile(vaultRoot, sourceAbsPath, "validate existing source document"); err != nil {
+		return "", err
+	}
+	return sourcePath, nil
+}
+
+func validateExistingVaultFile(vaultRoot string, absPath string, label string) error {
+	resolved, err := filepath.EvalSymlinks(absPath)
+	if err != nil {
+		return domain.InternalError(label, err)
+	}
+	rootClean, err := filepath.Abs(vaultRoot)
+	if err != nil {
+		return domain.InternalError("resolve vault root", err)
+	}
+	if resolvedRoot, err := filepath.EvalSymlinks(rootClean); err == nil {
+		rootClean = resolvedRoot
+	}
+	resolvedClean, err := filepath.Abs(resolved)
+	if err != nil {
+		return domain.InternalError(label, err)
+	}
+	if resolvedClean != rootClean && !strings.HasPrefix(resolvedClean, rootClean+string(os.PathSeparator)) {
+		return domain.ValidationError("source path must stay inside the vault root", nil)
+	}
+	return nil
+}
+
 func resolveEvalSourceFixturePath(sourceURL string) (string, bool, error) {
+	if strings.TrimSpace(os.Getenv(evalSourceFixtureEnableEnv)) != "1" {
+		return "", false, nil
+	}
 	root := strings.TrimSpace(os.Getenv(evalSourceFixtureRootEnv))
 	if root == "" {
 		return "", false, nil

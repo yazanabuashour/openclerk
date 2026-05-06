@@ -47,6 +47,32 @@ func TestParallelRuntimeConfigInitialization(t *testing.T) {
 	}
 }
 
+func TestResolveRuntimeConfigRejectsUnboundExistingDatabaseWithDocuments(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	db, err := openSQLiteDatabase(ctx, dbPath)
+	if err != nil {
+		t.Fatalf("open legacy database: %v", err)
+	}
+	legacy := &Store{db: db, backend: domain.BackendOpenClerk}
+	if err := legacy.initSchema(ctx); err != nil {
+		t.Fatalf("init legacy schema: %v", err)
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO documents (doc_id, path, title, body, headings_json, metadata_json, created_at, updated_at) VALUES ('doc_legacy', 'docs/legacy.md', 'Legacy', '# Legacy', '[]', '{}', '2026-05-06T00:00:00Z', '2026-05-06T00:00:00Z')`); err != nil {
+		t.Fatalf("insert legacy document: %v", err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatalf("close legacy database: %v", err)
+	}
+
+	_, err = ResolveRuntimeConfig(ctx, dbPath, filepath.Join(filepath.Dir(dbPath), "vault"))
+	if err == nil || !strings.Contains(err.Error(), "missing vault root binding") {
+		t.Fatalf("ResolveRuntimeConfig error = %v, want missing binding rejection", err)
+	}
+}
+
 func TestParallelReadOnlyStoreStartup(t *testing.T) {
 	t.Parallel()
 

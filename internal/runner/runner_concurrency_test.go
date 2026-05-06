@@ -155,7 +155,7 @@ func TestParallelFreshStartupReadActions(t *testing.T) {
 	})
 }
 
-func TestReadOnlyActionsDoNotTakeRunnerWriteLock(t *testing.T) {
+func TestReadOnlyActionsRespectRunnerWriteLockForIndexRefresh(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -177,14 +177,14 @@ func TestReadOnlyActionsDoNotTakeRunnerWriteLock(t *testing.T) {
 			Text:  "runner",
 			Limit: 10,
 		},
-	}); err != nil {
-		t.Fatalf("read-only retrieval should not take runner write lock: %v", err)
+	}); err == nil || !strings.Contains(err.Error(), "runner write lock") {
+		t.Fatalf("read-only retrieval error = %v, want runner write lock", err)
 	}
 	if _, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionList,
 		List:   runner.DocumentListOptions{PathPrefix: "notes/", Limit: 10},
-	}); err != nil {
-		t.Fatalf("read-only document task should not take runner write lock: %v", err)
+	}); err == nil || !strings.Contains(err.Error(), "runner write lock") {
+		t.Fatalf("read-only document task error = %v, want runner write lock", err)
 	}
 }
 

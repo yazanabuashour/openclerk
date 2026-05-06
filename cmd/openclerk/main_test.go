@@ -506,6 +506,7 @@ func TestRunnerDocumentSourceURLUpdateStaleImpactJSON(t *testing.T) {
 	if err := os.WriteFile(fixturePath, []byte(`<!doctype html><html><head><title>Runner Web Title</title></head><body><h1>Runner Web Title</h1><p>Initial CLI runner evidence.</p></body></html>`), 0o644); err != nil {
 		t.Fatalf("write web fixture: %v", err)
 	}
+	t.Setenv("OPENCLERK_ENABLE_EVAL_SOURCE_FIXTURES", "1")
 	t.Setenv("OPENCLERK_EVAL_SOURCE_FIXTURE_ROOT", fixtureRoot)
 
 	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")

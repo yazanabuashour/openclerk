@@ -218,11 +218,31 @@ func (s *Store) rebuildServices(ctx context.Context) error {
 	}
 
 	now := s.now().UTC()
+	seenServiceIDs := map[string]string{}
 	for _, doc := range documents {
 		projected, ok := extractServiceProjection(doc.Body)
 		if !ok {
 			continue
 		}
+		if firstPath, exists := seenServiceIDs[projected.ServiceID]; exists {
+			if err := insertProvenanceEventIfAbsent(ctx, tx, domain.ProvenanceEvent{
+				EventID:    hashID("event", "service_duplicate_skipped", projected.ServiceID, doc.DocID),
+				EventType:  "service_duplicate_skipped",
+				RefKind:    "service",
+				RefID:      projected.ServiceID,
+				SourceRef:  "doc:" + doc.DocID,
+				OccurredAt: now,
+				Details: map[string]string{
+					"service_id": projected.ServiceID,
+					"path":       doc.Path,
+					"kept_path":  firstPath,
+				},
+			}); err != nil {
+				return domain.InternalError("record duplicate service skip", err)
+			}
+			continue
+		}
+		seenServiceIDs[projected.ServiceID] = doc.Path
 		summary := firstSummaryParagraph(doc.Body)
 		versionInputs := []string{
 			"service:" + projected.ServiceID,

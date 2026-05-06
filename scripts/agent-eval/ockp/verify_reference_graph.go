@@ -156,6 +156,9 @@ func verifyGraphSemanticsWorkflow(ctx context.Context, paths evalPaths, finalMes
 	if !turnMetrics.ProjectionStatesUsed {
 		failures = append(failures, "agent did not inspect graph projection state")
 	}
+	if turnMetrics.CreateDocumentUsed || turnMetrics.AppendDocumentUsed || turnMetrics.ReplaceSectionUsed || turnMetrics.IngestSourceURLUsed || turnMetrics.IngestVideoURLUsed {
+		failures = append(failures, "agent used a mutating document or source action")
+	}
 
 	if !assistantPass {
 		failures = append(failures, assistantFailure)
@@ -175,7 +178,12 @@ func verifyGraphSemanticsWorkflow(ctx context.Context, paths evalPaths, finalMes
 		turnMetrics.GetDocumentUsed &&
 		turnMetrics.DocumentLinksUsed &&
 		turnMetrics.GraphNeighborhoodUsed &&
-		turnMetrics.ProjectionStatesUsed
+		turnMetrics.ProjectionStatesUsed &&
+		!turnMetrics.CreateDocumentUsed &&
+		!turnMetrics.AppendDocumentUsed &&
+		!turnMetrics.ReplaceSectionUsed &&
+		!turnMetrics.IngestSourceURLUsed &&
+		!turnMetrics.IngestVideoURLUsed
 	if requireListDocuments {
 		activityPass = activityPass && turnMetrics.ListDocumentsUsed
 	}

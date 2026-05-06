@@ -707,6 +707,16 @@ func TestVerifyGraphSemanticsRevisitMatchesNaturalAndScriptedPrompts(t *testing.
 		t.Fatalf("scripted graph semantics revisit without list passed unexpectedly: %+v", result)
 	}
 
+	writeMetrics := completeMetrics
+	writeMetrics.CreateDocumentUsed = true
+	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: graphSemanticsScriptedScenarioID}, 1, scriptedAnswer, writeMetrics)
+	if err != nil {
+		t.Fatalf("verify scripted graph semantics revisit with write action: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("scripted graph semantics revisit with write action passed unexpectedly: %+v", result)
+	}
+
 	noUXAnswer := "Search finds canonical markdown relationship text: requires, supersedes, related to, and operationalizes. document_links shows outgoing links and incoming backlinks with canonical citations. graph_neighborhood shows structural context, and graph projection freshness is fresh. Current primitives can express the workflow safely, and the evidence shows neither a capability gap nor an ergonomics gap. Keep richer graph semantics as reference/deferred and do not promote a semantic-label graph layer."
 	result, err = verifyScenarioTurn(ctx, paths, scenario{ID: graphSemanticsScriptedScenarioID}, 1, noUXAnswer, completeMetrics)
 	if err != nil {

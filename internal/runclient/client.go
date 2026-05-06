@@ -32,9 +32,16 @@ func OpenForWrite(cfg Config) (*Client, error) {
 }
 
 // OpenReadOnly creates an embedded OpenClerk client for runner actions that do
-// not mutate vault files, document registry rows, provenance, or projections.
+// not mutate vault files. It refreshes the local SQLite index under the runner
+// write lock before serving reads so deleted or changed vault documents are not
+// returned from stale state.
 func OpenReadOnly(cfg Config) (*Client, error) {
-	runtime, err := newReadOnlyRuntime(domain.BackendOpenClerk, cfg)
+	var runtime *Runtime
+	err := WithWriteLock(context.Background(), cfg, func() error {
+		var openErr error
+		runtime, openErr = newRuntime(domain.BackendOpenClerk, cfg)
+		return openErr
+	})
 	if err != nil {
 		return nil, wrapError(err)
 	}

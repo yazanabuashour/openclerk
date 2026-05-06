@@ -89,6 +89,9 @@ func TestCodexArgsForSingleAndResumedTurns(t *testing.T) {
 	if !containsValue(singleArgs, "--ignore-user-config") {
 		t.Fatalf("single args missing --ignore-user-config: %v", singleArgs)
 	}
+	if containsValue(singleArgs, "shell_environment_policy.inherit=all") {
+		t.Fatalf("single args must not request full shell env inheritance: %v", singleArgs)
+	}
 
 	multi := scenario{ID: "multi", Turns: []scenarioTurn{{Prompt: "first"}, {Prompt: "second"}}}
 	firstArgs := codexArgsForTurn("codex", "run-root/production/multi/repo", "run-root/production/multi", multi, scenarioTurn{Prompt: "first"}, 1, "", cache)
@@ -224,8 +227,11 @@ func TestEvalEnvOverridesHostOpenClerkPaths(t *testing.T) {
 	t.Setenv("OPENCLERK_DATA_DIR", "/host/data")
 	t.Setenv("OPENCLERK_DATABASE_PATH", "/host/openclerk.db")
 	t.Setenv("OPENCLERK_VAULT_ROOT", "/host/vault")
+	t.Setenv("OPENAI_API_KEY", "host-secret")
+	t.Setenv("GITHUB_TOKEN", "host-token")
 
 	runDir := filepath.Join(t.TempDir(), "run")
+	evalCodexHome := filepath.Join(filepath.Dir(runDir), filepath.Base(runDir)+"-codex-home")
 	paths := evalPaths{
 		DatabasePath: filepath.Join(runDir, "openclerk.db"),
 	}
@@ -237,8 +243,8 @@ func TestEvalEnvOverridesHostOpenClerkPaths(t *testing.T) {
 			got[key] = value
 		}
 	}
-	if got["CODEX_HOME"] != filepath.Join(runDir, "codex-home") {
-		t.Fatalf("CODEX_HOME = %q, want %q", got["CODEX_HOME"], filepath.Join(runDir, "codex-home"))
+	if got["CODEX_HOME"] != evalCodexHome {
+		t.Fatalf("CODEX_HOME = %q, want %q", got["CODEX_HOME"], evalCodexHome)
 	}
 	if got["ZDOTDIR"] != filepath.Join(runDir, "zdotdir") {
 		t.Fatalf("ZDOTDIR = %q, want %q", got["ZDOTDIR"], filepath.Join(runDir, "zdotdir"))
@@ -251,6 +257,12 @@ func TestEvalEnvOverridesHostOpenClerkPaths(t *testing.T) {
 	}
 	if _, ok := got["OPENCLERK_VAULT_ROOT"]; ok {
 		t.Fatalf("OPENCLERK_VAULT_ROOT should not be exported: %v", got)
+	}
+	if _, ok := got["OPENAI_API_KEY"]; ok {
+		t.Fatalf("OPENAI_API_KEY should not be exported: %v", got)
+	}
+	if _, ok := got["GITHUB_TOKEN"]; ok {
+		t.Fatalf("GITHUB_TOKEN should not be exported: %v", got)
 	}
 }
 
@@ -295,11 +307,12 @@ func TestPrepareRunDirCreatesAuthOnlyCodexHome(t *testing.T) {
 	t.Setenv("CODEX_HOME", hostCodexHome)
 
 	runDir := filepath.Join(t.TempDir(), "run")
+	evalCodexHome := filepath.Join(filepath.Dir(runDir), filepath.Base(runDir)+"-codex-home")
 	if err := prepareRunDir(runDir, cacheConfig{}); err != nil {
 		t.Fatalf("prepare run dir: %v", err)
 	}
 	for _, want := range []string{
-		filepath.Join(runDir, "codex-home"),
+		evalCodexHome,
 		filepath.Join(runDir, "zdotdir"),
 		filepath.Join(runDir, "tmp"),
 	} {
@@ -307,22 +320,25 @@ func TestPrepareRunDirCreatesAuthOnlyCodexHome(t *testing.T) {
 			t.Fatalf("expected directory %s, stat err=%v", want, err)
 		}
 	}
-	got, err := os.ReadFile(filepath.Join(runDir, "codex-home", "auth.json"))
+	got, err := os.ReadFile(filepath.Join(evalCodexHome, "auth.json"))
 	if err != nil {
 		t.Fatalf("read seeded auth: %v", err)
 	}
 	if string(got) != `{"token":"test"}` {
 		t.Fatalf("seeded auth = %q, want copied auth", got)
 	}
-	homeInfo, err := os.Stat(filepath.Join(runDir, "codex-home"))
+	homeInfo, err := os.Stat(evalCodexHome)
 	if err != nil {
 		t.Fatalf("stat eval codex home: %v", err)
 	}
 	if homeInfo.Mode().Perm()&0o077 != 0 {
 		t.Fatalf("eval codex home permissions = %v, want no group/other access", homeInfo.Mode().Perm())
 	}
+	if strings.HasPrefix(evalCodexHome, runDir+string(os.PathSeparator)) {
+		t.Fatalf("eval codex home %q must not be inside agent writable run dir %q", evalCodexHome, runDir)
+	}
 	for _, unwanted := range []string{"config.toml", "installation_id", filepath.Join("sessions", "old.jsonl")} {
-		if _, err := os.Stat(filepath.Join(runDir, "codex-home", unwanted)); !os.IsNotExist(err) {
+		if _, err := os.Stat(filepath.Join(evalCodexHome, unwanted)); !os.IsNotExist(err) {
 			t.Fatalf("unexpected copied %s: stat error = %v", unwanted, err)
 		}
 	}

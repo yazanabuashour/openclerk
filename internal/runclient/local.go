@@ -325,7 +325,7 @@ func runnerProcessAlive(pid int) bool {
 }
 
 func ensureLocalDir(path string) error {
-	if err := os.MkdirAll(path, 0o755); err != nil {
+	if err := os.MkdirAll(path, 0o700); err != nil {
 		return domain.InternalError("create database directory", err)
 	}
 	return nil

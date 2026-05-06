@@ -724,6 +724,9 @@ func validateCompileSynthesisInput(input CompileSynthesisInput) string {
 		if ref == "" {
 			return "synthesis.source_refs entries must be non-empty"
 		}
+		if strings.ContainsAny(ref, ",\n\r\t") {
+			return "synthesis.source_refs entries must be single vault-relative paths without separators"
+		}
 		_, issue := domain.NormalizeVaultRelativePath(ref)
 		if issue != domain.VaultPathOK {
 			return "synthesis.source_refs entries must stay inside the vault root"
@@ -745,7 +748,7 @@ func validateCompileSynthesisInput(input CompileSynthesisInput) string {
 }
 
 func validateSourceURLInput(input SourceURLInput) string {
-	parsed, rejection := validateRequiredRunnerHTTPURL(input.URL, "source.url")
+	parsed, rejection := validateRequiredRunnerHTTPURLSyntax(input.URL, "source.url")
 	if rejection != "" {
 		return rejection
 	}
@@ -755,6 +758,11 @@ func validateSourceURLInput(input SourceURLInput) string {
 	}
 	if mode != "create" && mode != "update" && mode != "plan" {
 		return "source.mode must be create, update, or plan"
+	}
+	if mode == "plan" {
+		if rejection := validateRunnerPublicURLHost(parsed, "source.url"); rejection != "" {
+			return rejection
+		}
 	}
 	sourceType := input.SourceType
 	if sourceType != "" && sourceType != "pdf" && sourceType != "web" {
@@ -782,7 +790,7 @@ func validateSourceURLInput(input SourceURLInput) string {
 }
 
 func validateVideoURLInput(input VideoURLInput) string {
-	if _, rejection := validateRequiredRunnerHTTPURL(input.URL, "video.url"); rejection != "" {
+	if _, rejection := validateRequiredRunnerHTTPURLSyntax(input.URL, "video.url"); rejection != "" {
 		return rejection
 	}
 	mode := input.Mode

@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -17,6 +18,17 @@ func seedScenario(ctx context.Context, paths evalPaths, sc scenario) error {
 	return seedScenarioWithFixtures(ctx, paths, sc, nil)
 }
 func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario, fixtures *sourceURLUpdateFixtures) error {
+	if fixtures != nil {
+		runDir := filepath.Join(filepath.Dir(paths.DatabasePath), "seed-fixtures")
+		if err := fixtures.prepareFiles(runDir); err != nil {
+			return err
+		}
+		restoreFixtureEnv := setTemporaryEnv(map[string]string{
+			evalSourceFixtureEnableEnv: "1",
+			evalSourceFixtureRootEnv:   evalSourceFixtureRoot(runDir),
+		})
+		defer restoreFixtureEnv()
+	}
 	cfg := runclient.Config{
 		DatabasePath: paths.DatabasePath,
 	}
@@ -388,6 +400,28 @@ service_interface: JSON runner
 		}
 	}
 	return nil
+}
+
+func setTemporaryEnv(values map[string]string) func() {
+	type oldValue struct {
+		value string
+		set   bool
+	}
+	old := make(map[string]oldValue, len(values))
+	for key, value := range values {
+		existing, ok := os.LookupEnv(key)
+		old[key] = oldValue{value: existing, set: ok}
+		_ = os.Setenv(key, value)
+	}
+	return func() {
+		for key, previous := range old {
+			if previous.set {
+				_ = os.Setenv(key, previous.value)
+			} else {
+				_ = os.Unsetenv(key)
+			}
+		}
+	}
 }
 func sourceTitleFromPath(path string) string {
 	name := strings.TrimSuffix(filepath.Base(path), ".md")

@@ -37,7 +37,7 @@ bd close <id>         # Complete work
 
 ## Work Item Completion
 
-A **work item** is one logical bead, task, story, or other coherent unit of work. **When completing each work item**, you MUST complete the workflow below through review, commit, push, verification, and handoff before starting unrelated work or handing off. If a single thread completes multiple independent beads/tasks/stories, repeat this workflow once for each completed work item. The work item is NOT complete until `git push` succeeds and `git status` shows the branch is up to date with origin.
+A **work item** is one logical bead, task, story, or other coherent unit of work. **When completing each work item**, complete the workflow below through review, local commit, verification, and handoff before starting unrelated work or handing off. Push only when the maintainer or task explicitly asks for remote publication. If a single thread completes multiple independent beads/tasks/stories, repeat this workflow once for each completed work item.
 
 **MANDATORY WORKFLOW:**
 
@@ -51,22 +51,21 @@ A **work item** is one logical bead, task, story, or other coherent unit of work
    ```
    If the review finds issues, address the findings.
 6. **Commit reviewed changes** - After the review command completes, stage the intended files and create a local commit
-7. **PUSH TO REMOTE** - This is MANDATORY:
+7. **Remote publication** - Push only when explicitly requested:
    ```bash
    git pull --rebase
    bd dolt push
    git push
-   git status  # MUST show "up to date with origin"
+   git status
    ```
-8. **Clean up** - Clear stashes, prune remote branches
-9. **Verify** - All changes committed AND pushed
+8. **Clean up** - Clear stashes, prune remote branches when relevant
+9. **Verify** - All intended changes are committed, and pushed only when remote publication was requested
 10. **Hand off** - Provide context for next session
 
 **CRITICAL RULES:**
-- The work item is NOT complete until `git push` succeeds
+- Do not push to a remote unless the maintainer or task explicitly requested remote publication
 - Run the Codex review command once; do not rerun it as a workflow loop
 - Do NOT commit before quality gates and the Codex review command are complete
-- After the review command completes, stage, commit, pull/rebase, run `bd dolt push`, and `git push`; do NOT stop again with local-only changes unless there is a real blocker
-- NEVER say "ready to push when you are" after the review command completes - YOU must push
-- If push fails, resolve and retry until it succeeds
+- After the review command completes, stage and commit the intended files; if remote publication was requested, pull/rebase, run `bd dolt push`, and `git push`
+- If a requested push fails, resolve and retry until it succeeds or report the blocker
 <!-- END BEADS INTEGRATION -->

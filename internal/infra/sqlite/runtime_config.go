@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/yazanabuashour/openclerk/internal/domain"
 	_ "modernc.org/sqlite"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -41,6 +42,8 @@ func configureRuntime(ctx context.Context, databasePath string, vaultRoot string
 	if err := ensureDir(filepath.Dir(databasePath)); err != nil {
 		return RuntimeConfig{}, domain.InternalError("create database directory", err)
 	}
+	_, preexistingDBErr := os.Stat(databasePath)
+	preexistingDB := preexistingDBErr == nil
 	db, err := openSQLiteDatabase(ctx, databasePath)
 	if err != nil {
 		return RuntimeConfig{}, err
@@ -61,6 +64,14 @@ func configureRuntime(ctx context.Context, databasePath string, vaultRoot string
 		return RuntimeConfig{}, err
 	} else if stored != "" {
 		resolvedVaultRoot = filepath.Clean(stored)
+	} else if preexistingDB {
+		hasData, err := databaseHasIndexedDocuments(ctx, db)
+		if err != nil {
+			return RuntimeConfig{}, err
+		}
+		if hasData {
+			return RuntimeConfig{}, domain.ValidationError("existing OpenClerk database is missing vault root binding; run openclerk init --vault-root intentionally before use", nil)
+		}
 	}
 	if err := ensureDir(resolvedVaultRoot); err != nil {
 		return RuntimeConfig{}, domain.InternalError("create vault root", err)
@@ -89,6 +100,23 @@ func configureRuntime(ctx context.Context, databasePath string, vaultRoot string
 	}, nil
 }
 
+func databaseHasIndexedDocuments(ctx context.Context, db *sql.DB) (bool, error) {
+	var tableName string
+	err := db.QueryRowContext(ctx, `SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'documents'`).Scan(&tableName)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, domain.InternalError("inspect existing OpenClerk schema", err)
+	}
+	var count int
+	err = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM documents LIMIT 1`).Scan(&count)
+	if err != nil {
+		return false, domain.InternalError("inspect existing OpenClerk documents", err)
+	}
+	return count > 0, nil
+}
+
 func openSQLiteDatabase(ctx context.Context, databasePath string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite", databasePath)
 	if err != nil {
@@ -99,6 +127,7 @@ func openSQLiteDatabase(ctx context.Context, databasePath string) (*sql.DB, erro
 		_ = db.Close()
 		return nil, err
 	}
+	_ = os.Chmod(databasePath, 0o600)
 	return db, nil
 }
 

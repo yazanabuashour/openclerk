@@ -8,9 +8,9 @@ var (
 	osReadFile   = os.ReadFile
 	osStat       = os.Stat
 	osWriteBytes = func(name string, data []byte) error {
-		return os.WriteFile(name, data, 0o644)
+		return os.WriteFile(name, data, 0o600)
 	}
 	osWriteFile = func(name string, data string) error {
-		return os.WriteFile(name, []byte(data), 0o644)
+		return os.WriteFile(name, []byte(data), 0o600)
 	}
 )

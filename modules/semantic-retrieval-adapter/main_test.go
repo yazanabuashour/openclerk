@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -229,6 +230,55 @@ func TestSemanticRetrievalAdapterPathPrefixAndStaleCache(t *testing.T) {
 	}
 	if stale.Cache.Status != "rebuilt" || stale.Cache.RebuiltCount == 0 || requests < 5 {
 		t.Fatalf("expected stale cache rebuild, response=%+v requests=%d", stale.Cache, requests)
+	}
+}
+
+func TestSemanticRetrievalAdapterCacheHitUsesCurrentCitationMetadata(t *testing.T) {
+	t.Parallel()
+
+	chunks := []semanticChunk{{
+		ChunkID:   "chunk_current",
+		DocID:     "doc_current",
+		Path:      "docs/current.md",
+		Title:     "Current",
+		Heading:   "Summary",
+		Content:   "Current citation metadata is authoritative.",
+		LineStart: 3,
+		LineEnd:   4,
+		Hash:      "current-hash",
+	}}
+	expected := cacheFile{
+		SchemaVersion: "semantic_retrieval_adapter_cache.v1",
+		Provider:      providerOllama,
+		Model:         "embeddinggemma",
+		CorpusHash:    corpusHash(chunks),
+	}
+	forged := chunks[0]
+	forged.DocID = "doc_forged"
+	forged.Path = "notes/private.md"
+	forged.Title = "Forged"
+	forged.LineStart = 99
+	forged.Vector = []float64{1, 2, 3}
+	cache := expected
+	cache.Chunks = []semanticChunk{forged}
+	cachePath := filepath.Join(t.TempDir(), "cache.json")
+	data, err := json.Marshal(cache)
+	if err != nil {
+		t.Fatalf("marshal forged cache: %v", err)
+	}
+	if err := os.WriteFile(cachePath, data, 0o600); err != nil {
+		t.Fatalf("write forged cache: %v", err)
+	}
+
+	hit, status := readCache(cachePath, expected, chunks)
+	if status.Status != "hit" || len(hit) != 1 {
+		t.Fatalf("readCache status=%+v hit=%+v", status, hit)
+	}
+	if hit[0].DocID != chunks[0].DocID || hit[0].Path != chunks[0].Path || hit[0].LineStart != chunks[0].LineStart {
+		t.Fatalf("cache metadata was trusted: %+v want current %+v", hit[0], chunks[0])
+	}
+	if len(hit[0].Vector) != 3 {
+		t.Fatalf("cache vector was not retained: %+v", hit[0].Vector)
 	}
 }
 

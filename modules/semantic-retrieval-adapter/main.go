@@ -37,6 +37,7 @@ const (
 
 	ollamaEmbedBatchSize          = 4
 	semanticChunkTargetCharacters = 1800
+	maxSemanticChunks             = 5000
 )
 
 var wordPattern = regexp.MustCompile(`[a-z0-9]+`)
@@ -296,6 +297,9 @@ func executeSearch(ctx context.Context, config runclient.Config, request searchR
 	chunks, err := loadChunks(ctx, client, request)
 	if err != nil {
 		return searchResponse{}, err
+	}
+	if len(chunks) > maxSemanticChunks {
+		return searchResponse{}, fmt.Errorf("semantic corpus exceeds maximum supported chunks (%d)", maxSemanticChunks)
 	}
 	if len(chunks) == 0 {
 		return baseResponse(request, providerStatus{Provider: request.Provider, Model: request.EmbeddingModel, Status: "empty_corpus"}, cacheStatus{Status: "not_used"}), nil
@@ -594,6 +598,9 @@ func loadChunks(ctx context.Context, client *runclient.Client, request searchReq
 			return nil, err
 		}
 		chunks = append(chunks, chunksForDocument(doc)...)
+		if len(chunks) > maxSemanticChunks {
+			return nil, fmt.Errorf("semantic corpus exceeds maximum supported chunks (%d)", maxSemanticChunks)
+		}
 	}
 	return chunks, nil
 }
@@ -765,7 +772,12 @@ func readCache(cachePath string, expected cacheFile, chunks []semanticChunk) ([]
 			return nil, cacheStatus{Status: "stale"}
 		}
 	}
-	return cached.Chunks, cacheStatus{Status: "hit"}
+	rehydrated := make([]semanticChunk, len(chunks))
+	for idx, chunk := range chunks {
+		rehydrated[idx] = chunk
+		rehydrated[idx].Vector = append([]float64(nil), cached.Chunks[idx].Vector...)
+	}
+	return rehydrated, cacheStatus{Status: "hit"}
 }
 
 func writeCache(cachePath string, cache cacheFile) error {

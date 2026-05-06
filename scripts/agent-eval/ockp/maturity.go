@@ -112,7 +112,7 @@ type maturityOutcome struct {
 
 func executeMaturity(ctx context.Context, config maturityConfig, stdout io.Writer) error {
 	runRoot := filepath.Clean(config.RunRoot)
-	if err := os.MkdirAll(runRoot, 0o755); err != nil {
+	if err := os.MkdirAll(runRoot, 0o700); err != nil {
 		return fmt.Errorf("create maturity run root: %w", err)
 	}
 	dbPath := filepath.Join(runRoot, "openclerk.sqlite")

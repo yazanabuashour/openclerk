@@ -599,9 +599,9 @@ Source sensitive audit conflict runner retention is thirty days.
 	}
 	for _, want := range []string{
 		"source_refs: sources/audit-runner-current.md, sources/audit-runner-old.md",
-		"Current audit guidance: use the installed openclerk JSON runner.",
-		"Current source: sources/audit-runner-current.md.",
-		"Superseded source: sources/audit-runner-old.md.",
+		"Current source selected from projection evidence: sources/audit-runner-current.md.",
+		"Superseded source retained for audit context: sources/audit-runner-old.md.",
+		"Audit repair did not choose unresolved claims beyond source classification.",
 		"## Sources",
 		"## Freshness",
 	} {
@@ -683,7 +683,7 @@ Checked source refs.
 		t.Fatalf("get repaired source audit synthesis: %v", err)
 	}
 	if strings.Contains(updated.Document.Body, "direct vault inspection") ||
-		!strings.Contains(updated.Document.Body, "installed openclerk JSON runner") {
+		!strings.Contains(updated.Document.Body, "Audit repair did not choose unresolved claims beyond source classification.") {
 		t.Fatalf("source audit repaired body = %q", updated.Document.Body)
 	}
 

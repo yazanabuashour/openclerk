@@ -1229,9 +1229,12 @@ func TestVerifySourceURLUpdateChangedPDFRequiresStaleProjection(t *testing.T) {
 	if err := seedScenarioWithFixtures(ctx, paths, scenario{ID: sourceURLUpdateChangedScenarioID}, fixtures); err != nil {
 		t.Fatalf("seed source URL changed scenario: %v", err)
 	}
-	if err := fixtures.prepareForAgent(t.TempDir(), sourceURLUpdateChangedScenarioID); err != nil {
+	runDir := t.TempDir()
+	if err := fixtures.prepareForAgent(runDir, sourceURLUpdateChangedScenarioID); err != nil {
 		t.Fatalf("prepare source URL fixture: %v", err)
 	}
+	t.Setenv(evalSourceFixtureEnableEnv, "1")
+	t.Setenv(evalSourceFixtureRootEnv, evalSourceFixtureRoot(runDir))
 	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	if _, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionIngestSourceURL,
@@ -1284,6 +1287,7 @@ func TestVerifyWebURLStaleRepairRequiresFreshnessAndBoundaries(t *testing.T) {
 	if err := fixtures.prepareFiles(runDir); err != nil {
 		t.Fatalf("prepare web URL fixture files: %v", err)
 	}
+	t.Setenv(evalSourceFixtureEnableEnv, "1")
 	t.Setenv(evalSourceFixtureRootEnv, evalSourceFixtureRoot(runDir))
 	if err := seedScenarioWithFixtures(ctx, paths, scenario{ID: webURLStaleRepairScriptedScenarioID}, fixtures); err != nil {
 		t.Fatalf("seed web URL stale repair scenario: %v", err)
@@ -1530,6 +1534,7 @@ func TestVerifyWebURLChangedRejectsRepairedSynthesis(t *testing.T) {
 	if err := fixtures.prepareFiles(runDir); err != nil {
 		t.Fatalf("prepare web URL fixture files: %v", err)
 	}
+	t.Setenv(evalSourceFixtureEnableEnv, "1")
 	t.Setenv(evalSourceFixtureRootEnv, evalSourceFixtureRoot(runDir))
 	if err := seedScenarioWithFixtures(ctx, paths, scenario{ID: webURLChangedScenarioID}, fixtures); err != nil {
 		t.Fatalf("seed web URL changed scenario: %v", err)

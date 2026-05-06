@@ -18,6 +18,7 @@ import (
 )
 
 func TestIngestSourceURLKeepsAssetWhenSourceNotePersistsBeforeError(t *testing.T) {
+	allowPrivateSourceHosts(t)
 	pdfBytes := minimalStorePDF("Partial ingest PDF", "OpenClerk Test", "Partial ingest text")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/pdf")
@@ -71,6 +72,7 @@ func TestIngestSourceURLEvalFixtureURL(t *testing.T) {
 	if err := os.WriteFile(fixturePath, minimalStorePDF("Eval fixture PDF", "OpenClerk Test", "Eval fixture evidence"), 0o644); err != nil {
 		t.Fatalf("write fixture: %v", err)
 	}
+	t.Setenv(evalSourceFixtureEnableEnv, "1")
 	t.Setenv(evalSourceFixtureRootEnv, fixtureRoot)
 
 	vaultRoot := t.TempDir()
@@ -115,9 +117,20 @@ func TestEvalFixtureURLNotInterceptedWithoutEnv(t *testing.T) {
 	if ok {
 		t.Fatal("eval fixture URL was intercepted without fixture env")
 	}
+
+	t.Setenv(evalSourceFixtureRootEnv, t.TempDir())
+	t.Setenv(evalSourceFixtureEnableEnv, "")
+	_, ok, err = resolveEvalSourceFixturePath("http://openclerk-eval.local/artifacts/vendor-security-paper.pdf")
+	if err != nil {
+		t.Fatalf("resolve disabled eval fixture: %v", err)
+	}
+	if ok {
+		t.Fatal("eval fixture URL was intercepted without explicit enable env")
+	}
 }
 
 func TestIngestSourceURLUpdateMode(t *testing.T) {
+	allowPrivateSourceHosts(t)
 	var (
 		mu         sync.Mutex
 		currentPDF = minimalStorePDF("Runner Intake PDF Title", "OpenClerk Test", "Initial PDF evidence")
@@ -279,6 +292,7 @@ func TestIngestSourceURLWebCreateAndUpdateMode(t *testing.T) {
 	if err := os.WriteFile(fixturePath, []byte(initialHTML), 0o644); err != nil {
 		t.Fatalf("write web fixture: %v", err)
 	}
+	t.Setenv(evalSourceFixtureEnableEnv, "1")
 	t.Setenv(evalSourceFixtureRootEnv, fixtureRoot)
 	sourceURL := "http://openclerk-eval.local/web/runner-product.html?tag=tracking"
 
@@ -450,6 +464,7 @@ func TestIngestSourceURLUpdateImpactPagesSynthesisProjections(t *testing.T) {
 	if err := os.WriteFile(fixturePath, []byte(initialHTML), 0o644); err != nil {
 		t.Fatalf("write web fixture: %v", err)
 	}
+	t.Setenv(evalSourceFixtureEnableEnv, "1")
 	t.Setenv(evalSourceFixtureRootEnv, fixtureRoot)
 
 	ctx := context.Background()
@@ -518,6 +533,14 @@ func TestIngestSourceURLWebRejectsPrivateNetworkHost(t *testing.T) {
 	}
 }
 
+func TestIngestSourceURLPDFRejectsPrivateNetworkHost(t *testing.T) {
+	_, err := downloadSource(context.Background(), "http://169.254.169.254/latest/meta-data/report.pdf", sourceTypePDF)
+	var appErr *domain.Error
+	if !errors.As(err, &appErr) || appErr.Status != 400 || !strings.Contains(appErr.Message, "publicly fetchable") {
+		t.Fatalf("private PDF URL error = %v, want publicly fetchable validation", err)
+	}
+}
+
 func TestIngestSourceURLWebRejectsPrivateRedirectTarget(t *testing.T) {
 	oldClient := sourceHTTPClient
 	defer func() {
@@ -552,6 +575,45 @@ func TestIngestSourceURLWebRejectsPrivateRedirectTarget(t *testing.T) {
 	}
 }
 
+func TestIngestSourceURLPDFRejectsPrivateRedirectTarget(t *testing.T) {
+	oldClient := sourceHTTPClient
+	defer func() {
+		sourceHTTPClient = oldClient
+	}()
+	var requestedPrivate bool
+	sourceHTTPClient = func(checkRedirect func(*http.Request, []*http.Request) error) *http.Client {
+		return &http.Client{
+			CheckRedirect: checkRedirect,
+			Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+				if request.URL.Host == "127.0.0.1" {
+					requestedPrivate = true
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Header:     http.Header{"Content-Type": []string{"application/pdf"}},
+						Body:       io.NopCloser(bytes.NewReader(minimalStorePDF("Private", "OpenClerk Test", "private"))),
+						Request:    request,
+					}, nil
+				}
+				return &http.Response{
+					StatusCode: http.StatusFound,
+					Header:     http.Header{"Location": []string{"http://127.0.0.1/private.pdf"}},
+					Body:       io.NopCloser(strings.NewReader("")),
+					Request:    request,
+				}, nil
+			}),
+		}
+	}
+
+	_, err := downloadSource(context.Background(), "http://93.184.216.34/report.pdf", sourceTypePDF)
+	var appErr *domain.Error
+	if !errors.As(err, &appErr) || appErr.Status != 400 || !strings.Contains(appErr.Message, "publicly fetchable") {
+		t.Fatalf("private PDF redirect error = %v, want publicly fetchable validation", err)
+	}
+	if requestedPrivate {
+		t.Fatal("followed private PDF redirect target")
+	}
+}
+
 func TestIngestSourceURLAutodetectedWebRejectsPrivateFinalURL(t *testing.T) {
 	oldClient := sourceHTTPClient
 	defer func() {
@@ -570,6 +632,43 @@ func TestIngestSourceURLAutodetectedWebRejectsPrivateFinalURL(t *testing.T) {
 	var appErr *domain.Error
 	if !errors.As(err, &appErr) || appErr.Status != 400 || !strings.Contains(appErr.Message, "publicly fetchable") {
 		t.Fatalf("private autodetected web error = %v, want publicly fetchable validation", err)
+	}
+}
+
+func TestIngestSourceURLUpdateRejectsUntrustedStoredAssetPath(t *testing.T) {
+	ctx := context.Background()
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+
+	sourceURL := "https://example.test/malicious.pdf"
+	if _, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+		Path:  "sources/malicious.md",
+		Title: "Malicious Source",
+		Body: strings.TrimSpace(`---
+type: source
+source_type: pdf
+modality: markdown
+source_url: https://example.test/malicious.pdf
+asset_path: ../../outside.pdf
+derived_path: sources/malicious.md
+---
+# Malicious Source
+`) + "\n",
+	}); err != nil {
+		t.Fatalf("create malicious source-like document: %v", err)
+	}
+
+	_, err := store.IngestSourceURL(ctx, domain.SourceURLInput{
+		URL:  sourceURL,
+		Mode: "update",
+	})
+	var appErr *domain.Error
+	if !errors.As(err, &appErr) || appErr.Status != 409 || !strings.Contains(appErr.Message, "invalid asset_path") {
+		t.Fatalf("malicious stored asset path update error = %v, want conflict", err)
 	}
 }
 
@@ -790,6 +889,7 @@ func TestIngestVideoURLSuppliedTranscriptUpdateMode(t *testing.T) {
 }
 
 func TestIngestSourceURLUpdateRollbackRestoresPreviousState(t *testing.T) {
+	allowPrivateSourceHosts(t)
 	var (
 		mu         sync.Mutex
 		currentPDF = minimalStorePDF("Rollback PDF", "OpenClerk Test", "Rollback old evidence")
@@ -880,6 +980,15 @@ func TestIngestSourceURLUpdateRollbackRestoresPreviousState(t *testing.T) {
 	if len(search.Hits) != 0 {
 		t.Fatalf("new evidence indexed after rollback: %+v", search.Hits)
 	}
+}
+
+func allowPrivateSourceHosts(t *testing.T) {
+	t.Helper()
+	old := allowPrivateSourceHostsForTests
+	allowPrivateSourceHostsForTests = true
+	t.Cleanup(func() {
+		allowPrivateSourceHostsForTests = old
+	})
 }
 
 func requireNoOpSourceUpdateImpact(t *testing.T, result domain.SourceIngestionResult, sourceURL string, sourceDocID string, sha string) {

@@ -22,6 +22,7 @@ const (
 	recordsPathPrefix         = "records/"
 	serviceRecordsPathPrefix  = "records/services/"
 	decisionRecordsPathPrefix = "records/decisions/"
+	maxInspectLayoutDocuments = 1000
 )
 
 func inspectKnowledgeLayout(ctx context.Context, client *runclient.Client) (KnowledgeLayout, error) {
@@ -127,6 +128,9 @@ func listAllDocuments(ctx context.Context, client *runclient.Client) ([]Document
 			return nil, err
 		}
 		documents = append(documents, toDocumentSummaries(result.Documents)...)
+		if len(documents) > maxInspectLayoutDocuments {
+			return nil, domain.ValidationError("inspect_layout exceeds maximum supported document count", map[string]any{"max_documents": maxInspectLayoutDocuments})
+		}
 		if !result.PageInfo.HasMore {
 			return documents, nil
 		}

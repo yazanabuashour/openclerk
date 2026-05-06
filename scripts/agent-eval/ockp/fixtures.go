@@ -30,6 +30,7 @@ type sourceURLUpdateFixtures struct {
 	changedHTML     []byte
 	productPageHTML []byte
 	serveChangedWeb bool
+	useEvalFiles    bool
 }
 
 func startSourceURLUpdateFixtures(scenarioID string) *sourceURLUpdateFixtures {
@@ -85,6 +86,9 @@ func (f *sourceURLUpdateFixtures) stableURL() string {
 	if f.webProductPage {
 		return webProductPageEvalSourceURL
 	}
+	if f.useEvalFiles {
+		return "http://openclerk-eval.local/source-url/stable.pdf"
+	}
 	return f.server.URL + "/stable.pdf"
 }
 func (f *sourceURLUpdateFixtures) changedURL() string {
@@ -103,7 +107,7 @@ func (f *sourceURLUpdateFixtures) prepareForAgent(runDir string, scenarioID stri
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.serveChangedPDF = true
-	return nil
+	return writeSourceURLFixtureFile(runDir, "source-url/stable.pdf", f.changedPDF)
 }
 func (f *sourceURLUpdateFixtures) renderPrompt(prompt string) string {
 	if f == nil {
@@ -122,6 +126,7 @@ func (f *sourceURLUpdateFixtures) prepareFiles(runDir string) error {
 	if f == nil {
 		return nil
 	}
+	f.useEvalFiles = true
 	if f.webURLIntake {
 		if err := writeSourceURLFixtureFile(runDir, "web-url/product-page.html", f.initialHTML); err != nil {
 			return err
@@ -135,7 +140,7 @@ func (f *sourceURLUpdateFixtures) prepareFiles(runDir string) error {
 		return writeSourceURLFixtureFile(runDir, "product-pages/blocked.txt", []byte("blocked plain text product page"))
 	}
 	if !f.artifactPDF {
-		return nil
+		return writeSourceURLFixtureFile(runDir, "source-url/stable.pdf", f.initialPDF)
 	}
 	return writeSourceURLFixtureFile(runDir, "artifacts/vendor-security-paper.pdf", f.initialPDF)
 }

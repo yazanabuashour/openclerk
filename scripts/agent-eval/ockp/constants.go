@@ -541,6 +541,7 @@ const (
 	webProductPageDuplicateEvalSourceURL = "http://OPENCLERK-EVAL.local/product-pages/rich-public-product.html?utm_source=newsletter&variant=graphite#details"
 	webProductPageUnsupportedEvalURL     = "http://openclerk-eval.local/product-pages/blocked.txt"
 	evalSourceFixtureRootEnv             = "OPENCLERK_EVAL_SOURCE_FIXTURE_ROOT"
+	evalSourceFixtureEnableEnv           = "OPENCLERK_ENABLE_EVAL_SOURCE_FIXTURES"
 	artifactPDFEvidenceText              = "ArtifactPDFIngestionEvidence"
 	artifactTranscriptPath               = "transcripts/artifacts/vendor-demo-transcript.md"
 	artifactInvoicePath                  = "invoices/artifacts/atlas-platform-2026-04.md"
