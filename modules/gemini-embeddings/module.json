@@ -2,7 +2,7 @@
   "schema_version": "openclerk-module.v1",
   "module": {
     "name": "gemini-embeddings",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "kind": "embedding_provider"
   },
   "openclerk_contract": {
@@ -73,16 +73,16 @@
     "schema": "returns the shared openclerk_semantic_retrieval.v1 contract with citations"
   },
   "release": {
-    "tag": "gemini-embeddings/v0.1.0",
+    "tag": "gemini-embeddings/v0.1.1",
     "assets": [
-      "openclerk-module-gemini-embeddings_0.1.0_darwin_arm64.tar.gz",
-      "openclerk-module-gemini-embeddings_0.1.0_darwin_amd64.tar.gz",
-      "openclerk-module-gemini-embeddings_0.1.0_linux_amd64.tar.gz",
-      "openclerk-module-gemini-embeddings_0.1.0_linux_arm64.tar.gz",
-      "openclerk-module-gemini-embeddings_0.1.0_skill.tar.gz",
-      "openclerk-module-gemini-embeddings_0.1.0_source.tar.gz",
-      "openclerk-module-gemini-embeddings_0.1.0_checksums.txt",
-      "openclerk-module-gemini-embeddings_0.1.0_sbom.json",
+      "openclerk-module-gemini-embeddings_0.1.1_darwin_arm64.tar.gz",
+      "openclerk-module-gemini-embeddings_0.1.1_darwin_amd64.tar.gz",
+      "openclerk-module-gemini-embeddings_0.1.1_linux_amd64.tar.gz",
+      "openclerk-module-gemini-embeddings_0.1.1_linux_arm64.tar.gz",
+      "openclerk-module-gemini-embeddings_0.1.1_skill.tar.gz",
+      "openclerk-module-gemini-embeddings_0.1.1_source.tar.gz",
+      "openclerk-module-gemini-embeddings_0.1.1_checksums.txt",
+      "openclerk-module-gemini-embeddings_0.1.1_sbom.json",
       "install-module.sh"
     ],
     "status": "supported_optional_module"

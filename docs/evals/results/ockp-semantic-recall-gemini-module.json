@@ -2,7 +2,7 @@
   "metadata": {
     "lane": "semantic-recall",
     "mode": "local-hybrid",
-    "generated_at": "2026-05-06T16:10:50.034539Z",
+    "generated_at": "2026-05-06T16:27:13.675491Z",
     "harness": "scripts/agent-eval/ockp semantic-recall",
     "run_root_artifact_reference": "\u003crun-root\u003e",
     "report_name": "ockp-semantic-recall-gemini-module",
@@ -38,14 +38,13 @@
     "provider": "gemini",
     "url": "https://generativelanguage.googleapis.com/v1beta",
     "model": "gemini-embedding-001",
-    "status": "provider_blocked",
+    "status": "completed",
     "credential_ref": "runtime_config:GEMINI_API_KEY",
     "embedding_dimensions": 3072,
     "output_dimensions": 3072,
-    "request_count": 33,
+    "request_count": 34,
     "retry_count": 6,
-    "backoff_seconds": 51.55,
-    "error_summary": "gemini returned HTTP 429: {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-l"
+    "backoff_seconds": 51.55
   },
   "methods": [
     {
@@ -56,7 +55,7 @@
       "mrr": 0.833,
       "query_count": 8,
       "raw_duplicate_hits": 0,
-      "total_seconds": 0.15,
+      "total_seconds": 0.16,
       "rows": [
         {
           "query_id": "wiki_synthesis",
@@ -281,31 +280,465 @@
     },
     {
       "method": "provider_mimic_vector_only",
-      "status": "provider_blocked",
-      "description": "Gemini provider-mimic embedding call was unavailable or rate-limited; semantic evidence is intentionally not faked.",
-      "hit_at_3": 0,
-      "mrr": 0,
+      "status": "completed",
+      "description": "Gemini provider-mimic vector-only chunk ranking.",
+      "hit_at_3": 8,
+      "mrr": 0.938,
       "query_count": 8,
-      "raw_duplicate_hits": 0,
-      "total_seconds": 59.2,
-      "evidence_posture": "provider-blocked; rerun with configured Gemini API key/quota or local Ollama for local/offline evidence",
-      "validation_boundary": "no fake vectors, no durable embedding store, no provider config write, no production ranking change; error: gemini returned HTTP 429: {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-l",
-      "candidate_only": true,
-      "provider_blocked": true
+      "raw_duplicate_hits": 736,
+      "total_seconds": 59.91,
+      "rows": [
+        {
+          "query_id": "wiki_synthesis",
+          "kind": "concept-recall",
+          "expected_path": "docs/architecture/agent-knowledge-plane.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/agent-knowledge-plane.md",
+              "heading": "Canonical and derived layers",
+              "line_start": 84,
+              "line_end": 256
+            },
+            {
+              "path": "docs/architecture/eval-backed-knowledge-plane-adr.md",
+              "heading": "Context",
+              "line_start": 17,
+              "line_end": 34
+            },
+            {
+              "path": "docs/architecture/knowledge-configuration-v1-adr.md",
+              "heading": "Context",
+              "line_start": 20,
+              "line_end": 39
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "semantic_retrieval_gap",
+          "kind": "paraphrase",
+          "expected_path": "docs/architecture/hybrid-retrieval-adr.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/hybrid-retrieval-adr.md",
+              "heading": "Candidates",
+              "line_start": 67,
+              "line_end": 78
+            },
+            {
+              "path": "docs/architecture/local-first-hybrid-retrieval-implementation-candidate-decision.md",
+              "heading": "Decision",
+              "line_start": 31,
+              "line_end": 48
+            },
+            {
+              "path": "docs/architecture/hybrid-retrieval-promotion-decision.md",
+              "heading": "UX Quality",
+              "line_start": 60,
+              "line_end": 65
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "structured_rows_vs_notes",
+          "kind": "synonym-drift",
+          "expected_path": "docs/architecture/structured-data-canonical-stores-adr.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/structured-data-canonical-stores-adr.md",
+              "heading": "Projection Versus Independent Store",
+              "line_start": 54,
+              "line_end": 68
+            },
+            {
+              "path": "docs/architecture/knowledge-configuration-v1-adr.md",
+              "heading": "V1 Concepts",
+              "line_start": 72,
+              "line_end": 114
+            },
+            {
+              "path": "docs/architecture/artifact-intake-autofiling-tags-fields-adr.md",
+              "heading": "Non-Goals",
+              "line_start": 128,
+              "line_end": 139
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "checkpoint_not_restore",
+          "kind": "indirect-source",
+          "expected_path": "docs/architecture/git-lifecycle-version-control-adr.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/git-lifecycle-version-control-adr.md",
+              "heading": "Context",
+              "line_start": 27,
+              "line_end": 41
+            },
+            {
+              "path": "docs/architecture/structured-data-canonical-stores-adr.md",
+              "heading": "Authority And Approval Boundaries",
+              "line_start": 35,
+              "line_end": 53
+            },
+            {
+              "path": "docs/architecture/hybrid-retrieval-adr.md",
+              "heading": "Authority And Approval Boundaries",
+              "line_start": 48,
+              "line_end": 66
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "search_then_ingest",
+          "kind": "indirect-source",
+          "expected_path": "docs/architecture/harness-owned-web-search-fetch-adr.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/harness-owned-web-search-fetch-adr.md",
+              "heading": "Promoted Candidate",
+              "line_start": 51,
+              "line_end": 67
+            },
+            {
+              "path": "docs/architecture/knowledge-configuration-v1-adr.md",
+              "heading": "`oc-v1ed` Web URL Intake Decision",
+              "line_start": 360,
+              "line_end": 399
+            },
+            {
+              "path": "docs/architecture/artifact-intake-autofiling-tags-fields-adr.md",
+              "heading": "Decision",
+              "line_start": 49,
+              "line_end": 75
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "ocr_uncertain_artifact",
+          "kind": "concept-recall",
+          "expected_path": "docs/architecture/generalized-artifact-ingestion-adr.md",
+          "rank": 2,
+          "top_citations": [
+            {
+              "path": "docs/architecture/artifact-intake-autofiling-tags-fields-adr.md",
+              "heading": "Confidence Policy",
+              "line_start": 110,
+              "line_end": 119
+            },
+            {
+              "path": "docs/architecture/generalized-artifact-ingestion-adr.md",
+              "heading": "Decision",
+              "line_start": 62,
+              "line_end": 108
+            },
+            {
+              "path": "docs/architecture/knowledge-configuration-v1-adr.md",
+              "heading": "`oc-n31` Contract Decision",
+              "line_start": 321,
+              "line_end": 359
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "memory_no_hidden_truth",
+          "kind": "paraphrase",
+          "expected_path": "docs/architecture/memory-architecture-recall-adr.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/memory-architecture-recall-adr.md",
+              "heading": "Decision",
+              "line_start": 51,
+              "line_end": 66
+            },
+            {
+              "path": "docs/architecture/eval-backed-knowledge-plane-adr.md",
+              "heading": "Invariants",
+              "line_start": 91,
+              "line_end": 112
+            },
+            {
+              "path": "docs/architecture/agent-knowledge-plane.md",
+              "heading": "Canonical and derived layers",
+              "line_start": 84,
+              "line_end": 256
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "plan_filename_tags",
+          "kind": "synonym-drift",
+          "expected_path": "docs/architecture/artifact-intake-autofiling-tags-fields-adr.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/artifact-intake-autofiling-tags-fields-adr.md",
+              "heading": "Override Precedence",
+              "line_start": 95,
+              "line_end": 109
+            },
+            {
+              "path": "docs/architecture/generalized-artifact-ingestion-adr.md",
+              "heading": "Decision",
+              "line_start": 62,
+              "line_end": 108
+            },
+            {
+              "path": "docs/architecture/harness-owned-web-search-fetch-adr.md",
+              "heading": "Promotion And Kill Criteria",
+              "line_start": 82,
+              "line_end": 111
+            }
+          ],
+          "hit": true
+        }
+      ],
+      "evidence_posture": "provider-backed Gemini embedding mimic evidence; useful for vector/hybrid mechanics, not local/offline completion",
+      "validation_boundary": "eval-only Gemini provider call using redacted runtime_config credential; no durable embedding store, provider config write, or production ranking change",
+      "candidate_only": true
     },
     {
       "method": "provider_mimic_hybrid_rrf",
-      "status": "provider_blocked",
-      "description": "Gemini provider-mimic embedding call was unavailable or rate-limited; semantic evidence is intentionally not faked.",
-      "hit_at_3": 0,
-      "mrr": 0,
+      "status": "completed",
+      "description": "RRF fusion over eval current lexical-token score and Gemini provider-mimic vector chunk ranks.",
+      "hit_at_3": 8,
+      "mrr": 0.938,
       "query_count": 8,
-      "raw_duplicate_hits": 0,
-      "total_seconds": 59.2,
-      "evidence_posture": "provider-blocked; rerun with configured Gemini API key/quota or local Ollama for local/offline evidence",
-      "validation_boundary": "no fake vectors, no durable embedding store, no provider config write, no production ranking change; error: gemini returned HTTP 429: {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-l",
-      "candidate_only": true,
-      "provider_blocked": true
+      "raw_duplicate_hits": 736,
+      "total_seconds": 59.91,
+      "rows": [
+        {
+          "query_id": "wiki_synthesis",
+          "kind": "concept-recall",
+          "expected_path": "docs/architecture/agent-knowledge-plane.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/agent-knowledge-plane.md",
+              "heading": "Canonical and derived layers",
+              "line_start": 84,
+              "line_end": 256
+            },
+            {
+              "path": "docs/architecture/eval-backed-knowledge-plane-adr.md",
+              "heading": "Context",
+              "line_start": 17,
+              "line_end": 34
+            },
+            {
+              "path": "docs/architecture/knowledge-configuration-v1-adr.md",
+              "heading": "Context",
+              "line_start": 20,
+              "line_end": 39
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "semantic_retrieval_gap",
+          "kind": "paraphrase",
+          "expected_path": "docs/architecture/hybrid-retrieval-adr.md",
+          "rank": 2,
+          "top_citations": [
+            {
+              "path": "docs/architecture/harness-owned-web-search-fetch-adr.md",
+              "heading": "Context",
+              "line_start": 27,
+              "line_end": 39
+            },
+            {
+              "path": "docs/architecture/hybrid-retrieval-adr.md",
+              "heading": "Candidates",
+              "line_start": 67,
+              "line_end": 78
+            },
+            {
+              "path": "docs/architecture/local-first-hybrid-retrieval-implementation-candidate-decision.md",
+              "heading": "Candidate Comparison",
+              "line_start": 49,
+              "line_end": 56
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "structured_rows_vs_notes",
+          "kind": "synonym-drift",
+          "expected_path": "docs/architecture/structured-data-canonical-stores-adr.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/structured-data-canonical-stores-adr.md",
+              "heading": "Authority And Approval Boundaries",
+              "line_start": 35,
+              "line_end": 53
+            },
+            {
+              "path": "docs/architecture/agent-knowledge-plane.md",
+              "heading": "Canonical and derived layers",
+              "line_start": 84,
+              "line_end": 256
+            },
+            {
+              "path": "docs/architecture/knowledge-configuration-v1-adr.md",
+              "heading": "V1 Concepts",
+              "line_start": 72,
+              "line_end": 114
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "checkpoint_not_restore",
+          "kind": "indirect-source",
+          "expected_path": "docs/architecture/git-lifecycle-version-control-adr.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/git-lifecycle-version-control-adr.md",
+              "heading": "Context",
+              "line_start": 27,
+              "line_end": 41
+            },
+            {
+              "path": "docs/architecture/structured-data-canonical-stores-adr.md",
+              "heading": "Authority And Approval Boundaries",
+              "line_start": 35,
+              "line_end": 53
+            },
+            {
+              "path": "docs/architecture/hybrid-retrieval-adr.md",
+              "heading": "Authority And Approval Boundaries",
+              "line_start": 48,
+              "line_end": 66
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "search_then_ingest",
+          "kind": "indirect-source",
+          "expected_path": "docs/architecture/harness-owned-web-search-fetch-adr.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/harness-owned-web-search-fetch-adr.md",
+              "heading": "Promoted Candidate",
+              "line_start": 51,
+              "line_end": 67
+            },
+            {
+              "path": "docs/architecture/knowledge-configuration-v1-adr.md",
+              "heading": "`oc-v1ed` Web URL Intake Decision",
+              "line_start": 360,
+              "line_end": 399
+            },
+            {
+              "path": "docs/architecture/generalized-artifact-ingestion-adr.md",
+              "heading": "Decision",
+              "line_start": 62,
+              "line_end": 108
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "ocr_uncertain_artifact",
+          "kind": "concept-recall",
+          "expected_path": "docs/architecture/generalized-artifact-ingestion-adr.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/generalized-artifact-ingestion-adr.md",
+              "heading": "Decision",
+              "line_start": 62,
+              "line_end": 108
+            },
+            {
+              "path": "docs/architecture/artifact-intake-autofiling-tags-fields-adr.md",
+              "heading": "Non-Goals",
+              "line_start": 128,
+              "line_end": 139
+            },
+            {
+              "path": "docs/architecture/agent-knowledge-plane.md",
+              "heading": "Canonical and derived layers",
+              "line_start": 84,
+              "line_end": 256
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "memory_no_hidden_truth",
+          "kind": "paraphrase",
+          "expected_path": "docs/architecture/memory-architecture-recall-adr.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/memory-architecture-recall-adr.md",
+              "heading": "Decision",
+              "line_start": 51,
+              "line_end": 66
+            },
+            {
+              "path": "docs/architecture/agent-knowledge-plane.md",
+              "heading": "Canonical and derived layers",
+              "line_start": 84,
+              "line_end": 256
+            },
+            {
+              "path": "docs/architecture/hybrid-retrieval-adr.md",
+              "heading": "Authority And Approval Boundaries",
+              "line_start": 48,
+              "line_end": 66
+            }
+          ],
+          "hit": true
+        },
+        {
+          "query_id": "plan_filename_tags",
+          "kind": "synonym-drift",
+          "expected_path": "docs/architecture/artifact-intake-autofiling-tags-fields-adr.md",
+          "rank": 1,
+          "top_citations": [
+            {
+              "path": "docs/architecture/artifact-intake-autofiling-tags-fields-adr.md",
+              "heading": "Override Precedence",
+              "line_start": 95,
+              "line_end": 109
+            },
+            {
+              "path": "docs/architecture/generalized-artifact-ingestion-adr.md",
+              "heading": "Invariants",
+              "line_start": 109,
+              "line_end": 128
+            },
+            {
+              "path": "docs/architecture/harness-owned-web-search-fetch-adr.md",
+              "heading": "Options",
+              "line_start": 40,
+              "line_end": 50
+            }
+          ],
+          "hit": true
+        }
+      ],
+      "evidence_posture": "provider-backed Gemini embedding mimic evidence; useful for vector/hybrid mechanics, not local/offline completion",
+      "validation_boundary": "eval-only Gemini provider call using redacted runtime_config credential; no durable embedding store, provider config write, or production ranking change",
+      "candidate_only": true
     }
   ],
   "freshness_probe": {
@@ -327,13 +760,13 @@
   "outcomes": [
     {
       "name": "provider-mimic-hybrid-poc",
-      "status": "provider_blocked",
-      "safety_pass": "pass",
-      "capability_pass": "not_recorded",
-      "ux_quality": "not_recorded",
-      "performance": "not_recorded",
-      "evidence_posture": "Gemini provider-mimic embedding call unavailable or rate-limited; no fake vectors produced",
-      "details": "rerun with a valid runtime_config Gemini key/quota or with local Ollama for oc-bq8c local evidence"
+      "status": "recorded",
+      "safety_pass": "partial",
+      "capability_pass": "recorded_for_vector_mechanics",
+      "ux_quality": "pass_if_hidden_behind_search",
+      "performance": "recorded_provider_latency_and_retries",
+      "evidence_posture": "real Gemini provider-mimic embedding evidence with citations, duplicate counts, and freshness probe",
+      "details": "provider evidence does not satisfy local/offline oc-bq8c acceptance; rerun with local Ollama remains required"
     }
   ]
 }
