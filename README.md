@@ -1,21 +1,17 @@
 # OpenClerk
 
-**A local-first knowledge-plane runtime for agents.**  
-One binary. One `SKILL.md`. Canonical markdown stays yours.
-
----
+A composable local-first knowledge-plane runtime for agents. One binary. One `SKILL.md`.
 
 ## What is this?
 
 OpenClerk gives agents a citation-bearing, provenance-tracked knowledge base
 over your local markdown vault. Agents read and write through a strict JSON
-runner — not by grepping files or calling an LLM to remember things. Knowledge
-compounds: useful synthesis becomes durable, inspectable markdown instead of
+runner, which is more efficient than a CLI, MCP, and code. Knowledge compounds: useful synthesis becomes durable, inspectable markdown instead of
 being rediscovered on every query.
 
 ## Who is it for?
 
-Technical users building agent workflows over local markdown, source notes, or
+Knowledge workers building agent workflows over local markdown, source notes, or
 research vaults. If you want your agent to *know* your notes — not just search
 them — and you want to audit every write, this is the runtime for that.
 
@@ -44,12 +40,12 @@ Verify command -v openclerk, openclerk --version, and the installed skill path.
 Do not report OpenClerk installed until both the runner and skill are installed.
 ```
 
-Then bind your vault and run a search:
+Then ask it to connect your vault and prove retrieval works:
 
-```bash
-openclerk init --vault-root ~/notes
-printf '%s\n' '{"action":"search","search":{"text":"architecture","limit":5}}' \
-  | openclerk retrieval
+```text
+Use OpenClerk with my notes at <path-to-your-vault>. Initialize it if needed,
+then search for "<something you know is in your notes>" and show me five cited
+results.
 ```
 
 Each result carries a `doc_id`, `chunk_id`, and citation path. That's the
@@ -59,18 +55,18 @@ Full install details: [`docs/install.md`](docs/install.md)
 
 ## What to test first
 
-These are the eval-worthy surfaces in priority order:
+These are the eval-worthy surfaces in priority order. Try prompts like:
 
-1. **Lexical search** — does retrieval return correct citations, not hallucinated paths?
-2. **Document write → re-search** — does a new note surface in subsequent queries?
-3. **Synthesis page lifecycle** — create a `synthesis/` page, mark sources, update it, inspect provenance.
-4. **Duplicate candidate detection** — ingest a near-duplicate and watch `duplicate_candidate_report` surface it rather than silently creating a second document.
-5. **Stale projection detection** — update a source doc, confirm downstream synthesis shows as stale before repair.
+1. **Lexical search** — search for `"<topic you know is present>"` and show five cited results.
+2. **Document write → re-search** — create a short note at `<vault-relative-path>`, then search for it and show the cited result.
+3. **Synthesis page lifecycle** — create a `synthesis/` page from `<source paths>`, update it, and inspect provenance.
+4. **Duplicate candidate detection** — ingest or create a near-duplicate of `<existing note>`, then report any `duplicate_candidate_report`.
+5. **Stale projection detection** — update `<source path>`, then confirm downstream synthesis shows as stale before repair.
 
 Report correctness, tool call count, and wall time. That's how the maintainers
 gate new features.
 
-## Building blocks, not a platform
+## Building blocks
 
 OpenClerk follows the [building block economy](https://mitchellh.com/writing/building-block-economy)
 model deliberately. The mainline runner stays narrow. Optional behavior ships
@@ -112,8 +108,6 @@ with `openclerk module` list_modules. Do not edit SQLite directly.
 - **Autonomous memory and routing** — memory and routing are deferred until the
   docs, synthesis, and truth-sync layers are reliable. See
   [`docs/architecture/memory-routing-reference-decision.md`](docs/architecture/memory-routing-reference-decision.md).
-
----
 
 ## Runner
 
