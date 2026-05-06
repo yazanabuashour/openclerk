@@ -44,22 +44,13 @@ Full install options: [`docs/install.md`](docs/install.md)
 **Or tell your agent:**
 
 ```text
-Install OpenClerk from https://github.com/yazanabuashour/openclerk.
-Use the latest release unless I requested a pinned version.
-Install the runner into $HOME/.local/bin.
-Register the matching skills/openclerk/SKILL.md with your native skill system.
-Verify command -v openclerk, openclerk --version, and the installed skill path.
-Do not report OpenClerk installed until both the runner and skill are installed.
+Install OpenClerk into $HOME/.local/bin using https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh or the requested release. Register release-matched skills/openclerk/SKILL.md from installer output. Verify command -v openclerk, openclerk --version, and skill path. Report only after runner and skill verify.
 ```
 
 **Upgrade prompt:**
 
 ```text
-Upgrade OpenClerk from https://github.com/yazanabuashour/openclerk to the latest release unless I requested a pinned version.
-Rerun the matching release installer.
-Re-register the matching skills/openclerk/SKILL.md with your native skill system.
-Verify command -v openclerk, openclerk --version, and the installed skill path.
-Do not report OpenClerk upgraded until both the runner and skill are upgraded.
+Upgrade OpenClerk using https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh or the requested release. Re-register release-matched skills/openclerk/SKILL.md from installer output. Verify command -v openclerk, openclerk --version, and skill path. Report only after runner and skill verify.
 ```
 
 **Then bind your vault and verify retrieval:**
