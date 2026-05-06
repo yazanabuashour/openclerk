@@ -35,9 +35,9 @@ bd close <id>         # Complete work
 - Run `bd prime` for detailed command reference and session close protocol
 - Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
 
-## Session Completion
+## Work Item Completion
 
-**When ending a work session**, you MUST complete the workflow below through review, commit, push, verification, and handoff. The work session is NOT complete until `git push` succeeds and `git status` shows the branch is up to date with origin.
+A **work item** is one logical bead, task, story, or other coherent unit of work. **When completing each work item**, you MUST complete the workflow below through review, commit, push, verification, and handoff before starting unrelated work or handing off. If a single thread completes multiple independent beads/tasks/stories, repeat this workflow once for each completed work item. The work item is NOT complete until `git push` succeeds and `git status` shows the branch is up to date with origin.
 
 **MANDATORY WORKFLOW:**
 
@@ -63,7 +63,7 @@ bd close <id>         # Complete work
 10. **Hand off** - Provide context for next session
 
 **CRITICAL RULES:**
-- The work session is NOT complete until `git push` succeeds
+- The work item is NOT complete until `git push` succeeds
 - Run the Codex review command once; do not rerun it as a workflow loop
 - Do NOT commit before quality gates and the Codex review command are complete
 - After the review command completes, stage, commit, pull/rebase, run `bd dolt push`, and `git push`; do NOT stop again with local-only changes unless there is a real blocker
