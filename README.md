@@ -100,8 +100,9 @@ Install a module (tell your agent):
 
 ```text
 Install the OpenClerk module ollama using modules/ollama-embeddings/module.json.
-Use command semantic-retrieval-adapter, register the module skill, and verify
-with `openclerk module` list_modules. Do not edit SQLite directly.
+Use semantic-retrieval-adapter on PATH, register the module skill, and verify
+with `openclerk module` list_modules. Do not pass command_args or edit SQLite
+directly.
 ```
 
 ## What is explicitly not supported yet

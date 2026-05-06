@@ -39,7 +39,9 @@ module output that lacks citations before returning it as semantic evidence.
 Hosts manage modules with `openclerk module`:
 
 - `install_module` verifies an `openclerk-module.v1` manifest, stores the
-  manifest SHA-256, command, args, enabled state, and redacted provider config.
+  manifest SHA-256, canonical adapter command, enabled state, and redacted
+  provider config. Semantic modules cannot override the executable or pass
+  command args.
 - `configure_module` updates enabled state or redacted provider defaults such
   as `embedding_model`, `ollama_url`, `gemini_api_base`, or
   `embedding_output_dimensions`.

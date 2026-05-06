@@ -3,6 +3,7 @@ package runner_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -39,7 +40,7 @@ func TestRetrievalTaskSemanticSearchRequiresVerifiedModule(t *testing.T) {
 }
 
 func TestRetrievalTaskSemanticSearchDispatchesInstalledModule(t *testing.T) {
-	t.Setenv("OPENCLERK_SEMANTIC_MODULE_HELPER", "1")
+	installSemanticModuleHelper(t)
 
 	ctx := context.Background()
 	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
@@ -65,8 +66,7 @@ Lexical search defaults remain separate from semantic retrieval.
 	if _, err := runclient.InstallSemanticModule(ctx, config, runclient.SemanticModuleInstallInput{
 		Provider:     "ollama",
 		ManifestPath: manifestPath,
-		Command:      os.Args[0],
-		CommandArgs:  []string{"-test.run=TestSemanticSearchModuleHelper", "--"},
+		Command:      "semantic-retrieval-adapter",
 		ProviderConfig: map[string]string{
 			"embedding_model": "embeddinggemma",
 			"ollama_url":      "http://localhost:11434",
@@ -99,7 +99,7 @@ Lexical search defaults remain separate from semantic retrieval.
 }
 
 func TestRetrievalTaskSemanticSearchRejectsModuleHitsWithoutCitations(t *testing.T) {
-	t.Setenv("OPENCLERK_SEMANTIC_MODULE_HELPER", "1")
+	installSemanticModuleHelper(t)
 	t.Setenv("OPENCLERK_SEMANTIC_MODULE_HELPER_NO_CITATIONS", "1")
 
 	ctx := context.Background()
@@ -109,8 +109,7 @@ func TestRetrievalTaskSemanticSearchRejectsModuleHitsWithoutCitations(t *testing
 	if _, err := runclient.InstallSemanticModule(ctx, config, runclient.SemanticModuleInstallInput{
 		Provider:     "ollama",
 		ManifestPath: manifestPath,
-		Command:      os.Args[0],
-		CommandArgs:  []string{"-test.run=TestSemanticSearchModuleHelper", "--"},
+		Command:      "semantic-retrieval-adapter",
 	}); err != nil {
 		t.Fatalf("install module: %v", err)
 	}
@@ -139,8 +138,7 @@ func TestRetrievalTaskSemanticSearchRejectsConfiguredRemoteOllamaURL(t *testing.
 	if _, err := runclient.InstallSemanticModule(ctx, config, runclient.SemanticModuleInstallInput{
 		Provider:     "ollama",
 		ManifestPath: manifestPath,
-		Command:      os.Args[0],
-		CommandArgs:  []string{"-test.run=TestSemanticSearchModuleHelper", "--"},
+		Command:      "semantic-retrieval-adapter",
 		ProviderConfig: map[string]string{
 			"ollama_url": "https://embeddings.example.test",
 		},
@@ -247,6 +245,23 @@ Semantic recall citations stay local.
 	if !unknownProvider.Rejected || unknownProvider.RejectionReason != "semantic_search.provider must be ollama or gemini" {
 		t.Fatalf("unknown provider result = %+v", unknownProvider)
 	}
+}
+
+func installSemanticModuleHelper(t *testing.T) {
+	t.Helper()
+
+	t.Setenv("OPENCLERK_SEMANTIC_MODULE_HELPER", "1")
+	helperDir := t.TempDir()
+	helperPath := filepath.Join(helperDir, "semantic-retrieval-adapter")
+	testBinary, err := filepath.Abs(os.Args[0])
+	if err != nil {
+		t.Fatalf("resolve test binary path: %v", err)
+	}
+	script := fmt.Sprintf("#!/bin/sh\nexec %q -test.run=TestSemanticSearchModuleHelper -- \"$@\"\n", testBinary)
+	if err := os.WriteFile(helperPath, []byte(script), 0o700); err != nil {
+		t.Fatalf("write semantic module helper: %v", err)
+	}
+	t.Setenv("PATH", helperDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 }
 
 func TestSemanticSearchModuleHelper(t *testing.T) {

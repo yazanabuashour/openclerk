@@ -66,7 +66,9 @@ semantic-retrieval-adapter search
 
 The adapter lives at `modules/semantic-retrieval-adapter`. Build or install it
 separately from OpenClerk core and make `semantic-retrieval-adapter` available
-on `PATH` before registering a provider module.
+on `PATH` before registering a provider module. Semantic module registration
+does not support overriding this executable or passing `command_args`; OpenClerk
+always runs `semantic-retrieval-adapter search`.
 
 ```bash
 mise exec -- go build -o "$HOME/.local/bin/semantic-retrieval-adapter" ./modules/semantic-retrieval-adapter
@@ -78,6 +80,10 @@ Install those tools separately and make both commands available on `PATH`
 before registering the module.
 
 ## Register or Refresh Module Registration
+
+For semantic modules, `command` may be omitted or set to
+`semantic-retrieval-adapter` for compatibility with older instructions.
+`command_args` are rejected.
 
 Install Ollama embeddings:
 

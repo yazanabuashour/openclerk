@@ -154,6 +154,121 @@ func TestModuleRuntimeConfigConfigureRemoveAndList(t *testing.T) {
 	}
 }
 
+func TestInstallSemanticModuleLocksCommandSurface(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	t.Run("rejects noncanonical command", func(t *testing.T) {
+		t.Parallel()
+
+		config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+		manifestPath := writeRunclientSemanticModuleManifest(t, t.TempDir(), "ollama")
+		_, err := InstallSemanticModule(ctx, config, SemanticModuleInstallInput{
+			Provider:     SemanticModuleProviderOllama,
+			ManifestPath: manifestPath,
+			Command:      "/bin/sh",
+		})
+		if err == nil || !strings.Contains(err.Error(), "module.command must be semantic-retrieval-adapter") {
+			t.Fatalf("err = %v, want semantic command rejection", err)
+		}
+	})
+
+	t.Run("rejects command args", func(t *testing.T) {
+		t.Parallel()
+
+		config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+		manifestPath := writeRunclientSemanticModuleManifest(t, t.TempDir(), "ollama")
+		_, err := InstallSemanticModule(ctx, config, SemanticModuleInstallInput{
+			Provider:     SemanticModuleProviderOllama,
+			ManifestPath: manifestPath,
+			Command:      semanticModuleCommand,
+			CommandArgs:  []string{"-c", "echo pwned"},
+		})
+		if err == nil || !strings.Contains(err.Error(), "module.command_args are unsupported for semantic modules") {
+			t.Fatalf("err = %v, want semantic command_args rejection", err)
+		}
+	})
+
+	t.Run("persists canonical command when omitted", func(t *testing.T) {
+		t.Parallel()
+
+		config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+		manifestPath := writeRunclientSemanticModuleManifest(t, t.TempDir(), "ollama")
+		installed, err := InstallSemanticModule(ctx, config, SemanticModuleInstallInput{
+			Provider:     SemanticModuleProviderOllama,
+			ManifestPath: manifestPath,
+		})
+		if err != nil {
+			t.Fatalf("install semantic module: %v", err)
+		}
+		if installed.Command != semanticModuleCommand || len(installed.CommandArgs) != 0 {
+			t.Fatalf("installed command surface = %q %v, want canonical command without args", installed.Command, installed.CommandArgs)
+		}
+	})
+
+	t.Run("persists canonical command when provided", func(t *testing.T) {
+		t.Parallel()
+
+		config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+		manifestPath := writeRunclientSemanticModuleManifest(t, t.TempDir(), "gemini")
+		installed, err := InstallSemanticModule(ctx, config, SemanticModuleInstallInput{
+			Provider:     SemanticModuleProviderGemini,
+			ManifestPath: manifestPath,
+			Command:      semanticModuleCommand,
+		})
+		if err != nil {
+			t.Fatalf("install semantic module: %v", err)
+		}
+		if installed.Command != semanticModuleCommand || len(installed.CommandArgs) != 0 {
+			t.Fatalf("installed command surface = %q %v, want canonical command without args", installed.Command, installed.CommandArgs)
+		}
+	})
+}
+
+func TestReadSemanticModuleConfigRejectsPoisonedStoredCommand(t *testing.T) {
+	t.Parallel()
+
+	t.Run("command", func(t *testing.T) {
+		t.Parallel()
+
+		config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+		installed := installRunclientSemanticModuleForPoisonTest(t, config)
+		installed.Command = "/bin/sh"
+		installed.CommandArgs = []string{"-c", "echo pwned"}
+		if err := writeSemanticModuleConfig(context.Background(), config, installed); err != nil {
+			t.Fatalf("write poisoned config: %v", err)
+		}
+
+		read, err := ReadSemanticModuleConfig(context.Background(), config, SemanticModuleProviderOllama)
+		if err == nil || !strings.Contains(err.Error(), "semantic module command must be semantic-retrieval-adapter") {
+			t.Fatalf("read=%+v err=%v, want poisoned command rejection", read, err)
+		}
+		if read.VerificationStatus != "verification_failed" {
+			t.Fatalf("verification status = %q, want verification_failed", read.VerificationStatus)
+		}
+	})
+
+	t.Run("command args", func(t *testing.T) {
+		t.Parallel()
+
+		config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+		installed := installRunclientSemanticModuleForPoisonTest(t, config)
+		installed.CommandArgs = []string{"-c", "echo pwned"}
+		if err := writeSemanticModuleConfig(context.Background(), config, installed); err != nil {
+			t.Fatalf("write poisoned config: %v", err)
+		}
+
+		read, err := ReadSemanticModuleConfig(context.Background(), config, SemanticModuleProviderOllama)
+		if err == nil || !strings.Contains(err.Error(), "semantic module command_args are unsupported") {
+			t.Fatalf("read=%+v err=%v, want poisoned command_args rejection", read, err)
+		}
+		if read.VerificationStatus != "verification_failed" {
+			t.Fatalf("verification status = %q, want verification_failed", read.VerificationStatus)
+		}
+	})
+}
+
 func TestModuleManifestValidationRejectsSharedPolicyViolations(t *testing.T) {
 	t.Parallel()
 
@@ -175,6 +290,28 @@ func TestModuleManifestValidationRejectsSharedPolicyViolations(t *testing.T) {
 		_, _, err := verifySemanticModuleManifest(manifestPath, "gemini", "")
 		if err == nil || !strings.Contains(err.Error(), "semantic module manifest must provide a search command") {
 			t.Fatalf("err = %v, want semantic command validation", err)
+		}
+	})
+
+	t.Run("semantic shell-looking command", func(t *testing.T) {
+		t.Parallel()
+
+		manifestPath := writeRunclientSemanticModuleManifest(t, t.TempDir(), "gemini")
+		replaceManifestFile(t, manifestPath, "semantic-retrieval-adapter search", "/bin/sh -c payload search")
+		_, _, err := verifySemanticModuleManifest(manifestPath, "gemini", "")
+		if err == nil || !strings.Contains(err.Error(), "semantic module manifest must provide a search command") {
+			t.Fatalf("err = %v, want exact semantic command validation", err)
+		}
+	})
+
+	t.Run("semantic search command with extra flag", func(t *testing.T) {
+		t.Parallel()
+
+		manifestPath := writeRunclientSemanticModuleManifest(t, t.TempDir(), "gemini")
+		replaceManifestFile(t, manifestPath, "semantic-retrieval-adapter search", "semantic-retrieval-adapter search --flag")
+		_, _, err := verifySemanticModuleManifest(manifestPath, "gemini", "")
+		if err == nil || !strings.Contains(err.Error(), "semantic module manifest must provide a search command") {
+			t.Fatalf("err = %v, want exact semantic command validation", err)
 		}
 	})
 
@@ -221,6 +358,21 @@ func writeRunclientSemanticModuleManifest(t *testing.T, dir string, provider str
 		t.Fatalf("write manifest: %v", err)
 	}
 	return path
+}
+
+func installRunclientSemanticModuleForPoisonTest(t *testing.T, config Config) SemanticModuleConfig {
+	t.Helper()
+
+	manifestPath := writeRunclientSemanticModuleManifest(t, t.TempDir(), "ollama")
+	installed, err := InstallSemanticModule(context.Background(), config, SemanticModuleInstallInput{
+		Provider:     SemanticModuleProviderOllama,
+		ManifestPath: manifestPath,
+		Command:      semanticModuleCommand,
+	})
+	if err != nil {
+		t.Fatalf("install semantic module: %v", err)
+	}
+	return installed
 }
 
 func writeRunclientOCRModuleManifest(t *testing.T, dir string) string {

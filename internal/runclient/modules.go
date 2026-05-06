@@ -24,6 +24,9 @@ const (
 
 	ModuleKindEmbeddingProvider = "embedding_provider"
 	ModuleKindOCRProvider       = "ocr_provider"
+
+	semanticModuleCommand       = "semantic-retrieval-adapter"
+	semanticModuleSearchCommand = "semantic-retrieval-adapter search"
 )
 
 type SemanticModuleConfig struct {
@@ -69,8 +72,11 @@ func InstallSemanticModule(ctx context.Context, cfg Config, input SemanticModule
 	if strings.TrimSpace(input.ManifestPath) == "" {
 		return SemanticModuleConfig{}, domain.ValidationError("module.manifest_path is required", nil)
 	}
-	if strings.TrimSpace(input.Command) == "" {
-		return SemanticModuleConfig{}, domain.ValidationError("module.command is required", nil)
+	if command := strings.TrimSpace(input.Command); command != "" && command != semanticModuleCommand {
+		return SemanticModuleConfig{}, domain.ValidationError("module.command must be semantic-retrieval-adapter for semantic modules", nil)
+	}
+	if len(input.CommandArgs) != 0 {
+		return SemanticModuleConfig{}, domain.ValidationError("module.command_args are unsupported for semantic modules", nil)
 	}
 	manifestPath := filepath.Clean(input.ManifestPath)
 	manifest, manifestSHA, err := verifySemanticModuleManifest(resolveSemanticModuleManifestPath(cfg, manifestPath), provider, input.ModuleName)
@@ -86,8 +92,8 @@ func InstallSemanticModule(ctx context.Context, cfg Config, input SemanticModule
 		Provider:           provider,
 		ModuleName:         manifest.Module.Name,
 		Enabled:            enabled,
-		Command:            strings.TrimSpace(input.Command),
-		CommandArgs:        sanitizedArgs(input.CommandArgs),
+		Command:            semanticModuleCommand,
+		CommandArgs:        nil,
 		ManifestPath:       manifestPath,
 		ManifestSHA256:     manifestSHA,
 		ProviderConfig:     redactedProviderConfig(provider, input.ProviderConfig),
@@ -394,6 +400,12 @@ func verifyInstalledSemanticModule(cfg Config, config SemanticModuleConfig) erro
 	if strings.TrimSpace(config.Command) == "" {
 		return domain.ValidationError("semantic module command is missing", map[string]any{"provider": config.Provider})
 	}
+	if config.Command != semanticModuleCommand {
+		return domain.ValidationError("semantic module command must be semantic-retrieval-adapter", map[string]any{"provider": config.Provider})
+	}
+	if len(config.CommandArgs) != 0 {
+		return domain.ValidationError("semantic module command_args are unsupported", map[string]any{"provider": config.Provider})
+	}
 	if strings.TrimSpace(config.ManifestPath) == "" || strings.TrimSpace(config.ManifestSHA256) == "" {
 		return domain.ValidationError("semantic module manifest verification is missing", map[string]any{"provider": config.Provider})
 	}
@@ -465,7 +477,7 @@ var (
 		label:                   "semantic module",
 		kind:                    ModuleKindEmbeddingProvider,
 		providerMatches:         semanticModuleProviderMatches,
-		providesRequiredCommand: func(command string) bool { return strings.Contains(command, " search") },
+		providesRequiredCommand: func(command string) bool { return strings.TrimSpace(command) == semanticModuleSearchCommand },
 		missingCommandMessage:   "semantic module manifest must provide a search command",
 	}
 	ocrModuleManifestPolicy = moduleManifestPolicy{
@@ -535,8 +547,7 @@ func verifyModuleManifest(path string, provider string, expectedName string, pol
 }
 
 func semanticModuleProviderMatches(moduleName string, provider string) bool {
-	wantSuffix := "-" + provider
-	return strings.Contains(moduleName, provider) || strings.HasSuffix(moduleName, wantSuffix)
+	return moduleName == provider+"-embeddings"
 }
 
 type moduleRuntimeConfigStore struct {
