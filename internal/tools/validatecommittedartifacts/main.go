@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 )
 
 var (
@@ -184,6 +185,9 @@ func validateModuleDocumentation(root string, files []string) error {
 	if err := validateReadmeModuleSection(readme); err != nil {
 		return err
 	}
+	if err := validateReadmeAgentPrompts(readme); err != nil {
+		return err
+	}
 	moduleInstallDoc, err := read("modules/docs/install.md")
 	if err != nil {
 		return err
@@ -191,12 +195,12 @@ func validateModuleDocumentation(root string, files []string) error {
 	if err := validateModuleInstallDoc(moduleInstallDoc); err != nil {
 		return err
 	}
-	modules, err := documentedEmbeddingModules(root, files)
+	modules, err := documentedModules(root, files)
 	if err != nil {
 		return err
 	}
 	if len(modules) == 0 {
-		return errors.New("module docs validation found no embedding provider module manifests")
+		return errors.New("module docs validation found no module manifests")
 	}
 	for _, module := range modules {
 		for _, target := range []struct {
@@ -286,12 +290,136 @@ func validateModuleInstallDoc(text string) error {
 	return nil
 }
 
+func validateReadmeAgentPrompts(readme string) error {
+	moduleSectionIndex := strings.Index(readme, "\n### Agent Module Instructions\n")
+	if moduleSectionIndex < 0 {
+		return errors.New("README.md must include Agent Module Instructions before validating prompts")
+	}
+	moduleSection := readme[moduleSectionIndex:]
+	prompts := []struct {
+		name     string
+		text     string
+		maxRunes int
+		required []string
+	}{
+		{
+			name:     "core install prompt",
+			text:     fencedTextAfter(readme, "**Or tell your agent:**", 0),
+			maxRunes: 360,
+			required: []string{
+				"https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh",
+				"$HOME/.local/bin",
+				"skills/openclerk/SKILL.md",
+				"command -v openclerk",
+				"openclerk --version",
+				"skill path",
+				"runner and skill",
+			},
+		},
+		{
+			name:     "core upgrade prompt",
+			text:     fencedTextAfter(readme, "**Upgrade prompt:**", strings.Index(readme, "**Or tell your agent:**")),
+			maxRunes: 340,
+			required: []string{
+				"Upgrade OpenClerk",
+				"https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh",
+				"Re-register",
+				"skills/openclerk/SKILL.md",
+				"command -v openclerk",
+				"openclerk --version",
+				"skill path",
+				"runner and skill",
+			},
+		},
+		{
+			name:     "module install prompt",
+			text:     fencedTextAfter(moduleSection, "Install prompt:", 0),
+			maxRunes: 260,
+			required: []string{
+				"<module-provider>",
+				"<module-manifest-path>",
+				"<module-command>",
+				"<module-skill-path>",
+				"openclerk module",
+				"list_modules",
+				"command_args",
+				"SQLite",
+			},
+		},
+		{
+			name:     "module upgrade prompt",
+			text:     fencedTextAfter(moduleSection, "Upgrade prompt:", 0),
+			maxRunes: 240,
+			required: []string{
+				"<module-name>",
+				"<module-version-or-latest>",
+				"openclerk module",
+				"preserve existing provider config",
+				"list_modules",
+				"SQLite",
+			},
+		},
+	}
+	for _, prompt := range prompts {
+		if strings.TrimSpace(prompt.text) == "" {
+			return fmt.Errorf("README.md missing %s", prompt.name)
+		}
+		if got := utf8.RuneCountInString(prompt.text); got > prompt.maxRunes {
+			return fmt.Errorf("README.md %s length = %d, want <= %d", prompt.name, got, prompt.maxRunes)
+		}
+		for _, want := range prompt.required {
+			if !strings.Contains(prompt.text, want) {
+				return fmt.Errorf("README.md %s missing %q", prompt.name, want)
+			}
+		}
+		for _, forbidden := range []string{
+			"go build",
+			"go run",
+			"source checkout",
+			"source-built",
+			"cmd/openclerk",
+			"Install Ollama embeddings:",
+			"Install Gemini embeddings:",
+			"Configure a module:",
+			`{"action"`,
+		} {
+			if strings.Contains(prompt.text, forbidden) {
+				return fmt.Errorf("README.md %s must not include recipe/source-build detail %q", prompt.name, forbidden)
+			}
+		}
+	}
+	return nil
+}
+
+func fencedTextAfter(text string, marker string, start int) string {
+	if start < 0 || start >= len(text) {
+		return ""
+	}
+	markerIndex := strings.Index(text[start:], marker)
+	if markerIndex < 0 {
+		return ""
+	}
+	afterMarker := text[start+markerIndex+len(marker):]
+	fenceStart := strings.Index(afterMarker, "```text")
+	if fenceStart < 0 {
+		return ""
+	}
+	afterFence := afterMarker[fenceStart+len("```text"):]
+	afterFence = strings.TrimPrefix(afterFence, "\r\n")
+	afterFence = strings.TrimPrefix(afterFence, "\n")
+	fenceEnd := strings.Index(afterFence, "```")
+	if fenceEnd < 0 {
+		return ""
+	}
+	return strings.TrimSpace(afterFence[:fenceEnd])
+}
+
 type documentedModule struct {
 	ManifestPath string
 	SkillPath    string
 }
 
-func documentedEmbeddingModules(root string, files []string) ([]documentedModule, error) {
+func documentedModules(root string, files []string) ([]documentedModule, error) {
 	out := []documentedModule{}
 	for _, rel := range files {
 		rel = filepath.ToSlash(rel)
@@ -326,15 +454,18 @@ func readDocumentedModule(root string, rel string) (documentedModule, error) {
 	if err := json.Unmarshal(content, &manifest); err != nil {
 		return documentedModule{}, fmt.Errorf("decode %s: %w", rel, err)
 	}
-	if manifest.Module.Kind != "embedding_provider" {
-		return documentedModule{}, nil
-	}
 	for _, provided := range manifest.Provides {
 		if provided.Type == "skill" && strings.TrimSpace(provided.Path) != "" {
 			return documentedModule{ManifestPath: rel, SkillPath: filepath.ToSlash(provided.Path)}, nil
 		}
 	}
-	return documentedModule{}, fmt.Errorf("%s embedding provider manifest must provide a skill path", rel)
+	if manifest.Module.Kind == "retrieval_adapter" {
+		return documentedModule{}, nil
+	}
+	if strings.TrimSpace(manifest.Module.Kind) != "" {
+		return documentedModule{}, fmt.Errorf("%s module kind %q must provide a skill path", rel, manifest.Module.Kind)
+	}
+	return documentedModule{}, nil
 }
 
 func containsRunRootPlaceholder(line string) bool {
@@ -433,6 +564,8 @@ func validateLiveInstallSmokeReport(root string) error {
 			SkillPath         string            `json:"skill_path"`
 			InstallPassed     bool              `json:"install_passed"`
 			ConfigurePassed   bool              `json:"configure_passed"`
+			UpgradePassed     bool              `json:"upgrade_passed"`
+			UpgradePreserved  bool              `json:"upgrade_preserved_config"`
 			ListPassed        bool              `json:"list_passed"`
 			RemovePassed      bool              `json:"remove_passed"`
 			FinalListEmpty    bool              `json:"final_list_empty"`
@@ -482,6 +615,8 @@ func validateLiveInstallSmokeReport(root string) error {
 		report.Module.SkillPath != "modules/ollama-embeddings/skill/ollama-embeddings/SKILL.md" ||
 		!report.Module.InstallPassed ||
 		!report.Module.ConfigurePassed ||
+		!report.Module.UpgradePassed ||
+		!report.Module.UpgradePreserved ||
 		!report.Module.ListPassed ||
 		!report.Module.RemovePassed ||
 		!report.Module.FinalListEmpty ||
@@ -489,7 +624,7 @@ func validateLiveInstallSmokeReport(root string) error {
 		report.Module.ProviderConfig["ollama_url"] != "http://localhost:11434" ||
 		report.Module.VerificationState != "verified" ||
 		report.Module.RedactionState != "redacted" {
-		return fmt.Errorf("%s must verify ollama module install/config/list/remove with redacted verified state", rel)
+		return fmt.Errorf("%s must verify ollama module install/config/upgrade/list/remove with preserved config and redacted verified state", rel)
 	}
 	for _, want := range []string{"temp HOME/CODEX_HOME", "no durable host install", "no network release fetch", "no direct SQLite edit"} {
 		if !strings.Contains(report.ValidationBoundaries, want) {

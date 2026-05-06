@@ -307,7 +307,7 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		summary.Promotion = "targeted parallel runner UX evidence for documented safe read/startup workflows; no public JSON schema, storage schema, or write-concurrency expansion"
 	case installUpgradeModuleLaneName:
 		summary.Decision = "track_install_upgrade_module_agent_instructions"
-		summary.Promotion = "targeted install, upgrade, and module-agent instruction evidence only; no installer transport, module schema, storage schema, provider behavior, or default semantic ranking change from this eval"
+		summary.Promotion = "targeted install, upgrade, module-agent install, and module-agent upgrade instruction evidence only; no installer transport, module schema, storage schema, provider behavior, or default semantic ranking change from this eval"
 	case documentHistoryLaneName:
 		summary.Decision = documentHistoryDecision(summary.ScenarioClassifications)
 		summary.Promotion = "targeted document lifecycle evidence only; no promoted history, diff, review, restore, rollback, schema, migration, storage behavior, or public API change from this eval"

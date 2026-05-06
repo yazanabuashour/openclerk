@@ -57,8 +57,8 @@ func classifyTargetedInstallUpgradeModuleResult(result jobResult) (string, strin
 	if len(populatedBypassFailures(result.Metrics)) != 0 {
 		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
 	}
-	if result.Scenario == moduleAgentInstallScenarioID && (result.Metrics.DirectSQLiteAccess || !result.Metrics.ModuleInstallUsed || !result.Metrics.ModuleListUsed) {
-		return "skill_guidance_or_eval_coverage", "module install scenario did not use install_module and list_modules through openclerk module"
+	if (result.Scenario == moduleAgentInstallScenarioID || result.Scenario == moduleAgentUpgradeScenarioID) && (result.Metrics.DirectSQLiteAccess || !result.Metrics.ModuleInstallUsed || !result.Metrics.ModuleListUsed) {
+		return "skill_guidance_or_eval_coverage", "module install or upgrade scenario did not use install_module and list_modules through openclerk module"
 	}
 	if (result.Scenario == installInstructionsAgentScenarioID || result.Scenario == upgradeInstructionsAgentScenarioID) && (!result.Metrics.OpenClerkPathCheckUsed || !result.Metrics.OpenClerkVersionCheckUsed) {
 		return "skill_guidance_or_eval_coverage", "install or upgrade scenario did not verify command path and runner version"

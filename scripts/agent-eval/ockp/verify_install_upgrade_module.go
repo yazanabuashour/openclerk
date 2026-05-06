@@ -113,6 +113,71 @@ func verifyModuleAgentInstall(ctx context.Context, paths evalPaths, finalMessage
 	}, nil
 }
 
+func verifyModuleAgentUpgrade(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	failures := populatedBypassFailures(turnMetrics)
+	if turnMetrics.ManualHTTPFetch {
+		failures = append(failures, "agent used network fetch during module upgrade refresh")
+	}
+	if !turnMetrics.ModuleInstallUsed {
+		failures = append(failures, "agent did not use install_module to refresh module registration")
+	}
+	if !turnMetrics.ModuleListUsed {
+		failures = append(failures, "agent did not use list_modules")
+	}
+	if turnMetrics.ModuleConfigureUsed || turnMetrics.ModuleRemoveUsed {
+		failures = append(failures, "agent used unexpected module mutation")
+	}
+	if turnMetrics.SemanticSearchUsed {
+		failures = append(failures, "agent used provider semantic_search during module upgrade eval")
+	}
+	modules, err := runclient.ListSemanticModules(ctx, runclient.Config{
+		DatabasePath:       paths.DatabasePath,
+		ModuleManifestRoot: evalRepoRoot(paths),
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	modulePass := false
+	for _, module := range modules {
+		if module.Provider == moduleAgentInstallProvider &&
+			module.Enabled &&
+			module.ManifestPath == moduleAgentInstallManifestPath &&
+			module.Command == moduleAgentInstallCommand &&
+			module.ProviderConfig["embedding_model"] == moduleAgentUpgradeEmbeddingModel &&
+			module.ProviderConfig["ollama_url"] == moduleAgentInstallOllamaURL &&
+			module.VerificationStatus == "verified" &&
+			module.RedactionStatus == "redacted" {
+			modulePass = true
+			break
+		}
+	}
+	if !modulePass {
+		failures = append(failures, "ollama module upgrade did not preserve provider config in runtime_config")
+	}
+	lower := strings.ToLower(finalMessage)
+	for _, want := range []string{
+		"module-agent upgrade verified",
+		moduleAgentInstallProvider,
+		moduleAgentInstallManifestPath,
+		moduleAgentInstallSkillPath,
+		"list_modules",
+		"preserved",
+		moduleAgentUpgradeEmbeddingModel,
+		"direct sqlite",
+	} {
+		if !strings.Contains(lower, strings.ToLower(want)) {
+			failures = append(failures, "final answer missing "+want)
+		}
+	}
+	return verificationResult{
+		Passed:        len(failures) == 0,
+		DatabasePass:  modulePass,
+		AssistantPass: len(failures) == 0,
+		Details:       missingDetails(failures),
+		Documents:     []string{moduleAgentInstallManifestPath, moduleAgentInstallSkillPath},
+	}, nil
+}
+
 func installedEvalSkillPath(paths evalPaths) (string, bool) {
 	repoRoot := evalRepoRoot(paths)
 	runRoot := filepath.Dir(repoRoot)

@@ -23,3 +23,6 @@ require explicit approval through `create_document` or `ingest_source_url`.
 Reject requests that ask for cloud OCR, hidden provider fallback, direct vault
 inspection, direct SQLite mutation, module-cache inspection, or durable writes
 from the OCR module.
+
+For committed docs, fixtures, reduced results, and artifact references, use
+repo-relative paths or neutral placeholders, never machine-absolute paths.

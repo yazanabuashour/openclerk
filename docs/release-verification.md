@@ -64,6 +64,16 @@ This writes the reduced public report at
 `docs/evals/results/ockp-live-install-upgrade-module-smoke.md` and keeps raw
 temp paths out of committed artifacts.
 
+All release gates also validate the core and module skill files:
+
+```bash
+mise exec -- ./scripts/validate-all-agent-skills.sh
+```
+
+`validate-committed-artifacts.sh` checks the README install, upgrade, module
+install, and module upgrade prompts for compactness plus required verification
+and no-bypass wording.
+
 Install into a temporary directory, then verify the runner version and commands:
 
 ```bash

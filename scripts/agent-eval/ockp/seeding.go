@@ -49,6 +49,10 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedParallelRunnerReads(ctx, cfg); err != nil {
 			return err
 		}
+	case moduleAgentUpgradeScenarioID:
+		if err := seedModuleAgentUpgrade(ctx, cfg); err != nil {
+			return err
+		}
 	case docsNavigationScenarioID:
 		if err := seedDocsNavigationBaseline(ctx, cfg); err != nil {
 			return err
@@ -530,6 +534,21 @@ The accepted parallel runner concurrency decision permits safe read workflows wh
 `) + "\n"
 	return createSeedDocument(ctx, cfg, parallelRunnerDecisionPath, "Parallel runner concurrency", decisionBody)
 }
+
+func seedModuleAgentUpgrade(ctx context.Context, cfg runclient.Config) error {
+	cfg.ModuleManifestRoot = filepath.Dir(filepath.Dir(cfg.DatabasePath))
+	_, err := runclient.InstallSemanticModule(ctx, cfg, runclient.SemanticModuleInstallInput{
+		Provider:     moduleAgentInstallProvider,
+		ManifestPath: moduleAgentInstallManifestPath,
+		Command:      moduleAgentInstallCommand,
+		ProviderConfig: map[string]string{
+			"embedding_model": moduleAgentUpgradeEmbeddingModel,
+			"ollama_url":      moduleAgentInstallOllamaURL,
+		},
+	})
+	return err
+}
+
 func createSeedDocument(ctx context.Context, cfg runclient.Config, path, title, body string) error {
 	result, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionCreate,

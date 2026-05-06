@@ -37,6 +37,7 @@ jobs:
             .github/workflows/pull-request.yml
             .github/workflows/release.yml
             .github/workflows/codeql.yml
+            scripts/validate-all-agent-skills.sh
             scripts/validate-agent-skill.sh
             scripts/validate-release-docs.sh
             scripts/validate-committed-artifacts.sh
@@ -49,8 +50,8 @@ jobs:
       - name: Validate committed artifacts
         run: ./scripts/validate-committed-artifacts.sh
 
-      - name: Validate Agent Skill
-        run: ./scripts/validate-agent-skill.sh skills/openclerk
+      - name: Validate Agent Skills
+        run: ./scripts/validate-all-agent-skills.sh
 
       - name: Validate release docs
         run: ./scripts/validate-release-docs.sh v0.1.0

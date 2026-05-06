@@ -124,6 +124,33 @@ func TestValidateReadmeModuleSectionRequiresAgentInstructionsFirst(t *testing.T)
 	}
 }
 
+func TestValidateReadmeAgentPromptsStayCompactAndActionable(t *testing.T) {
+	t.Parallel()
+
+	valid := validReadmeForPromptValidation()
+	if err := validateReadmeAgentPrompts(valid); err != nil {
+		t.Fatalf("validateReadmeAgentPrompts valid: %v", err)
+	}
+
+	tooLong := strings.Replace(valid, "Report only after runner and skill verify.", "Report only after runner and skill verify. "+strings.Repeat("extra ", 30), 1)
+	err := validateReadmeAgentPrompts(tooLong)
+	if err == nil || !strings.Contains(err.Error(), "core install prompt length") {
+		t.Fatalf("validateReadmeAgentPrompts long prompt error = %v, want length rejection", err)
+	}
+
+	missingInstaller := strings.Replace(valid, "https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh", "https://example.test/install.sh", 1)
+	err = validateReadmeAgentPrompts(missingInstaller)
+	if err == nil || !strings.Contains(err.Error(), "latest/download/install.sh") {
+		t.Fatalf("validateReadmeAgentPrompts missing installer error = %v, want installer rejection", err)
+	}
+
+	recipeCreep := strings.Replace(valid, "SQLite", `SQLite {"action"}`, 1)
+	err = validateReadmeAgentPrompts(recipeCreep)
+	if err == nil || !strings.Contains(err.Error(), "recipe/source-build") {
+		t.Fatalf("validateReadmeAgentPrompts recipe error = %v, want recipe rejection", err)
+	}
+}
+
 func TestValidateModuleInstallDocRequiresInstallUpgradeSections(t *testing.T) {
 	t.Parallel()
 
@@ -141,7 +168,7 @@ func TestValidateModuleDocumentationReferencesEmbeddingModules(t *testing.T) {
 	t.Parallel()
 
 	root := t.TempDir()
-	readme := `# OpenClerk
+	readme := validReadmeForPromptValidation() + `
 
 ## Modules
 
@@ -200,6 +227,54 @@ scripts/build-module-release-bundle.sh
 	if err == nil || !strings.Contains(err.Error(), "modules/docs/install.md must reference module manifest") {
 		t.Fatalf("validateModuleDocumentation missing module error = %v, want manifest reference rejection", err)
 	}
+
+	writeTestFile(t, root, "modules/docs/install.md", moduleDoc)
+	writeTestFile(t, root, "modules/example-embeddings/module.json", `{"module":{"kind":"embedding_provider"},"provides":[{"type":"command","name":"semantic-retrieval-adapter search"}]}`)
+	err = validateModuleDocumentation(root, files)
+	if err == nil || !strings.Contains(err.Error(), "must provide a skill path") {
+		t.Fatalf("validateModuleDocumentation missing skill error = %v, want skill path rejection", err)
+	}
+}
+
+func validReadmeForPromptValidation() string {
+	return `# OpenClerk
+
+## Try it in 5 minutes
+
+**Or tell your agent:**
+
+` + "```text" + `
+Install OpenClerk into $HOME/.local/bin using https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh or the requested release. Register release-matched skills/openclerk/SKILL.md from installer output. Verify command -v openclerk, openclerk --version, and skill path. Report only after runner and skill verify.
+` + "```" + `
+
+**Upgrade prompt:**
+
+` + "```text" + `
+Upgrade OpenClerk using https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh or the requested release. Re-register release-matched skills/openclerk/SKILL.md from installer output. Verify command -v openclerk, openclerk --version, and skill path. Report only after runner and skill verify.
+` + "```" + `
+
+## Modules
+
+### Agent Module Instructions
+
+Install prompt:
+
+` + "```text" + `
+Install the OpenClerk module <module-provider> using <module-manifest-path>.
+Use <module-command> on PATH, register <module-skill-path>, and verify with ` + "`openclerk module`" + ` list_modules. Do not pass command_args or edit SQLite directly.
+` + "```" + `
+
+Upgrade prompt:
+
+` + "```text" + `
+Upgrade the OpenClerk module <module-name> to <module-version-or-latest>.
+Refresh registration through ` + "`openclerk module`" + `, preserve existing provider config, and verify with list_modules. Do not edit SQLite directly.
+` + "```" + `
+
+Available installable modules:
+
+Exact module commands live in ` + "`modules/docs/install.md`" + `.
+`
 }
 
 func TestValidateLiveInstallSmokeReport(t *testing.T) {
@@ -235,6 +310,8 @@ func TestValidateLiveInstallSmokeReport(t *testing.T) {
     "skill_path": "modules/ollama-embeddings/skill/ollama-embeddings/SKILL.md",
     "install_passed": true,
     "configure_passed": true,
+    "upgrade_passed": true,
+    "upgrade_preserved_config": true,
     "list_passed": true,
     "remove_passed": true,
     "final_list_empty": true,
@@ -254,7 +331,7 @@ func TestValidateLiveInstallSmokeReport(t *testing.T) {
 
 	writeTestFile(t, root, "docs/evals/results/ockp-live-install-upgrade-module-smoke.json", strings.Replace(report, `"remove_passed": true`, `"remove_passed": false`, 1))
 	err := validateLiveInstallSmokeReport(root)
-	if err == nil || !strings.Contains(err.Error(), "install/config/list/remove") {
-		t.Fatalf("validateLiveInstallSmokeReport missing remove error = %v, want install/config/list/remove rejection", err)
+	if err == nil || !strings.Contains(err.Error(), "install/config/upgrade/list/remove") {
+		t.Fatalf("validateLiveInstallSmokeReport missing remove error = %v, want install/config/upgrade/list/remove rejection", err)
 	}
 }

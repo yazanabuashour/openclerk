@@ -14,5 +14,6 @@
 /docs/security-operations.md @yazanabuashour
 /scripts/build-release-bundle.sh @yazanabuashour
 /scripts/install.sh @yazanabuashour
+/scripts/validate-all-agent-skills.sh @yazanabuashour
 /scripts/validate-agent-skill.sh @yazanabuashour
 /scripts/validate-release-docs.sh @yazanabuashour

@@ -233,11 +233,13 @@ const (
 	installInstructionsAgentScenarioID = "install-instructions-agent"
 	upgradeInstructionsAgentScenarioID = "upgrade-instructions-agent"
 	moduleAgentInstallScenarioID       = "module-agent-install"
+	moduleAgentUpgradeScenarioID       = "module-agent-upgrade"
 	moduleAgentInstallProvider         = "ollama"
 	moduleAgentInstallManifestPath     = "modules/ollama-embeddings/module.json"
 	moduleAgentInstallSkillPath        = "modules/ollama-embeddings/skill/ollama-embeddings/SKILL.md"
 	moduleAgentInstallCommand          = "semantic-retrieval-adapter"
 	moduleAgentInstallEmbeddingModel   = "embeddinggemma"
+	moduleAgentUpgradeEmbeddingModel   = "nomic-embed-text"
 	moduleAgentInstallOllamaURL        = "http://localhost:11434"
 
 	documentHistoryNaturalScenarioID      = "document-lifecycle-natural-intent"

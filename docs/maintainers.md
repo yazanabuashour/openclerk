@@ -114,7 +114,7 @@ run:
 
 ```bash
 mise exec -- ./scripts/validate-release-docs.sh <tag>
-mise exec -- ./scripts/validate-agent-skill.sh skills/openclerk
+mise exec -- ./scripts/validate-all-agent-skills.sh
 mise exec -- ./scripts/validate-committed-artifacts.sh
 test -z "$(gofmt -l $(git ls-files '*.go'))"
 mise exec -- golangci-lint run
@@ -152,6 +152,11 @@ keep the skill to compact action routing and move detailed examples to docs or
 the runner action itself. The installed runner's `document --help` and
 `retrieval --help` output is an acceptable compact action-index surface when
 agents need request-shape discovery without source inspection.
+
+The all-skill gate validates the core skill and every module `SKILL.md`.
+Committed-artifact validation also checks the README install, upgrade, module
+install, and module upgrade prompts for compactness and required safety/action
+terms.
 
 Tag a version like `v0.1.0`, push the tag, and let the release workflow:
 

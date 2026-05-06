@@ -57,6 +57,8 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyInstallOrUpgradeInstructions(paths, finalMessage, turnMetrics, true), nil
 	case moduleAgentInstallScenarioID:
 		return verifyModuleAgentInstall(ctx, paths, finalMessage, turnMetrics)
+	case moduleAgentUpgradeScenarioID:
+		return verifyModuleAgentUpgrade(ctx, paths, finalMessage, turnMetrics)
 	case docsNavigationScenarioID:
 		return verifyDocsNavigationBaseline(ctx, paths, finalMessage, turnMetrics)
 	case graphSemanticsScenarioID:

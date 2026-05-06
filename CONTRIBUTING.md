@@ -33,7 +33,7 @@ printf '%s\n' '{"action":"resolve_paths"}' | \
 test -z "$(gofmt -l $(git ls-files '*.go'))"
 mise exec -- golangci-lint run
 mise exec -- go test ./...
-mise exec -- ./scripts/validate-agent-skill.sh skills/openclerk
+mise exec -- ./scripts/validate-all-agent-skills.sh
 ```
 
 If a change touches release notes or release workflow behavior, also run:
@@ -54,14 +54,14 @@ of relying on a global binary.
 
 ## Checks and Review Rules
 
-Pull request checks validate repository policy, Agent Skill metadata shape,
+Pull request checks validate repository policy, all Agent Skill metadata shape,
 release docs, Go formatting, Go linting, unit tests, CodeQL, and
 dependency-review safety.
 
 Pull requests that touch Go code are expected to leave the repository in a
 runnable, formatted, lint-clean, and test-clean state. Changes to
-`skills/openclerk/SKILL.md` should also pass
-`mise exec -- ./scripts/validate-agent-skill.sh skills/openclerk`.
+`skills/openclerk/SKILL.md` or module `SKILL.md` files should also pass
+`mise exec -- ./scripts/validate-all-agent-skills.sh`.
 
 ## Support and Compatibility
 

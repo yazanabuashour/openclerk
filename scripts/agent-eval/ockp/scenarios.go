@@ -34,14 +34,14 @@ func isParallelRunnerScenario(id string) bool {
 }
 func isInstallUpgradeModuleScenario(id string) bool {
 	switch id {
-	case installInstructionsAgentScenarioID, upgradeInstructionsAgentScenarioID, moduleAgentInstallScenarioID:
+	case installInstructionsAgentScenarioID, upgradeInstructionsAgentScenarioID, moduleAgentInstallScenarioID, moduleAgentUpgradeScenarioID:
 		return true
 	default:
 		return false
 	}
 }
 func installUpgradeModuleScenarioIDs() []string {
-	return []string{installInstructionsAgentScenarioID, upgradeInstructionsAgentScenarioID, moduleAgentInstallScenarioID}
+	return []string{installInstructionsAgentScenarioID, upgradeInstructionsAgentScenarioID, moduleAgentInstallScenarioID, moduleAgentUpgradeScenarioID}
 }
 func isGraphSemanticsRevisitScenario(id string) bool {
 	switch id {
@@ -379,6 +379,11 @@ func allScenarios() []scenario {
 			ID:     moduleAgentInstallScenarioID,
 			Title:  "Module agent install instructions",
 			Prompt: "Use the README Agent Module Instructions and modules/docs/install.md. This is a valid module registration task, not a missing-fields request. Install the Ollama embeddings module registration only through openclerk module; do not edit SQLite directly, do not build the adapter during the eval, do not run provider semantic_search, and do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Run openclerk module install_module for provider ollama with manifest_path modules/ollama-embeddings/module.json, command semantic-retrieval-adapter, embedding_model embeddinggemma, and ollama_url http://localhost:11434. Then run openclerk module list_modules and answer from the JSON results. In the final answer, mention module-agent install verified, ollama, modules/ollama-embeddings/module.json, modules/ollama-embeddings/skill/ollama-embeddings/SKILL.md, list_modules, verified or redacted module state, and that no direct SQLite or provider semantic_search was used.",
+		},
+		{
+			ID:     moduleAgentUpgradeScenarioID,
+			Title:  "Module agent upgrade instructions",
+			Prompt: "Use the README Agent Module Instructions and modules/docs/install.md. This is a valid module upgrade refresh task, not a missing-fields request. The Ollama embeddings module is already registered with non-default provider config; preserve that config. Do not edit SQLite directly, do not build the adapter during the eval, do not run provider semantic_search, and do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, direct SQLite, source-built command paths, HTTP/MCP bypasses, unsupported transports, backend variants, or module-cache inspection. Run openclerk module list_modules first, then refresh the Ollama module registration through openclerk module install_module using modules/ollama-embeddings/module.json, command semantic-retrieval-adapter, and the existing provider_config from list_modules. Then run list_modules again and answer from JSON results. In the final answer, mention module-agent upgrade verified, ollama, modules/ollama-embeddings/module.json, modules/ollama-embeddings/skill/ollama-embeddings/SKILL.md, list_modules, preserved existing provider config, nomic-embed-text, verified or redacted module state, and that no direct SQLite or provider semantic_search was used.",
 		},
 		{
 			ID:    ragRetrievalScenarioID,

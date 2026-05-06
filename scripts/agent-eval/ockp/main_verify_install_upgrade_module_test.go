@@ -45,37 +45,7 @@ func writeTestFile(t *testing.T, root string, rel string, content string) {
 }
 
 func TestVerifyModuleAgentInstall(t *testing.T) {
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("getwd: %v", err)
-	}
-	sourceRepoRoot, err := filepath.Abs(filepath.Join(wd, "..", "..", ".."))
-	if err != nil {
-		t.Fatalf("source repo root: %v", err)
-	}
-	sourceManifest, err := os.ReadFile(filepath.Join(sourceRepoRoot, filepath.FromSlash(moduleAgentInstallManifestPath)))
-	if err != nil {
-		t.Fatalf("read source module manifest: %v", err)
-	}
-	repoRoot := t.TempDir()
-	writeTestFile(t, repoRoot, moduleAgentInstallManifestPath, string(sourceManifest))
-
-	dbPath := filepath.Join(repoRoot, ".openclerk-eval", "openclerk.db")
-	_, err = runclient.InstallSemanticModule(context.Background(), runclient.Config{
-		DatabasePath:       dbPath,
-		ModuleManifestRoot: repoRoot,
-	}, runclient.SemanticModuleInstallInput{
-		Provider:     moduleAgentInstallProvider,
-		ManifestPath: moduleAgentInstallManifestPath,
-		Command:      moduleAgentInstallCommand,
-		ProviderConfig: map[string]string{
-			"embedding_model": moduleAgentInstallEmbeddingModel,
-			"ollama_url":      moduleAgentInstallOllamaURL,
-		},
-	})
-	if err != nil {
-		t.Fatalf("install module fixture: %v", err)
-	}
+	_, dbPath := seedModuleVerificationFixture(t, moduleAgentInstallEmbeddingModel)
 	evalMetrics := metrics{
 		ModuleInstallUsed: true,
 		ModuleListUsed:    true,
@@ -105,4 +75,65 @@ func TestVerifyModuleAgentInstall(t *testing.T) {
 	if result.Passed {
 		t.Fatalf("module verification passed with semantic_search: %+v", result)
 	}
+}
+
+func TestVerifyModuleAgentUpgrade(t *testing.T) {
+	_, dbPath := seedModuleVerificationFixture(t, moduleAgentUpgradeEmbeddingModel)
+	evalMetrics := metrics{
+		ModuleInstallUsed: true,
+		ModuleListUsed:    true,
+		EventTypeCounts:   map[string]int{},
+	}
+	answer := "Module-agent upgrade verified for ollama using modules/ollama-embeddings/module.json and modules/ollama-embeddings/skill/ollama-embeddings/SKILL.md. list_modules preserved existing provider config nomic-embed-text with verified redacted state; no direct SQLite or provider semantic_search was used."
+	result, err := verifyModuleAgentUpgrade(context.Background(), evalPaths{DatabasePath: dbPath}, answer, evalMetrics)
+	if err != nil {
+		t.Fatalf("verify module upgrade: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("module upgrade verification failed: %+v", result)
+	}
+
+	result, err = verifyModuleAgentUpgrade(context.Background(), evalPaths{DatabasePath: dbPath}, answer, metrics{ModuleInstallUsed: true, EventTypeCounts: map[string]int{}})
+	if err != nil {
+		t.Fatalf("verify module upgrade missing list: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("module upgrade verification passed without list_modules: %+v", result)
+	}
+}
+
+func seedModuleVerificationFixture(t *testing.T, embeddingModel string) (string, string) {
+	t.Helper()
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	sourceRepoRoot, err := filepath.Abs(filepath.Join(wd, "..", "..", ".."))
+	if err != nil {
+		t.Fatalf("source repo root: %v", err)
+	}
+	sourceManifest, err := os.ReadFile(filepath.Join(sourceRepoRoot, filepath.FromSlash(moduleAgentInstallManifestPath)))
+	if err != nil {
+		t.Fatalf("read source module manifest: %v", err)
+	}
+	repoRoot := t.TempDir()
+	writeTestFile(t, repoRoot, moduleAgentInstallManifestPath, string(sourceManifest))
+
+	dbPath := filepath.Join(repoRoot, ".openclerk-eval", "openclerk.db")
+	_, err = runclient.InstallSemanticModule(context.Background(), runclient.Config{
+		DatabasePath:       dbPath,
+		ModuleManifestRoot: repoRoot,
+	}, runclient.SemanticModuleInstallInput{
+		Provider:     moduleAgentInstallProvider,
+		ManifestPath: moduleAgentInstallManifestPath,
+		Command:      moduleAgentInstallCommand,
+		ProviderConfig: map[string]string{
+			"embedding_model": embeddingModel,
+			"ollama_url":      moduleAgentInstallOllamaURL,
+		},
+	})
+	if err != nil {
+		t.Fatalf("install module fixture: %v", err)
+	}
+	return repoRoot, dbPath
 }

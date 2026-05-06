@@ -1,6 +1,6 @@
 {
   "schema_version": "openclerk-live-install-smoke.v1",
-  "generated_at": "2026-05-06T16:29:55.902493Z",
+  "generated_at": "2026-05-06T18:50:42.403651Z",
   "version": "v0.0.0-smoke",
   "temp_environment": {
     "home": "$HOME",
@@ -45,6 +45,8 @@
     "skill_path": "modules/ollama-embeddings/skill/ollama-embeddings/SKILL.md",
     "install_passed": true,
     "configure_passed": true,
+    "upgrade_passed": true,
+    "upgrade_preserved_config": true,
     "list_passed": true,
     "remove_passed": true,
     "final_list_empty": true,

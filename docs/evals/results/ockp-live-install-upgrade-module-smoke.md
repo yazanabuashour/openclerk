@@ -8,7 +8,7 @@ This report records a local temp HOME/CODEX_HOME smoke validation for install, u
 - Install: `true`
 - Upgrade: `true`
 - Skill: `true`
-- Module install/config/list/remove: `true`
+- Module install/config/upgrade/list/remove: `true`
 
 ## Evidence
 
@@ -20,6 +20,7 @@ This report records a local temp HOME/CODEX_HOME smoke validation for install, u
 - Module manifest: `modules/ollama-embeddings/module.json`
 - Module skill: `modules/ollama-embeddings/skill/ollama-embeddings/SKILL.md`
 - Module provider config: `embedding_model=nomic-embed-text`, `ollama_url=http://localhost:11434`
+- Module upgrade preserved config: `true`
 - Module verification/redaction: `verified` / `redacted`
 
 ## Boundaries

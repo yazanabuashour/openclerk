@@ -31,15 +31,8 @@ jobs:
       - name: Validate committed artifacts
         run: ./scripts/validate-committed-artifacts.sh
 
-      - name: Validate Agent Skill
-        if: startsWith(github.ref_name, 'v')
-        run: ./scripts/validate-agent-skill.sh skills/openclerk
-
-      - name: Validate Module Skill
-        if: ${{ !startsWith(github.ref_name, 'v') }}
-        run: |
-          module="${GITHUB_REF_NAME%%/v*}"
-          ./scripts/validate-agent-skill.sh "modules/${module}/skill/${module}"
+      - name: Validate Agent Skills
+        run: ./scripts/validate-all-agent-skills.sh
 
       - name: Check formatting
         run: test -z "$(gofmt -l $(git ls-files '*.go'))"

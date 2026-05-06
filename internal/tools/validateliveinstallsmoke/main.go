@@ -108,6 +108,8 @@ type moduleSmoke struct {
 	SkillPath         string            `json:"skill_path"`
 	InstallPassed     bool              `json:"install_passed"`
 	ConfigurePassed   bool              `json:"configure_passed"`
+	UpgradePassed     bool              `json:"upgrade_passed"`
+	UpgradePreserved  bool              `json:"upgrade_preserved_config"`
 	ListPassed        bool              `json:"list_passed"`
 	RemovePassed      bool              `json:"remove_passed"`
 	FinalListEmpty    bool              `json:"final_list_empty"`
@@ -392,6 +394,32 @@ func runModuleSmoke(ctx context.Context, smoke smokeContext) (moduleSmoke, error
 		listResult.Modules[0].ProviderConfig["embedding_model"] != "nomic-embed-text" {
 		return moduleSmoke{}, fmt.Errorf("unexpected module list result: %+v", listResult.Modules)
 	}
+	preservedConfig := listResult.Modules[0].ProviderConfig
+	upgradeResult, err := runModuleCommand(ctx, smoke, fmt.Sprintf(`{"action":"install_module","module":{"provider":"ollama","manifest_path":"modules/ollama-embeddings/module.json","command":"semantic-retrieval-adapter","enabled":false,"provider_config":{"embedding_model":%q,"ollama_url":%q}}}`, preservedConfig["embedding_model"], preservedConfig["ollama_url"]))
+	if err != nil {
+		return moduleSmoke{}, err
+	}
+	if upgradeResult.Rejected || upgradeResult.Module == nil {
+		return moduleSmoke{}, fmt.Errorf("module upgrade refresh rejected: %s", upgradeResult.RejectionReason)
+	}
+	if upgradeResult.Module.Provider != "ollama" ||
+		upgradeResult.Module.Enabled ||
+		upgradeResult.Module.ProviderConfig["embedding_model"] != "nomic-embed-text" ||
+		upgradeResult.Module.ProviderConfig["ollama_url"] != "http://localhost:11434" ||
+		upgradeResult.Module.VerificationStatus != "verified" ||
+		upgradeResult.Module.RedactionStatus != "redacted" {
+		return moduleSmoke{}, fmt.Errorf("unexpected module upgrade refresh result: %+v", upgradeResult.Module)
+	}
+	upgradeList, err := runModuleCommand(ctx, smoke, `{"action":"list_modules"}`)
+	if err != nil {
+		return moduleSmoke{}, err
+	}
+	if len(upgradeList.Modules) != 1 ||
+		upgradeList.Modules[0].Provider != "ollama" ||
+		upgradeList.Modules[0].ProviderConfig["embedding_model"] != "nomic-embed-text" ||
+		upgradeList.Modules[0].ProviderConfig["ollama_url"] != "http://localhost:11434" {
+		return moduleSmoke{}, fmt.Errorf("unexpected module list after upgrade refresh: %+v", upgradeList.Modules)
+	}
 
 	removeResult, err := runModuleCommand(ctx, smoke, `{"action":"remove_module","provider":"ollama"}`)
 	if err != nil {
@@ -414,6 +442,8 @@ func runModuleSmoke(ctx context.Context, smoke smokeContext) (moduleSmoke, error
 		SkillPath:         "modules/ollama-embeddings/skill/ollama-embeddings/SKILL.md",
 		InstallPassed:     true,
 		ConfigurePassed:   true,
+		UpgradePassed:     true,
+		UpgradePreserved:  true,
 		ListPassed:        true,
 		RemovePassed:      true,
 		FinalListEmpty:    true,
@@ -601,7 +631,7 @@ func writeMarkdown(path string, report smokeReport) error {
 	fmt.Fprintf(&b, "- Install: `%t`\n", report.Install.Passed)
 	fmt.Fprintf(&b, "- Upgrade: `%t`\n", report.Upgrade.Passed)
 	fmt.Fprintf(&b, "- Skill: `%t`\n", report.Skill.Passed)
-	fmt.Fprintf(&b, "- Module install/config/list/remove: `%t`\n\n", report.Module.Passed)
+	fmt.Fprintf(&b, "- Module install/config/upgrade/list/remove: `%t`\n\n", report.Module.Passed)
 	b.WriteString("## Evidence\n\n")
 	fmt.Fprintf(&b, "- Installer invocation: `%s`\n", report.Install.InstallerInvocation)
 	fmt.Fprintf(&b, "- Binary path: `%s`\n", report.Install.BinaryPath)
@@ -611,6 +641,7 @@ func writeMarkdown(path string, report smokeReport) error {
 	fmt.Fprintf(&b, "- Module manifest: `%s`\n", report.Module.ManifestPath)
 	fmt.Fprintf(&b, "- Module skill: `%s`\n", report.Module.SkillPath)
 	fmt.Fprintf(&b, "- Module provider config: `embedding_model=%s`, `ollama_url=%s`\n", report.Module.ProviderConfig["embedding_model"], report.Module.ProviderConfig["ollama_url"])
+	fmt.Fprintf(&b, "- Module upgrade preserved config: `%t`\n", report.Module.UpgradePreserved)
 	fmt.Fprintf(&b, "- Module verification/redaction: `%s` / `%s`\n\n", report.Module.VerificationState, report.Module.RedactionState)
 	b.WriteString("## Boundaries\n\n")
 	fmt.Fprintf(&b, "%s.\n", report.ValidationBoundaries)
