@@ -238,6 +238,39 @@ func TestRunnerModuleInstallTesseractOCRJSON(t *testing.T) {
 	}
 }
 
+func TestRunnerModuleInstallUsesManifestRootInput(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	releaseRoot := t.TempDir()
+	manifestPath := writeCLISemanticModuleManifest(t, filepath.Join(releaseRoot, "modules", "ollama-embeddings"), "ollama")
+	manifestRel, err := filepath.Rel(releaseRoot, manifestPath)
+	if err != nil {
+		t.Fatalf("relative manifest path: %v", err)
+	}
+	installRequest := `{"action":"install_module","module":{"provider":"ollama","manifest_path":"` + filepath.ToSlash(manifestRel) + `","manifest_root":"` + filepath.ToSlash(releaseRoot) + `","command":"semantic-retrieval-adapter","provider_config":{"embedding_model":"embeddinggemma","ollama_url":"http://localhost:11434"}}}`
+	var installResult moduleTaskResult
+	code, stderr := runJSON(t, []string{"module", "--db", dbPath}, installRequest, &installResult)
+	if code != 0 {
+		t.Fatalf("install exit = %d stderr=%s", code, stderr)
+	}
+	if installResult.Rejected ||
+		installResult.Module == nil ||
+		installResult.Module.Provider != "ollama" ||
+		installResult.Module.ManifestPath != filepath.ToSlash(manifestRel) {
+		t.Fatalf("install result = %+v", installResult)
+	}
+
+	var listResult moduleTaskResult
+	code, stderr = runJSON(t, []string{"module", "--db", dbPath}, `{"action":"list_modules"}`, &listResult)
+	if code != 0 {
+		t.Fatalf("list exit = %d stderr=%s", code, stderr)
+	}
+	if len(listResult.Modules) != 1 || listResult.Modules[0].ManifestPath != filepath.ToSlash(manifestRel) {
+		t.Fatalf("list result = %+v", listResult)
+	}
+}
+
 func TestResolvedVersion(t *testing.T) {
 	t.Parallel()
 
@@ -744,6 +777,9 @@ func runJSON(t *testing.T, args []string, input string, output any) (int, string
 
 func writeCLISemanticModuleManifest(t *testing.T, dir string, provider string) string {
 	t.Helper()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("create manifest dir: %v", err)
+	}
 	path := filepath.Join(dir, "module.json")
 	manifest := map[string]any{
 		"schema_version": "openclerk-module.v1",
@@ -777,6 +813,9 @@ func writeCLISemanticModuleManifest(t *testing.T, dir string, provider string) s
 
 func writeCLIOCRModuleManifest(t *testing.T, dir string) string {
 	t.Helper()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("create OCR manifest dir: %v", err)
+	}
 	path := filepath.Join(dir, "module.json")
 	manifest := map[string]any{
 		"schema_version": "openclerk-module.v1",

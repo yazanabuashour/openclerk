@@ -33,17 +33,18 @@ const (
 )
 
 type SemanticModuleConfig struct {
-	Kind               string            `json:"kind,omitempty"`
-	Provider           string            `json:"provider"`
-	ModuleName         string            `json:"module_name"`
-	Enabled            bool              `json:"enabled"`
-	Command            string            `json:"command,omitempty"`
-	CommandArgs        []string          `json:"command_args,omitempty"`
-	ManifestPath       string            `json:"manifest_path,omitempty"`
-	ManifestSHA256     string            `json:"manifest_sha256,omitempty"`
-	ProviderConfig     map[string]string `json:"provider_config,omitempty"`
-	VerificationStatus string            `json:"verification_status"`
-	RedactionStatus    string            `json:"redaction_status"`
+	Kind                 string            `json:"kind,omitempty"`
+	Provider             string            `json:"provider"`
+	ModuleName           string            `json:"module_name"`
+	Enabled              bool              `json:"enabled"`
+	Command              string            `json:"command,omitempty"`
+	CommandArgs          []string          `json:"command_args,omitempty"`
+	ManifestPath         string            `json:"manifest_path,omitempty"`
+	ManifestSHA256       string            `json:"manifest_sha256,omitempty"`
+	ManifestResolvedPath string            `json:"-"`
+	ProviderConfig       map[string]string `json:"provider_config,omitempty"`
+	VerificationStatus   string            `json:"verification_status"`
+	RedactionStatus      string            `json:"redaction_status"`
 }
 
 type SemanticModuleInstallInput struct {
@@ -51,6 +52,7 @@ type SemanticModuleInstallInput struct {
 	Provider       string            `json:"provider"`
 	ModuleName     string            `json:"module_name,omitempty"`
 	ManifestPath   string            `json:"manifest_path"`
+	ManifestRoot   string            `json:"manifest_root,omitempty"`
 	Command        string            `json:"command"`
 	CommandArgs    []string          `json:"command_args,omitempty"`
 	ProviderConfig map[string]string `json:"provider_config,omitempty"`
@@ -82,7 +84,11 @@ func InstallSemanticModule(ctx context.Context, cfg Config, input SemanticModule
 		return SemanticModuleConfig{}, domain.ValidationError("module.command_args are unsupported for semantic modules", nil)
 	}
 	manifestPath := filepath.Clean(input.ManifestPath)
-	manifest, manifestSHA, err := verifySemanticModuleManifest(resolveSemanticModuleManifestPath(cfg, manifestPath), provider, input.ModuleName)
+	resolvedManifestPath, err := resolveModuleManifestPathForInstall(cfg, input.ManifestRoot, manifestPath, semanticModuleManifestPolicy)
+	if err != nil {
+		return SemanticModuleConfig{}, err
+	}
+	manifest, manifestSHA, err := verifySemanticModuleManifest(resolvedManifestPath, provider, input.ModuleName)
 	if err != nil {
 		return SemanticModuleConfig{}, err
 	}
@@ -95,17 +101,18 @@ func InstallSemanticModule(ctx context.Context, cfg Config, input SemanticModule
 		return SemanticModuleConfig{}, err
 	}
 	config := SemanticModuleConfig{
-		Kind:               ModuleKindEmbeddingProvider,
-		Provider:           provider,
-		ModuleName:         manifest.Module.Name,
-		Enabled:            enabled,
-		Command:            semanticModuleCommand,
-		CommandArgs:        nil,
-		ManifestPath:       manifestPath,
-		ManifestSHA256:     manifestSHA,
-		ProviderConfig:     providerConfig,
-		VerificationStatus: "verified",
-		RedactionStatus:    "redacted",
+		Kind:                 ModuleKindEmbeddingProvider,
+		Provider:             provider,
+		ModuleName:           manifest.Module.Name,
+		Enabled:              enabled,
+		Command:              semanticModuleCommand,
+		CommandArgs:          nil,
+		ManifestPath:         manifestPath,
+		ManifestSHA256:       manifestSHA,
+		ManifestResolvedPath: resolvedManifestPath,
+		ProviderConfig:       providerConfig,
+		VerificationStatus:   "verified",
+		RedactionStatus:      "redacted",
 	}
 	if err := writeSemanticModuleConfig(ctx, cfg, config); err != nil {
 		return SemanticModuleConfig{}, err
@@ -208,16 +215,17 @@ func ReadSemanticModuleConfig(ctx context.Context, cfg Config, provider string) 
 		return SemanticModuleConfig{}, err
 	}
 	config := SemanticModuleConfig{
-		Kind:               ModuleKindEmbeddingProvider,
-		Provider:           normalized,
-		ModuleName:         values["module_name"],
-		Enabled:            values["enabled"] == "true",
-		Command:            values["command"],
-		ManifestPath:       values["manifest_path"],
-		ManifestSHA256:     values["manifest_sha256"],
-		ProviderConfig:     map[string]string{},
-		VerificationStatus: "not_installed",
-		RedactionStatus:    "redacted",
+		Kind:                 ModuleKindEmbeddingProvider,
+		Provider:             normalized,
+		ModuleName:           values["module_name"],
+		Enabled:              values["enabled"] == "true",
+		Command:              values["command"],
+		ManifestPath:         values["manifest_path"],
+		ManifestSHA256:       values["manifest_sha256"],
+		ManifestResolvedPath: values["manifest_resolved_path"],
+		ProviderConfig:       map[string]string{},
+		VerificationStatus:   "not_installed",
+		RedactionStatus:      "redacted",
 	}
 	_ = json.Unmarshal([]byte(values["command_args_json"]), &config.CommandArgs)
 	_ = json.Unmarshal([]byte(values["provider_config_json"]), &config.ProviderConfig)
@@ -251,7 +259,11 @@ func InstallOCRModule(ctx context.Context, cfg Config, input SemanticModuleInsta
 		return SemanticModuleConfig{}, domain.ValidationError("module.command is required", nil)
 	}
 	manifestPath := filepath.Clean(input.ManifestPath)
-	manifest, manifestSHA, err := verifyOCRModuleManifest(resolveSemanticModuleManifestPath(cfg, manifestPath), provider, input.ModuleName)
+	resolvedManifestPath, err := resolveModuleManifestPathForInstall(cfg, input.ManifestRoot, manifestPath, ocrModuleManifestPolicy)
+	if err != nil {
+		return SemanticModuleConfig{}, err
+	}
+	manifest, manifestSHA, err := verifyOCRModuleManifest(resolvedManifestPath, provider, input.ModuleName)
 	if err != nil {
 		return SemanticModuleConfig{}, err
 	}
@@ -260,17 +272,18 @@ func InstallOCRModule(ctx context.Context, cfg Config, input SemanticModuleInsta
 		enabled = *input.Enabled
 	}
 	config := SemanticModuleConfig{
-		Kind:               ModuleKindOCRProvider,
-		Provider:           provider,
-		ModuleName:         manifest.Module.Name,
-		Enabled:            enabled,
-		Command:            strings.TrimSpace(input.Command),
-		CommandArgs:        sanitizedArgs(input.CommandArgs),
-		ManifestPath:       manifestPath,
-		ManifestSHA256:     manifestSHA,
-		ProviderConfig:     redactedProviderConfig(provider, input.ProviderConfig),
-		VerificationStatus: "verified",
-		RedactionStatus:    "redacted",
+		Kind:                 ModuleKindOCRProvider,
+		Provider:             provider,
+		ModuleName:           manifest.Module.Name,
+		Enabled:              enabled,
+		Command:              strings.TrimSpace(input.Command),
+		CommandArgs:          sanitizedArgs(input.CommandArgs),
+		ManifestPath:         manifestPath,
+		ManifestSHA256:       manifestSHA,
+		ManifestResolvedPath: resolvedManifestPath,
+		ProviderConfig:       redactedProviderConfig(provider, input.ProviderConfig),
+		VerificationStatus:   "verified",
+		RedactionStatus:      "redacted",
 	}
 	if err := writeOCRModuleConfig(ctx, cfg, config); err != nil {
 		return SemanticModuleConfig{}, err
@@ -341,16 +354,17 @@ func ReadOCRModuleConfig(ctx context.Context, cfg Config, provider string) (Sema
 		return SemanticModuleConfig{}, err
 	}
 	config := SemanticModuleConfig{
-		Kind:               ModuleKindOCRProvider,
-		Provider:           normalized,
-		ModuleName:         values["module_name"],
-		Enabled:            values["enabled"] == "true",
-		Command:            values["command"],
-		ManifestPath:       values["manifest_path"],
-		ManifestSHA256:     values["manifest_sha256"],
-		ProviderConfig:     map[string]string{},
-		VerificationStatus: "not_installed",
-		RedactionStatus:    "redacted",
+		Kind:                 ModuleKindOCRProvider,
+		Provider:             normalized,
+		ModuleName:           values["module_name"],
+		Enabled:              values["enabled"] == "true",
+		Command:              values["command"],
+		ManifestPath:         values["manifest_path"],
+		ManifestSHA256:       values["manifest_sha256"],
+		ManifestResolvedPath: values["manifest_resolved_path"],
+		ProviderConfig:       map[string]string{},
+		VerificationStatus:   "not_installed",
+		RedactionStatus:      "redacted",
 	}
 	_ = json.Unmarshal([]byte(values["command_args_json"]), &config.CommandArgs)
 	_ = json.Unmarshal([]byte(values["provider_config_json"]), &config.ProviderConfig)
@@ -422,7 +436,7 @@ func verifyInstalledSemanticModule(cfg Config, config SemanticModuleConfig) erro
 	if strings.TrimSpace(config.ManifestPath) == "" || strings.TrimSpace(config.ManifestSHA256) == "" {
 		return domain.ValidationError("semantic module manifest verification is missing", map[string]any{"provider": config.Provider})
 	}
-	manifest, sha, err := verifySemanticModuleManifest(resolveSemanticModuleManifestPath(cfg, config.ManifestPath), config.Provider, config.ModuleName)
+	manifest, sha, err := verifyInstalledModuleManifest(cfg, config, semanticModuleManifestPolicy)
 	if err != nil {
 		return err
 	}
@@ -439,7 +453,7 @@ func verifyInstalledOCRModule(cfg Config, config SemanticModuleConfig) error {
 	if strings.TrimSpace(config.ManifestPath) == "" || strings.TrimSpace(config.ManifestSHA256) == "" {
 		return domain.ValidationError("OCR module manifest verification is missing", map[string]any{"provider": config.Provider})
 	}
-	manifest, sha, err := verifyOCRModuleManifest(resolveSemanticModuleManifestPath(cfg, config.ManifestPath), config.Provider, config.ModuleName)
+	manifest, sha, err := verifyInstalledModuleManifest(cfg, config, ocrModuleManifestPolicy)
 	if err != nil {
 		return err
 	}
@@ -447,13 +461,6 @@ func verifyInstalledOCRModule(cfg Config, config SemanticModuleConfig) error {
 		return domain.ValidationError("OCR module manifest digest changed", map[string]any{"provider": config.Provider, "module": manifest.Module.Name})
 	}
 	return nil
-}
-
-func resolveSemanticModuleManifestPath(cfg Config, manifestPath string) string {
-	if cfg.ModuleManifestRoot == "" || filepath.IsAbs(manifestPath) {
-		return manifestPath
-	}
-	return filepath.Join(cfg.ModuleManifestRoot, manifestPath)
 }
 
 type semanticModuleManifest struct {
@@ -512,6 +519,69 @@ func verifySemanticModuleManifest(path string, provider string, expectedName str
 
 func verifyOCRModuleManifest(path string, provider string, expectedName string) (semanticModuleManifest, string, error) {
 	return verifyModuleManifest(path, provider, expectedName, ocrModuleManifestPolicy)
+}
+
+func verifyInstalledModuleManifest(cfg Config, config SemanticModuleConfig, policy moduleManifestPolicy) (semanticModuleManifest, string, error) {
+	path, err := resolveInstalledModuleManifestPath(cfg, config, policy)
+	if err != nil {
+		return semanticModuleManifest{}, "", err
+	}
+	return verifyModuleManifest(path, config.Provider, config.ModuleName, policy)
+}
+
+func resolveModuleManifestPathForInstall(cfg Config, manifestRoot string, manifestPath string, policy moduleManifestPolicy) (string, error) {
+	return resolveModuleManifestPath(cfg, manifestPath, "", manifestRoot, policy)
+}
+
+func resolveInstalledModuleManifestPath(cfg Config, config SemanticModuleConfig, policy moduleManifestPolicy) (string, error) {
+	return resolveModuleManifestPath(cfg, config.ManifestPath, config.ManifestResolvedPath, "", policy)
+}
+
+func resolveModuleManifestPath(cfg Config, manifestPath string, resolvedPath string, manifestRoot string, policy moduleManifestPolicy) (string, error) {
+	for _, candidate := range moduleManifestPathCandidates(cfg, manifestPath, resolvedPath, manifestRoot) {
+		if candidate == "" {
+			continue
+		}
+		clean := filepath.Clean(candidate)
+		if !filepath.IsAbs(clean) {
+			abs, err := filepath.Abs(clean)
+			if err != nil {
+				return "", domain.InternalError("resolve "+policy.label+" manifest path", err)
+			}
+			clean = filepath.Clean(abs)
+		}
+		info, err := os.Stat(clean)
+		if err == nil {
+			if info.IsDir() {
+				return "", domain.ValidationError(policy.label+" manifest could not be resolved", map[string]any{"manifest_path": manifestPath, "resolved_path": clean, "reason": "path is a directory"})
+			}
+			return clean, nil
+		}
+		if !errors.Is(err, os.ErrNotExist) {
+			return "", domain.InternalError("inspect "+policy.label+" manifest", err)
+		}
+	}
+	return "", domain.ValidationError(policy.label+" manifest could not be resolved", map[string]any{"manifest_path": manifestPath, "manifest_root": strings.TrimSpace(manifestRoot), "guidance": "use module.manifest_root with relative module.manifest_path or provide an absolute module.manifest_path"})
+}
+
+func moduleManifestPathCandidates(cfg Config, manifestPath string, resolvedPath string, manifestRoot string) []string {
+	manifestPath = filepath.Clean(manifestPath)
+	candidates := []string{}
+	if strings.TrimSpace(resolvedPath) != "" {
+		return append(candidates, resolvedPath)
+	}
+	if filepath.IsAbs(manifestPath) {
+		candidates = append(candidates, manifestPath)
+		return candidates
+	}
+	if strings.TrimSpace(manifestRoot) != "" {
+		return append(candidates, filepath.Join(manifestRoot, manifestPath))
+	}
+	if strings.TrimSpace(cfg.ModuleManifestRoot) != "" {
+		return append(candidates, filepath.Join(cfg.ModuleManifestRoot, manifestPath))
+	}
+	candidates = append(candidates, manifestPath)
+	return candidates
 }
 
 func verifyModuleManifest(path string, provider string, expectedName string, policy moduleManifestPolicy) (semanticModuleManifest, string, error) {
@@ -593,13 +663,14 @@ ON CONFLICT(key_name) DO UPDATE SET
 
 func moduleRuntimeConfigValues(config SemanticModuleConfig) map[string]string {
 	return map[string]string{
-		"enabled":              fmt.Sprint(config.Enabled),
-		"module_name":          config.ModuleName,
-		"command":              config.Command,
-		"manifest_path":        config.ManifestPath,
-		"manifest_sha256":      config.ManifestSHA256,
-		"command_args_json":    mustMarshalString(config.CommandArgs),
-		"provider_config_json": mustMarshalString(config.ProviderConfig),
+		"enabled":                fmt.Sprint(config.Enabled),
+		"module_name":            config.ModuleName,
+		"command":                config.Command,
+		"manifest_path":          config.ManifestPath,
+		"manifest_sha256":        config.ManifestSHA256,
+		"manifest_resolved_path": config.ManifestResolvedPath,
+		"command_args_json":      mustMarshalString(config.CommandArgs),
+		"provider_config_json":   mustMarshalString(config.ProviderConfig),
 	}
 }
 

@@ -384,7 +384,7 @@ func runModuleSmoke(ctx context.Context, smoke smokeContext) (moduleSmoke, error
 		return moduleSmoke{}, fmt.Errorf("unexpected module configure result: %+v", configureResult.Module)
 	}
 
-	listResult, err := runModuleCommand(ctx, smoke, `{"action":"list_modules"}`)
+	listResult, err := runModuleCommandInDir(ctx, smoke, filepath.Join(smoke.workDir, "non-repo-cwd"), `{"action":"list_modules"}`)
 	if err != nil {
 		return moduleSmoke{}, err
 	}
@@ -473,8 +473,15 @@ type semanticModuleConfig struct {
 }
 
 func runModuleCommand(ctx context.Context, smoke smokeContext, request string) (moduleCommandResult, error) {
+	return runModuleCommandInDir(ctx, smoke, smoke.repoRoot, request)
+}
+
+func runModuleCommandInDir(ctx context.Context, smoke smokeContext, dir string, request string) (moduleCommandResult, error) {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return moduleCommandResult{}, err
+	}
 	cmd := exec.CommandContext(ctx, filepath.Join(smoke.installDir, "openclerk"), "module", "--db", smoke.dbPath)
-	cmd.Dir = smoke.repoRoot
+	cmd.Dir = dir
 	cmd.Env = smoke.env
 	cmd.Stdin = strings.NewReader(request)
 	output, err := cmd.CombinedOutput()
