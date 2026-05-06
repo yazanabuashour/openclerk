@@ -34,14 +34,14 @@ func runAuditContradictions(ctx context.Context, client *runclient.Client, optio
 	result.SourcePaths = sourcePaths
 	result.Citations = citations
 
-	candidatePaths, targetMatches, err := auditSynthesisCandidates(ctx, client, options.TargetPath)
+	candidateInspection, err := inspectSynthesisCandidates(ctx, client, options.TargetPath)
 	if err != nil {
 		return AuditContradictionsResult{}, err
 	}
-	result.CandidateSynthesisPaths = candidatePaths
+	result.CandidateSynthesisPaths = candidateInspection.Paths
 
-	if len(targetMatches) != 1 {
-		if len(targetMatches) > 1 {
+	if len(candidateInspection.TargetMatches) != 1 {
+		if len(candidateInspection.TargetMatches) > 1 {
 			result.DuplicatePrevention = "duplicate_target_path_detected"
 			result.FailureClassification = "duplicate_target"
 		} else {
@@ -50,7 +50,7 @@ func runAuditContradictions(ctx context.Context, client *runclient.Client, optio
 		return result, nil
 	}
 
-	targetSummary := targetMatches[0]
+	targetSummary := candidateInspection.TargetMatches[0]
 	result.SelectedTargetPath = targetSummary.Path
 	result.DuplicatePrevention = "existing_target_selected_no_duplicate_created"
 
@@ -171,37 +171,6 @@ func auditSourceEvidence(hits []domain.SearchHit) ([]string, []Citation) {
 	}
 	sort.Strings(paths)
 	return paths, citations
-}
-
-func auditSynthesisCandidates(ctx context.Context, client *runclient.Client, targetPath string) ([]string, []domain.DocumentSummary, error) {
-	candidatePaths := []string{}
-	targetMatches := []domain.DocumentSummary{}
-	cursor := ""
-	for {
-		list, err := client.ListDocuments(ctx, domain.DocumentListQuery{
-			PathPrefix: "synthesis/",
-			Limit:      100,
-			Cursor:     cursor,
-		})
-		if err != nil {
-			return nil, nil, err
-		}
-		for _, document := range list.Documents {
-			candidatePaths = appendUniqueString(candidatePaths, document.Path)
-			if document.Path == targetPath {
-				targetMatches = append(targetMatches, document)
-			}
-		}
-		if !list.PageInfo.HasMore {
-			break
-		}
-		cursor = list.PageInfo.NextCursor
-		if cursor == "" {
-			return nil, nil, fmt.Errorf("list synthesis candidates did not return next cursor")
-		}
-	}
-	sort.Strings(candidatePaths)
-	return candidatePaths, targetMatches, nil
 }
 
 func sourceClassesFromProjection(projections []domain.ProjectionState) ([]string, []string) {

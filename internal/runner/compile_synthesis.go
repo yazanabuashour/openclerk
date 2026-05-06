@@ -16,10 +16,12 @@ func runCompileSynthesis(ctx context.Context, client *runclient.Client, input Co
 		return CompileSynthesisResult{}, err
 	}
 	body := compileSynthesisBody(compileSynthesisInputWithSourceRoleFacts(input, sourceRoleFacts))
-	candidates, matches, err := compileSynthesisCandidates(ctx, client, input.Path)
+	candidateInspection, err := inspectSynthesisCandidates(ctx, client, input.Path)
 	if err != nil {
 		return CompileSynthesisResult{}, err
 	}
+	candidates := candidateInspection.Paths
+	matches := candidateInspection.TargetMatches
 	if len(matches) > 1 {
 		validationBoundaries := compileSynthesisValidationBoundaries()
 		authorityLimits := compileSynthesisAuthorityLimits()
@@ -208,37 +210,6 @@ func stripFrontmatter(body string) string {
 		}
 	}
 	return body
-}
-
-func compileSynthesisCandidates(ctx context.Context, client *runclient.Client, targetPath string) ([]string, []domain.DocumentSummary, error) {
-	candidatePaths := []string{}
-	targetMatches := []domain.DocumentSummary{}
-	cursor := ""
-	for {
-		list, err := client.ListDocuments(ctx, domain.DocumentListQuery{
-			PathPrefix: "synthesis/",
-			Limit:      100,
-			Cursor:     cursor,
-		})
-		if err != nil {
-			return nil, nil, err
-		}
-		for _, document := range list.Documents {
-			candidatePaths = appendUniqueString(candidatePaths, document.Path)
-			if document.Path == targetPath {
-				targetMatches = append(targetMatches, document)
-			}
-		}
-		if !list.PageInfo.HasMore {
-			break
-		}
-		cursor = list.PageInfo.NextCursor
-		if cursor == "" {
-			return nil, nil, fmt.Errorf("list synthesis candidates did not return next cursor")
-		}
-	}
-	sort.Strings(candidatePaths)
-	return candidatePaths, targetMatches, nil
 }
 
 func compileSynthesisSourceEvidence(ctx context.Context, client *runclient.Client, sourceRefs []string) ([]Citation, []string, error) {
