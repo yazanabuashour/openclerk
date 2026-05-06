@@ -190,11 +190,11 @@ func semanticModuleResponseToResult(response semanticModuleSearchResponse, modul
 		ValidationBoundaries: response.ValidationBoundaries,
 		AuthorityLimits:      response.AuthorityLimits,
 		AgentHandoff: &AgentHandoff{
-			AnswerSummary:               firstNonEmptyString(response.AgentHandoff.Summary, "semantic_search returned citation-bearing module results"),
+			AnswerSummary:               firstNonEmpty(strings.TrimSpace(response.AgentHandoff.Summary), "semantic_search returned citation-bearing module results"),
 			Evidence:                    response.AgentHandoff.EvidenceInspected,
-			ValidationBoundaries:        firstNonEmptyString(response.ValidationBoundaries, "explicit semantic_search through verified optional module; default search remains lexical"),
-			AuthorityLimits:             firstNonEmptyString(response.AuthorityLimits, "semantic similarity is retrieval evidence only; canonical citations remain authority"),
-			FollowUpPrimitiveInspection: firstNonEmptyString(response.AgentHandoff.FollowUpPrimitiveInspection, "use get_document, provenance_events, and projection_states for authority drill-down before durable writes"),
+			ValidationBoundaries:        firstNonEmpty(strings.TrimSpace(response.ValidationBoundaries), "explicit semantic_search through verified optional module; default search remains lexical"),
+			AuthorityLimits:             firstNonEmpty(strings.TrimSpace(response.AuthorityLimits), "semantic similarity is retrieval evidence only; canonical citations remain authority"),
+			FollowUpPrimitiveInspection: firstNonEmpty(strings.TrimSpace(response.AgentHandoff.FollowUpPrimitiveInspection), "use get_document, provenance_events, and projection_states for authority drill-down before durable writes"),
 		},
 	}
 	if result.Query == "" {
@@ -239,15 +239,6 @@ func semanticModuleBlockedResult(options SemanticSearchOptions, status string, e
 			FollowUpPrimitiveInspection: "install/configure the provider module, then rerun semantic_search; use lexical search for authoritative retrieval meanwhile",
 		},
 	}
-}
-
-func firstNonEmptyString(values ...string) string {
-	for _, value := range values {
-		if strings.TrimSpace(value) != "" {
-			return strings.TrimSpace(value)
-		}
-	}
-	return ""
 }
 
 func semanticModuleErrorSummary(err error) string {

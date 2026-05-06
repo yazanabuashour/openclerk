@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/yazanabuashour/openclerk/internal/domain"
@@ -75,7 +76,7 @@ func duplicateCandidateLikelyTarget(ctx context.Context, client *runclient.Clien
 			DocID:     document.DocID,
 			Path:      document.Path,
 			Title:     document.Title,
-			Metadata:  cloneStringMap(document.Metadata),
+			Metadata:  maps.Clone(document.Metadata),
 			UpdatedAt: document.UpdatedAt,
 		}
 		evidence = append(evidence, "get_document:"+summary.Path)

@@ -132,7 +132,7 @@ func runAuditContradictions(ctx context.Context, client *runclient.Client, optio
 	result.ProjectionFreshnessAfter = toProjectionStates(after.Projections)
 
 	if options.ConflictQuery != "" {
-		conflicts, inspections, err := auditUnresolvedConflicts(ctx, client, options.ConflictQuery, limit)
+		conflicts, inspections, err := auditUnresolvedConflictsForQuery(ctx, client, options.ConflictQuery, limit)
 		if err != nil {
 			return AuditContradictionsResult{}, err
 		}
@@ -229,58 +229,6 @@ func auditRepairSummaryContent(currentSourcePaths []string, supersededSourcePath
 		"Current source: " + currentSourcePaths[0] + ".",
 		"Superseded source: " + supersededSourcePaths[0] + ".",
 	}, "\n"), true
-}
-
-func auditUnresolvedConflicts(ctx context.Context, client *runclient.Client, query string, limit int) ([]AuditConflictGroup, []AuditProvenanceInspection, error) {
-	conflicts, inspections, err := auditUnresolvedConflictsForQuery(ctx, client, query, limit)
-	if err != nil {
-		return nil, nil, err
-	}
-	if len(conflicts) != 0 || !strings.Contains(query, ":") {
-		if len(conflicts) != 0 {
-			return conflicts, inspections, nil
-		}
-		return auditUnresolvedConflictsWithKeywordFallback(ctx, client, query, limit, conflicts, inspections)
-	}
-	prefix := strings.TrimSpace(strings.SplitN(query, ":", 2)[0])
-	if prefix == "" || prefix == query {
-		return auditUnresolvedConflictsWithKeywordFallback(ctx, client, query, limit, conflicts, inspections)
-	}
-	fallbackConflicts, fallbackInspections, err := auditUnresolvedConflictsForQuery(ctx, client, prefix, limit)
-	if err != nil {
-		return nil, nil, err
-	}
-	if len(fallbackConflicts) == 0 {
-		return auditUnresolvedConflictsWithKeywordFallback(ctx, client, query, limit, conflicts, inspections)
-	}
-	return fallbackConflicts, append(inspections, fallbackInspections...), nil
-}
-
-func auditUnresolvedConflictsWithKeywordFallback(ctx context.Context, client *runclient.Client, query string, limit int, conflicts []AuditConflictGroup, inspections []AuditProvenanceInspection) ([]AuditConflictGroup, []AuditProvenanceInspection, error) {
-	if !auditContainsAll(strings.ToLower(query), []string{"source", "sensitive", "audit", "conflict", "runner", "retention"}) {
-		return conflicts, inspections, nil
-	}
-	fallbackQuery := "source sensitive audit conflict runner retention"
-	if strings.TrimSpace(strings.ToLower(query)) == fallbackQuery {
-		return conflicts, inspections, nil
-	}
-	fallbackConflicts, fallbackInspections, err := auditUnresolvedConflictsForQuery(ctx, client, fallbackQuery, limit)
-	if err != nil {
-		return nil, nil, err
-	}
-	if len(fallbackConflicts) == 0 {
-		return conflicts, inspections, nil
-	}
-	return fallbackConflicts, append(inspections, fallbackInspections...), nil
-}
-
-func auditContainsAll(value string, needles []string) bool {
-	for _, needle := range needles {
-		if !strings.Contains(value, needle) {
-			return false
-		}
-	}
-	return true
 }
 
 func auditUnresolvedConflictsForQuery(ctx context.Context, client *runclient.Client, query string, limit int) ([]AuditConflictGroup, []AuditProvenanceInspection, error) {

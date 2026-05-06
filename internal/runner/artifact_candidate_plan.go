@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"mime"
 	"net/http"
 	"os"
@@ -38,7 +39,10 @@ func runArtifactCandidatePlan(ctx context.Context, client *runclient.Client, con
 		if options.SourceType == "" {
 			options.SourceType = "local_artifact"
 		}
-		options.Fields = cloneArtifactFields(options.Fields)
+		options.Fields = maps.Clone(options.Fields)
+		if options.Fields == nil {
+			options.Fields = map[string]string{}
+		}
 		options.Fields["text_extraction"] = "ocr_review"
 		options.Fields["ocr_provider"] = ocrExtraction.Provider
 		options.Fields["ocr_module"] = ocrExtraction.ModuleName
@@ -120,14 +124,6 @@ func runArtifactCandidatePlanFromInspected(ctx context.Context, client *runclien
 
 func artifactOCRReviewRequested(options ArtifactPlanOptions) bool {
 	return strings.EqualFold(strings.TrimSpace(options.TextExtraction), "ocr_review")
-}
-
-func cloneArtifactFields(fields map[string]string) map[string]string {
-	cloned := map[string]string{}
-	for key, value := range fields {
-		cloned[key] = value
-	}
-	return cloned
 }
 
 func inspectLocalArtifact(localPath string) (*LocalArtifact, string, error) {
@@ -488,7 +484,7 @@ func artifactTitle(explicit string, content string, body string, artifactKind st
 	if title := conciseContentTitle(content); title != "" {
 		return title, "content_title"
 	}
-	return titleFromSlug(artifactKind + " artifact"), "fallback_title"
+	return titleFromSlug(artifactKind + " artifact"), "artifact_kind_title"
 }
 
 func firstMarkdownHeading(text string) string {

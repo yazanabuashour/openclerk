@@ -1,6 +1,8 @@
 package runner
 
 import (
+	"maps"
+
 	"github.com/yazanabuashour/openclerk/internal/domain"
 	"github.com/yazanabuashour/openclerk/internal/runclient"
 )
@@ -19,7 +21,7 @@ func toDocument(document domain.Document) Document {
 		Title:     document.Title,
 		Body:      document.Body,
 		Headings:  append([]string(nil), document.Headings...),
-		Metadata:  cloneStringMap(document.Metadata),
+		Metadata:  maps.Clone(document.Metadata),
 		CreatedAt: document.CreatedAt,
 		UpdatedAt: document.UpdatedAt,
 	}
@@ -32,7 +34,7 @@ func toDocumentSummaries(documents []domain.DocumentSummary) []DocumentSummary {
 			DocID:     document.DocID,
 			Path:      document.Path,
 			Title:     document.Title,
-			Metadata:  cloneStringMap(document.Metadata),
+			Metadata:  maps.Clone(document.Metadata),
 			UpdatedAt: document.UpdatedAt,
 		})
 	}
@@ -347,7 +349,7 @@ func toProvenanceEvents(events []domain.ProvenanceEvent) []ProvenanceEvent {
 			RefID:      event.RefID,
 			SourceRef:  event.SourceRef,
 			OccurredAt: event.OccurredAt,
-			Details:    cloneStringMap(event.Details),
+			Details:    maps.Clone(event.Details),
 		})
 	}
 	return result
@@ -371,19 +373,8 @@ func toProjectionStates(projections []domain.ProjectionState) []ProjectionState 
 			Freshness:         projection.Freshness,
 			ProjectionVersion: projection.ProjectionVersion,
 			UpdatedAt:         projection.UpdatedAt,
-			Details:           cloneStringMap(projection.Details),
+			Details:           maps.Clone(projection.Details),
 		})
 	}
 	return result
-}
-
-func cloneStringMap(values map[string]string) map[string]string {
-	if len(values) == 0 {
-		return nil
-	}
-	cloned := make(map[string]string, len(values))
-	for key, value := range values {
-		cloned[key] = value
-	}
-	return cloned
 }

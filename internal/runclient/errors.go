@@ -2,6 +2,8 @@ package runclient
 
 import (
 	"errors"
+	"maps"
+
 	"github.com/yazanabuashour/openclerk/internal/domain"
 )
 
@@ -36,7 +38,7 @@ func wrapError(err error) error {
 			Message:   domainErr.Message,
 			Status:    domainErr.Status,
 			Retryable: domainErr.Retryable,
-			Details:   cloneDetails(domainErr.Details),
+			Details:   maps.Clone(domainErr.Details),
 		}
 	}
 	return &Error{
@@ -45,15 +47,4 @@ func wrapError(err error) error {
 		Status:    500,
 		Retryable: true,
 	}
-}
-
-func cloneDetails(details map[string]any) map[string]any {
-	if len(details) == 0 {
-		return nil
-	}
-	cloned := make(map[string]any, len(details))
-	for key, value := range details {
-		cloned[key] = value
-	}
-	return cloned
 }
