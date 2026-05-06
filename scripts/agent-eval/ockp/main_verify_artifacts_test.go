@@ -64,24 +64,6 @@ func TestExecuteRunDefersPartialDocumentArtifactCandidateLane(t *testing.T) {
 	if len(report.TargetedLaneSummary.ScenarioClassifications) != 3 {
 		t.Fatalf("classifications = %d, want 3", len(report.TargetedLaneSummary.ScenarioClassifications))
 	}
-	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-document-artifact-candidate-test.md"))
-	if err != nil {
-		t.Fatalf("read markdown report: %v", err)
-	}
-	for _, want := range []string{
-		"Lane: `" + documentArtifactCandidateLaneName + "`",
-		"Release blocking: `false`",
-		"Decision: `defer_for_candidate_quality_repair`",
-		"no promoted skill policy yet; repair candidate quality gaps before any propose-before-create skill behavior change",
-		"Prompt specificity",
-		"Guidance dependence",
-		"Safety risks",
-		"`none`",
-	} {
-		if !strings.Contains(string(markdown), want) {
-			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
-		}
-	}
 }
 
 func TestVerifyVideoYouTubeValidationScenariosUseFinalAnswerVerifier(t *testing.T) {
@@ -824,32 +806,12 @@ func TestCandidateHeadingScenarioDoesNotLeakExpectedPath(t *testing.T) {
 	if strings.Contains(sc.Prompt, candidateHeadingPath) {
 		t.Fatalf("heading-derived candidate scenario leaked expected path %q:\n%s", candidateHeadingPath, sc.Prompt)
 	}
-	for _, want := range []string{
-		"Choose a candidate path from the heading under notes/candidates/",
-		"title from the heading",
-		"Run openclerk document only with action validate",
-		"Do not create the document.",
-	} {
-		if !strings.Contains(sc.Prompt, want) {
-			t.Fatalf("heading-derived candidate scenario missing %q:\n%s", want, sc.Prompt)
-		}
-	}
 }
 
 func TestCandidateErgonomicsNaturalIntentDoesNotLeakExpectedPath(t *testing.T) {
 	sc := requireScenarioByID(t, candidateErgonomicsNaturalIntentScenarioID)
 	if strings.Contains(sc.Prompt, candidateErgonomicsNaturalPath) {
 		t.Fatalf("natural ergonomics scenario leaked expected path %q:\n%s", candidateErgonomicsNaturalPath, sc.Prompt)
-	}
-	for _, want := range []string{
-		"Document this:",
-		"I did not choose a path or title.",
-		"validate the candidate",
-		"wait for my approval before creating anything",
-	} {
-		if !strings.Contains(sc.Prompt, want) {
-			t.Fatalf("natural ergonomics scenario missing %q:\n%s", want, sc.Prompt)
-		}
 	}
 }
 

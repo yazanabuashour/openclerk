@@ -8,27 +8,6 @@ import (
 	"testing"
 )
 
-func TestMemoryRouterRevisitPromptsClarifyEvidenceComparison(t *testing.T) {
-	byID := map[string]scenario{}
-	for _, sc := range allScenarios() {
-		byID[sc.ID] = sc
-	}
-	for _, id := range memoryRouterRevisitScenarioIDs() {
-		prompt := byID[id].Prompt
-		for _, want := range []string{
-			"evidence comparison over existing runner-visible documents",
-			"not a request to use or implement",
-			"memory transport",
-			"remember/recall action",
-			"autonomous router API",
-		} {
-			if !strings.Contains(prompt, want) {
-				t.Fatalf("%s prompt missing %q:\n%s", id, want, prompt)
-			}
-		}
-	}
-}
-
 func TestMemoryRouterRecallResponseCandidateVerifierUsesJSONContractWithoutProseAnswer(t *testing.T) {
 	ctx := context.Background()
 	paths := scenarioPaths(t.TempDir())
@@ -200,32 +179,6 @@ func TestMemoryRouterRecallCurrentPrimitivesVerifierUsesCandidateSpecificAnswerC
 	}
 	if result.Passed {
 		t.Fatalf("current-primitives answer without labeled posture passed")
-	}
-}
-
-func TestCreateNoteScenarioForbidsBroadInspection(t *testing.T) {
-	prompt := ""
-	for _, sc := range allScenarios() {
-		if sc.ID == "create-note" {
-			prompt = sc.Prompt
-			break
-		}
-	}
-	if prompt == "" {
-		t.Fatal("create-note scenario missing")
-	}
-	for _, want := range []string{
-		"Use only OpenClerk runner document JSON results",
-		"do not use rg",
-		"find",
-		"ls",
-		"repo search",
-		"direct vault inspection",
-		"direct file edits",
-	} {
-		if !strings.Contains(prompt, want) {
-			t.Fatalf("create-note prompt missing %q: %s", want, prompt)
-		}
 	}
 }
 

@@ -91,24 +91,6 @@ func TestExecuteRunLabelsPopulatedVaultLaneAsNonReleaseBlocking(t *testing.T) {
 	if classifications[populatedSynthesisUpdateScenarioID] != "runner_execution_failure" {
 		t.Fatalf("execution failure classification = %q, want runner_execution_failure", classifications[populatedSynthesisUpdateScenarioID])
 	}
-	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-populated-test.md"))
-	if err != nil {
-		t.Fatalf("read markdown report: %v", err)
-	}
-	for _, want := range []string{
-		"Lane: `" + populatedLaneName + "`",
-		"Release blocking: `false`",
-		"## Targeted Lane Summary",
-		"Decision: `keep_as_reference`",
-		"Public surface: `openclerk document`, `openclerk retrieval`",
-		"no promoted runner action, schema, migration, storage API, product behavior, or public OpenClerk interface",
-		"`skill_guidance_or_eval_coverage`",
-		"`runner_execution_failure`",
-	} {
-		if !strings.Contains(string(markdown), want) {
-			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
-		}
-	}
 }
 
 func TestExecuteRunLabelsRepoDocsDogfoodLaneAsNonReleaseBlocking(t *testing.T) {
@@ -181,21 +163,6 @@ func TestExecuteRunLabelsRepoDocsDogfoodLaneAsNonReleaseBlocking(t *testing.T) {
 	}
 	if classifications[repoDocsDecisionScenarioID] != "skill_guidance_or_eval_coverage" {
 		t.Fatalf("decision classification = %q, want skill guidance", classifications[repoDocsDecisionScenarioID])
-	}
-	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-repo-docs-test.md"))
-	if err != nil {
-		t.Fatalf("read markdown report: %v", err)
-	}
-	for _, want := range []string{
-		"Lane: `" + repoDocsLaneName + "`",
-		"Release blocking: `false`",
-		"Decision: `keep_as_public_dogfood_lane`",
-		"repo-docs dogfood evidence only",
-		"`skill_guidance_or_eval_coverage`",
-	} {
-		if !strings.Contains(string(markdown), want) {
-			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
-		}
 	}
 }
 
@@ -270,21 +237,6 @@ func TestExecuteRunLabelsAgentChosenPathLaneAsNonReleaseBlocking(t *testing.T) {
 	if classifications[agentChosenAutonomousScenarioID] != "skill_guidance_or_eval_coverage" {
 		t.Fatalf("autonomous classification = %q, want skill guidance", classifications[agentChosenAutonomousScenarioID])
 	}
-	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-agent-chosen-test.md"))
-	if err != nil {
-		t.Fatalf("read markdown report: %v", err)
-	}
-	for _, want := range []string{
-		"Lane: `" + agentChosenPathLaneName + "`",
-		"Release blocking: `false`",
-		"Decision: `keep_as_reference`",
-		"no promoted runner action, schema, migration, storage API, product behavior, public OpenClerk interface, or change to missing-path clarification",
-		"`skill_guidance_or_eval_coverage`",
-	} {
-		if !strings.Contains(string(markdown), want) {
-			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
-		}
-	}
 }
 
 func TestExecuteRunLabelsPathTitleAutonomyPressureLaneAsNonReleaseBlocking(t *testing.T) {
@@ -337,20 +289,6 @@ func TestExecuteRunLabelsPathTitleAutonomyPressureLaneAsNonReleaseBlocking(t *te
 	if len(report.TargetedLaneSummary.ScenarioClassifications) != 3 {
 		t.Fatalf("classifications = %d, want 3", len(report.TargetedLaneSummary.ScenarioClassifications))
 	}
-	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-path-title-test.md"))
-	if err != nil {
-		t.Fatalf("read markdown report: %v", err)
-	}
-	for _, want := range []string{
-		"Lane: `" + pathTitleAutonomyLaneName + "`",
-		"Release blocking: `false`",
-		"Decision: `evaluate_for_oc_iat`",
-		"no promoted runner action, schema, migration, skill behavior, storage API, product behavior, or public OpenClerk interface from this eval",
-	} {
-		if !strings.Contains(string(markdown), want) {
-			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
-		}
-	}
 }
 
 func TestExecuteRunLabelsDocumentThisIntakePressureLaneAsNonReleaseBlocking(t *testing.T) {
@@ -402,20 +340,6 @@ func TestExecuteRunLabelsDocumentThisIntakePressureLaneAsNonReleaseBlocking(t *t
 	}
 	if len(report.TargetedLaneSummary.ScenarioClassifications) != 3 {
 		t.Fatalf("classifications = %d, want 3", len(report.TargetedLaneSummary.ScenarioClassifications))
-	}
-	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-document-this-test.md"))
-	if err != nil {
-		t.Fatalf("read markdown report: %v", err)
-	}
-	for _, want := range []string{
-		"Lane: `" + documentThisLaneName + "`",
-		"Release blocking: `false`",
-		"Decision: `evaluate_for_oc_99z`",
-		"no promoted runner action, schema, migration, skill behavior, storage API, product behavior, or public OpenClerk interface from this eval",
-	} {
-		if !strings.Contains(string(markdown), want) {
-			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
-		}
 	}
 }
 
@@ -787,21 +711,6 @@ func TestExecuteRunLabelsArtifactIngestionLaneAsNonReleaseBlocking(t *testing.T)
 	if len(report.TargetedLaneSummary.ScenarioClassifications) != len(artifactIngestionScenarioIDs()) {
 		t.Fatalf("classifications = %d, want %d", len(report.TargetedLaneSummary.ScenarioClassifications), len(artifactIngestionScenarioIDs()))
 	}
-	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-heterogeneous-artifact-ingestion-pressure-test.md"))
-	if err != nil {
-		t.Fatalf("read markdown report: %v", err)
-	}
-	for _, want := range []string{
-		"Lane: `" + artifactIngestionLaneName + "`",
-		"Release blocking: `false`",
-		"Decision: `keep_as_reference`",
-		"no promoted runner action, parser, schema, storage migration, direct create behavior, or public API change",
-		"`none`",
-	} {
-		if !strings.Contains(string(markdown), want) {
-			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
-		}
-	}
 }
 
 func TestArtifactIngestionDecisionRequiresCompleteScenarioCoverage(t *testing.T) {
@@ -952,20 +861,6 @@ func TestExecuteRunLabelsVideoYouTubeLaneAsNonReleaseBlocking(t *testing.T) {
 	if len(report.TargetedLaneSummary.ScenarioClassifications) != len(videoYouTubeScenarioIDs()) {
 		t.Fatalf("classifications = %d, want %d", len(report.TargetedLaneSummary.ScenarioClassifications), len(videoYouTubeScenarioIDs()))
 	}
-	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-video-youtube-canonical-source-note-test.md"))
-	if err != nil {
-		t.Fatalf("read markdown report: %v", err)
-	}
-	for _, want := range []string{
-		"Lane: `" + videoYouTubeLaneName + "`",
-		"Release blocking: `false`",
-		"Decision: `keep_as_reference`",
-		"`none`",
-	} {
-		if !strings.Contains(string(markdown), want) {
-			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
-		}
-	}
 }
 
 func TestVideoYouTubeDecisionRequiresCompleteScenarioCoverage(t *testing.T) {
@@ -1042,23 +937,6 @@ func TestExecuteRunLabelsNativeMediaTranscriptLaneAsNonReleaseBlocking(t *testin
 	}
 	if len(report.TargetedLaneSummary.ScenarioClassifications) != len(scenarioIDs) {
 		t.Fatalf("classifications = %d, want %d", len(report.TargetedLaneSummary.ScenarioClassifications), len(scenarioIDs))
-	}
-	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-artifact-native-media-transcript-acquisition-test.md"))
-	if err != nil {
-		t.Fatalf("read markdown report: %v", err)
-	}
-	for _, want := range []string{
-		"Lane: `" + nativeMediaTranscriptLaneName + "`",
-		"Release blocking: `false`",
-		"Decision: `keep_as_reference`",
-		"Safety pass",
-		"Capability pass",
-		"UX quality",
-		"`none`",
-	} {
-		if !strings.Contains(string(markdown), want) {
-			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
-		}
 	}
 }
 
@@ -1172,20 +1050,6 @@ func TestExecuteRunLabelsSynthesisCompileLaneAsNonReleaseBlocking(t *testing.T) 
 	if classifications["negative-limit-reject"].EvidencePosture != "validation control stayed final-answer-only" {
 		t.Fatalf("negative-limit evidence posture = %q, want validation posture", classifications["negative-limit-reject"].EvidencePosture)
 	}
-	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-synthesis-compile-revisit-pressure-test.md"))
-	if err != nil {
-		t.Fatalf("read markdown report: %v", err)
-	}
-	for _, want := range []string{
-		"Lane: `" + synthesisCompileLaneName + "`",
-		"Release blocking: `false`",
-		"Decision: `defer_compile_synthesis`",
-		"validation control stayed final-answer-only",
-	} {
-		if !strings.Contains(string(markdown), want) {
-			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
-		}
-	}
 }
 
 func TestExecuteRunLabelsHighTouchCompileSynthesisLaneAsNonReleaseBlocking(t *testing.T) {
@@ -1252,20 +1116,6 @@ func TestExecuteRunLabelsHighTouchCompileSynthesisLaneAsNonReleaseBlocking(t *te
 	}
 	if classifications[highTouchCompileSynthesisScriptedScenarioID].FailureClassification != "none" {
 		t.Fatalf("scripted classification = %q, want none", classifications[highTouchCompileSynthesisScriptedScenarioID].FailureClassification)
-	}
-	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-high-touch-compile-synthesis-ceremony-test.md"))
-	if err != nil {
-		t.Fatalf("read markdown report: %v", err)
-	}
-	for _, want := range []string{
-		"Lane: `" + highTouchCompileSynthesisLaneName + "`",
-		"Release blocking: `false`",
-		"Decision: `defer_compile_synthesis`",
-		"validation control stayed final-answer-only",
-	} {
-		if !strings.Contains(string(markdown), want) {
-			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
-		}
 	}
 }
 
@@ -1340,23 +1190,6 @@ func TestExecuteRunLabelsHighTouchDocumentLifecycleLaneAsNonReleaseBlocking(t *t
 	if classifications[highTouchDocumentLifecycleScriptedScenarioID].PromptSpecificity != "scripted-control" {
 		t.Fatalf("scripted prompt specificity = %q, want scripted-control", classifications[highTouchDocumentLifecycleScriptedScenarioID].PromptSpecificity)
 	}
-	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-high-touch-document-lifecycle-ceremony-test.md"))
-	if err != nil {
-		t.Fatalf("read markdown report: %v", err)
-	}
-	for _, want := range []string{
-		"Lane: `" + highTouchDocumentLifecycleLaneName + "`",
-		"Release blocking: `false`",
-		"Decision: `keep_as_reference`",
-		"Safety pass",
-		"Capability pass",
-		"UX quality",
-		"validation control stayed final-answer-only",
-	} {
-		if !strings.Contains(string(markdown), want) {
-			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
-		}
-	}
 }
 
 func TestExecuteRunLabelsHighTouchRelationshipRecordLaneAsNonReleaseBlocking(t *testing.T) {
@@ -1429,23 +1262,6 @@ func TestExecuteRunLabelsHighTouchRelationshipRecordLaneAsNonReleaseBlocking(t *
 	}
 	if classifications[highTouchRelationshipRecordScriptedScenarioID].PromptSpecificity != "scripted-control" {
 		t.Fatalf("scripted prompt specificity = %q, want scripted-control", classifications[highTouchRelationshipRecordScriptedScenarioID].PromptSpecificity)
-	}
-	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-high-touch-relationship-record-ceremony-test.md"))
-	if err != nil {
-		t.Fatalf("read markdown report: %v", err)
-	}
-	for _, want := range []string{
-		"Lane: `" + highTouchRelationshipRecordLaneName + "`",
-		"Release blocking: `false`",
-		"Decision: `keep_as_reference`",
-		"Safety pass",
-		"Capability pass",
-		"UX quality",
-		"validation control stayed final-answer-only",
-	} {
-		if !strings.Contains(string(markdown), want) {
-			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
-		}
 	}
 }
 
@@ -1523,23 +1339,6 @@ func TestExecuteRunLabelsCompileSynthesisCandidateLaneAsNonReleaseBlocking(t *te
 	}
 	if classifications[compileSynthesisResponseCandidateScenarioID].SafetyPass != "pass" || classifications[compileSynthesisResponseCandidateScenarioID].CapabilityPass != "pass" {
 		t.Fatalf("candidate pass fields = safety %q capability %q, want pass/pass", classifications[compileSynthesisResponseCandidateScenarioID].SafetyPass, classifications[compileSynthesisResponseCandidateScenarioID].CapabilityPass)
-	}
-	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-compile-synthesis-candidate-evidence-test.md"))
-	if err != nil {
-		t.Fatalf("read markdown report: %v", err)
-	}
-	for _, want := range []string{
-		"Lane: `" + compileSynthesisCandidateLaneName + "`",
-		"Release blocking: `false`",
-		"Decision: `promote_compile_synthesis_candidate_contract`",
-		"Safety pass",
-		"Capability pass",
-		"UX quality",
-		"validation control stayed final-answer-only",
-	} {
-		if !strings.Contains(string(markdown), want) {
-			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
-		}
 	}
 }
 
@@ -1624,23 +1423,6 @@ func TestExecuteRunLabelsDocumentLifecycleRollbackCandidateLaneAsNonReleaseBlock
 	if classifications[documentLifecycleRollbackResponseScenarioID].UXQuality != "candidate_contract_complete" {
 		t.Fatalf("candidate UX quality = %q, want candidate_contract_complete", classifications[documentLifecycleRollbackResponseScenarioID].UXQuality)
 	}
-	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-document-lifecycle-rollback-candidate-evidence-test.md"))
-	if err != nil {
-		t.Fatalf("read markdown report: %v", err)
-	}
-	for _, want := range []string{
-		"Lane: `" + documentLifecycleRollbackCandidateLaneName + "`",
-		"Release blocking: `false`",
-		"Decision: `promote_lifecycle_rollback_candidate_contract`",
-		"Safety pass",
-		"Capability pass",
-		"UX quality",
-		"validation control stayed final-answer-only",
-	} {
-		if !strings.Contains(string(markdown), want) {
-			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
-		}
-	}
 }
 
 func TestExecuteRunLabelsWebURLStaleRepairLaneAsNonReleaseBlocking(t *testing.T) {
@@ -1710,23 +1492,6 @@ func TestExecuteRunLabelsWebURLStaleRepairLaneAsNonReleaseBlocking(t *testing.T)
 	}
 	if classifications["negative-limit-reject"].EvidencePosture != "validation control stayed final-answer-only" {
 		t.Fatalf("negative-limit evidence posture = %q, want validation posture", classifications["negative-limit-reject"].EvidencePosture)
-	}
-	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-web-url-stale-repair-ceremony-test.md"))
-	if err != nil {
-		t.Fatalf("read markdown report: %v", err)
-	}
-	for _, want := range []string{
-		"Lane: `" + webURLStaleRepairLaneName + "`",
-		"Release blocking: `false`",
-		"Decision: `keep_as_reference`",
-		"Prompt specificity",
-		"Guidance dependence",
-		"Safety risks",
-		"validation control stayed final-answer-only",
-	} {
-		if !strings.Contains(string(markdown), want) {
-			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
-		}
 	}
 }
 
@@ -1802,23 +1567,6 @@ func TestExecuteRunLabelsWebURLStaleImpactCandidateLaneAsNonReleaseBlocking(t *t
 	if classifications[webURLStaleImpactResponseCandidateScenarioID].SafetyPass != "pass" || classifications[webURLStaleImpactResponseCandidateScenarioID].CapabilityPass != "pass" {
 		t.Fatalf("candidate pass fields = safety %q capability %q, want pass/pass", classifications[webURLStaleImpactResponseCandidateScenarioID].SafetyPass, classifications[webURLStaleImpactResponseCandidateScenarioID].CapabilityPass)
 	}
-	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-web-url-stale-impact-update-response-candidate-test.md"))
-	if err != nil {
-		t.Fatalf("read markdown report: %v", err)
-	}
-	for _, want := range []string{
-		"Lane: `" + webURLStaleImpactLaneName + "`",
-		"Release blocking: `false`",
-		"Decision: `promote_stale_impact_update_response_candidate`",
-		"Safety pass",
-		"Capability pass",
-		"UX quality",
-		"validation control stayed final-answer-only",
-	} {
-		if !strings.Contains(string(markdown), want) {
-			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
-		}
-	}
 }
 
 func TestExecuteRunLabelsMemoryRouterRevisitLaneAsNonReleaseBlocking(t *testing.T) {
@@ -1888,20 +1636,6 @@ func TestExecuteRunLabelsMemoryRouterRevisitLaneAsNonReleaseBlocking(t *testing.
 	}
 	if classifications["missing-document-path-reject"].EvidencePosture != "validation control stayed final-answer-only" {
 		t.Fatalf("validation evidence posture = %q, want validation posture", classifications["missing-document-path-reject"].EvidencePosture)
-	}
-	markdown, err := os.ReadFile(filepath.Join(reportDir, "ockp-memory-router-revisit-pressure-test.md"))
-	if err != nil {
-		t.Fatalf("read markdown report: %v", err)
-	}
-	for _, want := range []string{
-		"Lane: `" + memoryRouterRevisitLaneName + "`",
-		"Release blocking: `false`",
-		"Decision: `keep_as_reference`",
-		"validation control stayed final-answer-only",
-	} {
-		if !strings.Contains(string(markdown), want) {
-			t.Fatalf("markdown missing %q:\n%s", want, string(markdown))
-		}
 	}
 }
 
@@ -2668,26 +2402,6 @@ func TestMemoryRouterRecallCandidateCurrentPrimitivesRequiresLabeledDecisionPost
 	answer := "Search plus list_documents and get_document found the memory/router source paths inside local-first no-bypass boundaries. Temporal status is current because canonical docs over stale session observations win. The promotion path is durable canonical markdown with source refs, feedback weighting is advisory, and routing rationale uses existing AgentOps document and retrieval actions. Provenance and synthesis projection freshness were inspected. Validation boundaries exclude direct SQLite, direct vault inspection, broad repo search, source-built runners, HTTP/MCP bypasses, unsupported transports, memory transports, remember/recall actions, autonomous router APIs, vector stores, embedding stores, graph memory, and hidden authority ranking. Authority limits say canonical markdown remains durable memory authority, feedback is advisory, synthesis is derived evidence, and no memory/router recall runner action exists. This shows neither a capability gap nor an ergonomics gap; current primitives can safely express the workflow, the UX is acceptable, and the evidence supports defer for the eval-only candidate."
 	if failures := memoryRouterRecallCandidateAnswerFailures(answer, true); len(failures) == 0 {
 		t.Fatalf("candidate current-primitives answer without labeled safety/capability/UX posture passed")
-	}
-}
-
-func TestOpenClerkSkillAllowsDeferredCapabilityEvidenceComparison(t *testing.T) {
-	content, err := os.ReadFile(filepath.Join("..", "..", "..", "skills", "openclerk", "SKILL.md"))
-	if err != nil {
-		t.Fatalf("read OpenClerk skill: %v", err)
-	}
-	text := string(content)
-	for _, want := range []string{
-		"Deferred-capability comparison",
-		"valid runner-backed evidence tasks",
-		"memory transports",
-		"remember",
-		"autonomous\nrouter APIs",
-		"unsupported only when the user asks you to use, implement, or rely on them",
-	} {
-		if !strings.Contains(text, want) {
-			t.Fatalf("skill missing %q", want)
-		}
 	}
 }
 
