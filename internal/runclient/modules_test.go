@@ -50,6 +50,107 @@ func TestSemanticModuleRuntimeConfigRedactsAndVerifiesManifest(t *testing.T) {
 	}
 }
 
+func TestSemanticModuleProviderConfigRejectsUnsafeEndpointConfig(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	t.Run("remote ollama install", func(t *testing.T) {
+		t.Parallel()
+
+		config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+		manifestPath := writeRunclientSemanticModuleManifest(t, t.TempDir(), "ollama")
+		_, err := InstallSemanticModule(ctx, config, SemanticModuleInstallInput{
+			Provider:     SemanticModuleProviderOllama,
+			ManifestPath: manifestPath,
+			ProviderConfig: map[string]string{
+				"ollama_url": "https://embeddings.example.test",
+			},
+		})
+		if err == nil || !strings.Contains(err.Error(), "module.provider_config.ollama_url must be a loopback HTTP URL") {
+			t.Fatalf("install error = %v", err)
+		}
+	})
+
+	t.Run("remote gemini install", func(t *testing.T) {
+		t.Parallel()
+
+		config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+		manifestPath := writeRunclientSemanticModuleManifest(t, t.TempDir(), "gemini")
+		_, err := InstallSemanticModule(ctx, config, SemanticModuleInstallInput{
+			Provider:     SemanticModuleProviderGemini,
+			ManifestPath: manifestPath,
+			ProviderConfig: map[string]string{
+				"gemini_api_base": "http://127.0.0.1:9999",
+			},
+		})
+		if err == nil || !strings.Contains(err.Error(), "module.provider_config.gemini_api_base must be https://generativelanguage.googleapis.com/v1beta") {
+			t.Fatalf("install error = %v", err)
+		}
+	})
+
+	t.Run("remote gemini configure", func(t *testing.T) {
+		t.Parallel()
+
+		config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+		manifestPath := writeRunclientSemanticModuleManifest(t, t.TempDir(), "gemini")
+		if _, err := InstallSemanticModule(ctx, config, SemanticModuleInstallInput{
+			Provider:     SemanticModuleProviderGemini,
+			ManifestPath: manifestPath,
+		}); err != nil {
+			t.Fatalf("install module: %v", err)
+		}
+		_, err := ConfigureSemanticModule(ctx, config, SemanticModuleConfigureInput{
+			Provider: SemanticModuleProviderGemini,
+			ProviderConfig: map[string]string{
+				"gemini_api_base": "https://generativelanguage.googleapis.com/v1beta?key=inline",
+			},
+		})
+		if err == nil || !strings.Contains(err.Error(), "module.provider_config.gemini_api_base must be https://generativelanguage.googleapis.com/v1beta") {
+			t.Fatalf("configure error = %v", err)
+		}
+	})
+
+	t.Run("disable legacy unsafe config", func(t *testing.T) {
+		t.Parallel()
+
+		config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+		manifestPath := writeRunclientSemanticModuleManifest(t, t.TempDir(), "ollama")
+		installed, err := InstallSemanticModule(ctx, config, SemanticModuleInstallInput{
+			Provider:     SemanticModuleProviderOllama,
+			ManifestPath: manifestPath,
+		})
+		if err != nil {
+			t.Fatalf("install module: %v", err)
+		}
+		installed.ProviderConfig["ollama_url"] = "https://embeddings.example.test"
+		if err := writeSemanticModuleConfig(ctx, config, installed); err != nil {
+			t.Fatalf("poison legacy config: %v", err)
+		}
+
+		disabled := false
+		configured, err := ConfigureSemanticModule(ctx, config, SemanticModuleConfigureInput{
+			Provider: SemanticModuleProviderOllama,
+			Enabled:  &disabled,
+		})
+		if err != nil {
+			t.Fatalf("disable legacy unsafe config: %v", err)
+		}
+		if configured.Enabled {
+			t.Fatalf("configured module still enabled: %+v", configured)
+		}
+
+		enabled := true
+		_, err = ConfigureSemanticModule(ctx, config, SemanticModuleConfigureInput{
+			Provider: SemanticModuleProviderOllama,
+			Enabled:  &enabled,
+		})
+		if err == nil || !strings.Contains(err.Error(), "module.provider_config.ollama_url must be a loopback HTTP URL") {
+			t.Fatalf("reenable error = %v", err)
+		}
+	})
+}
+
 func TestOCRModuleRuntimeConfigVerifiesManifest(t *testing.T) {
 	t.Parallel()
 

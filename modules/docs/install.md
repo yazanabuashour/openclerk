@@ -99,6 +99,10 @@ printf '%s\n' '{"action":"install_module","module":{"provider":"gemini","manifes
   openclerk module
 ```
 
+`gemini_api_base` is compatibility-only for the production adapter and must
+remain `https://generativelanguage.googleapis.com/v1beta`; custom Gemini
+endpoints and provider mimics are rejected.
+
 Install local Tesseract OCR:
 
 ```bash

@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,6 +29,7 @@ const (
 
 	semanticModuleCommand       = "semantic-retrieval-adapter"
 	semanticModuleSearchCommand = "semantic-retrieval-adapter search"
+	canonicalGeminiAPIBase      = "https://generativelanguage.googleapis.com/v1beta"
 )
 
 type SemanticModuleConfig struct {
@@ -87,6 +90,10 @@ func InstallSemanticModule(ctx context.Context, cfg Config, input SemanticModule
 	if input.Enabled != nil {
 		enabled = *input.Enabled
 	}
+	providerConfig := redactedProviderConfig(provider, input.ProviderConfig)
+	if err := validateSemanticProviderConfig(provider, providerConfig); err != nil {
+		return SemanticModuleConfig{}, err
+	}
 	config := SemanticModuleConfig{
 		Kind:               ModuleKindEmbeddingProvider,
 		Provider:           provider,
@@ -96,7 +103,7 @@ func InstallSemanticModule(ctx context.Context, cfg Config, input SemanticModule
 		CommandArgs:        nil,
 		ManifestPath:       manifestPath,
 		ManifestSHA256:     manifestSHA,
-		ProviderConfig:     redactedProviderConfig(provider, input.ProviderConfig),
+		ProviderConfig:     providerConfig,
 		VerificationStatus: "verified",
 		RedactionStatus:    "redacted",
 	}
@@ -128,8 +135,14 @@ func ConfigureSemanticModule(ctx context.Context, cfg Config, input SemanticModu
 	for key, value := range current.ProviderConfig {
 		merged[key] = value
 	}
-	for key, value := range redactedProviderConfig(provider, input.ProviderConfig) {
+	providerConfigUpdates := redactedProviderConfig(provider, input.ProviderConfig)
+	for key, value := range providerConfigUpdates {
 		merged[key] = value
+	}
+	if current.Enabled || len(providerConfigUpdates) > 0 {
+		if err := validateSemanticProviderConfig(provider, merged); err != nil {
+			return SemanticModuleConfig{}, err
+		}
 	}
 	current.ProviderConfig = merged
 	current.VerificationStatus = "verified"
@@ -714,6 +727,74 @@ func redactedProviderConfig(provider string, values map[string]string) map[strin
 		delete(config, "api_key")
 	}
 	return config
+}
+
+func validateSemanticProviderConfig(provider string, config map[string]string) error {
+	switch provider {
+	case SemanticModuleProviderOllama:
+		if rejection := validateOptionalModuleLoopbackHTTPURL(config["ollama_url"], "module.provider_config.ollama_url"); rejection != "" {
+			return domain.ValidationError(rejection, map[string]any{"provider": provider})
+		}
+	case SemanticModuleProviderGemini:
+		if rejection := validateOptionalModuleCanonicalGeminiAPIBase(config["gemini_api_base"], "module.provider_config.gemini_api_base"); rejection != "" {
+			return domain.ValidationError(rejection, map[string]any{"provider": provider})
+		}
+		if key := strings.TrimSpace(config["gemini_config_key"]); key != "" && key != "GEMINI_API_KEY" {
+			return domain.ValidationError("module.provider_config.gemini_config_key must be GEMINI_API_KEY", map[string]any{"provider": provider})
+		}
+	}
+	return nil
+}
+
+func validateOptionalModuleLoopbackHTTPURL(raw string, field string) string {
+	parsed, rejection := validateOptionalModuleHTTPURL(raw, field)
+	if rejection != "" {
+		return field + " must be a loopback HTTP URL"
+	}
+	if parsed == nil {
+		return ""
+	}
+	if strings.EqualFold(parsed.Hostname(), "localhost") {
+		return ""
+	}
+	ip := net.ParseIP(parsed.Hostname())
+	if ip != nil && ip.IsLoopback() {
+		return ""
+	}
+	return field + " must be a loopback HTTP URL"
+}
+
+func validateOptionalModuleCanonicalGeminiAPIBase(raw string, field string) string {
+	parsed, rejection := validateOptionalModuleHTTPURL(raw, field)
+	if rejection != "" {
+		return field + " must be " + canonicalGeminiAPIBase
+	}
+	if parsed == nil {
+		return ""
+	}
+	if parsed.User != nil || parsed.RawQuery != "" || parsed.ForceQuery || parsed.Fragment != "" ||
+		parsed.Scheme != "https" || parsed.Host != "generativelanguage.googleapis.com" || parsed.Path != "/v1beta" {
+		return field + " must be " + canonicalGeminiAPIBase
+	}
+	return ""
+}
+
+func validateOptionalModuleHTTPURL(raw string, field string) (*url.URL, string) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return nil, ""
+	}
+	parsed, err := url.Parse(trimmed)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return nil, field + " must be a valid http or https URL"
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return nil, field + " must use http or https"
+	}
+	if parsed.User != nil || parsed.RawQuery != "" || parsed.ForceQuery || parsed.Fragment != "" {
+		return nil, field + " must not include userinfo, query, or fragment"
+	}
+	return parsed, ""
 }
 
 func semanticProviderConfigSecretKey(key string) bool {

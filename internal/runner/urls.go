@@ -6,6 +6,8 @@ import (
 	"strings"
 )
 
+const canonicalGeminiAPIBase = "https://generativelanguage.googleapis.com/v1beta"
+
 func validateRequiredRunnerHTTPURL(raw string, field string) (*url.URL, string) {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {
@@ -46,4 +48,19 @@ func validateOptionalRunnerLoopbackHTTPURL(raw string, field string) string {
 		return ""
 	}
 	return field + " must be a loopback HTTP URL"
+}
+
+func validateOptionalRunnerCanonicalGeminiAPIBase(raw string, field string) string {
+	parsed, rejection := validateOptionalRunnerHTTPURL(raw, field)
+	if rejection != "" {
+		return field + " must be " + canonicalGeminiAPIBase
+	}
+	if parsed == nil {
+		return ""
+	}
+	if parsed.User != nil || parsed.RawQuery != "" || parsed.ForceQuery || parsed.Fragment != "" ||
+		parsed.Scheme != "https" || parsed.Host != "generativelanguage.googleapis.com" || parsed.Path != "/v1beta" {
+		return field + " must be " + canonicalGeminiAPIBase
+	}
+	return ""
 }

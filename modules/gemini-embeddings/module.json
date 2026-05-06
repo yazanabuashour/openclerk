@@ -62,7 +62,7 @@
       "Install modules/gemini-embeddings/skill/gemini-embeddings/SKILL.md only when the host opts into the Gemini module skill.",
       "Store GEMINI_API_KEY in runtime_config for the target database before use.",
       "Register the module with openclerk module install_module and this manifest.",
-      "Configure gemini_api_base, embedding_model, and embedding_output_dimensions through openclerk module configure_module."
+      "Configure embedding_model and embedding_output_dimensions through openclerk module configure_module; gemini_api_base is compatibility-only and must remain https://generativelanguage.googleapis.com/v1beta."
     ],
     "uninstall": "Run openclerk module remove_module for provider gemini, then remove the adapter binary, optional skill, and user-cache directory without changing OpenClerk core. Removing the provider module does not delete runtime_config:GEMINI_API_KEY."
   },

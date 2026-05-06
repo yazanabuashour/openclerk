@@ -142,21 +142,8 @@ func TestRetrievalTaskSemanticSearchRejectsConfiguredRemoteOllamaURL(t *testing.
 		ProviderConfig: map[string]string{
 			"ollama_url": "https://embeddings.example.test",
 		},
-	}); err != nil {
-		t.Fatalf("install module: %v", err)
-	}
-
-	result, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
-		Action:         runner.RetrievalTaskActionSemanticSearch,
-		SemanticSearch: runner.SemanticSearchOptions{Query: "semantic recall", Limit: 5},
-	})
-	if err != nil {
-		t.Fatalf("semantic search: %v", err)
-	}
-	if result.SemanticSearch == nil ||
-		result.SemanticSearch.SearchStatus != "provider_blocked" ||
-		!strings.Contains(result.SemanticSearch.Provider.ErrorSummary, "loopback HTTP URL") {
-		t.Fatalf("semantic result = %+v", result.SemanticSearch)
+	}); err == nil || !strings.Contains(err.Error(), "loopback HTTP URL") {
+		t.Fatalf("install error = %v", err)
 	}
 }
 
@@ -230,6 +217,21 @@ Semantic recall citations stay local.
 	}
 	if !remoteURL.Rejected || remoteURL.RejectionReason != "semantic_search.ollama_url must be a loopback HTTP URL" {
 		t.Fatalf("remote url result = %+v", remoteURL)
+	}
+
+	remoteGeminiBase, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSemanticSearch,
+		SemanticSearch: runner.SemanticSearchOptions{
+			Query:         "semantic",
+			Provider:      "gemini",
+			GeminiAPIBase: "http://127.0.0.1:9999",
+		},
+	})
+	if err != nil {
+		t.Fatalf("gemini url validation: %v", err)
+	}
+	if !remoteGeminiBase.Rejected || remoteGeminiBase.RejectionReason != "semantic_search.gemini_api_base must be https://generativelanguage.googleapis.com/v1beta" {
+		t.Fatalf("remote gemini base result = %+v", remoteGeminiBase)
 	}
 
 	unknownProvider, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{

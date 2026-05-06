@@ -76,6 +76,11 @@ func runSemanticSearch(ctx context.Context, client *runclient.Client, options Se
 			return semanticModuleBlockedResult(options, "module_config_invalid", errors.New(rejection)), nil
 		}
 	}
+	if request.Provider == runclient.SemanticModuleProviderGemini {
+		if rejection := validateSemanticSearchGeminiAPIBase(request.GeminiAPIBase); rejection != "" {
+			return semanticModuleBlockedResult(options, "module_config_invalid", errors.New(rejection)), nil
+		}
+	}
 	response, err := executeSemanticModule(ctx, moduleConfig, paths.DatabasePath, request)
 	if err != nil {
 		return semanticModuleBlockedResult(options, "module_blocked", err), nil

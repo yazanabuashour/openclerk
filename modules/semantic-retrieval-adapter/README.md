@@ -35,9 +35,12 @@ provided, `metadata_key` and `metadata_value` must be provided together, and
 ## Boundaries
 
 - Ollama keeps corpus/query text local when the local service and model are
-  available.
+  available. `ollama_url` must resolve to a loopback HTTP(S) host.
 - Gemini is explicit provider-backed mode only and reads
   `runtime_config:GEMINI_API_KEY`; the key is never printed or written back.
+  `gemini_api_base` is accepted only for the canonical
+  `https://generativelanguage.googleapis.com/v1beta` endpoint. Custom Gemini
+  endpoints and provider mimics are not supported by the production adapter.
 - The cache is outside the committed repository and can be deleted/rebuilt.
 - Results are retrieval evidence only. Canonical markdown citations and
   approved OpenClerk runner writes remain authority.

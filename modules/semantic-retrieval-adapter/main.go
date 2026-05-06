@@ -12,7 +12,9 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -29,6 +31,9 @@ import (
 const (
 	providerOllama = "ollama"
 	providerGemini = "gemini"
+
+	geminiAPIBase = "https://generativelanguage.googleapis.com/v1beta"
+	geminiKeyName = "GEMINI_API_KEY"
 
 	ollamaEmbedBatchSize          = 4
 	semanticChunkTargetCharacters = 1800
@@ -265,6 +270,9 @@ func executeSearch(ctx context.Context, config runclient.Config, request searchR
 	if unsafePrefix(request.PathPrefix) {
 		return searchResponse{}, errors.New("path_prefix must stay inside the vault root")
 	}
+	if err := validateProviderSettings(request); err != nil {
+		return searchResponse{}, err
+	}
 	if request.tagProvided && request.Tag == "" {
 		return searchResponse{}, errors.New("tag must be non-empty")
 	}
@@ -387,11 +395,11 @@ func normalizeRequest(request searchRequest) searchRequest {
 	}
 	request.GeminiAPIBase = strings.TrimRight(strings.TrimSpace(request.GeminiAPIBase), "/")
 	if request.GeminiAPIBase == "" {
-		request.GeminiAPIBase = "https://generativelanguage.googleapis.com/v1beta"
+		request.GeminiAPIBase = geminiAPIBase
 	}
 	request.GeminiConfigKey = strings.TrimSpace(request.GeminiConfigKey)
 	if request.GeminiConfigKey == "" {
-		request.GeminiConfigKey = "GEMINI_API_KEY"
+		request.GeminiConfigKey = geminiKeyName
 	}
 	request.EmbeddingModel = defaultModel(request.Provider, strings.TrimSpace(request.EmbeddingModel))
 	if request.EmbeddingOutputDimensions == 0 {
@@ -401,6 +409,98 @@ func normalizeRequest(request searchRequest) searchRequest {
 		request.Limit = 10
 	}
 	return request
+}
+
+func validateProviderSettings(request searchRequest) error {
+	if err := validateProviderName(request.Provider); err != nil {
+		return err
+	}
+	if request.FallbackProvider != "" {
+		if err := validateProviderName(request.FallbackProvider); err != nil {
+			return fmt.Errorf("fallback_provider must be %q or %q", providerOllama, providerGemini)
+		}
+	}
+	for _, provider := range activeProviders(request) {
+		switch provider {
+		case providerOllama:
+			if err := validateOllamaBaseURL(request.OllamaURL); err != nil {
+				return err
+			}
+		case providerGemini:
+			if err := validateGeminiSettings(request.GeminiAPIBase, request.GeminiConfigKey); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func activeProviders(request searchRequest) []string {
+	providers := []string{request.Provider}
+	if request.FallbackProvider != "" && request.FallbackProvider != request.Provider {
+		providers = append(providers, request.FallbackProvider)
+	}
+	return providers
+}
+
+func validateProviderName(provider string) error {
+	if provider != providerOllama && provider != providerGemini {
+		return fmt.Errorf("provider must be %q or %q", providerOllama, providerGemini)
+	}
+	return nil
+}
+
+func validateOllamaBaseURL(raw string) error {
+	parsed, err := parseProviderBaseURL(raw)
+	if err != nil {
+		return fmt.Errorf("invalid ollama_url: %w", err)
+	}
+	if !isLoopbackHost(parsed.Hostname()) {
+		return errors.New("ollama_url must be a loopback HTTP URL")
+	}
+	return nil
+}
+
+func validateGeminiSettings(rawBase string, keyName string) error {
+	parsed, err := parseProviderBaseURL(rawBase)
+	if err != nil {
+		return fmt.Errorf("invalid gemini_api_base: %w", err)
+	}
+	if parsed.Scheme != "https" || parsed.Host != "generativelanguage.googleapis.com" || parsed.Path != "/v1beta" {
+		return errors.New("gemini_api_base must be https://generativelanguage.googleapis.com/v1beta")
+	}
+	if keyName != geminiKeyName {
+		return errors.New("gemini_config_key must be GEMINI_API_KEY")
+	}
+	return nil
+}
+
+func parseProviderBaseURL(raw string) (*url.URL, error) {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return nil, err
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return nil, errors.New("scheme must be http or https")
+	}
+	if parsed.Host == "" {
+		return nil, errors.New("host is required")
+	}
+	if parsed.User != nil {
+		return nil, errors.New("userinfo is not allowed")
+	}
+	if parsed.RawQuery != "" || parsed.ForceQuery || parsed.Fragment != "" {
+		return nil, errors.New("query and fragment are not allowed")
+	}
+	return parsed, nil
+}
+
+func isLoopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 func defaultModel(provider string, model string) string {
@@ -709,7 +809,7 @@ func embedTexts(ctx context.Context, request searchRequest, dbPath string, input
 	status := providerStatus{Provider: request.Provider, Model: request.EmbeddingModel, Status: "completed"}
 	switch request.Provider {
 	case providerOllama:
-		client := ollamaClient{baseURL: request.OllamaURL, client: &http.Client{Timeout: 60 * time.Second}}
+		client := ollamaClient{baseURL: request.OllamaURL, client: providerHTTPClient(60 * time.Second)}
 		vectors, requestCount, err := client.embed(ctx, request.EmbeddingModel, inputs)
 		status.RequestCount = requestCount
 		if err != nil {
@@ -729,7 +829,7 @@ func embedTexts(ctx context.Context, request searchRequest, dbPath string, input
 			status.ErrorSummary = errorSummary(err)
 			return nil, status, err
 		}
-		client := geminiClient{baseURL: request.GeminiAPIBase, apiKey: key, httpClient: &http.Client{Timeout: 45 * time.Second}, sleep: time.Sleep}
+		client := geminiClient{baseURL: request.GeminiAPIBase, apiKey: key, httpClient: providerHTTPClient(45 * time.Second), sleep: time.Sleep}
 		taskType := "RETRIEVAL_QUERY"
 		if documents {
 			taskType = "RETRIEVAL_DOCUMENT"
@@ -749,6 +849,15 @@ func embedTexts(ctx context.Context, request searchRequest, dbPath string, input
 		return vectors, status, nil
 	default:
 		return nil, status, fmt.Errorf("provider must be %q or %q", providerOllama, providerGemini)
+	}
+}
+
+func providerHTTPClient(timeout time.Duration) *http.Client {
+	return &http.Client{
+		Timeout: timeout,
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
 	}
 }
 

@@ -557,6 +557,11 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 				return normalizedRetrievalTaskRequest{}, rejection
 			}
 		}
+		if normalized.SemanticSearch.Provider == runclient.SemanticModuleProviderGemini {
+			if rejection := validateSemanticSearchGeminiAPIBase(normalized.SemanticSearch.GeminiAPIBase); rejection != "" {
+				return normalizedRetrievalTaskRequest{}, rejection
+			}
+		}
 		if normalized.SemanticSearch.Provider == runclient.SemanticModuleProviderGemini && strings.TrimSpace(normalized.SemanticSearch.OllamaURL) != "" {
 			return normalizedRetrievalTaskRequest{}, "semantic_search.ollama_url is only valid for provider ollama"
 		}
@@ -579,6 +584,10 @@ func normalizeSemanticSearchTagFilter(search *SemanticSearchOptions) string {
 
 func validateSemanticSearchOllamaURL(raw string) string {
 	return validateOptionalRunnerLoopbackHTTPURL(raw, "semantic_search.ollama_url")
+}
+
+func validateSemanticSearchGeminiAPIBase(raw string) string {
+	return validateOptionalRunnerCanonicalGeminiAPIBase(raw, "semantic_search.gemini_api_base")
 }
 
 func normalizeTagFilter(fieldPrefix string, tag string, tagProvided bool, metadataKey *string, metadataValue *string, normalizedTag *string) string {

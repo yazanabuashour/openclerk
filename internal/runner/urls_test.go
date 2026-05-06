@@ -41,3 +41,21 @@ func TestRunnerLoopbackHTTPURLValidation(t *testing.T) {
 		t.Fatalf("invalid loopback URL rejection = %q", rejection)
 	}
 }
+
+func TestRunnerGeminiAPIBaseValidation(t *testing.T) {
+	t.Parallel()
+
+	if rejection := validateOptionalRunnerCanonicalGeminiAPIBase("https://generativelanguage.googleapis.com/v1beta", "semantic_search.gemini_api_base"); rejection != "" {
+		t.Fatalf("canonical Gemini base rejection = %q", rejection)
+	}
+	for _, raw := range []string{
+		"http://127.0.0.1:9999",
+		"https://generativelanguage.googleapis.com/v1beta?key=inline",
+		"https://user:pass@generativelanguage.googleapis.com/v1beta",
+		"https://generativelanguage.googleapis.com/v1",
+	} {
+		if rejection := validateOptionalRunnerCanonicalGeminiAPIBase(raw, "semantic_search.gemini_api_base"); rejection != "semantic_search.gemini_api_base must be https://generativelanguage.googleapis.com/v1beta" {
+			t.Fatalf("Gemini base %q rejection = %q", raw, rejection)
+		}
+	}
+}

@@ -423,6 +423,96 @@ func TestSemanticRetrievalAdapterRejectsUnsafePrefix(t *testing.T) {
 	}
 }
 
+func TestSemanticRetrievalAdapterRejectsUnsafeProviderSettingsBeforeDBAccess(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "missing", "openclerk.sqlite")
+	cases := []struct {
+		name    string
+		request searchRequest
+		want    string
+	}{
+		{
+			name: "remote ollama",
+			request: searchRequest{
+				Query:     "semantic",
+				Limit:     5,
+				Provider:  providerOllama,
+				OllamaURL: "https://embeddings.example.test",
+			},
+			want: "ollama_url must be a loopback HTTP URL",
+		},
+		{
+			name: "non canonical gemini base",
+			request: searchRequest{
+				Query:         "semantic",
+				Limit:         5,
+				Provider:      providerGemini,
+				GeminiAPIBase: "http://127.0.0.1:9999",
+			},
+			want: "gemini_api_base must be https://generativelanguage.googleapis.com/v1beta",
+		},
+		{
+			name: "non default gemini config key",
+			request: searchRequest{
+				Query:           "semantic",
+				Limit:           5,
+				Provider:        providerGemini,
+				GeminiConfigKey: "OTHER_RUNTIME_KEY",
+			},
+			want: "gemini_config_key must be GEMINI_API_KEY",
+		},
+		{
+			name: "fallback gemini base",
+			request: searchRequest{
+				Query:            "semantic",
+				Limit:            5,
+				Provider:         providerOllama,
+				OllamaURL:        "http://localhost:11434",
+				FallbackProvider: providerGemini,
+				GeminiAPIBase:    "https://attacker.example.test/v1beta",
+			},
+			want: "gemini_api_base must be https://generativelanguage.googleapis.com/v1beta",
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := executeSearch(context.Background(), runclient.Config{DatabasePath: dbPath}, tc.request)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("error = %v, want %q", err, tc.want)
+			}
+		})
+	}
+}
+
+func TestSemanticRetrievalAdapterGeminiValidationDoesNotReadRuntimeConfigOrCallHTTP(t *testing.T) {
+	t.Parallel()
+
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		http.Error(w, "should not be called", http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	_, err := executeSearch(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "missing.sqlite")}, searchRequest{
+		Query:         "semantic",
+		Limit:         5,
+		Provider:      providerGemini,
+		GeminiAPIBase: server.URL,
+	})
+	if err == nil || !strings.Contains(err.Error(), "gemini_api_base") {
+		t.Fatalf("error = %v, want gemini_api_base rejection", err)
+	}
+	if requests != 0 {
+		t.Fatalf("unsafe gemini request reached HTTP server %d time(s)", requests)
+	}
+}
+
 func TestSemanticRetrievalAdapterDoesNotDefaultRemoteFallback(t *testing.T) {
 	t.Parallel()
 
@@ -432,14 +522,8 @@ func TestSemanticRetrievalAdapterDoesNotDefaultRemoteFallback(t *testing.T) {
 	}
 }
 
-func TestSemanticRetrievalAdapterGeminiRetriesAndRedactsCredential(t *testing.T) {
+func TestGeminiClientRetriesAndBatches(t *testing.T) {
 	t.Parallel()
-
-	ctx := context.Background()
-	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
-	createModuleDocument(t, ctx, dbPath, "docs/architecture/semantic.md", "Semantic Retrieval", "# Semantic Retrieval\n\n## Summary\nSemantic recall evidence keeps citations.\n")
-	writeModuleRuntimeConfig(t, dbPath, "GEMINI_API_KEY", "test-secret-gemini-key")
-	cacheDir := t.TempDir()
 
 	requests := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -467,46 +551,53 @@ func TestSemanticRetrievalAdapterGeminiRetriesAndRedactsCredential(t *testing.T)
 	}))
 	defer server.Close()
 
-	response, err := executeSearch(ctx, runclient.Config{DatabasePath: dbPath}, searchRequest{
-		Query:                     "semantic recall",
-		Limit:                     5,
-		Provider:                  providerGemini,
-		EmbeddingModel:            "gemini-embedding-001",
-		GeminiAPIBase:             server.URL,
-		EmbeddingOutputDimensions: 3,
-		CacheDir:                  cacheDir,
-	})
+	client := geminiClient{
+		baseURL:    server.URL,
+		apiKey:     "test-secret-gemini-key",
+		httpClient: providerHTTPClient(45 * time.Second),
+		sleep:      func(time.Duration) {},
+	}
+	vectors, stats, err := client.embed(context.Background(), "gemini-embedding-001", []string{"semantic recall", "citation evidence"}, "RETRIEVAL_DOCUMENT", 3)
 	if err != nil {
 		t.Fatalf("gemini search: %v", err)
 	}
-	encoded, err := json.Marshal(response)
-	if err != nil {
-		t.Fatalf("marshal response: %v", err)
+	if len(vectors) != 2 || stats.RetryCount != 1 || stats.RequestCount != 2 {
+		t.Fatalf("vectors=%v stats=%+v", vectors, stats)
 	}
-	if response.SearchStatus != "completed" ||
-		response.Provider.Provider != providerGemini ||
-		response.Provider.CredentialRef != "runtime_config:GEMINI_API_KEY" ||
-		response.Provider.RetryCount == 0 ||
-		strings.Contains(string(encoded), "test-secret-gemini-key") ||
-		len(response.Results) == 0 ||
-		response.Results[0].Citations[0].Path != "docs/architecture/semantic.md" {
-		t.Fatalf("gemini response = %s", encoded)
-	}
+}
 
-	cached, err := executeSearch(ctx, runclient.Config{DatabasePath: dbPath}, searchRequest{
-		Query:                     "semantic recall",
-		Limit:                     5,
-		Provider:                  providerGemini,
-		EmbeddingModel:            "gemini-embedding-001",
-		GeminiAPIBase:             server.URL,
-		EmbeddingOutputDimensions: 3,
-		CacheDir:                  cacheDir,
-	})
-	if err != nil {
-		t.Fatalf("cached gemini search: %v", err)
+func TestProviderClientsDoNotFollowRedirects(t *testing.T) {
+	t.Parallel()
+
+	attackerRequests := 0
+	attacker := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attackerRequests++
+		if r.Header.Get("x-goog-api-key") != "" {
+			t.Fatalf("api key reached redirected server")
+		}
+	}))
+	defer attacker.Close()
+
+	redirector := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, attacker.URL+"/steal", http.StatusTemporaryRedirect)
+	}))
+	defer redirector.Close()
+
+	ollama := ollamaClient{baseURL: redirector.URL, client: providerHTTPClient(60 * time.Second)}
+	if _, _, err := ollama.embed(context.Background(), "embeddinggemma", []string{"private corpus text"}); err == nil {
+		t.Fatalf("expected ollama redirect to fail")
 	}
-	if cached.Cache.Status != "hit" || cached.Provider.CredentialRef != "runtime_config:GEMINI_API_KEY" {
-		t.Fatalf("cached gemini response = %+v", cached)
+	gemini := geminiClient{
+		baseURL:    redirector.URL,
+		apiKey:     "test-secret-gemini-key",
+		httpClient: providerHTTPClient(45 * time.Second),
+		sleep:      func(time.Duration) {},
+	}
+	if _, _, err := gemini.embed(context.Background(), "gemini-embedding-001", []string{"private corpus text"}, "RETRIEVAL_DOCUMENT", 3); err == nil {
+		t.Fatalf("expected gemini redirect to fail")
+	}
+	if attackerRequests != 0 {
+		t.Fatalf("redirected provider request reached attacker server %d time(s)", attackerRequests)
 	}
 }
 
