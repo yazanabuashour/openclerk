@@ -13,32 +13,27 @@ import (
 )
 
 func runSourcePlacementPlan(ctx context.Context, client *runclient.Client, input SourceURLInput) (SourcePlacementPlan, error) {
-	sourceURL := normalizeSourcePlacementURL(input.URL)
-	sourceType := sourcePlacementType(input)
-	slug := sourcePlacementSlug(input, sourceURL)
-	existing, err := sourcePlacementExistingSource(ctx, client, sourceURL, input.URL)
+	placement, err := planSourceURLPlacement(ctx, client, sourceURLPlacementInput{
+		URL:           input.URL,
+		Title:         input.Title,
+		SourceType:    input.SourceType,
+		PathHint:      input.PathHint,
+		AssetPathHint: input.AssetPathHint,
+	})
 	if err != nil {
 		return SourcePlacementPlan{}, err
 	}
 
-	candidateSourcePaths := sourcePlacementCandidatePaths(input.PathHint, sourceType, slug)
-	candidateAssetPaths := sourcePlacementAssetPaths(input.AssetPathHint, sourceType, slug)
-	candidateSynthesisPath := "synthesis/" + slug + ".md"
-	duplicateStatus := "no_existing_source_url_found"
-	if existing != nil {
-		duplicateStatus = "existing_source_url_found_no_fetch_no_write"
-		candidateSynthesisPath = ""
-	}
 	validationBoundaries := sourcePlacementValidationBoundaries()
 	authorityLimits := sourcePlacementAuthorityLimits()
 	plan := SourcePlacementPlan{
-		SourceURL:              sourceURL,
-		SourceType:             sourceType,
-		CandidateSourcePaths:   candidateSourcePaths,
-		CandidateAssetPaths:    candidateAssetPaths,
-		CandidateSynthesisPath: candidateSynthesisPath,
-		ExistingSource:         existing,
-		DuplicateStatus:        duplicateStatus,
+		SourceURL:              placement.SourceURL,
+		SourceType:             placement.SourceType,
+		CandidateSourcePaths:   placement.CandidateSourcePaths,
+		CandidateAssetPaths:    placement.CandidateAssetPaths,
+		CandidateSynthesisPath: placement.CandidateSynthesisPath,
+		ExistingSource:         placement.ExistingSource,
+		DuplicateStatus:        placement.DuplicateStatus,
 		FetchStatus:            "planned_no_fetch",
 		WriteStatus:            "planned_no_write",
 		ApprovalBoundary:       "public URL inspection intent is not durable-write approval; approve source fetch/write, synthesis creation, or existing-source update before mutating",
@@ -47,6 +42,70 @@ func runSourcePlacementPlan(ctx context.Context, client *runclient.Client, input
 	}
 	plan.AgentHandoff = sourcePlacementHandoff(plan)
 	return plan, nil
+}
+
+type sourceURLPlacementInput struct {
+	URL           string
+	Title         string
+	SourceType    string
+	PathHint      string
+	AssetPathHint string
+}
+
+type sourceURLPlacement struct {
+	SourceURL              string
+	SourceType             string
+	Slug                   string
+	CandidateSourcePaths   []string
+	CandidateAssetPaths    []string
+	CandidateSynthesisPath string
+	ExistingSource         *DocumentSummary
+	DuplicateStatus        string
+}
+
+func planSourceURLPlacement(ctx context.Context, client *runclient.Client, input sourceURLPlacementInput) (sourceURLPlacement, error) {
+	sourceURL := normalizeSourcePlacementURL(input.URL)
+	sourceType := sourcePlacementType(SourceURLInput{
+		URL:        input.URL,
+		SourceType: input.SourceType,
+	})
+	slug := sourcePlacementSlug(SourceURLInput{
+		URL:   input.URL,
+		Title: input.Title,
+	}, sourceURL)
+	existing, err := sourcePlacementExistingSource(ctx, client, sourceURL, input.URL)
+	if err != nil {
+		return sourceURLPlacement{}, err
+	}
+
+	placement := sourceURLPlacement{
+		SourceURL:              sourceURL,
+		SourceType:             sourceType,
+		Slug:                   slug,
+		CandidateSourcePaths:   sourcePlacementCandidatePaths(input.PathHint, sourceType, slug),
+		CandidateAssetPaths:    sourcePlacementAssetPaths(input.AssetPathHint, sourceType, slug),
+		CandidateSynthesisPath: "synthesis/" + slug + ".md",
+		ExistingSource:         existing,
+		DuplicateStatus:        "no_existing_source_url_found",
+	}
+	if existing != nil {
+		placement.CandidateSynthesisPath = ""
+		placement.DuplicateStatus = "existing_source_url_found_no_fetch_no_write"
+	}
+	return placement, nil
+}
+
+func (placement sourceURLPlacement) NextIngestSourceRequest(candidateStatus string) string {
+	if candidateStatus != "public_candidate_requires_ingest_source_url_approval" {
+		return ""
+	}
+	if placement.ExistingSource != nil {
+		return fmt.Sprintf(`{"action":"ingest_source_url","source":{"url":%q,"mode":"update","source_type":%q}}`, placement.SourceURL, placement.SourceType)
+	}
+	if placement.SourceType == "pdf" {
+		return fmt.Sprintf(`{"action":"ingest_source_url","source":{"url":%q,"path_hint":%q,"asset_path_hint":%q,"source_type":"pdf"}}`, placement.SourceURL, "sources/"+placement.Slug+".md", "assets/sources/"+placement.Slug+".pdf")
+	}
+	return fmt.Sprintf(`{"action":"ingest_source_url","source":{"url":%q,"path_hint":%q,"source_type":"web"}}`, placement.SourceURL, "sources/web/"+placement.Slug+".md")
 }
 
 func normalizeSourcePlacementURL(raw string) string {

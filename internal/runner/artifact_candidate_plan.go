@@ -71,7 +71,7 @@ func runArtifactCandidatePlanFromInspected(ctx context.Context, client *runclien
 	explicitBody := strings.TrimSpace(options.Body)
 	artifactKind := inferArtifactKind(options.ArtifactKind, content, explicitBody)
 	sourceType := artifactSourceType(options)
-	sourceURL := normalizeArtifactSourceURL(options.SourceURL)
+	sourceURL := normalizeSourcePlacementURL(options.SourceURL)
 
 	title, titleReason := artifactTitle(options.Title, content, explicitBody, artifactKind, sourceURL)
 	candidatePath, pathReason := artifactCandidatePath(options.Path, artifactKind, title, sourceURL)
@@ -83,15 +83,26 @@ func runArtifactCandidatePlanFromInspected(ctx context.Context, client *runclien
 	if err != nil {
 		return ArtifactCandidatePlan{}, err
 	}
-	existingSource, err := artifactExistingSource(ctx, client, sourceURL, options.SourceURL)
-	if err != nil {
-		return ArtifactCandidatePlan{}, err
+	var existingSource *DocumentSummary
+	nextIngest := ""
+	if sourceURL != "" {
+		placement, err := planSourceURLPlacement(ctx, client, sourceURLPlacementInput{
+			URL:        options.SourceURL,
+			Title:      title,
+			SourceType: sourceType,
+		})
+		if err != nil {
+			return ArtifactCandidatePlan{}, err
+		}
+		sourceURL = placement.SourceURL
+		sourceType = placement.SourceType
+		existingSource = placement.ExistingSource
+		nextIngest = placement.NextIngestSourceRequest("public_candidate_requires_ingest_source_url_approval")
 	}
 
 	duplicateStatus := artifactDuplicateStatus(duplicateSearch, likelyDuplicate, existingSource)
 	confidence, confidenceReasons := artifactConfidence(options, artifactKind, bodyPreview, titleReason, pathReason, duplicateStatus)
 	nextCreate := artifactNextCreateRequest(candidatePath, title, bodyPreview, confidence, likelyDuplicate, existingSource)
-	nextIngest := artifactNextIngestRequest(sourceURL, sourceType, title, existingSource)
 
 	plan := ArtifactCandidatePlan{
 		ArtifactKind:            artifactKind,
@@ -461,13 +472,6 @@ func artifactSourceType(options ArtifactPlanOptions) string {
 	return "explicit_content"
 }
 
-func normalizeArtifactSourceURL(raw string) string {
-	if raw == "" {
-		return ""
-	}
-	return normalizeSourcePlacementURL(raw)
-}
-
 func artifactTitle(explicit string, content string, body string, artifactKind string, sourceURL string) (string, string) {
 	if explicit != "" {
 		return explicit, "explicit_title"
@@ -717,13 +721,6 @@ func stripFrontmatterAndHeading(body string) string {
 	return strings.Join(kept, "\n")
 }
 
-func artifactExistingSource(ctx context.Context, client *runclient.Client, sourceURL string, rawSourceURL string) (*DocumentSummary, error) {
-	if sourceURL == "" {
-		return nil, nil
-	}
-	return sourcePlacementExistingSource(ctx, client, sourceURL, rawSourceURL)
-}
-
 func artifactDuplicateStatus(search *SearchResult, likely *SearchHit, existingSource *DocumentSummary) string {
 	if existingSource != nil {
 		return "existing_source_url_found_no_write"
@@ -771,17 +768,6 @@ func artifactNextCreateRequest(candidatePath string, title string, body string, 
 		return ""
 	}
 	return string(encoded)
-}
-
-func artifactNextIngestRequest(sourceURL string, sourceType string, title string, existingSource *DocumentSummary) string {
-	if sourceURL == "" {
-		return ""
-	}
-	if existingSource != nil {
-		return webSearchNextIngestRequest(sourceURL, sourceType, "", true, "public_candidate_requires_ingest_source_url_approval")
-	}
-	slug := sourcePlacementSlug(SourceURLInput{URL: sourceURL, Title: title, SourceType: sourceType}, sourceURL)
-	return webSearchNextIngestRequest(sourceURL, sourceType, slug, false, "public_candidate_requires_ingest_source_url_approval")
 }
 
 func artifactCandidatePlanHandoff(plan ArtifactCandidatePlan) *AgentHandoff {

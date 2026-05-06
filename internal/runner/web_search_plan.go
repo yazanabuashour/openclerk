@@ -3,8 +3,6 @@ package runner
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"strings"
 
 	"github.com/yazanabuashour/openclerk/internal/runclient"
 )
@@ -40,57 +38,36 @@ func runWebSearchPlan(ctx context.Context, client *runclient.Client, options Web
 }
 
 func webSearchCandidate(ctx context.Context, client *runclient.Client, result WebSearchResultInput, rank int) (WebSearchCandidate, error) {
-	normalizedURL := normalizeSourcePlacementURL(result.URL)
-	sourceType := result.SourceType
-	if sourceType == "" {
-		sourceType = inferredWebSearchSourceType(result.URL)
+	placement, err := planSourceURLPlacement(ctx, client, sourceURLPlacementInput{
+		URL:        result.URL,
+		Title:      result.Title,
+		SourceType: result.SourceType,
+	})
+	if err != nil {
+		return WebSearchCandidate{}, err
 	}
 	accessStatus := result.AccessStatus
 	if accessStatus == "" {
 		accessStatus = "public"
 	}
-	sourceInput := SourceURLInput{
-		URL:        result.URL,
-		Title:      result.Title,
-		SourceType: sourceType,
-	}
-	slug := sourcePlacementSlug(sourceInput, normalizedURL)
-	existing, err := sourcePlacementExistingSource(ctx, client, normalizedURL, result.URL)
-	if err != nil {
-		return WebSearchCandidate{}, err
-	}
-	duplicateStatus := "no_existing_source_url_found"
-	candidateSynthesisPath := "synthesis/" + slug + ".md"
-	if existing != nil {
-		duplicateStatus = "existing_source_url_found_no_fetch_no_write"
-		candidateSynthesisPath = ""
-	}
 	candidateStatus := webSearchCandidateStatus(accessStatus)
 	candidate := WebSearchCandidate{
 		Rank:                    rank,
 		URL:                     result.URL,
-		NormalizedURL:           normalizedURL,
+		NormalizedURL:           placement.SourceURL,
 		Title:                   result.Title,
 		Snippet:                 result.Snippet,
-		SourceType:              sourceType,
+		SourceType:              placement.SourceType,
 		AccessStatus:            accessStatus,
 		CandidateStatus:         candidateStatus,
-		DuplicateStatus:         duplicateStatus,
-		CandidateSourcePaths:    sourcePlacementCandidatePaths("", sourceType, slug),
-		CandidateAssetPaths:     sourcePlacementAssetPaths("", sourceType, slug),
-		CandidateSynthesisPath:  candidateSynthesisPath,
-		ExistingSource:          existing,
-		NextIngestSourceRequest: webSearchNextIngestRequest(normalizedURL, sourceType, slug, existing != nil, candidateStatus),
+		DuplicateStatus:         placement.DuplicateStatus,
+		CandidateSourcePaths:    placement.CandidateSourcePaths,
+		CandidateAssetPaths:     placement.CandidateAssetPaths,
+		CandidateSynthesisPath:  placement.CandidateSynthesisPath,
+		ExistingSource:          placement.ExistingSource,
+		NextIngestSourceRequest: placement.NextIngestSourceRequest(candidateStatus),
 	}
 	return candidate, nil
-}
-
-func inferredWebSearchSourceType(rawURL string) string {
-	parsed, err := url.Parse(rawURL)
-	if err == nil && strings.HasSuffix(strings.ToLower(parsed.Path), ".pdf") {
-		return "pdf"
-	}
-	return "web"
 }
 
 func webSearchCandidateStatus(accessStatus string) string {
@@ -104,19 +81,6 @@ func webSearchCandidateStatus(accessStatus string) string {
 	default:
 		return "public_candidate_requires_ingest_source_url_approval"
 	}
-}
-
-func webSearchNextIngestRequest(sourceURL string, sourceType string, slug string, existing bool, candidateStatus string) string {
-	if candidateStatus != "public_candidate_requires_ingest_source_url_approval" {
-		return ""
-	}
-	if existing {
-		return fmt.Sprintf(`{"action":"ingest_source_url","source":{"url":%q,"mode":"update","source_type":%q}}`, sourceURL, sourceType)
-	}
-	if sourceType == "pdf" {
-		return fmt.Sprintf(`{"action":"ingest_source_url","source":{"url":%q,"path_hint":%q,"asset_path_hint":%q,"source_type":"pdf"}}`, sourceURL, "sources/"+slug+".md", "assets/sources/"+slug+".pdf")
-	}
-	return fmt.Sprintf(`{"action":"ingest_source_url","source":{"url":%q,"path_hint":%q,"source_type":"web"}}`, sourceURL, "sources/web/"+slug+".md")
 }
 
 func webSearchPlanHandoff(plan WebSearchPlan) *AgentHandoff {
