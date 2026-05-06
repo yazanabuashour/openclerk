@@ -1,17 +1,18 @@
 # OpenClerk
 
-A composable local-first knowledge-plane runtime for agents. One binary. One `SKILL.md`.
+A local-first knowledge-plane runtime for agents. One binary. One `SKILL.md`.
 
 ## What is this?
 
 OpenClerk gives agents a citation-bearing, provenance-tracked knowledge base
 over your local markdown vault. Agents read and write through a strict JSON
-runner, which is more efficient than a CLI, MCP, and code. Knowledge compounds: useful synthesis becomes durable, inspectable markdown instead of
-being rediscovered on every query.
+runner — a stable, citable contract that keeps canonical markdown as the
+human-readable authority. Knowledge compounds: useful synthesis becomes durable,
+inspectable markdown instead of being rediscovered on every query.
 
 ## Who is it for?
 
-Knowledge workers building agent workflows over local markdown, source notes, or
+Technical users building agent workflows over local markdown, source notes, or
 research vaults. If you want your agent to *know* your notes — not just search
 them — and you want to audit every write, this is the runtime for that.
 
@@ -25,13 +26,22 @@ them — and you want to audit every write, this is the runtime for that.
 | Local-first | Yes | Depends | Yes | No |
 | Composable modules | Yes | DIY | Plugin ecosystem | No |
 
-RAG pipelines make the index the truth. OpenClerk keeps markdown the truth and
-makes the index a recall layer. Obsidian has no agent-write contract.
-NotebookLM is not local.
+Many RAG setups make the index the primary agent interface. OpenClerk keeps
+markdown as the human-readable authority and treats indexes and projections as
+derived recall layers. Obsidian has no agent-write contract. NotebookLM is not
+local.
 
 ## Try it in 5 minutes
 
-Tell your agent:
+**Direct install:**
+
+```bash
+curl -fsSL https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh | sh
+```
+
+Full install options: [`docs/install.md`](docs/install.md)
+
+**Or tell your agent:**
 
 ```text
 Install OpenClerk into $HOME/.local/bin from the latest release.
@@ -40,28 +50,26 @@ Verify command -v openclerk, openclerk --version, and the installed skill path.
 Do not report OpenClerk installed until both the runner and skill are installed.
 ```
 
-Then ask it to connect your vault and prove retrieval works:
+**Then bind your vault and verify retrieval:**
 
-```text
-Use OpenClerk with my notes at <path-to-your-vault>. Initialize it if needed,
-then search for "<something you know is in your notes>" and show me five cited
-results.
+```bash
+openclerk init --vault-root ~/notes
+printf '%s\n' '{"action":"search","search":{"text":"architecture","limit":5}}' \
+  | openclerk retrieval
 ```
 
 Each result carries a `doc_id`, `chunk_id`, and citation path. That's the
 contract.
 
-Full install details: [`docs/install.md`](docs/install.md)
-
 ## What to test first
 
-These are the eval-worthy surfaces in priority order. Try prompts like:
+These are the eval-worthy surfaces in priority order:
 
-1. **Lexical search** — search for `"<topic you know is present>"` and show five cited results.
-2. **Document write → re-search** — create a short note at `<vault-relative-path>`, then search for it and show the cited result.
-3. **Synthesis page lifecycle** — create a `synthesis/` page from `<source paths>`, update it, and inspect provenance.
-4. **Duplicate candidate detection** — ingest or create a near-duplicate of `<existing note>`, then report any `duplicate_candidate_report`.
-5. **Stale projection detection** — update `<source path>`, then confirm downstream synthesis shows as stale before repair.
+1. **Lexical search** — search for a topic you know is present and verify five cited results.
+2. **Document write → re-search** — create a short note, then search for it and confirm the cited result appears.
+3. **Synthesis page lifecycle** — create a `synthesis/` page from source paths, update it, inspect provenance.
+4. **Duplicate candidate detection** — ingest a near-duplicate, then confirm `duplicate_candidate_report` surfaces it rather than silently creating a second document.
+5. **Stale projection detection** — update a source doc, then confirm downstream synthesis shows as stale before repair.
 
 Report correctness, tool call count, and wall time. That's how the maintainers
 gate new features.
@@ -98,16 +106,12 @@ with `openclerk module` list_modules. Do not edit SQLite directly.
 
 ## What is explicitly not supported yet
 
-- **Browsing / URL ingestion as a default path** — `ingest_source_url` exists
-  but is placement-plan-first; it does not browse the open web autonomously.
+- **Browsing / URL ingestion as a default path** — `ingest_source_url` exists but is placement-plan-first; it does not browse the open web autonomously.
 - **Automatic video transcript acquisition** — not supported.
 - **Hosted service or cloud sync** — fully local. No OpenClerk server, no SaaS.
 - **Multi-user / team server** — single-user, single-machine runtime.
-- **Broad vector DB memory** — no Pinecone, Weaviate, or default durable vector
-  index. Semantic modules are optional and local-only by default.
-- **Autonomous memory and routing** — memory and routing are deferred until the
-  docs, synthesis, and truth-sync layers are reliable. See
-  [`docs/architecture/memory-routing-reference-decision.md`](docs/architecture/memory-routing-reference-decision.md).
+- **Broad vector DB memory** — no Pinecone, Weaviate, or default durable vector index. Semantic modules are optional and local-only by default.
+- **Autonomous memory and routing** — deferred until docs, synthesis, and truth-sync layers are reliable. See [`docs/architecture/memory-routing-reference-decision.md`](docs/architecture/memory-routing-reference-decision.md).
 
 ## Runner
 
