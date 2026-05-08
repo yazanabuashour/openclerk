@@ -234,7 +234,7 @@ func assembleMemoryRouterRecallReport(query string, searchHits int, docs map[str
 		validation += "; missing evidence: " + strings.Join(missing, ", ")
 	}
 
-	return MemoryRouterRecallReport{
+	report := MemoryRouterRecallReport{
 		QuerySummary:          fmt.Sprintf("memory/router recall report for %q; search returned %d hits; canonical evidence %d/%d present", query, searchHits, foundCanonical, len(memoryRouterCanonicalPaths)),
 		TemporalStatus:        temporalStatusSummary(docs, synthesis),
 		CanonicalEvidenceRefs: refs,
@@ -246,6 +246,8 @@ func assembleMemoryRouterRecallReport(query string, searchHits int, docs map[str
 		ValidationBoundaries:  validation,
 		AuthorityLimits:       "canonical markdown remains durable memory authority; synthesis is derived evidence with provenance and freshness; feedback is advisory; this report is read-only and does not create hidden memory authority or autonomous routing decisions",
 	}
+	report.AgentHandoff = memoryRouterRecallHandoff(report)
+	return report
 }
 
 func temporalStatusSummary(docs map[string]memoryRouterRecallDoc, synthesis memoryRouterRecallDoc) string {
@@ -277,9 +279,36 @@ func synthesisFreshnessSummary(projections []domain.ProjectionState) string {
 		return "missing synthesis projection for " + memoryRouterSynthesisPath
 	}
 	for _, projection := range projections {
-		if projection.Freshness == "fresh" {
+		if projection.Freshness == "fresh" && projectionHasMemoryRouterSourceRefs(projection) {
 			return "fresh synthesis projection for " + memoryRouterSynthesisPath
 		}
 	}
-	return "synthesis projection for " + memoryRouterSynthesisPath + " is not fresh"
+	return "synthesis projection for " + memoryRouterSynthesisPath + " is not fresh or does not cite all memory-router canonical source refs"
+}
+
+func projectionHasMemoryRouterSourceRefs(projection domain.ProjectionState) bool {
+	refs := map[string]struct{}{}
+	for _, field := range []string{"source_refs", "current_source_refs"} {
+		for _, ref := range splitAuditList(projection.Details[field]) {
+			refs[ref] = struct{}{}
+		}
+	}
+	for _, path := range memoryRouterCanonicalPaths {
+		if _, ok := refs[path]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
+func memoryRouterRecallHandoff(report MemoryRouterRecallReport) *AgentHandoff {
+	evidence := append([]string(nil), report.CanonicalEvidenceRefs...)
+	evidence = append(evidence, report.ProvenanceRefs...)
+	return &AgentHandoff{
+		AnswerSummary:               report.QuerySummary,
+		Evidence:                    evidence,
+		ValidationBoundaries:        report.ValidationBoundaries,
+		AuthorityLimits:             report.AuthorityLimits,
+		FollowUpPrimitiveInspection: "not required for this read-only report; use get_document, provenance_events, and projection_states only if drilling into cited memory-router refs",
+	}
 }

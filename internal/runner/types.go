@@ -648,16 +648,17 @@ type AgentHandoff struct {
 }
 
 type MemoryRouterRecallReport struct {
-	QuerySummary          string   `json:"query_summary"`
-	TemporalStatus        string   `json:"temporal_status"`
-	CanonicalEvidenceRefs []string `json:"canonical_evidence_refs"`
-	StaleSessionStatus    string   `json:"stale_session_status"`
-	FeedbackWeighting     string   `json:"feedback_weighting"`
-	RoutingRationale      string   `json:"routing_rationale"`
-	ProvenanceRefs        []string `json:"provenance_refs"`
-	SynthesisFreshness    string   `json:"synthesis_freshness"`
-	ValidationBoundaries  string   `json:"validation_boundaries"`
-	AuthorityLimits       string   `json:"authority_limits"`
+	QuerySummary          string        `json:"query_summary"`
+	TemporalStatus        string        `json:"temporal_status"`
+	CanonicalEvidenceRefs []string      `json:"canonical_evidence_refs"`
+	StaleSessionStatus    string        `json:"stale_session_status"`
+	FeedbackWeighting     string        `json:"feedback_weighting"`
+	RoutingRationale      string        `json:"routing_rationale"`
+	ProvenanceRefs        []string      `json:"provenance_refs"`
+	SynthesisFreshness    string        `json:"synthesis_freshness"`
+	ValidationBoundaries  string        `json:"validation_boundaries"`
+	AuthorityLimits       string        `json:"authority_limits"`
+	AgentHandoff          *AgentHandoff `json:"agent_handoff,omitempty"`
 }
 
 type SourceAuditReport struct {

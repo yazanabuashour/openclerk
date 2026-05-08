@@ -378,13 +378,17 @@ func extractImageWithOCR(ctx context.Context, localPath string, command string, 
 	defer cancel()
 	args := []string{localPath, "stdout", "-l", language, "--psm", "6"}
 	cmd := exec.CommandContext(ocrCtx, command, args...)
+	configureCommandProcessGroupCancel(cmd)
+	cmd.WaitDelay = 5 * time.Second
 	var stdout limitedOCRBuffer
 	stdout.limit = maxOCRExtractedTextBytes
-	var stderr bytes.Buffer
+	var stderr limitedOCRBuffer
+	stderr.limit = maxOCRExtractedTextBytes
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
 		if ocrCtx.Err() == context.DeadlineExceeded {
+			killCommandProcessGroup(cmd)
 			return "", domain.ValidationError("OCR review timed out", nil)
 		}
 		var domainErr *domain.Error
@@ -410,10 +414,14 @@ func extractPDFWithOCR(ctx context.Context, localPath string, command string, la
 	outputPath := filepath.Join(tempDir, "ocr.pdf")
 	args := []string{"--sidecar", sidecarPath, "--force-ocr", "-l", language, localPath, outputPath}
 	cmd := exec.CommandContext(ocrCtx, command, args...)
-	var stderr bytes.Buffer
+	configureCommandProcessGroupCancel(cmd)
+	cmd.WaitDelay = 5 * time.Second
+	var stderr limitedOCRBuffer
+	stderr.limit = maxOCRExtractedTextBytes
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
 		if ocrCtx.Err() == context.DeadlineExceeded {
+			killCommandProcessGroup(cmd)
 			return "", 0, "", domain.ValidationError("OCR review timed out", nil)
 		}
 		return "", 0, "", domain.ValidationError("OCR PDF extraction failed", map[string]any{"error": strings.TrimSpace(stderr.String())})

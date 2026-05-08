@@ -1064,14 +1064,22 @@ func resolveEvalSourceFixturePath(sourceURL string) (string, bool, error) {
 	if err != nil {
 		return "", false, domain.InternalError("resolve eval source fixture root", err)
 	}
+	rootReal, err := filepath.EvalSymlinks(rootClean)
+	if err != nil {
+		return "", false, domain.InternalError("resolve eval source fixture root", err)
+	}
 	targetClean, err := filepath.Abs(target)
 	if err != nil {
 		return "", false, domain.InternalError("resolve eval source fixture path", err)
 	}
-	if targetClean != rootClean && !strings.HasPrefix(targetClean, rootClean+string(os.PathSeparator)) {
+	targetReal, err := filepath.EvalSymlinks(targetClean)
+	if err != nil {
+		return "", false, domain.InternalError("resolve eval source fixture path", err)
+	}
+	if targetReal != rootReal && !strings.HasPrefix(targetReal, rootReal+string(os.PathSeparator)) {
 		return "", false, domain.ValidationError("eval source fixture path escapes root", map[string]any{"path": parsed.Path})
 	}
-	return targetClean, true, nil
+	return targetReal, true, nil
 }
 
 func looksLikePDF(body []byte) bool {

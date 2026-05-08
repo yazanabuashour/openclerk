@@ -183,6 +183,32 @@ func TestSemanticRetrievalAdapterSplitsLargeSectionsBeforeEmbedding(t *testing.T
 	}
 }
 
+func TestSemanticRetrievalAdapterRejectsOversizedChunkCorpus(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	var body strings.Builder
+	body.WriteString("# Oversized Corpus\n\n## Summary\n")
+	for range maxSemanticChunks + 1 {
+		body.WriteString(strings.Repeat("semantic ", semanticChunkTargetCharacters/len("semantic ")+1))
+		body.WriteString("\n")
+	}
+	createModuleDocument(t, ctx, dbPath, "docs/oversized.md", "Oversized Corpus", body.String())
+
+	_, err := executeSearch(ctx, runclient.Config{DatabasePath: dbPath}, searchRequest{
+		Query:          "semantic",
+		Limit:          10,
+		Provider:       providerOllama,
+		OllamaURL:      "http://localhost:11434",
+		EmbeddingModel: "embeddinggemma",
+		CacheDir:       t.TempDir(),
+	})
+	if err == nil || !strings.Contains(err.Error(), "semantic corpus exceeds maximum supported chunks") {
+		t.Fatalf("oversized corpus error = %v", err)
+	}
+}
+
 func TestSemanticRetrievalAdapterPathPrefixAndStaleCache(t *testing.T) {
 	t.Parallel()
 

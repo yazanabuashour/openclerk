@@ -80,6 +80,7 @@ func runAuditContradictions(ctx context.Context, client *runclient.Client, optio
 	}
 	result.ProvenanceInspected = append(result.ProvenanceInspected, auditProvenanceInspection("projection", "synthesis:"+target.DocID, target.Path, targetEvents.Events))
 
+	sourceDocuments := map[string]domain.Document{}
 	for _, sourcePath := range append(result.CurrentSourcePaths, result.SupersededSourcePaths...) {
 		sourceDoc, ok, err := auditDocumentByPath(ctx, client, sourcePath)
 		if err != nil {
@@ -88,6 +89,7 @@ func runAuditContradictions(ctx context.Context, client *runclient.Client, optio
 		if !ok {
 			continue
 		}
+		sourceDocuments[sourceDoc.Path] = sourceDoc
 		sourceEvents, err := client.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{
 			RefKind: "document",
 			RefID:   sourceDoc.DocID,
@@ -102,7 +104,7 @@ func runAuditContradictions(ctx context.Context, client *runclient.Client, optio
 	if options.Mode == auditModePlanOnly {
 		result.RepairStatus = "planned"
 	} else {
-		repairContent, ok := auditRepairSummaryContent(result.CurrentSourcePaths, result.SupersededSourcePaths)
+		repairContent, ok := auditRepairSummaryContent(result.CurrentSourcePaths, result.SupersededSourcePaths, sourceDocuments)
 		if !ok {
 			result.RepairStatus = "skipped_insufficient_source_classification"
 			result.FailureClassification = "insufficient_evidence"
@@ -189,16 +191,44 @@ func sourceClassesFromProjection(projections []domain.ProjectionState) ([]string
 	return current, superseded
 }
 
-func auditRepairSummaryContent(currentSourcePaths []string, supersededSourcePaths []string) (string, bool) {
+func auditRepairSummaryContent(currentSourcePaths []string, supersededSourcePaths []string, sourceDocuments map[string]domain.Document) (string, bool) {
 	if len(currentSourcePaths) == 0 || len(supersededSourcePaths) == 0 {
 		return "", false
 	}
+	currentSummary := auditDocumentSummary(sourceDocuments[currentSourcePaths[0]])
+	if currentSummary == "" {
+		return "", false
+	}
 	return strings.Join([]string{
-		"Current audit guidance: use the installed openclerk JSON runner.",
+		"Current source summary: " + currentSummary,
 		"Current source: " + currentSourcePaths[0],
 		"Superseded source: " + supersededSourcePaths[0],
 		"Audit repair did not choose unresolved claims beyond source classification.",
 	}, "\n"), true
+}
+
+func auditDocumentSummary(document domain.Document) string {
+	body := strings.ReplaceAll(document.Body, "\r\n", "\n")
+	lines := strings.Split(body, "\n")
+	inSummary := false
+	parts := []string{}
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "## ") {
+			if inSummary {
+				break
+			}
+			inSummary = strings.EqualFold(strings.TrimSpace(strings.TrimPrefix(trimmed, "## ")), "summary")
+			continue
+		}
+		if inSummary && trimmed != "" {
+			parts = append(parts, trimmed)
+		}
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return strings.Join(parts, " ")
 }
 
 func auditUnresolvedConflictsForQuery(ctx context.Context, client *runclient.Client, query string, limit int) ([]AuditConflictGroup, []AuditProvenanceInspection, error) {

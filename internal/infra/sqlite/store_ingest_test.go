@@ -129,6 +129,24 @@ func TestEvalFixtureURLNotInterceptedWithoutEnv(t *testing.T) {
 	}
 }
 
+func TestEvalFixtureURLRejectsSymlinkEscape(t *testing.T) {
+	fixtureRoot := t.TempDir()
+	outside := t.TempDir()
+	if err := os.WriteFile(filepath.Join(outside, "private.pdf"), minimalStorePDF("Private", "OpenClerk Test", "private evidence"), 0o644); err != nil {
+		t.Fatalf("write outside fixture: %v", err)
+	}
+	if err := os.Symlink(outside, filepath.Join(fixtureRoot, "escape")); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+
+	t.Setenv(evalSourceFixtureEnableEnv, "1")
+	t.Setenv(evalSourceFixtureRootEnv, fixtureRoot)
+	_, ok, err := resolveEvalSourceFixturePath("http://openclerk-eval.local/escape/private.pdf")
+	if err == nil || ok || !strings.Contains(err.Error(), "escapes root") {
+		t.Fatalf("resolve symlink escape ok=%v err=%v", ok, err)
+	}
+}
+
 func TestIngestSourceURLUpdateMode(t *testing.T) {
 	allowPrivateSourceHosts(t)
 	var (

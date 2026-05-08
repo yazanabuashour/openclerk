@@ -599,7 +599,7 @@ Source sensitive audit conflict runner retention is thirty days.
 	}
 	for _, want := range []string{
 		"source_refs: sources/audit-runner-current.md, sources/audit-runner-old.md",
-		"Current audit guidance: use the installed openclerk JSON runner.",
+		"Current source summary: Current source-sensitive audit runner repair evidence says use the installed openclerk JSON runner for audit repairs.",
 		"Current source: sources/audit-runner-current.md",
 		"Superseded source: sources/audit-runner-old.md",
 		"Audit repair did not choose unresolved claims beyond source classification.",
@@ -1235,6 +1235,11 @@ func TestRetrievalTaskMemoryRouterRecallReport(t *testing.T) {
 	if len(report.ProvenanceRefs) == 0 || !strings.HasPrefix(report.ProvenanceRefs[0], "document:") {
 		t.Fatalf("provenance refs = %+v", report.ProvenanceRefs)
 	}
+	if report.AgentHandoff == nil ||
+		!strings.Contains(report.AgentHandoff.AnswerSummary, "memory/router recall report") ||
+		!containsString(report.AgentHandoff.Evidence, "notes/memory-router/session-observation.md") {
+		t.Fatalf("agent handoff = %+v", report.AgentHandoff)
+	}
 	if !strings.Contains(report.SynthesisFreshness, "fresh synthesis projection") {
 		t.Fatalf("synthesis freshness = %q", report.SynthesisFreshness)
 	}
@@ -1251,6 +1256,54 @@ func TestRetrievalTaskMemoryRouterRecallReport(t *testing.T) {
 	}
 	if len(after.Documents) != len(before.Documents) {
 		t.Fatalf("memory/router recall report mutated document count: before=%d after=%d", len(before.Documents), len(after.Documents))
+	}
+}
+
+func TestRetrievalTaskMemoryRouterRecallReportRejectsProjectionWithoutCanonicalSourceRefs(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "notes/memory-router/session-observation.md", "Memory Router Session Observation", "# Memory Router Session Observation\n\n## Summary\nSession observation evidence.\n")
+	createDocument(t, ctx, config, "notes/memory-router/temporal-policy.md", "Temporal Recall Policy", "# Temporal Recall Policy\n\n## Summary\nTemporal evidence.\n")
+	createDocument(t, ctx, config, "notes/memory-router/feedback-weighting.md", "Feedback Weighting", "# Feedback Weighting\n\n## Summary\nFeedback evidence.\n")
+	createDocument(t, ctx, config, "notes/memory-router/routing-policy.md", "Routing Policy", "# Routing Policy\n\n## Summary\nRouting evidence.\n")
+	createDocument(t, ctx, config, "synthesis/memory-router-reference.md", "Memory Router Reference", strings.TrimSpace(`---
+type: synthesis
+status: active
+freshness: fresh
+source_refs: notes/memory-router/session-observation.md
+---
+# Memory Router Reference
+
+## Summary
+Memory router reference without all canonical source refs.
+
+## Sources
+- notes/memory-router/session-observation.md
+
+## Freshness
+Fresh projection is not enough without the expected source refs.
+`)+"\n")
+
+	result, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionMemoryRouterRecall,
+		MemoryRouterRecall: runner.MemoryRouterRecallOptions{
+			Query: "memory router temporal recall session promotion feedback weighting routing canonical docs",
+			Limit: 10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("memory/router recall report with incomplete source refs: %v", err)
+	}
+	if result.Rejected || result.MemoryRouterRecall == nil {
+		t.Fatalf("incomplete source refs result = %+v", result)
+	}
+	report := result.MemoryRouterRecall
+	if strings.Contains(report.SynthesisFreshness, "fresh synthesis projection") ||
+		!strings.Contains(report.ValidationBoundaries, "missing evidence") ||
+		!strings.Contains(report.ValidationBoundaries, "projection:synthesis/memory-router-reference.md") {
+		t.Fatalf("report accepted incomplete source refs: %+v", report)
 	}
 }
 
