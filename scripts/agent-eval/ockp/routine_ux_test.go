@@ -204,6 +204,45 @@ func fakeRoutineUXRunner(_ context.Context, _ routineUXConfig, job routineUXJob,
 	}
 }
 
+func TestRoutineUXWorkflowActionsSatisfyWrappedPrimitiveExpectations(t *testing.T) {
+	t.Parallel()
+
+	sourceActions := routineUXActionSet(metrics{SourceDiscoveryReportUsed: true})
+	for _, want := range []string{"source_discovery_report", "search", "list_documents", "get_document"} {
+		if _, ok := sourceActions[want]; !ok {
+			t.Fatalf("source discovery action set missing %s: %+v", want, sourceActions)
+		}
+	}
+
+	decisionActions := routineUXActionSet(metrics{DecisionLookupReportUsed: true})
+	for _, want := range []string{"decision_lookup_report", "decisions_lookup", "decision_record"} {
+		if _, ok := decisionActions[want]; !ok {
+			t.Fatalf("decision lookup action set missing %s: %+v", want, decisionActions)
+		}
+	}
+
+	synthesisActions := routineUXActionSet(metrics{CompileSynthesisUsed: true})
+	for _, want := range []string{"compile_synthesis", "create_document", "replace_section"} {
+		if _, ok := synthesisActions[want]; !ok {
+			t.Fatalf("compile synthesis action set missing %s: %+v", want, synthesisActions)
+		}
+	}
+
+	validationSynthesisActions := routineUXActionSet(metrics{ValidationSynthesisReportUsed: true})
+	for _, want := range []string{"validation_synthesis_report", "create_document", "replace_section"} {
+		if _, ok := validationSynthesisActions[want]; !ok {
+			t.Fatalf("validation synthesis action set missing %s: %+v", want, validationSynthesisActions)
+		}
+	}
+
+	evidenceActions := routineUXActionSet(metrics{EvidenceBundleReportUsed: true})
+	for _, want := range []string{"evidence_bundle_report", "provenance_events", "projection_states"} {
+		if _, ok := evidenceActions[want]; !ok {
+			t.Fatalf("evidence bundle action set missing %s: %+v", want, evidenceActions)
+		}
+	}
+}
+
 func validRoutineUXTaskManifestForTest() routineUXTaskManifest {
 	classes := []string{
 		"source_discovery",

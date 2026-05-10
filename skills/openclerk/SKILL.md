@@ -30,10 +30,14 @@ workflow-action comparison, not a reason to expand this file.
 Prefer a promoted workflow action over manual primitive choreography when it
 matches the request:
 
-- Source-linked synthesis create/update: document `compile_synthesis` once
-  with the user-provided target, title, source refs, and requested claims as
-  `body_facts` or body text, preserving stated source roles; then answer from
-  `compile_synthesis.agent_handoff`.
+- Source-linked synthesis create/update, including disposable validation
+  synthesis: document `compile_synthesis` once with user-provided target,
+  title, source refs, and requested claims as `body_facts` or body text; then
+  answer from `compile_synthesis.agent_handoff`.
+- Disposable validation synthesis: document `validation_synthesis_report` once with `validation_synthesis.disposable_validation=true` when the runner is bound to a routine UX disposable vault copy; answer from its `agent_handoff`.
+- Representative source discovery: retrieval `source_discovery_report` once;
+  answer from `source_discovery.agent_handoff`, using categories/counts instead
+  of private paths, titles, snippets, ids, or raw JSON for private telemetry.
 - Source URL placement before durable fetch/write: document
   `ingest_source_url` with `mode: "plan"`, then answer from
   `source_placement_plan.agent_handoff`.
@@ -47,8 +51,10 @@ matches the request:
   `{"action":"source_audit_report","source_audit":{"query":"...","target_path":"...","mode":"explain|repair_existing","conflict_query":"...","limit":10}}`,
   then answer from `source_audit.agent_handoff`.
 - Records, decisions, provenance, and projection evidence bundles: retrieval
-  `evidence_bundle_report` once; do not repeat, check skill paths, or inspect
-  primitives; answer from `evidence_bundle.agent_handoff` fields.
+  `evidence_bundle_report` once; answer from `evidence_bundle.agent_handoff`.
+- Decision-like record lookup across formal decisions, records, search,
+  provenance, and projection freshness: retrieval `decision_lookup_report`
+  once; answer from `decision_lookup.agent_handoff`.
 - Duplicate update-versus-new clarification: retrieval
   `duplicate_candidate_report`, then answer from
   `duplicate_candidate.agent_handoff`.
@@ -58,15 +64,13 @@ matches the request:
   `memory_router_recall_report`, then answer from
   `memory_router_recall.agent_handoff` or returned evidence.
 - Structured data and non-document canonical-store decision support: retrieval
-  `structured_store_report`, then answer from
-  `structured_store.agent_handoff`. Do not claim independent canonical tables,
-  time-series stores, external connectors, or durable structured writes from
-  this report.
+  `structured_store_report`, then answer from `structured_store.agent_handoff`;
+  do not claim independent tables, external connectors, or structured writes.
 - Hybrid/vector decision support: retrieval `hybrid_retrieval_report`, then
   answer from `hybrid_retrieval.agent_handoff`; do not claim vector ranking.
 - Explicit local semantic retrieval: retrieval `semantic_search`, then answer
-  from `semantic_search.hits` and handoff. Use only for explicit semantic/vector
-  recall; requires loopback Ollama, no Gemini fallback, default `search` unchanged.
+  from hits and handoff; requires explicit semantic/vector recall, loopback
+  Ollama, no Gemini fallback, and unchanged default `search`.
 
 Use lower-level primitives for explicit primitive requests, advanced/manual
 cases, unsupported workflow-action inputs, and follow-up inspection after a
@@ -150,10 +154,8 @@ policies and let runner results drive the answer:
 - Document lifecycle review, rollback, restore, and semantic diff: stay inside `openclerk document` and `openclerk retrieval`. Use `git_lifecycle_report` only for local Git status/history/checkpoints; it is storage history, not semantic provenance, and checkpoint mode needs explicit runner config. There is no public raw diff, restore, or rollback action.
 - Messy populated-vault retrieval: answer from runner-visible authority such as metadata-filtered authority results, active canonical sources, cited source paths, `doc_id`, and `chunk_id`; treat polluted, decoy, stale, draft, archived, duplicate, or candidate documents as non-authority unless runner-visible source authority says otherwise.
 - Synthesis maintenance: prefer `compile_synthesis`; include requested outcome claims in `body_facts` or `body`; use lower-level document and retrieval actions only for explicit primitive or manual cases; preserve `source_refs`, `## Sources`, `## Freshness`, provenance, and projection freshness.
+Detailed versions of these workflows belong in runner actions, compact runner help, maintainer/eval docs, or follow-up candidate-surface comparisons.
 
-Detailed versions of these workflows belong in runner actions, compact runner
-help, maintainer/eval docs, or follow-up candidate-surface comparisons, not in
-this file.
 ## Document Tasks
 
 Run document tasks with:
@@ -162,12 +164,10 @@ Run document tasks with:
 openclerk document
 ```
 
-Common actions are `validate`, `create_document`, `ingest_source_url`, `ingest_video_url`, `web_search_plan`, `artifact_candidate_plan`, `list_documents`, `get_document`, `append_document`, `replace_section`, `resolve_paths`, `inspect_layout`, `compile_synthesis`, and `git_lifecycle_report`.
-Use `openclerk document --help` for primitive and promoted workflow-action
-request shapes, including source placement, source ingestion, and video fields.
+Common actions are `validate`, `create_document`, `ingest_source_url`, `ingest_video_url`, `web_search_plan`, `artifact_candidate_plan`, `list_documents`, `get_document`, `append_document`, `replace_section`, `resolve_paths`, `inspect_layout`, `compile_synthesis`, `validation_synthesis_report`, and `git_lifecycle_report`.
+Use `openclerk document --help` for request shapes.
 
-Validation rejections are JSON results with `rejected: true` and
-`rejection_reason`; runtime failures exit non-zero and write errors to stderr.
+Validation rejections use `rejected: true`; runtime failures exit non-zero.
 
 ## Retrieval Tasks
 
@@ -181,16 +181,16 @@ Common actions are `search`, `document_links`, `graph_neighborhood`,
 `records_lookup`, `record_entity`, `services_lookup`, `service_record`,
 `decisions_lookup`, `decision_record`, `provenance_events`,
 `projection_states`, `audit_contradictions`, `source_audit_report`,
-`evidence_bundle_report`, `duplicate_candidate_report`, and
+`source_discovery_report`, `evidence_bundle_report`,
+`decision_lookup_report`, `duplicate_candidate_report`, and
 `workflow_guide_report`, `memory_router_recall_report`,
 `structured_store_report`, `hybrid_retrieval_report`, and `semantic_search`.
 Use `openclerk retrieval --help` for promoted workflow-action request shape.
 
-Use search for source-grounded answers; document links and graph neighborhoods
-for markdown relationships; records, services, and decisions lookup for
-promoted-domain projections; provenance for derivation history; and projection
-states for freshness. Canonical markdown remains authoritative over derived
-service, record, decision, and synthesis projections.
+Use search for source-grounded answers; document links/graphs for markdown
+relationships; records/services/decisions for promoted projections; provenance
+for derivation; projection states for freshness. Canonical markdown remains
+authoritative over derived service, record, decision, and synthesis projections.
 
 Minimal request shapes:
 

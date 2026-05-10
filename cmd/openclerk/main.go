@@ -146,6 +146,7 @@ func buildCapabilitiesResult() capabilitiesResult {
 					{Action: "web_search_plan", Purpose: "plan harness-supplied public search-result intake before fetch/write", Posture: "read_only", Handoff: "web_search_plan.agent_handoff"},
 					{Action: "artifact_candidate_plan", Purpose: "plan artifact path, title, body preview, tags, fields, duplicates, and create/ingest handoff", Posture: "read_only", Handoff: "artifact_candidate_plan.agent_handoff"},
 					{Action: "git_lifecycle_report", Purpose: "report local storage status/history or create explicit local checkpoints", Posture: "read_only_or_explicit_checkpoint"},
+					{Action: "validation_synthesis_report", Purpose: "create or update disposable validation synthesis with auditable source refs and freshness", Posture: "disposable_validation_write", Handoff: "validation_synthesis.agent_handoff"},
 				},
 			},
 			{
@@ -168,8 +169,10 @@ func buildCapabilitiesResult() capabilitiesResult {
 				},
 				Workflow: []capabilityAction{
 					{Action: "audit_contradictions", Purpose: "plan or repair existing contradiction-audit synthesis with source authority visible", Posture: "read_only_or_existing_target_repair"},
+					{Action: "source_discovery_report", Purpose: "find representative runner-visible sources and sanitized source-category summaries", Posture: "read_only", Handoff: "source_discovery.agent_handoff"},
 					{Action: "source_audit_report", Purpose: "explain source-sensitive gaps or repair an existing synthesis target", Posture: "read_only_or_existing_target_repair", Handoff: "source_audit.agent_handoff"},
 					{Action: "evidence_bundle_report", Purpose: "package citations, provenance, projection freshness, and authority limits", Posture: "read_only", Handoff: "evidence_bundle.agent_handoff"},
+					{Action: "decision_lookup_report", Purpose: "lookup decision-like evidence across decisions, records, search, provenance, and projection freshness", Posture: "read_only", Handoff: "decision_lookup.agent_handoff"},
 					{Action: "duplicate_candidate_report", Purpose: "choose update-versus-new evidence before durable writes", Posture: "read_only", Handoff: "duplicate_candidate.agent_handoff"},
 					{Action: "workflow_guide_report", Purpose: "select the natural runner surface for an intent", Posture: "read_only", Handoff: "workflow_guide.agent_handoff"},
 					{Action: "memory_router_recall_report", Purpose: "package routine memory/router recall evidence without memory transports", Posture: "read_only", Handoff: "memory_router_recall.agent_handoff"},
@@ -457,7 +460,7 @@ func usage(stderr io.Writer) {
 	_, _ = fmt.Fprintln(stderr, "       openclerk document --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk retrieval --help")
 	_, _ = fmt.Fprintln(stderr, "document/retrieval read strict JSON from stdin and use configured paths by default; pass --db only for an explicit dataset.")
-	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, ingest_source_url plan, web_search_plan, artifact_candidate_plan, git_lifecycle_report, source_audit_report, evidence_bundle_report, duplicate_candidate_report, workflow_guide_report, memory_router_recall_report, structured_store_report, hybrid_retrieval_report, semantic_search")
+	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, validation_synthesis_report, ingest_source_url plan, web_search_plan, artifact_candidate_plan, git_lifecycle_report, source_discovery_report, source_audit_report, evidence_bundle_report, decision_lookup_report, duplicate_candidate_report, workflow_guide_report, memory_router_recall_report, structured_store_report, hybrid_retrieval_report, semantic_search")
 }
 
 func moduleUsage(w io.Writer) {
@@ -493,6 +496,8 @@ func documentUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, `  compile_synthesis: {"action":"compile_synthesis","synthesis":{"path":"synthesis/example.md","title":"Example","source_refs":["sources/a.md"],"body":"...","body_facts":["..."],"freshness_note":"...","mode":"create_or_update"}}`)
 	_, _ = fmt.Fprintln(w, "  Requires path, title, non-empty source_refs, and either body or body_facts. mode defaults to create_or_update.")
 	_, _ = fmt.Fprintln(w, "  Returns compile_synthesis.agent_handoff with final-answer evidence; use primitives only after rejection or explicit drill-down.")
+	_, _ = fmt.Fprintln(w, `  validation_synthesis_report: {"action":"validation_synthesis_report","validation_synthesis":{"disposable_validation":true,"doc_id":"optional_doc_id","body_facts":["validated claim"],"freshness_note":"checked disposable source evidence"}}`)
+	_, _ = fmt.Fprintln(w, "  Requires a routine UX disposable vault copy with the validation marker and returns validation_synthesis.agent_handoff; the live private vault is not the mutation target.")
 	_, _ = fmt.Fprintln(w, `  git_lifecycle_report status/history: {"action":"git_lifecycle_report","git_lifecycle":{"mode":"status","paths":["synthesis/example.md"],"limit":10}}`)
 	_, _ = fmt.Fprintln(w, `  git_lifecycle_report checkpoint: {"action":"git_lifecycle_report","git_lifecycle":{"mode":"checkpoint","paths":["synthesis/example.md"],"message":"openclerk: update synthesis example"}}`)
 	_, _ = fmt.Fprintln(w, "  Status/history are read-only. Checkpoint requires --git-checkpoints or OPENCLERK_GIT_CHECKPOINTS=1, never pushes, switches branches, restores, or emits raw diffs.")
@@ -509,10 +514,14 @@ func retrievalUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "Reads one strict JSON object from stdin and writes one JSON result.")
 	_, _ = fmt.Fprintln(w, "Uses configured paths by default; pass --db only for an explicit dataset.")
 	_, _ = fmt.Fprintln(w, "Promoted workflow actions:")
+	_, _ = fmt.Fprintln(w, `  source_discovery_report: {"action":"source_discovery_report","source_discovery":{"query":"representative source evidence","path_prefix":"sources/","limit":10}}`)
+	_, _ = fmt.Fprintln(w, "  Read-only. Returns source_discovery.agent_handoff with sanitized source-category summaries, representative counts, citations, validation boundaries, and authority limits.")
 	_, _ = fmt.Fprintln(w, `  source_audit_report: {"action":"source_audit_report","source_audit":{"query":"...","target_path":"synthesis/example.md","mode":"explain","conflict_query":"...","limit":10}}`)
 	_, _ = fmt.Fprintln(w, "  Default mode is explain; repair_existing may update only an existing synthesis target.")
 	_, _ = fmt.Fprintln(w, `  evidence_bundle_report: {"action":"evidence_bundle_report","evidence_bundle":{"query":"...","entity_id":"...","decision_id":"...","ref_kind":"document","ref_id":"...","projection":"records","limit":10}}`)
 	_, _ = fmt.Fprintln(w, "  Read-only. Returns evidence_bundle.agent_handoff with citations, provenance, projection freshness, validation boundaries, and authority limits.")
+	_, _ = fmt.Fprintln(w, `  decision_lookup_report: {"action":"decision_lookup_report","decision_lookup":{"query":"decision-like evidence","decision_id":"optional-decision-id","limit":10}}`)
+	_, _ = fmt.Fprintln(w, "  Read-only. Returns decision_lookup.agent_handoff with formal decisions, decision-like records/search evidence, provenance, projection freshness, validation boundaries, and authority limits.")
 	_, _ = fmt.Fprintln(w, `  duplicate_candidate_report: {"action":"duplicate_candidate_report","duplicate_candidate":{"query":"renewal packaging notes","path_prefix":"notes/","limit":10}}`)
 	_, _ = fmt.Fprintln(w, "  Read-only. Returns duplicate_candidate.agent_handoff with likely target, evidence inspected, no-write status, and approval boundary.")
 	_, _ = fmt.Fprintln(w, `  workflow_guide_report: {"action":"workflow_guide_report","workflow_guide":{"intent":"should I update an existing note or create a new one?"}}`)

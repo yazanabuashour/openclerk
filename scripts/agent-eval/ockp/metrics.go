@@ -91,7 +91,7 @@ func parseMetrics(eventsPath string) (parsedTurn, error) {
 		out.metrics.NonCachedInputTokens = &nonCached
 		out.metrics.OutputTokens = &outputTotal
 	}
-	if out.metrics.WorkflowActionCallCount > 0 && assistantMessagesAfterWorkflowAction > 1 {
+	if out.metrics.WorkflowActionCallCount > 0 && out.metrics.PostActionPrimitiveCommandCount > 8 && assistantMessagesAfterWorkflowAction > 1 {
 		out.metrics.FinalAnswerRepairTurns = assistantMessagesAfterWorkflowAction - 1
 	}
 	return out, nil
@@ -337,6 +337,9 @@ func classifyCommand(command string, m *metrics) {
 	if commandContainsAction(actionText, "memory_router_recall_report") {
 		m.MemoryRouterRecallReportUsed = true
 	}
+	if commandContainsAction(actionText, "source_discovery_report") {
+		m.SourceDiscoveryReportUsed = true
+	}
 	if strings.Contains(lower, "command -v openclerk") || strings.Contains(lower, "which openclerk") {
 		m.OpenClerkPathCheckUsed = true
 	}
@@ -367,12 +370,18 @@ func classifyCommand(command string, m *metrics) {
 	if commandContainsAction(actionText, "compile_synthesis") {
 		m.CompileSynthesisUsed = true
 	}
+	if commandContainsAction(actionText, "validation_synthesis_report") {
+		m.ValidationSynthesisReportUsed = true
+	}
 	if commandContainsAction(actionText, "source_audit_report") {
 		m.SourceAuditReportUsed = true
 		m.SourceAuditReportModes = append(m.SourceAuditReportModes, actionFieldValues(actionText, "source_audit_report", "mode")...)
 	}
 	if commandContainsAction(actionText, "evidence_bundle_report") {
 		m.EvidenceBundleReportUsed = true
+	}
+	if commandContainsAction(actionText, "decision_lookup_report") {
+		m.DecisionLookupReportUsed = true
 	}
 }
 func normalizeActionText(command string) string {
@@ -392,8 +401,11 @@ func commandContainsAction(actionText string, action string) bool {
 }
 func commandContainsWorkflowAction(actionText string) bool {
 	return commandContainsAction(actionText, "compile_synthesis") ||
+		commandContainsAction(actionText, "validation_synthesis_report") ||
+		commandContainsAction(actionText, "source_discovery_report") ||
 		commandContainsAction(actionText, "source_audit_report") ||
-		commandContainsAction(actionText, "evidence_bundle_report")
+		commandContainsAction(actionText, "evidence_bundle_report") ||
+		commandContainsAction(actionText, "decision_lookup_report")
 }
 func commandContainsWorkflowPrimitive(actionText string) bool {
 	for _, action := range []string{

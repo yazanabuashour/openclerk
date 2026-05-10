@@ -3,6 +3,7 @@ package runner_test
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"github.com/yazanabuashour/openclerk/internal/runclient"
 	"github.com/yazanabuashour/openclerk/internal/runner"
@@ -1724,5 +1725,103 @@ func TestRetrievalSearchZeroHitFallbackDoesNotReplaceLaterEmptyFTSPage(t *testin
 	}
 	if result.Search == nil || len(result.Search.Hits) != 0 {
 		t.Fatalf("later empty FTS page should not be replaced by fallback hits: %+v", result.Search)
+	}
+}
+
+func TestRetrievalTaskSourceDiscoveryReportPackagesRepresentativeSources(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "sources/discovery-alpha.md", "Discovery Alpha", "# Discovery Alpha\n\n## Summary\nRepresentative source discovery alpha evidence.\n")
+	createDocument(t, ctx, config, "sources/discovery-beta.md", "Discovery Beta", "# Discovery Beta\n\n## Summary\nRepresentative source discovery beta evidence.\n")
+
+	result, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSourceDiscovery,
+		SourceDiscovery: runner.SourceDiscoveryOptions{
+			Query: "representative source discovery",
+			Limit: 10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("source discovery report task: %v", err)
+	}
+	report := result.SourceDiscovery
+	if report == nil ||
+		report.SearchHitCount == 0 ||
+		report.RepresentativeCount < 2 ||
+		report.CitationCount == 0 ||
+		len(report.SourceCategories) == 0 ||
+		report.AgentHandoff == nil ||
+		!strings.Contains(report.AgentHandoff.AnswerSummary, "source_discovery_report inspected") ||
+		!strings.Contains(report.AgentHandoff.FollowUpPrimitiveInspection, "not required") ||
+		!strings.Contains(report.ValidationBoundaries, "read-only") ||
+		!strings.Contains(report.AuthorityLimits, "canonical markdown sources") {
+		t.Fatalf("source discovery report = %+v", report)
+	}
+	encoded, err := json.Marshal(report)
+	if err != nil {
+		t.Fatalf("marshal source discovery report: %v", err)
+	}
+	for _, privateToken := range []string{"Discovery Alpha", "discovery-alpha.md", "Representative source discovery alpha evidence"} {
+		if strings.Contains(string(encoded), privateToken) {
+			t.Fatalf("source discovery report leaked private token %q: %s", privateToken, encoded)
+		}
+	}
+}
+
+func TestRetrievalTaskDecisionLookupReportHandlesDecisionLikeRecords(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "records/decisions/lookup-current.md", "Lookup Current", strings.TrimSpace(`---
+decision_id: adr-lookup-current
+decision_title: Lookup Current
+decision_status: accepted
+decision_scope: routine-ux
+decision_owner: platform
+---
+# Lookup Current
+
+## Summary
+Decision-like lookup should find formal decisions and package freshness.
+`)+"\n")
+	createDocument(t, ctx, config, "records/tools/lookup-record.md", "Lookup Record", strings.TrimSpace(`---
+entity_id: lookup-record
+entity_type: tool
+entity_name: Lookup Record
+---
+# Lookup Record
+
+## Summary
+Decision-like lookup can also inspect promoted records.
+`)+"\n")
+
+	result, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionDecisionLookup,
+		DecisionLookup: runner.DecisionLookupReportOptions{
+			Query: "Decision-like lookup",
+			Limit: 10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("decision lookup report task: %v", err)
+	}
+	report := result.DecisionLookup
+	if report == nil ||
+		report.Decisions == nil ||
+		report.Decision == nil ||
+		report.Records == nil ||
+		report.Search == nil ||
+		report.Provenance == nil ||
+		report.Projections == nil ||
+		report.AgentHandoff == nil ||
+		report.LookupStatus != "formal_decision_record_found" ||
+		!strings.Contains(report.AgentHandoff.AnswerSummary, "decision_lookup_report returned") ||
+		!strings.Contains(report.AgentHandoff.FollowUpPrimitiveInspection, "not required") ||
+		!strings.Contains(report.ValidationBoundaries, "read-only") ||
+		!strings.Contains(report.AuthorityLimits, "degrades gracefully") {
+		t.Fatalf("decision lookup report = %+v", report)
 	}
 }

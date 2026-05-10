@@ -240,6 +240,15 @@ func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, n
 			MemoryRouterRecall: &report,
 			Summary:            "returned memory/router recall report",
 		}, nil
+	case RetrievalTaskActionSourceDiscovery:
+		report, err := runSourceDiscoveryReport(ctx, client, normalized.SourceDiscovery)
+		if err != nil {
+			return RetrievalTaskResult{}, err
+		}
+		return RetrievalTaskResult{
+			SourceDiscovery: &report,
+			Summary:         "returned source discovery report",
+		}, nil
 	case RetrievalTaskActionSourceAuditReport:
 		report, err := runSourceAuditReport(ctx, client, normalized.SourceAudit)
 		if err != nil {
@@ -257,6 +266,15 @@ func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, n
 		return RetrievalTaskResult{
 			EvidenceBundle: &report,
 			Summary:        "returned evidence bundle report",
+		}, nil
+	case RetrievalTaskActionDecisionLookup:
+		report, err := runDecisionLookupReport(ctx, client, normalized.DecisionLookup)
+		if err != nil {
+			return RetrievalTaskResult{}, err
+		}
+		return RetrievalTaskResult{
+			DecisionLookup: &report,
+			Summary:        "returned decision lookup report",
 		}, nil
 	case RetrievalTaskActionDuplicateCandidate:
 		report, err := runDuplicateCandidateReport(ctx, client, normalized.DuplicateCandidate)
@@ -321,8 +339,10 @@ type normalizedRetrievalTaskRequest struct {
 	Projection         ProjectionStateOptions
 	Audit              AuditContradictionsOptions
 	MemoryRouterRecall MemoryRouterRecallOptions
+	SourceDiscovery    SourceDiscoveryOptions
 	SourceAudit        SourceAuditReportOptions
 	EvidenceBundle     EvidenceBundleOptions
+	DecisionLookup     DecisionLookupReportOptions
 	DuplicateCandidate DuplicateCandidateOptions
 	WorkflowGuide      WorkflowGuideOptions
 	StructuredStore    StructuredStoreOptions
@@ -352,8 +372,10 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		Projection:         request.Projection,
 		Audit:              request.Audit,
 		MemoryRouterRecall: request.MemoryRouterRecall,
+		SourceDiscovery:    request.SourceDiscovery,
 		SourceAudit:        request.SourceAudit,
 		EvidenceBundle:     request.EvidenceBundle,
+		DecisionLookup:     request.DecisionLookup,
 		DuplicateCandidate: request.DuplicateCandidate,
 		WorkflowGuide:      request.WorkflowGuide,
 		StructuredStore:    request.StructuredStore,
@@ -372,8 +394,10 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		request.Projection.Limit,
 		request.Audit.Limit,
 		request.MemoryRouterRecall.Limit,
+		request.SourceDiscovery.Limit,
 		request.SourceAudit.Limit,
 		request.EvidenceBundle.Limit,
+		request.DecisionLookup.Limit,
 		request.DuplicateCandidate.Limit,
 		request.StructuredStore.Limit,
 		request.HybridRetrieval.Limit,
@@ -450,6 +474,13 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 	case RetrievalTaskActionMemoryRouterRecall:
 		normalized.MemoryRouterRecall.Query = strings.TrimSpace(request.MemoryRouterRecall.Query)
 		return normalized, ""
+	case RetrievalTaskActionSourceDiscovery:
+		normalized.SourceDiscovery.Query = strings.TrimSpace(request.SourceDiscovery.Query)
+		normalized.SourceDiscovery.PathPrefix = strings.TrimSpace(request.SourceDiscovery.PathPrefix)
+		if normalized.SourceDiscovery.Query == "" {
+			return normalizedRetrievalTaskRequest{}, "source_discovery.query is required"
+		}
+		return normalized, ""
 	case RetrievalTaskActionSourceAuditReport:
 		normalized.SourceAudit.Query = strings.TrimSpace(request.SourceAudit.Query)
 		normalized.SourceAudit.TargetPath = strings.TrimSpace(request.SourceAudit.TargetPath)
@@ -484,6 +515,16 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		}
 		if (normalized.EvidenceBundle.RefKind == "") != (normalized.EvidenceBundle.RefID == "") {
 			return normalizedRetrievalTaskRequest{}, "evidence_bundle.ref_kind and evidence_bundle.ref_id must be provided together"
+		}
+		return normalized, ""
+	case RetrievalTaskActionDecisionLookup:
+		normalized.DecisionLookup.Query = strings.TrimSpace(request.DecisionLookup.Query)
+		normalized.DecisionLookup.DecisionID = strings.TrimSpace(request.DecisionLookup.DecisionID)
+		normalized.DecisionLookup.Status = strings.TrimSpace(request.DecisionLookup.Status)
+		normalized.DecisionLookup.Scope = strings.TrimSpace(request.DecisionLookup.Scope)
+		normalized.DecisionLookup.Owner = strings.TrimSpace(request.DecisionLookup.Owner)
+		if normalized.DecisionLookup.Query == "" && normalized.DecisionLookup.DecisionID == "" {
+			return normalizedRetrievalTaskRequest{}, "decision_lookup.query or decision_lookup.decision_id is required"
 		}
 		return normalized, ""
 	case RetrievalTaskActionDuplicateCandidate:

@@ -158,6 +158,7 @@ type metrics struct {
 	AuditContradictionsUsed         bool           `json:"audit_contradictions_used"`
 	AuditContradictionsModes        []string       `json:"audit_contradictions_modes,omitempty"`
 	MemoryRouterRecallReportUsed    bool           `json:"memory_router_recall_report_used"`
+	SourceDiscoveryReportUsed       bool           `json:"source_discovery_report_used"`
 	OpenClerkPathCheckUsed          bool           `json:"openclerk_path_check_used"`
 	OpenClerkVersionCheckUsed       bool           `json:"openclerk_version_check_used"`
 	OpenClerkSkillCheckUsed         bool           `json:"openclerk_skill_check_used"`
@@ -168,9 +169,11 @@ type metrics struct {
 	ModuleRemoveUsed                bool           `json:"module_remove_used"`
 	ModuleProviders                 []string       `json:"module_providers,omitempty"`
 	CompileSynthesisUsed            bool           `json:"compile_synthesis_used"`
+	ValidationSynthesisReportUsed   bool           `json:"validation_synthesis_report_used"`
 	SourceAuditReportUsed           bool           `json:"source_audit_report_used"`
 	SourceAuditReportModes          []string       `json:"source_audit_report_modes,omitempty"`
 	EvidenceBundleReportUsed        bool           `json:"evidence_bundle_report_used"`
+	DecisionLookupReportUsed        bool           `json:"decision_lookup_report_used"`
 	WorkflowActionFirstCommandIndex int            `json:"workflow_action_first_command_index,omitempty"`
 	WorkflowActionCallCount         int            `json:"workflow_action_call_count,omitempty"`
 	PreActionPrimitiveCommandCount  int            `json:"pre_action_primitive_command_count,omitempty"`

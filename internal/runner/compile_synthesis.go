@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -117,6 +118,77 @@ func runCompileSynthesis(ctx context.Context, client *runclient.Client, input Co
 			"not required for routine answer; use primitives only for explicit follow-up inspection or runner rejection repair",
 		),
 	}, nil
+}
+
+func runValidationSynthesis(ctx context.Context, client *runclient.Client, input ValidationSynthesisInput) (CompileSynthesisResult, error) {
+	if err := validateDisposableValidationRuntime(ctx, client); err != nil {
+		return CompileSynthesisResult{}, err
+	}
+	if input.DocID != "" {
+		document, err := client.GetDocument(ctx, input.DocID)
+		if err != nil {
+			return CompileSynthesisResult{}, err
+		}
+		if input.Path == "" {
+			input.Path = document.Path
+		}
+		if input.Title == "" {
+			input.Title = document.Title
+		}
+	}
+	synthesisInput := CompileSynthesisInput{
+		Path:          firstNonEmpty(input.Path, "synthesis/routine-ux-validation.md"),
+		Title:         firstNonEmpty(input.Title, "Routine UX Validation Synthesis"),
+		SourceRefs:    input.SourceRefs,
+		Body:          input.Body,
+		BodyFacts:     input.BodyFacts,
+		FreshnessNote: firstNonEmpty(input.FreshnessNote, "Checked against disposable validation source evidence through validation_synthesis_report."),
+		Mode:          "create_or_update",
+	}
+	if len(synthesisInput.SourceRefs) == 0 {
+		synthesisInput.SourceRefs = []string{"sources/routine-ux-validation/source.md"}
+	}
+	if strings.TrimSpace(synthesisInput.Body) == "" && len(synthesisInput.BodyFacts) == 0 {
+		synthesisInput.BodyFacts = []string{"Validation synthesis refreshed through the runner-owned disposable validation workflow."}
+	}
+	result, err := runCompileSynthesis(ctx, client, trimCompileSynthesisInput(synthesisInput))
+	if err != nil {
+		return CompileSynthesisResult{}, err
+	}
+	result.ValidationBoundaries = "runner-owned validation_synthesis_report workflow for disposable validation copies; no live private vault mutation, broad repo search, direct vault inspection, direct file edits, direct SQLite, source-built runners, HTTP/MCP bypasses, unsupported transports, duplicate synthesis creation, or hidden authority promotion"
+	result.AgentHandoff = compileSynthesisHandoff(
+		result.SelectedPath,
+		result.SourceRefs,
+		fmt.Sprintf("validation_synthesis_report %s %s with disposable validation source refs; %s", result.WriteStatus, result.SelectedPath, projectionFreshnessSummary(result.ProjectionFreshness)),
+		[]string{
+			"selected_path=" + result.SelectedPath,
+			"source_refs=" + strings.Join(result.SourceRefs, ", "),
+			"duplicate_status=" + result.DuplicateStatus,
+			"provenance_refs=" + strings.Join(result.ProvenanceRefs, ", "),
+			"projection_freshness=" + projectionFreshnessSummary(result.ProjectionFreshness),
+			"write_status=" + result.WriteStatus,
+			"live_private_vault_mutated=false",
+		},
+		result.ValidationBoundaries,
+		result.AuthorityLimits,
+		"not required for routine validation answer; use compile_synthesis or primitives only for explicit drill-down or runner rejection repair",
+	)
+	return result, nil
+}
+
+func validateDisposableValidationRuntime(ctx context.Context, client *runclient.Client) error {
+	vaultRoot := filepath.Clean(client.Paths().VaultRoot)
+	if filepath.Base(vaultRoot) != "private-vault-copy" {
+		return domain.ValidationError("validation_synthesis_report requires the routine UX disposable vault copy", nil)
+	}
+	source, ok, err := auditDocumentByPath(ctx, client, "sources/routine-ux-validation/source.md")
+	if err != nil {
+		return err
+	}
+	if !ok || !strings.Contains(source.Body, "disposable source exists only inside the routine UX telemetry vault copy") {
+		return domain.ValidationError("validation_synthesis_report requires disposable validation source marker", nil)
+	}
+	return nil
 }
 
 func compileSynthesisBody(input CompileSynthesisInput) string {

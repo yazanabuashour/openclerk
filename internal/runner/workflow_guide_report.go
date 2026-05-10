@@ -43,6 +43,15 @@ type workflowGuideSelection struct {
 func selectWorkflowGuideCandidate(intent string) workflowGuideSelection {
 	normalized := strings.ToLower(intent)
 	switch {
+	case containsAny(normalized, "representative source", "source discovery", "find sources", "source categories", "representative sources"):
+		return workflowGuideSelection{
+			Surface:        "source_discovery_report",
+			RunnerDomain:   "retrieval",
+			RequestShape:   `{"action":"source_discovery_report","source_discovery":{"query":"...","limit":10}}`,
+			UseWhen:        "use for read-only representative source discovery and sanitized source-category summaries",
+			DoNotUseFor:    []string{"durable writes", "raw private content exposure", "external search"},
+			HandoffSummary: "Use retrieval source_discovery_report, then answer from source_discovery.agent_handoff without private paths, titles, snippets, ids, or raw JSON.",
+		}
 	case containsAny(normalized, "artifact", "invoice", "receipt", "legal document", "transcript", "auto-file", "autofile", "candidate path", "body preview", "metadata field", "tags"):
 		return workflowGuideSelection{
 			Surface:        "artifact_candidate_plan",
@@ -78,6 +87,15 @@ func selectWorkflowGuideCandidate(intent string) workflowGuideSelection {
 			UseWhen:        "use for public URL source placement before durable fetch or write approval",
 			DoNotUseFor:    []string{"login-gated pages", "purchases", "captcha/paywall bypasses", "non-runner HTTP/browser fetch"},
 			HandoffSummary: "Use document ingest_source_url with mode plan for public-link placement; public read/fetch permission is separate from durable-write approval.",
+		}
+	case containsAny(normalized, "validation synthesis", "disposable synthesis", "routine ux validation"):
+		return workflowGuideSelection{
+			Surface:        "validation_synthesis_report",
+			RunnerDomain:   "document",
+			RequestShape:   `{"action":"validation_synthesis_report","validation_synthesis":{"disposable_validation":true,"body_facts":["..."]}}`,
+			UseWhen:        "use for routine UX disposable validation synthesis create/update workflows where validation defaults may be used safely",
+			DoNotUseFor:    []string{"live-vault durable writes", "uncited claims", "non-validation synthesis"},
+			HandoffSummary: "Use document validation_synthesis_report for disposable validation synthesis, then answer from validation_synthesis.agent_handoff.",
 		}
 	case containsAny(normalized, "synthesis", "compile", "summarize sources", "source-linked answer", "file answer"):
 		return workflowGuideSelection{
@@ -132,6 +150,15 @@ func selectWorkflowGuideCandidate(intent string) workflowGuideSelection {
 			UseWhen:        "use for read-only hybrid/vector retrieval decision support",
 			DoNotUseFor:    []string{"vector-ranked answers", "embedding-store evidence", "default ranking changes"},
 			HandoffSummary: "Use retrieval hybrid_retrieval_report and do not claim vector-ranked retrieval from it.",
+		}
+	case containsAny(normalized, "decision-like", "decision like", "decision record", "decision lookup", "adr lookup"):
+		return workflowGuideSelection{
+			Surface:        "decision_lookup_report",
+			RunnerDomain:   "retrieval",
+			RequestShape:   `{"action":"decision_lookup_report","decision_lookup":{"query":"...","limit":10}}`,
+			UseWhen:        "use for natural decision-like record lookup across formal decisions, promoted records, search evidence, provenance, and projection freshness",
+			DoNotUseFor:    []string{"durable writes", "hidden authority ranking"},
+			HandoffSummary: "Use retrieval decision_lookup_report, then answer from decision_lookup.agent_handoff.",
 		}
 	case containsAny(normalized, "record", "records", "decision", "provenance", "projection", "evidence bundle", "freshness"):
 		return workflowGuideSelection{
@@ -192,6 +219,20 @@ func workflowGuideCandidates() []WorkflowGuideCandidate {
 			SelectionRule:  "use when current primitives are safe but too ceremonial, scripted, slow, or guidance-dependent",
 			Boundary:       "must preserve citations, provenance, freshness, duplicate handling, local-first runner-only access, and approval-before-write",
 			RequestExample: `{"action":"duplicate_candidate_report","duplicate_candidate":{"query":"...","limit":10}}`,
+		},
+		{
+			Surface:        "source_discovery_report",
+			Status:         "promoted_for_representative_source_discovery",
+			SelectionRule:  "use when a user asks to find representative sources or source categories without needing raw private content",
+			Boundary:       "read-only source discovery; final answers should summarize categories and counts when private-vault telemetry asks for sanitization",
+			RequestExample: `{"action":"source_discovery_report","source_discovery":{"query":"...","limit":10}}`,
+		},
+		{
+			Surface:        "decision_lookup_report",
+			Status:         "promoted_for_decision_like_lookup",
+			SelectionRule:  "use when decision-like evidence may live across formal decisions, promoted records, provenance, projection, and source search evidence",
+			Boundary:       "read-only; canonical markdown remains authority and projections are derived evidence",
+			RequestExample: `{"action":"decision_lookup_report","decision_lookup":{"query":"...","limit":10}}`,
 		},
 		{
 			Surface:       "skill_recipe_expansion",

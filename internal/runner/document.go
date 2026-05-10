@@ -186,6 +186,7 @@ func isMutatingDocumentAction(normalized normalizedDocumentTaskRequest) bool {
 	case DocumentTaskActionCreate,
 		DocumentTaskActionIngestVideoURL,
 		DocumentTaskActionCompileSynthesis,
+		DocumentTaskActionValidationSynthesis,
 		DocumentTaskActionAppend,
 		DocumentTaskActionReplaceSection:
 		return true
@@ -264,6 +265,15 @@ func runMutatingDocumentTask(ctx context.Context, client *runclient.Client, norm
 			CompileSynthesis: &compiled,
 			Summary:          fmt.Sprintf("compiled synthesis %s", compiled.SelectedPath),
 		}, nil
+	case DocumentTaskActionValidationSynthesis:
+		compiled, err := runValidationSynthesis(ctx, client, normalized.ValidationSynthesis)
+		if err != nil {
+			return DocumentTaskResult{}, err
+		}
+		return DocumentTaskResult{
+			ValidationSynthesis: &compiled,
+			Summary:             fmt.Sprintf("validated synthesis %s", compiled.SelectedPath),
+		}, nil
 	case DocumentTaskActionAppend:
 		document, err := client.AppendDocument(ctx, normalized.DocID, domain.AppendDocumentInput{Content: normalized.Content})
 		if err != nil {
@@ -293,18 +303,19 @@ func runMutatingDocumentTask(ctx context.Context, client *runclient.Client, norm
 }
 
 type normalizedDocumentTaskRequest struct {
-	Action       string
-	Document     DocumentInput
-	Source       SourceURLInput
-	Video        VideoURLInput
-	Synthesis    CompileSynthesisInput
-	GitLifecycle GitLifecycleOptions
-	WebSearch    WebSearchPlanOptions
-	Artifact     ArtifactPlanOptions
-	DocID        string
-	Content      string
-	Heading      string
-	List         DocumentListOptions
+	Action              string
+	Document            DocumentInput
+	Source              SourceURLInput
+	Video               VideoURLInput
+	Synthesis           CompileSynthesisInput
+	ValidationSynthesis ValidationSynthesisInput
+	GitLifecycle        GitLifecycleOptions
+	WebSearch           WebSearchPlanOptions
+	Artifact            ArtifactPlanOptions
+	DocID               string
+	Content             string
+	Heading             string
+	List                DocumentListOptions
 }
 
 func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocumentTaskRequest, string) {
@@ -313,18 +324,19 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		action = DocumentTaskActionValidate
 	}
 	normalized := normalizedDocumentTaskRequest{
-		Action:       action,
-		Document:     request.Document,
-		Source:       trimSourceURLInput(request.Source),
-		Video:        trimVideoURLInput(request.Video),
-		Synthesis:    trimCompileSynthesisInput(compileSynthesisInputFromRequest(request)),
-		GitLifecycle: trimGitLifecycleOptions(request.GitLifecycle),
-		WebSearch:    trimWebSearchPlanOptions(request.WebSearch),
-		Artifact:     trimArtifactPlanOptions(request.Artifact),
-		DocID:        strings.TrimSpace(request.DocID),
-		Content:      request.Content,
-		Heading:      strings.TrimSpace(request.Heading),
-		List:         request.List,
+		Action:              action,
+		Document:            request.Document,
+		Source:              trimSourceURLInput(request.Source),
+		Video:               trimVideoURLInput(request.Video),
+		Synthesis:           trimCompileSynthesisInput(compileSynthesisInputFromRequest(request)),
+		ValidationSynthesis: trimValidationSynthesisInput(request.ValidationSynthesis),
+		GitLifecycle:        trimGitLifecycleOptions(request.GitLifecycle),
+		WebSearch:           trimWebSearchPlanOptions(request.WebSearch),
+		Artifact:            trimArtifactPlanOptions(request.Artifact),
+		DocID:               strings.TrimSpace(request.DocID),
+		Content:             request.Content,
+		Heading:             strings.TrimSpace(request.Heading),
+		List:                request.List,
 	}
 
 	if rejection := rejectNegativeRunnerLimits(
@@ -359,6 +371,11 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		return normalized, ""
 	case DocumentTaskActionCompileSynthesis:
 		if rejection := validateCompileSynthesisInput(normalized.Synthesis); rejection != "" {
+			return normalizedDocumentTaskRequest{}, rejection
+		}
+		return normalized, ""
+	case DocumentTaskActionValidationSynthesis:
+		if rejection := validateValidationSynthesisInput(normalized.ValidationSynthesis); rejection != "" {
 			return normalizedDocumentTaskRequest{}, rejection
 		}
 		return normalized, ""
@@ -533,6 +550,39 @@ func trimCompileSynthesisInput(input CompileSynthesisInput) CompileSynthesisInpu
 		FreshnessNote: strings.TrimSpace(input.FreshnessNote),
 		Mode:          normalizeCompileSynthesisMode(input.Mode),
 	}
+}
+
+func trimValidationSynthesisInput(input ValidationSynthesisInput) ValidationSynthesisInput {
+	sourceRefs := make([]string, 0, len(input.SourceRefs))
+	for _, ref := range input.SourceRefs {
+		sourceRefs = append(sourceRefs, normalizeCompileSynthesisMarkdownPath(strings.TrimSpace(ref)))
+	}
+	bodyFacts := make([]string, 0, len(input.BodyFacts))
+	for _, fact := range input.BodyFacts {
+		trimmed := strings.TrimSpace(fact)
+		if trimmed != "" {
+			bodyFacts = append(bodyFacts, trimmed)
+		}
+	}
+	return ValidationSynthesisInput{
+		DocID:                strings.TrimSpace(input.DocID),
+		Path:                 normalizeOptionalCompileSynthesisMarkdownPath(input.Path),
+		Title:                strings.TrimSpace(input.Title),
+		SourceRefs:           sourceRefs,
+		Body:                 input.Body,
+		BodyFacts:            bodyFacts,
+		FreshnessNote:        strings.TrimSpace(input.FreshnessNote),
+		Mode:                 strings.TrimSpace(input.Mode),
+		DisposableValidation: input.DisposableValidation,
+	}
+}
+
+func normalizeOptionalCompileSynthesisMarkdownPath(raw string) string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return ""
+	}
+	return normalizeCompileSynthesisMarkdownPath(trimmed)
 }
 
 func trimGitLifecycleOptions(input GitLifecycleOptions) GitLifecycleOptions {
@@ -745,6 +795,28 @@ func validateCompileSynthesisInput(input CompileSynthesisInput) string {
 		return "synthesis.mode must be create_or_update"
 	}
 	return ""
+}
+
+func validateValidationSynthesisInput(input ValidationSynthesisInput) string {
+	if !input.DisposableValidation {
+		return "validation_synthesis.disposable_validation must be true for disposable validation writes"
+	}
+	synthesisInput := CompileSynthesisInput{
+		Path:          firstNonEmpty(input.Path, "synthesis/routine-ux-validation.md"),
+		Title:         firstNonEmpty(input.Title, "Routine UX Validation Synthesis"),
+		SourceRefs:    input.SourceRefs,
+		Body:          input.Body,
+		BodyFacts:     input.BodyFacts,
+		FreshnessNote: input.FreshnessNote,
+		Mode:          "create_or_update",
+	}
+	if len(synthesisInput.SourceRefs) == 0 {
+		synthesisInput.SourceRefs = []string{"sources/routine-ux-validation/source.md"}
+	}
+	if strings.TrimSpace(synthesisInput.Body) == "" && len(synthesisInput.BodyFacts) == 0 {
+		synthesisInput.BodyFacts = []string{"validation synthesis default body fact"}
+	}
+	return validateCompileSynthesisInput(trimCompileSynthesisInput(synthesisInput))
 }
 
 func validateSourceURLInput(input SourceURLInput) string {

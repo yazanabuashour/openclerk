@@ -1274,6 +1274,57 @@ func TestDocumentTaskCompileSynthesisRejectsMissingBodyAndFactsWithoutWrite(t *t
 	}
 }
 
+func TestDocumentTaskValidationSynthesisUsesDisposableDefaults(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	tempDir := t.TempDir()
+	config := runclient.Config{DatabasePath: filepath.Join(tempDir, "data", "openclerk.sqlite")}
+	if _, err := runclient.InitializePaths(config, filepath.Join(tempDir, "task-01-synthesis_create_update", "private-vault-copy")); err != nil {
+		t.Fatalf("initialize disposable paths: %v", err)
+	}
+	createDocument(t, ctx, config, "sources/routine-ux-validation/source.md", "Routine UX Validation Source", "# Routine UX Validation Source\n\n## Summary\nThis disposable source exists only inside the routine UX telemetry vault copy.\n")
+
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionValidationSynthesis,
+		ValidationSynthesis: runner.ValidationSynthesisInput{
+			DisposableValidation: true,
+			BodyFacts:            []string{"Disposable validation synthesis evidence."},
+		},
+	})
+	if err != nil {
+		t.Fatalf("validation synthesis: %v", err)
+	}
+	if result.Rejected ||
+		result.ValidationSynthesis == nil ||
+		result.ValidationSynthesis.SelectedPath != "synthesis/routine-ux-validation.md" ||
+		result.ValidationSynthesis.WriteStatus != "created" ||
+		result.ValidationSynthesis.AgentHandoff == nil ||
+		!strings.Contains(result.ValidationSynthesis.AgentHandoff.AnswerSummary, "validation_synthesis_report created") ||
+		!strings.Contains(result.ValidationSynthesis.AgentHandoff.ValidationBoundaries, "no live private vault mutation") {
+		t.Fatalf("validation synthesis result = %+v", result)
+	}
+}
+
+func TestDocumentTaskValidationSynthesisRejectsLiveVault(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "sources/routine-ux-validation/source.md", "Routine UX Validation Source", "# Routine UX Validation Source\n\n## Summary\nThis disposable source exists only inside the routine UX telemetry vault copy.\n")
+
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionValidationSynthesis,
+		ValidationSynthesis: runner.ValidationSynthesisInput{
+			DisposableValidation: true,
+			BodyFacts:            []string{"Should not write live vault."},
+		},
+	})
+	if err == nil || !strings.Contains(err.Error(), "routine UX disposable vault copy") {
+		t.Fatalf("live vault validation synthesis result = %+v, err = %v", result, err)
+	}
+}
+
 func TestDocumentTaskCompileSynthesisRejectsCleanedPathsOutsideNamespaces(t *testing.T) {
 	t.Parallel()
 

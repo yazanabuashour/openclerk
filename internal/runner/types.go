@@ -8,20 +8,21 @@ import (
 )
 
 const (
-	DocumentTaskActionValidate         = "validate"
-	DocumentTaskActionCreate           = "create_document"
-	DocumentTaskActionIngestSourceURL  = "ingest_source_url"
-	DocumentTaskActionIngestVideoURL   = "ingest_video_url"
-	DocumentTaskActionCompileSynthesis = "compile_synthesis"
-	DocumentTaskActionList             = "list_documents"
-	DocumentTaskActionGet              = "get_document"
-	DocumentTaskActionAppend           = "append_document"
-	DocumentTaskActionReplaceSection   = "replace_section"
-	DocumentTaskActionResolvePaths     = "resolve_paths"
-	DocumentTaskActionInspectLayout    = "inspect_layout"
-	DocumentTaskActionGitLifecycle     = "git_lifecycle_report"
-	DocumentTaskActionWebSearchPlan    = "web_search_plan"
-	DocumentTaskActionArtifactPlan     = "artifact_candidate_plan"
+	DocumentTaskActionValidate            = "validate"
+	DocumentTaskActionCreate              = "create_document"
+	DocumentTaskActionIngestSourceURL     = "ingest_source_url"
+	DocumentTaskActionIngestVideoURL      = "ingest_video_url"
+	DocumentTaskActionCompileSynthesis    = "compile_synthesis"
+	DocumentTaskActionValidationSynthesis = "validation_synthesis_report"
+	DocumentTaskActionList                = "list_documents"
+	DocumentTaskActionGet                 = "get_document"
+	DocumentTaskActionAppend              = "append_document"
+	DocumentTaskActionReplaceSection      = "replace_section"
+	DocumentTaskActionResolvePaths        = "resolve_paths"
+	DocumentTaskActionInspectLayout       = "inspect_layout"
+	DocumentTaskActionGitLifecycle        = "git_lifecycle_report"
+	DocumentTaskActionWebSearchPlan       = "web_search_plan"
+	DocumentTaskActionArtifactPlan        = "artifact_candidate_plan"
 
 	RetrievalTaskActionValidate            = "validate"
 	RetrievalTaskActionSearch              = "search"
@@ -37,8 +38,10 @@ const (
 	RetrievalTaskActionProjectionStates    = "projection_states"
 	RetrievalTaskActionAuditContradictions = "audit_contradictions"
 	RetrievalTaskActionMemoryRouterRecall  = "memory_router_recall_report"
+	RetrievalTaskActionSourceDiscovery     = "source_discovery_report"
 	RetrievalTaskActionSourceAuditReport   = "source_audit_report"
 	RetrievalTaskActionEvidenceBundle      = "evidence_bundle_report"
+	RetrievalTaskActionDecisionLookup      = "decision_lookup_report"
 	RetrievalTaskActionDuplicateCandidate  = "duplicate_candidate_report"
 	RetrievalTaskActionWorkflowGuide       = "workflow_guide_report"
 	RetrievalTaskActionStructuredStore     = "structured_store_report"
@@ -47,25 +50,26 @@ const (
 )
 
 type DocumentTaskRequest struct {
-	Action        string                `json:"action"`
-	Document      DocumentInput         `json:"document,omitempty"`
-	Source        SourceURLInput        `json:"source,omitempty"`
-	Video         VideoURLInput         `json:"video,omitempty"`
-	Synthesis     CompileSynthesisInput `json:"synthesis,omitempty"`
-	GitLifecycle  GitLifecycleOptions   `json:"git_lifecycle,omitempty"`
-	WebSearch     WebSearchPlanOptions  `json:"web_search,omitempty"`
-	Artifact      ArtifactPlanOptions   `json:"artifact,omitempty"`
-	Path          string                `json:"path,omitempty"`
-	Title         string                `json:"title,omitempty"`
-	Body          string                `json:"body,omitempty"`
-	BodyFacts     []string              `json:"body_facts,omitempty"`
-	SourceRefs    []string              `json:"source_refs,omitempty"`
-	FreshnessNote string                `json:"freshness_note,omitempty"`
-	Mode          string                `json:"mode,omitempty"`
-	DocID         string                `json:"doc_id,omitempty"`
-	Content       string                `json:"content,omitempty"`
-	Heading       string                `json:"heading,omitempty"`
-	List          DocumentListOptions   `json:"list,omitempty"`
+	Action              string                   `json:"action"`
+	Document            DocumentInput            `json:"document,omitempty"`
+	Source              SourceURLInput           `json:"source,omitempty"`
+	Video               VideoURLInput            `json:"video,omitempty"`
+	Synthesis           CompileSynthesisInput    `json:"synthesis,omitempty"`
+	ValidationSynthesis ValidationSynthesisInput `json:"validation_synthesis,omitempty"`
+	GitLifecycle        GitLifecycleOptions      `json:"git_lifecycle,omitempty"`
+	WebSearch           WebSearchPlanOptions     `json:"web_search,omitempty"`
+	Artifact            ArtifactPlanOptions      `json:"artifact,omitempty"`
+	Path                string                   `json:"path,omitempty"`
+	Title               string                   `json:"title,omitempty"`
+	Body                string                   `json:"body,omitempty"`
+	BodyFacts           []string                 `json:"body_facts,omitempty"`
+	SourceRefs          []string                 `json:"source_refs,omitempty"`
+	FreshnessNote       string                   `json:"freshness_note,omitempty"`
+	Mode                string                   `json:"mode,omitempty"`
+	DocID               string                   `json:"doc_id,omitempty"`
+	Content             string                   `json:"content,omitempty"`
+	Heading             string                   `json:"heading,omitempty"`
+	List                DocumentListOptions      `json:"list,omitempty"`
 }
 
 type DocumentInput struct {
@@ -111,6 +115,18 @@ type CompileSynthesisInput struct {
 	BodyFacts     []string `json:"body_facts,omitempty"`
 	FreshnessNote string   `json:"freshness_note,omitempty"`
 	Mode          string   `json:"mode,omitempty"`
+}
+
+type ValidationSynthesisInput struct {
+	DocID                string   `json:"doc_id,omitempty"`
+	Path                 string   `json:"path,omitempty"`
+	Title                string   `json:"title,omitempty"`
+	SourceRefs           []string `json:"source_refs,omitempty"`
+	Body                 string   `json:"body,omitempty"`
+	BodyFacts            []string `json:"body_facts,omitempty"`
+	FreshnessNote        string   `json:"freshness_note,omitempty"`
+	Mode                 string   `json:"mode,omitempty"`
+	DisposableValidation bool     `json:"disposable_validation,omitempty"`
 }
 
 type SourcePDFMetadata struct {
@@ -216,47 +232,50 @@ type DocumentListOptions struct {
 }
 
 type DocumentTaskResult struct {
-	Rejected         bool                    `json:"rejected"`
-	RejectionReason  string                  `json:"rejection_reason,omitempty"`
-	Document         *Document               `json:"document,omitempty"`
-	Ingestion        *SourceIngestionResult  `json:"ingestion,omitempty"`
-	SourcePlacement  *SourcePlacementPlan    `json:"source_placement_plan,omitempty"`
-	VideoIngestion   *VideoIngestionResult   `json:"video_ingestion,omitempty"`
-	CompileSynthesis *CompileSynthesisResult `json:"compile_synthesis,omitempty"`
-	GitLifecycle     *GitLifecycleReport     `json:"git_lifecycle,omitempty"`
-	WebSearchPlan    *WebSearchPlan          `json:"web_search_plan,omitempty"`
-	ArtifactPlan     *ArtifactCandidatePlan  `json:"artifact_candidate_plan,omitempty"`
-	Documents        []DocumentSummary       `json:"documents,omitempty"`
-	Paths            *Paths                  `json:"paths,omitempty"`
-	Layout           *KnowledgeLayout        `json:"layout,omitempty"`
-	PageInfo         PageInfo                `json:"page_info,omitempty"`
-	Summary          string                  `json:"summary"`
+	Rejected            bool                    `json:"rejected"`
+	RejectionReason     string                  `json:"rejection_reason,omitempty"`
+	Document            *Document               `json:"document,omitempty"`
+	Ingestion           *SourceIngestionResult  `json:"ingestion,omitempty"`
+	SourcePlacement     *SourcePlacementPlan    `json:"source_placement_plan,omitempty"`
+	VideoIngestion      *VideoIngestionResult   `json:"video_ingestion,omitempty"`
+	CompileSynthesis    *CompileSynthesisResult `json:"compile_synthesis,omitempty"`
+	ValidationSynthesis *CompileSynthesisResult `json:"validation_synthesis,omitempty"`
+	GitLifecycle        *GitLifecycleReport     `json:"git_lifecycle,omitempty"`
+	WebSearchPlan       *WebSearchPlan          `json:"web_search_plan,omitempty"`
+	ArtifactPlan        *ArtifactCandidatePlan  `json:"artifact_candidate_plan,omitempty"`
+	Documents           []DocumentSummary       `json:"documents,omitempty"`
+	Paths               *Paths                  `json:"paths,omitempty"`
+	Layout              *KnowledgeLayout        `json:"layout,omitempty"`
+	PageInfo            PageInfo                `json:"page_info,omitempty"`
+	Summary             string                  `json:"summary"`
 }
 
 type RetrievalTaskRequest struct {
-	Action             string                     `json:"action"`
-	Search             SearchOptions              `json:"search,omitempty"`
-	DocID              string                     `json:"doc_id,omitempty"`
-	ChunkID            string                     `json:"chunk_id,omitempty"`
-	NodeID             string                     `json:"node_id,omitempty"`
-	EntityID           string                     `json:"entity_id,omitempty"`
-	ServiceID          string                     `json:"service_id,omitempty"`
-	DecisionID         string                     `json:"decision_id,omitempty"`
-	Records            RecordLookupOptions        `json:"records,omitempty"`
-	Services           ServiceLookupOptions       `json:"services,omitempty"`
-	Decisions          DecisionLookupOptions      `json:"decisions,omitempty"`
-	Provenance         ProvenanceEventOptions     `json:"provenance,omitempty"`
-	Projection         ProjectionStateOptions     `json:"projection,omitempty"`
-	Audit              AuditContradictionsOptions `json:"audit,omitempty"`
-	MemoryRouterRecall MemoryRouterRecallOptions  `json:"memory_router_recall,omitempty"`
-	SourceAudit        SourceAuditReportOptions   `json:"source_audit,omitempty"`
-	EvidenceBundle     EvidenceBundleOptions      `json:"evidence_bundle,omitempty"`
-	DuplicateCandidate DuplicateCandidateOptions  `json:"duplicate_candidate,omitempty"`
-	WorkflowGuide      WorkflowGuideOptions       `json:"workflow_guide,omitempty"`
-	StructuredStore    StructuredStoreOptions     `json:"structured_store,omitempty"`
-	HybridRetrieval    HybridRetrievalOptions     `json:"hybrid_retrieval,omitempty"`
-	SemanticSearch     SemanticSearchOptions      `json:"semantic_search,omitempty"`
-	Limit              int                        `json:"limit,omitempty"`
+	Action             string                      `json:"action"`
+	Search             SearchOptions               `json:"search,omitempty"`
+	DocID              string                      `json:"doc_id,omitempty"`
+	ChunkID            string                      `json:"chunk_id,omitempty"`
+	NodeID             string                      `json:"node_id,omitempty"`
+	EntityID           string                      `json:"entity_id,omitempty"`
+	ServiceID          string                      `json:"service_id,omitempty"`
+	DecisionID         string                      `json:"decision_id,omitempty"`
+	Records            RecordLookupOptions         `json:"records,omitempty"`
+	Services           ServiceLookupOptions        `json:"services,omitempty"`
+	Decisions          DecisionLookupOptions       `json:"decisions,omitempty"`
+	Provenance         ProvenanceEventOptions      `json:"provenance,omitempty"`
+	Projection         ProjectionStateOptions      `json:"projection,omitempty"`
+	Audit              AuditContradictionsOptions  `json:"audit,omitempty"`
+	MemoryRouterRecall MemoryRouterRecallOptions   `json:"memory_router_recall,omitempty"`
+	SourceDiscovery    SourceDiscoveryOptions      `json:"source_discovery,omitempty"`
+	SourceAudit        SourceAuditReportOptions    `json:"source_audit,omitempty"`
+	EvidenceBundle     EvidenceBundleOptions       `json:"evidence_bundle,omitempty"`
+	DecisionLookup     DecisionLookupReportOptions `json:"decision_lookup,omitempty"`
+	DuplicateCandidate DuplicateCandidateOptions   `json:"duplicate_candidate,omitempty"`
+	WorkflowGuide      WorkflowGuideOptions        `json:"workflow_guide,omitempty"`
+	StructuredStore    StructuredStoreOptions      `json:"structured_store,omitempty"`
+	HybridRetrieval    HybridRetrievalOptions      `json:"hybrid_retrieval,omitempty"`
+	SemanticSearch     SemanticSearchOptions       `json:"semantic_search,omitempty"`
+	Limit              int                         `json:"limit,omitempty"`
 }
 
 type SearchOptions struct {
@@ -399,6 +418,12 @@ type MemoryRouterRecallOptions struct {
 	Limit int    `json:"limit,omitempty"`
 }
 
+type SourceDiscoveryOptions struct {
+	Query      string `json:"query,omitempty"`
+	PathPrefix string `json:"path_prefix,omitempty"`
+	Limit      int    `json:"limit,omitempty"`
+}
+
 type SourceAuditReportOptions struct {
 	Query         string `json:"query,omitempty"`
 	TargetPath    string `json:"target_path,omitempty"`
@@ -414,6 +439,15 @@ type EvidenceBundleOptions struct {
 	RefKind    string `json:"ref_kind,omitempty"`
 	RefID      string `json:"ref_id,omitempty"`
 	Projection string `json:"projection,omitempty"`
+	Limit      int    `json:"limit,omitempty"`
+}
+
+type DecisionLookupReportOptions struct {
+	Query      string `json:"query,omitempty"`
+	DecisionID string `json:"decision_id,omitempty"`
+	Status     string `json:"status,omitempty"`
+	Scope      string `json:"scope,omitempty"`
+	Owner      string `json:"owner,omitempty"`
 	Limit      int    `json:"limit,omitempty"`
 }
 
@@ -499,8 +533,10 @@ type RetrievalTaskResult struct {
 	Projections        *ProjectionStateList       `json:"projections,omitempty"`
 	Audit              *AuditContradictionsResult `json:"audit,omitempty"`
 	MemoryRouterRecall *MemoryRouterRecallReport  `json:"memory_router_recall,omitempty"`
+	SourceDiscovery    *SourceDiscoveryReport     `json:"source_discovery,omitempty"`
 	SourceAudit        *SourceAuditReport         `json:"source_audit,omitempty"`
 	EvidenceBundle     *EvidenceBundleReport      `json:"evidence_bundle,omitempty"`
+	DecisionLookup     *DecisionLookupReport      `json:"decision_lookup,omitempty"`
 	DuplicateCandidate *DuplicateCandidateReport  `json:"duplicate_candidate,omitempty"`
 	WorkflowGuide      *WorkflowGuideReport       `json:"workflow_guide,omitempty"`
 	StructuredStore    *StructuredStoreReport     `json:"structured_store,omitempty"`
@@ -684,6 +720,26 @@ type SourceAuditReport struct {
 	AgentHandoff              *AgentHandoff               `json:"agent_handoff,omitempty"`
 }
 
+type SourceDiscoveryCategory struct {
+	Category        string `json:"category"`
+	PathPrefix      string `json:"path_prefix,omitempty"`
+	SearchHits      int    `json:"search_hits"`
+	ListedDocuments int    `json:"listed_documents"`
+}
+
+type SourceDiscoveryReport struct {
+	QueryPresent         bool                      `json:"query_present"`
+	PathPrefix           string                    `json:"path_prefix,omitempty"`
+	SearchHitCount       int                       `json:"search_hit_count"`
+	RepresentativeCount  int                       `json:"representative_count"`
+	CitationCount        int                       `json:"citation_count"`
+	SourceCategories     []SourceDiscoveryCategory `json:"source_categories,omitempty"`
+	SanitizedSummary     string                    `json:"sanitized_summary"`
+	ValidationBoundaries string                    `json:"validation_boundaries"`
+	AuthorityLimits      string                    `json:"authority_limits"`
+	AgentHandoff         *AgentHandoff             `json:"agent_handoff,omitempty"`
+}
+
 type EvidenceBundleReport struct {
 	QuerySummary         string                `json:"query_summary"`
 	Search               *SearchResult         `json:"search,omitempty"`
@@ -694,6 +750,22 @@ type EvidenceBundleReport struct {
 	Citations            []Citation            `json:"citations,omitempty"`
 	Provenance           *ProvenanceEventList  `json:"provenance,omitempty"`
 	Projections          *ProjectionStateList  `json:"projections,omitempty"`
+	ValidationBoundaries string                `json:"validation_boundaries"`
+	AuthorityLimits      string                `json:"authority_limits"`
+	AgentHandoff         *AgentHandoff         `json:"agent_handoff,omitempty"`
+}
+
+type DecisionLookupReport struct {
+	Query                string                `json:"query,omitempty"`
+	DecisionID           string                `json:"decision_id,omitempty"`
+	Decisions            *DecisionLookupResult `json:"decisions,omitempty"`
+	Decision             *DecisionRecord       `json:"decision,omitempty"`
+	Records              *RecordLookupResult   `json:"records,omitempty"`
+	Search               *SearchResult         `json:"search,omitempty"`
+	Provenance           *ProvenanceEventList  `json:"provenance,omitempty"`
+	Projections          *ProjectionStateList  `json:"projections,omitempty"`
+	Citations            []Citation            `json:"citations,omitempty"`
+	LookupStatus         string                `json:"lookup_status"`
 	ValidationBoundaries string                `json:"validation_boundaries"`
 	AuthorityLimits      string                `json:"authority_limits"`
 	AgentHandoff         *AgentHandoff         `json:"agent_handoff,omitempty"`

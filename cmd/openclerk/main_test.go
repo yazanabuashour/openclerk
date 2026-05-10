@@ -51,6 +51,8 @@ func TestCapabilitiesManifestShowsBuildingBlocks(t *testing.T) {
 	}
 	if !hasCapabilityAction(result, "document", "compile_synthesis") ||
 		!hasCapabilityAction(result, "retrieval", "audit_contradictions") ||
+		!hasCapabilityAction(result, "retrieval", "source_discovery_report") ||
+		!hasCapabilityAction(result, "retrieval", "decision_lookup_report") ||
 		!hasCapabilityAction(result, "retrieval", "semantic_search") ||
 		!hasCapabilityAction(result, "module", "install_module") {
 		t.Fatalf("capabilities missing expected document/retrieval/module actions: %+v", result.Domains)
@@ -81,6 +83,7 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 				"ingest_video_url",
 				"transcript",
 				"compile_synthesis",
+				"validation_synthesis_report",
 				"web_search_plan",
 				"artifact_candidate_plan",
 				"git_lifecycle_report",
@@ -93,7 +96,7 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 		{
 			name: "retrieval",
 			args: []string{"retrieval", "--help"},
-			want: []string{"source_audit_report", "evidence_bundle_report", "duplicate_candidate_report", "workflow_guide_report", "memory_router_recall_report", "structured_store_report", "hybrid_retrieval_report", "semantic_search", "agent_handoff", "Read-only"},
+			want: []string{"source_discovery_report", "source_audit_report", "evidence_bundle_report", "decision_lookup_report", "duplicate_candidate_report", "workflow_guide_report", "memory_router_recall_report", "structured_store_report", "hybrid_retrieval_report", "semantic_search", "agent_handoff", "Read-only"},
 		},
 		{
 			name: "module",
