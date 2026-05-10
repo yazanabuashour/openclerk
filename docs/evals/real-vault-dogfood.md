@@ -69,6 +69,11 @@ event-log review that checks no direct SQLite, direct vault inspection,
 source-built runner, HTTP/MCP bypass, broad repo search, or unsupported
 transport was used.
 
+For routine-agent UX telemetry over a maintainer-supplied private vault, use
+[`real-vault-routine-ux-telemetry.md`](real-vault-routine-ux-telemetry.md). That
+lane runs Codex event-log rows against a disposable copy of the private vault
+and commits only a sanitized Markdown summary.
+
 ## Decision Use
 
 Use the real-vault report to decide whether current v1 surfaces are sufficient

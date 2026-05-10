@@ -85,6 +85,37 @@ Raw logs remain local-only.
 	}
 }
 
+func TestValidateRealVaultRoutineUXReportPolicy(t *testing.T) {
+	t.Parallel()
+
+	valid := `# OpenClerk Real-Vault Routine UX Telemetry
+
+This is a sanitized real-vault routine UX telemetry report. It uses ` + "`<private-vault>`" + ` and ` + "`<run-root>`" + ` placeholders only.
+
+- Raw logs committed: ` + "`false`" + `
+- Raw JSON committed: ` + "`false`" + `
+- Raw content committed: ` + "`false`" + `
+- Private task manifest committed: ` + "`false`" + `
+
+## Privacy Boundary
+
+The committed report omits private prompts, paths, titles, snippets, citations, document ids, chunk ids, raw JSON, event logs, disposable vault contents, SQLite files, and machine-local roots. The live private vault is never the mutation target.
+`
+	root := t.TempDir()
+	writeTestFile(t, root, "docs/evals/results/ockp-real-vault-routine-ux.md", valid)
+	if err := validateRealVaultRoutineUXReport(root); err != nil {
+		t.Fatalf("validateRealVaultRoutineUXReport: %v", err)
+	}
+
+	leaky := valid + "Private path: sources/private/topic.md with doc_private and chunk_private.\n"
+	root = t.TempDir()
+	writeTestFile(t, root, "docs/evals/results/ockp-real-vault-routine-ux.md", leaky)
+	err := validateRealVaultRoutineUXReport(root)
+	if err == nil || !strings.Contains(err.Error(), "vault-relative markdown path") {
+		t.Fatalf("validateRealVaultRoutineUXReport error = %v, want vault path rejection", err)
+	}
+}
+
 func TestValidateNoRealVaultJSONReports(t *testing.T) {
 	t.Parallel()
 

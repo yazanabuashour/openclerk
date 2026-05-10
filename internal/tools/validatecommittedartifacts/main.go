@@ -63,6 +63,9 @@ func validateCommittedArtifacts(root string) error {
 	if err := validateRealVaultReport(root); err != nil {
 		return err
 	}
+	if err := validateRealVaultRoutineUXReport(root); err != nil {
+		return err
+	}
 	if err := validateNoRealVaultJSONReports(files); err != nil {
 		return err
 	}
@@ -512,6 +515,52 @@ func validateRealVaultReport(root string) error {
 	}
 	if strings.Contains(text, "events.jsonl") {
 		return fmt.Errorf("%s must not reference private real-vault raw log files", rel)
+	}
+	return nil
+}
+
+func validateRealVaultRoutineUXReport(root string) error {
+	rel := filepath.ToSlash(filepath.Join("docs", "evals", "results", "ockp-real-vault-routine-ux.md"))
+	content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(rel)))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("read %s: %w", rel, err)
+	}
+	text := strings.ReplaceAll(string(content), "\r\n", "\n")
+	required := []string{
+		"sanitized real-vault routine UX telemetry report",
+		"`<private-vault>`",
+		"`<run-root>`",
+		"Raw JSON committed: `false`",
+		"Private task manifest committed: `false`",
+		"omits private prompts, paths, titles, snippets, citations, document ids, chunk ids, raw JSON, event logs",
+		"live private vault is never the mutation target",
+	}
+	normalized := strings.Join(strings.Fields(text), " ")
+	for _, want := range required {
+		if !strings.Contains(normalized, want) {
+			return fmt.Errorf("%s must document sanitized routine UX evidence policy: missing %q", rel, want)
+		}
+	}
+	forbiddenPatterns := []struct {
+		name    string
+		pattern *regexp.Regexp
+	}{
+		{name: "vault-relative markdown path", pattern: realVaultDocPathPattern},
+		{name: "document id", pattern: realVaultDocIDPattern},
+		{name: "chunk id", pattern: realVaultChunkIDPattern},
+		{name: "machine-absolute Unix path", pattern: machineUnixPathPattern},
+		{name: "machine-absolute Windows path", pattern: machineWindowsPathPattern},
+	}
+	for _, forbidden := range forbiddenPatterns {
+		if match := forbidden.pattern.FindString(text); match != "" {
+			return fmt.Errorf("%s contains private real-vault %s %q", rel, forbidden.name, match)
+		}
+	}
+	if strings.Contains(text, "events.jsonl") && !strings.Contains(text, "<run-root>") {
+		return fmt.Errorf("%s must not reference private real-vault raw log files without placeholder", rel)
 	}
 	return nil
 }
