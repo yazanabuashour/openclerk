@@ -234,7 +234,7 @@ func classifyCommand(command string, m *metrics) {
 		m.BroadRepoSearch = true
 		addEvidence(&m.BroadRepoSearchEvidence)
 	}
-	if strings.Contains(lower, "sqlite3") || strings.Contains(lower, "select ") || strings.Contains(lower, "pragma ") {
+	if isDirectSQLiteCommand(lower) {
 		m.DirectSQLiteAccess = true
 		addEvidence(&m.DirectSQLiteEvidence)
 	}
@@ -249,7 +249,7 @@ func classifyCommand(command string, m *metrics) {
 		m.LegacyRunnerUsage = true
 		addEvidence(&m.LegacyRunnerEvidence)
 	}
-	if strings.Contains(lower, "curl ") || strings.Contains(lower, "wget ") || strings.Contains(lower, "http ") || strings.Contains(lower, "httpie ") {
+	if isManualHTTPFetchCommand(lower) {
 		m.ManualHTTPFetch = true
 		addEvidence(&m.ManualHTTPFetchEvidence)
 	}
@@ -384,6 +384,36 @@ func classifyCommand(command string, m *metrics) {
 		m.DecisionLookupReportUsed = true
 	}
 }
+
+func isDirectSQLiteCommand(lower string) bool {
+	trimmed := strings.TrimSpace(lower)
+	return strings.Contains(trimmed, "sqlite3") ||
+		strings.HasPrefix(trimmed, "select ") ||
+		strings.HasPrefix(trimmed, "pragma ") ||
+		strings.Contains(trimmed, "| sqlite3") ||
+		strings.Contains(trimmed, "; sqlite3")
+}
+
+func isManualHTTPFetchCommand(lower string) bool {
+	return strings.Contains(lower, "curl ") ||
+		strings.Contains(lower, "wget ") ||
+		strings.Contains(lower, "httpie ") ||
+		isShellCommandToken(lower, "http")
+}
+
+func isShellCommandToken(lower string, token string) bool {
+	trimmed := strings.TrimSpace(lower)
+	if strings.HasPrefix(trimmed, token+" ") {
+		return true
+	}
+	for _, marker := range []string{"\n", "|", ";", "&&", "||"} {
+		if strings.Contains(trimmed, marker+" "+token+" ") {
+			return true
+		}
+	}
+	return false
+}
+
 func normalizeActionText(command string) string {
 	actionText := strings.ToLower(command)
 	for {

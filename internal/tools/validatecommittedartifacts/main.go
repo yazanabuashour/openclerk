@@ -69,6 +69,9 @@ func validateCommittedArtifacts(root string) error {
 	if err := validateNoRealVaultJSONReports(files); err != nil {
 		return err
 	}
+	if err := validatePublicVaultKubernetesDocsReport(root); err != nil {
+		return err
+	}
 	if err := validateModuleDocumentation(root, files); err != nil {
 		return err
 	}
@@ -571,6 +574,64 @@ func validateNoRealVaultJSONReports(files []string) error {
 		if strings.HasPrefix(rel, "docs/evals/results/ockp-real-vault") && strings.HasSuffix(rel, ".json") {
 			return fmt.Errorf("%s must stay local-only; commit only the sanitized markdown real-vault report", rel)
 		}
+	}
+	return nil
+}
+
+func validatePublicVaultKubernetesDocsReport(root string) error {
+	mdRel := filepath.ToSlash(filepath.Join("docs", "evals", "results", "ockp-public-vault-kubernetes-docs.md"))
+	jsonRel := filepath.ToSlash(filepath.Join("docs", "evals", "results", "ockp-public-vault-kubernetes-docs.json"))
+	mdContent, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(mdRel)))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("read %s: %w", mdRel, err)
+	}
+	mdText := strings.ReplaceAll(string(mdContent), "\r\n", "\n")
+	required := []string{
+		"public-vault trial report",
+		"https://github.com/kubernetes/website.git",
+		"7e7144c3969feb5d57a3c757ac462bd271f4a691",
+		"sources/kubernetes/website/content/en/docs",
+		"Passes gate: `true`",
+		"must not include machine-local roots",
+	}
+	normalized := strings.Join(strings.Fields(mdText), " ")
+	for _, want := range required {
+		if !strings.Contains(normalized, want) {
+			return fmt.Errorf("%s must document public-vault evidence policy: missing %q", mdRel, want)
+		}
+	}
+	for _, forbidden := range []string{"events.jsonl", "doc_", "chunk_", ".openclerk-eval"} {
+		if strings.Contains(mdText, forbidden) {
+			return fmt.Errorf("%s contains forbidden public-vault marker %q", mdRel, forbidden)
+		}
+	}
+	jsonContent, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(jsonRel)))
+	if err != nil {
+		return fmt.Errorf("read %s: %w", jsonRel, err)
+	}
+	if strings.Contains(string(jsonContent), "events.jsonl") ||
+		strings.Contains(string(jsonContent), "doc_") ||
+		strings.Contains(string(jsonContent), "chunk_") ||
+		strings.Contains(string(jsonContent), ".openclerk-eval") {
+		return fmt.Errorf("%s contains raw-log or runner-internal public-vault marker", jsonRel)
+	}
+	var report struct {
+		Summary struct {
+			RowsCompleted  int  `json:"rows_completed"`
+			RowsFailed     int  `json:"rows_failed"`
+			SafetyFailures int  `json:"safety_failures"`
+			UXDebtRows     int  `json:"ux_debt_rows"`
+			PassesGate     bool `json:"passes_gate"`
+		} `json:"summary"`
+	}
+	if err := json.Unmarshal(jsonContent, &report); err != nil {
+		return fmt.Errorf("decode %s: %w", jsonRel, err)
+	}
+	if report.Summary.RowsCompleted != 8 || report.Summary.RowsFailed != 0 || report.Summary.SafetyFailures != 0 || report.Summary.UXDebtRows != 0 || !report.Summary.PassesGate {
+		return fmt.Errorf("%s must record public-vault gate pass with 8 completed rows and zero failures/debt", jsonRel)
 	}
 	return nil
 }

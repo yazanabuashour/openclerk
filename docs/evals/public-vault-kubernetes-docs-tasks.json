@@ -1,0 +1,84 @@
+{
+  "schema_version": "openclerk-public-vault-tasks.v1",
+  "tasks": [
+    {
+      "class": "source_discovery",
+      "prompt": "Find the representative public Kubernetes source categories for Deployment rollout behavior. Use the pinned public docs copy and summarize only public evidence categories/counts.",
+      "expected_runner_actions": ["source_discovery_report"],
+      "forbidden_runner_actions": ["compile_synthesis"],
+      "public_evidence_refs": [
+        "sources/kubernetes/website/content/en/docs/concepts/workloads/controllers/deployment.md"
+      ]
+    },
+    {
+      "class": "cited_search_answer",
+      "prompt": "Answer from public Kubernetes docs: when should a workload use liveness, readiness, and startup probes? Include public citation paths only.",
+      "expected_runner_actions": ["search"],
+      "forbidden_runner_actions": ["compile_synthesis"],
+      "public_evidence_refs": [
+        "sources/kubernetes/website/content/en/docs/concepts/configuration/liveness-readiness-startup-probes.md",
+        "sources/kubernetes/website/content/en/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes.md"
+      ]
+    },
+    {
+      "class": "synthesis_create_update",
+      "prompt": "Create or update a disposable public synthesis at synthesis/public-vault/kubernetes-docs/deployment-service-rollout.md titled Deployment Service Rollout Notes. Use source_refs sources/kubernetes/website/content/en/docs/concepts/workloads/controllers/deployment.md and sources/kubernetes/website/content/en/docs/concepts/services-networking/service.md. Body facts should explain deployment rollout status and service exposure at a high level.",
+      "expected_runner_actions": ["compile_synthesis"],
+      "forbidden_runner_actions": ["validation_synthesis_report"],
+      "public_evidence_refs": [
+        "sources/kubernetes/website/content/en/docs/concepts/workloads/controllers/deployment.md",
+        "sources/kubernetes/website/content/en/docs/concepts/services-networking/service.md"
+      ]
+    },
+    {
+      "class": "provenance_freshness",
+      "prompt": "Package public evidence and freshness for the Kubernetes Deployment docs. Use the public source path sources/kubernetes/website/content/en/docs/concepts/workloads/controllers/deployment.md as the document ref when useful.",
+      "expected_runner_actions": ["evidence_bundle_report"],
+      "forbidden_runner_actions": ["compile_synthesis"],
+      "public_evidence_refs": [
+        "sources/kubernetes/website/content/en/docs/concepts/workloads/controllers/deployment.md"
+      ]
+    },
+    {
+      "class": "decision_like_lookup",
+      "prompt": "Find decision-like public evidence about Ingress versus Gateway API in the Kubernetes docs. If there is no formal ADR-style decision record, say so and answer from public docs evidence.",
+      "expected_runner_actions": ["decision_lookup_report"],
+      "forbidden_runner_actions": ["compile_synthesis"],
+      "public_evidence_refs": [
+        "sources/kubernetes/website/content/en/docs/concepts/services-networking/ingress.md",
+        "sources/kubernetes/website/content/en/docs/concepts/services-networking/gateway.md"
+      ]
+    },
+    {
+      "class": "stale_duplicate_detection",
+      "prompt": "Before creating any new note, check public Kubernetes docs for existing ConfigMap and Secret guidance and projection freshness. Report whether a new synthesis would duplicate existing public sources.",
+      "expected_runner_actions": ["search", "projection_states"],
+      "forbidden_runner_actions": ["compile_synthesis"],
+      "public_evidence_refs": [
+        "sources/kubernetes/website/content/en/docs/concepts/configuration/configmap.md",
+        "sources/kubernetes/website/content/en/docs/concepts/configuration/secret.md"
+      ]
+    },
+    {
+      "class": "cross_source_comparison",
+      "prompt": "Compare the public Kubernetes boundaries between Service, EndpointSlice, and Ingress. Use public citations and do not write a synthesis.",
+      "expected_runner_actions": ["search"],
+      "forbidden_runner_actions": ["compile_synthesis"],
+      "public_evidence_refs": [
+        "sources/kubernetes/website/content/en/docs/concepts/services-networking/service.md",
+        "sources/kubernetes/website/content/en/docs/concepts/services-networking/endpoint-slices.md",
+        "sources/kubernetes/website/content/en/docs/concepts/services-networking/ingress.md"
+      ]
+    },
+    {
+      "class": "rbac_navigation",
+      "prompt": "Find the public Kubernetes authority docs for RBAC and service account administration, then summarize which docs a user should read first. Prefer the access-authn-authz source discovery surface.",
+      "expected_runner_actions": ["source_discovery_report"],
+      "forbidden_runner_actions": ["compile_synthesis"],
+      "public_evidence_refs": [
+        "sources/kubernetes/website/content/en/docs/reference/access-authn-authz/rbac.md",
+        "sources/kubernetes/website/content/en/docs/reference/access-authn-authz/service-accounts-admin.md"
+      ]
+    }
+  ]
+}
