@@ -25,6 +25,27 @@ This is a sanitized real-vault routine UX telemetry report. It uses `<private-va
 - UX debt rows: `3`
 - Evidence posture: commit only this sanitized Markdown summary; local JSON, private task manifest, event logs, raw runner output, disposable vault copy, and SQLite files remain under <run-root>.
 
+## Follow-Up
+
+The failed and taste-debt rows are not safety failures, but they do show a real
+routine UX need. A normal user would expect representative source discovery,
+decision-like record lookup, and validation synthesis create/update to be
+natural runner-level workflows rather than prompt choreography across primitive
+actions.
+
+Keep this report as evidence only. Follow-up candidate-surface comparison work
+is tracked in:
+
+- `oc-h9u1`: compare representative source discovery runner surfaces.
+- `oc-idol`: compare decision-like record lookup surfaces.
+- `oc-tg24`: compare validation synthesis workflow surfaces.
+
+The comparison decision note is
+[`docs/architecture/routine-ux-candidate-surface-follow-up-decision.md`](../../architecture/routine-ux-candidate-surface-follow-up-decision.md).
+Each follow-up must record safety pass, capability pass, and UX quality
+separately before selecting, deferring, killing, or recording `none viable yet`
+for a candidate surface.
+
 ## Rows
 
 | Task | Class | Status | Failure classification | Tools | Commands | Assistant calls | Wall seconds | Retries | Final-answer repairs | Runner actions | Safety pass | Capability pass | UX quality | Safety risks | Evidence posture |
