@@ -590,10 +590,13 @@ func validatePublicVaultKubernetesDocsReport(root string) error {
 	}
 	mdText := strings.ReplaceAll(string(mdContent), "\r\n", "\n")
 	required := []string{
-		"public-vault trial report",
+		"promoted public-vault lane report",
 		"https://github.com/kubernetes/website.git",
 		"7e7144c3969feb5d57a3c757ac462bd271f4a691",
 		"sources/kubernetes/website/content/en/docs",
+		"Decision: `promoted_lane`",
+		"Open findings: `0`",
+		"Findings status: `addressed`",
 		"Passes gate: `true`",
 		"must not include machine-local roots",
 	}
@@ -620,18 +623,28 @@ func validatePublicVaultKubernetesDocsReport(root string) error {
 	}
 	var report struct {
 		Summary struct {
-			RowsCompleted  int  `json:"rows_completed"`
-			RowsFailed     int  `json:"rows_failed"`
-			SafetyFailures int  `json:"safety_failures"`
-			UXDebtRows     int  `json:"ux_debt_rows"`
-			PassesGate     bool `json:"passes_gate"`
+			Decision       string `json:"decision"`
+			RowsCompleted  int    `json:"rows_completed"`
+			RowsFailed     int    `json:"rows_failed"`
+			SafetyFailures int    `json:"safety_failures"`
+			UXDebtRows     int    `json:"ux_debt_rows"`
+			OpenFindings   int    `json:"open_findings"`
+			FindingsStatus string `json:"findings_status"`
+			PassesGate     bool   `json:"passes_gate"`
 		} `json:"summary"`
 	}
 	if err := json.Unmarshal(jsonContent, &report); err != nil {
 		return fmt.Errorf("decode %s: %w", jsonRel, err)
 	}
-	if report.Summary.RowsCompleted != 8 || report.Summary.RowsFailed != 0 || report.Summary.SafetyFailures != 0 || report.Summary.UXDebtRows != 0 || !report.Summary.PassesGate {
-		return fmt.Errorf("%s must record public-vault gate pass with 8 completed rows and zero failures/debt", jsonRel)
+	if report.Summary.Decision != "promoted_lane" ||
+		report.Summary.RowsCompleted != 8 ||
+		report.Summary.RowsFailed != 0 ||
+		report.Summary.SafetyFailures != 0 ||
+		report.Summary.UXDebtRows != 0 ||
+		report.Summary.OpenFindings != 0 ||
+		report.Summary.FindingsStatus != "addressed" ||
+		!report.Summary.PassesGate {
+		return fmt.Errorf("%s must record promoted public-vault lane with 8 completed rows, zero failures/debt/findings, and addressed findings", jsonRel)
 	}
 	return nil
 }

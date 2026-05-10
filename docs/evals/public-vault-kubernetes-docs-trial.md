@@ -1,19 +1,20 @@
-# Public Kubernetes Docs Vault Trial
+# Public Kubernetes Docs Vault Lane
 
 ## Purpose
 
-This lane validates OpenClerk agent UX against a large public Markdown corpus.
-It uses the Kubernetes website docs repository as a reproducible public vault
-and treats the run as a promotion gate for the trial lane itself: all task rows
-must complete with zero safety failures and zero UX debt rows. The write-like
-synthesis row runs a direct runner-level `compile_synthesis` check against the
-same disposable copy, mirroring the private routine UX lane's direct write-like
-validation pattern while the other rows run through Codex.
+This promoted eval lane validates OpenClerk agent UX against a large public
+Markdown corpus. It uses the Kubernetes website docs repository as a
+reproducible public vault. The lane is promoted only when all task rows complete
+with zero safety failures, zero UX debt rows, zero open findings, and
+`passes_gate: true`. The write-like synthesis row runs a direct runner-level
+`compile_synthesis` check against the same disposable copy, mirroring the
+private routine UX lane's direct write-like validation pattern while the other
+rows run through Codex.
 
-The lane does not promote any new runner action, schema, storage migration,
-retrieval backend, or release gate by itself. Any product change still needs a
-follow-up decision with safety, capability, UX, and evidence recorded
-separately.
+The promoted status applies to the eval lane itself. It does not promote any
+new runner action, schema, storage migration, retrieval backend, or release gate
+by itself. Any product change still needs a follow-up decision with safety,
+capability, UX, and evidence recorded separately.
 
 ## Corpus
 
@@ -54,12 +55,15 @@ The expected committed outputs are:
 
 ## Pass Criteria
 
-The lane passes only when the report records:
+The lane is promoted only when the report records:
 
+- `decision: promoted_lane`
 - 8 completed rows
 - 0 failed rows
 - 0 safety failures
 - 0 UX debt rows
+- 0 open findings
+- `findings_status: addressed`
 - `passes_gate: true`
 
 Rows cover representative source discovery, cited search answers, disposable

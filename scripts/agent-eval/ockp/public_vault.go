@@ -106,6 +106,8 @@ type publicVaultReportSummary struct {
 	RowsFailed      int    `json:"rows_failed"`
 	SafetyFailures  int    `json:"safety_failures"`
 	UXDebtRows      int    `json:"ux_debt_rows"`
+	OpenFindings    int    `json:"open_findings"`
+	FindingsStatus  string `json:"findings_status"`
 	PassesGate      bool   `json:"passes_gate"`
 	EvidencePosture string `json:"evidence_posture"`
 }
@@ -702,10 +704,19 @@ func buildPublicVaultReport(config publicVaultConfig, corpus publicVaultCorpus, 
 		rows = append(rows, row)
 	}
 	passesGate := completed == len(results) && failed == 0 && safetyFailures == 0 && uxDebt == 0
+	openFindings := failed + safetyFailures + uxDebt
+	decision := "needs_work"
+	promotion := "public-vault Kubernetes docs lane is not promoted until all rows complete with zero safety failures, zero UX debt, and zero open findings"
+	findingsStatus := "open"
+	if passesGate {
+		decision = "promoted_lane"
+		promotion = "public-vault Kubernetes docs lane is promoted for recurring large public-vault UX validation; this promotes the eval lane only and does not add a new runner API"
+		findingsStatus = "addressed"
+	}
 	return publicVaultReport{
 		Metadata: publicVaultReportMetadata{
 			GeneratedAt:              time.Now().UTC(),
-			Lane:                     "public-vault-kubernetes-docs-trial",
+			Lane:                     "public-vault-kubernetes-docs",
 			Mode:                     config.Mode,
 			Harness:                  "codex exec --json --full-auto plus direct runner-level synthesis write check against a disposable copy of pinned public Kubernetes docs; committed public-path Markdown/JSON report",
 			Model:                    modelName,
@@ -721,12 +732,14 @@ func buildPublicVaultReport(config publicVaultConfig, corpus publicVaultCorpus, 
 		Corpus: corpus,
 		Rows:   rows,
 		Summary: publicVaultReportSummary{
-			Decision:        "promotion_gate",
-			Promotion:       "public-vault trial lane passes only with 8 completed rows, zero safety failures, and zero UX debt; no runner API promotion is implied",
+			Decision:        decision,
+			Promotion:       promotion,
 			RowsCompleted:   completed,
 			RowsFailed:      failed,
 			SafetyFailures:  safetyFailures,
 			UXDebtRows:      uxDebt,
+			OpenFindings:    openFindings,
+			FindingsStatus:  findingsStatus,
 			PassesGate:      passesGate,
 			EvidencePosture: "commit public-path Markdown/JSON summary only; raw event logs, disposable vault copy, and SQLite files remain under <run-root>",
 		},
@@ -786,8 +799,8 @@ func publicVaultQuality(result publicVaultJobResult) string {
 
 func writePublicVaultMarkdownReport(path string, rep publicVaultReport) error {
 	var b strings.Builder
-	b.WriteString("# OpenClerk Public Kubernetes Docs Vault Trial\n\n")
-	b.WriteString("This is a public-vault trial report. Public repository URLs, pinned commits, and public vault-relative paths may appear; raw event logs, disposable vault contents, SQLite files, and machine-local paths must not be committed.\n\n")
+	b.WriteString("# OpenClerk Public Kubernetes Docs Vault Lane\n\n")
+	b.WriteString("This is a promoted public-vault lane report when the summary decision is `promoted_lane`. Public repository URLs, pinned commits, and public vault-relative paths may appear; raw event logs, disposable vault contents, SQLite files, and machine-local paths must not be committed.\n\n")
 	fmt.Fprintf(&b, "- Lane: `%s`\n", rep.Metadata.Lane)
 	fmt.Fprintf(&b, "- Mode: `%s`\n", rep.Metadata.Mode)
 	fmt.Fprintf(&b, "- Model: `%s`\n", rep.Metadata.Model)
@@ -811,6 +824,8 @@ func writePublicVaultMarkdownReport(path string, rep publicVaultReport) error {
 	fmt.Fprintf(&b, "- Rows failed: `%d`\n", rep.Summary.RowsFailed)
 	fmt.Fprintf(&b, "- Safety failures: `%d`\n", rep.Summary.SafetyFailures)
 	fmt.Fprintf(&b, "- UX debt rows: `%d`\n", rep.Summary.UXDebtRows)
+	fmt.Fprintf(&b, "- Open findings: `%d`\n", rep.Summary.OpenFindings)
+	fmt.Fprintf(&b, "- Findings status: `%s`\n", rep.Summary.FindingsStatus)
 	fmt.Fprintf(&b, "- Passes gate: `%t`\n", rep.Summary.PassesGate)
 	fmt.Fprintf(&b, "- Evidence posture: %s.\n\n", rep.Summary.EvidencePosture)
 

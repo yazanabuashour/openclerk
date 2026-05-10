@@ -117,11 +117,14 @@ func TestExecutePublicVaultWritesPublicReports(t *testing.T) {
 	if !report.Summary.PassesGate || report.Summary.RowsCompleted != 8 || report.Summary.SafetyFailures != 0 || report.Summary.UXDebtRows != 0 {
 		t.Fatalf("summary = %+v", report.Summary)
 	}
+	if report.Summary.Decision != "promoted_lane" || report.Summary.OpenFindings != 0 || report.Summary.FindingsStatus != "addressed" {
+		t.Fatalf("promotion summary = %+v", report.Summary)
+	}
 	if report.Corpus.RepoURL != "<local-public-repo>" || strings.Contains(string(content), sourceRoot) {
 		t.Fatalf("report leaked local repo path: corpus=%+v", report.Corpus)
 	}
 	markdown := string(readReportForTest(t, filepath.Join(reportDir, "test-public-vault.md")))
-	for _, want := range []string{"Public Kubernetes Docs Vault Trial", "sources/kubernetes/website/content/en/docs", "Passes gate: `true`"} {
+	for _, want := range []string{"Public Kubernetes Docs Vault Lane", "Decision: `promoted_lane`", "Open findings: `0`", "Findings status: `addressed`", "sources/kubernetes/website/content/en/docs", "Passes gate: `true`"} {
 		if !strings.Contains(markdown, want) {
 			t.Fatalf("markdown missing %q:\n%s", want, markdown)
 		}
@@ -136,7 +139,7 @@ func TestExecutePublicVaultWritesPublicReports(t *testing.T) {
 
 func TestWritePublicVaultMarkdownRejectsLocalPaths(t *testing.T) {
 	report := publicVaultReport{
-		Metadata: publicVaultReportMetadata{Lane: "public-vault-kubernetes-docs-trial"},
+		Metadata: publicVaultReportMetadata{Lane: "public-vault-kubernetes-docs"},
 		Corpus: publicVaultCorpus{
 			RepoURL:     defaultPublicVaultRepoURL,
 			RepoRef:     defaultPublicVaultRepoRef,
