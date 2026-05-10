@@ -51,6 +51,7 @@ const (
 
 type DocumentTaskRequest struct {
 	Action              string                   `json:"action"`
+	Autonomy            AutonomyModes            `json:"autonomy,omitempty"`
 	Document            DocumentInput            `json:"document,omitempty"`
 	Source              SourceURLInput           `json:"source,omitempty"`
 	Video               VideoURLInput            `json:"video,omitempty"`
@@ -252,6 +253,7 @@ type DocumentTaskResult struct {
 
 type RetrievalTaskRequest struct {
 	Action             string                      `json:"action"`
+	Autonomy           AutonomyModes               `json:"autonomy,omitempty"`
 	Search             SearchOptions               `json:"search,omitempty"`
 	DocID              string                      `json:"doc_id,omitempty"`
 	ChunkID            string                      `json:"chunk_id,omitempty"`
@@ -276,6 +278,15 @@ type RetrievalTaskRequest struct {
 	HybridRetrieval    HybridRetrievalOptions      `json:"hybrid_retrieval,omitempty"`
 	SemanticSearch     SemanticSearchOptions       `json:"semantic_search,omitempty"`
 	Limit              int                         `json:"limit,omitempty"`
+}
+
+type AutonomyModes struct {
+	ApprovalMode    string `json:"approval_mode,omitempty"`
+	DraftingMode    string `json:"drafting_mode,omitempty"`
+	WriteTargetMode string `json:"write_target_mode,omitempty"`
+	CitationMode    string `json:"citation_mode,omitempty"`
+	PrivacyMode     string `json:"privacy_mode,omitempty"`
+	AudienceMode    string `json:"audience_mode,omitempty"`
 }
 
 type SearchOptions struct {

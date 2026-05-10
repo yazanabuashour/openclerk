@@ -25,6 +25,13 @@
       "prompt": "Create or update a disposable public synthesis at synthesis/public-vault/kubernetes-docs/deployment-service-rollout.md titled Deployment Service Rollout Notes. Use source_refs sources/kubernetes/website/content/en/docs/concepts/workloads/controllers/deployment.md and sources/kubernetes/website/content/en/docs/concepts/services-networking/service.md. Body facts should explain deployment rollout status and service exposure at a high level.",
       "expected_runner_actions": ["compile_synthesis"],
       "forbidden_runner_actions": ["validation_synthesis_report"],
+      "synthesis_path": "synthesis/public-vault/kubernetes-docs/deployment-service-rollout.md",
+      "synthesis_title": "Deployment Service Rollout Notes",
+      "body_facts": [
+        "Deployments manage rollout progress by creating and updating ReplicaSets, which lets readers track whether updated Pods are progressing toward availability.",
+        "Services expose Pods through a stable network endpoint and abstract away changing Pod IPs while a rollout replaces backing Pods.",
+        "Together, Deployment rollout status and Service exposure show whether updated Pods are becoming available behind a consistent service address."
+      ],
       "public_evidence_refs": [
         "sources/kubernetes/website/content/en/docs/concepts/workloads/controllers/deployment.md",
         "sources/kubernetes/website/content/en/docs/concepts/services-networking/service.md"

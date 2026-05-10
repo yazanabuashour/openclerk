@@ -101,6 +101,54 @@ func TestDocumentTaskCreateListGetAndUpdate(t *testing.T) {
 	}
 }
 
+func TestDocumentTaskAutonomyModesValidateAndGateWrites(t *testing.T) {
+	t.Parallel()
+
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	invalid, err := runner.RunDocumentTask(context.Background(), config, runner.DocumentTaskRequest{
+		Action:   runner.DocumentTaskActionValidate,
+		Autonomy: runner.AutonomyModes{ApprovalMode: "surprise_me"},
+	})
+	if err != nil {
+		t.Fatalf("invalid autonomy mode errored: %v", err)
+	}
+	if !invalid.Rejected || !strings.Contains(invalid.RejectionReason, "autonomy.approval_mode") {
+		t.Fatalf("invalid autonomy rejection = %+v", invalid)
+	}
+
+	proposeOnly, err := runner.RunDocumentTask(context.Background(), config, runner.DocumentTaskRequest{
+		Action:   runner.DocumentTaskActionCreate,
+		Autonomy: runner.AutonomyModes{ApprovalMode: runner.ApprovalModeProposeOnly},
+		Document: runner.DocumentInput{
+			Path:  "notes/autonomy/propose-only.md",
+			Title: "Propose Only",
+			Body:  "# Propose Only\n",
+		},
+	})
+	if err != nil {
+		t.Fatalf("propose-only create errored: %v", err)
+	}
+	if !proposeOnly.Rejected || !strings.Contains(proposeOnly.RejectionReason, "propose_only") {
+		t.Fatalf("propose-only rejection = %+v", proposeOnly)
+	}
+
+	existingOnly, err := runner.RunDocumentTask(context.Background(), config, runner.DocumentTaskRequest{
+		Action:   runner.DocumentTaskActionCreate,
+		Autonomy: runner.AutonomyModes{WriteTargetMode: runner.WriteTargetModeExistingOnly},
+		Document: runner.DocumentInput{
+			Path:  "notes/autonomy/existing-only.md",
+			Title: "Existing Only",
+			Body:  "# Existing Only\n",
+		},
+	})
+	if err != nil {
+		t.Fatalf("existing-only create errored: %v", err)
+	}
+	if !existingOnly.Rejected || !strings.Contains(existingOnly.RejectionReason, "existing_only") {
+		t.Fatalf("existing-only rejection = %+v", existingOnly)
+	}
+}
+
 func TestDocumentTaskGitLifecycleStatusAndHistory(t *testing.T) {
 	t.Parallel()
 

@@ -1,0 +1,93 @@
+{
+  "schema_version": "openclerk-public-vault-tasks.v1",
+  "tasks": [
+    {
+      "class": "source_discovery",
+      "prompt": "Find representative public Go documentation categories for modules and tutorials. Use the pinned public docs copy and summarize only public evidence categories/counts.",
+      "expected_runner_actions": ["source_discovery_report"],
+      "forbidden_runner_actions": ["compile_synthesis"],
+      "public_evidence_refs": [
+        "sources/golang/website/_content/ref/mod.md",
+        "sources/golang/website/_content/doc/tutorial/workspaces.md"
+      ]
+    },
+    {
+      "class": "cited_search_answer",
+      "prompt": "Answer from public Go docs: how should a project start with modules and workspaces? Include public citation paths only.",
+      "expected_runner_actions": ["search"],
+      "forbidden_runner_actions": ["compile_synthesis"],
+      "public_evidence_refs": [
+        "sources/golang/website/_content/ref/mod.md",
+        "sources/golang/website/_content/doc/tutorial/workspaces.md"
+      ]
+    },
+    {
+      "class": "synthesis_create_update",
+      "prompt": "Create or update a disposable public synthesis at synthesis/public-vault/go-docs/modules-workspaces.md titled Go Modules And Workspaces Notes. Use source_refs sources/golang/website/_content/ref/mod.md and sources/golang/website/_content/doc/tutorial/workspaces.md. Body facts should explain module identity and workspace development at a high level.",
+      "expected_runner_actions": ["compile_synthesis"],
+      "forbidden_runner_actions": ["validation_synthesis_report"],
+      "synthesis_path": "synthesis/public-vault/go-docs/modules-workspaces.md",
+      "synthesis_title": "Go Modules And Workspaces Notes",
+      "body_facts": [
+        "Go modules define module identity, dependency requirements, and version selection through module-aware commands and metadata.",
+        "Go workspaces let a developer work across multiple local modules without rewriting each module's published requirements.",
+        "Together, module metadata and workspace configuration separate durable dependency declarations from local multi-module development state."
+      ],
+      "public_evidence_refs": [
+        "sources/golang/website/_content/ref/mod.md",
+        "sources/golang/website/_content/doc/tutorial/workspaces.md"
+      ]
+    },
+    {
+      "class": "provenance_freshness",
+      "prompt": "Package public evidence and freshness for the Go modules reference. Use sources/golang/website/_content/ref/mod.md as the document ref when useful.",
+      "expected_runner_actions": ["evidence_bundle_report"],
+      "forbidden_runner_actions": ["compile_synthesis"],
+      "public_evidence_refs": [
+        "sources/golang/website/_content/ref/mod.md"
+      ]
+    },
+    {
+      "class": "decision_like_lookup",
+      "prompt": "Find decision-like public evidence about Go vulnerability checking and editor integration. If there is no formal ADR-style decision record, say so and answer from public docs evidence.",
+      "expected_runner_actions": ["decision_lookup_report"],
+      "forbidden_runner_actions": ["compile_synthesis"],
+      "public_evidence_refs": [
+        "sources/golang/website/_content/doc/tutorial/govulncheck.md",
+        "sources/golang/website/_content/doc/security/vuln/editor.md"
+      ]
+    },
+    {
+      "class": "stale_duplicate_detection",
+      "prompt": "Before creating any new note, check public Go docs for existing database query and prepared statement guidance and projection freshness. Report whether a new synthesis would duplicate existing public sources.",
+      "expected_runner_actions": ["search", "projection_states"],
+      "forbidden_runner_actions": ["compile_synthesis"],
+      "public_evidence_refs": [
+        "sources/golang/website/_content/doc/database/querying.md",
+        "sources/golang/website/_content/doc/database/prepared-statements.md"
+      ]
+    },
+    {
+      "class": "cross_source_comparison",
+      "prompt": "Compare the public Go docs boundaries between database connections, transactions, and SQL injection guidance. Use public citations and do not write a synthesis.",
+      "expected_runner_actions": ["search"],
+      "forbidden_runner_actions": ["compile_synthesis"],
+      "public_evidence_refs": [
+        "sources/golang/website/_content/doc/database/manage-connections.md",
+        "sources/golang/website/_content/doc/database/execute-transactions.md",
+        "sources/golang/website/_content/doc/database/sql-injection.md"
+      ]
+    },
+    {
+      "class": "authority_navigation",
+      "prompt": "Find the public Go authority docs for getting started, learning, and module reference, then summarize which docs a user should read first. Prefer the source discovery surface.",
+      "expected_runner_actions": ["source_discovery_report"],
+      "forbidden_runner_actions": ["compile_synthesis"],
+      "public_evidence_refs": [
+        "sources/golang/website/_content/learn/index.md",
+        "sources/golang/website/_content/ref/index.md",
+        "sources/golang/website/_content/ref/mod.md"
+      ]
+    }
+  ]
+}

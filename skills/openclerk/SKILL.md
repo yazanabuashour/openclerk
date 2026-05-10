@@ -97,17 +97,17 @@ follow-up primitives unless the result rejects or the user asks for more.
   transports, browser automation, external OCR, PPTX parsing,
   email/chat/form/bundle parsing, direct local file reads, or external
   acquisition tools as substitutes for runner JSON.
-- Parallelize runner commands only for documented safe reads:
-  `resolve_paths`, `list_documents`, `get_document`, `inspect_layout`,
-  retrieval read actions, `source_audit_report` with `mode: "explain"`, and
-  `audit_contradictions` with `mode: "plan_only"`. Sequence all writes,
-  including `init`, create/ingest/append/replace document actions,
-  `compile_synthesis`, `source_audit_report` with `mode: "repair_existing"`,
-  and `audit_contradictions` with `mode: "repair_existing"`.
-- Durable writes require explicit approval when the agent is proposing a
-  candidate path, title, body, source placement, synthesis placement, or
-  update-versus-new choice. Public read, fetch, or inspect permission is not
-  durable-write approval.
+- Parallelize only safe reads: path/list/get/layout, retrieval reads,
+  `source_audit_report` explain, and `audit_contradictions` plan_only.
+  Sequence writes: `init`, document writes, `compile_synthesis`, repair modes.
+- Durable writes require explicit approval for proposed path/title/body,
+  placement, or update-versus-new choice. Public read/fetch/inspect permission
+  is not durable-write approval.
+- Honor supplied autonomy profiles: `approval_mode`, `drafting_mode`,
+  `write_target_mode`, `citation_mode`, `privacy_mode`, and `audience_mode`.
+  `propose_only` means no durable writes; `autonomous_disposable` writes only
+  the configured disposable eval copy; `autonomous_trusted` needs an explicit
+  trusted durable target. Privacy modes cap final-answer detail.
 
 ## No-Tools Before Runners
 

@@ -69,7 +69,7 @@ func validateCommittedArtifacts(root string) error {
 	if err := validateNoRealVaultJSONReports(files); err != nil {
 		return err
 	}
-	if err := validatePublicVaultKubernetesDocsReport(root); err != nil {
+	if err := validatePublicVaultReports(root); err != nil {
 		return err
 	}
 	if err := validateModuleDocumentation(root, files); err != nil {
@@ -578,9 +578,29 @@ func validateNoRealVaultJSONReports(files []string) error {
 	return nil
 }
 
-func validatePublicVaultKubernetesDocsReport(root string) error {
-	mdRel := filepath.ToSlash(filepath.Join("docs", "evals", "results", "ockp-public-vault-kubernetes-docs.md"))
-	jsonRel := filepath.ToSlash(filepath.Join("docs", "evals", "results", "ockp-public-vault-kubernetes-docs.json"))
+func validatePublicVaultReports(root string) error {
+	reports := []struct {
+		name         string
+		repoURL      string
+		repoRef      string
+		vaultPrefix  string
+		decisionText string
+	}{
+		{"ockp-public-vault-kubernetes-docs", "https://github.com/kubernetes/website.git", "7e7144c3969feb5d57a3c757ac462bd271f4a691", "sources/kubernetes/website/content/en/docs", "promoted public-vault lane report"},
+		{"ockp-public-vault-go-docs", "https://github.com/golang/website.git", "31fb202f84245709e774bf7c85d13430925d45e5", "sources/golang/website/_content", "second large technical corpus autonomy validation"},
+		{"ockp-public-vault-moby-dick", "https://github.com/GITenberg/Moby-Dick--Or-The-Whale_2701.git", "bdf1948e6cd00963730971e5624e764a35f238c3", "sources/gitenberg/moby-dick", "non-technical public-corpus autonomy validation"},
+	}
+	for _, report := range reports {
+		if err := validatePublicVaultReport(root, report.name, report.repoURL, report.repoRef, report.vaultPrefix, report.decisionText); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validatePublicVaultReport(root string, reportName string, repoURL string, repoRef string, vaultPrefix string, decisionText string) error {
+	mdRel := filepath.ToSlash(filepath.Join("docs", "evals", "results", reportName+".md"))
+	jsonRel := filepath.ToSlash(filepath.Join("docs", "evals", "results", reportName+".json"))
 	mdContent, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(mdRel)))
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -590,15 +610,21 @@ func validatePublicVaultKubernetesDocsReport(root string) error {
 	}
 	mdText := strings.ReplaceAll(string(mdContent), "\r\n", "\n")
 	required := []string{
-		"promoted public-vault lane report",
-		"https://github.com/kubernetes/website.git",
-		"7e7144c3969feb5d57a3c757ac462bd271f4a691",
-		"sources/kubernetes/website/content/en/docs",
+		decisionText,
+		repoURL,
+		repoRef,
+		vaultPrefix,
 		"Decision: `promoted_lane`",
 		"Open findings: `0`",
 		"Findings status: `addressed`",
 		"Passes gate: `true`",
 		"must not include machine-local roots",
+		"approval_mode: `autonomous_disposable`",
+		"drafting_mode: `autonomous_fields`",
+		"write_target_mode: `create_or_update`",
+		"citation_mode: `balanced`",
+		"privacy_mode: `allow_paths`",
+		"audience_mode: `plain_language`",
 	}
 	normalized := strings.Join(strings.Fields(mdText), " ")
 	for _, want := range required {

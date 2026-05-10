@@ -103,6 +103,38 @@ Checked source refs.
 	}
 }
 
+func TestRetrievalTaskAutonomyModesValidateAndGateWrites(t *testing.T) {
+	t.Parallel()
+
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	invalid, err := runner.RunRetrievalTask(context.Background(), config, runner.RetrievalTaskRequest{
+		Action:   runner.RetrievalTaskActionValidate,
+		Autonomy: runner.AutonomyModes{AudienceMode: "boardroom"},
+	})
+	if err != nil {
+		t.Fatalf("invalid autonomy mode errored: %v", err)
+	}
+	if !invalid.Rejected || !strings.Contains(invalid.RejectionReason, "autonomy.audience_mode") {
+		t.Fatalf("invalid autonomy rejection = %+v", invalid)
+	}
+
+	proposeOnly, err := runner.RunRetrievalTask(context.Background(), config, runner.RetrievalTaskRequest{
+		Action:   runner.RetrievalTaskActionSourceAuditReport,
+		Autonomy: runner.AutonomyModes{ApprovalMode: runner.ApprovalModeProposeOnly},
+		SourceAudit: runner.SourceAuditReportOptions{
+			Query:      "autonomy source audit repair",
+			TargetPath: "synthesis/autonomy.md",
+			Mode:       "repair_existing",
+		},
+	})
+	if err != nil {
+		t.Fatalf("propose-only source audit errored: %v", err)
+	}
+	if !proposeOnly.Rejected || !strings.Contains(proposeOnly.RejectionReason, "propose_only") {
+		t.Fatalf("propose-only rejection = %+v", proposeOnly)
+	}
+}
+
 func TestRetrievalTaskDuplicateCandidateReportIsReadOnly(t *testing.T) {
 	t.Parallel()
 

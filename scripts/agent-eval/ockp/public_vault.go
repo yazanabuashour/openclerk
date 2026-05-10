@@ -29,6 +29,17 @@ var allowedPublicVaultTaskClasses = map[string]struct{}{
 	"stale_duplicate_detection": {},
 	"cross_source_comparison":   {},
 	"rbac_navigation":           {},
+	"authority_navigation":      {},
+}
+
+var requiredPublicVaultTaskClasses = []string{
+	"source_discovery",
+	"cited_search_answer",
+	"synthesis_create_update",
+	"provenance_freshness",
+	"decision_like_lookup",
+	"stale_duplicate_detection",
+	"cross_source_comparison",
 }
 
 type publicVaultTaskManifest struct {
@@ -42,6 +53,9 @@ type publicVaultTask struct {
 	ExpectedRunnerActions  []string `json:"expected_runner_actions,omitempty"`
 	ForbiddenRunnerActions []string `json:"forbidden_runner_actions,omitempty"`
 	PublicEvidenceRefs     []string `json:"public_evidence_refs,omitempty"`
+	SynthesisPath          string   `json:"synthesis_path,omitempty"`
+	SynthesisTitle         string   `json:"synthesis_title,omitempty"`
+	BodyFacts              []string `json:"body_facts,omitempty"`
 }
 
 type publicVaultCorpus struct {
@@ -63,19 +77,20 @@ type publicVaultReport struct {
 }
 
 type publicVaultReportMetadata struct {
-	GeneratedAt              time.Time `json:"generated_at"`
-	Lane                     string    `json:"lane"`
-	Mode                     string    `json:"mode"`
-	Harness                  string    `json:"harness"`
-	Model                    string    `json:"model"`
-	ReasoningEffort          string    `json:"reasoning_effort"`
-	ConfiguredParallelism    int       `json:"configured_parallelism"`
-	CacheMode                string    `json:"cache_mode"`
-	RunRootArtifactReference string    `json:"run_root_artifact_reference"`
-	RawLogsCommitted         bool      `json:"raw_logs_committed"`
-	RawJSONCommitted         bool      `json:"raw_json_committed"`
-	RawContentCommitted      bool      `json:"raw_content_committed"`
-	TaskManifestCommitted    bool      `json:"task_manifest_committed"`
+	GeneratedAt              time.Time           `json:"generated_at"`
+	Lane                     string              `json:"lane"`
+	Mode                     string              `json:"mode"`
+	Harness                  string              `json:"harness"`
+	Model                    string              `json:"model"`
+	ReasoningEffort          string              `json:"reasoning_effort"`
+	ConfiguredParallelism    int                 `json:"configured_parallelism"`
+	CacheMode                string              `json:"cache_mode"`
+	RunRootArtifactReference string              `json:"run_root_artifact_reference"`
+	RawLogsCommitted         bool                `json:"raw_logs_committed"`
+	RawJSONCommitted         bool                `json:"raw_json_committed"`
+	RawContentCommitted      bool                `json:"raw_content_committed"`
+	TaskManifestCommitted    bool                `json:"task_manifest_committed"`
+	Autonomy                 runnerAutonomyModes `json:"autonomy"`
 }
 
 type publicVaultReportRow struct {
@@ -216,9 +231,14 @@ func validatePublicVaultTaskManifest(manifest publicVaultTaskManifest) error {
 			}
 		}
 	}
-	for class := range allowedPublicVaultTaskClasses {
+	for _, class := range requiredPublicVaultTaskClasses {
 		if _, ok := seen[class]; !ok {
 			return fmt.Errorf("public vault task manifest missing class %q", class)
+		}
+	}
+	if _, hasRBAC := seen["rbac_navigation"]; !hasRBAC {
+		if _, hasAuthority := seen["authority_navigation"]; !hasAuthority {
+			return errors.New("public vault task manifest missing navigation class")
 		}
 	}
 	return nil
@@ -238,11 +258,11 @@ func materializePublicVaultCorpus(ctx context.Context, config publicVaultConfig)
 	if err := os.RemoveAll(vaultRoot); err != nil {
 		return publicVaultCorpus{}, err
 	}
-	summary, err := copyPublicMarkdownSubtree(sourceRoot, config.PublicSubdir, vaultRoot, publicVaultSourcePrefix(config))
+	summary, err := copyPublicMarkdownSubtree(sourceRoot, config.PublicSubdir, vaultRoot, publicVaultSourcePrefix(config), config.FileExtensions)
 	if err != nil {
 		return publicVaultCorpus{}, err
 	}
-	if err := os.MkdirAll(filepath.Join(vaultRoot, "synthesis", "public-vault", "kubernetes-docs"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(vaultRoot, "synthesis", "public-vault", config.SynthesisSlug), 0o755); err != nil {
 		return publicVaultCorpus{}, fmt.Errorf("create public synthesis directory: %w", err)
 	}
 	paths := evalPaths{DatabasePath: filepath.Join(config.RunRoot, "public-vault-openclerk.sqlite")}
@@ -282,7 +302,7 @@ func clonePublicRepo(ctx context.Context, repoURL string, repoRef string, dst st
 	return nil
 }
 
-func copyPublicMarkdownSubtree(sourceRoot string, subdir string, vaultRoot string, vaultPrefix string) (publicVaultCorpus, error) {
+func copyPublicMarkdownSubtree(sourceRoot string, subdir string, vaultRoot string, vaultPrefix string, extensions []string) (publicVaultCorpus, error) {
 	sourceSubdir := filepath.Join(sourceRoot, filepath.FromSlash(subdir))
 	info, err := os.Stat(sourceSubdir)
 	if err != nil {
@@ -290,6 +310,13 @@ func copyPublicMarkdownSubtree(sourceRoot string, subdir string, vaultRoot strin
 	}
 	if !info.IsDir() {
 		return publicVaultCorpus{}, errors.New("public corpus subdir must be a directory")
+	}
+	allowedExtensions := map[string]struct{}{}
+	for _, ext := range extensions {
+		allowedExtensions[strings.ToLower(strings.TrimSpace(ext))] = struct{}{}
+	}
+	if len(allowedExtensions) == 0 {
+		allowedExtensions[".md"] = struct{}{}
 	}
 	var summary publicVaultCorpus
 	err = filepath.WalkDir(sourceSubdir, func(path string, entry fs.DirEntry, walkErr error) error {
@@ -299,7 +326,8 @@ func copyPublicMarkdownSubtree(sourceRoot string, subdir string, vaultRoot strin
 		if entry.IsDir() {
 			return nil
 		}
-		if strings.ToLower(filepath.Ext(entry.Name())) != ".md" {
+		ext := strings.ToLower(filepath.Ext(entry.Name()))
+		if _, ok := allowedExtensions[ext]; !ok {
 			return nil
 		}
 		rel, err := filepath.Rel(sourceSubdir, path)
@@ -310,7 +338,12 @@ func copyPublicMarkdownSubtree(sourceRoot string, subdir string, vaultRoot strin
 		if err != nil {
 			return err
 		}
-		target := filepath.Join(vaultRoot, filepath.FromSlash(vaultPrefix), filepath.FromSlash(filepath.ToSlash(rel)))
+		targetRel := filepath.ToSlash(rel)
+		if ext != ".md" {
+			targetRel = strings.TrimSuffix(targetRel, filepath.Ext(targetRel)) + ".md"
+			content = []byte("# " + strings.TrimSuffix(filepath.Base(targetRel), ".md") + "\n\n```text\n" + string(content) + "\n```\n")
+		}
+		target := filepath.Join(vaultRoot, filepath.FromSlash(vaultPrefix), filepath.FromSlash(targetRel))
 		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 			return err
 		}
@@ -325,16 +358,19 @@ func copyPublicMarkdownSubtree(sourceRoot string, subdir string, vaultRoot strin
 		return publicVaultCorpus{}, err
 	}
 	if summary.MarkdownFiles == 0 {
-		return publicVaultCorpus{}, errors.New("public corpus subdir contained no Markdown files")
+		return publicVaultCorpus{}, errors.New("public corpus subdir contained no supported source files")
 	}
 	return summary, nil
 }
 
 func publicVaultSourcePrefix(config publicVaultConfig) string {
-	return filepath.ToSlash(filepath.Join("sources", "kubernetes", "website", config.PublicSubdir))
+	return filepath.ToSlash(config.SourcePrefix)
 }
 
 func publicVaultMaterializedRef(config publicVaultConfig) string {
+	if config.PublicSubdir == "." {
+		return publicVaultReportRepoURL(config.PublicRepoURL) + "@" + config.PublicRepoRef
+	}
 	return publicVaultReportRepoURL(config.PublicRepoURL) + "@" + config.PublicRepoRef + "/" + config.PublicSubdir
 }
 
@@ -409,7 +445,7 @@ func codexPublicVaultRunner(ctx context.Context, config publicVaultConfig, job p
 		return result
 	}
 	if job.Task.Class == "synthesis_create_update" {
-		return runPublicVaultSynthesisDirect(ctx, job, paths, start)
+		return runPublicVaultSynthesisDirect(ctx, config, job, paths, start)
 	}
 	turnResult, parsed, err := runPublicVaultTurn(ctx, config, repoDir, jobDir, paths, job, cache, corpus)
 	timings.AgentRun = turnResult.WallSeconds
@@ -433,7 +469,7 @@ func codexPublicVaultRunner(ctx context.Context, config publicVaultConfig, job p
 	return result
 }
 
-func runPublicVaultSynthesisDirect(ctx context.Context, job publicVaultJob, paths evalPaths, start time.Time) publicVaultJobResult {
+func runPublicVaultSynthesisDirect(ctx context.Context, config publicVaultConfig, job publicVaultJob, paths evalPaths, start time.Time) publicVaultJobResult {
 	result := publicVaultJobResult{
 		Index:       job.Index,
 		Class:       job.Task.Class,
@@ -449,18 +485,38 @@ func runPublicVaultSynthesisDirect(ctx context.Context, job publicVaultJob, path
 			CommandMetricLimitations: "synthesis_create_update uses a direct runner-level compile_synthesis check against the disposable public vault copy because Codex sandboxed shell writes cannot create the sibling vault synthesis file reliably.",
 		},
 	}
+	synthesisPath := strings.TrimSpace(job.Task.SynthesisPath)
+	if synthesisPath == "" {
+		synthesisPath = "synthesis/public-vault/kubernetes-docs/deployment-service-rollout.md"
+	}
+	synthesisTitle := strings.TrimSpace(job.Task.SynthesisTitle)
+	if synthesisTitle == "" {
+		synthesisTitle = "Deployment Service Rollout Notes"
+	}
+	bodyFacts := append([]string{}, job.Task.BodyFacts...)
+	if len(bodyFacts) == 0 {
+		bodyFacts = []string{
+			"Deployments manage rollout progress by creating and updating ReplicaSets, which lets readers track whether updated Pods are progressing toward availability.",
+			"Services expose Pods through a stable network endpoint and abstract away changing Pod IPs while a rollout replaces backing Pods.",
+			"Together, Deployment rollout status and Service exposure show whether updated Pods are becoming available behind a consistent service address.",
+		}
+	}
 	taskResult, err := runner.RunDocumentTask(ctx, runclient.Config{DatabasePath: paths.DatabasePath}, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionCompileSynthesis,
+		Autonomy: runner.AutonomyModes{
+			ApprovalMode:    config.Autonomy.ApprovalMode,
+			DraftingMode:    config.Autonomy.DraftingMode,
+			WriteTargetMode: config.Autonomy.WriteTargetMode,
+			CitationMode:    config.Autonomy.CitationMode,
+			PrivacyMode:     config.Autonomy.PrivacyMode,
+			AudienceMode:    config.Autonomy.AudienceMode,
+		},
 		Synthesis: runner.CompileSynthesisInput{
-			Path:       "synthesis/public-vault/kubernetes-docs/deployment-service-rollout.md",
-			Title:      "Deployment Service Rollout Notes",
+			Path:       synthesisPath,
+			Title:      synthesisTitle,
 			SourceRefs: job.Task.PublicEvidenceRefs,
-			BodyFacts: []string{
-				"Deployments manage rollout progress by creating and updating ReplicaSets, which lets readers track whether updated Pods are progressing toward availability.",
-				"Services expose Pods through a stable network endpoint and abstract away changing Pod IPs while a rollout replaces backing Pods.",
-				"Together, Deployment rollout status and Service exposure show whether updated Pods are becoming available behind a consistent service address.",
-			},
-			Mode: "create_or_update",
+			BodyFacts:  bodyFacts,
+			Mode:       "create_or_update",
 		},
 	})
 	if err != nil {
@@ -541,7 +597,7 @@ func runPublicVaultTurn(ctx context.Context, config publicVaultConfig, repoDir s
 
 	args := []string{config.CodexBin, "exec", "--json", "--ephemeral", "--full-auto", "--skip-git-repo-check", "--ignore-user-config", "-C", repoDir}
 	args = appendAddDirs(args, codexWritableRoots(runDir, cache))
-	args = append(args, "-m", modelName, "-c", fmt.Sprintf("model_reasoning_effort=%q", reasoningEffort), publicVaultPrompt(job.Task, corpus))
+	args = append(args, "-m", modelName, "-c", fmt.Sprintf("model_reasoning_effort=%q", reasoningEffort), publicVaultPrompt(config, job.Task, corpus))
 	cmdCtx, cancel := context.WithTimeout(ctx, 7*time.Minute)
 	defer cancel()
 	cmd := exec.CommandContext(cmdCtx, args[0], args[1:]...)
@@ -578,15 +634,16 @@ func runPublicVaultTurn(ctx context.Context, config publicVaultConfig, repoDir s
 	return result, parsed, err
 }
 
-func publicVaultPrompt(task publicVaultTask, corpus publicVaultCorpus) string {
+func publicVaultPrompt(config publicVaultConfig, task publicVaultTask, corpus publicVaultCorpus) string {
 	var b strings.Builder
-	b.WriteString("Use OpenClerk for a public Kubernetes documentation vault trial. ")
+	b.WriteString("Use OpenClerk for a public corpus vault trial. ")
 	b.WriteString("The configured OpenClerk data path points at a disposable copy of public markdown docs from ")
 	b.WriteString(corpus.MaterializedRef)
 	b.WriteString(". Public vault-relative paths may be mentioned, but do not mention machine-local paths, document ids, chunk ids, raw JSON, or event logs. ")
+	fmt.Fprintf(&b, "Autonomy modes for this run: approval_mode=%s, drafting_mode=%s, write_target_mode=%s, citation_mode=%s, privacy_mode=%s, audience_mode=%s. ", config.Autonomy.ApprovalMode, config.Autonomy.DraftingMode, config.Autonomy.WriteTargetMode, config.Autonomy.CitationMode, config.Autonomy.PrivacyMode, config.Autonomy.AudienceMode)
 	b.WriteString("Stay inside installed openclerk document and openclerk retrieval JSON. Do not use rg, find, ls, broad repo search, direct vault inspection, direct file edits, openclerk --help, direct SQLite, source-built command paths, HTTP/MCP bypasses, browser automation, unsupported transports, backend variants, module-cache inspection, git commands, or network fetches. ")
 	b.WriteString("Prefer the first matching promoted workflow action and stop after a successful agent_handoff; do not repair with primitives unless the runner rejects. ")
-	b.WriteString("Writes are allowed only because this run uses a disposable public vault copy; never claim the upstream Kubernetes repo was modified. ")
+	b.WriteString("Writes are allowed only because this run uses a disposable public vault copy; never claim the upstream public repo was modified. ")
 	b.WriteString("In the final answer, summarize completion, runner action classes used, safety boundaries, capability pass/fail, UX quality, and public evidence refs only. ")
 	b.WriteString("Public task: ")
 	b.WriteString(task.Prompt)
@@ -613,6 +670,8 @@ func publicVaultRouteHint(class string) string {
 		return "Use retrieval search with public path/query focus and answer from citations; do not synthesize unless explicitly needed. "
 	case "rbac_navigation":
 		return "Use retrieval source_discovery_report once with query terms for RBAC and service-account administration and path_prefix sources/kubernetes/website/content/en/docs/reference/access-authn-authz/; answer from source_discovery.agent_handoff. "
+	case "authority_navigation":
+		return "Use retrieval source_discovery_report once with focused query terms and the public path prefix from the task evidence refs; answer from source_discovery.agent_handoff. "
 	default:
 		return ""
 	}
@@ -710,15 +769,15 @@ func buildPublicVaultReport(config publicVaultConfig, corpus publicVaultCorpus, 
 	findingsStatus := "open"
 	if passesGate {
 		decision = "promoted_lane"
-		promotion = "public-vault Kubernetes docs lane is promoted for recurring large public-vault UX validation; this promotes the eval lane only and does not add a new runner API"
+		promotion = config.Promotion
 		findingsStatus = "addressed"
 	}
 	return publicVaultReport{
 		Metadata: publicVaultReportMetadata{
 			GeneratedAt:              time.Now().UTC(),
-			Lane:                     "public-vault-kubernetes-docs",
+			Lane:                     config.Lane,
 			Mode:                     config.Mode,
-			Harness:                  "codex exec --json --full-auto plus direct runner-level synthesis write check against a disposable copy of pinned public Kubernetes docs; committed public-path Markdown/JSON report",
+			Harness:                  "codex exec --json --full-auto plus direct runner-level synthesis write check against a disposable copy of pinned public corpus docs; committed public-path Markdown/JSON report",
 			Model:                    modelName,
 			ReasoningEffort:          reasoningEffort,
 			ConfiguredParallelism:    config.Parallel,
@@ -728,6 +787,7 @@ func buildPublicVaultReport(config publicVaultConfig, corpus publicVaultCorpus, 
 			RawJSONCommitted:         true,
 			RawContentCommitted:      false,
 			TaskManifestCommitted:    true,
+			Autonomy:                 config.Autonomy,
 		},
 		Corpus: corpus,
 		Rows:   rows,
@@ -799,7 +859,7 @@ func publicVaultQuality(result publicVaultJobResult) string {
 
 func writePublicVaultMarkdownReport(path string, rep publicVaultReport) error {
 	var b strings.Builder
-	b.WriteString("# OpenClerk Public Kubernetes Docs Vault Lane\n\n")
+	fmt.Fprintf(&b, "# %s\n\n", publicVaultLaneTitle(rep.Metadata.Lane))
 	b.WriteString("This is a promoted public-vault lane report when the summary decision is `promoted_lane`. Public repository URLs, pinned commits, and public vault-relative paths may appear; raw event logs, disposable vault contents, SQLite files, and machine-local paths must not be committed.\n\n")
 	fmt.Fprintf(&b, "- Lane: `%s`\n", rep.Metadata.Lane)
 	fmt.Fprintf(&b, "- Mode: `%s`\n", rep.Metadata.Mode)
@@ -816,6 +876,12 @@ func writePublicVaultMarkdownReport(path string, rep publicVaultReport) error {
 	fmt.Fprintf(&b, "- Raw JSON committed: `%t`\n", rep.Metadata.RawJSONCommitted)
 	fmt.Fprintf(&b, "- Raw content committed: `%t`\n", rep.Metadata.RawContentCommitted)
 	fmt.Fprintf(&b, "- Task manifest committed: `%t`\n\n", rep.Metadata.TaskManifestCommitted)
+	fmt.Fprintf(&b, "- approval_mode: `%s`\n", rep.Metadata.Autonomy.ApprovalMode)
+	fmt.Fprintf(&b, "- drafting_mode: `%s`\n", rep.Metadata.Autonomy.DraftingMode)
+	fmt.Fprintf(&b, "- write_target_mode: `%s`\n", rep.Metadata.Autonomy.WriteTargetMode)
+	fmt.Fprintf(&b, "- citation_mode: `%s`\n", rep.Metadata.Autonomy.CitationMode)
+	fmt.Fprintf(&b, "- privacy_mode: `%s`\n", rep.Metadata.Autonomy.PrivacyMode)
+	fmt.Fprintf(&b, "- audience_mode: `%s`\n\n", rep.Metadata.Autonomy.AudienceMode)
 
 	b.WriteString("## Summary\n\n")
 	fmt.Fprintf(&b, "- Decision: `%s`\n", rep.Summary.Decision)
@@ -860,7 +926,7 @@ func writePublicVaultMarkdownReport(path string, rep publicVaultReport) error {
 		)
 	}
 	b.WriteString("\n## Public Evidence Boundary\n\n")
-	b.WriteString("The committed report may include public Kubernetes repository URLs, pinned commits, and public vault-relative paths. It must not include machine-local roots, raw event logs, disposable vault contents, SQLite files, document ids, chunk ids, or raw JSON event output.\n")
+	b.WriteString("The committed report may include public repository URLs, pinned commits, and public vault-relative paths. It must not include machine-local roots, raw event logs, disposable vault contents, SQLite files, document ids, chunk ids, or raw JSON event output.\n")
 	if err := rejectPublicVaultReportLeak(b.String()); err != nil {
 		return err
 	}
@@ -868,6 +934,19 @@ func writePublicVaultMarkdownReport(path string, rep publicVaultReport) error {
 		return fmt.Errorf("write public vault Markdown report: %w", err)
 	}
 	return nil
+}
+
+func publicVaultLaneTitle(lane string) string {
+	switch lane {
+	case "public-vault-kubernetes-docs":
+		return "OpenClerk Public Kubernetes Docs Vault Lane"
+	case "public-vault-go-docs":
+		return "OpenClerk Public Go Docs Vault Lane"
+	case "public-vault-moby-dick":
+		return "OpenClerk Public Moby-Dick Vault Lane"
+	default:
+		return "OpenClerk Public Vault Lane"
+	}
 }
 
 func rejectPublicVaultReportLeak(text string) error {

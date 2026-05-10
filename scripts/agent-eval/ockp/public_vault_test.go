@@ -18,12 +18,31 @@ func TestParsePublicVaultConfigDefaults(t *testing.T) {
 	}
 	if config.Mode != publicVaultModeKubernetesDocs ||
 		config.Parallel != 2 ||
-		config.PublicRepoURL != defaultPublicVaultRepoURL ||
-		config.PublicRepoRef != defaultPublicVaultRepoRef ||
-		config.PublicSubdir != defaultPublicVaultSubdir ||
-		config.TaskManifestPath != defaultPublicVaultManifest ||
-		config.ReportName != "ockp-public-vault-kubernetes-docs" {
+		config.PublicRepoURL != publicVaultProfiles[publicVaultModeKubernetesDocs].RepoURL ||
+		config.PublicRepoRef != publicVaultProfiles[publicVaultModeKubernetesDocs].RepoRef ||
+		config.PublicSubdir != publicVaultProfiles[publicVaultModeKubernetesDocs].Subdir ||
+		config.TaskManifestPath != publicVaultProfiles[publicVaultModeKubernetesDocs].TaskManifestPath ||
+		config.ReportName != "ockp-public-vault-kubernetes-docs" ||
+		config.Autonomy.ApprovalMode != "autonomous_disposable" {
 		t.Fatalf("config = %+v", config)
+	}
+	goConfig, err := parsePublicVaultConfig([]string{"go-docs", "--run-root", "run"}, io.Discard)
+	if err != nil {
+		t.Fatalf("parse Go public vault config: %v", err)
+	}
+	if goConfig.Mode != publicVaultModeGoDocs || goConfig.ReportName != "ockp-public-vault-go-docs" || goConfig.SourcePrefix != "sources/golang/website/_content" {
+		t.Fatalf("go config = %+v", goConfig)
+	}
+	overrideConfig, err := parsePublicVaultConfig([]string{"kubernetes-docs", "--run-root", "run", "--subdir", "content/en/blog"}, io.Discard)
+	if err != nil {
+		t.Fatalf("parse subdir override: %v", err)
+	}
+	if overrideConfig.SourcePrefix != "sources/kubernetes/website/content/en/blog" {
+		t.Fatalf("override source prefix = %q", overrideConfig.SourcePrefix)
+	}
+	_, err = parsePublicVaultConfig([]string{"kubernetes-docs", "--approval-mode", "reckless"}, io.Discard)
+	if err == nil || !strings.Contains(err.Error(), "approval_mode") {
+		t.Fatalf("bad autonomy mode error = %v", err)
 	}
 	_, err = parsePublicVaultConfig([]string{"unknown"}, io.Discard)
 	if err == nil || !strings.Contains(err.Error(), "unsupported public-vault mode") {
@@ -64,10 +83,13 @@ func TestMaterializePublicVaultCorpusCopiesMarkdownToSourcesPrefix(t *testing.T)
 	ctx := context.Background()
 	sourceRoot := seedPublicVaultSourceForTest(t)
 	config := publicVaultConfig{
-		RunRoot:       t.TempDir(),
-		PublicRepoURL: sourceRoot,
-		PublicRepoRef: "local-test",
-		PublicSubdir:  "content/en/docs",
+		RunRoot:        t.TempDir(),
+		PublicRepoURL:  sourceRoot,
+		PublicRepoRef:  "local-test",
+		PublicSubdir:   "content/en/docs",
+		SourcePrefix:   "sources/kubernetes/website/content/en/docs",
+		FileExtensions: []string{".md"},
+		SynthesisSlug:  "kubernetes-docs",
 	}
 	corpus, err := materializePublicVaultCorpus(ctx, config)
 	if err != nil {
@@ -78,6 +100,32 @@ func TestMaterializePublicVaultCorpusCopiesMarkdownToSourcesPrefix(t *testing.T)
 	}
 	if _, err := os.Stat(filepath.Join(config.RunRoot, "public-vault-copy", "sources", "kubernetes", "website", "content", "en", "docs", "concepts", "workloads", "controllers", "deployment.md")); err != nil {
 		t.Fatalf("materialized source missing: %v", err)
+	}
+}
+
+func TestMaterializePublicVaultCorpusConvertsTextCorpusToMarkdown(t *testing.T) {
+	ctx := context.Background()
+	sourceRoot := t.TempDir()
+	writePublicVaultSourceFileForTest(t, sourceRoot, "2701-0.txt", "Call me Ishmael.")
+	config := publicVaultConfig{
+		RunRoot:        t.TempDir(),
+		PublicRepoURL:  sourceRoot,
+		PublicRepoRef:  "local-test",
+		PublicSubdir:   ".",
+		SourcePrefix:   "sources/gitenberg/moby-dick",
+		FileExtensions: []string{".txt"},
+		SynthesisSlug:  "moby-dick",
+	}
+	corpus, err := materializePublicVaultCorpus(ctx, config)
+	if err != nil {
+		t.Fatalf("materialize text public vault corpus: %v", err)
+	}
+	if corpus.MarkdownFiles != 1 || corpus.VaultPrefix != "sources/gitenberg/moby-dick" {
+		t.Fatalf("corpus = %+v", corpus)
+	}
+	content := string(readReportForTest(t, filepath.Join(config.RunRoot, "public-vault-copy", "sources", "gitenberg", "moby-dick", "2701-0.md")))
+	if !strings.Contains(content, "Call me Ishmael.") {
+		t.Fatalf("converted markdown missing text:\n%s", content)
 	}
 }
 
@@ -100,6 +148,19 @@ func TestExecutePublicVaultWritesPublicReports(t *testing.T) {
 		PublicRepoRef:    "local-test",
 		PublicSubdir:     "content/en/docs",
 		TaskManifestPath: manifestPath,
+		SourcePrefix:     "sources/kubernetes/website/content/en/docs",
+		FileExtensions:   []string{".md"},
+		SynthesisSlug:    "kubernetes-docs",
+		Lane:             "public-vault-kubernetes-docs",
+		Promotion:        publicVaultProfiles[publicVaultModeKubernetesDocs].Promotion,
+		Autonomy: runnerAutonomyModes{
+			ApprovalMode:    "autonomous_disposable",
+			DraftingMode:    "autonomous_fields",
+			WriteTargetMode: "create_or_update",
+			CitationMode:    "balanced",
+			PrivacyMode:     "allow_paths",
+			AudienceMode:    "plain_language",
+		},
 	}
 	var stdout bytes.Buffer
 	if err := executePublicVault(context.Background(), config, &stdout, fakePublicVaultRunner); err != nil {
@@ -141,9 +202,9 @@ func TestWritePublicVaultMarkdownRejectsLocalPaths(t *testing.T) {
 	report := publicVaultReport{
 		Metadata: publicVaultReportMetadata{Lane: "public-vault-kubernetes-docs"},
 		Corpus: publicVaultCorpus{
-			RepoURL:     defaultPublicVaultRepoURL,
-			RepoRef:     defaultPublicVaultRepoRef,
-			Subdir:      defaultPublicVaultSubdir,
+			RepoURL:     publicVaultProfiles[publicVaultModeKubernetesDocs].RepoURL,
+			RepoRef:     publicVaultProfiles[publicVaultModeKubernetesDocs].RepoRef,
+			Subdir:      publicVaultProfiles[publicVaultModeKubernetesDocs].Subdir,
 			VaultPrefix: "/tmp/local-copy",
 		},
 		Summary: publicVaultReportSummary{PassesGate: true},
@@ -179,7 +240,7 @@ func fakePublicVaultRunner(_ context.Context, _ publicVaultConfig, job publicVau
 		EventTypeCounts:   map[string]int{},
 	}
 	switch job.Task.Class {
-	case "source_discovery":
+	case "source_discovery", "authority_navigation":
 		m.SourceDiscoveryReportUsed = true
 	case "cited_search_answer", "cross_source_comparison", "rbac_navigation":
 		m.SearchUsed = true
@@ -229,7 +290,7 @@ func validPublicVaultTaskManifestForTest() publicVaultTaskManifest {
 
 func expectedPublicActionForTest(class string) string {
 	switch class {
-	case "source_discovery":
+	case "source_discovery", "authority_navigation":
 		return "source_discovery_report"
 	case "synthesis_create_update":
 		return "compile_synthesis"
@@ -273,4 +334,15 @@ func seedPublicVaultSourceForTest(t *testing.T) string {
 		}
 	}
 	return root
+}
+
+func writePublicVaultSourceFileForTest(t *testing.T, root string, rel string, body string) {
+	t.Helper()
+	target := filepath.Join(root, filepath.FromSlash(rel))
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", rel, err)
+	}
+	if err := os.WriteFile(target, []byte(body), 0o644); err != nil {
+		t.Fatalf("write %s: %v", rel, err)
+	}
 }

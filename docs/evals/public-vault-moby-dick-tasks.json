@@ -1,0 +1,92 @@
+{
+  "schema_version": "openclerk-public-vault-tasks.v1",
+  "tasks": [
+    {
+      "class": "source_discovery",
+      "prompt": "Find representative public Moby-Dick source categories for the main text, alternate text, and contributor metadata. Use the pinned public corpus copy and summarize only public evidence categories/counts.",
+      "expected_runner_actions": ["source_discovery_report"],
+      "forbidden_runner_actions": ["compile_synthesis"],
+      "public_evidence_refs": [
+        "sources/gitenberg/moby-dick/2701-0.md",
+        "sources/gitenberg/moby-dick/book.md"
+      ]
+    },
+    {
+      "class": "cited_search_answer",
+      "prompt": "Answer from the public Moby-Dick corpus: what does the opening narrator tell the reader about himself? Include public citation paths only.",
+      "expected_runner_actions": ["search"],
+      "forbidden_runner_actions": ["compile_synthesis"],
+      "public_evidence_refs": [
+        "sources/gitenberg/moby-dick/2701-0.md"
+      ]
+    },
+    {
+      "class": "synthesis_create_update",
+      "prompt": "Create or update a disposable public synthesis at synthesis/public-vault/moby-dick/opening-narrator.md titled Moby-Dick Opening Narrator Notes. Use source_refs sources/gitenberg/moby-dick/2701-0.md and sources/gitenberg/moby-dick/book.md. Body facts should explain that the corpus is public literary text and that the narrator frames the opening in first person.",
+      "expected_runner_actions": ["compile_synthesis"],
+      "forbidden_runner_actions": ["validation_synthesis_report"],
+      "synthesis_path": "synthesis/public-vault/moby-dick/opening-narrator.md",
+      "synthesis_title": "Moby-Dick Opening Narrator Notes",
+      "body_facts": [
+        "The public corpus contains the Moby-Dick text in multiple public-domain source forms.",
+        "The opening narrator frames the story in first person and gives the famous self-identifying opening.",
+        "The non-technical lane checks literary source handling without private snippets, local paths, or runner internals in committed reports."
+      ],
+      "public_evidence_refs": [
+        "sources/gitenberg/moby-dick/2701-0.md",
+        "sources/gitenberg/moby-dick/book.md"
+      ]
+    },
+    {
+      "class": "provenance_freshness",
+      "prompt": "Package public evidence and freshness for the Moby-Dick main text. Use sources/gitenberg/moby-dick/2701-0.md as the document ref when useful.",
+      "expected_runner_actions": ["evidence_bundle_report"],
+      "forbidden_runner_actions": ["compile_synthesis"],
+      "public_evidence_refs": [
+        "sources/gitenberg/moby-dick/2701-0.md"
+      ]
+    },
+    {
+      "class": "decision_like_lookup",
+      "prompt": "Find decision-like public evidence about edition or metadata choices in the Moby-Dick corpus. If there is no formal ADR-style decision record, say so and answer from public corpus evidence.",
+      "expected_runner_actions": ["decision_lookup_report"],
+      "forbidden_runner_actions": ["compile_synthesis"],
+      "public_evidence_refs": [
+        "sources/gitenberg/moby-dick/README.md",
+        "sources/gitenberg/moby-dick/CONTRIBUTING.md"
+      ]
+    },
+    {
+      "class": "stale_duplicate_detection",
+      "prompt": "Before creating any new note, check public Moby-Dick corpus files for duplicate main-text forms and projection freshness. Report whether a new synthesis would duplicate existing public sources.",
+      "expected_runner_actions": ["search", "projection_states"],
+      "forbidden_runner_actions": ["compile_synthesis"],
+      "public_evidence_refs": [
+        "sources/gitenberg/moby-dick/2701-0.md",
+        "sources/gitenberg/moby-dick/2701.md"
+      ]
+    },
+    {
+      "class": "cross_source_comparison",
+      "prompt": "Compare the public Moby-Dick corpus boundaries between the main UTF-8 text, alternate text, and book source. Use public citations and do not write a synthesis.",
+      "expected_runner_actions": ["search"],
+      "forbidden_runner_actions": ["compile_synthesis"],
+      "public_evidence_refs": [
+        "sources/gitenberg/moby-dick/2701-0.md",
+        "sources/gitenberg/moby-dick/2701.md",
+        "sources/gitenberg/moby-dick/book.md"
+      ]
+    },
+    {
+      "class": "authority_navigation",
+      "prompt": "Find the public Moby-Dick authority files for the main text, old text, and book source, then summarize which file a reader should inspect first. Prefer the source discovery surface.",
+      "expected_runner_actions": ["source_discovery_report"],
+      "forbidden_runner_actions": ["compile_synthesis"],
+      "public_evidence_refs": [
+        "sources/gitenberg/moby-dick/2701-0.md",
+        "sources/gitenberg/moby-dick/old/moby10b.md",
+        "sources/gitenberg/moby-dick/book.md"
+      ]
+    }
+  ]
+}

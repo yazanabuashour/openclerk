@@ -325,6 +325,7 @@ func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, n
 
 type normalizedRetrievalTaskRequest struct {
 	Action             string
+	Autonomy           AutonomyModes
 	Search             SearchOptions
 	DocID              string
 	ChunkID            string
@@ -358,6 +359,7 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 	}
 	normalized := normalizedRetrievalTaskRequest{
 		Action:             action,
+		Autonomy:           request.Autonomy,
 		Search:             request.Search,
 		DocID:              strings.TrimSpace(request.DocID),
 		ChunkID:            strings.TrimSpace(request.ChunkID),
@@ -383,6 +385,12 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		SemanticSearch:     request.SemanticSearch,
 		Limit:              request.Limit,
 	}
+
+	autonomy, rejection := normalizeAutonomyModes(request.Autonomy)
+	if rejection != "" {
+		return normalizedRetrievalTaskRequest{}, rejection
+	}
+	normalized.Autonomy = autonomy
 
 	if rejection := rejectNegativeRunnerLimits(
 		request.Limit,
@@ -470,6 +478,9 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		if normalized.Audit.Mode != "plan_only" && normalized.Audit.Mode != "repair_existing" {
 			return normalizedRetrievalTaskRequest{}, "audit.mode must be plan_only or repair_existing"
 		}
+		if rejection := rejectRetrievalAutonomyWrite(normalized); rejection != "" {
+			return normalizedRetrievalTaskRequest{}, rejection
+		}
 		return normalized, ""
 	case RetrievalTaskActionMemoryRouterRecall:
 		normalized.MemoryRouterRecall.Query = strings.TrimSpace(request.MemoryRouterRecall.Query)
@@ -497,6 +508,9 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		}
 		if normalized.SourceAudit.Mode != "explain" && normalized.SourceAudit.Mode != "repair_existing" {
 			return normalizedRetrievalTaskRequest{}, "source_audit.mode must be explain or repair_existing"
+		}
+		if rejection := rejectRetrievalAutonomyWrite(normalized); rejection != "" {
+			return normalizedRetrievalTaskRequest{}, rejection
 		}
 		return normalized, ""
 	case RetrievalTaskActionEvidenceBundle:
@@ -613,6 +627,16 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 	default:
 		return normalizedRetrievalTaskRequest{}, fmt.Sprintf("unsupported retrieval task action %q", action)
 	}
+}
+
+func rejectRetrievalAutonomyWrite(normalized normalizedRetrievalTaskRequest) string {
+	if !isMutatingRetrievalAction(normalized) {
+		return ""
+	}
+	if normalized.Autonomy.ApprovalMode == ApprovalModeProposeOnly {
+		return "autonomy.approval_mode propose_only does not allow mutating retrieval actions"
+	}
+	return ""
 }
 
 func normalizeSearchTagFilter(search *SearchOptions) string {

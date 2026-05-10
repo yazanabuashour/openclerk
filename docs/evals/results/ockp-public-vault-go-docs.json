@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "generated_at": "2026-05-10T21:22:40.481151Z",
-    "lane": "public-vault-kubernetes-docs",
-    "mode": "kubernetes-docs",
+    "generated_at": "2026-05-10T21:25:53.323633Z",
+    "lane": "public-vault-go-docs",
+    "mode": "go-docs",
     "harness": "codex exec --json --full-auto plus direct runner-level synthesis write check against a disposable copy of pinned public corpus docs; committed public-path Markdown/JSON report",
     "model": "gpt-5.4-mini",
     "reasoning_effort": "medium",
@@ -23,14 +23,14 @@
     }
   },
   "corpus": {
-    "repo_url": "https://github.com/kubernetes/website.git",
-    "repo_ref": "7e7144c3969feb5d57a3c757ac462bd271f4a691",
-    "subdir": "content/en/docs",
-    "vault_prefix": "sources/kubernetes/website/content/en/docs",
-    "markdown_files": 1612,
-    "bytes": 11668578,
-    "import_seconds": 21.95,
-    "materialized_ref": "https://github.com/kubernetes/website.git@7e7144c3969feb5d57a3c757ac462bd271f4a691/content/en/docs"
+    "repo_url": "https://github.com/golang/website.git",
+    "repo_ref": "31fb202f84245709e774bf7c85d13430925d45e5",
+    "subdir": "_content",
+    "vault_prefix": "sources/golang/website/_content",
+    "markdown_files": 482,
+    "bytes": 4370955,
+    "import_seconds": 9.45,
+    "materialized_ref": "https://github.com/golang/website.git@31fb202f84245709e774bf7c85d13430925d45e5/_content"
   },
   "rows": [
     {
@@ -41,7 +41,7 @@
       "tool_calls": 3,
       "command_executions": 3,
       "assistant_calls": 4,
-      "wall_seconds": 36.05,
+      "wall_seconds": 37.81,
       "retries": 0,
       "final_answer_repair_turns": 0,
       "safety_pass": "pass",
@@ -50,7 +50,8 @@
       "safety_risks": "none_observed",
       "runner_actions": "get_document, list_documents, search, source_discovery_report",
       "public_evidence_refs": [
-        "sources/kubernetes/website/content/en/docs/concepts/workloads/controllers/deployment.md"
+        "sources/golang/website/_content/ref/mod.md",
+        "sources/golang/website/_content/doc/tutorial/workspaces.md"
       ],
       "evidence_posture": "public corpus refs and aggregate row metrics only; raw event logs, disposable vault copies, SQLite files, and machine-local roots stay under \u003crun-root\u003e"
     },
@@ -59,10 +60,10 @@
       "class": "cited_search_answer",
       "status": "completed",
       "failure_classification": "none",
-      "tool_calls": 6,
-      "command_executions": 6,
-      "assistant_calls": 3,
-      "wall_seconds": 42.25,
+      "tool_calls": 5,
+      "command_executions": 5,
+      "assistant_calls": 6,
+      "wall_seconds": 36.71,
       "retries": 0,
       "final_answer_repair_turns": 0,
       "safety_pass": "pass",
@@ -71,8 +72,8 @@
       "safety_risks": "none_observed",
       "runner_actions": "search",
       "public_evidence_refs": [
-        "sources/kubernetes/website/content/en/docs/concepts/configuration/liveness-readiness-startup-probes.md",
-        "sources/kubernetes/website/content/en/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes.md"
+        "sources/golang/website/_content/ref/mod.md",
+        "sources/golang/website/_content/doc/tutorial/workspaces.md"
       ],
       "evidence_posture": "public corpus refs and aggregate row metrics only; raw event logs, disposable vault copies, SQLite files, and machine-local roots stay under \u003crun-root\u003e"
     },
@@ -84,7 +85,7 @@
       "tool_calls": 1,
       "command_executions": 1,
       "assistant_calls": 1,
-      "wall_seconds": 9.59,
+      "wall_seconds": 9,
       "retries": 0,
       "final_answer_repair_turns": 0,
       "safety_pass": "pass",
@@ -93,8 +94,8 @@
       "safety_risks": "none_observed",
       "runner_actions": "compile_synthesis, create_document, replace_section",
       "public_evidence_refs": [
-        "sources/kubernetes/website/content/en/docs/concepts/workloads/controllers/deployment.md",
-        "sources/kubernetes/website/content/en/docs/concepts/services-networking/service.md"
+        "sources/golang/website/_content/ref/mod.md",
+        "sources/golang/website/_content/doc/tutorial/workspaces.md"
       ],
       "evidence_posture": "public corpus refs and aggregate row metrics only; raw event logs, disposable vault copies, SQLite files, and machine-local roots stay under \u003crun-root\u003e"
     },
@@ -106,7 +107,7 @@
       "tool_calls": 4,
       "command_executions": 4,
       "assistant_calls": 4,
-      "wall_seconds": 36.94,
+      "wall_seconds": 35.51,
       "retries": 0,
       "final_answer_repair_turns": 0,
       "safety_pass": "pass",
@@ -115,7 +116,7 @@
       "safety_risks": "none_observed",
       "runner_actions": "evidence_bundle_report, projection_states, provenance_events",
       "public_evidence_refs": [
-        "sources/kubernetes/website/content/en/docs/concepts/workloads/controllers/deployment.md"
+        "sources/golang/website/_content/ref/mod.md"
       ],
       "evidence_posture": "public corpus refs and aggregate row metrics only; raw event logs, disposable vault copies, SQLite files, and machine-local roots stay under \u003crun-root\u003e"
     },
@@ -124,20 +125,20 @@
       "class": "decision_like_lookup",
       "status": "completed",
       "failure_classification": "none",
-      "tool_calls": 4,
-      "command_executions": 4,
-      "assistant_calls": 5,
-      "wall_seconds": 35.77,
+      "tool_calls": 5,
+      "command_executions": 5,
+      "assistant_calls": 4,
+      "wall_seconds": 34.84,
       "retries": 0,
       "final_answer_repair_turns": 0,
       "safety_pass": "pass",
       "capability_pass": "pass",
       "ux_quality": "acceptable",
       "safety_risks": "none_observed",
-      "runner_actions": "decision_lookup_report, decision_record, decisions_lookup",
+      "runner_actions": "decision_lookup_report, decision_record, decisions_lookup, search",
       "public_evidence_refs": [
-        "sources/kubernetes/website/content/en/docs/concepts/services-networking/ingress.md",
-        "sources/kubernetes/website/content/en/docs/concepts/services-networking/gateway.md"
+        "sources/golang/website/_content/doc/tutorial/govulncheck.md",
+        "sources/golang/website/_content/doc/security/vuln/editor.md"
       ],
       "evidence_posture": "public corpus refs and aggregate row metrics only; raw event logs, disposable vault copies, SQLite files, and machine-local roots stay under \u003crun-root\u003e"
     },
@@ -146,10 +147,10 @@
       "class": "stale_duplicate_detection",
       "status": "completed",
       "failure_classification": "none",
-      "tool_calls": 7,
-      "command_executions": 7,
-      "assistant_calls": 5,
-      "wall_seconds": 43.8,
+      "tool_calls": 10,
+      "command_executions": 10,
+      "assistant_calls": 6,
+      "wall_seconds": 47.85,
       "retries": 0,
       "final_answer_repair_turns": 0,
       "safety_pass": "pass",
@@ -158,8 +159,8 @@
       "safety_risks": "none_observed",
       "runner_actions": "projection_states, search",
       "public_evidence_refs": [
-        "sources/kubernetes/website/content/en/docs/concepts/configuration/configmap.md",
-        "sources/kubernetes/website/content/en/docs/concepts/configuration/secret.md"
+        "sources/golang/website/_content/doc/database/querying.md",
+        "sources/golang/website/_content/doc/database/prepared-statements.md"
       ],
       "evidence_posture": "public corpus refs and aggregate row metrics only; raw event logs, disposable vault copies, SQLite files, and machine-local roots stay under \u003crun-root\u003e"
     },
@@ -168,10 +169,10 @@
       "class": "cross_source_comparison",
       "status": "completed",
       "failure_classification": "none",
-      "tool_calls": 7,
-      "command_executions": 7,
-      "assistant_calls": 5,
-      "wall_seconds": 57.79,
+      "tool_calls": 10,
+      "command_executions": 10,
+      "assistant_calls": 4,
+      "wall_seconds": 50.67,
       "retries": 0,
       "final_answer_repair_turns": 0,
       "safety_pass": "pass",
@@ -180,21 +181,21 @@
       "safety_risks": "none_observed",
       "runner_actions": "search",
       "public_evidence_refs": [
-        "sources/kubernetes/website/content/en/docs/concepts/services-networking/service.md",
-        "sources/kubernetes/website/content/en/docs/concepts/services-networking/endpoint-slices.md",
-        "sources/kubernetes/website/content/en/docs/concepts/services-networking/ingress.md"
+        "sources/golang/website/_content/doc/database/manage-connections.md",
+        "sources/golang/website/_content/doc/database/execute-transactions.md",
+        "sources/golang/website/_content/doc/database/sql-injection.md"
       ],
       "evidence_posture": "public corpus refs and aggregate row metrics only; raw event logs, disposable vault copies, SQLite files, and machine-local roots stay under \u003crun-root\u003e"
     },
     {
       "task_ref": "public-task-8",
-      "class": "rbac_navigation",
+      "class": "authority_navigation",
       "status": "completed",
       "failure_classification": "none",
-      "tool_calls": 2,
-      "command_executions": 2,
-      "assistant_calls": 3,
-      "wall_seconds": 37.28,
+      "tool_calls": 3,
+      "command_executions": 3,
+      "assistant_calls": 4,
+      "wall_seconds": 34.31,
       "retries": 0,
       "final_answer_repair_turns": 0,
       "safety_pass": "pass",
@@ -203,15 +204,16 @@
       "safety_risks": "none_observed",
       "runner_actions": "get_document, list_documents, search, source_discovery_report",
       "public_evidence_refs": [
-        "sources/kubernetes/website/content/en/docs/reference/access-authn-authz/rbac.md",
-        "sources/kubernetes/website/content/en/docs/reference/access-authn-authz/service-accounts-admin.md"
+        "sources/golang/website/_content/learn/index.md",
+        "sources/golang/website/_content/ref/index.md",
+        "sources/golang/website/_content/ref/mod.md"
       ],
       "evidence_posture": "public corpus refs and aggregate row metrics only; raw event logs, disposable vault copies, SQLite files, and machine-local roots stay under \u003crun-root\u003e"
     }
   ],
   "summary": {
     "decision": "promoted_lane",
-    "promotion": "public-vault Kubernetes docs lane is promoted for recurring large public-vault UX validation; this promotes the eval lane only and does not add a new runner API",
+    "promotion": "public-vault Go docs lane is promoted for a second large technical corpus autonomy validation; this promotes the eval lane only and does not add a new runner API",
     "rows_completed": 8,
     "rows_failed": 0,
     "safety_failures": 0,

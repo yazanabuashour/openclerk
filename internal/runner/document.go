@@ -304,6 +304,7 @@ func runMutatingDocumentTask(ctx context.Context, client *runclient.Client, norm
 
 type normalizedDocumentTaskRequest struct {
 	Action              string
+	Autonomy            AutonomyModes
 	Document            DocumentInput
 	Source              SourceURLInput
 	Video               VideoURLInput
@@ -325,6 +326,7 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 	}
 	normalized := normalizedDocumentTaskRequest{
 		Action:              action,
+		Autonomy:            request.Autonomy,
 		Document:            request.Document,
 		Source:              trimSourceURLInput(request.Source),
 		Video:               trimVideoURLInput(request.Video),
@@ -338,6 +340,12 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		Heading:             strings.TrimSpace(request.Heading),
 		List:                request.List,
 	}
+
+	autonomy, rejection := normalizeAutonomyModes(request.Autonomy)
+	if rejection != "" {
+		return normalizedDocumentTaskRequest{}, rejection
+	}
+	normalized.Autonomy = autonomy
 
 	if rejection := rejectNegativeRunnerLimits(
 		request.List.Limit,
@@ -355,26 +363,41 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		}
 		return normalized, ""
 	case DocumentTaskActionCreate:
+		if rejection := rejectDocumentAutonomyWrite(normalized); rejection != "" {
+			return normalizedDocumentTaskRequest{}, rejection
+		}
 		if rejection := validateDocumentInput(request.Document); rejection != "" {
 			return normalizedDocumentTaskRequest{}, rejection
 		}
 		return normalized, ""
 	case DocumentTaskActionIngestSourceURL:
+		if rejection := rejectDocumentAutonomyWrite(normalized); rejection != "" {
+			return normalizedDocumentTaskRequest{}, rejection
+		}
 		if rejection := validateSourceURLInput(normalized.Source); rejection != "" {
 			return normalizedDocumentTaskRequest{}, rejection
 		}
 		return normalized, ""
 	case DocumentTaskActionIngestVideoURL:
+		if rejection := rejectDocumentAutonomyWrite(normalized); rejection != "" {
+			return normalizedDocumentTaskRequest{}, rejection
+		}
 		if rejection := validateVideoURLInput(normalized.Video); rejection != "" {
 			return normalizedDocumentTaskRequest{}, rejection
 		}
 		return normalized, ""
 	case DocumentTaskActionCompileSynthesis:
+		if rejection := rejectDocumentAutonomyWrite(normalized); rejection != "" {
+			return normalizedDocumentTaskRequest{}, rejection
+		}
 		if rejection := validateCompileSynthesisInput(normalized.Synthesis); rejection != "" {
 			return normalizedDocumentTaskRequest{}, rejection
 		}
 		return normalized, ""
 	case DocumentTaskActionValidationSynthesis:
+		if rejection := rejectDocumentAutonomyWrite(normalized); rejection != "" {
+			return normalizedDocumentTaskRequest{}, rejection
+		}
 		if rejection := validateValidationSynthesisInput(normalized.ValidationSynthesis); rejection != "" {
 			return normalizedDocumentTaskRequest{}, rejection
 		}
@@ -390,6 +413,9 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		}
 		return normalized, ""
 	case DocumentTaskActionAppend:
+		if rejection := rejectDocumentAutonomyWrite(normalized); rejection != "" {
+			return normalizedDocumentTaskRequest{}, rejection
+		}
 		if normalized.DocID == "" {
 			return normalizedDocumentTaskRequest{}, "doc_id is required"
 		}
@@ -398,6 +424,9 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		}
 		return normalized, ""
 	case DocumentTaskActionReplaceSection:
+		if rejection := rejectDocumentAutonomyWrite(normalized); rejection != "" {
+			return normalizedDocumentTaskRequest{}, rejection
+		}
 		if normalized.DocID == "" {
 			return normalizedDocumentTaskRequest{}, "doc_id is required"
 		}
@@ -457,6 +486,27 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 	default:
 		return normalizedDocumentTaskRequest{}, fmt.Sprintf("unsupported document task action %q", action)
 	}
+}
+
+func rejectDocumentAutonomyWrite(normalized normalizedDocumentTaskRequest) string {
+	if !isMutatingDocumentAction(normalized) {
+		return ""
+	}
+	if normalized.Autonomy.ApprovalMode == ApprovalModeProposeOnly {
+		return "autonomy.approval_mode propose_only does not allow mutating document actions"
+	}
+	if normalized.Autonomy.WriteTargetMode != WriteTargetModeExistingOnly {
+		return ""
+	}
+	switch normalized.Action {
+	case DocumentTaskActionCreate, DocumentTaskActionIngestSourceURL, DocumentTaskActionIngestVideoURL:
+		return "autonomy.write_target_mode existing_only does not allow create-shaped document actions"
+	case DocumentTaskActionCompileSynthesis:
+		return "autonomy.write_target_mode existing_only does not allow create_or_update compile_synthesis writes"
+	case DocumentTaskActionValidationSynthesis:
+		return "autonomy.write_target_mode existing_only does not allow create_or_update validation_synthesis writes"
+	}
+	return ""
 }
 
 func compileSynthesisInputFromRequest(request DocumentTaskRequest) CompileSynthesisInput {

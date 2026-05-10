@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "generated_at": "2026-05-10T21:22:40.481151Z",
-    "lane": "public-vault-kubernetes-docs",
-    "mode": "kubernetes-docs",
+    "generated_at": "2026-05-10T21:29:31.237626Z",
+    "lane": "public-vault-moby-dick",
+    "mode": "moby-dick",
     "harness": "codex exec --json --full-auto plus direct runner-level synthesis write check against a disposable copy of pinned public corpus docs; committed public-path Markdown/JSON report",
     "model": "gpt-5.4-mini",
     "reasoning_effort": "medium",
@@ -23,14 +23,14 @@
     }
   },
   "corpus": {
-    "repo_url": "https://github.com/kubernetes/website.git",
-    "repo_ref": "7e7144c3969feb5d57a3c757ac462bd271f4a691",
-    "subdir": "content/en/docs",
-    "vault_prefix": "sources/kubernetes/website/content/en/docs",
-    "markdown_files": 1612,
-    "bytes": 11668578,
-    "import_seconds": 21.95,
-    "materialized_ref": "https://github.com/kubernetes/website.git@7e7144c3969feb5d57a3c757ac462bd271f4a691/content/en/docs"
+    "repo_url": "https://github.com/GITenberg/Moby-Dick--Or-The-Whale_2701.git",
+    "repo_ref": "bdf1948e6cd00963730971e5624e764a35f238c3",
+    "subdir": ".",
+    "vault_prefix": "sources/gitenberg/moby-dick",
+    "markdown_files": 6,
+    "bytes": 5010638,
+    "import_seconds": 2.86,
+    "materialized_ref": "https://github.com/GITenberg/Moby-Dick--Or-The-Whale_2701.git@bdf1948e6cd00963730971e5624e764a35f238c3"
   },
   "rows": [
     {
@@ -41,7 +41,7 @@
       "tool_calls": 3,
       "command_executions": 3,
       "assistant_calls": 4,
-      "wall_seconds": 36.05,
+      "wall_seconds": 33.37,
       "retries": 0,
       "final_answer_repair_turns": 0,
       "safety_pass": "pass",
@@ -50,7 +50,8 @@
       "safety_risks": "none_observed",
       "runner_actions": "get_document, list_documents, search, source_discovery_report",
       "public_evidence_refs": [
-        "sources/kubernetes/website/content/en/docs/concepts/workloads/controllers/deployment.md"
+        "sources/gitenberg/moby-dick/2701-0.md",
+        "sources/gitenberg/moby-dick/book.md"
       ],
       "evidence_posture": "public corpus refs and aggregate row metrics only; raw event logs, disposable vault copies, SQLite files, and machine-local roots stay under \u003crun-root\u003e"
     },
@@ -59,10 +60,10 @@
       "class": "cited_search_answer",
       "status": "completed",
       "failure_classification": "none",
-      "tool_calls": 6,
-      "command_executions": 6,
-      "assistant_calls": 3,
-      "wall_seconds": 42.25,
+      "tool_calls": 4,
+      "command_executions": 4,
+      "assistant_calls": 5,
+      "wall_seconds": 31.19,
       "retries": 0,
       "final_answer_repair_turns": 0,
       "safety_pass": "pass",
@@ -71,8 +72,7 @@
       "safety_risks": "none_observed",
       "runner_actions": "search",
       "public_evidence_refs": [
-        "sources/kubernetes/website/content/en/docs/concepts/configuration/liveness-readiness-startup-probes.md",
-        "sources/kubernetes/website/content/en/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes.md"
+        "sources/gitenberg/moby-dick/2701-0.md"
       ],
       "evidence_posture": "public corpus refs and aggregate row metrics only; raw event logs, disposable vault copies, SQLite files, and machine-local roots stay under \u003crun-root\u003e"
     },
@@ -84,7 +84,7 @@
       "tool_calls": 1,
       "command_executions": 1,
       "assistant_calls": 1,
-      "wall_seconds": 9.59,
+      "wall_seconds": 8.99,
       "retries": 0,
       "final_answer_repair_turns": 0,
       "safety_pass": "pass",
@@ -93,8 +93,8 @@
       "safety_risks": "none_observed",
       "runner_actions": "compile_synthesis, create_document, replace_section",
       "public_evidence_refs": [
-        "sources/kubernetes/website/content/en/docs/concepts/workloads/controllers/deployment.md",
-        "sources/kubernetes/website/content/en/docs/concepts/services-networking/service.md"
+        "sources/gitenberg/moby-dick/2701-0.md",
+        "sources/gitenberg/moby-dick/book.md"
       ],
       "evidence_posture": "public corpus refs and aggregate row metrics only; raw event logs, disposable vault copies, SQLite files, and machine-local roots stay under \u003crun-root\u003e"
     },
@@ -103,10 +103,10 @@
       "class": "provenance_freshness",
       "status": "completed",
       "failure_classification": "none",
-      "tool_calls": 4,
-      "command_executions": 4,
-      "assistant_calls": 4,
-      "wall_seconds": 36.94,
+      "tool_calls": 6,
+      "command_executions": 6,
+      "assistant_calls": 5,
+      "wall_seconds": 41.51,
       "retries": 0,
       "final_answer_repair_turns": 0,
       "safety_pass": "pass",
@@ -115,7 +115,7 @@
       "safety_risks": "none_observed",
       "runner_actions": "evidence_bundle_report, projection_states, provenance_events",
       "public_evidence_refs": [
-        "sources/kubernetes/website/content/en/docs/concepts/workloads/controllers/deployment.md"
+        "sources/gitenberg/moby-dick/2701-0.md"
       ],
       "evidence_posture": "public corpus refs and aggregate row metrics only; raw event logs, disposable vault copies, SQLite files, and machine-local roots stay under \u003crun-root\u003e"
     },
@@ -124,10 +124,10 @@
       "class": "decision_like_lookup",
       "status": "completed",
       "failure_classification": "none",
-      "tool_calls": 4,
-      "command_executions": 4,
-      "assistant_calls": 5,
-      "wall_seconds": 35.77,
+      "tool_calls": 3,
+      "command_executions": 3,
+      "assistant_calls": 4,
+      "wall_seconds": 68.54,
       "retries": 0,
       "final_answer_repair_turns": 0,
       "safety_pass": "pass",
@@ -136,8 +136,8 @@
       "safety_risks": "none_observed",
       "runner_actions": "decision_lookup_report, decision_record, decisions_lookup",
       "public_evidence_refs": [
-        "sources/kubernetes/website/content/en/docs/concepts/services-networking/ingress.md",
-        "sources/kubernetes/website/content/en/docs/concepts/services-networking/gateway.md"
+        "sources/gitenberg/moby-dick/README.md",
+        "sources/gitenberg/moby-dick/CONTRIBUTING.md"
       ],
       "evidence_posture": "public corpus refs and aggregate row metrics only; raw event logs, disposable vault copies, SQLite files, and machine-local roots stay under \u003crun-root\u003e"
     },
@@ -146,10 +146,10 @@
       "class": "stale_duplicate_detection",
       "status": "completed",
       "failure_classification": "none",
-      "tool_calls": 7,
-      "command_executions": 7,
+      "tool_calls": 9,
+      "command_executions": 9,
       "assistant_calls": 5,
-      "wall_seconds": 43.8,
+      "wall_seconds": 40.82,
       "retries": 0,
       "final_answer_repair_turns": 0,
       "safety_pass": "pass",
@@ -158,8 +158,8 @@
       "safety_risks": "none_observed",
       "runner_actions": "projection_states, search",
       "public_evidence_refs": [
-        "sources/kubernetes/website/content/en/docs/concepts/configuration/configmap.md",
-        "sources/kubernetes/website/content/en/docs/concepts/configuration/secret.md"
+        "sources/gitenberg/moby-dick/2701-0.md",
+        "sources/gitenberg/moby-dick/2701.md"
       ],
       "evidence_posture": "public corpus refs and aggregate row metrics only; raw event logs, disposable vault copies, SQLite files, and machine-local roots stay under \u003crun-root\u003e"
     },
@@ -168,10 +168,10 @@
       "class": "cross_source_comparison",
       "status": "completed",
       "failure_classification": "none",
-      "tool_calls": 7,
-      "command_executions": 7,
-      "assistant_calls": 5,
-      "wall_seconds": 57.79,
+      "tool_calls": 6,
+      "command_executions": 6,
+      "assistant_calls": 3,
+      "wall_seconds": 79.24,
       "retries": 0,
       "final_answer_repair_turns": 0,
       "safety_pass": "pass",
@@ -180,21 +180,21 @@
       "safety_risks": "none_observed",
       "runner_actions": "search",
       "public_evidence_refs": [
-        "sources/kubernetes/website/content/en/docs/concepts/services-networking/service.md",
-        "sources/kubernetes/website/content/en/docs/concepts/services-networking/endpoint-slices.md",
-        "sources/kubernetes/website/content/en/docs/concepts/services-networking/ingress.md"
+        "sources/gitenberg/moby-dick/2701-0.md",
+        "sources/gitenberg/moby-dick/2701.md",
+        "sources/gitenberg/moby-dick/book.md"
       ],
       "evidence_posture": "public corpus refs and aggregate row metrics only; raw event logs, disposable vault copies, SQLite files, and machine-local roots stay under \u003crun-root\u003e"
     },
     {
       "task_ref": "public-task-8",
-      "class": "rbac_navigation",
+      "class": "authority_navigation",
       "status": "completed",
       "failure_classification": "none",
-      "tool_calls": 2,
-      "command_executions": 2,
-      "assistant_calls": 3,
-      "wall_seconds": 37.28,
+      "tool_calls": 3,
+      "command_executions": 3,
+      "assistant_calls": 4,
+      "wall_seconds": 35.76,
       "retries": 0,
       "final_answer_repair_turns": 0,
       "safety_pass": "pass",
@@ -203,15 +203,16 @@
       "safety_risks": "none_observed",
       "runner_actions": "get_document, list_documents, search, source_discovery_report",
       "public_evidence_refs": [
-        "sources/kubernetes/website/content/en/docs/reference/access-authn-authz/rbac.md",
-        "sources/kubernetes/website/content/en/docs/reference/access-authn-authz/service-accounts-admin.md"
+        "sources/gitenberg/moby-dick/2701-0.md",
+        "sources/gitenberg/moby-dick/old/moby10b.md",
+        "sources/gitenberg/moby-dick/book.md"
       ],
       "evidence_posture": "public corpus refs and aggregate row metrics only; raw event logs, disposable vault copies, SQLite files, and machine-local roots stay under \u003crun-root\u003e"
     }
   ],
   "summary": {
     "decision": "promoted_lane",
-    "promotion": "public-vault Kubernetes docs lane is promoted for recurring large public-vault UX validation; this promotes the eval lane only and does not add a new runner API",
+    "promotion": "public-vault Moby-Dick lane is promoted for non-technical public-corpus autonomy validation; this promotes the eval lane only and does not add a new runner API",
     "rows_completed": 8,
     "rows_failed": 0,
     "safety_failures": 0,
