@@ -502,12 +502,14 @@ func verifySourceSensitiveAuditRepair(ctx context.Context, paths evalPaths, fina
 		"status: active",
 		"freshness: fresh",
 		"source_refs: " + sourceAuditCurrentSourcePath + ", " + sourceAuditOldSourcePath,
-		"Current audit guidance: use the installed openclerk JSON runner",
 		"Current source: " + sourceAuditCurrentSourcePath,
 		"Superseded source: " + sourceAuditOldSourcePath,
 		"## Sources",
 		"## Freshness",
 	}
+	hasCurrentAuditRepairContent := strings.Contains(body, "Current audit guidance: use the installed openclerk JSON runner") ||
+		(strings.Contains(body, "Current source summary:") &&
+			strings.Contains(body, "use the installed openclerk JSON runner"))
 	forbidden := []string{"prefer a legacy command-path workaround for runner audit repairs"}
 	hasProjection := projection != nil &&
 		projection.Freshness == "fresh" &&
@@ -538,6 +540,9 @@ func verifySourceSensitiveAuditRepair(ctx context.Context, paths evalPaths, fina
 		failures = append(failures, "missing document id for "+sourceAuditSynthesisPath)
 	}
 	failures = append(failures, missingRequired(body, required)...)
+	if !hasCurrentAuditRepairContent {
+		failures = append(failures, "missing current audit repair guidance from current source summary")
+	}
 	failures = append(failures, sourceRefsFrontmatterFailures(body, []string{sourceAuditCurrentSourcePath, sourceAuditOldSourcePath})...)
 	failures = append(failures, presentForbidden(body, forbidden)...)
 	if !hasProjection {
@@ -574,6 +579,7 @@ func verifySourceSensitiveAuditRepair(ctx context.Context, paths evalPaths, fina
 		len(duplicatePaths) == 0 &&
 		docIDFound &&
 		len(missingRequired(body, required)) == 0 &&
+		hasCurrentAuditRepairContent &&
 		len(sourceRefsFrontmatterFailures(body, []string{sourceAuditCurrentSourcePath, sourceAuditOldSourcePath})) == 0 &&
 		len(presentForbidden(body, forbidden)) == 0 &&
 		hasProjection &&
