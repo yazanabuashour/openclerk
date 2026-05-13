@@ -6,10 +6,10 @@
 - Release blocking: `false`
 - Configured parallelism: `4`
 - Cache mode: `shared`
-- Cache prewarm seconds: `20.16`
-- Harness elapsed seconds: `48.14`
-- Effective parallel speedup: `0.39x`
-- Parallel efficiency: `0.10`
+- Cache prewarm seconds: `19.86`
+- Harness elapsed seconds: `41.91`
+- Effective parallel speedup: `0.32x`
+- Parallel efficiency: `0.08`
 - Raw logs: `<run-root>/<variant>/<scenario>/turn-N/events.jsonl`
 
 ## Production Gate
@@ -35,20 +35,20 @@ Recommendation: `fix_production_agentops_before_release`
 | Phase | Seconds |
 | --- | ---: |
 | prepare_run_dir | 0.00 |
-| copy_repo | 0.05 |
-| install_variant | 8.90 |
+| copy_repo | 0.09 |
+| install_variant | 8.58 |
 | warm_cache | 0.00 |
-| seed_data | 0.06 |
-| agent_run | 18.89 |
+| seed_data | 0.05 |
+| agent_run | 13.29 |
 | parse_metrics | 0.00 |
-| verify | 0.06 |
-| total | 27.97 |
+| verify | 0.04 |
+| total | 22.05 |
 
 ## Results
 
 | Variant | Scenario | Status | Tools | Commands | Assistant Calls | Non-Cached Input | Wall Seconds | Raw Log |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `production` | `source-audit-workflow-action-natural` | `completed` | 1 | 1 | 2 | 8139 | 18.89 | `<run-root>/production/source-audit-workflow-action-natural/turn-1/events.jsonl` |
+| `production` | `source-audit-workflow-action-natural` | `completed` | 1 | 1 | 2 | 4871 | 13.29 | `<run-root>/production/source-audit-workflow-action-natural/turn-1/events.jsonl` |
 
 ## Targeted Lane Summary
 
@@ -60,4 +60,4 @@ Promotion: implemented narrow source_audit_report retrieval action plus existing
 
 | Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Workflow first command | Workflow calls | Setup discovery | Pre-action setup discovery | Pre-action primitives | Post-action primitives | Final-answer repair turns | Latency | Guidance dependence | Safety pass | Capability pass | UX quality | Safety risks | Fixture preflight | Evidence posture |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- |
-| `production` | `source-audit-workflow-action-natural` | `completed` | `none` | 1 | 1 | 2 | 18.89 | `natural-user-intent` | `completed` | `normal` | 0 | 1 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | `medium` | `low_natural_promoted_workflow_action` | `pass` | `pass` | `workflow_action_acceptable` | `none_observed` | `not_applicable` | source_audit_report preserved source authority, provenance/freshness checks, unresolved-conflict handling, existing-target repair boundaries, and reduced workflow ceremony |
+| `production` | `source-audit-workflow-action-natural` | `completed` | `none` | 1 | 1 | 2 | 13.29 | `natural-user-intent` | `completed` | `normal` | 0 | 1 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | `low` | `low_natural_promoted_workflow_action` | `pass` | `pass` | `workflow_action_acceptable` | `none_observed` | `not_applicable` | source_audit_report preserved source authority, provenance/freshness checks, unresolved-conflict handling, existing-target repair boundaries, and reduced workflow ceremony |

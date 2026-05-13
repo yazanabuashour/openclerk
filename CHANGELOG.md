@@ -2,6 +2,7 @@
 
 This CHANGELOG summarizes public releases. Full OpenClerk release notes are published on GitHub Releases:
 
+- [v0.2.9](https://github.com/yazanabuashour/openclerk/releases/tag/v0.2.9) promotes the documented Records, Graph, Artifacts, and Modules capability surfaces, adds release-facing support matrices/help for structured records, structural graph retrieval, artifact/OCR boundaries, refreshes module smoke evidence, and preserves local-first runner-only boundaries.
 - [v0.2.8](https://github.com/yazanabuashour/openclerk/releases/tag/v0.2.8) adds the `openclerk config` runner domain for persisted product/profile configuration, expands read-only effective config inspection, applies persisted autonomy defaults to document and retrieval actions, and preserves the v0.2 source URL update contract.
 - [v0.2.7](https://github.com/yazanabuashour/openclerk/releases/tag/v0.2.7) promotes routine UX workflow surfaces, real-vault routine UX telemetry, public-corpus autonomy lanes for Kubernetes docs, Go docs, and Moby-Dick, and the latest Dependabot maintenance bumps while preserving the v0.2 source URL update contract and local-first runner boundaries.
 - [v0.2.6](https://github.com/yazanabuashour/openclerk/releases/tag/v0.2.6) fixes module manifest verification from non-release-tree working directories by persisting resolved manifest paths in SQLite runtime configuration while keeping public module output repo-relative and preserving the v0.2 source URL update contract.

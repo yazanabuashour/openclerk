@@ -6,9 +6,9 @@
 - Release blocking: `false`
 - Configured parallelism: `4`
 - Cache mode: `shared`
-- Cache prewarm seconds: `28.21`
-- Harness elapsed seconds: `53.99`
-- Effective parallel speedup: `0.29x`
+- Cache prewarm seconds: `28.40`
+- Harness elapsed seconds: `51.94`
+- Effective parallel speedup: `0.28x`
 - Parallel efficiency: `0.07`
 - Raw logs: `<run-root>/<variant>/<scenario>/turn-N/events.jsonl`
 
@@ -36,19 +36,19 @@ Recommendation: `fix_production_agentops_before_release`
 | --- | ---: |
 | prepare_run_dir | 0.00 |
 | copy_repo | 0.11 |
-| install_variant | 10.05 |
+| install_variant | 8.63 |
 | warm_cache | 0.00 |
-| seed_data | 0.03 |
-| agent_run | 15.56 |
+| seed_data | 0.05 |
+| agent_run | 14.70 |
 | parse_metrics | 0.00 |
-| verify | 0.03 |
-| total | 25.79 |
+| verify | 0.04 |
+| total | 23.53 |
 
 ## Results
 
 | Variant | Scenario | Status | Tools | Commands | Assistant Calls | Non-Cached Input | Wall Seconds | Raw Log |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `production` | `compile-synthesis-workflow-action-natural` | `completed` | 1 | 1 | 2 | 7291 | 15.56 | `<run-root>/production/compile-synthesis-workflow-action-natural/turn-1/events.jsonl` |
+| `production` | `compile-synthesis-workflow-action-natural` | `completed` | 1 | 1 | 2 | 4137 | 14.70 | `<run-root>/production/compile-synthesis-workflow-action-natural/turn-1/events.jsonl` |
 
 ## Targeted Lane Summary
 
@@ -60,4 +60,4 @@ Promotion: implemented narrow compile_synthesis document action plus existing pr
 
 | Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Workflow first command | Workflow calls | Setup discovery | Pre-action setup discovery | Pre-action primitives | Post-action primitives | Final-answer repair turns | Latency | Guidance dependence | Safety pass | Capability pass | UX quality | Safety risks | Fixture preflight | Evidence posture |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- |
-| `production` | `compile-synthesis-workflow-action-natural` | `completed` | `none` | 1 | 1 | 2 | 15.56 | `natural-user-intent` | `completed` | `normal` | 0 | 1 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | `medium` | `low_natural_promoted_workflow_action` | `pass` | `pass` | `workflow_action_acceptable` | `none_observed` | `not_applicable` | compile_synthesis preserved source authority, selected the existing target, prevented duplicates, returned provenance/freshness evidence, and reduced workflow ceremony |
+| `production` | `compile-synthesis-workflow-action-natural` | `completed` | `none` | 1 | 1 | 2 | 14.70 | `natural-user-intent` | `completed` | `normal` | 0 | 1 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | `low` | `low_natural_promoted_workflow_action` | `pass` | `pass` | `workflow_action_acceptable` | `none_observed` | `not_applicable` | compile_synthesis preserved source authority, selected the existing target, prevented duplicates, returned provenance/freshness evidence, and reduced workflow ceremony |

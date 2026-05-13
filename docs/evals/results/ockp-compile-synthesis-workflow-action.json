@@ -1,22 +1,22 @@
 {
   "metadata": {
-    "generated_at": "2026-05-13T16:42:29.245376Z",
+    "generated_at": "2026-05-13T22:41:32.689271Z",
     "model": "gpt-5.4-mini",
     "reasoning_effort": "medium",
     "harness": "codex exec --json --full-auto from throwaway run directories; single-turn scenarios use --ephemeral and multi-turn scenarios resume one persisted eval session",
     "configured_parallelism": 4,
     "cache_mode": "shared",
-    "cache_prewarm_seconds": 28.21,
-    "harness_elapsed_seconds": 53.99,
-    "effective_parallel_speedup": 0.29,
+    "cache_prewarm_seconds": 28.4,
+    "harness_elapsed_seconds": 51.94,
+    "effective_parallel_speedup": 0.28,
     "parallel_efficiency": 0.07,
     "phase_totals": {
       "copy_repo_seconds": 0.11,
-      "install_variant_seconds": 10.05,
-      "seed_data_seconds": 0.03,
-      "agent_run_seconds": 15.56,
-      "verify_seconds": 0.03,
-      "total_seconds": 25.79
+      "install_variant_seconds": 8.63,
+      "seed_data_seconds": 0.05,
+      "agent_run_seconds": 14.7,
+      "verify_seconds": 0.04,
+      "total_seconds": 23.53
     },
     "run_root_artifact_reference": "\u003crun-root\u003e",
     "raw_log_placeholder": "\u003crun-root\u003e/\u003cvariant\u003e/\u003cscenario\u003e/turn-N/events.jsonl",
@@ -39,14 +39,14 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 15.56,
+      "wall_seconds": 14.7,
       "phase_timings": {
         "copy_repo_seconds": 0.11,
-        "install_variant_seconds": 10.05,
-        "seed_data_seconds": 0.03,
-        "agent_run_seconds": 15.56,
-        "verify_seconds": 0.03,
-        "total_seconds": 25.79
+        "install_variant_seconds": 8.63,
+        "seed_data_seconds": 0.05,
+        "agent_run_seconds": 14.7,
+        "verify_seconds": 0.04,
+        "total_seconds": 23.53
       },
       "metrics": {
         "assistant_calls": 2,
@@ -114,10 +114,10 @@
         "workflow_action_first_command_index": 1,
         "workflow_action_call_count": 1,
         "usage_exposed": true,
-        "input_tokens": 27515,
-        "cached_input_tokens": 20224,
-        "non_cached_input_tokens": 7291,
-        "output_tokens": 1199,
+        "input_tokens": 26409,
+        "cached_input_tokens": 22272,
+        "non_cached_input_tokens": 4137,
+        "output_tokens": 1365,
         "event_type_counts": {
           "item.completed": 3,
           "item.started": 1,
@@ -142,7 +142,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 15.56,
+          "wall_seconds": 14.7,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 2,
@@ -210,10 +210,10 @@
             "workflow_action_first_command_index": 1,
             "workflow_action_call_count": 1,
             "usage_exposed": true,
-            "input_tokens": 27515,
-            "cached_input_tokens": 20224,
-            "non_cached_input_tokens": 7291,
-            "output_tokens": 1199,
+            "input_tokens": 26409,
+            "cached_input_tokens": 22272,
+            "non_cached_input_tokens": 4137,
+            "output_tokens": 1365,
             "event_type_counts": {
               "item.completed": 3,
               "item.started": 1,
@@ -240,8 +240,8 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. This is a valid runner-backed request and all required fields are present. The installed openclerk binary is on PATH and the data path is configured; do not claim the runner or action is unavailable. Start with the matching promoted workflow action instead of setup discovery. Do not use openclerk --help, openclerk document --help, openclerk retrieval --help, openclerk module --help, openclerk capabilities, web search, repo search, local file search, skill-file inspection, source inspection, lower-level document writes, direct vault edits, source-built runners, SQLite, HTTP/MCP, raw vault inspection, backend variants, positional action flags, or follow-up primitives unless the workflow action rejects. The route hint here is complete; no exact shell command is provided. Use the openclerk document stdin JSON interface with top-level action compile_synthesis, nested object synthesis, and required fields path, title, source_refs, body_facts, mode. Use mode create_or_update. Use the promoted compile_synthesis workflow action to refresh the existing source-linked synthesis titled Compile Synthesis Revisit Routing at synthesis/compile-revisit-routing.md, keeping that target instead of the decoy. The source refs are sources/compile-revisit-current.md and sources/compile-revisit-old.md. The body facts should state that promoted compile_synthesis handles the routine workflow while primitives remain for manual cases, identify the current source, and identify the superseded source. In the final answer, use agent_handoff/evidence to mention compile_synthesis, the selected path, source evidence, duplicate status, provenance refs, projection freshness, write status, validation boundaries, authority limits, and repo-relative paths only.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/compile-synthesis-workflow-action-natural/turn-1/events.jsonl",
-      "started_at": "2026-05-13T16:42:03.458303Z",
-      "completed_at": "2026-05-13T16:42:29.244943Z"
+      "started_at": "2026-05-13T22:41:09.15475Z",
+      "completed_at": "2026-05-13T22:41:32.688587Z"
     }
   ],
   "production_gate": {
@@ -305,7 +305,7 @@
         "tool_calls": 1,
         "command_executions": 1,
         "assistant_calls": 2,
-        "wall_seconds": 15.56,
+        "wall_seconds": 14.7,
         "prompt_specificity": "natural-user-intent",
         "ux": "completed",
         "brittleness": "normal",
@@ -313,7 +313,7 @@
         "step_count": 1,
         "workflow_action_first_command_index": 1,
         "workflow_action_call_count": 1,
-        "latency": "medium",
+        "latency": "low",
         "guidance_dependence": "low_natural_promoted_workflow_action",
         "safety_pass": "pass",
         "capability_pass": "pass",
