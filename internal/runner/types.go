@@ -59,11 +59,39 @@ type ConfigTaskRequest struct {
 }
 
 type ConfigTaskResult struct {
-	Rejected        bool          `json:"rejected"`
-	RejectionReason string        `json:"rejection_reason,omitempty"`
-	Paths           *Paths        `json:"paths,omitempty"`
-	Profile         AutonomyModes `json:"profile"`
-	Summary         string        `json:"summary"`
+	Rejected        bool                       `json:"rejected"`
+	RejectionReason string                     `json:"rejection_reason,omitempty"`
+	Paths           *Paths                     `json:"paths,omitempty"`
+	Storage         *ConfigStorageSummary      `json:"storage,omitempty"`
+	Profile         AutonomyModes              `json:"profile"`
+	Modules         []ConfigModuleSummary      `json:"modules,omitempty"`
+	GitLifecycle    *ConfigGitLifecycleSummary `json:"git_lifecycle,omitempty"`
+	Summary         string                     `json:"summary"`
+}
+
+type ConfigStorageSummary struct {
+	DatabasePath   string `json:"database_path"`
+	VaultRoot      string `json:"vault_root"`
+	DatabaseSource string `json:"database_source"`
+}
+
+type ConfigModuleSummary struct {
+	Kind               string `json:"kind"`
+	Provider           string `json:"provider"`
+	ModuleName         string `json:"module_name"`
+	Enabled            bool   `json:"enabled"`
+	Command            string `json:"command,omitempty"`
+	ManifestPath       string `json:"manifest_path,omitempty"`
+	ManifestSHA256     string `json:"manifest_sha256,omitempty"`
+	VerificationStatus string `json:"verification_status"`
+	RedactionStatus    string `json:"redaction_status"`
+}
+
+type ConfigGitLifecycleSummary struct {
+	CheckpointPersistence          string `json:"checkpoint_persistence"`
+	CheckpointEnabledForInvocation bool   `json:"checkpoint_enabled_for_invocation"`
+	CheckpointEnablementSource     string `json:"checkpoint_enablement_source"`
+	CheckpointApprovalBoundary     string `json:"checkpoint_approval_boundary"`
 }
 
 type DocumentTaskRequest struct {

@@ -205,6 +205,30 @@ func ListSemanticModules(ctx context.Context, cfg Config) ([]SemanticModuleConfi
 	return modules, nil
 }
 
+// ListConfiguredModules returns stored module summaries without revalidating helper commands.
+func ListConfiguredModules(ctx context.Context, cfg Config) ([]SemanticModuleConfig, error) {
+	modules := []SemanticModuleConfig{}
+	for _, provider := range []string{SemanticModuleProviderOllama, SemanticModuleProviderGemini} {
+		values, err := readSemanticModuleValues(ctx, cfg, provider)
+		if err != nil {
+			return nil, err
+		}
+		config := semanticModuleConfigFromValues(ModuleKindEmbeddingProvider, provider, values)
+		if strings.TrimSpace(config.ModuleName) != "" {
+			modules = append(modules, config)
+		}
+	}
+	values, err := readOCRModuleValues(ctx, cfg, OCRModuleProviderTesseract)
+	if err != nil {
+		return nil, err
+	}
+	config := semanticModuleConfigFromValues(ModuleKindOCRProvider, OCRModuleProviderTesseract, values)
+	if strings.TrimSpace(config.ModuleName) != "" {
+		modules = append(modules, config)
+	}
+	return modules, nil
+}
+
 func ReadSemanticModuleConfig(ctx context.Context, cfg Config, provider string) (SemanticModuleConfig, error) {
 	normalized, err := normalizeSemanticModuleProvider(provider)
 	if err != nil {
@@ -214,24 +238,7 @@ func ReadSemanticModuleConfig(ctx context.Context, cfg Config, provider string) 
 	if err != nil {
 		return SemanticModuleConfig{}, err
 	}
-	config := SemanticModuleConfig{
-		Kind:                 ModuleKindEmbeddingProvider,
-		Provider:             normalized,
-		ModuleName:           values["module_name"],
-		Enabled:              values["enabled"] == "true",
-		Command:              values["command"],
-		ManifestPath:         values["manifest_path"],
-		ManifestSHA256:       values["manifest_sha256"],
-		ManifestResolvedPath: values["manifest_resolved_path"],
-		ProviderConfig:       map[string]string{},
-		VerificationStatus:   "not_installed",
-		RedactionStatus:      "redacted",
-	}
-	_ = json.Unmarshal([]byte(values["command_args_json"]), &config.CommandArgs)
-	_ = json.Unmarshal([]byte(values["provider_config_json"]), &config.ProviderConfig)
-	if config.ProviderConfig == nil {
-		config.ProviderConfig = map[string]string{}
-	}
+	config := semanticModuleConfigFromValues(ModuleKindEmbeddingProvider, normalized, values)
 	if strings.TrimSpace(config.ModuleName) == "" {
 		return config, nil
 	}
@@ -353,9 +360,26 @@ func ReadOCRModuleConfig(ctx context.Context, cfg Config, provider string) (Sema
 	if err != nil {
 		return SemanticModuleConfig{}, err
 	}
+	config := semanticModuleConfigFromValues(ModuleKindOCRProvider, normalized, values)
+	if strings.TrimSpace(config.ModuleName) == "" {
+		return config, nil
+	}
+	if !config.Enabled {
+		config.VerificationStatus = "disabled"
+		return config, nil
+	}
+	if err := verifyInstalledOCRModule(cfg, config); err != nil {
+		config.VerificationStatus = "verification_failed"
+		return config, err
+	}
+	config.VerificationStatus = "verified"
+	return config, nil
+}
+
+func semanticModuleConfigFromValues(kind string, provider string, values map[string]string) SemanticModuleConfig {
 	config := SemanticModuleConfig{
-		Kind:                 ModuleKindOCRProvider,
-		Provider:             normalized,
+		Kind:                 kind,
+		Provider:             provider,
 		ModuleName:           values["module_name"],
 		Enabled:              values["enabled"] == "true",
 		Command:              values["command"],
@@ -371,19 +395,12 @@ func ReadOCRModuleConfig(ctx context.Context, cfg Config, provider string) (Sema
 	if config.ProviderConfig == nil {
 		config.ProviderConfig = map[string]string{}
 	}
-	if strings.TrimSpace(config.ModuleName) == "" {
-		return config, nil
-	}
-	if !config.Enabled {
+	if strings.TrimSpace(config.ModuleName) != "" && config.Enabled {
+		config.VerificationStatus = "configured"
+	} else if strings.TrimSpace(config.ModuleName) != "" {
 		config.VerificationStatus = "disabled"
-		return config, nil
 	}
-	if err := verifyInstalledOCRModule(cfg, config); err != nil {
-		config.VerificationStatus = "verification_failed"
-		return config, err
-	}
-	config.VerificationStatus = "verified"
-	return config, nil
+	return config
 }
 
 func normalizeSemanticModuleProvider(provider string) (string, error) {

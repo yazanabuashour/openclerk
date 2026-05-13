@@ -13,23 +13,15 @@ func RunConfigTask(ctx context.Context, config runclient.Config, request ConfigT
 	if action == "" {
 		action = ConfigTaskActionInspectConfig
 	}
-	paths, err := runclient.ResolvePaths(config)
+	resolved, err := runclient.ResolvePathsWithSource(config)
 	if err != nil {
 		return ConfigTaskResult{}, err
 	}
-	convertedPaths := toPaths(paths)
+	convertedPaths := toPaths(resolved.Paths)
 
 	switch action {
 	case ConfigTaskActionInspectConfig:
-		profile, err := configuredProfileAutonomyModes(ctx, config)
-		if err != nil {
-			return ConfigTaskResult{}, err
-		}
-		return ConfigTaskResult{
-			Paths:   &convertedPaths,
-			Profile: profile,
-			Summary: "inspected OpenClerk config",
-		}, nil
+		return inspectConfigResult(ctx, config, resolved, convertedPaths)
 	case ConfigTaskActionConfigureProfile:
 		current, err := configuredProfileAutonomyModes(ctx, config)
 		if err != nil {
@@ -63,6 +55,60 @@ func RunConfigTask(ctx context.Context, config runclient.Config, request ConfigT
 	default:
 		return rejectedConfig(convertedPaths, fmt.Sprintf("unsupported config action %q", action)), nil
 	}
+}
+
+func inspectConfigResult(ctx context.Context, config runclient.Config, resolved runclient.ResolvedPaths, convertedPaths Paths) (ConfigTaskResult, error) {
+	profile, err := configuredProfileAutonomyModes(ctx, config)
+	if err != nil {
+		return ConfigTaskResult{}, err
+	}
+	modules, err := configuredModuleSummaries(ctx, config)
+	if err != nil {
+		return ConfigTaskResult{}, err
+	}
+	return ConfigTaskResult{
+		Paths:   &convertedPaths,
+		Storage: storageSummary(resolved),
+		Profile: profile,
+		Modules: modules,
+		GitLifecycle: &ConfigGitLifecycleSummary{
+			CheckpointPersistence:          "unsupported",
+			CheckpointEnabledForInvocation: gitLifecycleCheckpointsEnabled(config),
+			CheckpointEnablementSource:     gitLifecycleCheckpointEnablementSource(config),
+			CheckpointApprovalBoundary:     gitLifecycleApprovalBoundary("checkpoint"),
+		},
+		Summary: "inspected OpenClerk config",
+	}, nil
+}
+
+func storageSummary(resolved runclient.ResolvedPaths) *ConfigStorageSummary {
+	return &ConfigStorageSummary{
+		DatabasePath:   resolved.DatabasePath,
+		VaultRoot:      resolved.VaultRoot,
+		DatabaseSource: resolved.DatabaseSource,
+	}
+}
+
+func configuredModuleSummaries(ctx context.Context, config runclient.Config) ([]ConfigModuleSummary, error) {
+	modules, err := runclient.ListConfiguredModules(ctx, config)
+	if err != nil {
+		return nil, err
+	}
+	summaries := make([]ConfigModuleSummary, 0, len(modules))
+	for _, module := range modules {
+		summaries = append(summaries, ConfigModuleSummary{
+			Kind:               module.Kind,
+			Provider:           module.Provider,
+			ModuleName:         module.ModuleName,
+			Enabled:            module.Enabled,
+			Command:            module.Command,
+			ManifestPath:       module.ManifestPath,
+			ManifestSHA256:     module.ManifestSHA256,
+			VerificationStatus: module.VerificationStatus,
+			RedactionStatus:    module.RedactionStatus,
+		})
+	}
+	return summaries, nil
 }
 
 func applyProfileDefaults(ctx context.Context, config runclient.Config, input AutonomyModes) (AutonomyModes, error) {

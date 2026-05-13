@@ -35,6 +35,12 @@ type Paths struct {
 	VaultRoot    string
 }
 
+// ResolvedPaths describes effective runtime paths and how the database path was selected.
+type ResolvedPaths struct {
+	Paths
+	DatabaseSource string
+}
+
 // Runtime owns the in-process store used by the runner runtime.
 type Runtime struct {
 	paths Paths
@@ -59,27 +65,47 @@ func (r *Runtime) Paths() Paths {
 
 // ResolvePaths returns the effective storage layout for an internal runtime.
 func ResolvePaths(cfg Config) (Paths, error) {
-	return resolvePaths(cfg, true)
+	resolved, err := ResolvePathsWithSource(cfg)
+	if err != nil {
+		return Paths{}, err
+	}
+	return resolved.Paths, nil
+}
+
+// ResolvePathsWithSource returns the effective storage layout plus database path source metadata.
+func ResolvePathsWithSource(cfg Config) (ResolvedPaths, error) {
+	return resolvePathsWithSource(cfg, true)
 }
 
 func resolvePaths(cfg Config, lock bool) (Paths, error) {
-	databasePath, err := resolveDatabasePath(cfg)
+	resolved, err := resolvePathsWithSource(cfg, lock)
 	if err != nil {
 		return Paths{}, err
+	}
+	return resolved.Paths, nil
+}
+
+func resolvePathsWithSource(cfg Config, lock bool) (ResolvedPaths, error) {
+	databasePath, databaseSource, err := resolveDatabasePathWithSource(cfg)
+	if err != nil {
+		return ResolvedPaths{}, err
 	}
 	databasePath = filepath.Clean(databasePath)
 	if lock {
 		unlock, err := acquireRuntimeConfigLock(context.Background(), databasePath)
 		if err != nil {
-			return Paths{}, err
+			return ResolvedPaths{}, err
 		}
 		defer unlock()
 	}
 	runtimeConfig, err := sqlite.ResolveRuntimeConfig(context.Background(), databasePath, filepath.Join(filepath.Dir(databasePath), defaultVaultDir))
 	if err != nil {
-		return Paths{}, decorateRuntimeConfigError("resolve", databasePath, err)
+		return ResolvedPaths{}, decorateRuntimeConfigError("resolve", databasePath, err)
 	}
-	return Paths{DatabasePath: databasePath, VaultRoot: runtimeConfig.VaultRoot}, nil
+	return ResolvedPaths{
+		Paths:          Paths{DatabasePath: databasePath, VaultRoot: runtimeConfig.VaultRoot},
+		DatabaseSource: databaseSource,
+	}, nil
 }
 
 func InitializePaths(cfg Config, vaultRoot string) (Paths, error) {
@@ -328,17 +354,22 @@ func ensureLocalDir(path string) error {
 }
 
 func resolveDatabasePath(cfg Config) (string, error) {
+	databasePath, _, err := resolveDatabasePathWithSource(cfg)
+	return databasePath, err
+}
+
+func resolveDatabasePathWithSource(cfg Config) (string, string, error) {
 	switch {
 	case strings.TrimSpace(cfg.DatabasePath) != "":
-		return cfg.DatabasePath, nil
+		return cfg.DatabasePath, "flag", nil
 	case strings.TrimSpace(os.Getenv("OPENCLERK_DATABASE_PATH")) != "":
-		return os.Getenv("OPENCLERK_DATABASE_PATH"), nil
+		return os.Getenv("OPENCLERK_DATABASE_PATH"), "env", nil
 	default:
 		dataDir, err := defaultDataDir()
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
-		return filepath.Join(dataDir, defaultDBFile), nil
+		return filepath.Join(dataDir, defaultDBFile), "default", nil
 	}
 }
 

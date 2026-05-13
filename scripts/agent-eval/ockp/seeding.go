@@ -53,6 +53,10 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedModuleAgentUpgrade(ctx, cfg); err != nil {
 			return err
 		}
+	case profileConfigScenarioID:
+		if err := seedProfileConfigInspection(ctx, cfg); err != nil {
+			return err
+		}
 	case docsNavigationScenarioID:
 		if err := seedDocsNavigationBaseline(ctx, cfg); err != nil {
 			return err
@@ -543,6 +547,20 @@ func seedModuleAgentUpgrade(ctx context.Context, cfg runclient.Config) error {
 		Command:      moduleAgentInstallCommand,
 		ProviderConfig: map[string]string{
 			"embedding_model": moduleAgentUpgradeEmbeddingModel,
+			"ollama_url":      moduleAgentInstallOllamaURL,
+		},
+	})
+	return err
+}
+
+func seedProfileConfigInspection(ctx context.Context, cfg runclient.Config) error {
+	cfg.ModuleManifestRoot = filepath.Dir(filepath.Dir(cfg.DatabasePath))
+	_, err := runclient.InstallSemanticModule(ctx, cfg, runclient.SemanticModuleInstallInput{
+		Provider:     moduleAgentInstallProvider,
+		ManifestPath: moduleAgentInstallManifestPath,
+		Command:      moduleAgentInstallCommand,
+		ProviderConfig: map[string]string{
+			"embedding_model": moduleAgentInstallEmbeddingModel,
 			"ollama_url":      moduleAgentInstallOllamaURL,
 		},
 	})

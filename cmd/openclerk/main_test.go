@@ -63,6 +63,11 @@ func TestCapabilitiesManifestShowsBuildingBlocks(t *testing.T) {
 		!hasCapabilityExtension(result, "tesseract-ocr", "modules/tesseract-ocr/module.json") {
 		t.Fatalf("capabilities missing expected module extension points: %+v", result.ExtensionPoints)
 	}
+	if capabilitiesJSON := stdout.String(); !strings.Contains(capabilitiesJSON, "storage") ||
+		!strings.Contains(capabilitiesJSON, "git lifecycle") ||
+		!strings.Contains(capabilitiesJSON, "module") {
+		t.Fatalf("capabilities missing config introspection summary: %s", capabilitiesJSON)
+	}
 }
 
 func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
@@ -76,7 +81,7 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 		{
 			name: "config",
 			args: []string{"config", "--help"},
-			want: []string{"inspect_config", "configure_profile", "clear_profile", "approval_mode", "openclerk module configure_module"},
+			want: []string{"inspect_config", "configure_profile", "clear_profile", "approval_mode", "storage", "git_lifecycle", "checkpoint_persistence", "openclerk module configure_module"},
 		},
 		{
 			name: "document",
@@ -153,6 +158,13 @@ func TestRunnerConfigProfileJSONPersistsAcrossInvocations(t *testing.T) {
 	}
 	if inspected.Profile != configured.Profile {
 		t.Fatalf("inspected profile = %+v, want %+v", inspected.Profile, configured.Profile)
+	}
+	if inspected.Storage == nil ||
+		inspected.Storage.DatabasePath != dbPath ||
+		inspected.Storage.DatabaseSource != "flag" ||
+		inspected.GitLifecycle == nil ||
+		inspected.GitLifecycle.CheckpointPersistence != "unsupported" {
+		t.Fatalf("inspected config summary = %+v", inspected)
 	}
 
 	var invalid runner.ConfigTaskResult
@@ -237,6 +249,19 @@ func TestRunnerModuleInstallConfigureListRemoveJSON(t *testing.T) {
 		configureResult.Module.ProviderConfig["embedding_output_dimensions"] != "3072" ||
 		configureResult.Module.ProviderConfig["credential_ref"] != "runtime_config:GEMINI_API_KEY" {
 		t.Fatalf("configure result = %+v", configureResult)
+	}
+
+	var inspectResult runner.ConfigTaskResult
+	code, stderr = runJSON(t, []string{"config", "--db", dbPath}, `{"action":"inspect_config"}`, &inspectResult)
+	if code != 0 {
+		t.Fatalf("inspect config exit = %d stderr=%s", code, stderr)
+	}
+	if len(inspectResult.Modules) != 1 ||
+		inspectResult.Modules[0].Provider != "gemini" ||
+		inspectResult.Modules[0].Kind != "embedding_provider" ||
+		inspectResult.Modules[0].Enabled ||
+		inspectResult.Modules[0].RedactionStatus != "redacted" {
+		t.Fatalf("inspect module summaries = %+v", inspectResult.Modules)
 	}
 
 	var listResult moduleTaskResult

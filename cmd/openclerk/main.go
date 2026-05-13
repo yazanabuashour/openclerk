@@ -132,7 +132,7 @@ func buildCapabilitiesResult() capabilitiesResult {
 				Command: "openclerk config",
 				Posture: "strict JSON runner for product configuration and persisted default profile preferences",
 				Primitive: []capabilityAction{
-					{Action: "inspect_config", Purpose: "inspect effective persisted OpenClerk config and default profile preferences", Posture: "read_only"},
+					{Action: "inspect_config", Purpose: "inspect effective storage, profile, module, and git lifecycle configuration without exposing raw runtime_config keys", Posture: "read_only"},
 					{Action: "configure_profile", Purpose: "persist default autonomy/profile preferences for document and retrieval requests", Posture: "configuration_write"},
 					{Action: "clear_profile", Purpose: "clear persisted profile preferences and return to built-in defaults", Posture: "configuration_write"},
 				},
@@ -505,13 +505,14 @@ func usage(stderr io.Writer) {
 }
 
 func configUsage(w io.Writer) {
-	_, _ = fmt.Fprintln(w, "usage: openclerk config [--db path] < request.json")
+	_, _ = fmt.Fprintln(w, "usage: openclerk config [--db path] [--git-checkpoints] < request.json")
 	_, _ = fmt.Fprintln(w, "")
 	_, _ = fmt.Fprintln(w, "Reads one strict JSON object from stdin and writes one JSON result.")
-	_, _ = fmt.Fprintln(w, "Manages persisted product/profile configuration through runtime_config state.")
+	_, _ = fmt.Fprintln(w, "Inspects effective storage/profile/module/git lifecycle config and manages persisted product/profile configuration.")
 	_, _ = fmt.Fprintln(w, `  inspect: {"action":"inspect_config"}`)
 	_, _ = fmt.Fprintln(w, `  configure profile: {"action":"configure_profile","profile":{"approval_mode":"approve_write","drafting_mode":"suggest_fields","write_target_mode":"create_or_update","citation_mode":"balanced","privacy_mode":"allow_paths","audience_mode":"technical"}}`)
 	_, _ = fmt.Fprintln(w, `  clear profile: {"action":"clear_profile"}`)
+	_, _ = fmt.Fprintln(w, "inspect_config returns storage, profile, modules, and git_lifecycle summaries; checkpoint_persistence is unsupported by design.")
 	_, _ = fmt.Fprintln(w, "Request-level document/retrieval autonomy fields override persisted profile defaults field-by-field.")
 	_, _ = fmt.Fprintln(w, "Provider/module settings remain under openclerk module configure_module.")
 }

@@ -2,6 +2,8 @@ package runner_test
 
 import (
 	"context"
+	"encoding/json"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -11,7 +13,7 @@ import (
 )
 
 func TestConfigTaskProfileInspectConfigureAndClear(t *testing.T) {
-	t.Parallel()
+	t.Setenv("OPENCLERK_GIT_CHECKPOINTS", "")
 
 	ctx := context.Background()
 	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
@@ -28,6 +30,18 @@ func TestConfigTaskProfileInspectConfigureAndClear(t *testing.T) {
 		inspect.Profile.PrivacyMode != runner.PrivacyModeAllowPaths ||
 		inspect.Profile.AudienceMode != runner.AudienceModeTechnical {
 		t.Fatalf("default inspect = %+v", inspect)
+	}
+	if inspect.Storage == nil ||
+		inspect.Storage.DatabasePath != config.DatabasePath ||
+		inspect.Storage.VaultRoot != filepath.Join(filepath.Dir(config.DatabasePath), "vault") ||
+		inspect.Storage.DatabaseSource != "flag" {
+		t.Fatalf("storage summary = %+v", inspect.Storage)
+	}
+	if inspect.GitLifecycle == nil ||
+		inspect.GitLifecycle.CheckpointPersistence != "unsupported" ||
+		inspect.GitLifecycle.CheckpointEnabledForInvocation ||
+		inspect.GitLifecycle.CheckpointEnablementSource != "none" {
+		t.Fatalf("git lifecycle summary = %+v", inspect.GitLifecycle)
 	}
 
 	configured, err := runner.RunConfigTask(ctx, config, runner.ConfigTaskRequest{
@@ -71,6 +85,14 @@ func TestConfigTaskProfileInspectConfigureAndClear(t *testing.T) {
 	}
 	if !invalid.Rejected || !strings.Contains(invalid.RejectionReason, "profile.audience_mode") {
 		t.Fatalf("invalid profile result = %+v", invalid)
+	}
+
+	unsupported, err := runner.RunConfigTask(ctx, config, runner.ConfigTaskRequest{Action: "write_raw_runtime_config"})
+	if err != nil {
+		t.Fatalf("unsupported config action: %v", err)
+	}
+	if !unsupported.Rejected || !strings.Contains(unsupported.RejectionReason, "unsupported config action") {
+		t.Fatalf("unsupported config result = %+v", unsupported)
 	}
 
 	cleared, err := runner.RunConfigTask(ctx, config, runner.ConfigTaskRequest{Action: runner.ConfigTaskActionClearProfile})
@@ -141,4 +163,111 @@ func TestProfileDefaultsGateDocumentAndRetrievalWithRequestOverride(t *testing.T
 	if !blockedRetrieval.Rejected || !strings.Contains(blockedRetrieval.RejectionReason, "propose_only") {
 		t.Fatalf("blocked retrieval = %+v", blockedRetrieval)
 	}
+}
+
+func TestConfigInspectSummarizesModulesWithoutProviderSecrets(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	manifestPath := writeRunnerSemanticModuleManifest(t, t.TempDir(), "gemini")
+	if _, err := runclient.InstallSemanticModule(ctx, config, runclient.SemanticModuleInstallInput{
+		Provider:     "gemini",
+		ManifestPath: manifestPath,
+		Command:      "semantic-retrieval-adapter",
+		ProviderConfig: map[string]string{
+			"embedding_model": "gemini-embedding-001",
+			"gemini_api_base": "https://generativelanguage.googleapis.com/v1beta",
+			"api_key":         "do-not-leak",
+		},
+	}); err != nil {
+		t.Fatalf("install module: %v", err)
+	}
+
+	inspect, err := runner.RunConfigTask(ctx, config, runner.ConfigTaskRequest{Action: runner.ConfigTaskActionInspectConfig})
+	if err != nil {
+		t.Fatalf("inspect config: %v", err)
+	}
+	if len(inspect.Modules) != 1 ||
+		inspect.Modules[0].Provider != "gemini" ||
+		inspect.Modules[0].Kind != runclient.ModuleKindEmbeddingProvider ||
+		!inspect.Modules[0].Enabled ||
+		inspect.Modules[0].Command != "semantic-retrieval-adapter" ||
+		inspect.Modules[0].RedactionStatus != "redacted" {
+		t.Fatalf("module summaries = %+v", inspect.Modules)
+	}
+	data, err := json.Marshal(inspect)
+	if err != nil {
+		t.Fatalf("marshal inspect: %v", err)
+	}
+	if strings.Contains(string(data), "do-not-leak") || strings.Contains(string(data), "provider_config") {
+		t.Fatalf("inspect leaked provider config: %s", data)
+	}
+}
+
+func TestConfigInspectReportsGitCheckpointInvocationGate(t *testing.T) {
+	ctx := context.Background()
+
+	flagConfig := runclient.Config{
+		DatabasePath:   filepath.Join(t.TempDir(), "flag", "openclerk.sqlite"),
+		GitCheckpoints: true,
+	}
+	flagInspect, err := runner.RunConfigTask(ctx, flagConfig, runner.ConfigTaskRequest{Action: runner.ConfigTaskActionInspectConfig})
+	if err != nil {
+		t.Fatalf("inspect flag config: %v", err)
+	}
+	if flagInspect.GitLifecycle == nil ||
+		!flagInspect.GitLifecycle.CheckpointEnabledForInvocation ||
+		flagInspect.GitLifecycle.CheckpointEnablementSource != "flag" ||
+		flagInspect.GitLifecycle.CheckpointPersistence != "unsupported" {
+		t.Fatalf("flag git lifecycle = %+v", flagInspect.GitLifecycle)
+	}
+
+	t.Setenv("OPENCLERK_GIT_CHECKPOINTS", "yes")
+	envConfig := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "env", "openclerk.sqlite")}
+	envInspect, err := runner.RunConfigTask(ctx, envConfig, runner.ConfigTaskRequest{Action: runner.ConfigTaskActionInspectConfig})
+	if err != nil {
+		t.Fatalf("inspect env config: %v", err)
+	}
+	if envInspect.GitLifecycle == nil ||
+		!envInspect.GitLifecycle.CheckpointEnabledForInvocation ||
+		envInspect.GitLifecycle.CheckpointEnablementSource != "env" {
+		t.Fatalf("env git lifecycle = %+v", envInspect.GitLifecycle)
+	}
+}
+
+func writeRunnerSemanticModuleManifest(t *testing.T, dir string, provider string) string {
+	t.Helper()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("create manifest dir: %v", err)
+	}
+	path := filepath.Join(dir, "module.json")
+	manifest := map[string]any{
+		"schema_version": "openclerk-module.v1",
+		"module": map[string]any{
+			"name":    provider + "-embeddings",
+			"version": "0.1.0",
+			"kind":    "embedding_provider",
+		},
+		"provides": []map[string]any{{
+			"type": "command",
+			"name": "semantic-retrieval-adapter search",
+		}},
+		"authority": map[string]any{
+			"default":        "read_only",
+			"durable_writes": "forbidden",
+			"forbidden":      []string{"write_documents", "change_openclerk_search_default"},
+		},
+		"release": map[string]any{
+			"status": "supported_optional_module",
+		},
+	}
+	data, err := json.Marshal(manifest)
+	if err != nil {
+		t.Fatalf("marshal manifest: %v", err)
+	}
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	return path
 }

@@ -144,10 +144,13 @@ openclerk document --help
 openclerk retrieval --help
 ```
 
+`openclerk config inspect_config` is the read-only effective config summary for
+storage, profile defaults, module summaries, and git lifecycle gate posture.
 `openclerk config` owns persisted product/profile preferences such as the
-default autonomy profile. `openclerk module` owns optional provider settings.
+default autonomy profile. `openclerk module` owns optional provider writes.
 Request-level `document` and `retrieval` `autonomy` fields override persisted
-profile defaults field-by-field.
+profile defaults field-by-field. Git checkpoint enablement remains
+invocation-scoped through `--git-checkpoints` or `OPENCLERK_GIT_CHECKPOINTS`.
 
 Storage: `${XDG_DATA_HOME:-~/.local/share}/openclerk/openclerk.sqlite`  
 Override: `OPENCLERK_DATABASE_PATH` or `--db`

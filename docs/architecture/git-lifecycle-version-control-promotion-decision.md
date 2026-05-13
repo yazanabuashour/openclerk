@@ -48,6 +48,8 @@ Defaults and config:
 - `checkpoint` is disabled by default.
 - `checkpoint` requires `--git-checkpoints` or
   `OPENCLERK_GIT_CHECKPOINTS=1`.
+- `openclerk config inspect_config` reports the effective invocation gate
+  source and `checkpoint_persistence: unsupported`.
 - replacing that explicit gate with SQLite-configured default-enabled
   checkpoints is not promoted because it can make future durable local commits
   surprising after a persisted opt-in.

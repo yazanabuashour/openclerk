@@ -74,6 +74,8 @@ Default behavior:
 - checkpoint writes are disabled by default.
 - checkpoint writes require `--git-checkpoints` or
   `OPENCLERK_GIT_CHECKPOINTS=1`.
+- `openclerk config inspect_config` reports the effective checkpoint gate
+  source for the current invocation and `checkpoint_persistence: unsupported`.
 - this ADR explicitly rejects replacing that explicit gate with a SQLite
   default-enabled config flag because durable checkpoint commits are writes and
   should remain visible at the invocation boundary until stronger UX evidence

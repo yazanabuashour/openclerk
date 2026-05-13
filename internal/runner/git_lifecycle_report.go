@@ -306,14 +306,24 @@ func runGitLifecycleCommandNoOutput(ctx context.Context, vaultRoot string, args 
 }
 
 func gitLifecycleCheckpointsEnabled(config runclient.Config) bool {
+	enabled, _ := gitLifecycleCheckpointEnablement(config)
+	return enabled
+}
+
+func gitLifecycleCheckpointEnablementSource(config runclient.Config) string {
+	_, source := gitLifecycleCheckpointEnablement(config)
+	return source
+}
+
+func gitLifecycleCheckpointEnablement(config runclient.Config) (bool, string) {
 	if config.GitCheckpoints {
-		return true
+		return true, "flag"
 	}
 	switch strings.ToLower(strings.TrimSpace(os.Getenv("OPENCLERK_GIT_CHECKPOINTS"))) {
 	case "1", "true", "enabled", "on", "yes":
-		return true
+		return true, "env"
 	default:
-		return false
+		return false, "none"
 	}
 }
 

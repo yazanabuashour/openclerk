@@ -282,7 +282,7 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	switch lane {
 	case profileConfigLaneName:
 		summary.Decision = "promote_persisted_profile_config"
-		summary.Promotion = "implemented openclerk config persisted profile defaults; no module/provider behavior change"
+		summary.Promotion = "implemented openclerk config persisted profile defaults plus read-only effective storage/module/git lifecycle introspection; no module/provider write behavior change"
 	case populatedLaneName:
 		summary.Decision = "keep_as_reference"
 		summary.Promotion = "no promoted runner action, schema, migration, storage API, product behavior, or public OpenClerk interface"

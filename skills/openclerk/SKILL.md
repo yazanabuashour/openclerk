@@ -16,8 +16,7 @@ openclerk document
 openclerk retrieval
 ```
 
-`SKILL.md` is an activation, routing, and safety contract, not the durable home
-for long workflow recipes. Once a request is safely inside the runner contract,
+`SKILL.md` is an activation, routing, and safety contract, not the durable home for long workflow recipes. Once a request is safely inside the runner contract,
 use agent autonomy with runner JSON results, runner rejections, returned
 `agent_handoff`, `openclerk capabilities` for static surface discovery, and
 compact runner help. Repeated exact JSON, command ordering, or
@@ -100,13 +99,15 @@ follow-up primitives unless the result rejects or the user asks for more.
   `source_audit_report` explain, and `audit_contradictions` plan_only.
   Sequence writes: `init`, document writes, `compile_synthesis`, repair modes.
 - Durable writes require explicit approval for proposed path/title/body,
-  placement, or update-versus-new choice. Public read/fetch/inspect permission
-  is not durable-write approval.
+  placement, or update-versus-new choice; public read/fetch/inspect is not
+  durable-write approval.
 - Honor persisted or supplied autonomy profiles: `approval_mode`,
   `drafting_mode`, `write_target_mode`, `citation_mode`, `privacy_mode`, and
-  `audience_mode`. `openclerk config` inspects/configures persisted defaults;
-  request autonomy overrides them field-by-field. `propose_only` blocks durable
-  writes; trusted/disposable modes still need an appropriate target.
+  `audience_mode`. `openclerk config inspect_config` reports effective storage,
+  profile, module, and git gate posture; `configure_profile`/`clear_profile`
+  are the only profile writes. Request autonomy overrides persisted defaults
+  field-by-field. `propose_only` blocks durable writes;
+  trusted/disposable modes still need an appropriate target.
 
 ## No-Tools Before Runners
 

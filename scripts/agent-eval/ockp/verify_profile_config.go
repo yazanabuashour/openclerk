@@ -45,11 +45,44 @@ func verifyProfileConfiguration(ctx context.Context, paths evalPaths, finalMessa
 	if !defaultsRestored {
 		failures = append(failures, fmt.Sprintf("profile defaults not restored after clear_profile: %+v", inspect.Profile))
 	}
+	modulePass := false
+	for _, module := range inspect.Modules {
+		if module.Provider == moduleAgentInstallProvider &&
+			module.Kind == runclient.ModuleKindEmbeddingProvider &&
+			module.ModuleName == moduleAgentInstallProvider+"-embeddings" &&
+			module.Enabled &&
+			module.RedactionStatus == "redacted" {
+			modulePass = true
+			break
+		}
+	}
+	if !modulePass {
+		failures = append(failures, fmt.Sprintf("inspect_config did not summarize seeded %s module: %+v", moduleAgentInstallProvider, inspect.Modules))
+	}
+	storagePass := inspect.Storage != nil &&
+		inspect.Storage.DatabasePath == paths.DatabasePath &&
+		inspect.Storage.DatabaseSource != "" &&
+		inspect.Storage.VaultRoot != ""
+	if !storagePass {
+		failures = append(failures, fmt.Sprintf("inspect_config did not summarize storage: %+v", inspect.Storage))
+	}
+	gitLifecyclePass := inspect.GitLifecycle != nil &&
+		inspect.GitLifecycle.CheckpointPersistence == "unsupported" &&
+		inspect.GitLifecycle.CheckpointEnablementSource != ""
+	if !gitLifecyclePass {
+		failures = append(failures, fmt.Sprintf("inspect_config did not summarize git lifecycle checkpoint posture: %+v", inspect.GitLifecycle))
+	}
 	requiredAnswer := []string{
 		"openclerk config",
 		"configure_profile",
 		"inspect_config",
 		"clear_profile",
+		"storage",
+		"modules",
+		moduleAgentInstallProvider,
+		"git_lifecycle",
+		"checkpoint_persistence",
+		"unsupported",
 		profileConfigPath,
 		"approval_mode",
 		"drafting_mode",
@@ -65,7 +98,7 @@ func verifyProfileConfiguration(ctx context.Context, paths evalPaths, finalMessa
 		failures = append(failures, "final answer did not report profile configuration, gating, override, clear, and all six modes")
 	}
 	activityPass := len(documentHistoryInvariantFailures(turnMetrics)) == 0 && turnMetrics.ToolCalls > 0 && turnMetrics.CommandExecutions > 0
-	databasePass := createdCount == 1 && blockedCount == 0 && repairCount == 0 && defaultsRestored
+	databasePass := createdCount == 1 && blockedCount == 0 && repairCount == 0 && defaultsRestored && modulePass && storagePass && gitLifecyclePass
 	return verificationResult{
 		Passed:        databasePass && assistantPass && activityPass,
 		DatabasePass:  databasePass,
