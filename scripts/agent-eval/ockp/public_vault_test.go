@@ -265,6 +265,29 @@ func fakePublicVaultRunner(_ context.Context, _ publicVaultConfig, job publicVau
 	}
 }
 
+func TestPublicVaultQualityFlagsCeremonyAndLatencyDebt(t *testing.T) {
+	result := publicVaultJobResult{
+		Status:      "completed",
+		WallSeconds: 1,
+		Metrics: metrics{
+			CommandExecutions: 14,
+			EventTypeCounts:   map[string]int{},
+		},
+	}
+	if got := publicVaultQuality(result); got != "acceptable" {
+		t.Fatalf("quality = %q, want acceptable", got)
+	}
+	result.Metrics.CommandExecutions = 15
+	if got := publicVaultQuality(result); got != "taste_debt" {
+		t.Fatalf("command-heavy quality = %q, want taste_debt", got)
+	}
+	result.Metrics.CommandExecutions = 1
+	result.WallSeconds = 90.01
+	if got := publicVaultQuality(result); got != "taste_debt" {
+		t.Fatalf("slow quality = %q, want taste_debt", got)
+	}
+}
+
 func validPublicVaultTaskManifestForTest() publicVaultTaskManifest {
 	classes := []string{
 		"source_discovery",

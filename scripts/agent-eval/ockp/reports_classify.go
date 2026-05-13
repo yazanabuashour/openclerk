@@ -609,6 +609,7 @@ func workflowActionCeremonyExceeded(result jobResult) bool {
 		return result.Metrics.CommandExecutions > 3 || result.Metrics.AssistantCalls > 2 || scenarioRetries(result) > 0
 	}
 	return result.Metrics.WorkflowActionCallCount > 3 ||
+		result.Metrics.WorkflowActionFirstCommandIndex > 1 ||
 		result.Metrics.PreActionPrimitiveCommandCount > 0 ||
 		result.Metrics.PostActionPrimitiveCommandCount > 0 ||
 		result.Metrics.FinalAnswerRepairTurns > 0 ||

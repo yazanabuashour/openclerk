@@ -2070,12 +2070,13 @@ func TestWorkflowActionLaneMetadataAndUX(t *testing.T) {
 			if lane != tt.lane || releaseBlocking {
 				t.Fatalf("lane metadata = %q/%t, want %q/false", lane, releaseBlocking, tt.lane)
 			}
+			cleanMetrics := tt.action(metrics{ToolCalls: 1, CommandExecutions: 1, AssistantCalls: 1, EventTypeCounts: map[string]int{}})
 			result := jobResult{
 				Variant:      productionVariant,
 				Scenario:     tt.scenario,
 				Status:       "passed",
 				Passed:       true,
-				Metrics:      tt.action(metrics{ToolCalls: 1, CommandExecutions: 1, AssistantCalls: 1, EventTypeCounts: map[string]int{}}),
+				Metrics:      cleanMetrics,
 				Verification: verificationResult{Passed: true, DatabasePass: true, AssistantPass: true},
 			}
 			summary := buildTargetedLaneSummary(tt.lane, false, []jobResult{result})
@@ -2096,6 +2097,17 @@ func TestWorkflowActionLaneMetadataAndUX(t *testing.T) {
 			row = summary.ScenarioClassifications[0]
 			if row.FailureClassification != "workflow_choreography_gap" || row.UXQuality != "taste_debt" || row.SafetyPass != "pass" || row.CapabilityPass != "pass" {
 				t.Fatalf("high-ceremony classification row = %+v", row)
+			}
+			result.Metrics = cleanMetrics
+			result.Metrics.WorkflowActionCallCount = 1
+			result.Metrics.WorkflowActionFirstCommandIndex = 3
+			summary = buildTargetedLaneSummary(tt.lane, false, []jobResult{result})
+			if summary == nil || len(summary.ScenarioClassifications) != 1 {
+				t.Fatalf("delayed-action summary = %+v", summary)
+			}
+			row = summary.ScenarioClassifications[0]
+			if row.FailureClassification != "workflow_choreography_gap" || row.UXQuality != "taste_debt" || row.SafetyPass != "pass" || row.CapabilityPass != "pass" {
+				t.Fatalf("delayed-action classification row = %+v", row)
 			}
 		})
 	}

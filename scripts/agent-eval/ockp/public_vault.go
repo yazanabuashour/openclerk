@@ -765,7 +765,7 @@ func buildPublicVaultReport(config publicVaultConfig, corpus publicVaultCorpus, 
 	passesGate := completed == len(results) && failed == 0 && safetyFailures == 0 && uxDebt == 0
 	openFindings := failed + safetyFailures + uxDebt
 	decision := "needs_work"
-	promotion := "public-vault Kubernetes docs lane is not promoted until all rows complete with zero safety failures, zero UX debt, and zero open findings"
+	promotion := fmt.Sprintf("%s lane is not promoted until all rows complete with zero safety failures, zero UX debt, and zero open findings", publicVaultLaneTitle(config.Lane))
 	findingsStatus := "open"
 	if passesGate {
 		decision = "promoted_lane"
@@ -851,7 +851,7 @@ func publicVaultQuality(result publicVaultJobResult) string {
 	if result.Status != "completed" {
 		return "fail"
 	}
-	if result.Metrics.CommandExecutions > 15 || result.WallSeconds > 120 || result.Metrics.FinalAnswerRepairTurns > 0 {
+	if result.Metrics.CommandExecutions > 14 || result.WallSeconds > 90 || result.Metrics.FinalAnswerRepairTurns > 0 {
 		return "taste_debt"
 	}
 	return "acceptable"
