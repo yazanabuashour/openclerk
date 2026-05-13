@@ -4,6 +4,7 @@ func reportLane(ids []string) (string, bool) {
 	if len(ids) == 0 {
 		return populatedDefaultLaneName, true
 	}
+	profileConfig := 0
 	populated := 0
 	repoDocs := 0
 	graphSemanticsRevisit := 0
@@ -49,6 +50,10 @@ func reportLane(ids []string) (string, bool) {
 	validation := 0
 	releaseBlocking := false
 	for _, id := range ids {
+		if isProfileConfigScenario(id) {
+			profileConfig++
+			continue
+		}
 		if isPopulatedVaultScenario(id) {
 			populated++
 			continue
@@ -223,6 +228,9 @@ func reportLane(ids []string) (string, bool) {
 		}
 		releaseBlocking = true
 	}
+	if profileConfig == len(ids) {
+		return profileConfigLaneName, false
+	}
 	if populated == len(ids) {
 		return populatedLaneName, false
 	}
@@ -350,6 +358,9 @@ func reportLane(ids []string) (string, bool) {
 		return evidenceBundleWorkflowActionLaneName, false
 	}
 	if populated > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
+	if profileConfig > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
 	if repoDocs > 0 {

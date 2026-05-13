@@ -8,6 +8,10 @@ import (
 )
 
 const (
+	ConfigTaskActionInspectConfig    = "inspect_config"
+	ConfigTaskActionConfigureProfile = "configure_profile"
+	ConfigTaskActionClearProfile     = "clear_profile"
+
 	DocumentTaskActionValidate            = "validate"
 	DocumentTaskActionCreate              = "create_document"
 	DocumentTaskActionIngestSourceURL     = "ingest_source_url"
@@ -48,6 +52,19 @@ const (
 	RetrievalTaskActionHybridRetrieval     = "hybrid_retrieval_report"
 	RetrievalTaskActionSemanticSearch      = "semantic_search"
 )
+
+type ConfigTaskRequest struct {
+	Action  string        `json:"action"`
+	Profile AutonomyModes `json:"profile,omitempty"`
+}
+
+type ConfigTaskResult struct {
+	Rejected        bool          `json:"rejected"`
+	RejectionReason string        `json:"rejection_reason,omitempty"`
+	Paths           *Paths        `json:"paths,omitempty"`
+	Profile         AutonomyModes `json:"profile"`
+	Summary         string        `json:"summary"`
+}
 
 type DocumentTaskRequest struct {
 	Action              string                   `json:"action"`

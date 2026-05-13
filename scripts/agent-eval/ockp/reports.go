@@ -91,13 +91,16 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	if releaseBlocking {
 		return nil
 	}
-	if lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != highTouchMemoryRouterRecallLaneName && lane != memoryRouterRecallCandidateLaneName && lane != memoryRouterRecallReportLaneName && lane != promotedRecordDomainLaneName && lane != highTouchRelationshipRecordLaneName && lane != relationshipRecordCandidateLaneName && lane != parallelRunnerLaneName && lane != installUpgradeModuleLaneName && lane != documentHistoryLaneName && lane != highTouchDocumentLifecycleLaneName && lane != documentLifecycleRollbackCandidateLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != captureLowRiskLaneName && lane != captureExplicitOverridesLaneName && lane != captureDuplicateCandidateLaneName && lane != taggingLaneName && lane != captureSaveThisNoteLaneName && lane != captureDocumentLinksLaneName && lane != sourceURLUpdateLaneName && lane != webURLIntakeLaneName && lane != webURLStaleRepairLaneName && lane != webURLStaleImpactLaneName && lane != webProductPageLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != unsupportedArtifactKindLaneName && lane != localFileArtifactLaneName && lane != videoYouTubeLaneName && lane != nativeMediaTranscriptLaneName && lane != synthesisCompileLaneName && lane != highTouchCompileSynthesisLaneName && lane != compileSynthesisCandidateLaneName && lane != compileSynthesisWorkflowActionLaneName && lane != broadAuditLaneName && lane != sourceAuditWorkflowActionLaneName && lane != evidenceBundleWorkflowActionLaneName {
+	if lane != profileConfigLaneName && lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != memoryRouterRevisitLaneName && lane != highTouchMemoryRouterRecallLaneName && lane != memoryRouterRecallCandidateLaneName && lane != memoryRouterRecallReportLaneName && lane != promotedRecordDomainLaneName && lane != highTouchRelationshipRecordLaneName && lane != relationshipRecordCandidateLaneName && lane != parallelRunnerLaneName && lane != installUpgradeModuleLaneName && lane != documentHistoryLaneName && lane != highTouchDocumentLifecycleLaneName && lane != documentLifecycleRollbackCandidateLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != captureLowRiskLaneName && lane != captureExplicitOverridesLaneName && lane != captureDuplicateCandidateLaneName && lane != taggingLaneName && lane != captureSaveThisNoteLaneName && lane != captureDocumentLinksLaneName && lane != sourceURLUpdateLaneName && lane != webURLIntakeLaneName && lane != webURLStaleRepairLaneName && lane != webURLStaleImpactLaneName && lane != webProductPageLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != unsupportedArtifactKindLaneName && lane != localFileArtifactLaneName && lane != videoYouTubeLaneName && lane != nativeMediaTranscriptLaneName && lane != synthesisCompileLaneName && lane != highTouchCompileSynthesisLaneName && lane != compileSynthesisCandidateLaneName && lane != compileSynthesisWorkflowActionLaneName && lane != broadAuditLaneName && lane != sourceAuditWorkflowActionLaneName && lane != evidenceBundleWorkflowActionLaneName {
 		return nil
 	}
 	summary := targetedLaneSummary{
 		Lane:            lane,
 		PublicSurface:   []string{"openclerk document", "openclerk retrieval"},
 		ReleaseBlocking: releaseBlocking,
+	}
+	if lane == profileConfigLaneName {
+		summary.PublicSurface = []string{"openclerk config", "openclerk document", "openclerk retrieval"}
 	}
 	if lane == documentArtifactCandidateLaneName {
 		summary.PublicSurface = []string{"skills/openclerk/SKILL.md", "openclerk document", "openclerk retrieval"}
@@ -109,6 +112,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		include := false
 		classification, posture := "", ""
 		switch lane {
+		case profileConfigLaneName:
+			include = isProfileConfigScenario(result.Scenario)
+			classification, posture = classifyTargetedProfileConfigResult(result)
 		case populatedLaneName:
 			include = isPopulatedVaultScenario(result.Scenario)
 			classification, posture = classifyTargetedPopulatedResult(result)
@@ -274,6 +280,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		return nil
 	}
 	switch lane {
+	case profileConfigLaneName:
+		summary.Decision = "promote_persisted_profile_config"
+		summary.Promotion = "implemented openclerk config persisted profile defaults; no module/provider behavior change"
 	case populatedLaneName:
 		summary.Decision = "keep_as_reference"
 		summary.Promotion = "no promoted runner action, schema, migration, storage API, product behavior, or public OpenClerk interface"

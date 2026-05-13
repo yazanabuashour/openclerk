@@ -51,6 +51,8 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyParallelRunnerStartup(finalMessage, turnMetrics), nil
 	case parallelRunnerReadsScenarioID:
 		return verifyParallelRunnerReads(ctx, paths, finalMessage, turnMetrics)
+	case profileConfigScenarioID:
+		return verifyProfileConfiguration(ctx, paths, finalMessage, turnMetrics)
 	case installInstructionsAgentScenarioID:
 		return verifyInstallOrUpgradeInstructions(paths, finalMessage, turnMetrics, false), nil
 	case upgradeInstructionsAgentScenarioID:

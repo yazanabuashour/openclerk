@@ -14,6 +14,12 @@ const (
 
 	openClerkBootstrapRejectionText = "respond with exactly one no-tools assistant answer"
 
+	profileConfigLaneName    = "profile-configuration"
+	profileConfigScenarioID  = "profile-configuration-smoke"
+	profileConfigPath        = "notes/profile-config/override.md"
+	profileConfigBlockedPath = "notes/profile-config/blocked.md"
+	profileConfigRepairPath  = "synthesis/profile-config.md"
+
 	ragRetrievalScenarioID   = "rag-retrieval-baseline"
 	ragCurrentPolicyPath     = "notes/rag/current-runner-policy.md"
 	ragDecoyPolicyPath       = "notes/rag/decoy-runner-policy.md"

@@ -25,8 +25,9 @@ reading implementation files, backend variants, module caches, SQLite directly,
 HTTP/MCP internals, or source-built command paths.
 
 The v1 configuration contract therefore has to be visible through AgentOps:
-the installed `openclerk document` and `openclerk retrieval` JSON runners plus
-the shipped skill instructions. A production agent should be able to explain
+the installed `openclerk config`, `openclerk document`, and
+`openclerk retrieval` JSON runners plus the shipped skill instructions. A
+production agent should be able to explain
 where the vault is, which markdown files are canonical, which derived records
 or projections are fresh, and which source evidence supports a synthesis page
 using only runner JSON results.
@@ -165,6 +166,20 @@ The v1 document runner actions are:
 - `append_document` appends durable markdown content to an existing document.
 - `replace_section` replaces one named markdown section while preserving the
   rest of the document.
+
+The v1 config runner actions are:
+
+- `inspect_config` reports effective persisted product configuration, including
+  the default profile autonomy modes.
+- `configure_profile` persists default autonomy/profile modes under the
+  database-backed runtime configuration namespace.
+- `clear_profile` removes persisted default profile overrides and returns to
+  built-in defaults.
+
+Request-level `document` and `retrieval` `autonomy` fields override persisted
+profile defaults field-by-field. Optional provider settings remain under
+`openclerk module configure_module`; profile configuration is not module
+configuration.
 
 The v1 retrieval runner actions are:
 

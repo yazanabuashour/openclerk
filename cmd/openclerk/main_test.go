@@ -50,6 +50,7 @@ func TestCapabilitiesManifestShowsBuildingBlocks(t *testing.T) {
 		t.Fatalf("capabilities missing building-block principles or boundaries: %+v", result)
 	}
 	if !hasCapabilityAction(result, "document", "compile_synthesis") ||
+		!hasCapabilityAction(result, "config", "configure_profile") ||
 		!hasCapabilityAction(result, "retrieval", "audit_contradictions") ||
 		!hasCapabilityAction(result, "retrieval", "source_discovery_report") ||
 		!hasCapabilityAction(result, "retrieval", "decision_lookup_report") ||
@@ -72,6 +73,11 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 		args []string
 		want []string
 	}{
+		{
+			name: "config",
+			args: []string{"config", "--help"},
+			want: []string{"inspect_config", "configure_profile", "clear_profile", "approval_mode", "openclerk module configure_module"},
+		},
 		{
 			name: "document",
 			args: []string{"document", "--help"},
@@ -117,6 +123,54 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestRunnerConfigProfileJSONPersistsAcrossInvocations(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	configureRequest := `{"action":"configure_profile","profile":{"approval_mode":"propose_only","drafting_mode":"require_explicit_fields","write_target_mode":"existing_only","citation_mode":"strict","privacy_mode":"private_summary_only","audience_mode":"executive_summary"}}`
+	var configured runner.ConfigTaskResult
+	code, stderr := runJSON(t, []string{"config", "--db", dbPath}, configureRequest, &configured)
+	if code != 0 {
+		t.Fatalf("configure profile exit = %d stderr=%s", code, stderr)
+	}
+	if configured.Rejected ||
+		configured.Profile.ApprovalMode != runner.ApprovalModeProposeOnly ||
+		configured.Profile.DraftingMode != runner.DraftingModeRequireExplicitFields ||
+		configured.Profile.WriteTargetMode != runner.WriteTargetModeExistingOnly ||
+		configured.Profile.CitationMode != runner.CitationModeStrict ||
+		configured.Profile.PrivacyMode != runner.PrivacyModePrivateSummaryOnly ||
+		configured.Profile.AudienceMode != runner.AudienceModeExecutiveSummary {
+		t.Fatalf("configured profile = %+v", configured)
+	}
+
+	var inspected runner.ConfigTaskResult
+	code, stderr = runJSON(t, []string{"config", "--db", dbPath}, `{"action":"inspect_config"}`, &inspected)
+	if code != 0 {
+		t.Fatalf("inspect profile exit = %d stderr=%s", code, stderr)
+	}
+	if inspected.Profile != configured.Profile {
+		t.Fatalf("inspected profile = %+v, want %+v", inspected.Profile, configured.Profile)
+	}
+
+	var invalid runner.ConfigTaskResult
+	code, stderr = runJSON(t, []string{"config", "--db", dbPath}, `{"action":"configure_profile","profile":{"privacy_mode":"public_everything"}}`, &invalid)
+	if code != 0 {
+		t.Fatalf("invalid profile exit = %d stderr=%s", code, stderr)
+	}
+	if !invalid.Rejected || !strings.Contains(invalid.RejectionReason, "profile.privacy_mode") {
+		t.Fatalf("invalid profile = %+v", invalid)
+	}
+
+	var cleared runner.ConfigTaskResult
+	code, stderr = runJSON(t, []string{"config", "--db", dbPath}, `{"action":"clear_profile"}`, &cleared)
+	if code != 0 {
+		t.Fatalf("clear profile exit = %d stderr=%s", code, stderr)
+	}
+	if cleared.Rejected || cleared.Profile.ApprovalMode != runner.ApprovalModeApproveWrite {
+		t.Fatalf("cleared profile = %+v", cleared)
 	}
 }
 
@@ -645,6 +699,7 @@ func TestRunnerErrors(t *testing.T) {
 		{name: "bad json", args: []string{"document"}, input: `{`, want: 1, stderr: "decode document request"},
 		{name: "multiple json", args: []string{"document"}, input: `{} {}`, want: 1, stderr: "multiple JSON values"},
 		{name: "unknown json field", args: []string{"document"}, input: `{"action":"validate","extra":true}`, want: 1, stderr: "unknown field"},
+		{name: "unknown config json field", args: []string{"config"}, input: `{"action":"inspect_config","extra":true}`, want: 1, stderr: "unknown field"},
 		{name: "unknown list json field", args: []string{"document"}, input: `{"action":"list_documents","list":{"path_prefix":"notes/","tga":"account-renewal"}}`, want: 1, stderr: "unknown field"},
 		{name: "unknown search json field", args: []string{"retrieval"}, input: `{"action":"search","search":{"text":"renewal","tga":"account-renewal"}}`, want: 1, stderr: "unknown field"},
 		{name: "unexpected arg", args: []string{"retrieval", "extra"}, input: `{}`, want: 2, stderr: "unexpected positional arguments"},

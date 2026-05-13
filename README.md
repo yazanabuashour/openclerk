@@ -130,6 +130,7 @@ openclerk capabilities
 ## Runner
 
 ```bash
+openclerk config      # persisted product/profile config
 openclerk document    # doc writes, registry, paths
 openclerk retrieval   # search, provenance, synthesis inspection
 openclerk capabilities
@@ -138,9 +139,15 @@ openclerk capabilities
 JSON in, JSON out. See runner help:
 
 ```bash
+openclerk config --help
 openclerk document --help
 openclerk retrieval --help
 ```
+
+`openclerk config` owns persisted product/profile preferences such as the
+default autonomy profile. `openclerk module` owns optional provider settings.
+Request-level `document` and `retrieval` `autonomy` fields override persisted
+profile defaults field-by-field.
 
 Storage: `${XDG_DATA_HOME:-~/.local/share}/openclerk/openclerk.sqlite`  
 Override: `OPENCLERK_DATABASE_PATH` or `--db`

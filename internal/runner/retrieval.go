@@ -23,6 +23,20 @@ func RunRetrievalTask(ctx context.Context, config runclient.Config, request Retr
 		return RetrievalTaskResult{Summary: "valid"}, nil
 	}
 
+	autonomy, err := applyProfileDefaults(ctx, config, request.Autonomy)
+	if err != nil {
+		return RetrievalTaskResult{}, err
+	}
+	request.Autonomy = autonomy
+	normalized, rejection = normalizeRetrievalTaskRequest(request)
+	if rejection != "" {
+		return RetrievalTaskResult{
+			Rejected:        true,
+			RejectionReason: rejection,
+			Summary:         rejection,
+		}, nil
+	}
+
 	if normalized.Action == RetrievalTaskActionWorkflowGuide {
 		report := runWorkflowGuideReport(normalized.WorkflowGuide)
 		return RetrievalTaskResult{

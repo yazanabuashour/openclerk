@@ -37,6 +37,8 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 		return runCapabilities(args[1:], stdout, stderr)
 	case "init":
 		return runInit(args[1:], stdout, stderr)
+	case "config":
+		return runConfig(args[1:], stdin, stdout, stderr)
 	case "module":
 		return runModule(args[1:], stdin, stdout, stderr)
 	case "document":
@@ -126,6 +128,17 @@ func buildCapabilitiesResult() capabilitiesResult {
 		},
 		Domains: []capabilityDomain{
 			{
+				Name:    "config",
+				Command: "openclerk config",
+				Posture: "strict JSON runner for product configuration and persisted default profile preferences",
+				Primitive: []capabilityAction{
+					{Action: "inspect_config", Purpose: "inspect effective persisted OpenClerk config and default profile preferences", Posture: "read_only"},
+					{Action: "configure_profile", Purpose: "persist default autonomy/profile preferences for document and retrieval requests", Posture: "configuration_write"},
+					{Action: "clear_profile", Purpose: "clear persisted profile preferences and return to built-in defaults", Posture: "configuration_write"},
+				},
+				Workflow: []capabilityAction{},
+			},
+			{
 				Name:    "document",
 				Command: "openclerk document",
 				Posture: "strict JSON runner for validation, source intake, document mutation, placement planning, and document-side workflow blocks",
@@ -202,6 +215,7 @@ func buildCapabilitiesResult() capabilitiesResult {
 		AgentHandoff: capabilityAgentHandoff{
 			AnswerSummary: "Use OpenClerk as a narrow mainline runner plus composable document, retrieval, and module building blocks.",
 			SelectionGuidance: []string{
+				"Use config for persisted profile preferences and module for provider settings.",
 				"Start with promoted workflow actions when they match the user intent.",
 				"Use primitives for explicit manual work, advanced inspection, or after a workflow action rejects.",
 				"Use optional modules only after install/list verifies the module boundary.",
@@ -240,6 +254,32 @@ func runInit(args []string, stdout io.Writer, stderr io.Writer) int {
 	}
 	if err := json.NewEncoder(stdout).Encode(result); err != nil {
 		_, _ = fmt.Fprintf(stderr, "encode init result: %v\n", err)
+		return 1
+	}
+	return 0
+}
+
+func runConfig(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
+	if wantsSubcommandHelp(args) {
+		configUsage(stdout)
+		return 0
+	}
+	config, ok := parseConfig("config", args, stderr)
+	if !ok {
+		return 2
+	}
+	var request runner.ConfigTaskRequest
+	if err := decodeRequest(stdin, &request); err != nil {
+		_, _ = fmt.Fprintf(stderr, "decode config request: %v\n", err)
+		return 1
+	}
+	result, err := runner.RunConfigTask(context.Background(), config, request)
+	if err != nil {
+		_, _ = fmt.Fprintf(stderr, "run config task: %v\n", err)
+		return 1
+	}
+	if err := json.NewEncoder(stdout).Encode(result); err != nil {
+		_, _ = fmt.Fprintf(stderr, "encode config result: %v\n", err)
 		return 1
 	}
 	return 0
@@ -453,14 +493,27 @@ func resolvedVersion(linkerVersion string, info *debug.BuildInfo, ok bool) strin
 }
 
 func usage(stderr io.Writer) {
-	_, _ = fmt.Fprintln(stderr, "usage: openclerk <version|capabilities|init|module|document|retrieval> [--db path]")
+	_, _ = fmt.Fprintln(stderr, "usage: openclerk <version|capabilities|init|config|module|document|retrieval> [--db path]")
 	_, _ = fmt.Fprintln(stderr, "       openclerk init [--db path] [--vault-root path]")
 	_, _ = fmt.Fprintln(stderr, "       openclerk capabilities")
+	_, _ = fmt.Fprintln(stderr, "       openclerk config --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk module --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk document --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk retrieval --help")
 	_, _ = fmt.Fprintln(stderr, "document/retrieval read strict JSON from stdin and use configured paths by default; pass --db only for an explicit dataset.")
 	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, validation_synthesis_report, ingest_source_url plan, web_search_plan, artifact_candidate_plan, git_lifecycle_report, source_discovery_report, source_audit_report, evidence_bundle_report, decision_lookup_report, duplicate_candidate_report, workflow_guide_report, memory_router_recall_report, structured_store_report, hybrid_retrieval_report, semantic_search")
+}
+
+func configUsage(w io.Writer) {
+	_, _ = fmt.Fprintln(w, "usage: openclerk config [--db path] < request.json")
+	_, _ = fmt.Fprintln(w, "")
+	_, _ = fmt.Fprintln(w, "Reads one strict JSON object from stdin and writes one JSON result.")
+	_, _ = fmt.Fprintln(w, "Manages persisted product/profile configuration through runtime_config state.")
+	_, _ = fmt.Fprintln(w, `  inspect: {"action":"inspect_config"}`)
+	_, _ = fmt.Fprintln(w, `  configure profile: {"action":"configure_profile","profile":{"approval_mode":"approve_write","drafting_mode":"suggest_fields","write_target_mode":"create_or_update","citation_mode":"balanced","privacy_mode":"allow_paths","audience_mode":"technical"}}`)
+	_, _ = fmt.Fprintln(w, `  clear profile: {"action":"clear_profile"}`)
+	_, _ = fmt.Fprintln(w, "Request-level document/retrieval autonomy fields override persisted profile defaults field-by-field.")
+	_, _ = fmt.Fprintln(w, "Provider/module settings remain under openclerk module configure_module.")
 }
 
 func moduleUsage(w io.Writer) {

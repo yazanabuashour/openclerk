@@ -26,6 +26,20 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 		return DocumentTaskResult{Summary: "valid"}, nil
 	}
 
+	autonomy, err := applyProfileDefaults(ctx, config, request.Autonomy)
+	if err != nil {
+		return DocumentTaskResult{}, err
+	}
+	request.Autonomy = autonomy
+	normalized, rejection = normalizeDocumentTaskRequest(request)
+	if rejection != "" {
+		return DocumentTaskResult{
+			Rejected:        true,
+			RejectionReason: rejection,
+			Summary:         rejection,
+		}, nil
+	}
+
 	if normalized.Action == DocumentTaskActionResolvePaths {
 		paths, err := runclient.ResolvePaths(config)
 		if err != nil {

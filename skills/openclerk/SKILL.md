@@ -7,12 +7,11 @@ compatibility: Requires local filesystem access and an installed openclerk binar
 
 # OpenClerk
 
-Use this skill for routine local OpenClerk knowledge-plane tasks. The
-production interface is AgentOps: this Skills-compatible router plus the
-installed JSON runner.
+Use this skill for routine local OpenClerk knowledge-plane tasks. The production interface is AgentOps: this Skills-compatible router plus the installed JSON runner.
 
 ```bash
 openclerk capabilities
+openclerk config
 openclerk document
 openclerk retrieval
 ```
@@ -103,11 +102,11 @@ follow-up primitives unless the result rejects or the user asks for more.
 - Durable writes require explicit approval for proposed path/title/body,
   placement, or update-versus-new choice. Public read/fetch/inspect permission
   is not durable-write approval.
-- Honor supplied autonomy profiles: `approval_mode`, `drafting_mode`,
-  `write_target_mode`, `citation_mode`, `privacy_mode`, and `audience_mode`.
-  `propose_only` means no durable writes; `autonomous_disposable` writes only
-  the configured disposable eval copy; `autonomous_trusted` needs an explicit
-  trusted durable target. Privacy modes cap final-answer detail.
+- Honor persisted or supplied autonomy profiles: `approval_mode`,
+  `drafting_mode`, `write_target_mode`, `citation_mode`, `privacy_mode`, and
+  `audience_mode`. `openclerk config` inspects/configures persisted defaults;
+  request autonomy overrides them field-by-field. `propose_only` blocks durable
+  writes; trusted/disposable modes still need an appropriate target.
 
 ## No-Tools Before Runners
 
