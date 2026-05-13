@@ -97,6 +97,8 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 				"validation_synthesis_report",
 				"web_search_plan",
 				"artifact_candidate_plan",
+				"ocr_review",
+				"verified local OCR module",
 				"git_lifecycle_report",
 				"--git-checkpoints",
 				"body_facts",

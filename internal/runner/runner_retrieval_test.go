@@ -225,6 +225,32 @@ func TestRetrievalTaskWorkflowGuideReportRoutesIntentWithoutStore(t *testing.T) 
 	}
 }
 
+func TestRetrievalTaskWorkflowGuideReportRoutesExplicitOCRReview(t *testing.T) {
+	t.Parallel()
+
+	result, err := runner.RunRetrievalTask(context.Background(), runclient.Config{}, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionWorkflowGuide,
+		WorkflowGuide: runner.WorkflowGuideOptions{
+			Intent: "Plan OCR review for a scan-only PDF local file receipt.",
+		},
+	})
+	if err != nil {
+		t.Fatalf("workflow guide OCR report: %v", err)
+	}
+	if result.Rejected || result.WorkflowGuide == nil {
+		t.Fatalf("workflow guide OCR result = %+v", result)
+	}
+	report := result.WorkflowGuide
+	if report.RecommendedSurface != "artifact_candidate_plan" ||
+		report.RunnerDomain != "document" ||
+		!strings.Contains(report.RequestShape, "ocr_review") ||
+		!strings.Contains(report.RequestShape, "<explicit-user-local-file>") ||
+		containsString(report.DoNotUseFor, "OCR") ||
+		!containsString(report.DoNotUseFor, "external OCR") {
+		t.Fatalf("workflow guide OCR report = %+v", report)
+	}
+}
+
 func TestRetrievalTaskWorkflowGuideReportRejectsMissingIntent(t *testing.T) {
 	t.Parallel()
 

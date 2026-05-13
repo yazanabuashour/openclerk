@@ -52,13 +52,13 @@ func selectWorkflowGuideCandidate(intent string) workflowGuideSelection {
 			DoNotUseFor:    []string{"durable writes", "raw private content exposure", "external search"},
 			HandoffSummary: "Use retrieval source_discovery_report, then answer from source_discovery.agent_handoff without private paths, titles, snippets, ids, or raw JSON.",
 		}
-	case containsAny(normalized, "artifact", "invoice", "receipt", "legal document", "transcript", "auto-file", "autofile", "candidate path", "body preview", "metadata field", "tags"):
+	case containsAny(normalized, "artifact", "invoice", "receipt", "legal document", "transcript", "auto-file", "autofile", "candidate path", "body preview", "metadata field", "tags", "ocr", "scan-only", "scanned pdf", "local file"):
 		return workflowGuideSelection{
 			Surface:        "artifact_candidate_plan",
 			RunnerDomain:   "document",
-			RequestShape:   `{"action":"artifact_candidate_plan","artifact":{"content":"...","artifact_kind":"note","tags":["..."],"fields":{"type":"note"},"limit":5}}`,
-			UseWhen:        "use for read-only candidate path/title/body preview/tag/field planning from explicit content or public-source handoff context",
-			DoNotUseFor:    []string{"opaque file parsing", "OCR", "local file reads", "durable document writes", "private or authenticated acquisition"},
+			RequestShape:   `{"action":"artifact_candidate_plan","artifact":{"content":"...","artifact_kind":"note","tags":["..."],"fields":{"type":"note"},"limit":5}} or {"action":"artifact_candidate_plan","artifact":{"local_path":"<explicit-user-local-file>","artifact_kind":"receipt","text_extraction":"ocr_review","ocr_provider":"tesseract","limit":5}}`,
+			UseWhen:        "use for read-only candidate path/title/body preview/tag/field planning from explicit content, supported explicit local files, explicit OCR review, or public-source handoff context",
+			DoNotUseFor:    []string{"opaque file parsing", "implicit local file reads", "external OCR", "durable document writes", "private or authenticated acquisition"},
 			HandoffSummary: "Use document artifact_candidate_plan for proposal-first intake; approved writes still flow through create_document or ingest_source_url.",
 		}
 	case containsAny(normalized, "duplicate", "already exists", "update existing", "update versus new", "same note"):
@@ -210,7 +210,7 @@ func workflowGuideCandidates() []WorkflowGuideCandidate {
 			Surface:        "artifact_candidate_plan",
 			Status:         "promoted_for_artifact_intake_planning",
 			SelectionRule:  "use when explicit artifact content or public-source handoff context needs candidate path, title, body preview, tags, fields, confidence, and duplicate evidence before approval",
-			Boundary:       "read-only planning only; local file inspection only through explicit artifact.local_path and limited text/PDF parsers; no OCR, opaque parsing, fetches, or durable writes",
+			Boundary:       "read-only planning only; local file inspection only through explicit artifact.local_path and limited text/PDF parsers, or explicit OCR review through an installed verified local OCR module; no opaque parsing, fetches, or durable writes",
 			RequestExample: `{"action":"artifact_candidate_plan","artifact":{"content":"...","artifact_kind":"receipt","tags":["finance"],"limit":5}}`,
 		},
 		{

@@ -77,6 +77,23 @@ These are the eval-worthy surfaces in priority order:
 Report correctness, tool call count, and wall time. That's how the maintainers
 gate new features.
 
+## Artifact And File-Type Support
+
+OpenClerk treats artifact content as candidate evidence until a durable write is
+approved. The current support matrix is:
+
+| Input | Supported path | Boundary |
+|---|---|---|
+| Public PDF or web URL | `ingest_source_url` | Runner-owned fetch, provenance, duplicate checks, and approved create/update only |
+| Supplied video transcript | `ingest_video_url` | Transcript text and provenance must be supplied; no native media acquisition |
+| Pasted or explicit content | `artifact_candidate_plan` | Read-only path/title/body/tags/fields/duplicate proposal before approval |
+| Explicit local text, markdown, or text-bearing PDF | `artifact_candidate_plan` with `local_path` | Reads only the supplied file; no durable write |
+| Common images or scan-only PDFs | `artifact_candidate_plan` with `text_extraction: "ocr_review"` and verified `tesseract-ocr` module | OCR text is review-required candidate evidence |
+| Opaque binaries, slide decks, emails, chats, forms, native media without transcript | Unsupported by default | Paste reviewed text or use a supported runner path |
+
+No parser output, OCR result, local file metadata, or fetched source becomes
+canonical until the user approves the existing write action.
+
 ## Modules
 
 OpenClerk follows the [building block economy](https://mitchellh.com/writing/building-block-economy)
