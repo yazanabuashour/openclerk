@@ -132,16 +132,20 @@ release notes and skill examples may claim only these narrow surfaces:
 ```bash
 printf '%s\n' '{"action":"compile_synthesis","synthesis":{"path":"synthesis/example.md","title":"Example","source_refs":["sources/example.md"],"body":"# Example\n\n## Summary\nSource-backed synthesis.\n\n## Sources\n- sources/example.md\n\n## Freshness\nChecked with runner-visible source evidence.","mode":"create_or_update"}}' | openclerk document
 printf '%s\n' '{"action":"graph_neighborhood","doc_id":"doc_...","limit":10}' | openclerk retrieval
+printf '%s\n' '{"action":"structured_store_report","structured_store":{"domain":"records","query":"structured canonical record evidence","entity_type":"tool","limit":10}}' | openclerk retrieval
 printf '%s\n' '{"action":"source_audit_report","source_audit":{"query":"source-sensitive audit runner repair evidence","target_path":"synthesis/example.md","mode":"explain","limit":10}}' | openclerk retrieval
 printf '%s\n' '{"action":"evidence_bundle_report","evidence_bundle":{"query":"AgentOps Escalation Policy","entity_id":"agentops-escalation-policy","projection":"records","limit":10}}' | openclerk retrieval
 ```
 
 The `graph_neighborhood` claim is structural derived graph inspection only:
 canonical markdown remains semantic relationship authority, and graph freshness
-and citations must stay visible. These claims do not imply a broad
-contradiction engine, semantic-label graph authority, embeddings/vector DB,
-memory transport, autonomous router API, browser acquisition, direct local-file
-intake, or lower-level storage access.
+and citations must stay visible. The records claim is markdown-backed
+projection/report evidence only: records, services, and decisions remain
+derived from canonical markdown with citations, provenance, and freshness.
+These claims do not imply a broad contradiction engine, semantic-label graph
+authority, independent canonical stores, durable structured writes,
+embeddings/vector DB, memory transport, autonomous router API, browser
+acquisition, direct local-file intake, or lower-level storage access.
 
 For workflow-action release claims, the targeted reports must separate safety,
 capability, and UX quality. `ux_quality: workflow_action_acceptable` is

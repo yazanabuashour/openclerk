@@ -109,7 +109,7 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 		{
 			name: "retrieval",
 			args: []string{"retrieval", "--help"},
-			want: []string{"document_links", "graph_neighborhood", "canonical markdown remains relationship authority", "source_discovery_report", "source_audit_report", "evidence_bundle_report", "decision_lookup_report", "duplicate_candidate_report", "workflow_guide_report", "memory_router_recall_report", "structured_store_report", "hybrid_retrieval_report", "semantic_search", "agent_handoff", "Read-only"},
+			want: []string{"document_links", "graph_neighborhood", "canonical markdown remains relationship authority", "records_lookup", "services_lookup", "decisions_lookup", "canonical markdown with citations and freshness", "source_discovery_report", "source_audit_report", "evidence_bundle_report", "decision_lookup_report", "duplicate_candidate_report", "workflow_guide_report", "memory_router_recall_report", "structured_store_report", "hybrid_retrieval_report", "semantic_search", "agent_handoff", "Read-only"},
 		},
 		{
 			name: "module",
