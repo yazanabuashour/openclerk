@@ -81,7 +81,7 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 		{
 			name: "config",
 			args: []string{"config", "--help"},
-			want: []string{"inspect_config", "configure_profile", "clear_profile", "approval_mode", "storage", "git_lifecycle", "checkpoint_persistence", "openclerk module configure_module"},
+			want: []string{"inspect_config", "configure_profile", "clear_profile", "approval_mode", "storage", "vault_root", "openclerk init --vault-root", "git_lifecycle", "checkpoint_persistence", "openclerk module configure_module"},
 		},
 		{
 			name: "document",
@@ -825,6 +825,35 @@ func TestRunnerInitBindsVaultRoot(t *testing.T) {
 		t.Fatalf("init paths = %+v", initResult.Paths)
 	}
 
+	var inspectResult runner.ConfigTaskResult
+	code, stderr = runJSON(t, []string{"config", "--db", dbPath}, `{"action":"inspect_config"}`, &inspectResult)
+	if code != 0 {
+		t.Fatalf("inspect config exit = %d stderr=%s", code, stderr)
+	}
+	if inspectResult.Storage == nil || inspectResult.Storage.VaultRoot != vaultRoot {
+		t.Fatalf("inspect storage = %+v, want vault %q", inspectResult.Storage, vaultRoot)
+	}
+
+	var rejectedStorageWrite runner.ConfigTaskResult
+	code, stderr = runJSON(t, []string{"config", "--db", dbPath}, `{"action":"configure_storage"}`, &rejectedStorageWrite)
+	if code != 0 {
+		t.Fatalf("configure_storage exit = %d stderr=%s", code, stderr)
+	}
+	if !rejectedStorageWrite.Rejected || !strings.Contains(rejectedStorageWrite.RejectionReason, "unsupported config action") {
+		t.Fatalf("configure_storage result = %+v", rejectedStorageWrite)
+	}
+	code, stderr = runJSON(t, []string{"config", "--db", dbPath}, `{"action":"configure_storage","storage":{"vault_root":"`+filepath.ToSlash(filepath.Join(t.TempDir(), "forbidden"))+`"}}`, nil)
+	if code == 0 || !strings.Contains(stderr, "unknown field") {
+		t.Fatalf("storage write shape exit = %d stderr=%s", code, stderr)
+	}
+	code, stderr = runJSON(t, []string{"config", "--db", dbPath}, `{"action":"inspect_config"}`, &inspectResult)
+	if code != 0 {
+		t.Fatalf("inspect after rejected storage write exit = %d stderr=%s", code, stderr)
+	}
+	if inspectResult.Storage == nil || inspectResult.Storage.VaultRoot != vaultRoot {
+		t.Fatalf("inspect storage after rejected write = %+v, want vault %q", inspectResult.Storage, vaultRoot)
+	}
+
 	reboundVaultRoot := filepath.Join(t.TempDir(), "rebound-wiki")
 	code, stderr = runJSON(t, []string{"init", "--db", dbPath, "--vault-root", reboundVaultRoot}, "", &initResult)
 	if code != 0 {
@@ -842,6 +871,13 @@ func TestRunnerInitBindsVaultRoot(t *testing.T) {
 	}
 	if result.Paths == nil || result.Paths.VaultRoot != reboundVaultRoot {
 		t.Fatalf("paths = %+v, want vault %q", result.Paths, reboundVaultRoot)
+	}
+	code, stderr = runJSON(t, []string{"config", "--db", dbPath}, `{"action":"inspect_config"}`, &inspectResult)
+	if code != 0 {
+		t.Fatalf("inspect rebound config exit = %d stderr=%s", code, stderr)
+	}
+	if inspectResult.Storage == nil || inspectResult.Storage.VaultRoot != reboundVaultRoot {
+		t.Fatalf("inspect rebound storage = %+v, want vault %q", inspectResult.Storage, reboundVaultRoot)
 	}
 }
 

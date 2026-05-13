@@ -513,6 +513,7 @@ func configUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, `  configure profile: {"action":"configure_profile","profile":{"approval_mode":"approve_write","drafting_mode":"suggest_fields","write_target_mode":"create_or_update","citation_mode":"balanced","privacy_mode":"allow_paths","audience_mode":"technical"}}`)
 	_, _ = fmt.Fprintln(w, `  clear profile: {"action":"clear_profile"}`)
 	_, _ = fmt.Fprintln(w, "inspect_config returns storage, profile, modules, and git_lifecycle summaries; checkpoint_persistence is unsupported by design.")
+	_, _ = fmt.Fprintln(w, "Storage is read-only here; initialize or intentionally rebind vault_root with openclerk init --vault-root.")
 	_, _ = fmt.Fprintln(w, "Request-level document/retrieval autonomy fields override persisted profile defaults field-by-field.")
 	_, _ = fmt.Fprintln(w, "Provider/module settings remain under openclerk module configure_module.")
 }

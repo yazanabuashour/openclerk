@@ -148,6 +148,8 @@ openclerk retrieval --help
 storage, profile defaults, module summaries, and git lifecycle gate posture.
 `openclerk config` owns persisted product/profile preferences such as the
 default autonomy profile. `openclerk module` owns optional provider writes.
+Vault-root binding is storage bootstrap config: initialize or intentionally
+rebind it with `openclerk init --vault-root`, not `openclerk config`.
 Request-level `document` and `retrieval` `autonomy` fields override persisted
 profile defaults field-by-field. Git checkpoint enablement remains
 invocation-scoped through `--git-checkpoints` or `OPENCLERK_GIT_CHECKPOINTS`.

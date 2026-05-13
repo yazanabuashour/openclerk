@@ -180,9 +180,12 @@ The v1 config runner actions are:
 Request-level `document` and `retrieval` `autonomy` fields override persisted
 profile defaults field-by-field. Optional provider settings remain under
 `openclerk module configure_module`; profile configuration is not module
-configuration. Git checkpoint enablement remains invocation-scoped through
-`--git-checkpoints` or `OPENCLERK_GIT_CHECKPOINTS`; `inspect_config` reports
-that persistence is unsupported rather than adding a durable checkpoint flag.
+configuration. Vault-root binding is storage bootstrap configuration: it is
+initialized or intentionally rebound only through `openclerk init --vault-root`,
+while `inspect_config.storage` reports it read-only. Git checkpoint enablement
+remains invocation-scoped through `--git-checkpoints` or
+`OPENCLERK_GIT_CHECKPOINTS`; `inspect_config` reports that persistence is
+unsupported rather than adding a durable checkpoint flag.
 
 The v1 retrieval runner actions are:
 
