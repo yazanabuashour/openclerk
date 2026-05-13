@@ -149,7 +149,7 @@ openclerk capabilities
 ```bash
 openclerk config      # persisted product/profile config
 openclerk document    # doc writes, registry, paths
-openclerk retrieval   # search, provenance, synthesis inspection
+openclerk retrieval   # search, links, graph neighborhoods, provenance
 openclerk capabilities
 ```
 
