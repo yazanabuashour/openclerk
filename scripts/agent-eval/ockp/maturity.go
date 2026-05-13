@@ -207,6 +207,9 @@ func executeMaturity(ctx context.Context, config maturityConfig, stdout io.Write
 		return fmt.Errorf("create maturity report dir: %w", err)
 	}
 	jsonPath := filepath.Join(config.ReportDir, config.ReportName+".json")
+	if config.Mode == maturityModeRealVault {
+		jsonPath = filepath.Join(runRoot, config.ReportName+".json")
+	}
 	markdownPath := filepath.Join(config.ReportDir, config.ReportName+".md")
 	if err := writeJSON(jsonPath, report); err != nil {
 		return fmt.Errorf("write maturity JSON report: %w", err)

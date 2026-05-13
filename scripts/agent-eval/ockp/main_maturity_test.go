@@ -106,8 +106,11 @@ func TestExecuteRealVaultMaturityRedactsPrivateInputs(t *testing.T) {
 	if err := executeMaturity(context.Background(), config, &stdout); err != nil {
 		t.Fatalf("execute real-vault maturity: %v", err)
 	}
-	jsonContent := string(readReportForTest(t, filepath.Join(reportDir, "test-real-vault.json")))
+	jsonContent := string(readReportForTest(t, filepath.Join(runRoot, "test-real-vault.json")))
 	markdownContent := string(readReportForTest(t, filepath.Join(reportDir, "test-real-vault.md")))
+	if _, err := os.Stat(filepath.Join(reportDir, "test-real-vault.json")); !os.IsNotExist(err) {
+		t.Fatalf("real-vault JSON report should stay under run root, got err %v", err)
+	}
 	for _, content := range []string{jsonContent, markdownContent} {
 		assertReducedReportForTest(t, content, runRoot)
 		assertReducedReportForTest(t, content, privateVault)

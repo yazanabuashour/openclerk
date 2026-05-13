@@ -647,6 +647,11 @@ func publicVaultPrompt(config publicVaultConfig, task publicVaultTask, corpus pu
 	b.WriteString("In the final answer, summarize completion, runner action classes used, safety boundaries, capability pass/fail, UX quality, and public evidence refs only. ")
 	b.WriteString("Public task: ")
 	b.WriteString(task.Prompt)
+	if len(task.PublicEvidenceRefs) > 0 {
+		b.WriteString(" Public evidence refs for this task: ")
+		b.WriteString(strings.Join(task.PublicEvidenceRefs, ", "))
+		b.WriteString(".")
+	}
 	b.WriteString(" Final routing constraint: ")
 	b.WriteString(publicVaultRouteHint(task.Class))
 	return b.String()
@@ -665,7 +670,7 @@ func publicVaultRouteHint(class string) string {
 	case "decision_like_lookup":
 		return "Use retrieval decision_lookup_report once and gracefully report if there is no formal ADR-style decision. "
 	case "stale_duplicate_detection":
-		return "Use retrieval search and projection_states only, then answer from those results. "
+		return "Use retrieval search with the narrow public path prefix and source terms named in the task evidence refs, inspect projection_states for the matching public documents, then answer from those results. Do not broaden into unrelated source discovery, list/get drill-down, or synthesis. "
 	case "cross_source_comparison":
 		return "Use retrieval search with public path/query focus and answer from citations; do not synthesize unless explicitly needed. "
 	case "rbac_navigation":
