@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -23,6 +24,8 @@ type RuntimeConfig struct {
 	VaultRoot               string
 	LayoutConventionVersion string
 }
+
+var runtimeConfigInitializationMu sync.Mutex
 
 func ResolveRuntimeConfig(ctx context.Context, databasePath string, defaultVaultRoot string) (RuntimeConfig, error) {
 	return configureRuntime(ctx, databasePath, "", defaultVaultRoot)
@@ -39,6 +42,9 @@ func configureRuntime(ctx context.Context, databasePath string, vaultRoot string
 	if strings.TrimSpace(defaultVaultRoot) == "" {
 		return RuntimeConfig{}, domain.ValidationError("default vault root is required", nil)
 	}
+	runtimeConfigInitializationMu.Lock()
+	defer runtimeConfigInitializationMu.Unlock()
+
 	if err := ensureDir(filepath.Dir(databasePath)); err != nil {
 		return RuntimeConfig{}, domain.InternalError("create database directory", err)
 	}
