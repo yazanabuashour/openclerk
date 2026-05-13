@@ -162,6 +162,13 @@ type metrics struct {
 	OpenClerkPathCheckUsed          bool           `json:"openclerk_path_check_used"`
 	OpenClerkVersionCheckUsed       bool           `json:"openclerk_version_check_used"`
 	OpenClerkSkillCheckUsed         bool           `json:"openclerk_skill_check_used"`
+	OpenClerkHelpUsed               bool           `json:"openclerk_help_used"`
+	OpenClerkDocumentHelpUsed       bool           `json:"openclerk_document_help_used"`
+	OpenClerkRetrievalHelpUsed      bool           `json:"openclerk_retrieval_help_used"`
+	OpenClerkModuleHelpUsed         bool           `json:"openclerk_module_help_used"`
+	OpenClerkCapabilitiesUsed       bool           `json:"openclerk_capabilities_used"`
+	SetupDiscoveryCommandCount      int            `json:"setup_discovery_command_count,omitempty"`
+	PreActionSetupDiscoveryCount    int            `json:"pre_action_setup_discovery_count,omitempty"`
 	SemanticSearchUsed              bool           `json:"semantic_search_used"`
 	ModuleInstallUsed               bool           `json:"module_install_used"`
 	ModuleConfigureUsed             bool           `json:"module_configure_used"`
@@ -246,6 +253,8 @@ type targetedScenarioClassification struct {
 	StepCount                       int     `json:"step_count"`
 	WorkflowActionFirstCommandIndex int     `json:"workflow_action_first_command_index,omitempty"`
 	WorkflowActionCallCount         int     `json:"workflow_action_call_count,omitempty"`
+	SetupDiscoveryCommandCount      int     `json:"setup_discovery_command_count,omitempty"`
+	PreActionSetupDiscoveryCount    int     `json:"pre_action_setup_discovery_count,omitempty"`
 	PreActionPrimitiveCommandCount  int     `json:"pre_action_primitive_command_count,omitempty"`
 	PostActionPrimitiveCommandCount int     `json:"post_action_primitive_command_count,omitempty"`
 	FinalAnswerRepairTurns          int     `json:"final_answer_repair_turns,omitempty"`

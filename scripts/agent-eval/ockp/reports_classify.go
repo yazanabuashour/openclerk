@@ -603,13 +603,15 @@ func classifyTargetedEvidenceBundleWorkflowActionResult(result jobResult) (strin
 func workflowActionCeremonyExceeded(result jobResult) bool {
 	if result.Metrics.WorkflowActionCallCount == 0 &&
 		result.Metrics.WorkflowActionFirstCommandIndex == 0 &&
+		result.Metrics.PreActionSetupDiscoveryCount == 0 &&
 		result.Metrics.PreActionPrimitiveCommandCount == 0 &&
 		result.Metrics.PostActionPrimitiveCommandCount == 0 &&
 		result.Metrics.FinalAnswerRepairTurns == 0 {
 		return result.Metrics.CommandExecutions > 3 || result.Metrics.AssistantCalls > 2 || scenarioRetries(result) > 0
 	}
-	return result.Metrics.WorkflowActionCallCount > 3 ||
+	return result.Metrics.WorkflowActionCallCount > 1 ||
 		result.Metrics.WorkflowActionFirstCommandIndex > 1 ||
+		result.Metrics.PreActionSetupDiscoveryCount > 0 ||
 		result.Metrics.PreActionPrimitiveCommandCount > 0 ||
 		result.Metrics.PostActionPrimitiveCommandCount > 0 ||
 		result.Metrics.FinalAnswerRepairTurns > 0 ||

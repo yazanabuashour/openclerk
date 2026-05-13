@@ -2109,6 +2109,58 @@ func TestWorkflowActionLaneMetadataAndUX(t *testing.T) {
 			if row.FailureClassification != "workflow_choreography_gap" || row.UXQuality != "taste_debt" || row.SafetyPass != "pass" || row.CapabilityPass != "pass" {
 				t.Fatalf("delayed-action classification row = %+v", row)
 			}
+			result.Metrics = cleanMetrics
+			result.Metrics.WorkflowActionCallCount = 2
+			summary = buildTargetedLaneSummary(tt.lane, false, []jobResult{result})
+			if summary == nil || len(summary.ScenarioClassifications) != 1 {
+				t.Fatalf("repeated-action summary = %+v", summary)
+			}
+			row = summary.ScenarioClassifications[0]
+			if row.FailureClassification != "workflow_choreography_gap" || row.UXQuality != "taste_debt" || row.SafetyPass != "pass" || row.CapabilityPass != "pass" {
+				t.Fatalf("repeated-action classification row = %+v", row)
+			}
+			result.Metrics = cleanMetrics
+			result.Metrics.PreActionSetupDiscoveryCount = 1
+			result.Metrics.SetupDiscoveryCommandCount = 1
+			summary = buildTargetedLaneSummary(tt.lane, false, []jobResult{result})
+			if summary == nil || len(summary.ScenarioClassifications) != 1 {
+				t.Fatalf("setup-discovery summary = %+v", summary)
+			}
+			row = summary.ScenarioClassifications[0]
+			if row.FailureClassification != "workflow_choreography_gap" || row.UXQuality != "taste_debt" || row.SafetyPass != "pass" || row.CapabilityPass != "pass" || row.PreActionSetupDiscoveryCount != 1 {
+				t.Fatalf("setup-discovery classification row = %+v", row)
+			}
+			result.Metrics = cleanMetrics
+			result.Metrics.PostActionPrimitiveCommandCount = 1
+			summary = buildTargetedLaneSummary(tt.lane, false, []jobResult{result})
+			if summary == nil || len(summary.ScenarioClassifications) != 1 {
+				t.Fatalf("post-action primitive summary = %+v", summary)
+			}
+			row = summary.ScenarioClassifications[0]
+			if row.FailureClassification != "workflow_choreography_gap" || row.UXQuality != "taste_debt" || row.SafetyPass != "pass" || row.CapabilityPass != "pass" {
+				t.Fatalf("post-action primitive classification row = %+v", row)
+			}
+			result.Metrics = cleanMetrics
+			result.Metrics.FinalAnswerRepairTurns = 1
+			summary = buildTargetedLaneSummary(tt.lane, false, []jobResult{result})
+			if summary == nil || len(summary.ScenarioClassifications) != 1 {
+				t.Fatalf("final-answer repair summary = %+v", summary)
+			}
+			row = summary.ScenarioClassifications[0]
+			if row.FailureClassification != "workflow_choreography_gap" || row.UXQuality != "taste_debt" || row.SafetyPass != "pass" || row.CapabilityPass != "pass" {
+				t.Fatalf("final-answer repair classification row = %+v", row)
+			}
+			result.Metrics = cleanMetrics
+			result.Turns = []turnResult{{Index: 1}, {Index: 2}}
+			summary = buildTargetedLaneSummary(tt.lane, false, []jobResult{result})
+			if summary == nil || len(summary.ScenarioClassifications) != 1 {
+				t.Fatalf("retry summary = %+v", summary)
+			}
+			row = summary.ScenarioClassifications[0]
+			if row.FailureClassification != "workflow_choreography_gap" || row.UXQuality != "taste_debt" || row.SafetyPass != "pass" || row.CapabilityPass != "pass" {
+				t.Fatalf("retry classification row = %+v", row)
+			}
+			result.Turns = nil
 		})
 	}
 }

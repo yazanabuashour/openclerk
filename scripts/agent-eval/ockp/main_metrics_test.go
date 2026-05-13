@@ -163,6 +163,21 @@ func TestAggregateMetricsRequiresAllTurnsExposeUsage(t *testing.T) {
 	}
 }
 
+func TestAggregateMetricsCountsSetupDiscoveryBeforeGlobalWorkflowAction(t *testing.T) {
+	workflow := metrics{CommandExecutions: 1, WorkflowActionFirstCommandIndex: 1, WorkflowActionCallCount: 1, EventTypeCounts: map[string]int{}}
+	setup := metrics{CommandExecutions: 1, SetupDiscoveryCommandCount: 1, PreActionSetupDiscoveryCount: 1, EventTypeCounts: map[string]int{}}
+
+	afterAction := aggregateMetrics([]turnResult{{Metrics: workflow}, {Metrics: setup}})
+	if afterAction.SetupDiscoveryCommandCount != 1 || afterAction.PreActionSetupDiscoveryCount != 0 {
+		t.Fatalf("post-action setup discovery should not be pre-action globally: %+v", afterAction)
+	}
+
+	beforeAction := aggregateMetrics([]turnResult{{Metrics: setup}, {Metrics: workflow}})
+	if beforeAction.SetupDiscoveryCommandCount != 1 || beforeAction.PreActionSetupDiscoveryCount != 1 || beforeAction.WorkflowActionFirstCommandIndex != 2 {
+		t.Fatalf("pre-action setup discovery should remain pre-action globally: %+v", beforeAction)
+	}
+}
+
 func TestNormalizeActionTextHandlesShellEscapedJSON(t *testing.T) {
 	metrics := emptyMetrics()
 	classifyCommand(`printf '%s' \"{\\\"action\\\":\\\"provenance_events\\\",\\\"provenance\\\":{\\\"ref_kind\\\":\\\"document\\\",\\\"ref_id\\\":\\\"doc_alpha\\\"}}\" | openclerk retrieval`, &metrics)
@@ -185,6 +200,70 @@ func TestClassifyCommandTreatsOpenClerkSkillDiscoveryAsSkillCheck(t *testing.T) 
 	if metrics.BroadRepoSearch {
 		t.Fatalf("skill discovery should not be broad repo search: %+v", metrics)
 	}
+}
+
+func TestClassifyCommandTracksOpenClerkSetupDiscovery(t *testing.T) {
+	tests := []struct {
+		name  string
+		cmd   string
+		check func(metrics) bool
+	}{
+		{
+			name: "root help",
+			cmd:  "openclerk --help",
+			check: func(m metrics) bool {
+				return m.OpenClerkHelpUsed
+			},
+		},
+		{
+			name: "document help",
+			cmd:  "openclerk document --help",
+			check: func(m metrics) bool {
+				return m.OpenClerkDocumentHelpUsed
+			},
+		},
+		{
+			name: "retrieval help",
+			cmd:  "openclerk retrieval --help",
+			check: func(m metrics) bool {
+				return m.OpenClerkRetrievalHelpUsed
+			},
+		},
+		{
+			name: "module help",
+			cmd:  "openclerk module --help",
+			check: func(m metrics) bool {
+				return m.OpenClerkModuleHelpUsed
+			},
+		},
+		{
+			name: "capabilities",
+			cmd:  "openclerk capabilities",
+			check: func(m metrics) bool {
+				return m.OpenClerkCapabilitiesUsed
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			metrics := emptyMetrics()
+			metrics.CommandExecutions = 1
+			classifyCommand(tt.cmd, &metrics)
+			if !tt.check(metrics) || metrics.SetupDiscoveryCommandCount != 1 || metrics.PreActionSetupDiscoveryCount != 1 {
+				t.Fatalf("setup discovery metrics = %+v", metrics)
+			}
+		})
+	}
+	t.Run("post action setup is counted but not pre-action", func(t *testing.T) {
+		metrics := emptyMetrics()
+		metrics.CommandExecutions = 1
+		classifyCommand(`printf '%s' '{"action":"evidence_bundle_report","evidence_bundle":{"query":"x"}}' | openclerk retrieval`, &metrics)
+		metrics.CommandExecutions = 2
+		classifyCommand("openclerk retrieval --help", &metrics)
+		if metrics.SetupDiscoveryCommandCount != 1 || metrics.PreActionSetupDiscoveryCount != 0 || !metrics.OpenClerkRetrievalHelpUsed {
+			t.Fatalf("post-action setup discovery metrics = %+v", metrics)
+		}
+	})
 }
 
 func TestClassifyCommandFlagsGenericNativeMediaFetches(t *testing.T) {

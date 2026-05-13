@@ -256,6 +256,8 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 			StepCount:                       scenarioStepCount(result),
 			WorkflowActionFirstCommandIndex: result.Metrics.WorkflowActionFirstCommandIndex,
 			WorkflowActionCallCount:         result.Metrics.WorkflowActionCallCount,
+			SetupDiscoveryCommandCount:      result.Metrics.SetupDiscoveryCommandCount,
+			PreActionSetupDiscoveryCount:    result.Metrics.PreActionSetupDiscoveryCount,
 			PreActionPrimitiveCommandCount:  result.Metrics.PreActionPrimitiveCommandCount,
 			PostActionPrimitiveCommandCount: result.Metrics.PostActionPrimitiveCommandCount,
 			FinalAnswerRepairTurns:          result.Metrics.FinalAnswerRepairTurns,

@@ -6,10 +6,10 @@
 - Release blocking: `false`
 - Configured parallelism: `4`
 - Cache mode: `shared`
-- Cache prewarm seconds: `24.18`
-- Harness elapsed seconds: `66.26`
-- Effective parallel speedup: `0.51x`
-- Parallel efficiency: `0.13`
+- Cache prewarm seconds: `18.76`
+- Harness elapsed seconds: `44.43`
+- Effective parallel speedup: `0.32x`
+- Parallel efficiency: `0.08`
 - Raw logs: `<run-root>/<variant>/<scenario>/turn-N/events.jsonl`
 
 ## Production Gate
@@ -35,20 +35,20 @@ Recommendation: `fix_production_agentops_before_release`
 | Phase | Seconds |
 | --- | ---: |
 | prepare_run_dir | 0.00 |
-| copy_repo | 0.12 |
-| install_variant | 8.25 |
+| copy_repo | 0.05 |
+| install_variant | 11.27 |
 | warm_cache | 0.00 |
 | seed_data | 0.03 |
-| agent_run | 33.64 |
+| agent_run | 14.29 |
 | parse_metrics | 0.00 |
 | verify | 0.03 |
-| total | 42.08 |
+| total | 25.67 |
 
 ## Results
 
 | Variant | Scenario | Status | Tools | Commands | Assistant Calls | Non-Cached Input | Wall Seconds | Raw Log |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `production` | `compile-synthesis-workflow-action-natural` | `completed` | 3 | 3 | 4 | 5469 | 33.64 | `<run-root>/production/compile-synthesis-workflow-action-natural/turn-1/events.jsonl` |
+| `production` | `compile-synthesis-workflow-action-natural` | `completed` | 1 | 1 | 2 | 10290 | 14.29 | `<run-root>/production/compile-synthesis-workflow-action-natural/turn-1/events.jsonl` |
 
 ## Targeted Lane Summary
 
@@ -58,6 +58,6 @@ Public surface: `openclerk document`, `openclerk retrieval`
 
 Promotion: implemented narrow compile_synthesis document action plus existing primitives for advanced/manual cases; no schema migration, direct vault behavior, broad synthesis engine, or source authority change.
 
-| Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Workflow first command | Workflow calls | Pre-action primitives | Post-action primitives | Final-answer repair turns | Latency | Guidance dependence | Safety pass | Capability pass | UX quality | Safety risks | Fixture preflight | Evidence posture |
-| --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- |
-| `production` | `compile-synthesis-workflow-action-natural` | `completed` | `workflow_choreography_gap` | 3 | 3 | 4 | 33.64 | `natural-user-intent` | `completed` | `normal` | 0 | 3 | 3 | 1 | 0 | 0 | 0 | `medium` | `high_ceremony_promoted_workflow_action` | `pass` | `pass` | `taste_debt` | `none_observed` | `not_applicable` | compile_synthesis preserved source authority and passed, but natural workflow-action use still required more commands or assistant turns than the low-ceremony UX threshold |
+| Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Workflow first command | Workflow calls | Setup discovery | Pre-action setup discovery | Pre-action primitives | Post-action primitives | Final-answer repair turns | Latency | Guidance dependence | Safety pass | Capability pass | UX quality | Safety risks | Fixture preflight | Evidence posture |
+| --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- |
+| `production` | `compile-synthesis-workflow-action-natural` | `completed` | `none` | 1 | 1 | 2 | 14.29 | `natural-user-intent` | `completed` | `normal` | 0 | 1 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | `low` | `low_natural_promoted_workflow_action` | `pass` | `pass` | `workflow_action_acceptable` | `none_observed` | `not_applicable` | compile_synthesis preserved source authority, selected the existing target, prevented duplicates, returned provenance/freshness evidence, and reduced workflow ceremony |

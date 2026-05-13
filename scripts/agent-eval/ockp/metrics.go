@@ -203,6 +203,7 @@ func classifyCommand(command string, m *metrics) {
 	actionText := normalizeActionText(lower)
 	workflowActionCommand := commandContainsWorkflowAction(actionText)
 	primitiveCommand := commandContainsWorkflowPrimitive(actionText)
+	setupDiscoveryCommand := commandContainsSetupDiscovery(lower)
 	if workflowActionCommand {
 		if m.WorkflowActionFirstCommandIndex == 0 {
 			m.WorkflowActionFirstCommandIndex = m.CommandExecutions
@@ -213,6 +214,12 @@ func classifyCommand(command string, m *metrics) {
 			m.PreActionPrimitiveCommandCount++
 		} else {
 			m.PostActionPrimitiveCommandCount++
+		}
+	}
+	if setupDiscoveryCommand {
+		m.SetupDiscoveryCommandCount++
+		if m.WorkflowActionFirstCommandIndex == 0 {
+			m.PreActionSetupDiscoveryCount++
 		}
 	}
 	evidence := sanitizeMetricEvidence(command)
@@ -349,6 +356,21 @@ func classifyCommand(command string, m *metrics) {
 	if openClerkSkillCheck {
 		m.OpenClerkSkillCheckUsed = true
 	}
+	if commandContainsOpenClerkHelp(lower) {
+		m.OpenClerkHelpUsed = true
+	}
+	if commandContainsOpenClerkSubcommandHelp(lower, "document") {
+		m.OpenClerkDocumentHelpUsed = true
+	}
+	if commandContainsOpenClerkSubcommandHelp(lower, "retrieval") {
+		m.OpenClerkRetrievalHelpUsed = true
+	}
+	if commandContainsOpenClerkSubcommandHelp(lower, "module") {
+		m.OpenClerkModuleHelpUsed = true
+	}
+	if commandContainsOpenClerkCapabilities(lower) {
+		m.OpenClerkCapabilitiesUsed = true
+	}
 	if commandContainsAction(actionText, "semantic_search") {
 		m.SemanticSearchUsed = true
 	}
@@ -436,6 +458,26 @@ func commandContainsWorkflowAction(actionText string) bool {
 		commandContainsAction(actionText, "source_audit_report") ||
 		commandContainsAction(actionText, "evidence_bundle_report") ||
 		commandContainsAction(actionText, "decision_lookup_report")
+}
+func commandContainsSetupDiscovery(lower string) bool {
+	return commandContainsOpenClerkHelp(lower) ||
+		commandContainsOpenClerkSubcommandHelp(lower, "document") ||
+		commandContainsOpenClerkSubcommandHelp(lower, "retrieval") ||
+		commandContainsOpenClerkSubcommandHelp(lower, "module") ||
+		commandContainsOpenClerkCapabilities(lower)
+}
+func commandContainsOpenClerkHelp(lower string) bool {
+	return strings.Contains(lower, "openclerk --help") ||
+		strings.Contains(lower, "openclerk -h") ||
+		strings.Contains(lower, "openclerk help")
+}
+func commandContainsOpenClerkSubcommandHelp(lower string, subcommand string) bool {
+	return strings.Contains(lower, "openclerk "+subcommand+" --help") ||
+		strings.Contains(lower, "openclerk "+subcommand+" -h") ||
+		strings.Contains(lower, "openclerk help "+subcommand)
+}
+func commandContainsOpenClerkCapabilities(lower string) bool {
+	return strings.Contains(lower, "openclerk capabilities")
 }
 func commandContainsWorkflowPrimitive(actionText string) bool {
 	for _, action := range []string{
@@ -773,9 +815,19 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.AuditContradictionsUsed = out.AuditContradictionsUsed || current.AuditContradictionsUsed
 		out.AuditContradictionsModes = append(out.AuditContradictionsModes, current.AuditContradictionsModes...)
 		out.MemoryRouterRecallReportUsed = out.MemoryRouterRecallReportUsed || current.MemoryRouterRecallReportUsed
+		out.SourceDiscoveryReportUsed = out.SourceDiscoveryReportUsed || current.SourceDiscoveryReportUsed
 		out.OpenClerkPathCheckUsed = out.OpenClerkPathCheckUsed || current.OpenClerkPathCheckUsed
 		out.OpenClerkVersionCheckUsed = out.OpenClerkVersionCheckUsed || current.OpenClerkVersionCheckUsed
 		out.OpenClerkSkillCheckUsed = out.OpenClerkSkillCheckUsed || current.OpenClerkSkillCheckUsed
+		out.OpenClerkHelpUsed = out.OpenClerkHelpUsed || current.OpenClerkHelpUsed
+		out.OpenClerkDocumentHelpUsed = out.OpenClerkDocumentHelpUsed || current.OpenClerkDocumentHelpUsed
+		out.OpenClerkRetrievalHelpUsed = out.OpenClerkRetrievalHelpUsed || current.OpenClerkRetrievalHelpUsed
+		out.OpenClerkModuleHelpUsed = out.OpenClerkModuleHelpUsed || current.OpenClerkModuleHelpUsed
+		out.OpenClerkCapabilitiesUsed = out.OpenClerkCapabilitiesUsed || current.OpenClerkCapabilitiesUsed
+		out.SetupDiscoveryCommandCount += current.SetupDiscoveryCommandCount
+		if out.WorkflowActionFirstCommandIndex == 0 {
+			out.PreActionSetupDiscoveryCount += current.PreActionSetupDiscoveryCount
+		}
 		out.SemanticSearchUsed = out.SemanticSearchUsed || current.SemanticSearchUsed
 		out.ModuleInstallUsed = out.ModuleInstallUsed || current.ModuleInstallUsed
 		out.ModuleConfigureUsed = out.ModuleConfigureUsed || current.ModuleConfigureUsed
@@ -783,9 +835,11 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.ModuleRemoveUsed = out.ModuleRemoveUsed || current.ModuleRemoveUsed
 		out.ModuleProviders = append(out.ModuleProviders, current.ModuleProviders...)
 		out.CompileSynthesisUsed = out.CompileSynthesisUsed || current.CompileSynthesisUsed
+		out.ValidationSynthesisReportUsed = out.ValidationSynthesisReportUsed || current.ValidationSynthesisReportUsed
 		out.SourceAuditReportUsed = out.SourceAuditReportUsed || current.SourceAuditReportUsed
 		out.SourceAuditReportModes = append(out.SourceAuditReportModes, current.SourceAuditReportModes...)
 		out.EvidenceBundleReportUsed = out.EvidenceBundleReportUsed || current.EvidenceBundleReportUsed
+		out.DecisionLookupReportUsed = out.DecisionLookupReportUsed || current.DecisionLookupReportUsed
 		if current.WorkflowActionFirstCommandIndex != 0 {
 			first := commandOffset + current.WorkflowActionFirstCommandIndex
 			if out.WorkflowActionFirstCommandIndex == 0 || first < out.WorkflowActionFirstCommandIndex {
