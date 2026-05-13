@@ -226,7 +226,7 @@ func TestEvalEnvOverridesHostOpenClerkPaths(t *testing.T) {
 	t.Setenv("CODEX_HOME", "/host/.codex")
 	t.Setenv("OPENCLERK_DATA_DIR", "/host/data")
 	t.Setenv("OPENCLERK_DATABASE_PATH", "/host/openclerk.db")
-	t.Setenv("OPENCLERK_VAULT_ROOT", "/host/vault")
+	t.Setenv("OPENCLERK_HOST_ONLY_SETTING", "host-value")
 	t.Setenv("OPENAI_API_KEY", "host-secret")
 	t.Setenv("GITHUB_TOKEN", "host-token")
 
@@ -255,8 +255,8 @@ func TestEvalEnvOverridesHostOpenClerkPaths(t *testing.T) {
 	if got["OPENCLERK_DATABASE_PATH"] != paths.DatabasePath {
 		t.Fatalf("OPENCLERK_DATABASE_PATH = %q, want %q", got["OPENCLERK_DATABASE_PATH"], paths.DatabasePath)
 	}
-	if _, ok := got["OPENCLERK_VAULT_ROOT"]; ok {
-		t.Fatalf("OPENCLERK_VAULT_ROOT should not be exported: %v", got)
+	if _, ok := got["OPENCLERK_HOST_ONLY_SETTING"]; ok {
+		t.Fatalf("host OPENCLERK_* variables should not be exported: %v", got)
 	}
 	if _, ok := got["OPENAI_API_KEY"]; ok {
 		t.Fatalf("OPENAI_API_KEY should not be exported: %v", got)

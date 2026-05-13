@@ -267,11 +267,6 @@ func evalEnv(runDir string, paths evalPaths, cache cacheConfig) []string {
 	effective := evalPathsFor(runDir, paths, cache)
 	env := filteredEnv(os.Environ(),
 		"CODEX_HOME",
-		"OPENCLERK_DATA_DIR",
-		"OPENCLERK_DATABASE_PATH",
-		evalSourceFixtureRootEnv,
-		evalSourceFixtureEnableEnv,
-		"OPENCLERK_VAULT_ROOT",
 		"GOCACHE",
 		"GOMODCACHE",
 		"TMPDIR",
@@ -308,6 +303,9 @@ func filteredEnv(env []string, keys ...string) []string {
 		key, _, found := strings.Cut(entry, "=")
 		if found {
 			if _, blockedKey := blocked[key]; blockedKey {
+				continue
+			}
+			if strings.HasPrefix(key, "OPENCLERK_") {
 				continue
 			}
 			if isSecretEnvKey(key) {
