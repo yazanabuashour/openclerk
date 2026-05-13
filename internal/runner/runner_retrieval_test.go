@@ -251,6 +251,30 @@ func TestRetrievalTaskWorkflowGuideReportRoutesExplicitOCRReview(t *testing.T) {
 	}
 }
 
+func TestRetrievalTaskWorkflowGuideReportRoutesPublicScannedPDFURL(t *testing.T) {
+	t.Parallel()
+
+	result, err := runner.RunRetrievalTask(context.Background(), runclient.Config{}, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionWorkflowGuide,
+		WorkflowGuide: runner.WorkflowGuideOptions{
+			Intent: "Plan intake for a public scanned PDF URL before writing it.",
+		},
+	})
+	if err != nil {
+		t.Fatalf("workflow guide public PDF report: %v", err)
+	}
+	if result.Rejected || result.WorkflowGuide == nil {
+		t.Fatalf("workflow guide public PDF result = %+v", result)
+	}
+	report := result.WorkflowGuide
+	if report.RecommendedSurface != "ingest_source_url plan" ||
+		report.RunnerDomain != "document" ||
+		!strings.Contains(report.RequestShape, "ingest_source_url") ||
+		strings.Contains(report.RequestShape, "local_path") {
+		t.Fatalf("workflow guide public PDF report = %+v", report)
+	}
+}
+
 func TestRetrievalTaskWorkflowGuideReportRejectsMissingIntent(t *testing.T) {
 	t.Parallel()
 

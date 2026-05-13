@@ -52,6 +52,15 @@ func selectWorkflowGuideCandidate(intent string) workflowGuideSelection {
 			DoNotUseFor:    []string{"durable writes", "raw private content exposure", "external search"},
 			HandoffSummary: "Use retrieval source_discovery_report, then answer from source_discovery.agent_handoff without private paths, titles, snippets, ids, or raw JSON.",
 		}
+	case containsAny(normalized, "public url", "public link", "source url", "fetch url", "ingest url", "web page", "pdf url", "public pdf"):
+		return workflowGuideSelection{
+			Surface:        "ingest_source_url plan",
+			RunnerDomain:   "document",
+			RequestShape:   `{"action":"ingest_source_url","source":{"url":"https://example.test/page.html","mode":"plan","source_type":"web","title":"Optional title"}}`,
+			UseWhen:        "use for public URL source placement before durable fetch or write approval",
+			DoNotUseFor:    []string{"login-gated pages", "purchases", "captcha/paywall bypasses", "non-runner HTTP/browser fetch"},
+			HandoffSummary: "Use document ingest_source_url with mode plan for public-link placement; public read/fetch permission is separate from durable-write approval.",
+		}
 	case containsAny(normalized, "artifact", "invoice", "receipt", "legal document", "transcript", "auto-file", "autofile", "candidate path", "body preview", "metadata field", "tags", "ocr", "scan-only", "scanned pdf", "local file"):
 		return workflowGuideSelection{
 			Surface:        "artifact_candidate_plan",
@@ -79,7 +88,7 @@ func selectWorkflowGuideCandidate(intent string) workflowGuideSelection {
 			DoNotUseFor:    []string{"live search provider calls", "browser automation", "durable fetch/write", "private or authenticated pages"},
 			HandoffSummary: "Use document web_search_plan for read-only search-result planning; approved public fetch/write still flows through ingest_source_url.",
 		}
-	case containsAny(normalized, "public url", "public link", "source url", "source placement", "fetch url", "ingest url", "web page", "pdf"):
+	case containsAny(normalized, "source placement", "pdf"):
 		return workflowGuideSelection{
 			Surface:        "ingest_source_url plan",
 			RunnerDomain:   "document",
