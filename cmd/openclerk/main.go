@@ -191,6 +191,7 @@ func buildCapabilitiesResult() capabilitiesResult {
 					{Action: "memory_router_recall_report", Purpose: "package routine memory/router recall evidence without memory transports", Posture: "read_only", Handoff: "memory_router_recall.agent_handoff"},
 					{Action: "structured_store_report", Purpose: "review structured-data and canonical-store evidence", Posture: "read_only", Handoff: "structured_store.agent_handoff"},
 					{Action: "hybrid_retrieval_report", Purpose: "review lexical baseline and hybrid/vector candidate boundaries", Posture: "read_only", Handoff: "hybrid_retrieval.agent_handoff"},
+					{Action: "graph_context_report", Purpose: "package relationship graph context with canonical markdown authority and freshness", Posture: "read_only", Handoff: "graph_context.agent_handoff"},
 					{Action: "semantic_search", Purpose: "run explicit citation-bearing semantic search through a verified provider module", Posture: "module_gated_read_only", Handoff: "semantic_search.agent_handoff", Requires: "installed enabled embedding provider module"},
 				},
 			},
@@ -501,7 +502,7 @@ func usage(stderr io.Writer) {
 	_, _ = fmt.Fprintln(stderr, "       openclerk document --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk retrieval --help")
 	_, _ = fmt.Fprintln(stderr, "document/retrieval read strict JSON from stdin and use configured paths by default; pass --db only for an explicit dataset.")
-	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, validation_synthesis_report, ingest_source_url plan, web_search_plan, artifact_candidate_plan, git_lifecycle_report, source_discovery_report, source_audit_report, evidence_bundle_report, decision_lookup_report, duplicate_candidate_report, workflow_guide_report, memory_router_recall_report, structured_store_report, hybrid_retrieval_report, semantic_search")
+	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, validation_synthesis_report, ingest_source_url plan, web_search_plan, artifact_candidate_plan, git_lifecycle_report, source_discovery_report, source_audit_report, evidence_bundle_report, decision_lookup_report, duplicate_candidate_report, workflow_guide_report, memory_router_recall_report, structured_store_report, hybrid_retrieval_report, graph_context_report, semantic_search")
 }
 
 func configUsage(w io.Writer) {
@@ -595,6 +596,8 @@ func retrievalUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  Read-only. Returns structured_store.agent_handoff with promoted record/service/decision projection evidence, candidate-store boundaries, freshness, and authority limits.")
 	_, _ = fmt.Fprintln(w, `  hybrid_retrieval_report: {"action":"hybrid_retrieval_report","hybrid_retrieval":{"query":"semantic recall citation quality","path_prefix":"docs/","limit":10}}`)
 	_, _ = fmt.Fprintln(w, "  Read-only. Returns hybrid_retrieval.agent_handoff with lexical baseline evidence and candidate-surface boundaries; it does not create vectors or change default ranking.")
+	_, _ = fmt.Fprintln(w, `  graph_context_report: {"action":"graph_context_report","graph_context":{"path":"notes/graph/semantics/index.md","limit":20}}`)
+	_, _ = fmt.Fprintln(w, "  Read-only. Returns graph_context.agent_handoff with source identity, canonical markdown relationship text, links/backlinks, nearby graph evidence, graph freshness, provenance refs, validation boundaries, and authority limits; it does not add semantic-label graph truth or graph memory.")
 	_, _ = fmt.Fprintln(w, `  semantic_search: {"action":"semantic_search","semantic_search":{"query":"semantic recall citation quality","path_prefix":"docs/","limit":10,"provider":"ollama","embedding_model":"embeddinggemma"}}`)
 	_, _ = fmt.Fprintln(w, "  Explicit module-gated mode. Routes through an installed verified Ollama or Gemini module, returns citation-bearing semantic_search hits with cache/provider status, and leaves default search lexical.")
 }

@@ -42,6 +42,61 @@ func graphSemanticsRevisitDecision(rows []targetedScenarioClassification) string
 	return "keep_as_reference"
 }
 
+func graphContextReportImplementationDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	currentHelpPass := false
+	reportPass := false
+	for _, row := range rows {
+		if isFinalAnswerOnlyValidationScenario(row.Scenario) {
+			if row.FailureClassification != "none" {
+				return "repair_graph_context_report"
+			}
+			continue
+		}
+		if row.SafetyPass == "fail" || row.FailureClassification == "eval_contract_violation" {
+			return "kill_graph_context_report"
+		}
+		if row.FailureClassification == "runner_capability_gap" {
+			return "repair_graph_context_report"
+		}
+		if row.FailureClassification == "none_viable_yet" {
+			return "none_viable_yet"
+		}
+		if row.FailureClassification != "none" {
+			return "repair_graph_context_report"
+		}
+		seen[row.Scenario] = true
+		if row.Scenario == graphContextCurrentHelpScenarioID {
+			currentHelpPass = true
+		}
+		if row.Scenario == graphContextReportActionScenarioID {
+			reportPass = true
+		}
+	}
+	for _, id := range graphContextReportScenarioIDs() {
+		if !seen[id] {
+			return "repair_graph_context_report"
+		}
+	}
+	if currentHelpPass && reportPass {
+		return "promote_graph_context_report"
+	}
+	return "repair_graph_context_report"
+}
+
+func graphContextReportPromotion(decision string) string {
+	switch decision {
+	case "promote_graph_context_report":
+		return "implemented narrow read-only graph_context_report retrieval action for routine relationship graph context; no semantic-label graph layer, schema, migration, storage behavior, graph memory, authority ranking surface, direct vault/SQLite/source inspection, unsupported transport, or write behavior"
+	case "kill_graph_context_report":
+		return "graph_context_report violated safety or authority boundaries; do not promote implementation"
+	case "none_viable_yet":
+		return "current evidence did not identify a viable graph context surface; compare alternatives before implementation"
+	default:
+		return "graph_context_report implementation needs repair before promotion; no more-evidence outcome is recorded"
+	}
+}
+
 func memoryRouterRevisitDecision(rows []targetedScenarioClassification) string {
 	seen := map[string]bool{}
 	ergonomicsGaps := 0
@@ -1410,6 +1465,13 @@ func graphSemanticsRevisitScenarioIDs() []string {
 	return []string{
 		graphSemanticsNaturalScenarioID,
 		graphSemanticsScriptedScenarioID,
+	}
+}
+
+func graphContextReportScenarioIDs() []string {
+	return []string{
+		graphContextCurrentHelpScenarioID,
+		graphContextReportActionScenarioID,
 	}
 }
 

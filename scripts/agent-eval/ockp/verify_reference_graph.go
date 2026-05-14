@@ -19,6 +19,149 @@ func verifyGraphSemanticsRevisit(ctx context.Context, paths evalPaths, finalMess
 	return verifyGraphSemanticsWorkflow(ctx, paths, finalMessage, turnMetrics, scripted, graphSemanticsRevisitAnswerPass(finalMessage, scripted), assistantFailure)
 }
 
+func verifyGraphContextCurrentPrimitivesHelp(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	result, err := verifyGraphSemanticsWorkflow(ctx, paths, finalMessage, turnMetrics, true, graphContextCurrentHelpAnswerPass(finalMessage), "final answer did not compare current primitives plus help, graph_context_report, no new surface, and graph authority boundaries")
+	if err != nil {
+		return verificationResult{}, err
+	}
+	failures := []string{}
+	if !result.DatabasePass {
+		failures = append(failures, result.Details)
+	}
+	if !turnMetrics.OpenClerkRetrievalHelpUsed {
+		failures = append(failures, "agent did not inspect openclerk retrieval help")
+	}
+	if !turnMetrics.ProvenanceEventsUsed {
+		failures = append(failures, "agent did not inspect document provenance refs")
+	}
+	if turnMetrics.GraphContextReportUsed {
+		failures = append(failures, "current-primitives-plus-help row used graph_context_report")
+	}
+	if !result.AssistantPass {
+		failures = append(failures, "final answer did not compare current primitives plus help, graph_context_report, no new surface, and graph authority boundaries")
+	}
+	activityPass := result.DatabasePass &&
+		turnMetrics.OpenClerkRetrievalHelpUsed &&
+		turnMetrics.SearchUsed &&
+		turnMetrics.ListDocumentsUsed &&
+		turnMetrics.GetDocumentUsed &&
+		turnMetrics.DocumentLinksUsed &&
+		turnMetrics.GraphNeighborhoodUsed &&
+		turnMetrics.ProjectionStatesUsed &&
+		turnMetrics.ProvenanceEventsUsed &&
+		!turnMetrics.GraphContextReportUsed &&
+		!turnMetrics.CreateDocumentUsed &&
+		!turnMetrics.AppendDocumentUsed &&
+		!turnMetrics.ReplaceSectionUsed &&
+		!turnMetrics.IngestSourceURLUsed &&
+		!turnMetrics.IngestVideoURLUsed
+	return verificationResult{
+		Passed:        activityPass && result.AssistantPass,
+		DatabasePass:  result.DatabasePass,
+		AssistantPass: activityPass && result.AssistantPass,
+		Details:       missingDetails(failures),
+		Documents:     result.Documents,
+	}, nil
+}
+
+func verifyGraphContextReportAction(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	reportResult, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionGraphContext,
+		GraphContext: runner.GraphContextOptions{
+			Path:  graphSemanticsIndexPath,
+			Limit: 20,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	report := reportResult.GraphContext
+	databasePass := report != nil &&
+		report.SourceDocument != nil &&
+		report.SourceDocument.Path == graphSemanticsIndexPath &&
+		report.SourceSelection == "path_exact_match" &&
+		len(report.CanonicalRelationshipText) > 0 &&
+		messageContainsAll(report.CanonicalRelationshipText[0].Text, []string{"requires", "supersedes", "related to", "operationalizes"}) &&
+		report.Links != nil &&
+		documentLinksContainPath(report.Links.Outgoing, graphSemanticsRoutingPath) &&
+		documentLinksContainPath(report.Links.Outgoing, graphSemanticsFreshnessPath) &&
+		documentLinksContainPath(report.Links.Outgoing, graphSemanticsOperationsPath) &&
+		documentLinksContainPath(report.Links.Incoming, graphSemanticsRoutingPath) &&
+		report.Graph != nil &&
+		graphContainsNodeLabels(report.Graph.Nodes, []string{"Graph Semantics Reference", "Routing", "Freshness", "Operations"}) &&
+		graphContainsStructuralEdge(report.Graph.Edges) &&
+		graphEdgesHaveCitations(report.Graph.Edges) &&
+		graphEdgesOnlyStructural(report.Graph.Edges) &&
+		report.GraphProjection != nil &&
+		len(report.GraphProjection.Projections) == 1 &&
+		report.GraphProjection.Projections[0].Freshness == "fresh" &&
+		report.Provenance != nil &&
+		eventTypesInclude(report.Provenance.Events, "document_created") &&
+		graphContextCandidatesInclude(report.CandidateSurfaces, "current_primitives_plus_help") &&
+		graphContextCandidatesInclude(report.CandidateSurfaces, "no_new_surface") &&
+		strings.Contains(report.ValidationBoundaries, "no graph memory") &&
+		strings.Contains(report.AuthorityLimits, "canonical markdown")
+	assistantPass := graphContextReportActionAnswerPass(finalMessage)
+	activityPass := turnMetrics.GraphContextReportUsed &&
+		turnMetrics.WorkflowActionCallCount > 0 &&
+		graphContextReportFirstActionAllowed(turnMetrics) &&
+		turnMetrics.CommandExecutions <= 3 &&
+		!turnMetrics.OpenClerkRetrievalHelpUsed &&
+		!turnMetrics.SearchUsed &&
+		!turnMetrics.ListDocumentsUsed &&
+		!turnMetrics.GetDocumentUsed &&
+		!turnMetrics.DocumentLinksUsed &&
+		!turnMetrics.GraphNeighborhoodUsed &&
+		!turnMetrics.ProjectionStatesUsed &&
+		!turnMetrics.ProvenanceEventsUsed &&
+		!turnMetrics.CreateDocumentUsed &&
+		!turnMetrics.AppendDocumentUsed &&
+		!turnMetrics.ReplaceSectionUsed &&
+		!turnMetrics.IngestSourceURLUsed &&
+		!turnMetrics.IngestVideoURLUsed
+
+	failures := []string{}
+	if !databasePass {
+		failures = append(failures, "graph_context_report did not return complete cited graph context, freshness, provenance, and candidate-surface evidence")
+	}
+	if !turnMetrics.GraphContextReportUsed {
+		failures = append(failures, "agent did not use graph_context_report")
+	}
+	if !graphContextReportFirstActionAllowed(turnMetrics) {
+		failures = append(failures, "agent ran setup or primitives before graph_context_report")
+	}
+	if turnMetrics.CommandExecutions > 3 {
+		failures = append(failures, "graph_context_report row used too many commands")
+	}
+	if turnMetrics.OpenClerkRetrievalHelpUsed || turnMetrics.SearchUsed || turnMetrics.ListDocumentsUsed || turnMetrics.GetDocumentUsed || turnMetrics.DocumentLinksUsed || turnMetrics.GraphNeighborhoodUsed || turnMetrics.ProjectionStatesUsed || turnMetrics.ProvenanceEventsUsed {
+		failures = append(failures, "agent used follow-up help or primitive inspection despite graph_context_report success")
+	}
+	if turnMetrics.CreateDocumentUsed || turnMetrics.AppendDocumentUsed || turnMetrics.ReplaceSectionUsed || turnMetrics.IngestSourceURLUsed || turnMetrics.IngestVideoURLUsed {
+		failures = append(failures, "agent used a mutating document or source action")
+	}
+	if !assistantPass {
+		failures = append(failures, "final answer did not summarize graph_context_report fields and boundaries")
+	}
+
+	return verificationResult{
+		Passed:        databasePass && assistantPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: assistantPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{graphSemanticsIndexPath, graphSemanticsRoutingPath, graphSemanticsFreshnessPath, graphSemanticsOperationsPath},
+	}, nil
+}
+
+func graphContextReportFirstActionAllowed(turnMetrics metrics) bool {
+	if turnMetrics.WorkflowActionFirstCommandIndex <= 1 {
+		return true
+	}
+	return turnMetrics.WorkflowActionFirstCommandIndex == 2 && turnMetrics.OpenClerkSkillCheckUsed &&
+		turnMetrics.PreActionSetupDiscoveryCount == 0 &&
+		turnMetrics.PreActionPrimitiveCommandCount == 0
+}
+
 func verifyGraphSemanticsWorkflow(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics, requireListDocuments bool, assistantPass bool, assistantFailure string) (verificationResult, error) {
 	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
 	search, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
@@ -194,4 +337,13 @@ func verifyGraphSemanticsWorkflow(ctx context.Context, paths evalPaths, finalMes
 		Details:       missingDetails(failures),
 		Documents:     wantedPaths,
 	}, nil
+}
+
+func graphContextCandidatesInclude(candidates []runner.GraphContextCandidate, surface string) bool {
+	for _, candidate := range candidates {
+		if candidate.Surface == surface {
+			return true
+		}
+	}
+	return false
 }

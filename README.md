@@ -72,7 +72,8 @@ These are the eval-worthy surfaces in priority order:
 2. **Document write → re-search** — create a short note, then search for it and confirm the cited result appears.
 3. **Synthesis page lifecycle** — create a `synthesis/` page from source paths, update it, inspect provenance.
 4. **Duplicate candidate detection** — ingest a near-duplicate, then confirm `duplicate_candidate_report` surfaces it rather than silently creating a second document.
-5. **Stale projection detection** — update a source doc, then confirm downstream synthesis shows as stale before repair.
+5. **Relationship graph context** — run `graph_context_report` for a known markdown page and confirm canonical relationship text, links/backlinks, graph freshness, and provenance refs are returned without creating graph truth.
+6. **Stale projection detection** — update a source doc, then confirm downstream synthesis shows as stale before repair.
 
 Report correctness, tool call count, and wall time. That's how the maintainers
 gate new features.
@@ -149,7 +150,7 @@ openclerk capabilities
 ```bash
 openclerk config      # persisted product/profile config
 openclerk document    # doc writes, registry, paths
-openclerk retrieval   # search, links, graph neighborhoods, records, provenance
+openclerk retrieval   # search, graph context, records, provenance
 openclerk capabilities
 ```
 

@@ -166,6 +166,24 @@ func commandTexts(raw json.RawMessage) []string {
 	}
 	out := []string{}
 	collectCommandTexts(value, &out)
+	out = dedupeCommandTexts(out)
+	return out
+}
+
+func dedupeCommandTexts(commands []string) []string {
+	if len(commands) < 2 {
+		return commands
+	}
+	seen := map[string]bool{}
+	out := make([]string, 0, len(commands))
+	for _, command := range commands {
+		key := strings.TrimSpace(command)
+		if key == "" || seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, command)
+	}
 	return out
 }
 func collectCommandTexts(value any, out *[]string) {
@@ -344,6 +362,9 @@ func classifyCommand(command string, m *metrics) {
 	if commandContainsAction(actionText, "memory_router_recall_report") {
 		m.MemoryRouterRecallReportUsed = true
 	}
+	if commandContainsAction(actionText, "graph_context_report") {
+		m.GraphContextReportUsed = true
+	}
 	if commandContainsAction(actionText, "source_discovery_report") {
 		m.SourceDiscoveryReportUsed = true
 	}
@@ -457,7 +478,8 @@ func commandContainsWorkflowAction(actionText string) bool {
 		commandContainsAction(actionText, "source_discovery_report") ||
 		commandContainsAction(actionText, "source_audit_report") ||
 		commandContainsAction(actionText, "evidence_bundle_report") ||
-		commandContainsAction(actionText, "decision_lookup_report")
+		commandContainsAction(actionText, "decision_lookup_report") ||
+		commandContainsAction(actionText, "graph_context_report")
 }
 func commandContainsSetupDiscovery(lower string) bool {
 	return commandContainsOpenClerkHelp(lower) ||
@@ -501,6 +523,7 @@ func commandContainsWorkflowPrimitive(actionText string) bool {
 		"projection_states",
 		"audit_contradictions",
 		"memory_router_recall_report",
+		"graph_context_report",
 		"semantic_search",
 	} {
 		if commandContainsAction(actionText, action) {
@@ -815,6 +838,7 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.AuditContradictionsUsed = out.AuditContradictionsUsed || current.AuditContradictionsUsed
 		out.AuditContradictionsModes = append(out.AuditContradictionsModes, current.AuditContradictionsModes...)
 		out.MemoryRouterRecallReportUsed = out.MemoryRouterRecallReportUsed || current.MemoryRouterRecallReportUsed
+		out.GraphContextReportUsed = out.GraphContextReportUsed || current.GraphContextReportUsed
 		out.SourceDiscoveryReportUsed = out.SourceDiscoveryReportUsed || current.SourceDiscoveryReportUsed
 		out.OpenClerkPathCheckUsed = out.OpenClerkPathCheckUsed || current.OpenClerkPathCheckUsed
 		out.OpenClerkVersionCheckUsed = out.OpenClerkVersionCheckUsed || current.OpenClerkVersionCheckUsed

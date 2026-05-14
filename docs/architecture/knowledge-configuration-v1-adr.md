@@ -192,6 +192,9 @@ The v1 retrieval runner actions are:
 - `search` finds source-grounded document chunks with citations.
 - `document_links` exposes outgoing markdown links and incoming backlinks.
 - `graph_neighborhood` exposes derived docs graph context.
+- `graph_context_report` packages routine relationship graph context with
+  source identity, canonical markdown relationship text, links/backlinks,
+  graph projection freshness, provenance refs, and authority limits.
 - `records_lookup` finds promoted generic record entities.
 - `record_entity` returns one promoted generic record entity.
 - `services_lookup` finds promoted service records.

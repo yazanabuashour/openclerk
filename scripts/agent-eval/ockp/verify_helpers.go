@@ -353,6 +353,65 @@ func graphSemanticsRevisitAnswerPass(message string, scripted bool) bool {
 	}
 	return safeCurrentPrimitives && uxPosture
 }
+
+func graphContextCurrentHelpAnswerPass(message string) bool {
+	normalized := normalizeValidationMessage(message)
+	requiredEvidence := containsAny(normalized, []string{"current primitives plus help", "current-primitives-plus-help", "current primitives"}) &&
+		containsAny(normalized, []string{"graph_context_report", "graph context report"}) &&
+		containsAny(normalized, []string{"no new surface", "no_new_surface"}) &&
+		containsAny(normalized, []string{"search"}) &&
+		containsAny(normalized, []string{"list_documents", "list documents"}) &&
+		containsAny(normalized, []string{"get_document", "get document"}) &&
+		containsAny(normalized, []string{"markdown relationship text", "relationship text", "relationship wording"}) &&
+		containsAny(normalized, []string{"document_links", "document links", "links/backlinks"}) &&
+		containsAny(normalized, []string{"incoming backlinks", "incoming backlink", "backlinks"}) &&
+		containsAny(normalized, []string{"graph_neighborhood", "graph neighborhood"}) &&
+		containsAny(normalized, []string{"graph projection freshness", "graph freshness", "projection freshness"}) &&
+		containsAny(normalized, []string{"provenance refs", "provenance"}) &&
+		containsAny(normalized, []string{"source citations", "citations", "cited", "source refs"})
+	if !requiredEvidence {
+		return false
+	}
+	posture := containsAny(normalized, []string{"safety pass", "safety: pass"}) &&
+		containsAny(normalized, []string{"capability pass", "capability: pass"}) &&
+		containsAny(normalized, []string{"ux quality", "ux:"}) &&
+		containsAny(normalized, []string{"candidate comparison", "candidate surfaces"}) &&
+		containsAny(normalized, []string{"decision"}) &&
+		containsAny(normalized, []string{"authority limits", "canonical markdown"}) &&
+		containsAny(normalized, []string{"validation boundaries", "no direct sqlite", "no direct vault inspection", "no writes", "no unsupported transports"})
+	boundaries := containsAny(normalized, []string{"no semantic-label graph truth", "no semantic label graph truth"}) &&
+		containsAny(normalized, []string{"no hidden authority ranking", "hidden authority ranking"}) &&
+		containsAny(normalized, []string{"no graph memory", "graph memory"}) &&
+		containsAny(normalized, []string{"more ceremonial", "ceremonial"})
+	return posture && boundaries
+}
+
+func graphContextReportActionAnswerPass(message string) bool {
+	normalized := normalizeValidationMessage(message)
+	requiredFields := containsAny(normalized, []string{"graph_context_report", "graph context report"}) &&
+		containsAny(normalized, []string{"source_document", "source document"}) &&
+		containsAny(normalized, []string{"canonical_relationship_text", "canonical relationship text"}) &&
+		containsAny(normalized, []string{"links"}) &&
+		containsAny(normalized, []string{"incoming backlinks", "incoming backlink", "backlinks"}) &&
+		containsAny(normalized, []string{"graph"}) &&
+		containsAny(normalized, []string{"graph_projection", "graph projection"}) &&
+		containsAny(normalized, []string{"provenance_refs", "provenance refs"}) &&
+		containsAny(normalized, []string{"candidate_surfaces", "candidate surfaces"}) &&
+		containsAny(normalized, []string{"current_primitives_plus_help", "current primitives plus help"}) &&
+		containsAny(normalized, []string{"no_new_surface", "no new surface"}) &&
+		containsAny(normalized, []string{"validation_boundaries", "validation boundaries"}) &&
+		containsAny(normalized, []string{"authority_limits", "authority limits"})
+	if !requiredFields {
+		return false
+	}
+	return containsAny(normalized, []string{"read-only", "read only"}) &&
+		containsAny(normalized, []string{"no writes", "no write"}) &&
+		containsAny(normalized, []string{"no bypasses", "no-bypass", "no direct sqlite", "no direct vault"}) &&
+		containsAny(normalized, []string{"no semantic-label graph truth", "no semantic label graph truth"}) &&
+		containsAny(normalized, []string{"no hidden authority ranking", "hidden authority ranking"}) &&
+		containsAny(normalized, []string{"no graph memory", "graph memory"})
+}
+
 func broadContradictionAuditAnswerPass(message string, scripted bool) bool {
 	normalized := normalizeValidationMessage(message)
 	requiredEvidence := containsAny(normalized, []string{"search", "audit_contradictions", "source_audit_report"}) &&

@@ -323,6 +323,15 @@ func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, n
 			HybridRetrieval: &report,
 			Summary:         "returned hybrid retrieval report",
 		}, nil
+	case RetrievalTaskActionGraphContext:
+		report, err := runGraphContextReport(ctx, client, normalized.GraphContext)
+		if err != nil {
+			return RetrievalTaskResult{}, err
+		}
+		return RetrievalTaskResult{
+			GraphContext: &report,
+			Summary:      "returned graph context report",
+		}, nil
 	case RetrievalTaskActionSemanticSearch:
 		result, err := runSemanticSearch(ctx, client, normalized.SemanticSearch)
 		if err != nil {
@@ -362,6 +371,7 @@ type normalizedRetrievalTaskRequest struct {
 	WorkflowGuide      WorkflowGuideOptions
 	StructuredStore    StructuredStoreOptions
 	HybridRetrieval    HybridRetrievalOptions
+	GraphContext       GraphContextOptions
 	SemanticSearch     SemanticSearchOptions
 	Limit              int
 }
@@ -396,6 +406,7 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		WorkflowGuide:      request.WorkflowGuide,
 		StructuredStore:    request.StructuredStore,
 		HybridRetrieval:    request.HybridRetrieval,
+		GraphContext:       request.GraphContext,
 		SemanticSearch:     request.SemanticSearch,
 		Limit:              request.Limit,
 	}
@@ -423,6 +434,7 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		request.DuplicateCandidate.Limit,
 		request.StructuredStore.Limit,
 		request.HybridRetrieval.Limit,
+		request.GraphContext.Limit,
 		request.SemanticSearch.Limit,
 	); rejection != "" {
 		return normalizedRetrievalTaskRequest{}, rejection
@@ -593,6 +605,27 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		normalized.HybridRetrieval.PathPrefix = strings.TrimSpace(request.HybridRetrieval.PathPrefix)
 		if normalized.HybridRetrieval.Query == "" {
 			return normalizedRetrievalTaskRequest{}, "hybrid_retrieval.query is required"
+		}
+		return normalized, ""
+	case RetrievalTaskActionGraphContext:
+		normalized.GraphContext.DocID = strings.TrimSpace(request.GraphContext.DocID)
+		normalized.GraphContext.Path = strings.TrimSpace(request.GraphContext.Path)
+		normalized.GraphContext.Query = strings.TrimSpace(request.GraphContext.Query)
+		normalized.GraphContext.PathPrefix = strings.TrimSpace(request.GraphContext.PathPrefix)
+		selectors := 0
+		for _, value := range []string{normalized.GraphContext.DocID, normalized.GraphContext.Path, normalized.GraphContext.Query} {
+			if value != "" {
+				selectors++
+			}
+		}
+		if selectors == 0 {
+			return normalizedRetrievalTaskRequest{}, "graph_context doc_id, path, or query is required"
+		}
+		if selectors > 1 {
+			return normalizedRetrievalTaskRequest{}, "graph_context accepts exactly one of doc_id, path, or query"
+		}
+		if normalized.GraphContext.PathPrefix != "" && normalized.GraphContext.Query == "" {
+			return normalizedRetrievalTaskRequest{}, "graph_context.path_prefix is only valid with graph_context.query"
 		}
 		return normalized, ""
 	case RetrievalTaskActionSemanticSearch:

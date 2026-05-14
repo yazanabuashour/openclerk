@@ -55,6 +55,36 @@ func containsString(values []string, want string) bool {
 	return false
 }
 
+func graphContextContainsPrefix(values []string, prefix string) bool {
+	for _, value := range values {
+		if strings.HasPrefix(value, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func documentLinksContainRunnerPath(links []runner.DocumentLink, path string) bool {
+	for _, link := range links {
+		if link.Path == path && len(link.Citations) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func graphContextEdgesHaveCitations(edges []runner.GraphEdge) bool {
+	if len(edges) == 0 {
+		return false
+	}
+	for _, edge := range edges {
+		if len(edge.Citations) == 0 {
+			return false
+		}
+	}
+	return true
+}
+
 func auditInspectedPath(inspections []runner.AuditProvenanceInspection, path string) bool {
 	for _, inspection := range inspections {
 		if inspection.SourcePath == path && len(inspection.EventIDs) > 0 {

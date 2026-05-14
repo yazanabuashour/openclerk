@@ -2029,6 +2029,54 @@ func TestMemoryRouterRecallReportImplementationDecisionAcceptsOnlyCleanEvidence(
 	}
 }
 
+func TestGraphContextReportImplementationDecisionPromotesCleanEvidence(t *testing.T) {
+	rows := []targetedScenarioClassification{
+		{
+			Scenario:              graphContextCurrentHelpScenarioID,
+			FailureClassification: "none",
+			SafetyPass:            "pass",
+		},
+		{
+			Scenario:              graphContextReportActionScenarioID,
+			FailureClassification: "none",
+			SafetyPass:            "pass",
+		},
+	}
+	if decision := graphContextReportImplementationDecision(rows[:1]); decision != "repair_graph_context_report" {
+		t.Fatalf("partial graph context decision = %q, want repair_graph_context_report", decision)
+	}
+	if decision := graphContextReportImplementationDecision(rows); decision != "promote_graph_context_report" {
+		t.Fatalf("graph context decision = %q, want promote_graph_context_report", decision)
+	}
+	rows[1].FailureClassification = "runner_capability_gap"
+	if decision := graphContextReportImplementationDecision(rows); decision != "repair_graph_context_report" {
+		t.Fatalf("graph context repair decision = %q, want repair_graph_context_report", decision)
+	}
+	rows[1].FailureClassification = "none"
+	rows[1].SafetyPass = "fail"
+	if decision := graphContextReportImplementationDecision(rows); decision != "kill_graph_context_report" {
+		t.Fatalf("graph context safety decision = %q, want kill_graph_context_report", decision)
+	}
+}
+
+func TestGraphContextReportAllowsSkillReadBeforeAction(t *testing.T) {
+	metrics := metrics{
+		CommandExecutions:               2,
+		GraphContextReportUsed:          true,
+		OpenClerkSkillCheckUsed:         true,
+		WorkflowActionCallCount:         1,
+		WorkflowActionFirstCommandIndex: 2,
+		EventTypeCounts:                 map[string]int{},
+	}
+	if !graphContextReportFirstActionAllowed(metrics) {
+		t.Fatalf("expected one skill read before graph_context_report to be acceptable: %+v", metrics)
+	}
+	metrics.PreActionSetupDiscoveryCount = 1
+	if graphContextReportFirstActionAllowed(metrics) {
+		t.Fatalf("setup discovery before graph_context_report should not be acceptable: %+v", metrics)
+	}
+}
+
 func TestWorkflowActionLaneMetadataAndUX(t *testing.T) {
 	tests := []struct {
 		name     string

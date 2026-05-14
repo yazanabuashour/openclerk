@@ -8,6 +8,7 @@ func reportLane(ids []string) (string, bool) {
 	populated := 0
 	repoDocs := 0
 	graphSemanticsRevisit := 0
+	graphContextReport := 0
 	memoryRouterRevisit := 0
 	highTouchMemoryRouterRecall := 0
 	memoryRouterRecallCandidate := 0
@@ -64,6 +65,10 @@ func reportLane(ids []string) (string, bool) {
 		}
 		if isGraphSemanticsRevisitScenario(id) {
 			graphSemanticsRevisit++
+			continue
+		}
+		if isGraphContextReportScenario(id) {
+			graphContextReport++
 			continue
 		}
 		if isMemoryRouterRevisitScenario(id) {
@@ -240,6 +245,9 @@ func reportLane(ids []string) (string, bool) {
 	if graphSemanticsRevisit > 0 && graphSemanticsRevisit+validation == len(ids) {
 		return graphSemanticsRevisitLaneName, false
 	}
+	if graphContextReport > 0 && graphContextReport+validation == len(ids) {
+		return graphContextReportLaneName, false
+	}
 	if memoryRouterRevisit > 0 && memoryRouterRevisit+validation == len(ids) {
 		return memoryRouterRevisitLaneName, false
 	}
@@ -369,6 +377,9 @@ func reportLane(ids []string) (string, bool) {
 	if graphSemanticsRevisit > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
+	if graphContextReport > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
 	if memoryRouterRevisit > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
@@ -480,6 +491,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == graphSemanticsRevisitLaneName {
 		return "graph semantics revisit rows report natural relationship intent, scripted current-primitives control, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"
+	}
+	if lane == graphContextReportLaneName {
+		return "graph context report implementation rows compare current primitives plus help with the promoted read-only graph_context_report action, while reporting source identity, cited canonical relationship text, links/backlinks, graph neighborhood, graph projection freshness, provenance refs, candidate surfaces, validation boundaries, authority limits, no-write/no-bypass controls, tool count, command count, assistant calls, wall time, prompt specificity, retries, latency, safety pass, capability pass, and UX quality"
 	}
 	if lane == memoryRouterRevisitLaneName {
 		return "memory and autonomous router revisit rows report natural memory/router intent, scripted current-primitives control, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"

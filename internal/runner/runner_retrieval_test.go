@@ -499,6 +499,110 @@ func TestRetrievalTaskHybridRetrievalReportRejectsMissingQuery(t *testing.T) {
 	}
 }
 
+func TestRetrievalTaskGraphContextReportPackagesRelationshipEvidence(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	source := createDocument(t, ctx, config, "notes/graph/context/index.md", "Graph Context Reference", strings.TrimSpace(`---
+type: note
+---
+# Graph Context Reference
+
+## Relationships
+Graph context report marker requires [Routing](routing.md), supersedes [Freshness](freshness.md), is related to [Operations](operations.md), and operationalizes canonical markdown relationship text.
+`)+"\n")
+	createDocument(t, ctx, config, "notes/graph/context/routing.md", "Routing", "# Routing\n\n## Links\nRouting links back to [Graph Context Reference](index.md).\n")
+	createDocument(t, ctx, config, "notes/graph/context/freshness.md", "Freshness", "# Freshness\n\n## Links\nFreshness links back to [Graph Context Reference](index.md).\n")
+	createDocument(t, ctx, config, "notes/graph/context/operations.md", "Operations", "# Operations\n\n## Links\nOperations links back to [Graph Context Reference](index.md).\n")
+
+	result, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionGraphContext,
+		GraphContext: runner.GraphContextOptions{
+			Path:  source.Path,
+			Limit: 20,
+		},
+	})
+	if err != nil {
+		t.Fatalf("graph context report: %v", err)
+	}
+	if result.Rejected || result.GraphContext == nil {
+		t.Fatalf("graph context result = %+v", result)
+	}
+	report := result.GraphContext
+	if report.SourceDocument == nil ||
+		report.SourceDocument.DocID != source.DocID ||
+		report.SourceDocument.Path != source.Path ||
+		report.SourceSelection != "path_exact_match" ||
+		len(report.CanonicalRelationshipText) == 0 ||
+		!strings.Contains(report.CanonicalRelationshipText[0].Text, "requires") ||
+		report.CanonicalRelationshipText[0].Citation.Path != source.Path ||
+		report.Links == nil ||
+		!documentLinksContainRunnerPath(report.Links.Outgoing, "notes/graph/context/routing.md") ||
+		!documentLinksContainRunnerPath(report.Links.Outgoing, "notes/graph/context/freshness.md") ||
+		!documentLinksContainRunnerPath(report.Links.Outgoing, "notes/graph/context/operations.md") ||
+		!documentLinksContainRunnerPath(report.Links.Incoming, "notes/graph/context/routing.md") ||
+		report.Graph == nil ||
+		len(report.Graph.Nodes) < 4 ||
+		!graphContextEdgesHaveCitations(report.Graph.Edges) ||
+		report.GraphProjection == nil ||
+		len(report.GraphProjection.Projections) != 1 ||
+		report.GraphProjection.Projections[0].Freshness != "fresh" ||
+		report.Provenance == nil ||
+		!runnerEventTypesInclude(report.Provenance.Events, "document_created") ||
+		report.AgentHandoff == nil ||
+		!graphContextContainsPrefix(report.ProvenanceRefs, "projection:graph:document:"+source.DocID+":fresh") ||
+		!graphContextContainsPrefix(report.EvidenceInspected, "canonical_relationship_text:") ||
+		!strings.Contains(report.ValidationBoundaries, "read-only") ||
+		!strings.Contains(report.ValidationBoundaries, "no graph memory") ||
+		!strings.Contains(report.AuthorityLimits, "canonical markdown") {
+		t.Fatalf("graph context report = %+v", report)
+	}
+
+	list, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{PathPrefix: "notes/graph/context/", Limit: 10},
+	})
+	if err != nil {
+		t.Fatalf("list after graph context report: %v", err)
+	}
+	if len(list.Documents) != 4 {
+		t.Fatalf("graph context report mutated documents: %+v", list.Documents)
+	}
+}
+
+func TestRetrievalTaskGraphContextReportRejectsMissingSelector(t *testing.T) {
+	t.Parallel()
+
+	result, err := runner.RunRetrievalTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionGraphContext,
+	})
+	if err != nil {
+		t.Fatalf("graph context reject: %v", err)
+	}
+	if !result.Rejected || result.RejectionReason != "graph_context doc_id, path, or query is required" {
+		t.Fatalf("graph context rejection = %+v", result)
+	}
+}
+
+func TestRetrievalTaskGraphContextReportRejectsMultipleSelectors(t *testing.T) {
+	t.Parallel()
+
+	result, err := runner.RunRetrievalTask(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionGraphContext,
+		GraphContext: runner.GraphContextOptions{
+			Path:  "notes/graph/context/index.md",
+			Query: "graph context",
+		},
+	})
+	if err != nil {
+		t.Fatalf("graph context multi-selector reject: %v", err)
+	}
+	if !result.Rejected || result.RejectionReason != "graph_context accepts exactly one of doc_id, path, or query" {
+		t.Fatalf("graph context rejection = %+v", result)
+	}
+}
+
 func TestRetrievalTaskAuditContradictionsPlansAndRepairsExistingSynthesis(t *testing.T) {
 	t.Parallel()
 

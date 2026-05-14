@@ -16,12 +16,7 @@ openclerk document
 openclerk retrieval
 ```
 
-`SKILL.md` is an activation, routing, and safety contract, not the durable home for long workflow recipes. Once a request is safely inside the runner contract,
-use agent autonomy with runner JSON results, runner rejections, returned
-`agent_handoff`, `openclerk capabilities` for static surface discovery, and
-compact runner help. Repeated exact JSON, command ordering, or
-scenario-specific choreography is product UX evidence for a runner
-workflow-action comparison, not a reason to expand this file.
+`SKILL.md` is an activation, routing, and safety contract, not the durable home for long workflow recipes. Once a request is safely inside the runner contract, use agent autonomy with runner JSON results, runner rejections, returned `agent_handoff`, `openclerk capabilities`, and compact runner help. Repeated exact JSON, command ordering, or scenario-specific choreography is product UX evidence for a runner workflow-action comparison, not a reason to expand this file.
 
 ## Action Index
 
@@ -66,6 +61,10 @@ matches the request:
   do not claim independent tables, external connectors, or structured writes.
 - Hybrid/vector decision support: retrieval `hybrid_retrieval_report`, then
   answer from `hybrid_retrieval.agent_handoff`; do not claim vector ranking.
+- Routine relationship graph context: retrieval `graph_context_report`, then
+  answer from `graph_context.agent_handoff`; canonical markdown is authority,
+  graph evidence is navigation context, and there is no semantic-label graph
+  truth, hidden authority ranking, or graph memory.
 - Explicit local semantic retrieval: retrieval `semantic_search`, then answer
   from hits and handoff; requires explicit semantic/vector recall, loopback
   Ollama, no Gemini fallback, and unchanged default `search`.
@@ -184,7 +183,8 @@ Common actions are `search`, `document_links`, `graph_neighborhood`,
 `source_discovery_report`, `evidence_bundle_report`,
 `decision_lookup_report`, `duplicate_candidate_report`, and
 `workflow_guide_report`, `memory_router_recall_report`,
-`structured_store_report`, `hybrid_retrieval_report`, and `semantic_search`.
+`structured_store_report`, `hybrid_retrieval_report`, `graph_context_report`,
+and `semantic_search`.
 Use `openclerk retrieval --help` for promoted workflow-action request shape.
 
 Use search for source-grounded answers; document links/graphs for markdown
