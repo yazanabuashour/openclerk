@@ -603,6 +603,145 @@ func TestRetrievalTaskGraphContextReportRejectsMultipleSelectors(t *testing.T) {
 	}
 }
 
+func TestRetrievalTaskGraphRelationshipReportPackagesDeferredGraphEvidence(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	source := createDocument(t, ctx, config, "notes/graph/relationship/index.md", "Graph Relationship Reference", strings.TrimSpace(`---
+type: note
+---
+# Graph Relationship Reference
+
+## Relationships
+Graph relationship report marker requires [Routing](routing.md), supersedes [Freshness](freshness.md), is related to [Operations](operations.md), and operationalizes canonical markdown relationship text.
+`)+"\n")
+	createDocument(t, ctx, config, "notes/graph/relationship/routing.md", "Routing", "# Routing\n\n## Links\nRouting links back to [Graph Relationship Reference](index.md).\n")
+	createDocument(t, ctx, config, "notes/graph/relationship/freshness.md", "Freshness", "# Freshness\n\n## Links\nFreshness links back to [Graph Relationship Reference](index.md).\n")
+	createDocument(t, ctx, config, "notes/graph/relationship/operations.md", "Operations", "# Operations\n\n## Links\nOperations links back to [Graph Relationship Reference](index.md).\n")
+
+	result, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionGraphRelationship,
+		GraphRelationship: runner.GraphRelationshipOptions{
+			Path:  source.Path,
+			Limit: 20,
+		},
+	})
+	if err != nil {
+		t.Fatalf("graph relationship report: %v", err)
+	}
+	if result.Rejected || result.GraphRelationship == nil {
+		t.Fatalf("graph relationship result = %+v", result)
+	}
+	report := result.GraphRelationship
+	if report.SourceDocument == nil ||
+		report.SourceDocument.DocID != source.DocID ||
+		report.SourceDocument.Path != source.Path ||
+		report.SourceSelection != "path_exact_match" ||
+		!graphRelationshipPathContains(report.RelationshipPaths, "outgoing", "notes/graph/relationship/routing.md") ||
+		!graphRelationshipPathContains(report.RelationshipPaths, "incoming", "notes/graph/relationship/routing.md") ||
+		!graphRelationshipEvidenceContains(report.DirectRelationships, "requires") ||
+		!graphRelationshipEvidenceContains(report.DirectRelationships, "supersedes") ||
+		!graphRelationshipEvidenceContains(report.DirectRelationships, "related_to") ||
+		!graphRelationshipEvidenceContains(report.DirectRelationships, "operationalizes") ||
+		len(report.DerivedRelationships) == 0 ||
+		!graphRelationshipTypedCandidateContains(report.TypedRelationshipCandidates, "markdown_link") ||
+		!graphRelationshipTypedCandidateContains(report.TypedRelationshipCandidates, "requires") ||
+		!graphRelationshipAuditFinding(report.AuditFindings, "stale_graph_projection", "clear") ||
+		!graphRelationshipAuditFinding(report.AuditFindings, "orphaned_graph_context", "clear") ||
+		!graphRelationshipAuditFinding(report.AuditFindings, "contradictory_relationship_text", "clear_limited") ||
+		report.GraphProjection == nil ||
+		len(report.GraphProjection.Projections) != 1 ||
+		report.GraphProjection.Projections[0].Freshness != "fresh" ||
+		report.Provenance == nil ||
+		!runnerEventTypesInclude(report.Provenance.Events, "document_created") ||
+		report.AgentHandoff == nil ||
+		!graphRelationshipCandidatesInclude(report.CandidateSurfaces, "current_primitives_plus_graph_context_report") ||
+		!graphRelationshipCandidatesInclude(report.CandidateSurfaces, "split_specialized_reports") ||
+		!strings.Contains(report.ValidationBoundaries, "read-only") ||
+		!strings.Contains(report.ValidationBoundaries, "no graph memory") ||
+		!strings.Contains(report.AuthorityLimits, "canonical markdown") ||
+		!strings.Contains(report.AuthorityLimits, "typed relationship candidates") {
+		t.Fatalf("graph relationship report = %+v", report)
+	}
+
+	list, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{PathPrefix: "notes/graph/relationship/", Limit: 10},
+	})
+	if err != nil {
+		t.Fatalf("list after graph relationship report: %v", err)
+	}
+	if len(list.Documents) != 4 {
+		t.Fatalf("graph relationship report mutated documents: %+v", list.Documents)
+	}
+}
+
+func TestRetrievalTaskGraphRelationshipReportRejectsSelectors(t *testing.T) {
+	t.Parallel()
+
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	result, err := runner.RunRetrievalTask(context.Background(), config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionGraphRelationship,
+	})
+	if err != nil {
+		t.Fatalf("graph relationship missing selector reject: %v", err)
+	}
+	if !result.Rejected || result.RejectionReason != "graph_relationship doc_id, path, or query is required" {
+		t.Fatalf("graph relationship rejection = %+v", result)
+	}
+
+	result, err = runner.RunRetrievalTask(context.Background(), config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionGraphRelationship,
+		GraphRelationship: runner.GraphRelationshipOptions{
+			Path:  "notes/graph/relationship/index.md",
+			Query: "graph relationship",
+		},
+	})
+	if err != nil {
+		t.Fatalf("graph relationship multi-selector reject: %v", err)
+	}
+	if !result.Rejected || result.RejectionReason != "graph_relationship accepts exactly one of doc_id, path, or query" {
+		t.Fatalf("graph relationship rejection = %+v", result)
+	}
+}
+
+func TestRetrievalTaskGraphRelationshipReportTreatsStructuralMentionsAsNonRelationships(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	source := createDocument(t, ctx, config, "notes/graph/relationship/orphan.md", "Orphan Graph Note", strings.TrimSpace(`---
+type: note
+---
+# Orphan Graph Note
+
+## Summary
+This note has ordinary chunk text but no markdown relationship links.
+`)+"\n")
+
+	result, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionGraphRelationship,
+		GraphRelationship: runner.GraphRelationshipOptions{
+			Path:  source.Path,
+			Limit: 20,
+		},
+	})
+	if err != nil {
+		t.Fatalf("graph relationship orphan report: %v", err)
+	}
+	if result.Rejected || result.GraphRelationship == nil {
+		t.Fatalf("graph relationship orphan result = %+v", result)
+	}
+	report := result.GraphRelationship
+	if len(report.DerivedRelationships) != 0 {
+		t.Fatalf("structural graph mentions were reported as derived relationships: %+v", report.DerivedRelationships)
+	}
+	if !graphRelationshipAuditFinding(report.AuditFindings, "orphaned_graph_context", "attention") {
+		t.Fatalf("orphan audit did not flag no relationship links: %+v", report.AuditFindings)
+	}
+}
+
 func TestRetrievalTaskAuditContradictionsPlansAndRepairsExistingSynthesis(t *testing.T) {
 	t.Parallel()
 

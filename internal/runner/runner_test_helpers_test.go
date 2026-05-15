@@ -85,6 +85,51 @@ func graphContextEdgesHaveCitations(edges []runner.GraphEdge) bool {
 	return true
 }
 
+func graphRelationshipPathContains(paths []runner.GraphRelationshipPath, direction string, path string) bool {
+	for _, candidate := range paths {
+		if candidate.Direction == direction && candidate.Path == path && len(candidate.Citations) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func graphRelationshipEvidenceContains(evidence []runner.GraphRelationshipEvidence, relationshipType string) bool {
+	for _, candidate := range evidence {
+		if candidate.RelationshipType == relationshipType && len(candidate.Citations) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func graphRelationshipTypedCandidateContains(candidates []runner.GraphRelationshipTypeCandidate, relationshipType string) bool {
+	for _, candidate := range candidates {
+		if candidate.RelationshipType == relationshipType && candidate.Citation.Path != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func graphRelationshipAuditFinding(findings []runner.GraphRelationshipAuditFinding, kind string, status string) bool {
+	for _, finding := range findings {
+		if finding.Kind == kind && finding.Status == status {
+			return true
+		}
+	}
+	return false
+}
+
+func graphRelationshipCandidatesInclude(candidates []runner.GraphRelationshipCandidate, surface string) bool {
+	for _, candidate := range candidates {
+		if candidate.Surface == surface {
+			return true
+		}
+	}
+	return false
+}
+
 func auditInspectedPath(inspections []runner.AuditProvenanceInspection, path string) bool {
 	for _, inspection := range inspections {
 		if inspection.SourcePath == path && len(inspection.EventIDs) > 0 {

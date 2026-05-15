@@ -194,7 +194,110 @@ func verifyGraphProductStoryExploration(ctx context.Context, paths evalPaths, fi
 	}, nil
 }
 
+func verifyGraphRelationshipReportAction(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	reportResult, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionGraphRelationship,
+		GraphRelationship: runner.GraphRelationshipOptions{
+			Path:  graphSemanticsIndexPath,
+			Limit: 20,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	report := reportResult.GraphRelationship
+	databasePass := report != nil &&
+		report.SourceDocument != nil &&
+		report.SourceDocument.Path == graphSemanticsIndexPath &&
+		report.SourceSelection == "path_exact_match" &&
+		graphRelationshipPathContains(report.RelationshipPaths, "outgoing", graphSemanticsRoutingPath) &&
+		graphRelationshipPathContains(report.RelationshipPaths, "incoming", graphSemanticsRoutingPath) &&
+		graphRelationshipEvidenceContains(report.DirectRelationships, "requires") &&
+		graphRelationshipEvidenceContains(report.DirectRelationships, "supersedes") &&
+		graphRelationshipEvidenceContains(report.DirectRelationships, "related_to") &&
+		graphRelationshipEvidenceContains(report.DirectRelationships, "operationalizes") &&
+		len(report.DerivedRelationships) > 0 &&
+		graphRelationshipTypedCandidateContains(report.TypedRelationshipCandidates, "requires") &&
+		graphRelationshipTypedCandidateContains(report.TypedRelationshipCandidates, "markdown_link") &&
+		graphRelationshipAuditFinding(report.AuditFindings, "stale_graph_projection", "clear") &&
+		graphRelationshipAuditFinding(report.AuditFindings, "orphaned_graph_context", "clear") &&
+		graphRelationshipAuditFinding(report.AuditFindings, "contradictory_relationship_text", "clear_limited") &&
+		report.GraphProjection != nil &&
+		len(report.GraphProjection.Projections) == 1 &&
+		report.GraphProjection.Projections[0].Freshness == "fresh" &&
+		report.Provenance != nil &&
+		eventTypesInclude(report.Provenance.Events, "document_created") &&
+		graphRelationshipCandidatesInclude(report.CandidateSurfaces, "current_primitives_plus_graph_context_report") &&
+		graphRelationshipCandidatesInclude(report.CandidateSurfaces, "graph_relationship_report") &&
+		graphRelationshipCandidatesInclude(report.CandidateSurfaces, "split_specialized_reports") &&
+		strings.Contains(report.ValidationBoundaries, "no graph memory") &&
+		strings.Contains(report.AuthorityLimits, "canonical markdown")
+	answerPass := graphRelationshipReportAnswerPass(finalMessage)
+	activityPass := turnMetrics.GraphRelationshipReportUsed &&
+		!turnMetrics.GraphContextReportUsed &&
+		turnMetrics.WorkflowActionCallCount > 0 &&
+		graphRelationshipReportFirstActionAllowed(turnMetrics) &&
+		turnMetrics.CommandExecutions <= 3 &&
+		!turnMetrics.OpenClerkRetrievalHelpUsed &&
+		!turnMetrics.SearchUsed &&
+		!turnMetrics.ListDocumentsUsed &&
+		!turnMetrics.GetDocumentUsed &&
+		!turnMetrics.DocumentLinksUsed &&
+		!turnMetrics.GraphNeighborhoodUsed &&
+		!turnMetrics.ProjectionStatesUsed &&
+		!turnMetrics.ProvenanceEventsUsed &&
+		!turnMetrics.CreateDocumentUsed &&
+		!turnMetrics.AppendDocumentUsed &&
+		!turnMetrics.ReplaceSectionUsed &&
+		!turnMetrics.IngestSourceURLUsed &&
+		!turnMetrics.IngestVideoURLUsed
+
+	failures := []string{}
+	if !databasePass {
+		failures = append(failures, "graph_relationship_report did not return complete relationship paths, direct-vs-derived evidence, typed candidates, limited audit findings, freshness, provenance, and candidate-surface evidence")
+	}
+	if !turnMetrics.GraphRelationshipReportUsed {
+		failures = append(failures, "agent did not use graph_relationship_report")
+	}
+	if turnMetrics.GraphContextReportUsed {
+		failures = append(failures, "agent used graph_context_report before or alongside graph_relationship_report")
+	}
+	if !graphRelationshipReportFirstActionAllowed(turnMetrics) {
+		failures = append(failures, "agent ran setup or primitives before graph_relationship_report")
+	}
+	if turnMetrics.CommandExecutions > 3 {
+		failures = append(failures, "graph_relationship_report row used too many commands")
+	}
+	if turnMetrics.OpenClerkRetrievalHelpUsed || turnMetrics.SearchUsed || turnMetrics.ListDocumentsUsed || turnMetrics.GetDocumentUsed || turnMetrics.DocumentLinksUsed || turnMetrics.GraphNeighborhoodUsed || turnMetrics.ProjectionStatesUsed || turnMetrics.ProvenanceEventsUsed {
+		failures = append(failures, "agent used follow-up help or primitive inspection despite graph_relationship_report success")
+	}
+	if turnMetrics.CreateDocumentUsed || turnMetrics.AppendDocumentUsed || turnMetrics.ReplaceSectionUsed || turnMetrics.IngestSourceURLUsed || turnMetrics.IngestVideoURLUsed {
+		failures = append(failures, "agent used a mutating document or source action")
+	}
+	if !answerPass {
+		failures = append(failures, "final answer did not compare graph relationship report candidates and concrete outcome")
+	}
+
+	return verificationResult{
+		Passed:        databasePass && answerPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: answerPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{graphSemanticsIndexPath, graphSemanticsRoutingPath, graphSemanticsFreshnessPath, graphSemanticsOperationsPath},
+	}, nil
+}
+
 func graphContextReportFirstActionAllowed(turnMetrics metrics) bool {
+	if turnMetrics.WorkflowActionFirstCommandIndex <= 1 {
+		return true
+	}
+	return turnMetrics.WorkflowActionFirstCommandIndex == 2 && turnMetrics.OpenClerkSkillCheckUsed &&
+		turnMetrics.PreActionSetupDiscoveryCount == 0 &&
+		turnMetrics.PreActionPrimitiveCommandCount == 0
+}
+
+func graphRelationshipReportFirstActionAllowed(turnMetrics metrics) bool {
 	if turnMetrics.WorkflowActionFirstCommandIndex <= 1 {
 		return true
 	}
@@ -381,6 +484,51 @@ func verifyGraphSemanticsWorkflow(ctx context.Context, paths evalPaths, finalMes
 }
 
 func graphContextCandidatesInclude(candidates []runner.GraphContextCandidate, surface string) bool {
+	for _, candidate := range candidates {
+		if candidate.Surface == surface {
+			return true
+		}
+	}
+	return false
+}
+
+func graphRelationshipPathContains(paths []runner.GraphRelationshipPath, direction string, path string) bool {
+	for _, candidate := range paths {
+		if candidate.Direction == direction && candidate.Path == path && len(candidate.Citations) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func graphRelationshipEvidenceContains(evidence []runner.GraphRelationshipEvidence, relationshipType string) bool {
+	for _, candidate := range evidence {
+		if candidate.RelationshipType == relationshipType && len(candidate.Citations) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func graphRelationshipTypedCandidateContains(candidates []runner.GraphRelationshipTypeCandidate, relationshipType string) bool {
+	for _, candidate := range candidates {
+		if candidate.RelationshipType == relationshipType && candidate.Citation.Path != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func graphRelationshipAuditFinding(findings []runner.GraphRelationshipAuditFinding, kind string, status string) bool {
+	for _, finding := range findings {
+		if finding.Kind == kind && finding.Status == status {
+			return true
+		}
+	}
+	return false
+}
+
+func graphRelationshipCandidatesInclude(candidates []runner.GraphRelationshipCandidate, surface string) bool {
 	for _, candidate := range candidates {
 		if candidate.Surface == surface {
 			return true

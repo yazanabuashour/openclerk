@@ -10,6 +10,7 @@ func reportLane(ids []string) (string, bool) {
 	graphSemanticsRevisit := 0
 	graphProductStory := 0
 	graphContextReport := 0
+	graphRelationshipReport := 0
 	memoryRouterRevisit := 0
 	highTouchMemoryRouterRecall := 0
 	memoryRouterRecallCandidate := 0
@@ -74,6 +75,10 @@ func reportLane(ids []string) (string, bool) {
 		}
 		if isGraphContextReportScenario(id) {
 			graphContextReport++
+			continue
+		}
+		if isGraphRelationshipReportScenario(id) {
+			graphRelationshipReport++
 			continue
 		}
 		if isMemoryRouterRevisitScenario(id) {
@@ -256,6 +261,9 @@ func reportLane(ids []string) (string, bool) {
 	if graphContextReport > 0 && graphContextReport+validation == len(ids) {
 		return graphContextReportLaneName, false
 	}
+	if graphRelationshipReport > 0 && graphRelationshipReport+validation == len(ids) {
+		return graphRelationshipReportLaneName, false
+	}
 	if memoryRouterRevisit > 0 && memoryRouterRevisit+validation == len(ids) {
 		return memoryRouterRevisitLaneName, false
 	}
@@ -388,6 +396,9 @@ func reportLane(ids []string) (string, bool) {
 	if graphContextReport > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
+	if graphRelationshipReport > 0 {
+		return populatedMixedLaneName, releaseBlocking
+	}
 	if memoryRouterRevisit > 0 {
 		return populatedMixedLaneName, releaseBlocking
 	}
@@ -505,6 +516,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == graphContextReportLaneName {
 		return "graph context report implementation rows compare current primitives plus help with the promoted read-only graph_context_report action, while reporting source identity, cited canonical relationship text, links/backlinks, graph neighborhood, graph projection freshness, provenance refs, candidate surfaces, validation boundaries, authority limits, no-write/no-bypass controls, tool count, command count, assistant calls, wall time, prompt specificity, retries, latency, safety pass, capability pass, and UX quality"
+	}
+	if lane == graphRelationshipReportLaneName {
+		return "graph relationship report implementation rows compare current primitives plus graph_context_report, graph_relationship_report, and split specialized report candidates, while reporting relationship paths, direct-vs-derived evidence, typed candidates from canonical markdown, limited stale/orphaned/contradiction audit findings, graph projection freshness, provenance refs, authority model, validation boundaries, workflow impact, no-write/no-bypass controls, safety pass, capability pass, UX quality, and final promote/defer/kill/none-viable outcome"
 	}
 	if lane == memoryRouterRevisitLaneName {
 		return "memory and autonomous router revisit rows report natural memory/router intent, scripted current-primitives control, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"

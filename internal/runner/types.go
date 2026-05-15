@@ -51,6 +51,7 @@ const (
 	RetrievalTaskActionStructuredStore     = "structured_store_report"
 	RetrievalTaskActionHybridRetrieval     = "hybrid_retrieval_report"
 	RetrievalTaskActionGraphContext        = "graph_context_report"
+	RetrievalTaskActionGraphRelationship   = "graph_relationship_report"
 	RetrievalTaskActionSemanticSearch      = "semantic_search"
 )
 
@@ -323,6 +324,7 @@ type RetrievalTaskRequest struct {
 	StructuredStore    StructuredStoreOptions      `json:"structured_store,omitempty"`
 	HybridRetrieval    HybridRetrievalOptions      `json:"hybrid_retrieval,omitempty"`
 	GraphContext       GraphContextOptions         `json:"graph_context,omitempty"`
+	GraphRelationship  GraphRelationshipOptions    `json:"graph_relationship,omitempty"`
 	SemanticSearch     SemanticSearchOptions       `json:"semantic_search,omitempty"`
 	Limit              int                         `json:"limit,omitempty"`
 }
@@ -544,6 +546,14 @@ type GraphContextOptions struct {
 	Limit      int    `json:"limit,omitempty"`
 }
 
+type GraphRelationshipOptions struct {
+	DocID      string `json:"doc_id,omitempty"`
+	Path       string `json:"path,omitempty"`
+	Query      string `json:"query,omitempty"`
+	PathPrefix string `json:"path_prefix,omitempty"`
+	Limit      int    `json:"limit,omitempty"`
+}
+
 type GitLifecycleOptions struct {
 	Mode    string   `json:"mode,omitempty"`
 	Paths   []string `json:"paths,omitempty"`
@@ -608,6 +618,7 @@ type RetrievalTaskResult struct {
 	StructuredStore    *StructuredStoreReport     `json:"structured_store,omitempty"`
 	HybridRetrieval    *HybridRetrievalReport     `json:"hybrid_retrieval,omitempty"`
 	GraphContext       *GraphContextReport        `json:"graph_context,omitempty"`
+	GraphRelationship  *GraphRelationshipReport   `json:"graph_relationship,omitempty"`
 	SemanticSearch     *SemanticSearchResult      `json:"semantic_search,omitempty"`
 	Summary            string                     `json:"summary"`
 }
@@ -965,6 +976,78 @@ type CanonicalRelationshipText struct {
 }
 
 type GraphContextCandidate struct {
+	Surface        string   `json:"surface"`
+	Status         string   `json:"status"`
+	Safety         string   `json:"safety"`
+	Capability     string   `json:"capability"`
+	UXQuality      string   `json:"ux_quality"`
+	Implementation []string `json:"implementation,omitempty"`
+}
+
+type GraphRelationshipReport struct {
+	Query                       string                           `json:"query,omitempty"`
+	Path                        string                           `json:"path,omitempty"`
+	DocID                       string                           `json:"doc_id,omitempty"`
+	PathPrefix                  string                           `json:"path_prefix,omitempty"`
+	SourceDocument              *DocumentSummary                 `json:"source_document,omitempty"`
+	SourceSelection             string                           `json:"source_selection"`
+	SourceCandidates            []SearchHit                      `json:"source_candidates,omitempty"`
+	RelationshipPaths           []GraphRelationshipPath          `json:"relationship_paths,omitempty"`
+	DirectRelationships         []GraphRelationshipEvidence      `json:"direct_relationships,omitempty"`
+	DerivedRelationships        []GraphRelationshipEvidence      `json:"derived_relationships,omitempty"`
+	TypedRelationshipCandidates []GraphRelationshipTypeCandidate `json:"typed_relationship_candidates,omitempty"`
+	AuditFindings               []GraphRelationshipAuditFinding  `json:"audit_findings,omitempty"`
+	GraphProjection             *ProjectionStateList             `json:"graph_projection,omitempty"`
+	Provenance                  *ProvenanceEventList             `json:"provenance,omitempty"`
+	ProvenanceRefs              []string                         `json:"provenance_refs,omitempty"`
+	CandidateSurfaces           []GraphRelationshipCandidate     `json:"candidate_surfaces,omitempty"`
+	Recommendation              string                           `json:"recommendation"`
+	SafetyPass                  string                           `json:"safety_pass"`
+	CapabilityPass              string                           `json:"capability_pass"`
+	UXQuality                   string                           `json:"ux_quality"`
+	EvidencePosture             string                           `json:"evidence_posture"`
+	ValidationBoundaries        string                           `json:"validation_boundaries"`
+	AuthorityLimits             string                           `json:"authority_limits"`
+	EvidenceInspected           []string                         `json:"evidence_inspected,omitempty"`
+	AgentHandoff                *AgentHandoff                    `json:"agent_handoff,omitempty"`
+}
+
+type GraphRelationshipPath struct {
+	Direction string     `json:"direction"`
+	DocID     string     `json:"doc_id,omitempty"`
+	Path      string     `json:"path,omitempty"`
+	Title     string     `json:"title,omitempty"`
+	Evidence  string     `json:"evidence"`
+	Citations []Citation `json:"citations,omitempty"`
+}
+
+type GraphRelationshipEvidence struct {
+	Kind              string     `json:"kind"`
+	RelationshipType  string     `json:"relationship_type,omitempty"`
+	Direction         string     `json:"direction,omitempty"`
+	Source            string     `json:"source"`
+	EvidenceText      string     `json:"evidence_text,omitempty"`
+	Citations         []Citation `json:"citations,omitempty"`
+	Authority         string     `json:"authority"`
+	InferenceBoundary string     `json:"inference_boundary,omitempty"`
+}
+
+type GraphRelationshipTypeCandidate struct {
+	RelationshipType string   `json:"relationship_type"`
+	EvidenceText     string   `json:"evidence_text"`
+	Citation         Citation `json:"citation"`
+	Status           string   `json:"status"`
+	Authority        string   `json:"authority"`
+}
+
+type GraphRelationshipAuditFinding struct {
+	Kind      string     `json:"kind"`
+	Status    string     `json:"status"`
+	Evidence  string     `json:"evidence"`
+	Citations []Citation `json:"citations,omitempty"`
+}
+
+type GraphRelationshipCandidate struct {
 	Surface        string   `json:"surface"`
 	Status         string   `json:"status"`
 	Safety         string   `json:"safety"`

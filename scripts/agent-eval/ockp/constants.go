@@ -50,6 +50,8 @@ const (
 	graphContextReportLaneName         = "graph-context-report-implementation"
 	graphContextCurrentHelpScenarioID  = "graph-context-current-primitives-plus-help"
 	graphContextReportActionScenarioID = "graph-context-report-action-natural"
+	graphRelationshipReportLaneName    = "graph-relationship-report-implementation"
+	graphRelationshipReportScenarioID  = "graph-relationship-report-action-control"
 	graphSemanticsPrefix               = "notes/graph/semantics/"
 	graphSemanticsIndexPath            = "notes/graph/semantics/index.md"
 	graphSemanticsRoutingPath          = "notes/graph/semantics/routing.md"

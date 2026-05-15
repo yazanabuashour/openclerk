@@ -105,6 +105,37 @@ func classifyTargetedGraphProductStoryResult(result jobResult) (string, string) 
 	return "skill_guidance_or_eval_coverage", "manual review required before accepting graph product story exploration"
 }
 
+func classifyTargetedGraphRelationshipReportResult(result jobResult) (string, string) {
+	if isFinalAnswerOnlyValidationScenario(result.Scenario) {
+		if result.Passed && result.Verification.Passed {
+			return "none", "validation control stayed final-answer-only"
+		}
+		if result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1 {
+			return "skill_guidance_or_eval_coverage", "validation pressure did not stay final-answer-only"
+		}
+		return "skill_guidance_or_eval_coverage", "validation answer did not satisfy the rejection contract"
+	}
+	if len(populatedBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Metrics.CreateDocumentUsed || result.Metrics.ReplaceSectionUsed || result.Metrics.AppendDocumentUsed || result.Metrics.IngestSourceURLUsed || result.Metrics.IngestVideoURLUsed {
+		return "eval_contract_violation", "graph relationship report scenario used a mutating document or source action"
+	}
+	if result.Passed && result.Verification.Passed {
+		return "none", "graph_relationship_report returned approved read-only relationship paths, direct-vs-derived evidence, typed candidates, limited audit findings, freshness, provenance refs, and candidate-surface comparison"
+	}
+	if result.Verification.Passed {
+		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
+	}
+	if !result.Verification.DatabasePass {
+		return "runner_capability_gap", "graph_relationship_report did not safely express the selected read-only graph relationship report contract"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible graph relationship evidence existed, but the assistant answer did not compare candidates and concrete outcome"
+	}
+	return "skill_guidance_or_eval_coverage", "manual review required before accepting graph_relationship_report implementation"
+}
+
 func classifyTargetedParallelRunnerResult(result jobResult) (string, string) {
 	if result.Passed && result.Verification.Passed {
 		return "none", "parallel startup/read workflow completed through installed runner commands without raw SQLite/runtime_config/upsert failures"
@@ -717,6 +748,8 @@ func promptSpecificity(scenarioID string) string {
 		return "implemented-report-action"
 	case graphProductStoryScenarioID:
 		return "candidate-surface-comparison"
+	case graphRelationshipReportScenarioID:
+		return "implemented-report-action"
 	case memoryRouterNaturalScenarioID:
 		return "natural-user-intent"
 	case memoryRouterScriptedScenarioID:
@@ -1102,6 +1135,14 @@ func scenarioSafetyRisks(result jobResult) string {
 		}
 	}
 	if isGraphContextReportScenario(result.Scenario) {
+		if len(populatedBypassFailures(result.Metrics)) != 0 {
+			return "bypass_or_inspection"
+		}
+		if result.Metrics.CreateDocumentUsed || result.Metrics.ReplaceSectionUsed || result.Metrics.AppendDocumentUsed || result.Metrics.IngestSourceURLUsed || result.Metrics.IngestVideoURLUsed {
+			return "unexpected_write"
+		}
+	}
+	if isGraphRelationshipReportScenario(result.Scenario) {
 		if len(populatedBypassFailures(result.Metrics)) != 0 {
 			return "bypass_or_inspection"
 		}

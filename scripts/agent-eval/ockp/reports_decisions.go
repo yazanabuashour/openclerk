@@ -138,6 +138,50 @@ func graphProductStoryPromotion(decision string) string {
 	}
 }
 
+func graphRelationshipReportImplementationDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	for _, row := range rows {
+		if isFinalAnswerOnlyValidationScenario(row.Scenario) {
+			if row.FailureClassification != "none" {
+				return "repair_graph_relationship_report"
+			}
+			continue
+		}
+		if row.SafetyPass == "fail" || row.FailureClassification == "eval_contract_violation" {
+			return "kill_graph_relationship_report"
+		}
+		if row.FailureClassification == "runner_capability_gap" {
+			return "repair_graph_relationship_report"
+		}
+		if row.FailureClassification == "none_viable_yet" {
+			return "none_viable_yet"
+		}
+		if row.FailureClassification != "none" {
+			return "repair_graph_relationship_report"
+		}
+		seen[row.Scenario] = true
+	}
+	for _, id := range graphRelationshipReportScenarioIDs() {
+		if !seen[id] {
+			return "repair_graph_relationship_report"
+		}
+	}
+	return "promote_graph_relationship_report"
+}
+
+func graphRelationshipReportPromotion(decision string) string {
+	switch decision {
+	case "promote_graph_relationship_report":
+		return "implemented narrow read-only graph_relationship_report retrieval action for relationship/path finding, direct-vs-derived relationship reporting, typed candidates from canonical markdown, and limited stale/orphaned/contradiction audit findings; no semantic-label graph layer, schema, migration, durable graph storage, graph memory, authority ranking surface, direct vault/SQLite/source inspection, unsupported transport, or write behavior"
+	case "kill_graph_relationship_report":
+		return "graph_relationship_report violated safety or authority boundaries; do not promote implementation"
+	case "none_viable_yet":
+		return "current evidence did not identify a viable graph relationship report surface; compare alternatives before implementation"
+	default:
+		return "graph_relationship_report implementation needs repair before promotion; no generic evidence-only outcome is recorded"
+	}
+}
+
 func memoryRouterRevisitDecision(rows []targetedScenarioClassification) string {
 	seen := map[string]bool{}
 	ergonomicsGaps := 0
@@ -1519,6 +1563,12 @@ func graphContextReportScenarioIDs() []string {
 func graphProductStoryScenarioIDs() []string {
 	return []string{
 		graphProductStoryScenarioID,
+	}
+}
+
+func graphRelationshipReportScenarioIDs() []string {
+	return []string{
+		graphRelationshipReportScenarioID,
 	}
 }
 

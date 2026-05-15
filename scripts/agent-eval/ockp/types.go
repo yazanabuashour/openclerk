@@ -159,6 +159,7 @@ type metrics struct {
 	AuditContradictionsModes        []string       `json:"audit_contradictions_modes,omitempty"`
 	MemoryRouterRecallReportUsed    bool           `json:"memory_router_recall_report_used"`
 	GraphContextReportUsed          bool           `json:"graph_context_report_used"`
+	GraphRelationshipReportUsed     bool           `json:"graph_relationship_report_used"`
 	SourceDiscoveryReportUsed       bool           `json:"source_discovery_report_used"`
 	OpenClerkPathCheckUsed          bool           `json:"openclerk_path_check_used"`
 	OpenClerkVersionCheckUsed       bool           `json:"openclerk_version_check_used"`

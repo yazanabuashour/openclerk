@@ -21,6 +21,7 @@ Evidence:
 - [`docs/evals/graph-product-story-exploration.md`](../evals/graph-product-story-exploration.md)
 - [`docs/evals/results/ockp-graph-product-story-exploration.md`](../evals/results/ockp-graph-product-story-exploration.md)
 - [`docs/architecture/graph-context-report-promotion-decision.md`](graph-context-report-promotion-decision.md)
+- [`docs/architecture/graph-relationship-report-promotion-decision.md`](graph-relationship-report-promotion-decision.md)
 
 ## Decision
 
@@ -93,3 +94,9 @@ follow-ups are:
 Both follow-ups must compare 2-3 candidate shapes, choose the best, combine
 useful behaviors if appropriate, defer or kill the track, or record `none
 viable yet`.
+
+`oc-sl7c` is now resolved by
+[`docs/architecture/graph-relationship-report-promotion-decision.md`](graph-relationship-report-promotion-decision.md),
+which promotes `graph_relationship_report` for the deferred read-only
+relationship/path, direct-vs-derived, typed-candidate, and limited graph-audit
+needs.

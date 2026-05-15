@@ -41,6 +41,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"projection_states\",\"projection\":{\"limit\":10}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"memory_router_recall_report\",\"memory_router_recall\":{\"query\":\"memory router\",\"limit\":10}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"graph_context_report\",\"graph_context\":{\"path\":\"notes/graph/semantics/index.md\",\"limit\":20}}' | openclerk retrieval"}}`,
+		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"graph_relationship_report\",\"graph_relationship\":{\"path\":\"notes/graph/semantics/index.md\",\"limit\":20}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"compile_synthesis\",\"synthesis\":{\"path\":\"synthesis/example.md\",\"title\":\"Example\",\"source_refs\":[\"sources/example.md\"],\"body\":\"# Example\\n\\n## Sources\\n- sources/example.md\\n\\n## Freshness\\nChecked.\",\"mode\":\"create_or_update\"}}' | openclerk document"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"source_audit_report\",\"source_audit\":{\"query\":\"audit\",\"target_path\":\"synthesis/example.md\",\"mode\":\"repair_existing\",\"limit\":10}}' | openclerk retrieval"}}`,
 		`{"type":"tool_call","item":{"type":"tool_call","command":"printf '%s\n' '{\"action\":\"evidence_bundle_report\",\"evidence_bundle\":{\"query\":\"policy\",\"entity_id\":\"agentops-escalation-policy\",\"projection\":\"records\",\"limit\":10}}' | openclerk retrieval"}}`,
@@ -57,7 +58,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 	if parsed.sessionID != "session-123" || parsed.finalMessage != "done" {
 		t.Fatalf("parsed = %+v", parsed)
 	}
-	if parsed.metrics.ToolCalls != 31 || parsed.metrics.CommandExecutions != 31 || parsed.metrics.AssistantCalls != 1 {
+	if parsed.metrics.ToolCalls != 32 || parsed.metrics.CommandExecutions != 32 || parsed.metrics.AssistantCalls != 1 {
 		t.Fatalf("metrics = %+v", parsed.metrics)
 	}
 	if !parsed.metrics.BroadRepoSearch {
@@ -102,7 +103,7 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		t.Fatalf("expected source URL create and two updates in %+v", parsed.metrics)
 	}
 	if parsed.metrics.WorkflowActionFirstCommandIndex != 27 ||
-		parsed.metrics.WorkflowActionCallCount != 4 ||
+		parsed.metrics.WorkflowActionCallCount != 5 ||
 		parsed.metrics.PreActionPrimitiveCommandCount != 21 ||
 		parsed.metrics.PostActionPrimitiveCommandCount != 1 {
 		t.Fatalf("expected workflow-action ceremony metrics in %+v", parsed.metrics)
@@ -120,31 +121,32 @@ func TestParseMetricsFromCodexJSONLines(t *testing.T) {
 		t.Fatalf("expected ordered document action events in %+v", parsed.metrics)
 	}
 	for name, used := range map[string]bool{
-		"search":                 parsed.metrics.SearchUsed,
-		"search_unfiltered":      parsed.metrics.SearchUnfilteredUsed,
-		"search_path_filter":     parsed.metrics.SearchPathFilterUsed,
-		"search_metadata_filter": parsed.metrics.SearchMetadataFilterUsed,
-		"search_tag_filter":      parsed.metrics.SearchTagFilterUsed,
-		"list_documents":         parsed.metrics.ListDocumentsUsed,
-		"list_metadata_filter":   parsed.metrics.ListMetadataFilterUsed,
-		"list_tag_filter":        parsed.metrics.ListTagFilterUsed,
-		"get_document":           parsed.metrics.GetDocumentUsed,
-		"replace_section":        parsed.metrics.ReplaceSectionUsed,
-		"append_document":        parsed.metrics.AppendDocumentUsed,
-		"inspect_layout":         parsed.metrics.InspectLayoutUsed,
-		"document_links":         parsed.metrics.DocumentLinksUsed,
-		"graph_neighborhood":     parsed.metrics.GraphNeighborhoodUsed,
-		"records_lookup":         parsed.metrics.RecordsLookupUsed,
-		"record_entity":          parsed.metrics.RecordEntityUsed,
-		"decisions_lookup":       parsed.metrics.DecisionsLookupUsed,
-		"decision_record":        parsed.metrics.DecisionRecordUsed,
-		"provenance_events":      parsed.metrics.ProvenanceEventsUsed,
-		"projection_states":      parsed.metrics.ProjectionStatesUsed,
-		"memory_router_recall":   parsed.metrics.MemoryRouterRecallReportUsed,
-		"graph_context_report":   parsed.metrics.GraphContextReportUsed,
-		"compile_synthesis":      parsed.metrics.CompileSynthesisUsed,
-		"source_audit_report":    parsed.metrics.SourceAuditReportUsed,
-		"evidence_bundle_report": parsed.metrics.EvidenceBundleReportUsed,
+		"search":                    parsed.metrics.SearchUsed,
+		"search_unfiltered":         parsed.metrics.SearchUnfilteredUsed,
+		"search_path_filter":        parsed.metrics.SearchPathFilterUsed,
+		"search_metadata_filter":    parsed.metrics.SearchMetadataFilterUsed,
+		"search_tag_filter":         parsed.metrics.SearchTagFilterUsed,
+		"list_documents":            parsed.metrics.ListDocumentsUsed,
+		"list_metadata_filter":      parsed.metrics.ListMetadataFilterUsed,
+		"list_tag_filter":           parsed.metrics.ListTagFilterUsed,
+		"get_document":              parsed.metrics.GetDocumentUsed,
+		"replace_section":           parsed.metrics.ReplaceSectionUsed,
+		"append_document":           parsed.metrics.AppendDocumentUsed,
+		"inspect_layout":            parsed.metrics.InspectLayoutUsed,
+		"document_links":            parsed.metrics.DocumentLinksUsed,
+		"graph_neighborhood":        parsed.metrics.GraphNeighborhoodUsed,
+		"records_lookup":            parsed.metrics.RecordsLookupUsed,
+		"record_entity":             parsed.metrics.RecordEntityUsed,
+		"decisions_lookup":          parsed.metrics.DecisionsLookupUsed,
+		"decision_record":           parsed.metrics.DecisionRecordUsed,
+		"provenance_events":         parsed.metrics.ProvenanceEventsUsed,
+		"projection_states":         parsed.metrics.ProjectionStatesUsed,
+		"memory_router_recall":      parsed.metrics.MemoryRouterRecallReportUsed,
+		"graph_context_report":      parsed.metrics.GraphContextReportUsed,
+		"graph_relationship_report": parsed.metrics.GraphRelationshipReportUsed,
+		"compile_synthesis":         parsed.metrics.CompileSynthesisUsed,
+		"source_audit_report":       parsed.metrics.SourceAuditReportUsed,
+		"evidence_bundle_report":    parsed.metrics.EvidenceBundleReportUsed,
 	} {
 		if !used {
 			t.Fatalf("expected %s action metric in %+v", name, parsed.metrics)

@@ -332,6 +332,15 @@ func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, n
 			GraphContext: &report,
 			Summary:      "returned graph context report",
 		}, nil
+	case RetrievalTaskActionGraphRelationship:
+		report, err := runGraphRelationshipReport(ctx, client, normalized.GraphRelationship)
+		if err != nil {
+			return RetrievalTaskResult{}, err
+		}
+		return RetrievalTaskResult{
+			GraphRelationship: &report,
+			Summary:           "returned graph relationship report",
+		}, nil
 	case RetrievalTaskActionSemanticSearch:
 		result, err := runSemanticSearch(ctx, client, normalized.SemanticSearch)
 		if err != nil {
@@ -372,6 +381,7 @@ type normalizedRetrievalTaskRequest struct {
 	StructuredStore    StructuredStoreOptions
 	HybridRetrieval    HybridRetrievalOptions
 	GraphContext       GraphContextOptions
+	GraphRelationship  GraphRelationshipOptions
 	SemanticSearch     SemanticSearchOptions
 	Limit              int
 }
@@ -407,6 +417,7 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		StructuredStore:    request.StructuredStore,
 		HybridRetrieval:    request.HybridRetrieval,
 		GraphContext:       request.GraphContext,
+		GraphRelationship:  request.GraphRelationship,
 		SemanticSearch:     request.SemanticSearch,
 		Limit:              request.Limit,
 	}
@@ -435,6 +446,7 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		request.StructuredStore.Limit,
 		request.HybridRetrieval.Limit,
 		request.GraphContext.Limit,
+		request.GraphRelationship.Limit,
 		request.SemanticSearch.Limit,
 	); rejection != "" {
 		return normalizedRetrievalTaskRequest{}, rejection
@@ -626,6 +638,27 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		}
 		if normalized.GraphContext.PathPrefix != "" && normalized.GraphContext.Query == "" {
 			return normalizedRetrievalTaskRequest{}, "graph_context.path_prefix is only valid with graph_context.query"
+		}
+		return normalized, ""
+	case RetrievalTaskActionGraphRelationship:
+		normalized.GraphRelationship.DocID = strings.TrimSpace(request.GraphRelationship.DocID)
+		normalized.GraphRelationship.Path = strings.TrimSpace(request.GraphRelationship.Path)
+		normalized.GraphRelationship.Query = strings.TrimSpace(request.GraphRelationship.Query)
+		normalized.GraphRelationship.PathPrefix = strings.TrimSpace(request.GraphRelationship.PathPrefix)
+		selectors := 0
+		for _, value := range []string{normalized.GraphRelationship.DocID, normalized.GraphRelationship.Path, normalized.GraphRelationship.Query} {
+			if value != "" {
+				selectors++
+			}
+		}
+		if selectors == 0 {
+			return normalizedRetrievalTaskRequest{}, "graph_relationship doc_id, path, or query is required"
+		}
+		if selectors > 1 {
+			return normalizedRetrievalTaskRequest{}, "graph_relationship accepts exactly one of doc_id, path, or query"
+		}
+		if normalized.GraphRelationship.PathPrefix != "" && normalized.GraphRelationship.Query == "" {
+			return normalizedRetrievalTaskRequest{}, "graph_relationship.path_prefix is only valid with graph_relationship.query"
 		}
 		return normalized, ""
 	case RetrievalTaskActionSemanticSearch:

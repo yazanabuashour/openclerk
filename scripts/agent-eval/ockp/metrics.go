@@ -365,6 +365,9 @@ func classifyCommand(command string, m *metrics) {
 	if commandContainsAction(actionText, "graph_context_report") {
 		m.GraphContextReportUsed = true
 	}
+	if commandContainsAction(actionText, "graph_relationship_report") {
+		m.GraphRelationshipReportUsed = true
+	}
 	if commandContainsAction(actionText, "source_discovery_report") {
 		m.SourceDiscoveryReportUsed = true
 	}
@@ -479,7 +482,8 @@ func commandContainsWorkflowAction(actionText string) bool {
 		commandContainsAction(actionText, "source_audit_report") ||
 		commandContainsAction(actionText, "evidence_bundle_report") ||
 		commandContainsAction(actionText, "decision_lookup_report") ||
-		commandContainsAction(actionText, "graph_context_report")
+		commandContainsAction(actionText, "graph_context_report") ||
+		commandContainsAction(actionText, "graph_relationship_report")
 }
 func commandContainsSetupDiscovery(lower string) bool {
 	return commandContainsOpenClerkHelp(lower) ||
@@ -524,6 +528,7 @@ func commandContainsWorkflowPrimitive(actionText string) bool {
 		"audit_contradictions",
 		"memory_router_recall_report",
 		"graph_context_report",
+		"graph_relationship_report",
 		"semantic_search",
 	} {
 		if commandContainsAction(actionText, action) {
@@ -839,6 +844,7 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.AuditContradictionsModes = append(out.AuditContradictionsModes, current.AuditContradictionsModes...)
 		out.MemoryRouterRecallReportUsed = out.MemoryRouterRecallReportUsed || current.MemoryRouterRecallReportUsed
 		out.GraphContextReportUsed = out.GraphContextReportUsed || current.GraphContextReportUsed
+		out.GraphRelationshipReportUsed = out.GraphRelationshipReportUsed || current.GraphRelationshipReportUsed
 		out.SourceDiscoveryReportUsed = out.SourceDiscoveryReportUsed || current.SourceDiscoveryReportUsed
 		out.OpenClerkPathCheckUsed = out.OpenClerkPathCheckUsed || current.OpenClerkPathCheckUsed
 		out.OpenClerkVersionCheckUsed = out.OpenClerkVersionCheckUsed || current.OpenClerkVersionCheckUsed

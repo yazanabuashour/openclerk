@@ -20,8 +20,7 @@ openclerk retrieval
 
 ## Action Index
 
-Prefer a promoted workflow action over manual primitive choreography when it
-matches the request:
+Prefer a promoted workflow action over manual primitive choreography when it matches the request:
 
 - Source-linked synthesis create/update, including disposable validation
   synthesis: document `compile_synthesis` once with user-provided target,
@@ -61,13 +60,14 @@ matches the request:
   do not claim independent tables, external connectors, or structured writes.
 - Hybrid/vector decision support: retrieval `hybrid_retrieval_report`, then
   answer from `hybrid_retrieval.agent_handoff`; do not claim vector ranking.
-- Routine relationship graph context: retrieval `graph_context_report`, then
-  answer from `graph_context.agent_handoff`; canonical markdown is authority,
-  graph evidence is navigation context, and there is no semantic-label graph
-  truth, hidden authority ranking, or graph memory.
+- Relationship graph context: retrieval `graph_context_report`; answer from
+  `graph_context.agent_handoff`; canonical markdown is authority, graph
+  evidence is navigation context, and there is no graph truth/ranking/memory.
+- Relationship paths, direct-vs-derived evidence, typed candidates, or limited
+  graph audits: retrieval `graph_relationship_report`; answer from
+  `graph_relationship.agent_handoff`; typed candidates are cited suggestions.
 - Explicit local semantic retrieval: retrieval `semantic_search`, then answer
-  from hits and handoff; requires explicit semantic/vector recall, loopback
-  Ollama, no Gemini fallback, and unchanged default `search`.
+  from hits/handoff; requires explicit recall, loopback Ollama, no Gemini fallback, and unchanged default `search`.
 
 Use lower-level primitives for explicit primitive requests, advanced/manual
 cases, unsupported workflow-action inputs, and follow-up inspection after a
@@ -182,8 +182,8 @@ Common actions are `search`, `document_links`, `graph_neighborhood`,
 `projection_states`, `audit_contradictions`, `source_audit_report`,
 `source_discovery_report`, `evidence_bundle_report`,
 `decision_lookup_report`, `duplicate_candidate_report`, and
-`workflow_guide_report`, `memory_router_recall_report`,
-`structured_store_report`, `hybrid_retrieval_report`, `graph_context_report`,
+`workflow_guide_report`, `memory_router_recall_report`, `structured_store_report`,
+`hybrid_retrieval_report`, `graph_context_report`, `graph_relationship_report`,
 and `semantic_search`.
 Use `openclerk retrieval --help` for promoted workflow-action request shape.
 

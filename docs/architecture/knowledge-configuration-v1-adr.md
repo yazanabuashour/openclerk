@@ -195,6 +195,10 @@ The v1 retrieval runner actions are:
 - `graph_context_report` packages routine relationship graph context with
   source identity, canonical markdown relationship text, links/backlinks,
   graph projection freshness, provenance refs, and authority limits.
+- `graph_relationship_report` packages relationship paths, direct-vs-derived
+  evidence, typed candidates from canonical markdown, limited
+  stale/orphaned/contradiction audit findings, graph projection freshness,
+  provenance refs, and authority limits.
 - `records_lookup` finds promoted generic record entities.
 - `record_entity` returns one promoted generic record entity.
 - `services_lookup` finds promoted service records.

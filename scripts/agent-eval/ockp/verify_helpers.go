@@ -458,6 +458,46 @@ func graphProductStoryExplorationAnswerPass(message string) bool {
 		!strings.Contains(normalized, forbiddenGenericOutcome)
 }
 
+func graphRelationshipReportAnswerPass(message string) bool {
+	normalized := normalizeValidationMessage(message)
+	requiredPosture := containsAny(normalized, []string{"safety pass"}) &&
+		containsAny(normalized, []string{"capability pass"}) &&
+		containsAny(normalized, []string{"ux quality"}) &&
+		containsAny(normalized, []string{"authority model"}) &&
+		containsAny(normalized, []string{"provenance/freshness posture", "provenance freshness posture"}) &&
+		containsAny(normalized, []string{"validation boundaries"}) &&
+		containsAny(normalized, []string{"workflow impact"}) &&
+		containsAny(normalized, []string{"candidate comparison"}) &&
+		containsAny(normalized, []string{"decision"}) &&
+		containsAny(normalized, []string{"follow-up needs", "follow up needs"})
+	requiredCandidates := containsAny(normalized, []string{"current_primitives_plus_graph_context_report", "current primitives plus graph_context_report", "current primitives plus graph context report"}) &&
+		containsAny(normalized, []string{"graph_relationship_report", "graph relationship report"}) &&
+		containsAny(normalized, []string{"split_specialized_reports", "split specialized reports"})
+	requiredFields := containsAny(normalized, []string{"relationship_paths", "relationship paths"}) &&
+		containsAny(normalized, []string{"direct_relationships", "direct relationships"}) &&
+		containsAny(normalized, []string{"derived_relationships", "derived relationships"}) &&
+		containsAny(normalized, []string{"typed_relationship_candidates", "typed relationship candidates"}) &&
+		containsAny(normalized, []string{"audit_findings", "audit findings"}) &&
+		containsAny(normalized, []string{"stale_graph_projection", "stale graph projection"}) &&
+		containsAny(normalized, []string{"orphaned_graph_context", "orphaned graph context"}) &&
+		containsAny(normalized, []string{"contradictory_relationship_text", "contradictory relationship text"}) &&
+		containsAny(normalized, []string{"graph_projection", "graph projection", "projection freshness"}) &&
+		containsAny(normalized, []string{"provenance_refs", "provenance refs"}) &&
+		containsAny(normalized, []string{"source citations", "citations", "cited"})
+	requiredBoundaries := containsAny(normalized, []string{"canonical markdown authority", "canonical markdown"}) &&
+		containsAny(normalized, []string{"no writes", "no write"}) &&
+		containsAny(normalized, []string{"no bypasses", "no-bypass"}) &&
+		containsAny(normalized, []string{"no direct sqlite", "without direct sqlite"}) &&
+		containsAny(normalized, []string{"no direct vault inspection", "without direct vault inspection"}) &&
+		containsAny(normalized, []string{"no semantic-label graph truth", "no semantic label graph truth"}) &&
+		containsAny(normalized, []string{"no hidden authority ranking", "without hidden authority ranking"}) &&
+		containsAny(normalized, []string{"no graph memory", "without graph memory"}) &&
+		containsAny(normalized, []string{"no durable semantic graph storage", "without durable semantic graph storage"})
+	decision := containsAny(normalized, []string{"promote graph_relationship_report", "promote graph relationship report"}) &&
+		containsAny(normalized, []string{"no follow-up beads are required", "no follow up beads are required"})
+	return requiredPosture && requiredCandidates && requiredFields && requiredBoundaries && decision
+}
+
 func graphProductStoryOutcomePass(normalized string) bool {
 	return storyOutcomePass(normalized, []string{"read-only graph explanation", "read only graph explanation"}, []string{"promote"}) &&
 		storyOutcomePass(normalized, []string{"relationship/path finding", "relationship path finding"}, []string{"defer"}) &&

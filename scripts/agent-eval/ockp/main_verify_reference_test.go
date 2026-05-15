@@ -667,6 +667,39 @@ Follow-up needs: follow-up Beads cover deferred report and maintenance plan comp
 	}
 }
 
+func TestGraphRelationshipReportRejectsPriorGraphContextReport(t *testing.T) {
+	ctx := context.Background()
+	paths := scenarioPaths(t.TempDir())
+	if err := seedScenario(ctx, paths, scenario{ID: graphRelationshipReportScenarioID}); err != nil {
+		t.Fatalf("seed graph relationship report scenario: %v", err)
+	}
+	answer := `Safety pass: pass with no writes, no bypasses, no direct SQLite, no direct vault inspection, no semantic-label graph truth, no hidden authority ranking, no graph memory, and no durable semantic graph storage.
+Capability pass: relationship_paths, direct_relationships, derived_relationships, typed_relationship_candidates, audit_findings, stale_graph_projection, orphaned_graph_context, contradictory_relationship_text, graph_projection freshness, provenance_refs, source citations.
+UX quality: graph_relationship_report is simpler.
+Authority model: canonical markdown authority remains the source.
+Provenance/freshness posture: provenance_refs and graph_projection freshness are visible.
+Validation boundaries: no writes, no bypasses, no direct SQLite, no direct vault inspection, no semantic-label graph truth, no hidden authority ranking, no graph memory, no durable semantic graph storage.
+Workflow impact: one action replaces ceremony.
+Candidate comparison: current_primitives_plus_graph_context_report, graph_relationship_report, split_specialized_reports.
+Decision: promote graph_relationship_report.
+Follow-up needs: no follow-up beads are required for the deferred relationship/path, direct-vs-derived, typed-candidate, or limited graph-audit needs.`
+	metrics := metrics{
+		CommandExecutions:               2,
+		GraphContextReportUsed:          true,
+		GraphRelationshipReportUsed:     true,
+		WorkflowActionCallCount:         2,
+		WorkflowActionFirstCommandIndex: 1,
+		EventTypeCounts:                 map[string]int{},
+	}
+	result, err := verifyScenarioTurn(ctx, paths, scenario{ID: graphRelationshipReportScenarioID}, 1, answer, metrics)
+	if err != nil {
+		t.Fatalf("verify graph relationship prior context: %v", err)
+	}
+	if result.Passed {
+		t.Fatalf("graph relationship report passed despite prior graph_context_report: %+v", result)
+	}
+}
+
 func TestVerifyGraphSemanticsRevisitMatchesNaturalAndScriptedPrompts(t *testing.T) {
 	ctx := context.Background()
 	paths := scenarioPaths(t.TempDir())
