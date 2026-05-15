@@ -24,45 +24,65 @@ func normalizeVaultRelativePrefix(raw string) string {
 }
 
 func validateSourcePathHint(pathHint string) string {
-	clean, rejection := validateRequiredVaultPath(pathHint, "source.path_hint is required", "source.path_hint must be relative to the vault root", "source.path_hint must stay inside the vault root")
-	if rejection != "" {
-		return rejection
-	}
-	if !strings.HasPrefix(clean, "sources/") || path.Ext(clean) != ".md" {
-		return "source.path_hint must be a vault-relative sources/*.md path"
-	}
-	return ""
+	return validateVaultPathHint(pathHint, vaultPathHintRule{
+		RequiredMessage:   "source.path_hint is required",
+		RelativeMessage:   "source.path_hint must be relative to the vault root",
+		StayInsideMessage: "source.path_hint must stay inside the vault root",
+		Prefix:            "sources/",
+		Extension:         ".md",
+		ShapeMessage:      "source.path_hint must be a vault-relative sources/*.md path",
+	})
 }
 
 func validateVideoPathHint(pathHint string) string {
-	clean, rejection := validateRequiredVaultPath(pathHint, "video.path_hint is required", "video.path_hint must be relative to the vault root", "video.path_hint must stay inside the vault root")
-	if rejection != "" {
-		return rejection
-	}
-	if !strings.HasPrefix(clean, "sources/") || path.Ext(clean) != ".md" {
-		return "video.path_hint must be a vault-relative sources/*.md path"
-	}
-	return ""
+	return validateVaultPathHint(pathHint, vaultPathHintRule{
+		RequiredMessage:   "video.path_hint is required",
+		RelativeMessage:   "video.path_hint must be relative to the vault root",
+		StayInsideMessage: "video.path_hint must stay inside the vault root",
+		Prefix:            "sources/",
+		Extension:         ".md",
+		ShapeMessage:      "video.path_hint must be a vault-relative sources/*.md path",
+	})
 }
 
 func validateAssetPathHint(pathHint string) string {
-	clean, rejection := validateRequiredVaultPath(pathHint, "source.asset_path_hint is required", "source.asset_path_hint must be relative to the vault root", "source.asset_path_hint must stay inside the vault root")
-	if rejection != "" {
-		return rejection
-	}
-	if !strings.HasPrefix(clean, "assets/") || path.Ext(clean) != ".pdf" {
-		return "source.asset_path_hint must be a vault-relative assets/**/*.pdf path"
-	}
-	return ""
+	return validateVaultPathHint(pathHint, vaultPathHintRule{
+		RequiredMessage:   "source.asset_path_hint is required",
+		RelativeMessage:   "source.asset_path_hint must be relative to the vault root",
+		StayInsideMessage: "source.asset_path_hint must stay inside the vault root",
+		Prefix:            "assets/",
+		Extension:         ".pdf",
+		ShapeMessage:      "source.asset_path_hint must be a vault-relative assets/**/*.pdf path",
+	})
 }
 
 func validateVideoAssetPathHint(pathHint string) string {
-	clean, rejection := validateRequiredVaultPath(pathHint, "video.asset_path_hint is required", "video.asset_path_hint must be relative to the vault root", "video.asset_path_hint must stay inside the vault root")
+	return validateVaultPathHint(pathHint, vaultPathHintRule{
+		RequiredMessage:   "video.asset_path_hint is required",
+		RelativeMessage:   "video.asset_path_hint must be relative to the vault root",
+		StayInsideMessage: "video.asset_path_hint must stay inside the vault root",
+		Prefix:            "assets/",
+		Extension:         ".json",
+		ShapeMessage:      "video.asset_path_hint must be a vault-relative assets/**/*.json path",
+	})
+}
+
+type vaultPathHintRule struct {
+	RequiredMessage   string
+	RelativeMessage   string
+	StayInsideMessage string
+	Prefix            string
+	Extension         string
+	ShapeMessage      string
+}
+
+func validateVaultPathHint(raw string, rule vaultPathHintRule) string {
+	clean, rejection := validateRequiredVaultPath(raw, rule.RequiredMessage, rule.RelativeMessage, rule.StayInsideMessage)
 	if rejection != "" {
 		return rejection
 	}
-	if !strings.HasPrefix(clean, "assets/") || path.Ext(clean) != ".json" {
-		return "video.asset_path_hint must be a vault-relative assets/**/*.json path"
+	if !strings.HasPrefix(clean, rule.Prefix) || path.Ext(clean) != rule.Extension {
+		return rule.ShapeMessage
 	}
 	return ""
 }
