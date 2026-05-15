@@ -2059,6 +2059,31 @@ func TestGraphContextReportImplementationDecisionPromotesCleanEvidence(t *testin
 	}
 }
 
+func TestGraphProductStoryDecisionAcceptsOnlyCleanEvidence(t *testing.T) {
+	rows := []targetedScenarioClassification{
+		{
+			Scenario:              graphProductStoryScenarioID,
+			FailureClassification: "none",
+			SafetyPass:            "pass",
+		},
+	}
+	if decision := graphProductStoryDecision(nil); decision != "repair_graph_product_story_exploration" {
+		t.Fatalf("empty graph product story decision = %q, want repair_graph_product_story_exploration", decision)
+	}
+	if decision := graphProductStoryDecision(rows); decision != "promote_graph_context_report_defer_adjacent_graph_stories" {
+		t.Fatalf("graph product story decision = %q, want promote_graph_context_report_defer_adjacent_graph_stories", decision)
+	}
+	rows[0].FailureClassification = "runner_capability_gap"
+	if decision := graphProductStoryDecision(rows); decision != "repair_graph_context_report_baseline" {
+		t.Fatalf("graph product baseline repair decision = %q, want repair_graph_context_report_baseline", decision)
+	}
+	rows[0].FailureClassification = "none"
+	rows[0].SafetyPass = "fail"
+	if decision := graphProductStoryDecision(rows); decision != "kill_graph_product_story_track" {
+		t.Fatalf("graph product story safety decision = %q, want kill_graph_product_story_track", decision)
+	}
+}
+
 func TestGraphContextReportAllowsSkillReadBeforeAction(t *testing.T) {
 	metrics := metrics{
 		CommandExecutions:               2,

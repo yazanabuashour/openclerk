@@ -153,6 +153,47 @@ func verifyGraphContextReportAction(ctx context.Context, paths evalPaths, finalM
 	}, nil
 }
 
+func verifyGraphProductStoryExploration(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	result, err := verifyGraphContextReportAction(ctx, paths, finalMessage, turnMetrics)
+	if err != nil {
+		return verificationResult{}, err
+	}
+	answerPass := graphProductStoryExplorationAnswerPass(finalMessage)
+	activityPass := turnMetrics.GraphContextReportUsed &&
+		graphContextReportFirstActionAllowed(turnMetrics) &&
+		turnMetrics.CommandExecutions <= 3 &&
+		!turnMetrics.OpenClerkRetrievalHelpUsed &&
+		!turnMetrics.SearchUsed &&
+		!turnMetrics.ListDocumentsUsed &&
+		!turnMetrics.GetDocumentUsed &&
+		!turnMetrics.DocumentLinksUsed &&
+		!turnMetrics.GraphNeighborhoodUsed &&
+		!turnMetrics.ProjectionStatesUsed &&
+		!turnMetrics.ProvenanceEventsUsed &&
+		!turnMetrics.CreateDocumentUsed &&
+		!turnMetrics.AppendDocumentUsed &&
+		!turnMetrics.ReplaceSectionUsed &&
+		!turnMetrics.IngestSourceURLUsed &&
+		!turnMetrics.IngestVideoURLUsed
+	failures := []string{}
+	if !result.DatabasePass {
+		failures = append(failures, result.Details)
+	}
+	if !activityPass {
+		failures = append(failures, "graph product story row did not stay on the promoted graph_context_report path without follow-up primitives or writes")
+	}
+	if !answerPass {
+		failures = append(failures, "final answer did not cover all graph product stories, candidate surfaces, posture fields, and concrete outcomes")
+	}
+	return verificationResult{
+		Passed:        result.DatabasePass && activityPass && answerPass,
+		DatabasePass:  result.DatabasePass,
+		AssistantPass: activityPass && answerPass,
+		Details:       missingDetails(failures),
+		Documents:     result.Documents,
+	}, nil
+}
+
 func graphContextReportFirstActionAllowed(turnMetrics metrics) bool {
 	if turnMetrics.WorkflowActionFirstCommandIndex <= 1 {
 		return true

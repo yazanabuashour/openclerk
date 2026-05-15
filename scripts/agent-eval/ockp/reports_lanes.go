@@ -8,6 +8,7 @@ func reportLane(ids []string) (string, bool) {
 	populated := 0
 	repoDocs := 0
 	graphSemanticsRevisit := 0
+	graphProductStory := 0
 	graphContextReport := 0
 	memoryRouterRevisit := 0
 	highTouchMemoryRouterRecall := 0
@@ -65,6 +66,10 @@ func reportLane(ids []string) (string, bool) {
 		}
 		if isGraphSemanticsRevisitScenario(id) {
 			graphSemanticsRevisit++
+			continue
+		}
+		if isGraphProductStoryScenario(id) {
+			graphProductStory++
 			continue
 		}
 		if isGraphContextReportScenario(id) {
@@ -244,6 +249,9 @@ func reportLane(ids []string) (string, bool) {
 	}
 	if graphSemanticsRevisit > 0 && graphSemanticsRevisit+validation == len(ids) {
 		return graphSemanticsRevisitLaneName, false
+	}
+	if graphProductStory > 0 && graphProductStory+validation == len(ids) {
+		return graphProductStoryLaneName, false
 	}
 	if graphContextReport > 0 && graphContextReport+validation == len(ids) {
 		return graphContextReportLaneName, false
@@ -491,6 +499,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == graphSemanticsRevisitLaneName {
 		return "graph semantics revisit rows report natural relationship intent, scripted current-primitives control, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"
+	}
+	if lane == graphProductStoryLaneName {
+		return "graph product story exploration rows compare existing primitives/baseline, graph_context_report, narrow read-only reports, approval-before-write maintenance plans, durable semantic graph/storage options, and no-new-surface across graph explanation, path finding, direct-vs-inferred reporting, typed candidates, stale/contradictory/orphaned audits, maintenance plans, and durable storage candidates, while recording concrete outcomes, safety pass, capability pass, UX quality, authority model, provenance/freshness posture, validation boundaries, workflow impact, and negative controls"
 	}
 	if lane == graphContextReportLaneName {
 		return "graph context report implementation rows compare current primitives plus help with the promoted read-only graph_context_report action, while reporting source identity, cited canonical relationship text, links/backlinks, graph neighborhood, graph projection freshness, provenance refs, candidate surfaces, validation boundaries, authority limits, no-write/no-bypass controls, tool count, command count, assistant calls, wall time, prompt specificity, retries, latency, safety pass, capability pass, and UX quality"

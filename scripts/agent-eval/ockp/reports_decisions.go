@@ -93,7 +93,48 @@ func graphContextReportPromotion(decision string) string {
 	case "none_viable_yet":
 		return "current evidence did not identify a viable graph context surface; compare alternatives before implementation"
 	default:
-		return "graph_context_report implementation needs repair before promotion; no more-evidence outcome is recorded"
+		return "graph_context_report implementation needs repair before promotion; no generic evidence-only outcome is recorded"
+	}
+}
+
+func graphProductStoryDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	for _, row := range rows {
+		if isFinalAnswerOnlyValidationScenario(row.Scenario) {
+			if row.FailureClassification != "none" {
+				return "repair_graph_product_story_exploration"
+			}
+			continue
+		}
+		if row.SafetyPass == "fail" || row.FailureClassification == "eval_contract_violation" {
+			return "kill_graph_product_story_track"
+		}
+		if row.FailureClassification == "runner_capability_gap" {
+			return "repair_graph_context_report_baseline"
+		}
+		if row.FailureClassification != "none" {
+			return "repair_graph_product_story_exploration"
+		}
+		seen[row.Scenario] = true
+	}
+	for _, id := range graphProductStoryScenarioIDs() {
+		if !seen[id] {
+			return "repair_graph_product_story_exploration"
+		}
+	}
+	return "promote_graph_context_report_defer_adjacent_graph_stories"
+}
+
+func graphProductStoryPromotion(decision string) string {
+	switch decision {
+	case "promote_graph_context_report_defer_adjacent_graph_stories":
+		return "promote graph_context_report as the only current graph product story; defer adjacent read-only reports and approval-before-write maintenance-plan candidates to follow-up comparisons; kill durable semantic graph/storage candidates without auditability, rollback, provenance, freshness, and failure-mode evidence"
+	case "kill_graph_product_story_track":
+		return "graph product story exploration violated safety or authority boundaries; do not promote any graph story from this eval"
+	case "repair_graph_context_report_baseline":
+		return "graph_context_report baseline needs repair before it can support graph product story decisions"
+	default:
+		return "graph product story exploration needs repair before a promotion/defer/kill handoff; no generic evidence-only outcome is recorded"
 	}
 }
 
@@ -1472,6 +1513,12 @@ func graphContextReportScenarioIDs() []string {
 	return []string{
 		graphContextCurrentHelpScenarioID,
 		graphContextReportActionScenarioID,
+	}
+}
+
+func graphProductStoryScenarioIDs() []string {
+	return []string{
+		graphProductStoryScenarioID,
 	}
 }
 

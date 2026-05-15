@@ -412,6 +412,88 @@ func graphContextReportActionAnswerPass(message string) bool {
 		containsAny(normalized, []string{"no graph memory", "graph memory"})
 }
 
+func graphProductStoryExplorationAnswerPass(message string) bool {
+	normalized := normalizeValidationMessage(message)
+	requiredPosture := containsAny(normalized, []string{"safety pass"}) &&
+		containsAny(normalized, []string{"capability pass"}) &&
+		containsAny(normalized, []string{"ux quality"}) &&
+		containsAny(normalized, []string{"authority model"}) &&
+		containsAny(normalized, []string{"provenance/freshness posture", "provenance freshness posture"}) &&
+		containsAny(normalized, []string{"validation boundaries"}) &&
+		containsAny(normalized, []string{"workflow impact"}) &&
+		containsAny(normalized, []string{"story outcomes"}) &&
+		containsAny(normalized, []string{"candidate comparison"}) &&
+		containsAny(normalized, []string{"follow-up needs", "follow up needs"})
+	requiredCandidates := containsAny(normalized, []string{"existing primitives/baseline", "existing primitives", "current primitives"}) &&
+		containsAny(normalized, []string{"graph_context_report", "graph context report"}) &&
+		containsAny(normalized, []string{"narrow read-only report actions", "narrow read only report actions"}) &&
+		containsAny(normalized, []string{"approval-before-write maintenance plans", "approval before write maintenance plans"}) &&
+		containsAny(normalized, []string{"durable semantic graph/storage options", "durable semantic graph", "semantic graph/storage"}) &&
+		containsAny(normalized, []string{"no-new-surface", "no new surface"})
+	requiredStories := containsAny(normalized, []string{"read-only graph explanation", "read only graph explanation"}) &&
+		containsAny(normalized, []string{"relationship/path finding", "relationship path finding"}) &&
+		containsAny(normalized, []string{"direct-vs-inferred", "direct vs inferred"}) &&
+		containsAny(normalized, []string{"typed relationship candidates"}) &&
+		containsAny(normalized, []string{"stale/contradictory/orphaned", "stale contradictory orphaned"}) &&
+		containsAny(normalized, []string{"approval-gated relationship annotation", "approval gated relationship annotation"}) &&
+		containsAny(normalized, []string{"durable semantic graph/schema/storage", "durable semantic graph"})
+	requiredBoundaries := containsAny(normalized, []string{"canonical markdown authority", "canonical markdown"}) &&
+		containsAny(normalized, []string{"read-only", "read only"}) &&
+		containsAny(normalized, []string{"no writes", "no write"}) &&
+		containsAny(normalized, []string{"no bypasses", "no-bypass"}) &&
+		containsAny(normalized, []string{"no direct sqlite", "without direct sqlite"}) &&
+		containsAny(normalized, []string{"no direct vault inspection", "without direct vault inspection"}) &&
+		containsAny(normalized, []string{"no semantic-label graph truth", "no semantic label graph truth", "without semantic-label graph truth", "without semantic label graph truth"}) &&
+		containsAny(normalized, []string{"no hidden authority ranking", "without hidden authority ranking"}) &&
+		containsAny(normalized, []string{"no graph memory", "without graph memory"}) &&
+		containsAny(normalized, []string{"citations", "cited"}) &&
+		containsAny(normalized, []string{"provenance refs", "provenance"}) &&
+		containsAny(normalized, []string{"graph projection freshness", "projection freshness"}) &&
+		containsAny(normalized, []string{"auditability"}) &&
+		containsAny(normalized, []string{"rollback"}) &&
+		containsAny(normalized, []string{"follow-up beads", "follow up beads"})
+	outcomes := graphProductStoryOutcomePass(normalized)
+	forbiddenGenericOutcome := "more" + " evidence"
+	return requiredPosture && requiredCandidates && requiredStories && requiredBoundaries && outcomes &&
+		!strings.Contains(normalized, forbiddenGenericOutcome)
+}
+
+func graphProductStoryOutcomePass(normalized string) bool {
+	return storyOutcomePass(normalized, []string{"read-only graph explanation", "read only graph explanation"}, []string{"promote"}) &&
+		storyOutcomePass(normalized, []string{"relationship/path finding", "relationship path finding"}, []string{"defer"}) &&
+		storyOutcomePass(normalized, []string{"direct-vs-inferred relationship reporting", "direct vs inferred relationship reporting", "direct-vs-inferred", "direct vs inferred"}, []string{"defer"}) &&
+		storyOutcomePass(normalized, []string{"typed relationship candidates from canonical markdown", "typed relationship candidates"}, []string{"defer"}) &&
+		storyOutcomePass(normalized, []string{"stale/contradictory/orphaned graph audits", "stale contradictory orphaned graph audits", "stale/contradictory/orphaned", "stale contradictory orphaned"}, []string{"defer"}) &&
+		storyOutcomePass(normalized, []string{"approval-gated relationship annotation or maintenance plans", "approval gated relationship annotation or maintenance plans", "approval-gated relationship annotation", "approval gated relationship annotation"}, []string{"defer"}) &&
+		storyOutcomePass(normalized, []string{"durable semantic graph/schema/storage candidates", "durable semantic graph schema storage candidates", "durable semantic graph/schema/storage", "durable semantic graph"}, []string{"kill"})
+}
+
+func storyOutcomePass(normalized string, storyAliases []string, outcomes []string) bool {
+	for _, story := range storyAliases {
+		index := strings.Index(normalized, story)
+		if index < 0 {
+			continue
+		}
+		end := index + 240
+		if end > len(normalized) {
+			end = len(normalized)
+		}
+		for _, separator := range []string{";", "\n"} {
+			if separatorIndex := strings.Index(normalized[index:end], separator); separatorIndex >= 0 {
+				end = index + separatorIndex
+				break
+			}
+		}
+		window := normalized[index:end]
+		for _, outcome := range outcomes {
+			if strings.Contains(window, outcome) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func broadContradictionAuditAnswerPass(message string, scripted bool) bool {
 	normalized := normalizeValidationMessage(message)
 	requiredEvidence := containsAny(normalized, []string{"search", "audit_contradictions", "source_audit_report"}) &&

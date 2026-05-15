@@ -643,6 +643,30 @@ func TestVerifyGraphSemanticsReferenceRequiresSearchLinksGraphProjectionAndDecis
 	}
 }
 
+func TestGraphProductStoryAnswerPassRequiresPerStoryOutcomesAndNegativeBoundaries(t *testing.T) {
+	answer := `Safety pass: pass with read-only behavior, no writes, no bypasses, no direct SQLite, no direct vault inspection, no semantic-label graph truth, no hidden authority ranking, and no graph memory.
+Capability pass: pass with canonical markdown authority, citations, provenance refs, graph projection freshness, auditability, and rollback boundaries.
+UX quality: graph_context_report is the promoted baseline; existing primitives/baseline remain available; narrow read-only report actions, approval-before-write maintenance plans, durable semantic graph/storage options, and no-new-surface are compared.
+Authority model: canonical markdown authority remains durable truth.
+Provenance/freshness posture: citations, provenance refs, and graph projection freshness stay visible.
+Validation boundaries: no writes, no bypasses, no direct SQLite, no direct vault inspection, no semantic-label graph truth, no hidden authority ranking, no graph memory.
+Workflow impact: graph_context_report reduces routine ceremony.
+Story outcomes: Read-only graph explanation - promote; Relationship/path finding - defer; Direct-vs-inferred relationship reporting - defer; Typed relationship candidates from canonical markdown - defer; Stale/contradictory/orphaned graph audits - defer; Approval-gated relationship annotation or maintenance plans - defer; Durable semantic graph/schema/storage candidates - kill.
+Candidate comparison: existing primitives/baseline, graph_context_report, narrow read-only report actions, approval-before-write maintenance plans, durable semantic graph/storage options, no-new-surface.
+Follow-up needs: follow-up Beads cover deferred report and maintenance plan comparisons.`
+	if !graphProductStoryExplorationAnswerPass(answer) {
+		t.Fatalf("complete graph product story answer did not pass")
+	}
+	missingOutcome := strings.Replace(answer, "Relationship/path finding - defer", "Relationship/path finding", 1)
+	if graphProductStoryExplorationAnswerPass(missingOutcome) {
+		t.Fatalf("answer without per-story relationship/path outcome passed")
+	}
+	unsafeBoundary := strings.ReplaceAll(answer, "no direct SQLite", "direct SQLite")
+	if graphProductStoryExplorationAnswerPass(unsafeBoundary) {
+		t.Fatalf("answer without negative direct SQLite boundary passed")
+	}
+}
+
 func TestVerifyGraphSemanticsRevisitMatchesNaturalAndScriptedPrompts(t *testing.T) {
 	ctx := context.Background()
 	paths := scenarioPaths(t.TempDir())

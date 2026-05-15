@@ -61,7 +61,7 @@ func seedScenarioWithFixtures(ctx context.Context, paths evalPaths, sc scenario,
 		if err := seedDocsNavigationBaseline(ctx, cfg); err != nil {
 			return err
 		}
-	case graphSemanticsScenarioID, graphSemanticsNaturalScenarioID, graphSemanticsScriptedScenarioID, graphContextCurrentHelpScenarioID, graphContextReportActionScenarioID:
+	case graphSemanticsScenarioID, graphSemanticsNaturalScenarioID, graphSemanticsScriptedScenarioID, graphContextCurrentHelpScenarioID, graphContextReportActionScenarioID, graphProductStoryScenarioID:
 		if err := seedGraphSemanticsReference(ctx, cfg); err != nil {
 			return err
 		}
