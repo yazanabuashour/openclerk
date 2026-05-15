@@ -14,13 +14,7 @@ const (
 )
 
 func runGraphRelationshipReport(ctx context.Context, client *runclient.Client, options GraphRelationshipOptions) (GraphRelationshipReport, error) {
-	contextReport, err := runGraphContextReport(ctx, client, GraphContextOptions{
-		DocID:      options.DocID,
-		Path:       options.Path,
-		Query:      options.Query,
-		PathPrefix: options.PathPrefix,
-		Limit:      options.Limit,
-	})
+	contextReport, err := runGraphContextReport(ctx, client, GraphContextOptions(options))
 	if err != nil {
 		return GraphRelationshipReport{}, err
 	}

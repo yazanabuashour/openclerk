@@ -16,13 +16,7 @@ const (
 )
 
 func runGraphRelationshipMaintenancePlan(ctx context.Context, client *runclient.Client, options GraphRelationshipMaintenanceOptions) (GraphRelationshipMaintenancePlan, error) {
-	report, err := runGraphRelationshipReport(ctx, client, GraphRelationshipOptions{
-		DocID:      options.DocID,
-		Path:       options.Path,
-		Query:      options.Query,
-		PathPrefix: options.PathPrefix,
-		Limit:      options.Limit,
-	})
+	report, err := runGraphRelationshipReport(ctx, client, GraphRelationshipOptions(options))
 	if err != nil {
 		return GraphRelationshipMaintenancePlan{}, err
 	}
