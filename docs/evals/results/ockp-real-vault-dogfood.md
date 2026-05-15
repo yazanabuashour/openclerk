@@ -30,13 +30,13 @@ Counting policy: Counts are derived from runner-visible document summaries and m
 | Probe | Seconds |
 | --- | ---: |
 | generate | 0.00 |
-| import_sync | 0.16 |
+| import_sync | 0.19 |
 | reopen_rebuild | 0.02 |
 | list_latency | 0.00 |
 | get_latency | 0.00 |
 | projection_check | 0.00 |
 | provenance_check | 0.00 |
-| search_total | 0.27 |
+| search_total | 0.29 |
 
 ## Sync Diagnostics
 
@@ -62,19 +62,19 @@ Counting policy: Counts are derived from runner-visible document summaries and m
 | projection_rebuild_skipped | false |
 | scan_seconds | 0.01 |
 | prune_seconds | 0.00 |
-| document_read_parse_seconds | 0.03 |
-| document_write_seconds | 0.03 |
-| document_record_write_seconds | 0.01 |
+| document_read_parse_seconds | 0.04 |
+| document_write_seconds | 0.04 |
+| document_record_write_seconds | 0.02 |
 | chunk_write_seconds | 0.01 |
 | provenance_write_seconds | 0.01 |
 | incremental_fts_write_seconds | 0.00 |
-| bulk_fts_rebuild_seconds | 0.02 |
-| projection_rebuild_seconds | 0.05 |
-| total_seconds | 0.15 |
+| bulk_fts_rebuild_seconds | 0.03 |
+| projection_rebuild_seconds | 0.06 |
+| total_seconds | 0.18 |
 
 | Projection | Seconds |
 | --- | ---: |
-| `graph` | 0.03 |
+| `graph` | 0.04 |
 | `records` | 0.01 |
 | `services` | 0.01 |
 | `decisions` | 0.01 |
@@ -110,7 +110,7 @@ Counting policy: Counts are derived from runner-visible document summaries and m
 | incremental_fts_write_seconds | 0.00 |
 | bulk_fts_rebuild_seconds | 0.00 |
 | projection_rebuild_seconds | 0.00 |
-| total_seconds | 0.01 |
+| total_seconds | 0.02 |
 
 Projection rebuilds: none.
 
@@ -121,8 +121,8 @@ Projection rebuilds: none.
 | `list-documents` | `` | `completed` | 50 | 0.00 | runner-visible summaries counted without emitting paths or titles |
 | `get-document` | `` | `completed` | 1 | 0.00 | document body was read for timing only and is excluded from reduced reports |
 | `fts-search` | `private-query-1` | `completed` | 10 | 0.00 | hit counts only; reduced report excludes snippets, paths, titles, doc ids, and chunk ids |
-| `fts-search` | `private-query-2` | `completed` | 10 | 0.14 | hit counts only; reduced report excludes snippets, paths, titles, doc ids, and chunk ids |
-| `fts-search` | `private-query-3` | `completed` | 10 | 0.13 | hit counts only; reduced report excludes snippets, paths, titles, doc ids, and chunk ids |
+| `fts-search` | `private-query-2` | `completed` | 10 | 0.15 | hit counts only; reduced report excludes snippets, paths, titles, doc ids, and chunk ids |
+| `fts-search` | `private-query-3` | `completed` | 10 | 0.14 | hit counts only; reduced report excludes snippets, paths, titles, doc ids, and chunk ids |
 | `projection-synthesis-sample` | `` | `completed` | 3 | 0.00 | projection freshness count only; reduced report excludes projection refs |
 | `provenance-sample` | `` | `completed` | 100 | 0.00 | provenance event count only; reduced report excludes source refs and event ids |
 
