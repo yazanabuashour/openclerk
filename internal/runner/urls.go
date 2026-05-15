@@ -10,19 +10,51 @@ import (
 const canonicalGeminiAPIBase = "https://generativelanguage.googleapis.com/v1beta"
 
 func validateRequiredRunnerHTTPURL(raw string, field string) (*url.URL, string) {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" {
-		return nil, field + " is required"
-	}
-	return validateOptionalRunnerHTTPURL(trimmed, field)
+	return validateRunnerHTTPURL(raw, field, runnerHTTPURLRule{
+		Required:          true,
+		EnforcePublicHost: true,
+	})
 }
 
 func validateRequiredRunnerHTTPURLSyntax(raw string, field string) (*url.URL, string) {
+	return validateRunnerHTTPURL(raw, field, runnerHTTPURLRule{
+		Required: true,
+	})
+}
+
+func validateOptionalRunnerHTTPURL(raw string, field string) (*url.URL, string) {
+	return validateRunnerHTTPURL(raw, field, runnerHTTPURLRule{
+		EnforcePublicHost: true,
+	})
+}
+
+type runnerHTTPURLRule struct {
+	Required          bool
+	EnforcePublicHost bool
+}
+
+func validateRunnerHTTPURL(raw string, field string, rule runnerHTTPURLRule) (*url.URL, string) {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {
+		if !rule.Required {
+			return nil, ""
+		}
 		return nil, field + " is required"
 	}
-	parsed, err := url.Parse(trimmed)
+	parsed, rejection := parseRunnerHTTPURL(trimmed, field)
+	if rejection != "" {
+		return nil, rejection
+	}
+	if rule.EnforcePublicHost {
+		if rejection := validateRunnerPublicURLHost(parsed, field); rejection != "" {
+			return nil, rejection
+		}
+	}
+	return parsed, ""
+}
+
+func parseRunnerHTTPURL(raw string, field string) (*url.URL, string) {
+	parsed, err := url.Parse(raw)
 	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
 		return nil, field + " must be a valid http or https URL"
 	}
@@ -32,22 +64,39 @@ func validateRequiredRunnerHTTPURLSyntax(raw string, field string) (*url.URL, st
 	return parsed, ""
 }
 
-func validateOptionalRunnerHTTPURL(raw string, field string) (*url.URL, string) {
+func validateOptionalRunnerLoopbackHTTPURL(raw string, field string) string {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {
-		return nil, ""
+		return ""
 	}
-	parsed, err := url.Parse(trimmed)
-	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
-		return nil, field + " must be a valid http or https URL"
+	parsed, rejection := parseRunnerHTTPURL(trimmed, field)
+	if rejection != "" {
+		return field + " must be a loopback HTTP URL"
 	}
-	if parsed.Scheme != "http" && parsed.Scheme != "https" {
-		return nil, field + " must use http or https"
+	host := parsed.Hostname()
+	if strings.EqualFold(host, "localhost") {
+		return ""
 	}
-	if rejection := validateRunnerPublicURLHost(parsed, field); rejection != "" {
-		return nil, rejection
+	ip := net.ParseIP(host)
+	if ip != nil && ip.IsLoopback() {
+		return ""
 	}
-	return parsed, ""
+	return field + " must be a loopback HTTP URL"
+}
+
+func validateOptionalRunnerCanonicalGeminiAPIBase(raw string, field string) string {
+	parsed, rejection := validateOptionalRunnerHTTPURL(raw, field)
+	if rejection != "" {
+		return field + " must be " + canonicalGeminiAPIBase
+	}
+	if parsed == nil {
+		return ""
+	}
+	if parsed.User != nil || parsed.RawQuery != "" || parsed.ForceQuery || parsed.Fragment != "" ||
+		parsed.Scheme != "https" || parsed.Host != "generativelanguage.googleapis.com" || parsed.Path != "/v1beta" {
+		return field + " must be " + canonicalGeminiAPIBase
+	}
+	return ""
 }
 
 func validateRunnerPublicURLHost(parsed *url.URL, field string) string {
@@ -78,39 +127,4 @@ func isRunnerPublicIP(ip net.IP) bool {
 		!ip.IsLinkLocalUnicast() &&
 		!ip.IsLinkLocalMulticast() &&
 		!ip.IsMulticast()
-}
-
-func validateOptionalRunnerLoopbackHTTPURL(raw string, field string) string {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" {
-		return ""
-	}
-	parsed, err := url.Parse(trimmed)
-	if err != nil || parsed.Scheme == "" || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
-		return field + " must be a loopback HTTP URL"
-	}
-	host := parsed.Hostname()
-	if strings.EqualFold(host, "localhost") {
-		return ""
-	}
-	ip := net.ParseIP(host)
-	if ip != nil && ip.IsLoopback() {
-		return ""
-	}
-	return field + " must be a loopback HTTP URL"
-}
-
-func validateOptionalRunnerCanonicalGeminiAPIBase(raw string, field string) string {
-	parsed, rejection := validateOptionalRunnerHTTPURL(raw, field)
-	if rejection != "" {
-		return field + " must be " + canonicalGeminiAPIBase
-	}
-	if parsed == nil {
-		return ""
-	}
-	if parsed.User != nil || parsed.RawQuery != "" || parsed.ForceQuery || parsed.Fragment != "" ||
-		parsed.Scheme != "https" || parsed.Host != "generativelanguage.googleapis.com" || parsed.Path != "/v1beta" {
-		return field + " must be " + canonicalGeminiAPIBase
-	}
-	return ""
 }

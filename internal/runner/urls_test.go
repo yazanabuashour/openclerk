@@ -1,28 +1,80 @@
 package runner
 
-import "testing"
+import (
+	"net/url"
+	"testing"
+)
 
 func TestRunnerHTTPURLValidation(t *testing.T) {
 	t.Parallel()
 
-	if _, rejection := validateRequiredRunnerHTTPURL("", "source.url"); rejection != "source.url is required" {
-		t.Fatalf("missing required URL rejection = %q", rejection)
+	tests := []struct {
+		name     string
+		validate func(string, string) (*url.URL, string)
+		raw      string
+		want     string
+		wantPath string
+	}{
+		{
+			name:     "required URL rejects missing",
+			validate: validateRequiredRunnerHTTPURL,
+			want:     "source.url is required",
+		},
+		{
+			name:     "required URL accepts public HTTP URL",
+			validate: validateRequiredRunnerHTTPURL,
+			raw:      "https://example.test/source.pdf",
+			wantPath: "/source.pdf",
+		},
+		{
+			name:     "public URL rejects file URL",
+			validate: validateOptionalRunnerHTTPURL,
+			raw:      "file:///tmp/source.pdf",
+			want:     "source.url must be a valid http or https URL",
+		},
+		{
+			name:     "public URL rejects mailto URL",
+			validate: validateOptionalRunnerHTTPURL,
+			raw:      "mailto:user@example.test",
+			want:     "source.url must be a valid http or https URL",
+		},
+		{
+			name:     "public URL rejects unsupported scheme",
+			validate: validateOptionalRunnerHTTPURL,
+			raw:      "ftp://example.test/source.pdf",
+			want:     "source.url must use http or https",
+		},
+		{
+			name:     "optional URL accepts missing",
+			validate: validateOptionalRunnerHTTPURL,
+		},
+		{
+			name:     "public URL rejects loopback host",
+			validate: validateOptionalRunnerHTTPURL,
+			raw:      "http://127.0.0.1/source.pdf",
+			want:     "source.url must be publicly fetchable",
+		},
+		{
+			name:     "syntax-only URL accepts loopback host",
+			validate: validateRequiredRunnerHTTPURLSyntax,
+			raw:      "http://127.0.0.1/source.pdf",
+			wantPath: "/source.pdf",
+		},
 	}
-	parsed, rejection := validateRequiredRunnerHTTPURL("https://example.test/source.pdf", "source.url")
-	if rejection != "" || parsed == nil || parsed.Path != "/source.pdf" {
-		t.Fatalf("valid required URL = %#v, %q; want parsed URL, empty rejection", parsed, rejection)
-	}
-	if _, rejection := validateOptionalRunnerHTTPURL("file:///tmp/source.pdf", "source.url"); rejection != "source.url must be a valid http or https URL" {
-		t.Fatalf("absolute file URL rejection = %q", rejection)
-	}
-	if _, rejection := validateOptionalRunnerHTTPURL("mailto:user@example.test", "source.url"); rejection != "source.url must be a valid http or https URL" {
-		t.Fatalf("mailto URL rejection = %q", rejection)
-	}
-	if _, rejection := validateOptionalRunnerHTTPURL("ftp://example.test/source.pdf", "source.url"); rejection != "source.url must use http or https" {
-		t.Fatalf("unsupported scheme rejection = %q", rejection)
-	}
-	if _, rejection := validateOptionalRunnerHTTPURL("", "source.url"); rejection != "" {
-		t.Fatalf("empty optional URL rejection = %q, want empty", rejection)
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			parsed, rejection := tt.validate(tt.raw, "source.url")
+			if rejection != tt.want {
+				t.Fatalf("rejection = %q, want %q", rejection, tt.want)
+			}
+			if tt.wantPath != "" && (parsed == nil || parsed.Path != tt.wantPath) {
+				t.Fatalf("parsed = %#v, want path %q", parsed, tt.wantPath)
+			}
+		})
 	}
 }
 
