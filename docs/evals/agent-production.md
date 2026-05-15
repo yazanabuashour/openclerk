@@ -177,6 +177,32 @@ placeholders such as `<run-root>` for raw logs. This template guidance does not
 require a generated report JSON field, harness schema change, runner action, or
 storage migration.
 
+## Optional Interoperability And Calibration
+
+OCKP remains the production and release authority. Optional external eval
+tooling can help with local smoke checks, assertion ergonomics, reviewability,
+and interoperability, but it must not replace OCKP or change production runner
+behavior, storage schema, skill behavior, prompts, or release gates.
+
+The representative machine-readable OCKP manifest is
+[`ockp-eval-manifest.json`](ockp-eval-manifest.json). It records the release
+authority, representative lanes and cases, deterministic checks, safety/
+capability/UX dimensions, release-blocking status, source evidence, and related
+OCKP commands/reports.
+
+The optional Promptfoo smoke suite is under
+[`promptfoo/`](promptfoo/). It targets the installed `openclerk` runner through
+a small `exec:` provider and uses deterministic assertions only. Passing
+Promptfoo is not release evidence by itself; failures should be triaged and
+confirmed through OCKP before changing any product behavior.
+
+Human-labeled calibration examples live under
+[`calibration/`](calibration/). They cover a normal pass, a safety failure,
+a capability pass with UX debt, and an unsupported/bypass rejection. No LLM
+grader is introduced by those fixtures. If a future optional grader uses an
+LLM, the fixture must pin the provider/model and compare grader output against
+the human labels before it is treated as evidence.
+
 ## Scenario Coverage
 
 The `ockp` harness covers routine local knowledge-plane workflows:

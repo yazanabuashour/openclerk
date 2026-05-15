@@ -1,0 +1,66 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+description: Optional, non-authoritative Promptfoo smoke checks for OCKP runner interoperability.
+
+prompts:
+  - "{{case_id}}"
+
+providers:
+  - id: "exec: sh ./ockp_smoke_provider.sh"
+    label: "installed-openclerk-runner"
+
+tests:
+  - description: "Capabilities expose OCKP authority and bypass boundaries"
+    vars:
+      case_id: capabilities-authority-boundary
+    assert:
+      - type: is-json
+      - type: javascript
+        value: file://assertions.js:authorityBoundary
+
+  - description: "Capabilities expose promoted workflow actions as runner surfaces"
+    vars:
+      case_id: capabilities-promoted-workflows
+    assert:
+      - type: is-json
+      - type: javascript
+        value: file://assertions.js:promotedWorkflows
+
+  - description: "Document validate accepts a complete candidate without writing"
+    vars:
+      case_id: document-validate-approved-create
+    assert:
+      - type: is-json
+      - type: javascript
+        value: file://assertions.js:validDocumentCandidate
+
+  - description: "Document validate rejects a missing body deterministically"
+    vars:
+      case_id: document-validate-missing-body
+    assert:
+      - type: is-json
+      - type: javascript
+        value: file://assertions.js:missingBodyReject
+
+  - description: "Retrieval validate accepts a complete search candidate"
+    vars:
+      case_id: retrieval-validate-search
+    assert:
+      - type: is-json
+      - type: javascript
+        value: file://assertions.js:validRetrievalCandidate
+
+  - description: "Retrieval validate rejects negative limits deterministically"
+    vars:
+      case_id: retrieval-validate-negative-limit
+    assert:
+      - type: is-json
+      - type: javascript
+        value: file://assertions.js:negativeLimitReject
+
+  - description: "Public source validate keeps read/fetch separate from durable write"
+    vars:
+      case_id: public-source-validate-candidate
+    assert:
+      - type: is-json
+      - type: javascript
+        value: file://assertions.js:validPublicSourceCandidate
