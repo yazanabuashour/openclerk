@@ -810,10 +810,7 @@ func artifactNextCreateRequest(candidatePath string, title string, body string, 
 			"body":  body,
 		},
 	}
-	encoded, err := json.Marshal(payload)
-	if err != nil {
-		return ""
-	}
+	encoded, _ := json.Marshal(payload)
 	return string(encoded)
 }
 

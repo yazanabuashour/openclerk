@@ -154,7 +154,7 @@ func graphRelationshipNextReplaceSectionRequest(report GraphRelationshipReport, 
 	if report.SourceDocument == nil {
 		return ""
 	}
-	return marshalRunnerRequest(map[string]any{
+	return marshalRunnerRequest(map[string]string{
 		"action":  DocumentTaskActionReplaceSection,
 		"doc_id":  report.SourceDocument.DocID,
 		"heading": heading,
@@ -166,18 +166,15 @@ func graphRelationshipNextAppendDocumentRequest(report GraphRelationshipReport, 
 	if report.SourceDocument == nil {
 		return ""
 	}
-	return marshalRunnerRequest(map[string]any{
+	return marshalRunnerRequest(map[string]string{
 		"action":  DocumentTaskActionAppend,
 		"doc_id":  report.SourceDocument.DocID,
 		"content": "## Relationships\n" + strings.TrimSpace(content),
 	})
 }
 
-func marshalRunnerRequest(value map[string]any) string {
-	data, err := json.Marshal(value)
-	if err != nil {
-		return ""
-	}
+func marshalRunnerRequest(value map[string]string) string {
+	data, _ := json.Marshal(value)
 	return string(data)
 }
 

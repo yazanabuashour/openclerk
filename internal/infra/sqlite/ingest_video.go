@@ -94,10 +94,7 @@ func (s *Store) createVideoURL(ctx context.Context, input domain.VideoURLInput, 
 		} else if !errors.Is(err, fs.ErrNotExist) {
 			return domain.VideoIngestionResult{}, domain.InternalError("stat video metadata asset path", err)
 		}
-		assetBytes, err := buildVideoMetadataAsset(videoURL, sourcePath, assetPath, transcript)
-		if err != nil {
-			return domain.VideoIngestionResult{}, err
-		}
+		assetBytes := buildVideoMetadataAsset(videoURL, sourcePath, assetPath, transcript)
 		if err := ensureDir(filepath.Dir(assetAbsPath)); err != nil {
 			return domain.VideoIngestionResult{}, domain.InternalError("create video metadata asset directory", err)
 		}
@@ -182,10 +179,7 @@ func (s *Store) updateVideoURL(ctx context.Context, input domain.VideoURLInput, 
 		if err != nil {
 			return domain.VideoIngestionResult{}, domain.InternalError("read existing video metadata asset", err)
 		}
-		newAssetBytes, err := buildVideoMetadataAsset(videoURL, sourcePath, assetPath, transcript)
-		if err != nil {
-			return domain.VideoIngestionResult{}, err
-		}
+		newAssetBytes := buildVideoMetadataAsset(videoURL, sourcePath, assetPath, transcript)
 		if err := s.replaceVideoAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, newAssetBytes, body, title); err != nil {
 			return domain.VideoIngestionResult{}, err
 		}
@@ -401,7 +395,7 @@ func buildVideoSourceNoteBody(sourceURL string, sourcePath string, assetPath str
 	return body.String()
 }
 
-func buildVideoMetadataAsset(sourceURL string, sourcePath string, assetPath string, transcript normalizedVideoTranscript) ([]byte, error) {
+func buildVideoMetadataAsset(sourceURL string, sourcePath string, assetPath string, transcript normalizedVideoTranscript) []byte {
 	payload := map[string]string{
 		"source_url":        sourceURL,
 		"source_path":       sourcePath,
@@ -421,11 +415,8 @@ func buildVideoMetadataAsset(sourceURL string, sourcePath string, assetPath stri
 	if transcript.Model != "" {
 		payload["model"] = transcript.Model
 	}
-	body, err := json.MarshalIndent(payload, "", "  ")
-	if err != nil {
-		return nil, domain.InternalError("build video metadata asset", err)
-	}
-	return append(body, '\n'), nil
+	body, _ := json.MarshalIndent(payload, "", "  ")
+	return append(body, '\n')
 }
 
 func validateIngestedVideoSource(document domain.Document, sourceURL string, sourcePath string, assetPath string) error {

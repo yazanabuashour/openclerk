@@ -519,11 +519,8 @@ func stringValue(value any) string {
 }
 
 func valueText(value any) string {
-	encoded, err := json.Marshal(value)
-	if err == nil {
-		return strings.ToLower(string(encoded))
-	}
-	return strings.ToLower(stringValue(value))
+	encoded, _ := json.Marshal(value)
+	return strings.ToLower(string(encoded))
 }
 
 func valueContainsAll(value any, required []string) bool {

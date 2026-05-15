@@ -901,10 +901,7 @@ func sanitizedArgs(args []string) []string {
 }
 
 func mustMarshalString(value any) string {
-	data, err := json.Marshal(value)
-	if err != nil {
-		return "{}"
-	}
+	data, _ := json.Marshal(value)
 	return string(data)
 }
 
