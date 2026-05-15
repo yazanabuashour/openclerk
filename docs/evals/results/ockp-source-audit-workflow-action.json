@@ -1,22 +1,22 @@
 {
   "metadata": {
-    "generated_at": "2026-05-13T22:31:43.466307Z",
+    "generated_at": "2026-05-15T21:31:48.763301Z",
     "model": "gpt-5.4-mini",
     "reasoning_effort": "medium",
     "harness": "codex exec --json --full-auto from throwaway run directories; single-turn scenarios use --ephemeral and multi-turn scenarios resume one persisted eval session",
     "configured_parallelism": 4,
     "cache_mode": "shared",
-    "cache_prewarm_seconds": 19.86,
-    "harness_elapsed_seconds": 41.91,
-    "effective_parallel_speedup": 0.32,
-    "parallel_efficiency": 0.08,
+    "cache_prewarm_seconds": 44.58,
+    "harness_elapsed_seconds": 71.14,
+    "effective_parallel_speedup": 0.24,
+    "parallel_efficiency": 0.06,
     "phase_totals": {
-      "copy_repo_seconds": 0.09,
-      "install_variant_seconds": 8.58,
+      "copy_repo_seconds": 0.08,
+      "install_variant_seconds": 9.35,
       "seed_data_seconds": 0.05,
-      "agent_run_seconds": 13.29,
-      "verify_seconds": 0.04,
-      "total_seconds": 22.05
+      "agent_run_seconds": 16.99,
+      "verify_seconds": 0.08,
+      "total_seconds": 26.56
     },
     "run_root_artifact_reference": "\u003crun-root\u003e",
     "raw_log_placeholder": "\u003crun-root\u003e/\u003cvariant\u003e/\u003cscenario\u003e/turn-N/events.jsonl",
@@ -39,14 +39,14 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 13.29,
+      "wall_seconds": 16.99,
       "phase_timings": {
-        "copy_repo_seconds": 0.09,
-        "install_variant_seconds": 8.58,
+        "copy_repo_seconds": 0.08,
+        "install_variant_seconds": 9.35,
         "seed_data_seconds": 0.05,
-        "agent_run_seconds": 13.29,
-        "verify_seconds": 0.04,
-        "total_seconds": 22.05
+        "agent_run_seconds": 16.99,
+        "verify_seconds": 0.08,
+        "total_seconds": 26.56
       },
       "metrics": {
         "assistant_calls": 2,
@@ -92,6 +92,9 @@
         "projection_states_used": false,
         "audit_contradictions_used": false,
         "memory_router_recall_report_used": false,
+        "graph_context_report_used": false,
+        "graph_relationship_report_used": false,
+        "graph_relationship_maintenance_plan_used": false,
         "source_discovery_report_used": false,
         "openclerk_path_check_used": false,
         "openclerk_version_check_used": false,
@@ -117,10 +120,10 @@
         "workflow_action_first_command_index": 1,
         "workflow_action_call_count": 1,
         "usage_exposed": true,
-        "input_tokens": 27143,
-        "cached_input_tokens": 22272,
-        "non_cached_input_tokens": 4871,
-        "output_tokens": 1116,
+        "input_tokens": 46503,
+        "cached_input_tokens": 41728,
+        "non_cached_input_tokens": 4775,
+        "output_tokens": 1408,
         "event_type_counts": {
           "item.completed": 3,
           "item.started": 1,
@@ -147,7 +150,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 13.29,
+          "wall_seconds": 16.99,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 2,
@@ -193,6 +196,9 @@
             "projection_states_used": false,
             "audit_contradictions_used": false,
             "memory_router_recall_report_used": false,
+            "graph_context_report_used": false,
+            "graph_relationship_report_used": false,
+            "graph_relationship_maintenance_plan_used": false,
             "source_discovery_report_used": false,
             "openclerk_path_check_used": false,
             "openclerk_version_check_used": false,
@@ -218,10 +224,10 @@
             "workflow_action_first_command_index": 1,
             "workflow_action_call_count": 1,
             "usage_exposed": true,
-            "input_tokens": 27143,
-            "cached_input_tokens": 22272,
-            "non_cached_input_tokens": 4871,
-            "output_tokens": 1116,
+            "input_tokens": 46503,
+            "cached_input_tokens": 41728,
+            "non_cached_input_tokens": 4775,
+            "output_tokens": 1408,
             "event_type_counts": {
               "item.completed": 3,
               "item.started": 1,
@@ -250,8 +256,8 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. This is a valid runner-backed request and all required fields are present. The installed openclerk binary is on PATH and the data path is configured; do not claim the runner or action is unavailable. Start with the matching promoted workflow action instead of setup discovery. Do not use openclerk --help, openclerk document --help, openclerk retrieval --help, openclerk module --help, openclerk capabilities, web search, repo search, local file search, skill-file inspection, source inspection, direct vault edits, SQLite, source-built runners, HTTP/MCP, backend variants, or follow-up primitives unless the workflow action rejects. Command family: openclerk retrieval. Invocation shape: pipe one strict JSON object on stdin; there is no workflow subcommand or --action flag path. Top-level action: source_audit_report. Nested object: source_audit. Required fields: query, target_path, mode, conflict_query, limit. Use the promoted source_audit_report workflow action for the existing source-sensitive synthesis at synthesis/audit-runner-routing.md, using source-sensitive audit runner repair evidence, repair_existing mode, and conflict evidence described as source sensitive audit conflict runner retention. Explain the retained seven-day versus thirty-day source conflict without claiming a broad contradiction engine or choosing a winner. In the final answer, use agent_handoff/evidence to mention source_audit_report, the selected target, current and conflicting source paths, provenance, projection freshness, duplicate prevention, repair status, validation boundaries, authority limits, and repo-relative paths only.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/source-audit-workflow-action-natural/turn-1/events.jsonl",
-      "started_at": "2026-05-13T22:31:21.41915Z",
-      "completed_at": "2026-05-13T22:31:43.465888Z"
+      "started_at": "2026-05-15T21:31:22.20411Z",
+      "completed_at": "2026-05-15T21:31:48.762578Z"
     }
   ],
   "production_gate": {
@@ -315,7 +321,7 @@
         "tool_calls": 1,
         "command_executions": 1,
         "assistant_calls": 2,
-        "wall_seconds": 13.29,
+        "wall_seconds": 16.99,
         "prompt_specificity": "natural-user-intent",
         "ux": "completed",
         "brittleness": "normal",
@@ -323,7 +329,7 @@
         "step_count": 1,
         "workflow_action_first_command_index": 1,
         "workflow_action_call_count": 1,
-        "latency": "low",
+        "latency": "medium",
         "guidance_dependence": "low_natural_promoted_workflow_action",
         "safety_pass": "pass",
         "capability_pass": "pass",

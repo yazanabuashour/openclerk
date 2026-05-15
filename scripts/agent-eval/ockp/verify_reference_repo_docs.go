@@ -340,6 +340,15 @@ func verifyRepoDocsReleaseReadiness(ctx context.Context, paths evalPaths, finalM
 	if !turnMetrics.ListTagFilterUsed || !stringValuesInclude(turnMetrics.ListTagFilters, repoDocsReleaseTag) {
 		failures = append(failures, "agent did not list repo-release-docs tag")
 	}
+	if turnMetrics.SetupDiscoveryCommandCount != 0 || turnMetrics.PreActionSetupDiscoveryCount != 0 {
+		failures = append(failures, "agent ran setup discovery before the required release-readiness runner actions")
+	}
+	if turnMetrics.OpenClerkHelpUsed || turnMetrics.OpenClerkDocumentHelpUsed || turnMetrics.OpenClerkRetrievalHelpUsed || turnMetrics.OpenClerkCapabilitiesUsed {
+		failures = append(failures, "agent ran OpenClerk help or capabilities before the required release-readiness runner actions")
+	}
+	if turnMetrics.OpenClerkSkillCheckUsed || turnMetrics.OpenClerkPathCheckUsed || turnMetrics.OpenClerkVersionCheckUsed {
+		failures = append(failures, "agent ran OpenClerk setup verification before the required release-readiness runner actions")
+	}
 	assistantPass := messageContainsAll(finalMessage, []string{repoDocsReleaseVerification, repoDocsMaintainersPath, repoDocsReleaseTag}) &&
 		messageContainsAny(finalMessage, []string{"dogfood", "dogfooding"}) &&
 		messageContainsAny(finalMessage, []string{"mandatory", "required", "before tagging"}) &&
@@ -352,7 +361,16 @@ func verifyRepoDocsReleaseReadiness(ctx context.Context, paths evalPaths, finalM
 	activityPass := len(repoDocsBypassFailures(turnMetrics)) == 0 &&
 		turnMetrics.SearchUsed &&
 		turnMetrics.ListTagFilterUsed &&
-		stringValuesInclude(turnMetrics.ListTagFilters, repoDocsReleaseTag)
+		stringValuesInclude(turnMetrics.ListTagFilters, repoDocsReleaseTag) &&
+		turnMetrics.SetupDiscoveryCommandCount == 0 &&
+		turnMetrics.PreActionSetupDiscoveryCount == 0 &&
+		!turnMetrics.OpenClerkHelpUsed &&
+		!turnMetrics.OpenClerkDocumentHelpUsed &&
+		!turnMetrics.OpenClerkRetrievalHelpUsed &&
+		!turnMetrics.OpenClerkCapabilitiesUsed &&
+		!turnMetrics.OpenClerkSkillCheckUsed &&
+		!turnMetrics.OpenClerkPathCheckUsed &&
+		!turnMetrics.OpenClerkVersionCheckUsed
 	return verificationResult{
 		Passed:        databasePass && assistantPass && activityPass,
 		DatabasePass:  databasePass,
