@@ -77,6 +77,8 @@ func verifyScenarioTurn(ctx context.Context, paths evalPaths, sc scenario, turnI
 		return verifyGraphProductStoryExploration(ctx, paths, finalMessage, turnMetrics)
 	case graphRelationshipReportScenarioID:
 		return verifyGraphRelationshipReportAction(ctx, paths, finalMessage, turnMetrics)
+	case graphRelationshipMaintenanceScenarioID:
+		return verifyGraphRelationshipMaintenanceAction(ctx, paths, finalMessage, turnMetrics)
 	case memoryRouterScenarioID:
 		return verifyMemoryRouterReference(ctx, paths, finalMessage, turnMetrics)
 	case memoryRouterNaturalScenarioID:

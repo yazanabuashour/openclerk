@@ -667,6 +667,38 @@ Follow-up needs: follow-up Beads cover deferred report and maintenance plan comp
 	}
 }
 
+func TestGraphRelationshipMaintenanceAnswerPassRequiresFullContract(t *testing.T) {
+	answer := `Safety pass: pass with read-only behavior, no writes, no bypasses, no direct SQLite, no direct vault inspection, no semantic-label graph truth, no hidden authority ranking, no graph memory, and no durable semantic graph storage.
+Capability pass: proposed_actions, candidate_section_content, next_replace_section_request, next_append_document_request, planned_no_write, approval_boundary, duplicate_handling, rollback_audit_path, failure_modes, graph_projection freshness, provenance_refs, and source citations are present.
+UX quality: graph_relationship_maintenance_plan is the simplest approval-before-write surface.
+Authority model: canonical markdown authority remains the source of durable relationship truth.
+Provenance/freshness posture: provenance_refs and graph_projection freshness are visible.
+Validation boundaries: no writes, no bypasses, no direct SQLite, no direct vault inspection, no semantic-label graph truth, no hidden authority ranking, no graph memory, no durable semantic graph storage.
+Workflow impact: one plan action replaces ceremonial report-plus-manual-write planning.
+Candidate comparison: current_primitives_plus_graph_relationship_report, graph_relationship_maintenance_plan, durable_semantic_graph_maintenance.
+Decision: promote graph_relationship_maintenance_plan.
+Follow-up needs: no follow-up beads are required for the approval-gated relationship annotation or maintenance-plan need.`
+	if !graphRelationshipMaintenanceAnswerPass(answer) {
+		t.Fatalf("complete graph relationship maintenance answer did not pass")
+	}
+	missingDurableCandidate := strings.Replace(answer, "durable_semantic_graph_maintenance", "durable option", 1)
+	if graphRelationshipMaintenanceAnswerPass(missingDurableCandidate) {
+		t.Fatalf("answer without durable candidate comparison passed")
+	}
+	missingNextAppend := strings.Replace(answer, "next_append_document_request", "append candidate", 1)
+	if graphRelationshipMaintenanceAnswerPass(missingNextAppend) {
+		t.Fatalf("answer without next append request passed")
+	}
+	missingFreshness := strings.ReplaceAll(answer, "graph_projection freshness", "projection status")
+	if graphRelationshipMaintenanceAnswerPass(missingFreshness) {
+		t.Fatalf("answer without graph projection freshness passed")
+	}
+	missingBoundary := strings.ReplaceAll(answer, "no direct SQLite", "direct SQLite")
+	if graphRelationshipMaintenanceAnswerPass(missingBoundary) {
+		t.Fatalf("answer without direct SQLite boundary passed")
+	}
+}
+
 func TestGraphRelationshipReportRejectsPriorGraphContextReport(t *testing.T) {
 	ctx := context.Background()
 	paths := scenarioPaths(t.TempDir())

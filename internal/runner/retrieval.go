@@ -341,6 +341,15 @@ func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, n
 			GraphRelationship: &report,
 			Summary:           "returned graph relationship report",
 		}, nil
+	case RetrievalTaskActionGraphRelationshipMaintenance:
+		plan, err := runGraphRelationshipMaintenancePlan(ctx, client, normalized.GraphRelationshipMaintenance)
+		if err != nil {
+			return RetrievalTaskResult{}, err
+		}
+		return RetrievalTaskResult{
+			GraphRelationshipMaintenance: &plan,
+			Summary:                      "returned graph relationship maintenance plan",
+		}, nil
 	case RetrievalTaskActionSemanticSearch:
 		result, err := runSemanticSearch(ctx, client, normalized.SemanticSearch)
 		if err != nil {
@@ -356,34 +365,35 @@ func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, n
 }
 
 type normalizedRetrievalTaskRequest struct {
-	Action             string
-	Autonomy           AutonomyModes
-	Search             SearchOptions
-	DocID              string
-	ChunkID            string
-	NodeID             string
-	EntityID           string
-	ServiceID          string
-	DecisionID         string
-	Records            RecordLookupOptions
-	Services           ServiceLookupOptions
-	Decisions          DecisionLookupOptions
-	Provenance         ProvenanceEventOptions
-	Projection         ProjectionStateOptions
-	Audit              AuditContradictionsOptions
-	MemoryRouterRecall MemoryRouterRecallOptions
-	SourceDiscovery    SourceDiscoveryOptions
-	SourceAudit        SourceAuditReportOptions
-	EvidenceBundle     EvidenceBundleOptions
-	DecisionLookup     DecisionLookupReportOptions
-	DuplicateCandidate DuplicateCandidateOptions
-	WorkflowGuide      WorkflowGuideOptions
-	StructuredStore    StructuredStoreOptions
-	HybridRetrieval    HybridRetrievalOptions
-	GraphContext       GraphContextOptions
-	GraphRelationship  GraphRelationshipOptions
-	SemanticSearch     SemanticSearchOptions
-	Limit              int
+	Action                       string
+	Autonomy                     AutonomyModes
+	Search                       SearchOptions
+	DocID                        string
+	ChunkID                      string
+	NodeID                       string
+	EntityID                     string
+	ServiceID                    string
+	DecisionID                   string
+	Records                      RecordLookupOptions
+	Services                     ServiceLookupOptions
+	Decisions                    DecisionLookupOptions
+	Provenance                   ProvenanceEventOptions
+	Projection                   ProjectionStateOptions
+	Audit                        AuditContradictionsOptions
+	MemoryRouterRecall           MemoryRouterRecallOptions
+	SourceDiscovery              SourceDiscoveryOptions
+	SourceAudit                  SourceAuditReportOptions
+	EvidenceBundle               EvidenceBundleOptions
+	DecisionLookup               DecisionLookupReportOptions
+	DuplicateCandidate           DuplicateCandidateOptions
+	WorkflowGuide                WorkflowGuideOptions
+	StructuredStore              StructuredStoreOptions
+	HybridRetrieval              HybridRetrievalOptions
+	GraphContext                 GraphContextOptions
+	GraphRelationship            GraphRelationshipOptions
+	GraphRelationshipMaintenance GraphRelationshipMaintenanceOptions
+	SemanticSearch               SemanticSearchOptions
+	Limit                        int
 }
 
 func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetrievalTaskRequest, string) {
@@ -392,34 +402,35 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		action = RetrievalTaskActionValidate
 	}
 	normalized := normalizedRetrievalTaskRequest{
-		Action:             action,
-		Autonomy:           request.Autonomy,
-		Search:             request.Search,
-		DocID:              strings.TrimSpace(request.DocID),
-		ChunkID:            strings.TrimSpace(request.ChunkID),
-		NodeID:             strings.TrimSpace(request.NodeID),
-		EntityID:           strings.TrimSpace(request.EntityID),
-		ServiceID:          strings.TrimSpace(request.ServiceID),
-		DecisionID:         strings.TrimSpace(request.DecisionID),
-		Records:            request.Records,
-		Services:           request.Services,
-		Decisions:          request.Decisions,
-		Provenance:         request.Provenance,
-		Projection:         request.Projection,
-		Audit:              request.Audit,
-		MemoryRouterRecall: request.MemoryRouterRecall,
-		SourceDiscovery:    request.SourceDiscovery,
-		SourceAudit:        request.SourceAudit,
-		EvidenceBundle:     request.EvidenceBundle,
-		DecisionLookup:     request.DecisionLookup,
-		DuplicateCandidate: request.DuplicateCandidate,
-		WorkflowGuide:      request.WorkflowGuide,
-		StructuredStore:    request.StructuredStore,
-		HybridRetrieval:    request.HybridRetrieval,
-		GraphContext:       request.GraphContext,
-		GraphRelationship:  request.GraphRelationship,
-		SemanticSearch:     request.SemanticSearch,
-		Limit:              request.Limit,
+		Action:                       action,
+		Autonomy:                     request.Autonomy,
+		Search:                       request.Search,
+		DocID:                        strings.TrimSpace(request.DocID),
+		ChunkID:                      strings.TrimSpace(request.ChunkID),
+		NodeID:                       strings.TrimSpace(request.NodeID),
+		EntityID:                     strings.TrimSpace(request.EntityID),
+		ServiceID:                    strings.TrimSpace(request.ServiceID),
+		DecisionID:                   strings.TrimSpace(request.DecisionID),
+		Records:                      request.Records,
+		Services:                     request.Services,
+		Decisions:                    request.Decisions,
+		Provenance:                   request.Provenance,
+		Projection:                   request.Projection,
+		Audit:                        request.Audit,
+		MemoryRouterRecall:           request.MemoryRouterRecall,
+		SourceDiscovery:              request.SourceDiscovery,
+		SourceAudit:                  request.SourceAudit,
+		EvidenceBundle:               request.EvidenceBundle,
+		DecisionLookup:               request.DecisionLookup,
+		DuplicateCandidate:           request.DuplicateCandidate,
+		WorkflowGuide:                request.WorkflowGuide,
+		StructuredStore:              request.StructuredStore,
+		HybridRetrieval:              request.HybridRetrieval,
+		GraphContext:                 request.GraphContext,
+		GraphRelationship:            request.GraphRelationship,
+		GraphRelationshipMaintenance: request.GraphRelationshipMaintenance,
+		SemanticSearch:               request.SemanticSearch,
+		Limit:                        request.Limit,
 	}
 
 	autonomy, rejection := normalizeAutonomyModes(request.Autonomy)
@@ -447,6 +458,7 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		request.HybridRetrieval.Limit,
 		request.GraphContext.Limit,
 		request.GraphRelationship.Limit,
+		request.GraphRelationshipMaintenance.Limit,
 		request.SemanticSearch.Limit,
 	); rejection != "" {
 		return normalizedRetrievalTaskRequest{}, rejection
@@ -659,6 +671,27 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		}
 		if normalized.GraphRelationship.PathPrefix != "" && normalized.GraphRelationship.Query == "" {
 			return normalizedRetrievalTaskRequest{}, "graph_relationship.path_prefix is only valid with graph_relationship.query"
+		}
+		return normalized, ""
+	case RetrievalTaskActionGraphRelationshipMaintenance:
+		normalized.GraphRelationshipMaintenance.DocID = strings.TrimSpace(request.GraphRelationshipMaintenance.DocID)
+		normalized.GraphRelationshipMaintenance.Path = strings.TrimSpace(request.GraphRelationshipMaintenance.Path)
+		normalized.GraphRelationshipMaintenance.Query = strings.TrimSpace(request.GraphRelationshipMaintenance.Query)
+		normalized.GraphRelationshipMaintenance.PathPrefix = strings.TrimSpace(request.GraphRelationshipMaintenance.PathPrefix)
+		selectors := 0
+		for _, value := range []string{normalized.GraphRelationshipMaintenance.DocID, normalized.GraphRelationshipMaintenance.Path, normalized.GraphRelationshipMaintenance.Query} {
+			if value != "" {
+				selectors++
+			}
+		}
+		if selectors == 0 {
+			return normalizedRetrievalTaskRequest{}, "graph_relationship_maintenance doc_id, path, or query is required"
+		}
+		if selectors > 1 {
+			return normalizedRetrievalTaskRequest{}, "graph_relationship_maintenance accepts exactly one of doc_id, path, or query"
+		}
+		if normalized.GraphRelationshipMaintenance.PathPrefix != "" && normalized.GraphRelationshipMaintenance.Query == "" {
+			return normalizedRetrievalTaskRequest{}, "graph_relationship_maintenance.path_prefix is only valid with graph_relationship_maintenance.query"
 		}
 		return normalized, ""
 	case RetrievalTaskActionSemanticSearch:

@@ -28,31 +28,32 @@ const (
 	DocumentTaskActionWebSearchPlan       = "web_search_plan"
 	DocumentTaskActionArtifactPlan        = "artifact_candidate_plan"
 
-	RetrievalTaskActionValidate            = "validate"
-	RetrievalTaskActionSearch              = "search"
-	RetrievalTaskActionDocumentLinks       = "document_links"
-	RetrievalTaskActionGraph               = "graph_neighborhood"
-	RetrievalTaskActionRecordsLookup       = "records_lookup"
-	RetrievalTaskActionRecordEntity        = "record_entity"
-	RetrievalTaskActionServicesLookup      = "services_lookup"
-	RetrievalTaskActionServiceRecord       = "service_record"
-	RetrievalTaskActionDecisionsLookup     = "decisions_lookup"
-	RetrievalTaskActionDecisionRecord      = "decision_record"
-	RetrievalTaskActionProvenanceEvents    = "provenance_events"
-	RetrievalTaskActionProjectionStates    = "projection_states"
-	RetrievalTaskActionAuditContradictions = "audit_contradictions"
-	RetrievalTaskActionMemoryRouterRecall  = "memory_router_recall_report"
-	RetrievalTaskActionSourceDiscovery     = "source_discovery_report"
-	RetrievalTaskActionSourceAuditReport   = "source_audit_report"
-	RetrievalTaskActionEvidenceBundle      = "evidence_bundle_report"
-	RetrievalTaskActionDecisionLookup      = "decision_lookup_report"
-	RetrievalTaskActionDuplicateCandidate  = "duplicate_candidate_report"
-	RetrievalTaskActionWorkflowGuide       = "workflow_guide_report"
-	RetrievalTaskActionStructuredStore     = "structured_store_report"
-	RetrievalTaskActionHybridRetrieval     = "hybrid_retrieval_report"
-	RetrievalTaskActionGraphContext        = "graph_context_report"
-	RetrievalTaskActionGraphRelationship   = "graph_relationship_report"
-	RetrievalTaskActionSemanticSearch      = "semantic_search"
+	RetrievalTaskActionValidate                     = "validate"
+	RetrievalTaskActionSearch                       = "search"
+	RetrievalTaskActionDocumentLinks                = "document_links"
+	RetrievalTaskActionGraph                        = "graph_neighborhood"
+	RetrievalTaskActionRecordsLookup                = "records_lookup"
+	RetrievalTaskActionRecordEntity                 = "record_entity"
+	RetrievalTaskActionServicesLookup               = "services_lookup"
+	RetrievalTaskActionServiceRecord                = "service_record"
+	RetrievalTaskActionDecisionsLookup              = "decisions_lookup"
+	RetrievalTaskActionDecisionRecord               = "decision_record"
+	RetrievalTaskActionProvenanceEvents             = "provenance_events"
+	RetrievalTaskActionProjectionStates             = "projection_states"
+	RetrievalTaskActionAuditContradictions          = "audit_contradictions"
+	RetrievalTaskActionMemoryRouterRecall           = "memory_router_recall_report"
+	RetrievalTaskActionSourceDiscovery              = "source_discovery_report"
+	RetrievalTaskActionSourceAuditReport            = "source_audit_report"
+	RetrievalTaskActionEvidenceBundle               = "evidence_bundle_report"
+	RetrievalTaskActionDecisionLookup               = "decision_lookup_report"
+	RetrievalTaskActionDuplicateCandidate           = "duplicate_candidate_report"
+	RetrievalTaskActionWorkflowGuide                = "workflow_guide_report"
+	RetrievalTaskActionStructuredStore              = "structured_store_report"
+	RetrievalTaskActionHybridRetrieval              = "hybrid_retrieval_report"
+	RetrievalTaskActionGraphContext                 = "graph_context_report"
+	RetrievalTaskActionGraphRelationship            = "graph_relationship_report"
+	RetrievalTaskActionGraphRelationshipMaintenance = "graph_relationship_maintenance_plan"
+	RetrievalTaskActionSemanticSearch               = "semantic_search"
 )
 
 type ConfigTaskRequest struct {
@@ -299,34 +300,35 @@ type DocumentTaskResult struct {
 }
 
 type RetrievalTaskRequest struct {
-	Action             string                      `json:"action"`
-	Autonomy           AutonomyModes               `json:"autonomy,omitempty"`
-	Search             SearchOptions               `json:"search,omitempty"`
-	DocID              string                      `json:"doc_id,omitempty"`
-	ChunkID            string                      `json:"chunk_id,omitempty"`
-	NodeID             string                      `json:"node_id,omitempty"`
-	EntityID           string                      `json:"entity_id,omitempty"`
-	ServiceID          string                      `json:"service_id,omitempty"`
-	DecisionID         string                      `json:"decision_id,omitempty"`
-	Records            RecordLookupOptions         `json:"records,omitempty"`
-	Services           ServiceLookupOptions        `json:"services,omitempty"`
-	Decisions          DecisionLookupOptions       `json:"decisions,omitempty"`
-	Provenance         ProvenanceEventOptions      `json:"provenance,omitempty"`
-	Projection         ProjectionStateOptions      `json:"projection,omitempty"`
-	Audit              AuditContradictionsOptions  `json:"audit,omitempty"`
-	MemoryRouterRecall MemoryRouterRecallOptions   `json:"memory_router_recall,omitempty"`
-	SourceDiscovery    SourceDiscoveryOptions      `json:"source_discovery,omitempty"`
-	SourceAudit        SourceAuditReportOptions    `json:"source_audit,omitempty"`
-	EvidenceBundle     EvidenceBundleOptions       `json:"evidence_bundle,omitempty"`
-	DecisionLookup     DecisionLookupReportOptions `json:"decision_lookup,omitempty"`
-	DuplicateCandidate DuplicateCandidateOptions   `json:"duplicate_candidate,omitempty"`
-	WorkflowGuide      WorkflowGuideOptions        `json:"workflow_guide,omitempty"`
-	StructuredStore    StructuredStoreOptions      `json:"structured_store,omitempty"`
-	HybridRetrieval    HybridRetrievalOptions      `json:"hybrid_retrieval,omitempty"`
-	GraphContext       GraphContextOptions         `json:"graph_context,omitempty"`
-	GraphRelationship  GraphRelationshipOptions    `json:"graph_relationship,omitempty"`
-	SemanticSearch     SemanticSearchOptions       `json:"semantic_search,omitempty"`
-	Limit              int                         `json:"limit,omitempty"`
+	Action                       string                              `json:"action"`
+	Autonomy                     AutonomyModes                       `json:"autonomy,omitempty"`
+	Search                       SearchOptions                       `json:"search,omitempty"`
+	DocID                        string                              `json:"doc_id,omitempty"`
+	ChunkID                      string                              `json:"chunk_id,omitempty"`
+	NodeID                       string                              `json:"node_id,omitempty"`
+	EntityID                     string                              `json:"entity_id,omitempty"`
+	ServiceID                    string                              `json:"service_id,omitempty"`
+	DecisionID                   string                              `json:"decision_id,omitempty"`
+	Records                      RecordLookupOptions                 `json:"records,omitempty"`
+	Services                     ServiceLookupOptions                `json:"services,omitempty"`
+	Decisions                    DecisionLookupOptions               `json:"decisions,omitempty"`
+	Provenance                   ProvenanceEventOptions              `json:"provenance,omitempty"`
+	Projection                   ProjectionStateOptions              `json:"projection,omitempty"`
+	Audit                        AuditContradictionsOptions          `json:"audit,omitempty"`
+	MemoryRouterRecall           MemoryRouterRecallOptions           `json:"memory_router_recall,omitempty"`
+	SourceDiscovery              SourceDiscoveryOptions              `json:"source_discovery,omitempty"`
+	SourceAudit                  SourceAuditReportOptions            `json:"source_audit,omitempty"`
+	EvidenceBundle               EvidenceBundleOptions               `json:"evidence_bundle,omitempty"`
+	DecisionLookup               DecisionLookupReportOptions         `json:"decision_lookup,omitempty"`
+	DuplicateCandidate           DuplicateCandidateOptions           `json:"duplicate_candidate,omitempty"`
+	WorkflowGuide                WorkflowGuideOptions                `json:"workflow_guide,omitempty"`
+	StructuredStore              StructuredStoreOptions              `json:"structured_store,omitempty"`
+	HybridRetrieval              HybridRetrievalOptions              `json:"hybrid_retrieval,omitempty"`
+	GraphContext                 GraphContextOptions                 `json:"graph_context,omitempty"`
+	GraphRelationship            GraphRelationshipOptions            `json:"graph_relationship,omitempty"`
+	GraphRelationshipMaintenance GraphRelationshipMaintenanceOptions `json:"graph_relationship_maintenance,omitempty"`
+	SemanticSearch               SemanticSearchOptions               `json:"semantic_search,omitempty"`
+	Limit                        int                                 `json:"limit,omitempty"`
 }
 
 type AutonomyModes struct {
@@ -554,6 +556,14 @@ type GraphRelationshipOptions struct {
 	Limit      int    `json:"limit,omitempty"`
 }
 
+type GraphRelationshipMaintenanceOptions struct {
+	DocID      string `json:"doc_id,omitempty"`
+	Path       string `json:"path,omitempty"`
+	Query      string `json:"query,omitempty"`
+	PathPrefix string `json:"path_prefix,omitempty"`
+	Limit      int    `json:"limit,omitempty"`
+}
+
 type GitLifecycleOptions struct {
 	Mode    string   `json:"mode,omitempty"`
 	Paths   []string `json:"paths,omitempty"`
@@ -594,33 +604,34 @@ type ArtifactPlanOptions struct {
 }
 
 type RetrievalTaskResult struct {
-	Rejected           bool                       `json:"rejected"`
-	RejectionReason    string                     `json:"rejection_reason,omitempty"`
-	Search             *SearchResult              `json:"search,omitempty"`
-	Links              *DocumentLinks             `json:"links,omitempty"`
-	Graph              *GraphNeighborhood         `json:"graph,omitempty"`
-	Records            *RecordLookupResult        `json:"records,omitempty"`
-	Entity             *RecordEntity              `json:"entity,omitempty"`
-	Services           *ServiceLookupResult       `json:"services,omitempty"`
-	Service            *ServiceRecord             `json:"service,omitempty"`
-	Decisions          *DecisionLookupResult      `json:"decisions,omitempty"`
-	Decision           *DecisionRecord            `json:"decision,omitempty"`
-	Provenance         *ProvenanceEventList       `json:"provenance,omitempty"`
-	Projections        *ProjectionStateList       `json:"projections,omitempty"`
-	Audit              *AuditContradictionsResult `json:"audit,omitempty"`
-	MemoryRouterRecall *MemoryRouterRecallReport  `json:"memory_router_recall,omitempty"`
-	SourceDiscovery    *SourceDiscoveryReport     `json:"source_discovery,omitempty"`
-	SourceAudit        *SourceAuditReport         `json:"source_audit,omitempty"`
-	EvidenceBundle     *EvidenceBundleReport      `json:"evidence_bundle,omitempty"`
-	DecisionLookup     *DecisionLookupReport      `json:"decision_lookup,omitempty"`
-	DuplicateCandidate *DuplicateCandidateReport  `json:"duplicate_candidate,omitempty"`
-	WorkflowGuide      *WorkflowGuideReport       `json:"workflow_guide,omitempty"`
-	StructuredStore    *StructuredStoreReport     `json:"structured_store,omitempty"`
-	HybridRetrieval    *HybridRetrievalReport     `json:"hybrid_retrieval,omitempty"`
-	GraphContext       *GraphContextReport        `json:"graph_context,omitempty"`
-	GraphRelationship  *GraphRelationshipReport   `json:"graph_relationship,omitempty"`
-	SemanticSearch     *SemanticSearchResult      `json:"semantic_search,omitempty"`
-	Summary            string                     `json:"summary"`
+	Rejected                     bool                              `json:"rejected"`
+	RejectionReason              string                            `json:"rejection_reason,omitempty"`
+	Search                       *SearchResult                     `json:"search,omitempty"`
+	Links                        *DocumentLinks                    `json:"links,omitempty"`
+	Graph                        *GraphNeighborhood                `json:"graph,omitempty"`
+	Records                      *RecordLookupResult               `json:"records,omitempty"`
+	Entity                       *RecordEntity                     `json:"entity,omitempty"`
+	Services                     *ServiceLookupResult              `json:"services,omitempty"`
+	Service                      *ServiceRecord                    `json:"service,omitempty"`
+	Decisions                    *DecisionLookupResult             `json:"decisions,omitempty"`
+	Decision                     *DecisionRecord                   `json:"decision,omitempty"`
+	Provenance                   *ProvenanceEventList              `json:"provenance,omitempty"`
+	Projections                  *ProjectionStateList              `json:"projections,omitempty"`
+	Audit                        *AuditContradictionsResult        `json:"audit,omitempty"`
+	MemoryRouterRecall           *MemoryRouterRecallReport         `json:"memory_router_recall,omitempty"`
+	SourceDiscovery              *SourceDiscoveryReport            `json:"source_discovery,omitempty"`
+	SourceAudit                  *SourceAuditReport                `json:"source_audit,omitempty"`
+	EvidenceBundle               *EvidenceBundleReport             `json:"evidence_bundle,omitempty"`
+	DecisionLookup               *DecisionLookupReport             `json:"decision_lookup,omitempty"`
+	DuplicateCandidate           *DuplicateCandidateReport         `json:"duplicate_candidate,omitempty"`
+	WorkflowGuide                *WorkflowGuideReport              `json:"workflow_guide,omitempty"`
+	StructuredStore              *StructuredStoreReport            `json:"structured_store,omitempty"`
+	HybridRetrieval              *HybridRetrievalReport            `json:"hybrid_retrieval,omitempty"`
+	GraphContext                 *GraphContextReport               `json:"graph_context,omitempty"`
+	GraphRelationship            *GraphRelationshipReport          `json:"graph_relationship,omitempty"`
+	GraphRelationshipMaintenance *GraphRelationshipMaintenancePlan `json:"graph_relationship_maintenance,omitempty"`
+	SemanticSearch               *SemanticSearchResult             `json:"semantic_search,omitempty"`
+	Summary                      string                            `json:"summary"`
 }
 
 type CompileSynthesisResult struct {
@@ -1048,6 +1059,54 @@ type GraphRelationshipAuditFinding struct {
 }
 
 type GraphRelationshipCandidate struct {
+	Surface        string   `json:"surface"`
+	Status         string   `json:"status"`
+	Safety         string   `json:"safety"`
+	Capability     string   `json:"capability"`
+	UXQuality      string   `json:"ux_quality"`
+	Implementation []string `json:"implementation,omitempty"`
+}
+
+type GraphRelationshipMaintenancePlan struct {
+	Query                     string                                  `json:"query,omitempty"`
+	Path                      string                                  `json:"path,omitempty"`
+	DocID                     string                                  `json:"doc_id,omitempty"`
+	PathPrefix                string                                  `json:"path_prefix,omitempty"`
+	SourceDocument            *DocumentSummary                        `json:"source_document,omitempty"`
+	SourceSelection           string                                  `json:"source_selection"`
+	ProposedActions           []GraphRelationshipMaintenanceAction    `json:"proposed_actions,omitempty"`
+	CandidateSectionHeading   string                                  `json:"candidate_section_heading"`
+	CandidateSectionContent   string                                  `json:"candidate_section_content"`
+	NextReplaceSectionRequest string                                  `json:"next_replace_section_request,omitempty"`
+	NextAppendDocumentRequest string                                  `json:"next_append_document_request,omitempty"`
+	WriteStatus               string                                  `json:"write_status"`
+	ApprovalBoundary          string                                  `json:"approval_boundary"`
+	RollbackAuditPath         string                                  `json:"rollback_audit_path"`
+	DuplicateHandling         string                                  `json:"duplicate_handling"`
+	FailureModes              []string                                `json:"failure_modes,omitempty"`
+	GraphProjection           *ProjectionStateList                    `json:"graph_projection,omitempty"`
+	ProvenanceRefs            []string                                `json:"provenance_refs,omitempty"`
+	CandidateSurfaces         []GraphRelationshipMaintenanceCandidate `json:"candidate_surfaces,omitempty"`
+	Recommendation            string                                  `json:"recommendation"`
+	SafetyPass                string                                  `json:"safety_pass"`
+	CapabilityPass            string                                  `json:"capability_pass"`
+	UXQuality                 string                                  `json:"ux_quality"`
+	EvidencePosture           string                                  `json:"evidence_posture"`
+	ValidationBoundaries      string                                  `json:"validation_boundaries"`
+	AuthorityLimits           string                                  `json:"authority_limits"`
+	EvidenceInspected         []string                                `json:"evidence_inspected,omitempty"`
+	AgentHandoff              *AgentHandoff                           `json:"agent_handoff,omitempty"`
+}
+
+type GraphRelationshipMaintenanceAction struct {
+	Kind      string     `json:"kind"`
+	Status    string     `json:"status"`
+	Evidence  string     `json:"evidence"`
+	NextStep  string     `json:"next_step"`
+	Citations []Citation `json:"citations,omitempty"`
+}
+
+type GraphRelationshipMaintenanceCandidate struct {
 	Surface        string   `json:"surface"`
 	Status         string   `json:"status"`
 	Safety         string   `json:"safety"`

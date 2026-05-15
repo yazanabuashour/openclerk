@@ -4,7 +4,7 @@ decision_title: Graph Relationship Report Promotion
 decision_status: accepted
 decision_scope: graph-relationship-report
 decision_owner: platform
-source_refs: docs/evals/graph-relationship-report-implementation.md, docs/evals/results/ockp-graph-relationship-report-implementation.md, docs/architecture/graph-product-story-promotion-decision.md
+source_refs: docs/evals/graph-relationship-report-implementation.md, docs/evals/results/ockp-graph-relationship-report-implementation.md, docs/architecture/graph-product-story-promotion-decision.md, docs/architecture/graph-relationship-maintenance-plan-promotion-decision.md
 follow_up_beads: none
 ---
 # Decision: Graph Relationship Report Promotion
@@ -20,7 +20,8 @@ reporting, typed relationship candidates from canonical markdown, and limited
 stale/contradictory/orphaned graph audits.
 
 No follow-up Beads are required for those read-only deferred needs. The
-separate approval-gated maintenance-plan need remains outside this decision.
+separate approval-gated maintenance-plan need is resolved by
+[`docs/architecture/graph-relationship-maintenance-plan-promotion-decision.md`](graph-relationship-maintenance-plan-promotion-decision.md).
 
 Evidence:
 

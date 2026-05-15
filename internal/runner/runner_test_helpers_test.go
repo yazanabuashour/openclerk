@@ -130,6 +130,24 @@ func graphRelationshipCandidatesInclude(candidates []runner.GraphRelationshipCan
 	return false
 }
 
+func graphRelationshipMaintenanceActionContains(actions []runner.GraphRelationshipMaintenanceAction, kind string, status string) bool {
+	for _, action := range actions {
+		if action.Kind == kind && action.Status == status {
+			return true
+		}
+	}
+	return false
+}
+
+func graphRelationshipMaintenanceCandidatesInclude(candidates []runner.GraphRelationshipMaintenanceCandidate, surface string) bool {
+	for _, candidate := range candidates {
+		if candidate.Surface == surface {
+			return true
+		}
+	}
+	return false
+}
+
 func auditInspectedPath(inspections []runner.AuditProvenanceInspection, path string) bool {
 	for _, inspection := range inspections {
 		if inspection.SourcePath == path && len(inspection.EventIDs) > 0 {

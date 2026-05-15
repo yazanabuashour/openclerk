@@ -11,6 +11,7 @@ func reportLane(ids []string) (string, bool) {
 	graphProductStory := 0
 	graphContextReport := 0
 	graphRelationshipReport := 0
+	graphRelationshipMaintenance := 0
 	memoryRouterRevisit := 0
 	highTouchMemoryRouterRecall := 0
 	memoryRouterRecallCandidate := 0
@@ -79,6 +80,10 @@ func reportLane(ids []string) (string, bool) {
 		}
 		if isGraphRelationshipReportScenario(id) {
 			graphRelationshipReport++
+			continue
+		}
+		if isGraphRelationshipMaintenanceScenario(id) {
+			graphRelationshipMaintenance++
 			continue
 		}
 		if isMemoryRouterRevisitScenario(id) {
@@ -263,6 +268,9 @@ func reportLane(ids []string) (string, bool) {
 	}
 	if graphRelationshipReport > 0 && graphRelationshipReport+validation == len(ids) {
 		return graphRelationshipReportLaneName, false
+	}
+	if graphRelationshipMaintenance > 0 && graphRelationshipMaintenance+validation == len(ids) {
+		return graphRelationshipMaintenanceLaneName, false
 	}
 	if memoryRouterRevisit > 0 && memoryRouterRevisit+validation == len(ids) {
 		return memoryRouterRevisitLaneName, false
@@ -519,6 +527,9 @@ func targetedAcceptanceNote(lane string) string {
 	}
 	if lane == graphRelationshipReportLaneName {
 		return "graph relationship report implementation rows compare current primitives plus graph_context_report, graph_relationship_report, and split specialized report candidates, while reporting relationship paths, direct-vs-derived evidence, typed candidates from canonical markdown, limited stale/orphaned/contradiction audit findings, graph projection freshness, provenance refs, authority model, validation boundaries, workflow impact, no-write/no-bypass controls, safety pass, capability pass, UX quality, and final promote/defer/kill/none-viable outcome"
+	}
+	if lane == graphRelationshipMaintenanceLaneName {
+		return "graph relationship maintenance plan implementation rows compare current primitives plus graph_relationship_report, graph_relationship_maintenance_plan, and durable semantic graph maintenance candidates, while reporting proposed actions, candidate section content, next approved replace/append requests, planned_no_write status, approval boundary, duplicate handling, rollback/audit path, failure modes, graph projection freshness, provenance refs, authority model, validation boundaries, workflow impact, no-write/no-bypass controls, safety pass, capability pass, UX quality, and final promote/defer/kill/none-viable outcome"
 	}
 	if lane == memoryRouterRevisitLaneName {
 		return "memory and autonomous router revisit rows report natural memory/router intent, scripted current-primitives control, tool count, command count, assistant calls, wall time, prompt specificity, UX, brittleness, retries, step count, latency, guidance dependence, safety risks, and capability/ergonomics classification"

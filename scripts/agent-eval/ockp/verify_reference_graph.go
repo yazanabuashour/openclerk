@@ -288,6 +288,96 @@ func verifyGraphRelationshipReportAction(ctx context.Context, paths evalPaths, f
 	}, nil
 }
 
+func verifyGraphRelationshipMaintenanceAction(ctx context.Context, paths evalPaths, finalMessage string, turnMetrics metrics) (verificationResult, error) {
+	cfg := runclient.Config{DatabasePath: paths.DatabasePath}
+	planResult, err := runner.RunRetrievalTask(ctx, cfg, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionGraphRelationshipMaintenance,
+		GraphRelationshipMaintenance: runner.GraphRelationshipMaintenanceOptions{
+			Path:  graphSemanticsIndexPath,
+			Limit: 20,
+		},
+	})
+	if err != nil {
+		return verificationResult{}, err
+	}
+	plan := planResult.GraphRelationshipMaintenance
+	databasePass := plan != nil &&
+		plan.SourceDocument != nil &&
+		plan.SourceDocument.Path == graphSemanticsIndexPath &&
+		plan.SourceSelection == "path_exact_match" &&
+		graphRelationshipMaintenanceActionContains(plan.ProposedActions, "typed_relationship_annotation", "candidate_requires_approval") &&
+		strings.Contains(plan.CandidateSectionContent, "requires") &&
+		strings.Contains(plan.NextReplaceSectionRequest, `"action":"replace_section"`) &&
+		strings.Contains(plan.NextAppendDocumentRequest, `"action":"append_document"`) &&
+		plan.WriteStatus == "planned_no_write" &&
+		strings.Contains(plan.ApprovalBoundary, "not durable-write approval") &&
+		strings.Contains(plan.DuplicateHandling, "do not create duplicate") &&
+		strings.Contains(plan.RollbackAuditPath, "git_lifecycle_report") &&
+		len(plan.FailureModes) > 0 &&
+		plan.GraphProjection != nil &&
+		len(plan.GraphProjection.Projections) == 1 &&
+		plan.GraphProjection.Projections[0].Freshness == "fresh" &&
+		graphRelationshipMaintenanceCandidatesInclude(plan.CandidateSurfaces, "current_primitives_plus_graph_relationship_report") &&
+		graphRelationshipMaintenanceCandidatesInclude(plan.CandidateSurfaces, "graph_relationship_maintenance_plan") &&
+		graphRelationshipMaintenanceCandidatesInclude(plan.CandidateSurfaces, "durable_semantic_graph_maintenance") &&
+		strings.Contains(plan.ValidationBoundaries, "read-only maintenance plan") &&
+		strings.Contains(plan.AuthorityLimits, "canonical markdown")
+	answerPass := graphRelationshipMaintenanceAnswerPass(finalMessage)
+	activityPass := turnMetrics.GraphRelationshipMaintenanceUsed &&
+		!turnMetrics.GraphRelationshipReportUsed &&
+		!turnMetrics.GraphContextReportUsed &&
+		turnMetrics.WorkflowActionCallCount > 0 &&
+		graphRelationshipMaintenanceFirstActionAllowed(turnMetrics) &&
+		turnMetrics.CommandExecutions <= 4 &&
+		!turnMetrics.OpenClerkRetrievalHelpUsed &&
+		!turnMetrics.SearchUsed &&
+		!turnMetrics.ListDocumentsUsed &&
+		!turnMetrics.GetDocumentUsed &&
+		!turnMetrics.DocumentLinksUsed &&
+		!turnMetrics.GraphNeighborhoodUsed &&
+		!turnMetrics.ProjectionStatesUsed &&
+		!turnMetrics.ProvenanceEventsUsed &&
+		!turnMetrics.CreateDocumentUsed &&
+		!turnMetrics.AppendDocumentUsed &&
+		!turnMetrics.ReplaceSectionUsed &&
+		!turnMetrics.IngestSourceURLUsed &&
+		!turnMetrics.IngestVideoURLUsed
+
+	failures := []string{}
+	if !databasePass {
+		failures = append(failures, "graph_relationship_maintenance_plan did not return complete approval-gated maintenance plan evidence")
+	}
+	if !turnMetrics.GraphRelationshipMaintenanceUsed {
+		failures = append(failures, "agent did not use graph_relationship_maintenance_plan")
+	}
+	if turnMetrics.GraphRelationshipReportUsed || turnMetrics.GraphContextReportUsed {
+		failures = append(failures, "agent used graph report primitives before or alongside graph_relationship_maintenance_plan")
+	}
+	if !graphRelationshipMaintenanceFirstActionAllowed(turnMetrics) {
+		failures = append(failures, "agent ran setup or primitives before graph_relationship_maintenance_plan")
+	}
+	if turnMetrics.CommandExecutions > 4 {
+		failures = append(failures, "graph_relationship_maintenance_plan row used too many commands")
+	}
+	if turnMetrics.OpenClerkRetrievalHelpUsed || turnMetrics.SearchUsed || turnMetrics.ListDocumentsUsed || turnMetrics.GetDocumentUsed || turnMetrics.DocumentLinksUsed || turnMetrics.GraphNeighborhoodUsed || turnMetrics.ProjectionStatesUsed || turnMetrics.ProvenanceEventsUsed {
+		failures = append(failures, "agent used follow-up help or primitive inspection despite graph_relationship_maintenance_plan success")
+	}
+	if turnMetrics.CreateDocumentUsed || turnMetrics.AppendDocumentUsed || turnMetrics.ReplaceSectionUsed || turnMetrics.IngestSourceURLUsed || turnMetrics.IngestVideoURLUsed {
+		failures = append(failures, "agent used a mutating document or source action")
+	}
+	if !answerPass {
+		failures = append(failures, "final answer did not compare graph relationship maintenance candidates and concrete outcome")
+	}
+
+	return verificationResult{
+		Passed:        databasePass && answerPass && activityPass,
+		DatabasePass:  databasePass,
+		AssistantPass: answerPass && activityPass,
+		Details:       missingDetails(failures),
+		Documents:     []string{graphSemanticsIndexPath, graphSemanticsRoutingPath, graphSemanticsFreshnessPath, graphSemanticsOperationsPath},
+	}, nil
+}
+
 func graphContextReportFirstActionAllowed(turnMetrics metrics) bool {
 	if turnMetrics.WorkflowActionFirstCommandIndex <= 1 {
 		return true
@@ -302,6 +392,15 @@ func graphRelationshipReportFirstActionAllowed(turnMetrics metrics) bool {
 		return true
 	}
 	return turnMetrics.WorkflowActionFirstCommandIndex == 2 && turnMetrics.OpenClerkSkillCheckUsed &&
+		turnMetrics.PreActionSetupDiscoveryCount == 0 &&
+		turnMetrics.PreActionPrimitiveCommandCount == 0
+}
+
+func graphRelationshipMaintenanceFirstActionAllowed(turnMetrics metrics) bool {
+	if turnMetrics.WorkflowActionFirstCommandIndex <= 1 {
+		return true
+	}
+	return turnMetrics.WorkflowActionFirstCommandIndex <= 3 &&
 		turnMetrics.PreActionSetupDiscoveryCount == 0 &&
 		turnMetrics.PreActionPrimitiveCommandCount == 0
 }
@@ -529,6 +628,24 @@ func graphRelationshipAuditFinding(findings []runner.GraphRelationshipAuditFindi
 }
 
 func graphRelationshipCandidatesInclude(candidates []runner.GraphRelationshipCandidate, surface string) bool {
+	for _, candidate := range candidates {
+		if candidate.Surface == surface {
+			return true
+		}
+	}
+	return false
+}
+
+func graphRelationshipMaintenanceActionContains(actions []runner.GraphRelationshipMaintenanceAction, kind string, status string) bool {
+	for _, action := range actions {
+		if action.Kind == kind && action.Status == status {
+			return true
+		}
+	}
+	return false
+}
+
+func graphRelationshipMaintenanceCandidatesInclude(candidates []runner.GraphRelationshipMaintenanceCandidate, surface string) bool {
 	for _, candidate := range candidates {
 		if candidate.Surface == surface {
 			return true

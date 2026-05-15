@@ -489,11 +489,52 @@ func graphRelationshipReportAnswerPass(message string) bool {
 		containsAny(normalized, []string{"no bypasses", "no-bypass"}) &&
 		containsAny(normalized, []string{"no direct sqlite", "without direct sqlite"}) &&
 		containsAny(normalized, []string{"no direct vault inspection", "without direct vault inspection"}) &&
-		containsAny(normalized, []string{"no semantic-label graph truth", "no semantic label graph truth"}) &&
-		containsAny(normalized, []string{"no hidden authority ranking", "without hidden authority ranking"}) &&
-		containsAny(normalized, []string{"no graph memory", "without graph memory"}) &&
+		containsAny(normalized, []string{"no semantic-label graph truth", "no semantic label graph truth", "no `semantic-label graph truth`"}) &&
+		containsAny(normalized, []string{"no hidden authority ranking", "no `hidden authority ranking`", "without hidden authority ranking"}) &&
+		containsAny(normalized, []string{"no graph memory", "no `graph memory`", "without graph memory"}) &&
 		containsAny(normalized, []string{"no durable semantic graph storage", "without durable semantic graph storage"})
 	decision := containsAny(normalized, []string{"promote graph_relationship_report", "promote graph relationship report"}) &&
+		containsAny(normalized, []string{"no follow-up beads are required", "no follow up beads are required"})
+	return requiredPosture && requiredCandidates && requiredFields && requiredBoundaries && decision
+}
+
+func graphRelationshipMaintenanceAnswerPass(message string) bool {
+	normalized := normalizeValidationMessage(message)
+	requiredPosture := containsAny(normalized, []string{"safety pass"}) &&
+		containsAny(normalized, []string{"capability pass"}) &&
+		containsAny(normalized, []string{"ux quality"}) &&
+		containsAny(normalized, []string{"authority model"}) &&
+		containsAny(normalized, []string{"provenance/freshness posture", "provenance freshness posture"}) &&
+		containsAny(normalized, []string{"validation boundaries"}) &&
+		containsAny(normalized, []string{"workflow impact"}) &&
+		containsAny(normalized, []string{"candidate comparison", "candidate surfaces", "candidates"}) &&
+		containsAny(normalized, []string{"decision"}) &&
+		containsAny(normalized, []string{"follow-up needs", "follow up needs"})
+	requiredCandidates := containsAny(normalized, []string{"current_primitives_plus_graph_relationship_report", "current primitives plus graph_relationship_report", "current primitives plus graph relationship report"}) &&
+		containsAny(normalized, []string{"graph_relationship_maintenance_plan", "graph relationship maintenance plan"}) &&
+		containsAny(normalized, []string{"durable_semantic_graph_maintenance", "durable semantic graph maintenance"})
+	requiredFields := containsAny(normalized, []string{"proposed_actions", "proposed actions", "proposed approval-gated maintenance actions"}) &&
+		containsAny(normalized, []string{"candidate_section_content", "candidate section content"}) &&
+		containsAny(normalized, []string{"next_replace_section_request", "next replace section request", "replace_section request"}) &&
+		containsAny(normalized, []string{"next_append_document_request", "next append document request", "append_document request"}) &&
+		containsAny(normalized, []string{"planned_no_write", "planned no write"}) &&
+		containsAny(normalized, []string{"approval_boundary", "approval boundary", "approval"}) &&
+		containsAny(normalized, []string{"duplicate_handling", "duplicate handling"}) &&
+		containsAny(normalized, []string{"rollback_audit_path", "rollback audit path", "rollback"}) &&
+		containsAny(normalized, []string{"failure_modes", "failure modes", "failure"}) &&
+		containsAny(normalized, []string{"graph_projection", "graph projection", "projection freshness"}) &&
+		containsAny(normalized, []string{"provenance_refs", "provenance refs"}) &&
+		containsAny(normalized, []string{"source citations", "citations", "cited"})
+	requiredBoundaries := containsAny(normalized, []string{"canonical markdown authority", "canonical markdown"}) &&
+		containsAny(normalized, []string{"no writes", "no write", "read-only", "read only"}) &&
+		containsAny(normalized, []string{"no bypasses", "no-bypass"}) &&
+		containsAny(normalized, []string{"no direct sqlite", "without direct sqlite"}) &&
+		containsAny(normalized, []string{"no direct vault inspection", "without direct vault inspection"}) &&
+		containsAny(normalized, []string{"no semantic-label graph truth", "no semantic label graph truth", "no `semantic-label graph truth`"}) &&
+		containsAny(normalized, []string{"no hidden authority ranking", "no `hidden authority ranking`", "without hidden authority ranking"}) &&
+		containsAny(normalized, []string{"no graph memory", "no `graph memory`", "without graph memory"}) &&
+		containsAny(normalized, []string{"no durable semantic graph storage", "without durable semantic graph storage"})
+	decision := containsAny(normalized, []string{"promote graph_relationship_maintenance_plan", "promote graph relationship maintenance plan"}) &&
 		containsAny(normalized, []string{"no follow-up beads are required", "no follow up beads are required"})
 	return requiredPosture && requiredCandidates && requiredFields && requiredBoundaries && decision
 }

@@ -56,6 +56,7 @@ func TestCapabilitiesManifestShowsBuildingBlocks(t *testing.T) {
 		!hasCapabilityAction(result, "retrieval", "decision_lookup_report") ||
 		!hasCapabilityAction(result, "retrieval", "graph_context_report") ||
 		!hasCapabilityAction(result, "retrieval", "graph_relationship_report") ||
+		!hasCapabilityAction(result, "retrieval", "graph_relationship_maintenance_plan") ||
 		!hasCapabilityAction(result, "retrieval", "semantic_search") ||
 		!hasCapabilityAction(result, "module", "install_module") {
 		t.Fatalf("capabilities missing expected document/retrieval/module actions: %+v", result.Domains)
@@ -111,7 +112,7 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 		{
 			name: "retrieval",
 			args: []string{"retrieval", "--help"},
-			want: []string{"document_links", "graph_neighborhood", "canonical markdown remains relationship authority", "records_lookup", "services_lookup", "decisions_lookup", "canonical markdown with citations and freshness", "source_discovery_report", "source_audit_report", "evidence_bundle_report", "decision_lookup_report", "duplicate_candidate_report", "workflow_guide_report", "memory_router_recall_report", "structured_store_report", "hybrid_retrieval_report", "graph_context_report", "graph_relationship_report", "semantic_search", "agent_handoff", "Read-only"},
+			want: []string{"document_links", "graph_neighborhood", "canonical markdown remains relationship authority", "records_lookup", "services_lookup", "decisions_lookup", "canonical markdown with citations and freshness", "source_discovery_report", "source_audit_report", "evidence_bundle_report", "decision_lookup_report", "duplicate_candidate_report", "workflow_guide_report", "memory_router_recall_report", "structured_store_report", "hybrid_retrieval_report", "graph_context_report", "graph_relationship_report", "graph_relationship_maintenance_plan", "semantic_search", "agent_handoff", "Read-only"},
 		},
 		{
 			name: "module",

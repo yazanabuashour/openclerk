@@ -175,6 +175,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 			t.Fatalf("default selected scenarios included targeted graph relationship report scenario %q", id)
 		}
 	}
+	for _, id := range graphRelationshipMaintenanceScenarioIDs() {
+		if defaultIDs[id] {
+			t.Fatalf("default selected scenarios included targeted graph relationship maintenance scenario %q", id)
+		}
+	}
 	for _, id := range memoryRouterRevisitScenarioIDs() {
 		if defaultIDs[id] {
 			t.Fatalf("default selected scenarios included targeted memory/router revisit scenario %q", id)
@@ -364,6 +369,11 @@ func TestDefaultScenarioSelectionExcludesPopulatedTargetedLane(t *testing.T) {
 	lane, releaseBlocking = reportLane(selected)
 	if lane != graphRelationshipReportLaneName || releaseBlocking {
 		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, graphRelationshipReportLaneName)
+	}
+	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(append(graphRelationshipMaintenanceScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject"), ",")})
+	lane, releaseBlocking = reportLane(selected)
+	if lane != graphRelationshipMaintenanceLaneName || releaseBlocking {
+		t.Fatalf("reportLane(%v) = %q/%t, want %q/false", selected, lane, releaseBlocking, graphRelationshipMaintenanceLaneName)
 	}
 	selected = selectedScenarioIDs(runConfig{Scenario: strings.Join(append(memoryRouterRevisitScenarioIDs(), "missing-document-path-reject", "negative-limit-reject", "unsupported-lower-level-reject", "unsupported-transport-reject"), ",")})
 	lane, releaseBlocking = reportLane(selected)

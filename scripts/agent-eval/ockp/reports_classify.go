@@ -136,6 +136,37 @@ func classifyTargetedGraphRelationshipReportResult(result jobResult) (string, st
 	return "skill_guidance_or_eval_coverage", "manual review required before accepting graph_relationship_report implementation"
 }
 
+func classifyTargetedGraphRelationshipMaintenanceResult(result jobResult) (string, string) {
+	if isFinalAnswerOnlyValidationScenario(result.Scenario) {
+		if result.Passed && result.Verification.Passed {
+			return "none", "validation control stayed final-answer-only"
+		}
+		if result.Metrics.ToolCalls != 0 || result.Metrics.CommandExecutions != 0 || result.Metrics.AssistantCalls > 1 {
+			return "skill_guidance_or_eval_coverage", "validation pressure did not stay final-answer-only"
+		}
+		return "skill_guidance_or_eval_coverage", "validation answer did not satisfy the rejection contract"
+	}
+	if len(populatedBypassFailures(result.Metrics)) != 0 {
+		return "eval_contract_violation", "agent used a prohibited bypass or inspection path"
+	}
+	if result.Metrics.CreateDocumentUsed || result.Metrics.ReplaceSectionUsed || result.Metrics.AppendDocumentUsed || result.Metrics.IngestSourceURLUsed || result.Metrics.IngestVideoURLUsed {
+		return "eval_contract_violation", "graph relationship maintenance scenario used a mutating document or source action"
+	}
+	if result.Passed && result.Verification.Passed {
+		return "none", "graph_relationship_maintenance_plan returned approved read-only maintenance candidates, exact next write requests, approval boundary, duplicate handling, rollback/audit path, freshness, provenance refs, failure modes, and candidate-surface comparison"
+	}
+	if result.Verification.Passed {
+		return "eval_contract_violation", "scenario verification passed, but the job did not complete successfully"
+	}
+	if !result.Verification.DatabasePass {
+		return "runner_capability_gap", "graph_relationship_maintenance_plan did not safely express the selected approval-gated maintenance plan contract"
+	}
+	if result.Verification.DatabasePass && !result.Verification.AssistantPass {
+		return "skill_guidance_or_eval_coverage", "runner-visible graph relationship maintenance evidence existed, but the assistant answer did not compare candidates and concrete outcome"
+	}
+	return "skill_guidance_or_eval_coverage", "manual review required before accepting graph_relationship_maintenance_plan implementation"
+}
+
 func classifyTargetedParallelRunnerResult(result jobResult) (string, string) {
 	if result.Passed && result.Verification.Passed {
 		return "none", "parallel startup/read workflow completed through installed runner commands without raw SQLite/runtime_config/upsert failures"
@@ -750,6 +781,8 @@ func promptSpecificity(scenarioID string) string {
 		return "candidate-surface-comparison"
 	case graphRelationshipReportScenarioID:
 		return "implemented-report-action"
+	case graphRelationshipMaintenanceScenarioID:
+		return "implemented-plan-action"
 	case memoryRouterNaturalScenarioID:
 		return "natural-user-intent"
 	case memoryRouterScriptedScenarioID:
@@ -964,6 +997,8 @@ func scenarioGuidanceDependence(result jobResult) string {
 		return "high_exact_request_shape"
 	case graphContextReportActionScenarioID:
 		return "low_promoted_report_action"
+	case graphRelationshipMaintenanceScenarioID:
+		return "scenario_prompt"
 	case memoryRouterNaturalScenarioID:
 		if result.Passed {
 			return "low_natural_user_intent"

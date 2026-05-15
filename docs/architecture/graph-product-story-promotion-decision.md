@@ -22,6 +22,7 @@ Evidence:
 - [`docs/evals/results/ockp-graph-product-story-exploration.md`](../evals/results/ockp-graph-product-story-exploration.md)
 - [`docs/architecture/graph-context-report-promotion-decision.md`](graph-context-report-promotion-decision.md)
 - [`docs/architecture/graph-relationship-report-promotion-decision.md`](graph-relationship-report-promotion-decision.md)
+- [`docs/architecture/graph-relationship-maintenance-plan-promotion-decision.md`](graph-relationship-maintenance-plan-promotion-decision.md)
 
 ## Decision
 
@@ -100,3 +101,8 @@ viable yet`.
 which promotes `graph_relationship_report` for the deferred read-only
 relationship/path, direct-vs-derived, typed-candidate, and limited graph-audit
 needs.
+
+`oc-2hx7` is now resolved by
+[`docs/architecture/graph-relationship-maintenance-plan-promotion-decision.md`](graph-relationship-maintenance-plan-promotion-decision.md),
+which promotes `graph_relationship_maintenance_plan` for approval-before-write
+canonical markdown relationship maintenance plans.

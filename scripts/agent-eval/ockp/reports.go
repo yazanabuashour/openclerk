@@ -91,7 +91,7 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	if releaseBlocking {
 		return nil
 	}
-	if lane != profileConfigLaneName && lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != graphProductStoryLaneName && lane != graphContextReportLaneName && lane != graphRelationshipReportLaneName && lane != memoryRouterRevisitLaneName && lane != highTouchMemoryRouterRecallLaneName && lane != memoryRouterRecallCandidateLaneName && lane != memoryRouterRecallReportLaneName && lane != promotedRecordDomainLaneName && lane != highTouchRelationshipRecordLaneName && lane != relationshipRecordCandidateLaneName && lane != parallelRunnerLaneName && lane != installUpgradeModuleLaneName && lane != documentHistoryLaneName && lane != highTouchDocumentLifecycleLaneName && lane != documentLifecycleRollbackCandidateLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != captureLowRiskLaneName && lane != captureExplicitOverridesLaneName && lane != captureDuplicateCandidateLaneName && lane != taggingLaneName && lane != captureSaveThisNoteLaneName && lane != captureDocumentLinksLaneName && lane != sourceURLUpdateLaneName && lane != webURLIntakeLaneName && lane != webURLStaleRepairLaneName && lane != webURLStaleImpactLaneName && lane != webProductPageLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != unsupportedArtifactKindLaneName && lane != localFileArtifactLaneName && lane != videoYouTubeLaneName && lane != nativeMediaTranscriptLaneName && lane != synthesisCompileLaneName && lane != highTouchCompileSynthesisLaneName && lane != compileSynthesisCandidateLaneName && lane != compileSynthesisWorkflowActionLaneName && lane != broadAuditLaneName && lane != sourceAuditWorkflowActionLaneName && lane != evidenceBundleWorkflowActionLaneName {
+	if lane != profileConfigLaneName && lane != populatedLaneName && lane != repoDocsLaneName && lane != graphSemanticsRevisitLaneName && lane != graphProductStoryLaneName && lane != graphContextReportLaneName && lane != graphRelationshipReportLaneName && lane != graphRelationshipMaintenanceLaneName && lane != memoryRouterRevisitLaneName && lane != highTouchMemoryRouterRecallLaneName && lane != memoryRouterRecallCandidateLaneName && lane != memoryRouterRecallReportLaneName && lane != promotedRecordDomainLaneName && lane != highTouchRelationshipRecordLaneName && lane != relationshipRecordCandidateLaneName && lane != parallelRunnerLaneName && lane != installUpgradeModuleLaneName && lane != documentHistoryLaneName && lane != highTouchDocumentLifecycleLaneName && lane != documentLifecycleRollbackCandidateLaneName && lane != agentChosenPathLaneName && lane != pathTitleAutonomyLaneName && lane != captureLowRiskLaneName && lane != captureExplicitOverridesLaneName && lane != captureDuplicateCandidateLaneName && lane != taggingLaneName && lane != captureSaveThisNoteLaneName && lane != captureDocumentLinksLaneName && lane != sourceURLUpdateLaneName && lane != webURLIntakeLaneName && lane != webURLStaleRepairLaneName && lane != webURLStaleImpactLaneName && lane != webProductPageLaneName && lane != documentThisLaneName && lane != documentArtifactCandidateLaneName && lane != artifactIngestionLaneName && lane != unsupportedArtifactKindLaneName && lane != localFileArtifactLaneName && lane != videoYouTubeLaneName && lane != nativeMediaTranscriptLaneName && lane != synthesisCompileLaneName && lane != highTouchCompileSynthesisLaneName && lane != compileSynthesisCandidateLaneName && lane != compileSynthesisWorkflowActionLaneName && lane != broadAuditLaneName && lane != sourceAuditWorkflowActionLaneName && lane != evidenceBundleWorkflowActionLaneName {
 		return nil
 	}
 	summary := targetedLaneSummary{
@@ -133,6 +133,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		case graphRelationshipReportLaneName:
 			include = isGraphRelationshipReportScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
 			classification, posture = classifyTargetedGraphRelationshipReportResult(result)
+		case graphRelationshipMaintenanceLaneName:
+			include = isGraphRelationshipMaintenanceScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
+			classification, posture = classifyTargetedGraphRelationshipMaintenanceResult(result)
 		case memoryRouterRevisitLaneName:
 			include = isMemoryRouterRevisitScenario(result.Scenario) || isFinalAnswerOnlyValidationScenario(result.Scenario)
 			classification, posture = classifyTargetedMemoryRouterRevisitResult(result)
@@ -310,6 +313,9 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 	case graphRelationshipReportLaneName:
 		summary.Decision = graphRelationshipReportImplementationDecision(summary.ScenarioClassifications)
 		summary.Promotion = graphRelationshipReportPromotion(summary.Decision)
+	case graphRelationshipMaintenanceLaneName:
+		summary.Decision = graphRelationshipMaintenanceImplementationDecision(summary.ScenarioClassifications)
+		summary.Promotion = graphRelationshipMaintenancePromotion(summary.Decision)
 	case memoryRouterRevisitLaneName:
 		summary.Decision = memoryRouterRevisitDecision(summary.ScenarioClassifications)
 		summary.Promotion = "targeted memory and autonomous router revisit evidence only; no remember/recall action, memory transport, autonomous router API, schema, migration, storage behavior, or public API change from this eval"

@@ -193,6 +193,7 @@ func buildCapabilitiesResult() capabilitiesResult {
 					{Action: "hybrid_retrieval_report", Purpose: "review lexical baseline and hybrid/vector candidate boundaries", Posture: "read_only", Handoff: "hybrid_retrieval.agent_handoff"},
 					{Action: "graph_context_report", Purpose: "package relationship graph context with canonical markdown authority and freshness", Posture: "read_only", Handoff: "graph_context.agent_handoff"},
 					{Action: "graph_relationship_report", Purpose: "package relationship paths, direct-vs-derived evidence, typed candidates, and limited graph audits from canonical markdown authority", Posture: "read_only", Handoff: "graph_relationship.agent_handoff"},
+					{Action: "graph_relationship_maintenance_plan", Purpose: "plan approval-gated canonical markdown relationship maintenance from relationship report evidence", Posture: "read_only", Handoff: "graph_relationship_maintenance.agent_handoff"},
 					{Action: "semantic_search", Purpose: "run explicit citation-bearing semantic search through a verified provider module", Posture: "module_gated_read_only", Handoff: "semantic_search.agent_handoff", Requires: "installed enabled embedding provider module"},
 				},
 			},
@@ -503,7 +504,7 @@ func usage(stderr io.Writer) {
 	_, _ = fmt.Fprintln(stderr, "       openclerk document --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk retrieval --help")
 	_, _ = fmt.Fprintln(stderr, "document/retrieval read strict JSON from stdin and use configured paths by default; pass --db only for an explicit dataset.")
-	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, validation_synthesis_report, ingest_source_url plan, web_search_plan, artifact_candidate_plan, git_lifecycle_report, source_discovery_report, source_audit_report, evidence_bundle_report, decision_lookup_report, duplicate_candidate_report, workflow_guide_report, memory_router_recall_report, structured_store_report, hybrid_retrieval_report, graph_context_report, graph_relationship_report, semantic_search")
+	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, validation_synthesis_report, ingest_source_url plan, web_search_plan, artifact_candidate_plan, git_lifecycle_report, source_discovery_report, source_audit_report, evidence_bundle_report, decision_lookup_report, duplicate_candidate_report, workflow_guide_report, memory_router_recall_report, structured_store_report, hybrid_retrieval_report, graph_context_report, graph_relationship_report, graph_relationship_maintenance_plan, semantic_search")
 }
 
 func configUsage(w io.Writer) {
@@ -601,6 +602,8 @@ func retrievalUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  Read-only. Returns graph_context.agent_handoff with source identity, canonical markdown relationship text, links/backlinks, nearby graph evidence, graph freshness, provenance refs, validation boundaries, and authority limits; it does not add semantic-label graph truth or graph memory.")
 	_, _ = fmt.Fprintln(w, `  graph_relationship_report: {"action":"graph_relationship_report","graph_relationship":{"path":"notes/graph/semantics/index.md","limit":20}}`)
 	_, _ = fmt.Fprintln(w, "  Read-only. Returns graph_relationship.agent_handoff with relationship paths, direct-vs-derived evidence, typed candidates from cited markdown, limited stale/orphaned/contradiction audit findings, provenance refs, validation boundaries, and authority limits; it does not add semantic-label graph truth or graph memory.")
+	_, _ = fmt.Fprintln(w, `  graph_relationship_maintenance_plan: {"action":"graph_relationship_maintenance_plan","graph_relationship_maintenance":{"path":"notes/graph/semantics/index.md","limit":20}}`)
+	_, _ = fmt.Fprintln(w, "  Read-only. Returns graph_relationship_maintenance.agent_handoff with candidate section content, approval boundary, next replace/append requests, duplicate handling, rollback/audit path, failure modes, freshness, provenance refs, and planned_no_write status.")
 	_, _ = fmt.Fprintln(w, `  semantic_search: {"action":"semantic_search","semantic_search":{"query":"semantic recall citation quality","path_prefix":"docs/","limit":10,"provider":"ollama","embedding_model":"embeddinggemma"}}`)
 	_, _ = fmt.Fprintln(w, "  Explicit module-gated mode. Routes through an installed verified Ollama or Gemini module, returns citation-bearing semantic_search hits with cache/provider status, and leaves default search lexical.")
 }

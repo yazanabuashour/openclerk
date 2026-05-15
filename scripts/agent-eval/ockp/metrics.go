@@ -368,6 +368,9 @@ func classifyCommand(command string, m *metrics) {
 	if commandContainsAction(actionText, "graph_relationship_report") {
 		m.GraphRelationshipReportUsed = true
 	}
+	if commandContainsAction(actionText, "graph_relationship_maintenance_plan") {
+		m.GraphRelationshipMaintenanceUsed = true
+	}
 	if commandContainsAction(actionText, "source_discovery_report") {
 		m.SourceDiscoveryReportUsed = true
 	}
@@ -483,7 +486,8 @@ func commandContainsWorkflowAction(actionText string) bool {
 		commandContainsAction(actionText, "evidence_bundle_report") ||
 		commandContainsAction(actionText, "decision_lookup_report") ||
 		commandContainsAction(actionText, "graph_context_report") ||
-		commandContainsAction(actionText, "graph_relationship_report")
+		commandContainsAction(actionText, "graph_relationship_report") ||
+		commandContainsAction(actionText, "graph_relationship_maintenance_plan")
 }
 func commandContainsSetupDiscovery(lower string) bool {
 	return commandContainsOpenClerkHelp(lower) ||
@@ -529,6 +533,7 @@ func commandContainsWorkflowPrimitive(actionText string) bool {
 		"memory_router_recall_report",
 		"graph_context_report",
 		"graph_relationship_report",
+		"graph_relationship_maintenance_plan",
 		"semantic_search",
 	} {
 		if commandContainsAction(actionText, action) {
@@ -845,6 +850,7 @@ func aggregateMetrics(turns []turnResult) metrics {
 		out.MemoryRouterRecallReportUsed = out.MemoryRouterRecallReportUsed || current.MemoryRouterRecallReportUsed
 		out.GraphContextReportUsed = out.GraphContextReportUsed || current.GraphContextReportUsed
 		out.GraphRelationshipReportUsed = out.GraphRelationshipReportUsed || current.GraphRelationshipReportUsed
+		out.GraphRelationshipMaintenanceUsed = out.GraphRelationshipMaintenanceUsed || current.GraphRelationshipMaintenanceUsed
 		out.SourceDiscoveryReportUsed = out.SourceDiscoveryReportUsed || current.SourceDiscoveryReportUsed
 		out.OpenClerkPathCheckUsed = out.OpenClerkPathCheckUsed || current.OpenClerkPathCheckUsed
 		out.OpenClerkVersionCheckUsed = out.OpenClerkVersionCheckUsed || current.OpenClerkVersionCheckUsed

@@ -182,6 +182,50 @@ func graphRelationshipReportPromotion(decision string) string {
 	}
 }
 
+func graphRelationshipMaintenanceImplementationDecision(rows []targetedScenarioClassification) string {
+	seen := map[string]bool{}
+	for _, row := range rows {
+		if isFinalAnswerOnlyValidationScenario(row.Scenario) {
+			if row.FailureClassification != "none" {
+				return "repair_graph_relationship_maintenance_plan"
+			}
+			continue
+		}
+		if row.SafetyPass == "fail" || row.FailureClassification == "eval_contract_violation" {
+			return "kill_graph_relationship_maintenance_plan"
+		}
+		if row.FailureClassification == "runner_capability_gap" {
+			return "repair_graph_relationship_maintenance_plan"
+		}
+		if row.FailureClassification == "none_viable_yet" {
+			return "none_viable_yet"
+		}
+		if row.FailureClassification != "none" {
+			return "repair_graph_relationship_maintenance_plan"
+		}
+		seen[row.Scenario] = true
+	}
+	for _, id := range graphRelationshipMaintenanceScenarioIDs() {
+		if !seen[id] {
+			return "repair_graph_relationship_maintenance_plan"
+		}
+	}
+	return "promote_graph_relationship_maintenance_plan"
+}
+
+func graphRelationshipMaintenancePromotion(decision string) string {
+	switch decision {
+	case "promote_graph_relationship_maintenance_plan":
+		return "implemented narrow read-only graph_relationship_maintenance_plan retrieval action for approval-gated canonical markdown relationship maintenance candidates, exact next write requests, duplicate handling, rollback/audit path, provenance/freshness posture, and failure modes; no semantic-label graph layer, schema, migration, durable graph storage, graph memory, authority ranking surface, direct vault/SQLite/source inspection, unsupported transport, or automatic write behavior"
+	case "kill_graph_relationship_maintenance_plan":
+		return "graph_relationship_maintenance_plan violated safety or authority boundaries; do not promote implementation"
+	case "none_viable_yet":
+		return "current evidence did not identify a viable graph relationship maintenance plan surface; compare alternatives before implementation"
+	default:
+		return "graph_relationship_maintenance_plan implementation needs repair before promotion; no generic evidence-only outcome is recorded"
+	}
+}
+
 func memoryRouterRevisitDecision(rows []targetedScenarioClassification) string {
 	seen := map[string]bool{}
 	ergonomicsGaps := 0
@@ -1569,6 +1613,12 @@ func graphProductStoryScenarioIDs() []string {
 func graphRelationshipReportScenarioIDs() []string {
 	return []string{
 		graphRelationshipReportScenarioID,
+	}
+}
+
+func graphRelationshipMaintenanceScenarioIDs() []string {
+	return []string{
+		graphRelationshipMaintenanceScenarioID,
 	}
 }
 

@@ -66,6 +66,8 @@ Prefer a promoted workflow action over manual primitive choreography when it mat
 - Relationship paths, direct-vs-derived evidence, typed candidates, or limited
   graph audits: retrieval `graph_relationship_report`; answer from
   `graph_relationship.agent_handoff`; typed candidates are cited suggestions.
+- Approval-gated canonical markdown relationship maintenance plans: retrieval
+  `graph_relationship_maintenance_plan`; answer from handoff; review exact next replace/append request before any durable write.
 - Explicit local semantic retrieval: retrieval `semantic_search`, then answer
   from hits/handoff; requires explicit recall, loopback Ollama, no Gemini fallback, and unchanged default `search`.
 
@@ -176,15 +178,7 @@ Run retrieval tasks with:
 openclerk retrieval
 ```
 
-Common actions are `search`, `document_links`, `graph_neighborhood`,
-`records_lookup`, `record_entity`, `services_lookup`, `service_record`,
-`decisions_lookup`, `decision_record`, `provenance_events`,
-`projection_states`, `audit_contradictions`, `source_audit_report`,
-`source_discovery_report`, `evidence_bundle_report`,
-`decision_lookup_report`, `duplicate_candidate_report`, and
-`workflow_guide_report`, `memory_router_recall_report`, `structured_store_report`,
-`hybrid_retrieval_report`, `graph_context_report`, `graph_relationship_report`,
-and `semantic_search`.
+Common actions are `search`, `document_links`, `graph_neighborhood`, `records_lookup`, `record_entity`, `services_lookup`, `service_record`, `decisions_lookup`, `decision_record`, `provenance_events`, `projection_states`, `audit_contradictions`, `source_audit_report`, `source_discovery_report`, `evidence_bundle_report`, `decision_lookup_report`, `duplicate_candidate_report`, `workflow_guide_report`, `memory_router_recall_report`, `structured_store_report`, `hybrid_retrieval_report`, `graph_context_report`, `graph_relationship_report`, `graph_relationship_maintenance_plan`, and `semantic_search`.
 Use `openclerk retrieval --help` for promoted workflow-action request shape.
 
 Use search for source-grounded answers; document links/graphs for markdown

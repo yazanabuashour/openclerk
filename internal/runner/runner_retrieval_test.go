@@ -742,6 +742,115 @@ This note has ordinary chunk text but no markdown relationship links.
 	}
 }
 
+func TestRetrievalTaskGraphRelationshipMaintenancePlanPackagesApprovalGatedWritePlan(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	source := createDocument(t, ctx, config, "notes/graph/relationship/maintenance.md", "Graph Relationship Maintenance", strings.TrimSpace(`---
+type: note
+---
+# Graph Relationship Maintenance
+
+## Relationships
+Graph relationship maintenance marker requires [Routing](routing.md), supersedes [Freshness](freshness.md), and is related to [Operations](operations.md).
+`)+"\n")
+	createDocument(t, ctx, config, "notes/graph/relationship/routing.md", "Routing", "# Routing\n\n## Links\nRouting links back to [Graph Relationship Maintenance](maintenance.md).\n")
+	createDocument(t, ctx, config, "notes/graph/relationship/freshness.md", "Freshness", "# Freshness\n\n## Links\nFreshness links back to [Graph Relationship Maintenance](maintenance.md).\n")
+	createDocument(t, ctx, config, "notes/graph/relationship/operations.md", "Operations", "# Operations\n\n## Links\nOperations links back to [Graph Relationship Maintenance](maintenance.md).\n")
+
+	result, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionGraphRelationshipMaintenance,
+		GraphRelationshipMaintenance: runner.GraphRelationshipMaintenanceOptions{
+			Path:  source.Path,
+			Limit: 20,
+		},
+	})
+	if err != nil {
+		t.Fatalf("graph relationship maintenance plan: %v", err)
+	}
+	if result.Rejected || result.GraphRelationshipMaintenance == nil {
+		t.Fatalf("graph relationship maintenance result = %+v", result)
+	}
+	plan := result.GraphRelationshipMaintenance
+	if plan.SourceDocument == nil ||
+		plan.SourceDocument.DocID != source.DocID ||
+		plan.SourceSelection != "path_exact_match" ||
+		plan.WriteStatus != "planned_no_write" ||
+		plan.CandidateSectionHeading != "Relationships" ||
+		!strings.Contains(plan.CandidateSectionContent, "requires") ||
+		!strings.Contains(plan.CandidateSectionContent, "Maintenance audit findings") ||
+		!strings.Contains(plan.NextReplaceSectionRequest, `"action":"replace_section"`) ||
+		!strings.Contains(plan.NextReplaceSectionRequest, `"heading":"Relationships"`) ||
+		!strings.Contains(plan.NextAppendDocumentRequest, `"action":"append_document"`) ||
+		!strings.Contains(plan.ApprovalBoundary, "not durable-write approval") ||
+		!strings.Contains(plan.RollbackAuditPath, "git_lifecycle_report") ||
+		!strings.Contains(plan.DuplicateHandling, "do not create duplicate") ||
+		!graphRelationshipMaintenanceActionContains(plan.ProposedActions, "typed_relationship_annotation", "candidate_requires_approval") ||
+		!graphRelationshipMaintenanceCandidatesInclude(plan.CandidateSurfaces, "current_primitives_plus_graph_relationship_report") ||
+		!graphRelationshipMaintenanceCandidatesInclude(plan.CandidateSurfaces, "graph_relationship_maintenance_plan") ||
+		!graphRelationshipMaintenanceCandidatesInclude(plan.CandidateSurfaces, "durable_semantic_graph_maintenance") ||
+		plan.GraphProjection == nil ||
+		plan.AgentHandoff == nil ||
+		!strings.Contains(plan.ValidationBoundaries, "read-only maintenance plan") ||
+		!strings.Contains(plan.AuthorityLimits, "candidate maintenance text") {
+		t.Fatalf("graph relationship maintenance plan = %+v", plan)
+	}
+
+	list, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{PathPrefix: "notes/graph/relationship/", Limit: 10},
+	})
+	if err != nil {
+		t.Fatalf("list after graph relationship maintenance plan: %v", err)
+	}
+	if len(list.Documents) != 4 {
+		t.Fatalf("graph relationship maintenance plan mutated documents: %+v", list.Documents)
+	}
+}
+
+func TestRetrievalTaskGraphRelationshipMaintenancePlanRejectsSelectors(t *testing.T) {
+	t.Parallel()
+
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	result, err := runner.RunRetrievalTask(context.Background(), config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionGraphRelationshipMaintenance,
+	})
+	if err != nil {
+		t.Fatalf("graph relationship maintenance missing selector reject: %v", err)
+	}
+	if !result.Rejected || result.RejectionReason != "graph_relationship_maintenance doc_id, path, or query is required" {
+		t.Fatalf("graph relationship maintenance rejection = %+v", result)
+	}
+
+	result, err = runner.RunRetrievalTask(context.Background(), config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionGraphRelationshipMaintenance,
+		GraphRelationshipMaintenance: runner.GraphRelationshipMaintenanceOptions{
+			Path:  "notes/graph/relationship/index.md",
+			Query: "graph relationship",
+		},
+	})
+	if err != nil {
+		t.Fatalf("graph relationship maintenance multi-selector reject: %v", err)
+	}
+	if !result.Rejected || result.RejectionReason != "graph_relationship_maintenance accepts exactly one of doc_id, path, or query" {
+		t.Fatalf("graph relationship maintenance rejection = %+v", result)
+	}
+
+	result, err = runner.RunRetrievalTask(context.Background(), config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionGraphRelationshipMaintenance,
+		GraphRelationshipMaintenance: runner.GraphRelationshipMaintenanceOptions{
+			PathPrefix: "notes/graph/",
+		},
+	})
+	if err != nil {
+		t.Fatalf("graph relationship maintenance path_prefix reject: %v", err)
+	}
+	if !result.Rejected || result.RejectionReason != "graph_relationship_maintenance doc_id, path, or query is required" {
+		t.Fatalf("graph relationship maintenance path_prefix rejection = %+v", result)
+	}
+}
+
 func TestRetrievalTaskAuditContradictionsPlansAndRepairsExistingSynthesis(t *testing.T) {
 	t.Parallel()
 

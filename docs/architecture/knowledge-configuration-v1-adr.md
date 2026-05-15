@@ -199,6 +199,10 @@ The v1 retrieval runner actions are:
   evidence, typed candidates from canonical markdown, limited
   stale/orphaned/contradiction audit findings, graph projection freshness,
   provenance refs, and authority limits.
+- `graph_relationship_maintenance_plan` packages approval-before-write
+  canonical markdown relationship maintenance candidates with exact next
+  replace/append requests, duplicate handling, rollback/audit path, failure
+  modes, freshness, provenance refs, and `planned_no_write`.
 - `records_lookup` finds promoted generic record entities.
 - `record_entity` returns one promoted generic record entity.
 - `services_lookup` finds promoted service records.
