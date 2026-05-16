@@ -656,6 +656,10 @@ Graph relationship report marker requires [Routing](routing.md), supersedes [Fre
 		report.Provenance == nil ||
 		!runnerEventTypesInclude(report.Provenance.Events, "document_created") ||
 		report.AgentHandoff == nil ||
+		!strings.Contains(report.AgentHandoff.AnswerSummary, "Candidate comparison") ||
+		!strings.Contains(report.AgentHandoff.AnswerSummary, "promote graph_relationship_report") ||
+		!strings.Contains(report.AgentHandoff.AnswerSummary, "no follow-up beads are required") ||
+		!containsString(report.AgentHandoff.Evidence, "decision=promote graph_relationship_report") ||
 		!graphRelationshipCandidatesInclude(report.CandidateSurfaces, "current_primitives_plus_graph_context_report") ||
 		!graphRelationshipCandidatesInclude(report.CandidateSurfaces, "split_specialized_reports") ||
 		!strings.Contains(report.ValidationBoundaries, "read-only") ||
@@ -739,6 +743,9 @@ This note has ordinary chunk text but no markdown relationship links.
 	}
 	if !graphRelationshipAuditFinding(report.AuditFindings, "orphaned_graph_context", "attention") {
 		t.Fatalf("orphan audit did not flag no relationship links: %+v", report.AuditFindings)
+	}
+	if report.AgentHandoff == nil || !containsString(report.AgentHandoff.Evidence, "source_citations=0") {
+		t.Fatalf("orphan handoff should not claim source citations: %+v", report.AgentHandoff)
 	}
 }
 

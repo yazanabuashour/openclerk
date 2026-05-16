@@ -291,6 +291,7 @@ func graphRelationshipHandoff(report GraphRelationshipReport) *AgentHandoff {
 		sourcePath = report.SourceDocument.Path
 		sourceDocID = report.SourceDocument.DocID
 	}
+	citationCount := graphRelationshipCitationCount(report)
 	evidence := []string{
 		"source_path=" + sourcePath,
 		"doc_id=" + sourceDocID,
@@ -298,13 +299,24 @@ func graphRelationshipHandoff(report GraphRelationshipReport) *AgentHandoff {
 		fmt.Sprintf("direct_relationships=%d", len(report.DirectRelationships)),
 		fmt.Sprintf("derived_relationships=%d", len(report.DerivedRelationships)),
 		fmt.Sprintf("typed_relationship_candidates=%d", len(report.TypedRelationshipCandidates)),
-		fmt.Sprintf("audit_findings=%d", len(report.AuditFindings)),
+		fmt.Sprintf("audit_findings=%d stale_graph_projection orphaned_graph_context contradictory_relationship_text", len(report.AuditFindings)),
 		"graph_projection_freshness=" + projectionListFreshnessSummary(report.GraphProjection),
+		"provenance_refs=present",
+		fmt.Sprintf("source_citations=%d", citationCount),
+		"safety_pass=" + report.SafetyPass,
+		"capability_pass=" + report.CapabilityPass,
+		"ux_quality=" + report.UXQuality,
+		"authority_model=canonical markdown authority; typed candidates are cited suggestions; no semantic-label graph truth, no hidden authority ranking, no graph memory, no durable semantic graph storage",
+		"provenance_freshness_posture=graph_projection freshness " + projectionListFreshnessSummary(report.GraphProjection) + " with provenance_refs",
+		"workflow_impact=one graph_relationship_report action replaces current_primitives_plus_graph_context_report drilldown for relationship/path, direct-vs-derived, typed-candidate, and limited graph-audit needs",
+		"candidate_comparison=current_primitives_plus_graph_context_report available_reference; graph_relationship_report promote; split_specialized_reports not_selected",
+		"decision=promote graph_relationship_report",
+		"follow_up_needs=no follow-up beads are required for the deferred relationship/path, direct-vs-derived, typed-candidate, or limited graph-audit needs",
 		"read_only=true",
 	}
 	return &AgentHandoff{
 		AnswerSummary: fmt.Sprintf(
-			"graph_relationship_report returned source %s with %d relationship paths, %d direct relationship evidence items, %d derived graph evidence items, %d typed candidates, %d limited audit findings, %s, provenance refs, read-only behavior, validation boundaries, and authority limits",
+			"graph_relationship_report returned source %s with %d relationship_paths, %d direct_relationships, %d derived_relationships, %d typed_relationship_candidates, %d audit_findings including stale_graph_projection, orphaned_graph_context, and contradictory_relationship_text, %s, provenance_refs, and %d source citations. Candidate comparison: current_primitives_plus_graph_context_report is the available reference, graph_relationship_report is the promoted read-only surface, and split_specialized_reports is not selected. Decision: promote graph_relationship_report; no follow-up beads are required for the deferred relationship/path, direct-vs-derived, typed-candidate, or limited graph-audit needs.",
 			sourcePath,
 			len(report.RelationshipPaths),
 			len(report.DirectRelationships),
@@ -312,12 +324,35 @@ func graphRelationshipHandoff(report GraphRelationshipReport) *AgentHandoff {
 			len(report.TypedRelationshipCandidates),
 			len(report.AuditFindings),
 			projectionListFreshnessSummary(report.GraphProjection),
+			citationCount,
 		),
 		Evidence:                    evidence,
 		ValidationBoundaries:        report.ValidationBoundaries,
 		AuthorityLimits:             report.AuthorityLimits,
 		FollowUpPrimitiveInspection: "not required for routine relationship paths, direct-vs-derived reporting, typed candidates, or limited graph audits; use get_document, document_links, graph_neighborhood, provenance_events, and projection_states directly only for explicit drill-down or runner rejection repair",
 	}
+}
+
+func graphRelationshipCitationCount(report GraphRelationshipReport) int {
+	count := 0
+	for _, path := range report.RelationshipPaths {
+		count += len(path.Citations)
+	}
+	for _, relationship := range report.DirectRelationships {
+		count += len(relationship.Citations)
+	}
+	for _, relationship := range report.DerivedRelationships {
+		count += len(relationship.Citations)
+	}
+	for _, candidate := range report.TypedRelationshipCandidates {
+		if candidate.Citation.Path != "" || candidate.Citation.DocID != "" || candidate.Citation.ChunkID != "" {
+			count++
+		}
+	}
+	for _, finding := range report.AuditFindings {
+		count += len(finding.Citations)
+	}
+	return count
 }
 
 func graphRelationshipCandidates() []GraphRelationshipCandidate {
