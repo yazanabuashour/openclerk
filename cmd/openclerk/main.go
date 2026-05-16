@@ -195,6 +195,10 @@ func buildCapabilitiesResult() capabilitiesResult {
 					{Action: "graph_relationship_report", Purpose: "package relationship paths, direct-vs-derived evidence, typed candidates, and limited graph audits from canonical markdown authority", Posture: "read_only", Handoff: "graph_relationship.agent_handoff"},
 					{Action: "graph_relationship_maintenance_plan", Purpose: "plan approval-gated canonical markdown relationship maintenance from relationship report evidence", Posture: "read_only", Handoff: "graph_relationship_maintenance.agent_handoff"},
 					{Action: "semantic_search", Purpose: "run explicit citation-bearing semantic search through a verified provider module", Posture: "module_gated_read_only", Handoff: "semantic_search.agent_handoff", Requires: "installed enabled embedding provider module"},
+					{Action: "retrieval_eval_capture", Purpose: "append an explicit local-only sanitized retrieval eval case for replay", Posture: "opt_in_local_eval_artifact", Handoff: "retrieval_eval_capture.agent_handoff"},
+					{Action: "retrieval_eval_replay", Purpose: "replay sanitized retrieval eval cases and report Jaccard, top-1, and latency metrics", Posture: "read_only_local_eval_replay", Handoff: "retrieval_eval_replay.agent_handoff"},
+					{Action: "search_diagnostics_report", Purpose: "recommend search versus explicit semantic_search with tuning and module posture visibility", Posture: "read_only", Handoff: "search_diagnostics.agent_handoff"},
+					{Action: "maintenance_report", Purpose: "package layout, projection, relationship, duplicate, module, and git lifecycle maintenance posture without repair", Posture: "read_only", Handoff: "maintenance.agent_handoff"},
 				},
 			},
 			{
@@ -504,7 +508,7 @@ func usage(stderr io.Writer) {
 	_, _ = fmt.Fprintln(stderr, "       openclerk document --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk retrieval --help")
 	_, _ = fmt.Fprintln(stderr, "document/retrieval read strict JSON from stdin and use configured paths by default; pass --db only for an explicit dataset.")
-	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, validation_synthesis_report, ingest_source_url plan, web_search_plan, artifact_candidate_plan, git_lifecycle_report, source_discovery_report, source_audit_report, evidence_bundle_report, decision_lookup_report, duplicate_candidate_report, workflow_guide_report, memory_router_recall_report, structured_store_report, hybrid_retrieval_report, graph_context_report, graph_relationship_report, graph_relationship_maintenance_plan, semantic_search")
+	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, validation_synthesis_report, ingest_source_url plan, web_search_plan, artifact_candidate_plan, git_lifecycle_report, source_discovery_report, source_audit_report, evidence_bundle_report, decision_lookup_report, duplicate_candidate_report, workflow_guide_report, memory_router_recall_report, structured_store_report, hybrid_retrieval_report, graph_context_report, graph_relationship_report, graph_relationship_maintenance_plan, semantic_search, retrieval_eval_capture, retrieval_eval_replay, search_diagnostics_report, maintenance_report")
 }
 
 func configUsage(w io.Writer) {
@@ -606,4 +610,11 @@ func retrievalUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  Read-only. Returns graph_relationship_maintenance.agent_handoff with candidate section content, approval boundary, next replace/append requests, duplicate handling, rollback/audit path, failure modes, freshness, provenance refs, and planned_no_write status.")
 	_, _ = fmt.Fprintln(w, `  semantic_search: {"action":"semantic_search","semantic_search":{"query":"semantic recall citation quality","path_prefix":"docs/","limit":10,"provider":"ollama","embedding_model":"embeddinggemma"}}`)
 	_, _ = fmt.Fprintln(w, "  Explicit module-gated mode. Routes through an installed verified Ollama or Gemini module, returns citation-bearing semantic_search hits with cache/provider status, and leaves default search lexical.")
+	_, _ = fmt.Fprintln(w, `  retrieval_eval_capture: {"action":"retrieval_eval_capture","retrieval_eval":{"action":"search","search":{"text":"dogfood query","path_prefix":"docs/","limit":10},"capture_path":"retrieval-eval-capture.jsonl"}}`)
+	_, _ = fmt.Fprintln(w, `  retrieval_eval_replay: {"action":"retrieval_eval_replay","retrieval_replay":{"capture_path":"retrieval-eval-capture.jsonl","limit":100}}`)
+	_, _ = fmt.Fprintln(w, "  Explicit local-only eval loop. Capture is off by default, stores sanitized queries/filters/result ids/provider status/latency only, and replay reports Jaccard/top-1/latency metrics without raw vault content or writes.")
+	_, _ = fmt.Fprintln(w, `  search_diagnostics_report: {"action":"search_diagnostics_report","search_diagnostics":{"query":"semantic recall citation quality","intent":"semantic recall","path_prefix":"docs/","limit":10,"provider":"ollama"}}`)
+	_, _ = fmt.Fprintln(w, "  Read-only. Recommends search versus explicit semantic_search with visible filters, module readiness, cost/latency posture, and no default ranking change.")
+	_, _ = fmt.Fprintln(w, `  maintenance_report: {"action":"maintenance_report","maintenance":{"query":"renewal packaging notes","path_prefix":"notes/","limit":20}}`)
+	_, _ = fmt.Fprintln(w, "  Read-only. Packages layout validity, projection freshness, relationship context, duplicate risk, module posture, and git lifecycle posture; it does not run repairs, cron, or background jobs.")
 }

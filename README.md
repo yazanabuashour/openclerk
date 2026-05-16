@@ -75,7 +75,10 @@ These are the eval-worthy surfaces in priority order:
 5. **Relationship graph context** — run `graph_context_report` for a known markdown page and confirm canonical relationship text, links/backlinks, graph freshness, and provenance refs are returned without creating graph truth.
 6. **Relationship graph reports** — run `graph_relationship_report` for the same page and confirm relationship paths, direct-vs-derived evidence, typed candidates, and limited graph audit findings stay cited and read-only.
 7. **Relationship maintenance plans** — run `graph_relationship_maintenance_plan` for the same page and confirm candidate section content, next approved write requests, duplicate handling, rollback/audit path, and failure modes are returned with `planned_no_write`.
-8. **Stale projection detection** — update a source doc, then confirm downstream synthesis shows as stale before repair.
+8. **Retrieval replay loop** — explicitly run `retrieval_eval_capture` for a dogfood search, then run `retrieval_eval_replay` after changes and inspect Jaccard, top-1, and latency metrics. Capture is local-only and stores result ids/paths, not raw vault content.
+9. **Search diagnostics** — run `search_diagnostics_report` for a query and confirm it recommends default `search` versus explicit `semantic_search`, shows module readiness/cost/latency posture, and reports no default ranking change.
+10. **Maintenance report** — run `maintenance_report` for a relevant query/path prefix and confirm layout, projection freshness, relationship context, duplicate risk, module posture, and git lifecycle posture are packaged read-only with no repair.
+11. **Stale projection detection** — update a source doc, then confirm downstream synthesis shows as stale before repair.
 
 Report correctness, tool call count, and wall time. That's how the maintainers
 gate new features.

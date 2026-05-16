@@ -148,6 +148,33 @@ func graphRelationshipMaintenanceCandidatesInclude(candidates []runner.GraphRela
 	return false
 }
 
+func searchModulePostureContains(postures []runner.SearchModulePosture, provider string, readiness string) bool {
+	for _, posture := range postures {
+		if posture.Provider == provider && posture.Readiness == readiness {
+			return true
+		}
+	}
+	return false
+}
+
+func maintenanceFindingArea(findings []runner.MaintenanceFinding, area string) bool {
+	for _, finding := range findings {
+		if finding.Area == area {
+			return true
+		}
+	}
+	return false
+}
+
+func maintenanceFindingStatus(findings []runner.MaintenanceFinding, area string, status string) bool {
+	for _, finding := range findings {
+		if finding.Area == area && finding.Status == status {
+			return true
+		}
+	}
+	return false
+}
+
 func auditInspectedPath(inspections []runner.AuditProvenanceInspection, path string) bool {
 	for _, inspection := range inspections {
 		if inspection.SourcePath == path && len(inspection.EventIDs) > 0 {

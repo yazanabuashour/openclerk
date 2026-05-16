@@ -70,6 +70,9 @@ Prefer a promoted workflow action over manual primitive choreography when it mat
   `graph_relationship_maintenance_plan`; answer from handoff; review exact next replace/append request before any durable write.
 - Explicit local semantic retrieval: retrieval `semantic_search`, then answer
   from hits/handoff; requires explicit recall, loopback Ollama, no Gemini fallback, and unchanged default `search`.
+- Retrieval regression: use `retrieval_eval_capture` only when explicitly requested, then `retrieval_eval_replay`; local JSONL stores sanitized query/action/filter/result refs and provider posture, not writes/snippets/raw vault content.
+- Search diagnostics: retrieval `search_diagnostics_report`; answer from handoff with search vs explicit `semantic_search`, module readiness/cost/latency posture, and no default ranking change.
+- Maintenance posture: retrieval `maintenance_report`; answer from handoff with layout, projection, relationship, duplicate, module, and git posture; no cron, background jobs, repair, or writes.
 
 Use lower-level primitives for explicit primitive requests, advanced/manual
 cases, unsupported workflow-action inputs, and follow-up inspection after a
@@ -178,7 +181,7 @@ Run retrieval tasks with:
 openclerk retrieval
 ```
 
-Common actions are `search`, `document_links`, `graph_neighborhood`, `records_lookup`, `record_entity`, `services_lookup`, `service_record`, `decisions_lookup`, `decision_record`, `provenance_events`, `projection_states`, `audit_contradictions`, `source_audit_report`, `source_discovery_report`, `evidence_bundle_report`, `decision_lookup_report`, `duplicate_candidate_report`, `workflow_guide_report`, `memory_router_recall_report`, `structured_store_report`, `hybrid_retrieval_report`, `graph_context_report`, `graph_relationship_report`, `graph_relationship_maintenance_plan`, and `semantic_search`.
+Common actions are `search`, `document_links`, `graph_neighborhood`, `records_lookup`, `record_entity`, `services_lookup`, `service_record`, `decisions_lookup`, `decision_record`, `provenance_events`, `projection_states`, `audit_contradictions`, `source_audit_report`, `source_discovery_report`, `evidence_bundle_report`, `decision_lookup_report`, `duplicate_candidate_report`, `workflow_guide_report`, `memory_router_recall_report`, `structured_store_report`, `hybrid_retrieval_report`, `graph_context_report`, `graph_relationship_report`, `graph_relationship_maintenance_plan`, `semantic_search`, `retrieval_eval_capture`, `retrieval_eval_replay`, `search_diagnostics_report`, and `maintenance_report`.
 Use `openclerk retrieval --help` for promoted workflow-action request shape.
 
 Use search for source-grounded answers; document links/graphs for markdown

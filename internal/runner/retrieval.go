@@ -55,7 +55,7 @@ func RunRetrievalTask(ctx context.Context, config runclient.Config, request Retr
 			defer func() {
 				_ = client.Close()
 			}()
-			result, err = runRetrievalTaskWithClient(ctx, client, normalized)
+			result, err = runRetrievalTaskWithClient(ctx, client, normalized, config)
 			return err
 		})
 		if err != nil {
@@ -72,7 +72,7 @@ func RunRetrievalTask(ctx context.Context, config runclient.Config, request Retr
 		_ = client.Close()
 	}()
 
-	return runRetrievalTaskWithClient(ctx, client, normalized)
+	return runRetrievalTaskWithClient(ctx, client, normalized, config)
 }
 
 func isMutatingRetrievalAction(normalized normalizedRetrievalTaskRequest) bool {
@@ -80,7 +80,7 @@ func isMutatingRetrievalAction(normalized normalizedRetrievalTaskRequest) bool {
 		(normalized.Action == RetrievalTaskActionSourceAuditReport && normalized.SourceAudit.Mode == "repair_existing")
 }
 
-func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, normalized normalizedRetrievalTaskRequest) (RetrievalTaskResult, error) {
+func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, normalized normalizedRetrievalTaskRequest, config runclient.Config) (RetrievalTaskResult, error) {
 	switch normalized.Action {
 	case RetrievalTaskActionSearch:
 		search, err := client.Search(ctx, domain.SearchQuery{
@@ -359,6 +359,42 @@ func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, n
 			SemanticSearch: &result,
 			Summary:        fmt.Sprintf("returned %d semantic search hits", len(result.Hits)),
 		}, nil
+	case RetrievalTaskActionRetrievalEvalCapture:
+		report, err := runRetrievalEvalCapture(ctx, client, normalized.RetrievalEval)
+		if err != nil {
+			return RetrievalTaskResult{}, err
+		}
+		return RetrievalTaskResult{
+			RetrievalEvalCapture: &report,
+			Summary:              "captured sanitized retrieval eval case",
+		}, nil
+	case RetrievalTaskActionRetrievalEvalReplay:
+		report, err := runRetrievalEvalReplay(ctx, client, normalized.RetrievalReplay)
+		if err != nil {
+			return RetrievalTaskResult{}, err
+		}
+		return RetrievalTaskResult{
+			RetrievalEvalReplay: &report,
+			Summary:             fmt.Sprintf("replayed %d retrieval eval cases", report.ComparedCases),
+		}, nil
+	case RetrievalTaskActionSearchDiagnostics:
+		report, err := runSearchDiagnosticsReport(ctx, client, config, normalized.SearchDiagnostics)
+		if err != nil {
+			return RetrievalTaskResult{}, err
+		}
+		return RetrievalTaskResult{
+			SearchDiagnostics: &report,
+			Summary:           "returned search diagnostics report",
+		}, nil
+	case RetrievalTaskActionMaintenanceReport:
+		report, err := runMaintenanceReport(ctx, client, config, normalized.Maintenance)
+		if err != nil {
+			return RetrievalTaskResult{}, err
+		}
+		return RetrievalTaskResult{
+			Maintenance: &report,
+			Summary:     "returned maintenance report",
+		}, nil
 	default:
 		return RetrievalTaskResult{}, fmt.Errorf("unsupported retrieval task action %q", normalized.Action)
 	}
@@ -393,6 +429,10 @@ type normalizedRetrievalTaskRequest struct {
 	GraphRelationship            GraphRelationshipOptions
 	GraphRelationshipMaintenance GraphRelationshipMaintenanceOptions
 	SemanticSearch               SemanticSearchOptions
+	RetrievalEval                RetrievalEvalOptions
+	RetrievalReplay              RetrievalReplayOptions
+	SearchDiagnostics            SearchDiagnosticsOptions
+	Maintenance                  MaintenanceReportOptions
 	Limit                        int
 }
 
@@ -430,6 +470,10 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		GraphRelationship:            request.GraphRelationship,
 		GraphRelationshipMaintenance: request.GraphRelationshipMaintenance,
 		SemanticSearch:               request.SemanticSearch,
+		RetrievalEval:                request.RetrievalEval,
+		RetrievalReplay:              request.RetrievalReplay,
+		SearchDiagnostics:            request.SearchDiagnostics,
+		Maintenance:                  request.Maintenance,
 		Limit:                        request.Limit,
 	}
 
@@ -460,6 +504,11 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		request.GraphRelationship.Limit,
 		request.GraphRelationshipMaintenance.Limit,
 		request.SemanticSearch.Limit,
+		request.RetrievalEval.Search.Limit,
+		request.RetrievalEval.SemanticSearch.Limit,
+		request.RetrievalReplay.Limit,
+		request.SearchDiagnostics.Limit,
+		request.Maintenance.Limit,
 	); rejection != "" {
 		return normalizedRetrievalTaskRequest{}, rejection
 	}
@@ -737,6 +786,70 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 			return normalizedRetrievalTaskRequest{}, "semantic_search.embedding_output_dimensions must be greater than or equal to 0"
 		}
 		return normalized, ""
+	case RetrievalTaskActionRetrievalEvalCapture:
+		normalized.RetrievalEval.Action = strings.TrimSpace(request.RetrievalEval.Action)
+		normalized.RetrievalEval.CapturePath = strings.TrimSpace(request.RetrievalEval.CapturePath)
+		if normalized.RetrievalEval.Action == "" {
+			normalized.RetrievalEval.Action = RetrievalTaskActionSearch
+		}
+		switch normalized.RetrievalEval.Action {
+		case RetrievalTaskActionSearch:
+			nested, rejection := normalizeRetrievalTaskRequest(RetrievalTaskRequest{
+				Action: RetrievalTaskActionSearch,
+				Search: request.RetrievalEval.Search,
+			})
+			if rejection != "" {
+				return normalizedRetrievalTaskRequest{}, strings.Replace(rejection, "search.", "retrieval_eval.search.", 1)
+			}
+			normalized.RetrievalEval.Search = nested.Search
+			normalized.RetrievalEval.Search.Text = strings.TrimSpace(nested.Search.Text)
+			return normalized, ""
+		case RetrievalTaskActionSemanticSearch:
+			nested, rejection := normalizeRetrievalTaskRequest(RetrievalTaskRequest{
+				Action:         RetrievalTaskActionSemanticSearch,
+				SemanticSearch: request.RetrievalEval.SemanticSearch,
+			})
+			if rejection != "" {
+				return normalizedRetrievalTaskRequest{}, strings.Replace(rejection, "semantic_search.", "retrieval_eval.semantic_search.", 1)
+			}
+			normalized.RetrievalEval.SemanticSearch = nested.SemanticSearch
+			return normalized, ""
+		default:
+			return normalizedRetrievalTaskRequest{}, "retrieval_eval.action must be search or semantic_search"
+		}
+	case RetrievalTaskActionRetrievalEvalReplay:
+		normalized.RetrievalReplay.CapturePath = strings.TrimSpace(request.RetrievalReplay.CapturePath)
+		return normalized, ""
+	case RetrievalTaskActionSearchDiagnostics:
+		normalized.SearchDiagnostics.Query = strings.TrimSpace(request.SearchDiagnostics.Query)
+		normalized.SearchDiagnostics.Intent = strings.TrimSpace(request.SearchDiagnostics.Intent)
+		normalized.SearchDiagnostics.PathPrefix = strings.TrimSpace(request.SearchDiagnostics.PathPrefix)
+		normalized.SearchDiagnostics.MetadataKey = strings.TrimSpace(request.SearchDiagnostics.MetadataKey)
+		normalized.SearchDiagnostics.MetadataValue = strings.TrimSpace(request.SearchDiagnostics.MetadataValue)
+		normalized.SearchDiagnostics.Tag = request.SearchDiagnostics.Tag
+		normalized.SearchDiagnostics.Provider = strings.ToLower(strings.TrimSpace(request.SearchDiagnostics.Provider))
+		if normalized.SearchDiagnostics.Query == "" {
+			return normalizedRetrievalTaskRequest{}, "search_diagnostics.query is required"
+		}
+		if normalized.SearchDiagnostics.Provider != "" &&
+			normalized.SearchDiagnostics.Provider != runclient.SemanticModuleProviderOllama &&
+			normalized.SearchDiagnostics.Provider != runclient.SemanticModuleProviderGemini {
+			return normalizedRetrievalTaskRequest{}, "search_diagnostics.provider must be ollama or gemini"
+		}
+		if (normalized.SearchDiagnostics.MetadataKey == "") != (normalized.SearchDiagnostics.MetadataValue == "") {
+			return normalizedRetrievalTaskRequest{}, "search_diagnostics.metadata_key and metadata_value must be provided together"
+		}
+		if rejection := normalizeSearchDiagnosticsTagFilter(&normalized.SearchDiagnostics); rejection != "" {
+			return normalizedRetrievalTaskRequest{}, rejection
+		}
+		return normalized, ""
+	case RetrievalTaskActionMaintenanceReport:
+		normalized.Maintenance.Query = strings.TrimSpace(request.Maintenance.Query)
+		normalized.Maintenance.DuplicateQuery = strings.TrimSpace(request.Maintenance.DuplicateQuery)
+		normalized.Maintenance.DocID = strings.TrimSpace(request.Maintenance.DocID)
+		normalized.Maintenance.Path = strings.TrimSpace(request.Maintenance.Path)
+		normalized.Maintenance.PathPrefix = strings.TrimSpace(request.Maintenance.PathPrefix)
+		return normalized, ""
 	default:
 		return normalizedRetrievalTaskRequest{}, fmt.Sprintf("unsupported retrieval task action %q", action)
 	}
@@ -758,6 +871,10 @@ func normalizeSearchTagFilter(search *SearchOptions) string {
 
 func normalizeSemanticSearchTagFilter(search *SemanticSearchOptions) string {
 	return normalizeTagFilter("semantic_search", search.Tag, search.tagProvided, &search.MetadataKey, &search.MetadataValue, &search.Tag)
+}
+
+func normalizeSearchDiagnosticsTagFilter(search *SearchDiagnosticsOptions) string {
+	return normalizeTagFilter("search_diagnostics", search.Tag, search.tagProvided, &search.MetadataKey, &search.MetadataValue, &search.Tag)
 }
 
 func validateSemanticSearchOllamaURL(raw string) string {

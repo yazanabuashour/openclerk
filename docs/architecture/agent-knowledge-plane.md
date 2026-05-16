@@ -156,6 +156,11 @@ semantic_search after installation. There is no hidden provider fallback,
 committed embedding cache, durable core vector index, or default semantic
 ranking promotion.
 
+`search_diagnostics_report` is the read-only handoff for mode choice: it runs
+the current lexical baseline, reports visible filters and module
+readiness/cost/latency posture, and recommends default `search` versus
+explicit `semantic_search` without changing ranking.
+
 The direction is recorded in
 [`semantic-retrieval-building-blocks.md`](semantic-retrieval-building-blocks.md).
 It uses the LLM Wiki idea of optional search tooling over durable wiki
@@ -264,6 +269,19 @@ references using `<run-root>` placeholders. Deferred-capability evals also use
 these metrics as ergonomics evidence: an expressible workflow can still be a
 promotion candidate if natural prompts repeatedly require excessive steps,
 latency, prompt scripting, retries, or guidance dependence.
+
+For real-use retrieval regressions, `retrieval_eval_capture` and
+`retrieval_eval_replay` provide an explicit local-only loop: capture is off by
+default, stores sanitized query/action/filter/result refs with provider status
+and latency, and replay compares current output with Jaccard, top-1, and
+latency metrics. Capture rows do not store document writes, snippets, or raw
+vault content by default.
+
+For routine posture checks, `maintenance_report` packages existing read-only
+signals across layout validity, projection freshness, relationship context,
+duplicate risk, module configuration, and git lifecycle status. It is a doctor
+handoff, not cron, background repair, autonomous mutation, or a replacement for
+the underlying runner actions.
 
 The current architecture direction is recorded in
 [`eval-backed-knowledge-plane-adr.md`](eval-backed-knowledge-plane-adr.md).

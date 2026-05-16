@@ -54,6 +54,10 @@ const (
 	RetrievalTaskActionGraphRelationship            = "graph_relationship_report"
 	RetrievalTaskActionGraphRelationshipMaintenance = "graph_relationship_maintenance_plan"
 	RetrievalTaskActionSemanticSearch               = "semantic_search"
+	RetrievalTaskActionRetrievalEvalCapture         = "retrieval_eval_capture"
+	RetrievalTaskActionRetrievalEvalReplay          = "retrieval_eval_replay"
+	RetrievalTaskActionSearchDiagnostics            = "search_diagnostics_report"
+	RetrievalTaskActionMaintenanceReport            = "maintenance_report"
 )
 
 type ConfigTaskRequest struct {
@@ -328,6 +332,10 @@ type RetrievalTaskRequest struct {
 	GraphRelationship            GraphRelationshipOptions            `json:"graph_relationship,omitempty"`
 	GraphRelationshipMaintenance GraphRelationshipMaintenanceOptions `json:"graph_relationship_maintenance,omitempty"`
 	SemanticSearch               SemanticSearchOptions               `json:"semantic_search,omitempty"`
+	RetrievalEval                RetrievalEvalOptions                `json:"retrieval_eval,omitempty"`
+	RetrievalReplay              RetrievalReplayOptions              `json:"retrieval_replay,omitempty"`
+	SearchDiagnostics            SearchDiagnosticsOptions            `json:"search_diagnostics,omitempty"`
+	Maintenance                  MaintenanceReportOptions            `json:"maintenance,omitempty"`
 	Limit                        int                                 `json:"limit,omitempty"`
 }
 
@@ -367,6 +375,40 @@ type SemanticSearchOptions struct {
 	CacheDir                  string `json:"cache_dir,omitempty"`
 
 	tagProvided bool
+}
+
+type RetrievalEvalOptions struct {
+	Action         string                `json:"action,omitempty"`
+	CapturePath    string                `json:"capture_path,omitempty"`
+	Search         SearchOptions         `json:"search,omitempty"`
+	SemanticSearch SemanticSearchOptions `json:"semantic_search,omitempty"`
+}
+
+type RetrievalReplayOptions struct {
+	CapturePath string `json:"capture_path,omitempty"`
+	Limit       int    `json:"limit,omitempty"`
+}
+
+type SearchDiagnosticsOptions struct {
+	Query         string `json:"query,omitempty"`
+	Intent        string `json:"intent,omitempty"`
+	PathPrefix    string `json:"path_prefix,omitempty"`
+	MetadataKey   string `json:"metadata_key,omitempty"`
+	MetadataValue string `json:"metadata_value,omitempty"`
+	Tag           string `json:"tag,omitempty"`
+	Provider      string `json:"provider,omitempty"`
+	Limit         int    `json:"limit,omitempty"`
+
+	tagProvided bool
+}
+
+type MaintenanceReportOptions struct {
+	Query          string `json:"query,omitempty"`
+	DuplicateQuery string `json:"duplicate_query,omitempty"`
+	DocID          string `json:"doc_id,omitempty"`
+	Path           string `json:"path,omitempty"`
+	PathPrefix     string `json:"path_prefix,omitempty"`
+	Limit          int    `json:"limit,omitempty"`
 }
 
 func (options *DocumentListOptions) UnmarshalJSON(data []byte) error {
@@ -413,6 +455,23 @@ func (options *SemanticSearchOptions) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	*options = SemanticSearchOptions(decoded.semanticSearchOptionsAlias)
+	if decoded.Tag != nil {
+		options.Tag = *decoded.Tag
+		options.tagProvided = true
+	}
+	return nil
+}
+
+func (options *SearchDiagnosticsOptions) UnmarshalJSON(data []byte) error {
+	type searchDiagnosticsOptionsAlias SearchDiagnosticsOptions
+	var decoded struct {
+		searchDiagnosticsOptionsAlias
+		Tag *string `json:"tag"`
+	}
+	if err := decodeStrictJSON(data, &decoded); err != nil {
+		return err
+	}
+	*options = SearchDiagnosticsOptions(decoded.searchDiagnosticsOptionsAlias)
 	if decoded.Tag != nil {
 		options.Tag = *decoded.Tag
 		options.tagProvided = true
@@ -631,6 +690,10 @@ type RetrievalTaskResult struct {
 	GraphRelationship            *GraphRelationshipReport          `json:"graph_relationship,omitempty"`
 	GraphRelationshipMaintenance *GraphRelationshipMaintenancePlan `json:"graph_relationship_maintenance,omitempty"`
 	SemanticSearch               *SemanticSearchResult             `json:"semantic_search,omitempty"`
+	RetrievalEvalCapture         *RetrievalEvalCaptureReport       `json:"retrieval_eval_capture,omitempty"`
+	RetrievalEvalReplay          *RetrievalEvalReplayReport        `json:"retrieval_eval_replay,omitempty"`
+	SearchDiagnostics            *SearchDiagnosticsReport          `json:"search_diagnostics,omitempty"`
+	Maintenance                  *MaintenanceReport                `json:"maintenance,omitempty"`
 	Summary                      string                            `json:"summary"`
 }
 
@@ -1152,6 +1215,165 @@ type SemanticCacheStatus struct {
 	CacheRef     string `json:"cache_ref,omitempty"`
 	ChunkCount   int    `json:"chunk_count"`
 	RebuiltCount int    `json:"rebuilt_count,omitempty"`
+}
+
+type RetrievalEvalCaptureReport struct {
+	Case                 RetrievalEvalCase `json:"case"`
+	CapturePath          string            `json:"capture_path"`
+	WriteStatus          string            `json:"write_status"`
+	ValidationBoundaries string            `json:"validation_boundaries"`
+	AuthorityLimits      string            `json:"authority_limits"`
+	AgentHandoff         *AgentHandoff     `json:"agent_handoff,omitempty"`
+}
+
+type RetrievalEvalReplayReport struct {
+	CapturePath              string                    `json:"capture_path"`
+	CapturedCases            int                       `json:"captured_cases"`
+	ComparedCases            int                       `json:"compared_cases"`
+	AverageJaccard           float64                   `json:"average_jaccard"`
+	Top1MatchRate            float64                   `json:"top1_match_rate"`
+	AverageCapturedLatencyMS float64                   `json:"average_captured_latency_ms"`
+	AverageReplayLatencyMS   float64                   `json:"average_replay_latency_ms"`
+	Cases                    []RetrievalEvalReplayCase `json:"cases,omitempty"`
+	ValidationBoundaries     string                    `json:"validation_boundaries"`
+	AuthorityLimits          string                    `json:"authority_limits"`
+	AgentHandoff             *AgentHandoff             `json:"agent_handoff,omitempty"`
+}
+
+type RetrievalEvalCase struct {
+	SchemaVersion string                      `json:"schema_version"`
+	CaseID        string                      `json:"case_id"`
+	Action        string                      `json:"action"`
+	Query         string                      `json:"query"`
+	Filters       RetrievalEvalFilters        `json:"filters"`
+	Results       []RetrievalEvalResultRef    `json:"results,omitempty"`
+	Provider      RetrievalEvalProviderStatus `json:"provider"`
+	LatencyMS     float64                     `json:"latency_ms"`
+	CapturedAt    time.Time                   `json:"captured_at"`
+}
+
+type RetrievalEvalFilters struct {
+	PathPrefix    string `json:"path_prefix,omitempty"`
+	MetadataKey   string `json:"metadata_key,omitempty"`
+	MetadataValue string `json:"metadata_value,omitempty"`
+	Tag           string `json:"tag,omitempty"`
+	Limit         int    `json:"limit,omitempty"`
+}
+
+type RetrievalEvalResultRef struct {
+	Rank    int    `json:"rank"`
+	DocID   string `json:"doc_id"`
+	ChunkID string `json:"chunk_id"`
+	Path    string `json:"path"`
+}
+
+type RetrievalEvalProviderStatus struct {
+	Mode         string `json:"mode"`
+	Provider     string `json:"provider,omitempty"`
+	Status       string `json:"status"`
+	Model        string `json:"model,omitempty"`
+	CacheStatus  string `json:"cache_status,omitempty"`
+	SearchStatus string `json:"search_status,omitempty"`
+}
+
+type RetrievalEvalReplayCase struct {
+	CaseID            string                   `json:"case_id"`
+	Action            string                   `json:"action"`
+	Query             string                   `json:"query"`
+	CapturedAt        time.Time                `json:"captured_at"`
+	CapturedResults   []RetrievalEvalResultRef `json:"captured_results,omitempty"`
+	CurrentResults    []RetrievalEvalResultRef `json:"current_results,omitempty"`
+	Jaccard           float64                  `json:"jaccard"`
+	Top1Match         bool                     `json:"top1_match"`
+	CapturedLatencyMS float64                  `json:"captured_latency_ms"`
+	ReplayLatencyMS   float64                  `json:"replay_latency_ms"`
+	Status            string                   `json:"status"`
+}
+
+type SearchDiagnosticsReport struct {
+	Query                  string                `json:"query"`
+	Intent                 string                `json:"intent,omitempty"`
+	PathPrefix             string                `json:"path_prefix,omitempty"`
+	Tag                    string                `json:"tag,omitempty"`
+	MetadataKey            string                `json:"metadata_key,omitempty"`
+	MetadataValue          string                `json:"metadata_value,omitempty"`
+	LexicalSearch          *SearchResult         `json:"lexical_search,omitempty"`
+	RecommendedAction      string                `json:"recommended_action"`
+	RecommendationReason   string                `json:"recommendation_reason"`
+	ModePostures           []SearchModePosture   `json:"mode_postures,omitempty"`
+	ModulePostures         []SearchModulePosture `json:"module_postures,omitempty"`
+	TuningVisibility       []SearchTuningKnob    `json:"tuning_visibility,omitempty"`
+	NoDefaultRankingChange bool                  `json:"no_default_ranking_change"`
+	CostPosture            string                `json:"cost_posture"`
+	LatencyPosture         string                `json:"latency_posture"`
+	ValidationBoundaries   string                `json:"validation_boundaries"`
+	AuthorityLimits        string                `json:"authority_limits"`
+	AgentHandoff           *AgentHandoff         `json:"agent_handoff,omitempty"`
+}
+
+type SearchModePosture struct {
+	Mode           string `json:"mode"`
+	Status         string `json:"status"`
+	Ranking        string `json:"ranking"`
+	UseWhen        string `json:"use_when"`
+	CostPosture    string `json:"cost_posture"`
+	LatencyPosture string `json:"latency_posture"`
+	Boundary       string `json:"boundary"`
+}
+
+type SearchModulePosture struct {
+	Provider           string `json:"provider"`
+	ModuleName         string `json:"module_name,omitempty"`
+	Enabled            bool   `json:"enabled"`
+	Readiness          string `json:"readiness"`
+	VerificationStatus string `json:"verification_status,omitempty"`
+	CostPosture        string `json:"cost_posture"`
+	LatencyPosture     string `json:"latency_posture"`
+	ErrorSummary       string `json:"error_summary,omitempty"`
+}
+
+type SearchTuningKnob struct {
+	Knob       string `json:"knob"`
+	Value      string `json:"value"`
+	Visibility string `json:"visibility"`
+	Boundary   string `json:"boundary"`
+}
+
+type MaintenanceReport struct {
+	Query                string                     `json:"query,omitempty"`
+	DuplicateQuery       string                     `json:"duplicate_query,omitempty"`
+	Path                 string                     `json:"path,omitempty"`
+	DocID                string                     `json:"doc_id,omitempty"`
+	PathPrefix           string                     `json:"path_prefix,omitempty"`
+	Layout               *KnowledgeLayout           `json:"layout,omitempty"`
+	Projections          *ProjectionStateList       `json:"projections,omitempty"`
+	RelationshipContext  *GraphRelationshipReport   `json:"relationship_context,omitempty"`
+	DuplicateCandidate   *DuplicateCandidateReport  `json:"duplicate_candidate,omitempty"`
+	ModulePostures       []MaintenanceModulePosture `json:"module_postures,omitempty"`
+	GitLifecycle         *GitLifecycleReport        `json:"git_lifecycle,omitempty"`
+	Findings             []MaintenanceFinding       `json:"findings,omitempty"`
+	WriteStatus          string                     `json:"write_status"`
+	Recommendation       string                     `json:"recommendation"`
+	ValidationBoundaries string                     `json:"validation_boundaries"`
+	AuthorityLimits      string                     `json:"authority_limits"`
+	AgentHandoff         *AgentHandoff              `json:"agent_handoff,omitempty"`
+}
+
+type MaintenanceModulePosture struct {
+	Kind               string `json:"kind"`
+	Provider           string `json:"provider"`
+	ModuleName         string `json:"module_name,omitempty"`
+	Enabled            bool   `json:"enabled"`
+	VerificationStatus string `json:"verification_status,omitempty"`
+	Posture            string `json:"posture"`
+}
+
+type MaintenanceFinding struct {
+	Area     string   `json:"area"`
+	Status   string   `json:"status"`
+	Summary  string   `json:"summary"`
+	Evidence []string `json:"evidence,omitempty"`
+	NextStep string   `json:"next_step,omitempty"`
 }
 
 type AuditContradictionsResult struct {

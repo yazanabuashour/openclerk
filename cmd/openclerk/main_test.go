@@ -58,6 +58,10 @@ func TestCapabilitiesManifestShowsBuildingBlocks(t *testing.T) {
 		!hasCapabilityAction(result, "retrieval", "graph_relationship_report") ||
 		!hasCapabilityAction(result, "retrieval", "graph_relationship_maintenance_plan") ||
 		!hasCapabilityAction(result, "retrieval", "semantic_search") ||
+		!hasCapabilityAction(result, "retrieval", "retrieval_eval_capture") ||
+		!hasCapabilityAction(result, "retrieval", "retrieval_eval_replay") ||
+		!hasCapabilityAction(result, "retrieval", "search_diagnostics_report") ||
+		!hasCapabilityAction(result, "retrieval", "maintenance_report") ||
 		!hasCapabilityAction(result, "module", "install_module") {
 		t.Fatalf("capabilities missing expected document/retrieval/module actions: %+v", result.Domains)
 	}
@@ -112,7 +116,7 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 		{
 			name: "retrieval",
 			args: []string{"retrieval", "--help"},
-			want: []string{"document_links", "graph_neighborhood", "canonical markdown remains relationship authority", "records_lookup", "services_lookup", "decisions_lookup", "canonical markdown with citations and freshness", "source_discovery_report", "source_audit_report", "evidence_bundle_report", "decision_lookup_report", "duplicate_candidate_report", "workflow_guide_report", "memory_router_recall_report", "structured_store_report", "hybrid_retrieval_report", "graph_context_report", "graph_relationship_report", "graph_relationship_maintenance_plan", "semantic_search", "agent_handoff", "Read-only"},
+			want: []string{"document_links", "graph_neighborhood", "canonical markdown remains relationship authority", "records_lookup", "services_lookup", "decisions_lookup", "canonical markdown with citations and freshness", "source_discovery_report", "source_audit_report", "evidence_bundle_report", "decision_lookup_report", "duplicate_candidate_report", "workflow_guide_report", "memory_router_recall_report", "structured_store_report", "hybrid_retrieval_report", "graph_context_report", "graph_relationship_report", "graph_relationship_maintenance_plan", "semantic_search", "retrieval_eval_capture", "retrieval_eval_replay", "search_diagnostics_report", "maintenance_report", "no default ranking change", "agent_handoff", "Read-only"},
 		},
 		{
 			name: "module",
@@ -427,6 +431,72 @@ func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 	}
 	if searchResult.Search == nil || len(searchResult.Search.Hits) == 0 {
 		t.Fatalf("search result = %+v", searchResult)
+	}
+
+	capturePath := filepath.Join(t.TempDir(), "retrieval-eval.jsonl")
+	captureRequestBytes, err := json.Marshal(runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionRetrievalEvalCapture,
+		RetrievalEval: runner.RetrievalEvalOptions{
+			Action:      runner.RetrievalTaskActionSearch,
+			CapturePath: capturePath,
+			Search:      runner.SearchOptions{Text: "runner", Limit: 10},
+		},
+	})
+	if err != nil {
+		t.Fatalf("marshal retrieval eval capture request: %v", err)
+	}
+	var captureResult runner.RetrievalTaskResult
+	code, stderr = runJSON(t, []string{"retrieval", "--db", dbPath}, string(captureRequestBytes), &captureResult)
+	if code != 0 {
+		t.Fatalf("retrieval eval capture exit = %d stderr=%s", code, stderr)
+	}
+	if captureResult.RetrievalEvalCapture == nil ||
+		captureResult.RetrievalEvalCapture.WriteStatus != "local_eval_artifact_appended" ||
+		captureResult.RetrievalEvalCapture.AgentHandoff == nil {
+		t.Fatalf("retrieval eval capture result = %+v", captureResult)
+	}
+
+	replayRequestBytes, err := json.Marshal(runner.RetrievalTaskRequest{
+		Action:          runner.RetrievalTaskActionRetrievalEvalReplay,
+		RetrievalReplay: runner.RetrievalReplayOptions{CapturePath: capturePath, Limit: 10},
+	})
+	if err != nil {
+		t.Fatalf("marshal retrieval eval replay request: %v", err)
+	}
+	var replayResult runner.RetrievalTaskResult
+	code, stderr = runJSON(t, []string{"retrieval", "--db", dbPath}, string(replayRequestBytes), &replayResult)
+	if code != 0 {
+		t.Fatalf("retrieval eval replay exit = %d stderr=%s", code, stderr)
+	}
+	if replayResult.RetrievalEvalReplay == nil ||
+		replayResult.RetrievalEvalReplay.ComparedCases != 1 ||
+		replayResult.RetrievalEvalReplay.AgentHandoff == nil {
+		t.Fatalf("retrieval eval replay result = %+v", replayResult)
+	}
+
+	searchDiagnosticsRequest := `{"action":"search_diagnostics_report","search_diagnostics":{"query":"runner","intent":"semantic recall","limit":10,"provider":"ollama"}}`
+	var searchDiagnosticsResult runner.RetrievalTaskResult
+	code, stderr = runJSON(t, []string{"retrieval", "--db", dbPath}, searchDiagnosticsRequest, &searchDiagnosticsResult)
+	if code != 0 {
+		t.Fatalf("search diagnostics exit = %d stderr=%s", code, stderr)
+	}
+	if searchDiagnosticsResult.SearchDiagnostics == nil ||
+		searchDiagnosticsResult.SearchDiagnostics.RecommendedAction == "" ||
+		!searchDiagnosticsResult.SearchDiagnostics.NoDefaultRankingChange ||
+		searchDiagnosticsResult.SearchDiagnostics.AgentHandoff == nil {
+		t.Fatalf("search diagnostics result = %+v", searchDiagnosticsResult)
+	}
+
+	maintenanceRequest := `{"action":"maintenance_report","maintenance":{"query":"runner","path_prefix":"notes/","limit":20}}`
+	var maintenanceResult runner.RetrievalTaskResult
+	code, stderr = runJSON(t, []string{"retrieval", "--db", dbPath}, maintenanceRequest, &maintenanceResult)
+	if code != 0 {
+		t.Fatalf("maintenance report exit = %d stderr=%s", code, stderr)
+	}
+	if maintenanceResult.Maintenance == nil ||
+		maintenanceResult.Maintenance.WriteStatus != "read_only_no_repair" ||
+		maintenanceResult.Maintenance.AgentHandoff == nil {
+		t.Fatalf("maintenance report result = %+v", maintenanceResult)
 	}
 
 	recallRequest := `{"action":"memory_router_recall_report","memory_router_recall":{"query":"memory router temporal recall session promotion feedback weighting routing canonical docs","limit":10}}`

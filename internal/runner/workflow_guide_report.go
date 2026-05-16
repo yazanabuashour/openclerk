@@ -160,6 +160,33 @@ func selectWorkflowGuideCandidate(intent string) workflowGuideSelection {
 			DoNotUseFor:    []string{"vector-ranked answers", "embedding-store evidence", "default ranking changes"},
 			HandoffSummary: "Use retrieval hybrid_retrieval_report and do not claim vector-ranked retrieval from it.",
 		}
+	case containsAny(normalized, "search diagnostics", "search mode", "tuning", "which search", "semantic_search readiness", "module readiness"):
+		return workflowGuideSelection{
+			Surface:        "search_diagnostics_report",
+			RunnerDomain:   "retrieval",
+			RequestShape:   `{"action":"search_diagnostics_report","search_diagnostics":{"query":"...","intent":"...","limit":10,"provider":"ollama"}}`,
+			UseWhen:        "use for read-only search versus explicit semantic_search selection, tuning visibility, and provider/module readiness posture",
+			DoNotUseFor:    []string{"answering source-sensitive questions", "executing semantic modules", "default ranking changes"},
+			HandoffSummary: "Use retrieval search_diagnostics_report to choose search versus explicit semantic_search; then run the recommended retrieval action for evidence.",
+		}
+	case containsAny(normalized, "retrieval eval", "eval capture", "retrieval replay", "replay search", "regression test retrieval"):
+		return workflowGuideSelection{
+			Surface:        "retrieval_eval_capture/retrieval_eval_replay",
+			RunnerDomain:   "retrieval",
+			RequestShape:   `{"action":"retrieval_eval_capture","retrieval_eval":{"action":"search","search":{"text":"...","limit":10}}} then {"action":"retrieval_eval_replay","retrieval_replay":{"limit":100}}`,
+			UseWhen:        "use for explicit local-only sanitized retrieval regression capture and replay",
+			DoNotUseFor:    []string{"document writes", "raw vault content capture", "background eval jobs", "default ranking changes"},
+			HandoffSummary: "Use retrieval_eval_capture only when explicitly requested, and retrieval_eval_replay after retrieval changes to compare Jaccard/top-1/latency.",
+		}
+	case containsAny(normalized, "maintenance", "doctor", "health report", "maintenance report"):
+		return workflowGuideSelection{
+			Surface:        "maintenance_report",
+			RunnerDomain:   "retrieval",
+			RequestShape:   `{"action":"maintenance_report","maintenance":{"query":"...","path_prefix":"notes/","limit":20}}`,
+			UseWhen:        "use for a read-only doctor report across layout, projection freshness, relationship context, duplicate risk, module posture, and git lifecycle posture",
+			DoNotUseFor:    []string{"repairs", "cron/background jobs", "autonomous writes"},
+			HandoffSummary: "Use retrieval maintenance_report for consolidated read-only posture, then follow up with named runner actions and approved writes only where needed.",
+		}
 	case containsAny(normalized, "decision-like", "decision like", "decision record", "decision lookup", "adr lookup"):
 		return workflowGuideSelection{
 			Surface:        "decision_lookup_report",

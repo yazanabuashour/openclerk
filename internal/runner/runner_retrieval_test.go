@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/yazanabuashour/openclerk/internal/runclient"
 	"github.com/yazanabuashour/openclerk/internal/runner"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -180,6 +181,194 @@ func TestRetrievalTaskDuplicateCandidateReportIsReadOnly(t *testing.T) {
 	}
 	if len(list.Documents) != 2 {
 		t.Fatalf("duplicate report mutated documents: %+v", list.Documents)
+	}
+}
+
+func TestRetrievalEvalCaptureAndReplayAreSanitizedAndLocal(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "notes/eval/retrieval-target.md", "Retrieval Eval Target", "# Retrieval Eval Target\n\n## Summary\nRetrieval eval marker appears here. Raw vault body secret should not enter capture rows.\n")
+	createDocument(t, ctx, config, "notes/eval/other.md", "Other Eval Note", "# Other Eval Note\n\n## Summary\nAdjacent retrieval eval content.\n")
+	capturePath := filepath.Join(t.TempDir(), "captures", "retrieval-eval.jsonl")
+
+	capture, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionRetrievalEvalCapture,
+		RetrievalEval: runner.RetrievalEvalOptions{
+			Action:      runner.RetrievalTaskActionSearch,
+			CapturePath: capturePath,
+			Search: runner.SearchOptions{
+				Text:       "Retrieval   eval marker",
+				PathPrefix: "notes/eval/",
+				Limit:      10,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("capture retrieval eval: %v", err)
+	}
+	if capture.RetrievalEvalCapture == nil ||
+		capture.RetrievalEvalCapture.WriteStatus != "local_eval_artifact_appended" ||
+		capture.RetrievalEvalCapture.Case.Query != "Retrieval eval marker" ||
+		len(capture.RetrievalEvalCapture.Case.Results) == 0 ||
+		capture.RetrievalEvalCapture.AgentHandoff == nil {
+		t.Fatalf("capture report = %+v", capture)
+	}
+	content, err := os.ReadFile(capturePath)
+	if err != nil {
+		t.Fatalf("read capture path: %v", err)
+	}
+	if strings.Contains(string(content), "Raw vault body secret") ||
+		strings.Contains(string(content), "Snippet") {
+		t.Fatalf("capture row leaked raw body/snippet content: %s", string(content))
+	}
+
+	replay, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action:          runner.RetrievalTaskActionRetrievalEvalReplay,
+		RetrievalReplay: runner.RetrievalReplayOptions{CapturePath: capturePath, Limit: 10},
+	})
+	if err != nil {
+		t.Fatalf("replay retrieval eval: %v", err)
+	}
+	if replay.RetrievalEvalReplay == nil ||
+		replay.RetrievalEvalReplay.ComparedCases != 1 ||
+		replay.RetrievalEvalReplay.AverageJaccard != 1 ||
+		replay.RetrievalEvalReplay.Top1MatchRate != 1 ||
+		replay.RetrievalEvalReplay.AgentHandoff == nil {
+		t.Fatalf("replay report = %+v", replay)
+	}
+
+	paths, err := runclient.ResolvePaths(config)
+	if err != nil {
+		t.Fatalf("resolve paths: %v", err)
+	}
+	_, err = runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionRetrievalEvalCapture,
+		RetrievalEval: runner.RetrievalEvalOptions{
+			Action:      runner.RetrievalTaskActionSearch,
+			CapturePath: filepath.Join(paths.VaultRoot, "capture.jsonl"),
+			Search:      runner.SearchOptions{Text: "Retrieval eval marker", Limit: 10},
+		},
+	})
+	if err == nil || !strings.Contains(err.Error(), "must not be inside the vault root") {
+		t.Fatalf("capture inside vault err = %v, want vault-root rejection", err)
+	}
+}
+
+func TestRetrievalEvalCaptureExecutesStoredSanitizedQuery(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "notes/eval/long-query.md", "Long Query Target", "# Long Query Target\n\n## Summary\nOnly the tail marker should match this document.\n")
+	capturePath := filepath.Join(t.TempDir(), "captures", "long-query.jsonl")
+	longQuery := strings.Repeat("prefix ", 60) + "tail marker"
+
+	capture, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionRetrievalEvalCapture,
+		RetrievalEval: runner.RetrievalEvalOptions{
+			Action:      runner.RetrievalTaskActionSearch,
+			CapturePath: capturePath,
+			Search:      runner.SearchOptions{Text: longQuery, Limit: 10},
+		},
+	})
+	if err != nil {
+		t.Fatalf("capture long query: %v", err)
+	}
+	if capture.RetrievalEvalCapture == nil ||
+		len([]rune(capture.RetrievalEvalCapture.Case.Query)) != 240 ||
+		strings.Contains(capture.RetrievalEvalCapture.Case.Query, "tail marker") ||
+		len(capture.RetrievalEvalCapture.Case.Results) != 0 {
+		t.Fatalf("long-query capture = %+v", capture.RetrievalEvalCapture)
+	}
+
+	replay, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action:          runner.RetrievalTaskActionRetrievalEvalReplay,
+		RetrievalReplay: runner.RetrievalReplayOptions{CapturePath: capturePath, Limit: 10},
+	})
+	if err != nil {
+		t.Fatalf("replay long query: %v", err)
+	}
+	if replay.RetrievalEvalReplay == nil ||
+		replay.RetrievalEvalReplay.ComparedCases != 1 ||
+		replay.RetrievalEvalReplay.AverageJaccard != 1 ||
+		replay.RetrievalEvalReplay.Top1MatchRate != 1 {
+		t.Fatalf("long-query replay = %+v", replay.RetrievalEvalReplay)
+	}
+}
+
+func TestSearchDiagnosticsReportShowsModeAndModulePosture(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "docs/search/diagnostics.md", "Search Diagnostics", "# Search Diagnostics\n\n## Summary\nSemantic recall citation quality diagnostic marker.\n")
+
+	result, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearchDiagnostics,
+		SearchDiagnostics: runner.SearchDiagnosticsOptions{
+			Query:      "Semantic recall citation quality diagnostic marker",
+			Intent:     "semantic recall",
+			PathPrefix: "docs/search/",
+			Provider:   "ollama",
+			Limit:      10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("search diagnostics: %v", err)
+	}
+	report := result.SearchDiagnostics
+	if report == nil ||
+		report.RecommendedAction != runner.RetrievalTaskActionSearch ||
+		!report.NoDefaultRankingChange ||
+		report.LexicalSearch == nil ||
+		len(report.LexicalSearch.Hits) == 0 ||
+		len(report.ModePostures) < 2 ||
+		!searchModulePostureContains(report.ModulePostures, "ollama", "not_installed") ||
+		report.AgentHandoff == nil ||
+		!strings.Contains(report.ValidationBoundaries, "does not execute semantic modules") {
+		t.Fatalf("search diagnostics report = %+v", report)
+	}
+}
+
+func TestMaintenanceReportPackagesExistingChecksWithoutRepair(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	createDocument(t, ctx, config, "notes/maintenance/related.md", "Maintenance Related", "# Maintenance Related\n\n## Summary\nRelated maintenance evidence.\n")
+	createDocument(t, ctx, config, "notes/maintenance/source.md", "Maintenance Source", "# Maintenance Source\n\n## Summary\nMaintenance duplicate relationship marker supersedes and superseded by [Maintenance Related](related.md).\n")
+
+	result, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionMaintenanceReport,
+		Maintenance: runner.MaintenanceReportOptions{
+			Query:      "Maintenance duplicate relationship marker",
+			PathPrefix: "notes/maintenance/",
+			Limit:      20,
+		},
+	})
+	if err != nil {
+		t.Fatalf("maintenance report: %v", err)
+	}
+	report := result.Maintenance
+	if report == nil ||
+		report.WriteStatus != "read_only_no_repair" ||
+		report.Layout == nil ||
+		report.Projections == nil ||
+		report.RelationshipContext == nil ||
+		report.DuplicateCandidate == nil ||
+		report.GitLifecycle == nil ||
+		report.AgentHandoff == nil ||
+		!maintenanceFindingArea(report.Findings, "layout") ||
+		!maintenanceFindingArea(report.Findings, "projection_freshness") ||
+		!maintenanceFindingArea(report.Findings, "relationship_context") ||
+		!maintenanceFindingStatus(report.Findings, "relationship_context", "attention") ||
+		!maintenanceFindingArea(report.Findings, "duplicate_risk") ||
+		!maintenanceFindingArea(report.Findings, "module_config") ||
+		!maintenanceFindingArea(report.Findings, "git_lifecycle") ||
+		!strings.Contains(report.ValidationBoundaries, "does not create cron jobs") {
+		t.Fatalf("maintenance report = %+v", report)
 	}
 }
 
