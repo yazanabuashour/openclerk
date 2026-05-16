@@ -1,22 +1,22 @@
 {
   "metadata": {
-    "generated_at": "2026-05-15T21:37:37.436768Z",
+    "generated_at": "2026-05-16T10:47:01.028574Z",
     "model": "gpt-5.4-mini",
     "reasoning_effort": "medium",
     "harness": "codex exec --json --full-auto from throwaway run directories; single-turn scenarios use --ephemeral and multi-turn scenarios resume one persisted eval session",
     "configured_parallelism": 4,
     "cache_mode": "shared",
-    "cache_prewarm_seconds": 21.8,
-    "harness_elapsed_seconds": 49.91,
-    "effective_parallel_speedup": 0.39,
-    "parallel_efficiency": 0.1,
+    "cache_prewarm_seconds": 40.69,
+    "harness_elapsed_seconds": 65.42,
+    "effective_parallel_speedup": 0.23,
+    "parallel_efficiency": 0.06,
     "phase_totals": {
-      "copy_repo_seconds": 0.1,
-      "install_variant_seconds": 8.38,
-      "seed_data_seconds": 0.07,
-      "agent_run_seconds": 19.53,
+      "copy_repo_seconds": 0.06,
+      "install_variant_seconds": 9.49,
+      "seed_data_seconds": 0.06,
+      "agent_run_seconds": 15.09,
       "verify_seconds": 0.02,
-      "total_seconds": 28.11
+      "total_seconds": 24.73
     },
     "run_root_artifact_reference": "\u003crun-root\u003e",
     "raw_log_placeholder": "\u003crun-root\u003e/\u003cvariant\u003e/\u003cscenario\u003e/turn-N/events.jsonl",
@@ -39,14 +39,14 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 19.53,
+      "wall_seconds": 15.09,
       "phase_timings": {
-        "copy_repo_seconds": 0.1,
-        "install_variant_seconds": 8.38,
-        "seed_data_seconds": 0.07,
-        "agent_run_seconds": 19.53,
+        "copy_repo_seconds": 0.06,
+        "install_variant_seconds": 9.49,
+        "seed_data_seconds": 0.06,
+        "agent_run_seconds": 15.09,
         "verify_seconds": 0.02,
-        "total_seconds": 28.11
+        "total_seconds": 24.73
       },
       "metrics": {
         "assistant_calls": 2,
@@ -117,10 +117,10 @@
         "workflow_action_first_command_index": 1,
         "workflow_action_call_count": 1,
         "usage_exposed": true,
-        "input_tokens": 46148,
-        "cached_input_tokens": 41216,
-        "non_cached_input_tokens": 4932,
-        "output_tokens": 774,
+        "input_tokens": 46216,
+        "cached_input_tokens": 41728,
+        "non_cached_input_tokens": 4488,
+        "output_tokens": 851,
         "event_type_counts": {
           "item.completed": 3,
           "item.started": 1,
@@ -142,7 +142,7 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 19.53,
+          "wall_seconds": 15.09,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 2,
@@ -213,10 +213,10 @@
             "workflow_action_first_command_index": 1,
             "workflow_action_call_count": 1,
             "usage_exposed": true,
-            "input_tokens": 46148,
-            "cached_input_tokens": 41216,
-            "non_cached_input_tokens": 4932,
-            "output_tokens": 774,
+            "input_tokens": 46216,
+            "cached_input_tokens": 41728,
+            "non_cached_input_tokens": 4488,
+            "output_tokens": 851,
             "event_type_counts": {
               "item.completed": 3,
               "item.started": 1,
@@ -240,8 +240,8 @@
       ],
       "prompt_summary": "Use the configured local OpenClerk data path. This is a valid runner-backed request and all required fields are present. The installed openclerk binary is on PATH and the data path is configured; do not claim the runner or action is unavailable. Start with the matching promoted workflow action instead of setup discovery. Do not use openclerk --help, openclerk document --help, openclerk retrieval --help, openclerk module --help, openclerk capabilities, web search, repo search, local file search, skill-file inspection, source inspection, direct vault edits, SQLite, source-built runners, HTTP/MCP, memory transport, vector DB, hidden authority ranking, positional action flags, blank runner invocations, or follow-up primitives unless the workflow action rejects. Route hint: command family openclerk retrieval; invocation interface stdin JSON; top-level action evidence_bundle_report; nested object evidence_bundle; required fields query, entity_id, projection, limit. Required field values: query = AgentOps Escalation Policy; entity_id = agentops-escalation-policy; projection = records; limit = 10. Use the promoted evidence_bundle_report workflow action to give me a read-only evidence bundle for the AgentOps Escalation Policy record evidence with records projection freshness, citations, and provenance. No exact decision_id is supplied or needed. In the final answer, use agent_handoff/evidence to mention evidence_bundle_report, records/policies/agentops-escalation-policy.md, citations, provenance, projection freshness, validation boundaries, authority limits, read-only behavior, and repo-relative paths only.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/evidence-bundle-workflow-action-natural/turn-1/events.jsonl",
-      "started_at": "2026-05-15T21:37:09.32512Z",
-      "completed_at": "2026-05-15T21:37:37.43552Z"
+      "started_at": "2026-05-16T10:46:36.296543Z",
+      "completed_at": "2026-05-16T10:47:01.027592Z"
     }
   ],
   "production_gate": {
@@ -305,7 +305,7 @@
         "tool_calls": 1,
         "command_executions": 1,
         "assistant_calls": 2,
-        "wall_seconds": 19.53,
+        "wall_seconds": 15.09,
         "prompt_specificity": "natural-user-intent",
         "ux": "completed",
         "brittleness": "normal",
