@@ -177,6 +177,24 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 			ArtifactPlan: &plan,
 			Summary:      artifactCandidatePlanSummary(plan),
 		}, nil
+	case DocumentTaskActionPlanMoveDocument:
+		plan, err := client.PlanMoveDocument(ctx, toDomainMoveDocumentInput(normalized.Move))
+		if err != nil {
+			return DocumentTaskResult{}, err
+		}
+		if rejection := rejectMovePlanForAction(normalized.Action, plan); rejection != "" {
+			return DocumentTaskResult{
+				Rejected:        true,
+				RejectionReason: rejection,
+				MovePlan:        ptr(toDocumentMovePlan(plan)),
+				Summary:         rejection,
+			}, nil
+		}
+		converted := toDocumentMovePlan(plan)
+		return DocumentTaskResult{
+			MovePlan: &converted,
+			Summary:  fmt.Sprintf("planned move from %s to %s", converted.SourcePath, converted.TargetPath),
+		}, nil
 	case DocumentTaskActionInspectLayout:
 		layout, err := inspectKnowledgeLayout(ctx, client)
 		if err != nil {
@@ -202,7 +220,10 @@ func isMutatingDocumentAction(normalized normalizedDocumentTaskRequest) bool {
 		DocumentTaskActionCompileSynthesis,
 		DocumentTaskActionValidationSynthesis,
 		DocumentTaskActionAppend,
-		DocumentTaskActionReplaceSection:
+		DocumentTaskActionReplaceSection,
+		DocumentTaskActionMoveDocument,
+		DocumentTaskActionRenameDocument,
+		DocumentTaskActionPromoteCandidate:
 		return true
 	case DocumentTaskActionIngestSourceURL:
 		return normalized.Source.Mode != "plan"
@@ -311,9 +332,66 @@ func runMutatingDocumentTask(ctx context.Context, client *runclient.Client, norm
 			Document: &converted,
 			Summary:  fmt.Sprintf("replaced section in document %s", converted.DocID),
 		}, nil
+	case DocumentTaskActionMoveDocument, DocumentTaskActionRenameDocument, DocumentTaskActionPromoteCandidate:
+		plan, err := client.PlanMoveDocument(ctx, toDomainMoveDocumentInput(normalized.Move))
+		if err != nil {
+			return DocumentTaskResult{}, err
+		}
+		if rejection := rejectMovePlanForAction(normalized.Action, plan); rejection != "" {
+			return DocumentTaskResult{
+				Rejected:        true,
+				RejectionReason: rejection,
+				MovePlan:        ptr(toDocumentMovePlan(plan)),
+				Summary:         rejection,
+			}, nil
+		}
+		moved, err := client.MoveDocument(ctx, toDomainMoveDocumentInput(normalized.Move))
+		if err != nil {
+			return DocumentTaskResult{}, err
+		}
+		converted := toDocumentMoveResult(moved)
+		return DocumentTaskResult{
+			MoveResult: &converted,
+			Summary:    fmt.Sprintf("moved document from %s to %s", converted.Plan.SourcePath, converted.Plan.TargetPath),
+		}, nil
 	default:
 		return DocumentTaskResult{}, fmt.Errorf("unsupported mutating document task action %q", normalized.Action)
 	}
+}
+
+func toDomainMoveDocumentInput(options MoveDocumentOptions) domain.MoveDocumentInput {
+	updateLinks := true
+	if options.UpdateLinks != nil {
+		updateLinks = *options.UpdateLinks
+	}
+	return domain.MoveDocumentInput{
+		DocID:         options.DocID,
+		Path:          options.Path,
+		TargetPath:    options.TargetPath,
+		UpdateLinks:   updateLinks,
+		UpdateIndexes: options.UpdateIndexes,
+	}
+}
+
+func rejectMovePlanForAction(action string, plan domain.DocumentMovePlan) string {
+	switch action {
+	case DocumentTaskActionRenameDocument:
+		if path.Dir(plan.SourcePath) != path.Dir(plan.TargetPath) {
+			return "rename_document target_path must stay in the same directory as the current path"
+		}
+	case DocumentTaskActionPromoteCandidate:
+		if !strings.HasPrefix(plan.SourcePath, "notes/candidates/") {
+			return "promote_candidate source path must be under notes/candidates/"
+		}
+		if strings.HasPrefix(plan.TargetPath, "notes/candidates/") {
+			return "promote_candidate target_path must leave notes/candidates/"
+		}
+	}
+	return ""
+}
+
+func ptr[T any](value T) *T {
+	return &value
 }
 
 type normalizedDocumentTaskRequest struct {
@@ -327,6 +405,7 @@ type normalizedDocumentTaskRequest struct {
 	GitLifecycle        GitLifecycleOptions
 	WebSearch           WebSearchPlanOptions
 	Artifact            ArtifactPlanOptions
+	Move                MoveDocumentOptions
 	DocID               string
 	Content             string
 	Heading             string
@@ -349,6 +428,7 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		GitLifecycle:        trimGitLifecycleOptions(request.GitLifecycle),
 		WebSearch:           trimWebSearchPlanOptions(request.WebSearch),
 		Artifact:            trimArtifactPlanOptions(request.Artifact),
+		Move:                trimMoveDocumentOptions(moveDocumentOptionsFromRequest(request)),
 		DocID:               strings.TrimSpace(request.DocID),
 		Content:             request.Content,
 		Heading:             strings.TrimSpace(request.Heading),
@@ -497,6 +577,19 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 			return normalizedDocumentTaskRequest{}, rejection
 		}
 		return normalized, ""
+	case DocumentTaskActionPlanMoveDocument:
+		if rejection := validateMoveDocumentOptions(normalized.Move); rejection != "" {
+			return normalizedDocumentTaskRequest{}, rejection
+		}
+		return normalized, ""
+	case DocumentTaskActionMoveDocument, DocumentTaskActionRenameDocument, DocumentTaskActionPromoteCandidate:
+		if rejection := rejectDocumentAutonomyWrite(normalized); rejection != "" {
+			return normalizedDocumentTaskRequest{}, rejection
+		}
+		if rejection := validateMoveDocumentOptions(normalized.Move); rejection != "" {
+			return normalizedDocumentTaskRequest{}, rejection
+		}
+		return normalized, ""
 	default:
 		return normalizedDocumentTaskRequest{}, fmt.Sprintf("unsupported document task action %q", action)
 	}
@@ -554,6 +647,55 @@ func firstNonEmpty(values ...string) string {
 		if value != "" {
 			return value
 		}
+	}
+	return ""
+}
+
+func moveDocumentOptionsFromRequest(request DocumentTaskRequest) MoveDocumentOptions {
+	options := request.Move
+	if options.DocID == "" {
+		options.DocID = request.DocID
+	}
+	if options.Path == "" {
+		options.Path = request.Path
+	}
+	return options
+}
+
+func trimMoveDocumentOptions(options MoveDocumentOptions) MoveDocumentOptions {
+	trimmed := MoveDocumentOptions{
+		DocID:         strings.TrimSpace(options.DocID),
+		Path:          normalizeVaultRelativePath(options.Path),
+		TargetPath:    normalizeVaultRelativePath(options.TargetPath),
+		UpdateIndexes: options.UpdateIndexes,
+	}
+	if options.UpdateLinks != nil {
+		updateLinks := *options.UpdateLinks
+		trimmed.UpdateLinks = &updateLinks
+	}
+	return trimmed
+}
+
+func validateMoveDocumentOptions(options MoveDocumentOptions) string {
+	if options.DocID == "" && options.Path == "" {
+		return "move.doc_id or move.path is required"
+	}
+	if options.DocID != "" && options.Path != "" {
+		return "move accepts only one of doc_id or path"
+	}
+	if options.Path != "" {
+		if _, rejection := validateRequiredVaultPath(options.Path, "move.path is required", "move.path must be relative to the vault root", "move.path must stay inside the vault root"); rejection != "" {
+			return rejection
+		}
+	}
+	if options.TargetPath == "" {
+		return "move.target_path is required"
+	}
+	if _, rejection := validateRequiredVaultPath(options.TargetPath, "move.target_path is required", "move.target_path must be relative to the vault root", "move.target_path must stay inside the vault root"); rejection != "" {
+		return rejection
+	}
+	if path.Ext(options.TargetPath) != "" && path.Ext(options.TargetPath) != ".md" {
+		return "move.target_path must be a vault-relative markdown path"
 	}
 	return ""
 }

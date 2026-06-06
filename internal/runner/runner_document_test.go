@@ -149,6 +149,152 @@ func TestDocumentTaskAutonomyModesValidateAndGateWrites(t *testing.T) {
 	}
 }
 
+func TestDocumentTaskMoveDocumentPlansAndAppliesMigration(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	source := createDocument(t, ctx, config, "technology/projects.md", "Projects", "# Projects\n\n## Summary\nProject idea source.\n")
+	index := createDocument(t, ctx, config, "technology/_index.md", "Technology Index", "# Technology\n\n- [Projects](projects.md)\n")
+	backlog := createDocument(t, ctx, config, "projects/idea-backlog.md", "Idea Backlog", "# Idea Backlog\n\nSee [Projects](../technology/projects.md).\n")
+
+	plan, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionPlanMoveDocument,
+		Move: runner.MoveDocumentOptions{
+			Path:          "technology/projects.md",
+			TargetPath:    "technology/project-ideas.md",
+			UpdateIndexes: true,
+		},
+	})
+	if err != nil {
+		t.Fatalf("plan move document: %v", err)
+	}
+	if plan.Rejected ||
+		plan.MovePlan == nil ||
+		plan.MovePlan.DocID != source.DocID ||
+		plan.MovePlan.WriteStatus != "no_write" ||
+		!runnerMoveLinkUpdateIncludes(plan.MovePlan.LinkUpdates, backlog.Path, "../technology/project-ideas.md") ||
+		!runnerMoveLinkUpdateIncludes(plan.MovePlan.LinkUpdates, index.Path, "project-ideas.md") {
+		t.Fatalf("move plan result = %+v", plan)
+	}
+
+	proposeOnly, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action:   runner.DocumentTaskActionMoveDocument,
+		Autonomy: runner.AutonomyModes{ApprovalMode: runner.ApprovalModeProposeOnly},
+		Move: runner.MoveDocumentOptions{
+			Path:       "technology/projects.md",
+			TargetPath: "technology/project-ideas.md",
+		},
+	})
+	if err != nil {
+		t.Fatalf("propose-only move document: %v", err)
+	}
+	if !proposeOnly.Rejected || !strings.Contains(proposeOnly.RejectionReason, "propose_only") {
+		t.Fatalf("propose-only move rejection = %+v", proposeOnly)
+	}
+
+	moved, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionMoveDocument,
+		Move: runner.MoveDocumentOptions{
+			Path:          "technology/projects.md",
+			TargetPath:    "technology/project-ideas.md",
+			UpdateIndexes: true,
+		},
+	})
+	if err != nil {
+		t.Fatalf("move document: %v", err)
+	}
+	if moved.MoveResult == nil ||
+		moved.MoveResult.Document.DocID != source.DocID ||
+		moved.MoveResult.Document.Path != "technology/project-ideas.md" ||
+		!strings.Contains(moved.MoveResult.Document.Body, "id: \""+source.DocID+"\"") ||
+		!runnerMoveLinkUpdateIncludes(moved.MoveResult.LinkUpdatesApplied, backlog.Path, "../technology/project-ideas.md") {
+		t.Fatalf("move result = %+v", moved)
+	}
+	updatedBacklog, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGet,
+		DocID:  backlog.DocID,
+	})
+	if err != nil {
+		t.Fatalf("get backlog after move: %v", err)
+	}
+	if updatedBacklog.Document == nil ||
+		!strings.Contains(updatedBacklog.Document.Body, "../technology/project-ideas.md") ||
+		strings.Contains(updatedBacklog.Document.Body, "../technology/projects.md") {
+		t.Fatalf("updated backlog = %+v", updatedBacklog.Document)
+	}
+}
+
+func TestDocumentTaskRenameAndPromoteCandidateWrappers(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	rough := createDocument(t, ctx, config, "notes/projects/rough-name.md", "Rough Name", "# Rough Name\n")
+	candidate := createDocument(t, ctx, config, "notes/candidates/project-idea.md", "Project Idea", "# Project Idea\n")
+	nonCandidate := createDocument(t, ctx, config, "notes/projects/not-candidate.md", "Not Candidate", "# Not Candidate\n")
+
+	badRename, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionRenameDocument,
+		Move: runner.MoveDocumentOptions{
+			DocID:      rough.DocID,
+			TargetPath: "notes/archive/rough-name.md",
+		},
+	})
+	if err != nil {
+		t.Fatalf("bad rename document: %v", err)
+	}
+	if !badRename.Rejected || !strings.Contains(badRename.RejectionReason, "same directory") {
+		t.Fatalf("bad rename result = %+v", badRename)
+	}
+
+	renamed, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionRenameDocument,
+		Move: runner.MoveDocumentOptions{
+			DocID:      rough.DocID,
+			TargetPath: "notes/projects/precise-name.md",
+		},
+	})
+	if err != nil {
+		t.Fatalf("rename document: %v", err)
+	}
+	if renamed.MoveResult == nil ||
+		renamed.MoveResult.Document.DocID != rough.DocID ||
+		renamed.MoveResult.Document.Path != "notes/projects/precise-name.md" {
+		t.Fatalf("renamed result = %+v", renamed)
+	}
+
+	badPromote, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionPromoteCandidate,
+		Move: runner.MoveDocumentOptions{
+			DocID:      nonCandidate.DocID,
+			TargetPath: "notes/projects/promoted.md",
+		},
+	})
+	if err != nil {
+		t.Fatalf("bad promote candidate: %v", err)
+	}
+	if !badPromote.Rejected || !strings.Contains(badPromote.RejectionReason, "notes/candidates") {
+		t.Fatalf("bad promote result = %+v", badPromote)
+	}
+
+	promoted, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionPromoteCandidate,
+		Move: runner.MoveDocumentOptions{
+			DocID:      candidate.DocID,
+			TargetPath: "notes/projects/project-idea.md",
+		},
+	})
+	if err != nil {
+		t.Fatalf("promote candidate: %v", err)
+	}
+	if promoted.MoveResult == nil ||
+		promoted.MoveResult.Document.DocID != candidate.DocID ||
+		promoted.MoveResult.Document.Path != "notes/projects/project-idea.md" {
+		t.Fatalf("promoted result = %+v", promoted)
+	}
+}
+
 func TestDocumentTaskGitLifecycleStatusAndHistory(t *testing.T) {
 	t.Parallel()
 
@@ -2482,6 +2628,15 @@ func runGitLifecycleTestCommand(t *testing.T, dir string, args ...string) {
 func gitLifecycleDirtyPath(statuses []runner.GitLifecyclePathStatus, path string) bool {
 	for _, status := range statuses {
 		if status.Path == path {
+			return true
+		}
+	}
+	return false
+}
+
+func runnerMoveLinkUpdateIncludes(updates []runner.DocumentLinkUpdate, path string, newTarget string) bool {
+	for _, update := range updates {
+		if update.Path == path && update.NewTarget == newTarget && update.Occurrences > 0 {
 			return true
 		}
 	}

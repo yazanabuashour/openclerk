@@ -27,6 +27,10 @@ const (
 	DocumentTaskActionGitLifecycle        = "git_lifecycle_report"
 	DocumentTaskActionWebSearchPlan       = "web_search_plan"
 	DocumentTaskActionArtifactPlan        = "artifact_candidate_plan"
+	DocumentTaskActionPlanMoveDocument    = "plan_move_document"
+	DocumentTaskActionMoveDocument        = "move_document"
+	DocumentTaskActionRenameDocument      = "rename_document"
+	DocumentTaskActionPromoteCandidate    = "promote_candidate"
 
 	RetrievalTaskActionValidate                     = "validate"
 	RetrievalTaskActionSearch                       = "search"
@@ -112,6 +116,7 @@ type DocumentTaskRequest struct {
 	GitLifecycle        GitLifecycleOptions      `json:"git_lifecycle,omitempty"`
 	WebSearch           WebSearchPlanOptions     `json:"web_search,omitempty"`
 	Artifact            ArtifactPlanOptions      `json:"artifact,omitempty"`
+	Move                MoveDocumentOptions      `json:"move,omitempty"`
 	Path                string                   `json:"path,omitempty"`
 	Title               string                   `json:"title,omitempty"`
 	Body                string                   `json:"body,omitempty"`
@@ -296,6 +301,8 @@ type DocumentTaskResult struct {
 	GitLifecycle        *GitLifecycleReport     `json:"git_lifecycle,omitempty"`
 	WebSearchPlan       *WebSearchPlan          `json:"web_search_plan,omitempty"`
 	ArtifactPlan        *ArtifactCandidatePlan  `json:"artifact_candidate_plan,omitempty"`
+	MovePlan            *DocumentMovePlan       `json:"move_plan,omitempty"`
+	MoveResult          *DocumentMoveResult     `json:"move_result,omitempty"`
 	Documents           []DocumentSummary       `json:"documents,omitempty"`
 	Paths               *Paths                  `json:"paths,omitempty"`
 	Layout              *KnowledgeLayout        `json:"layout,omitempty"`
@@ -660,6 +667,14 @@ type ArtifactPlanOptions struct {
 	DuplicateQuery string            `json:"duplicate_query,omitempty"`
 	PathPrefix     string            `json:"path_prefix,omitempty"`
 	Limit          int               `json:"limit,omitempty"`
+}
+
+type MoveDocumentOptions struct {
+	DocID         string `json:"doc_id,omitempty"`
+	Path          string `json:"path,omitempty"`
+	TargetPath    string `json:"target_path,omitempty"`
+	UpdateLinks   *bool  `json:"update_links,omitempty"`
+	UpdateIndexes bool   `json:"update_indexes,omitempty"`
 }
 
 type RetrievalTaskResult struct {
@@ -1511,6 +1526,58 @@ type DocumentLinks struct {
 	DocID    string         `json:"doc_id"`
 	Outgoing []DocumentLink `json:"outgoing,omitempty"`
 	Incoming []DocumentLink `json:"incoming,omitempty"`
+}
+
+type DocumentMovePlan struct {
+	DocID                string                      `json:"doc_id"`
+	SourcePath           string                      `json:"source_path"`
+	TargetPath           string                      `json:"target_path"`
+	Title                string                      `json:"title"`
+	FrontmatterID        string                      `json:"frontmatter_id"`
+	StableIDStatus       string                      `json:"stable_id_status"`
+	DuplicateRisk        string                      `json:"duplicate_risk"`
+	ExistingTarget       *DocumentSummary            `json:"existing_target,omitempty"`
+	OutgoingLinks        []DocumentLink              `json:"outgoing_links,omitempty"`
+	IncomingLinks        []DocumentLink              `json:"incoming_links,omitempty"`
+	LinkUpdates          []DocumentLinkUpdate        `json:"link_updates,omitempty"`
+	IndexUpdates         []DocumentIndexUpdate       `json:"index_updates,omitempty"`
+	ProjectionRefresh    []DocumentProjectionRefresh `json:"projection_refresh,omitempty"`
+	ValidationWarnings   []string                    `json:"validation_warnings,omitempty"`
+	WriteStatus          string                      `json:"write_status"`
+	ApprovalBoundary     string                      `json:"approval_boundary"`
+	ValidationBoundaries string                      `json:"validation_boundaries"`
+}
+
+type DocumentMoveResult struct {
+	Plan                DocumentMovePlan      `json:"plan"`
+	Document            Document              `json:"document"`
+	LinkUpdatesApplied  []DocumentLinkUpdate  `json:"link_updates_applied,omitempty"`
+	IndexUpdatesApplied []DocumentIndexUpdate `json:"index_updates_applied,omitempty"`
+	ProvenanceRefs      []string              `json:"provenance_refs,omitempty"`
+	ProjectionFreshness []ProjectionState     `json:"projection_freshness,omitempty"`
+	WriteStatus         string                `json:"write_status"`
+}
+
+type DocumentLinkUpdate struct {
+	DocID          string `json:"doc_id"`
+	Path           string `json:"path"`
+	OldTarget      string `json:"old_target"`
+	NewTarget      string `json:"new_target"`
+	Occurrences    int    `json:"occurrences"`
+	IndexCandidate bool   `json:"index_candidate,omitempty"`
+}
+
+type DocumentIndexUpdate struct {
+	Path   string `json:"path"`
+	Status string `json:"status"`
+	Reason string `json:"reason"`
+}
+
+type DocumentProjectionRefresh struct {
+	Projection string `json:"projection"`
+	RefKind    string `json:"ref_kind"`
+	RefID      string `json:"ref_id"`
+	Status     string `json:"status"`
 }
 
 type GraphNode struct {

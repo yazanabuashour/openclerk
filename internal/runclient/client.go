@@ -144,6 +144,22 @@ func (c *Client) ReplaceDocument(ctx context.Context, docID string, input domain
 	return wrapResult(store.ReplaceDocument(ctx, docID, input))
 }
 
+func (c *Client) PlanMoveDocument(ctx context.Context, input domain.MoveDocumentInput) (domain.DocumentMovePlan, error) {
+	store, err := c.store()
+	if err != nil {
+		return domain.DocumentMovePlan{}, err
+	}
+	return wrapResult(store.PlanMoveDocument(ctx, input))
+}
+
+func (c *Client) MoveDocument(ctx context.Context, input domain.MoveDocumentInput) (domain.DocumentMoveResult, error) {
+	store, err := c.store()
+	if err != nil {
+		return domain.DocumentMoveResult{}, err
+	}
+	return wrapResult(store.MoveDocument(ctx, input))
+}
+
 func (c *Client) GetDocumentLinks(ctx context.Context, docID string) (domain.DocumentLinks, error) {
 	store, err := c.store()
 	if err != nil {

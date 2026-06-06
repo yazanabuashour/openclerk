@@ -169,7 +169,7 @@ func (s *Store) CreateDocument(ctx context.Context, input domain.CreateDocumentI
 	if err := s.syncDocumentFromDisk(ctx, relPath, input.Title); err != nil {
 		return domain.Document{}, err
 	}
-	return s.GetDocument(ctx, docIDForPath(relPath))
+	return s.getDocumentByPath(ctx, relPath)
 }
 
 func (s *Store) GetDocument(ctx context.Context, docID string) (domain.Document, error) {

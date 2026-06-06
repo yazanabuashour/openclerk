@@ -201,6 +201,13 @@ func docIDForPath(relPath string) string {
 	return hashID("doc", relPath)
 }
 
+func docIDForDocument(relPath string, frontmatter map[string]string) string {
+	if id := strings.TrimSpace(frontmatter["id"]); id != "" {
+		return id
+	}
+	return docIDForPath(relPath)
+}
+
 func chunkIDForSection(docID string, sec section) string {
 	return hashID("chunk", docID, sec.Heading, sec.Content, strconv.Itoa(sec.LineStart), strconv.Itoa(sec.LineEnd))
 }

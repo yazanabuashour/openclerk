@@ -202,6 +202,85 @@ func toDocumentLinks(links []domain.DocumentLink) []DocumentLink {
 	return result
 }
 
+func toDocumentMovePlan(plan domain.DocumentMovePlan) DocumentMovePlan {
+	var existingTarget *DocumentSummary
+	if plan.ExistingTarget != nil {
+		summaries := toDocumentSummaries([]domain.DocumentSummary{*plan.ExistingTarget})
+		existingTarget = &summaries[0]
+	}
+	return DocumentMovePlan{
+		DocID:                plan.DocID,
+		SourcePath:           plan.SourcePath,
+		TargetPath:           plan.TargetPath,
+		Title:                plan.Title,
+		FrontmatterID:        plan.FrontmatterID,
+		StableIDStatus:       plan.StableIDStatus,
+		DuplicateRisk:        plan.DuplicateRisk,
+		ExistingTarget:       existingTarget,
+		OutgoingLinks:        toDocumentLinks(plan.OutgoingLinks),
+		IncomingLinks:        toDocumentLinks(plan.IncomingLinks),
+		LinkUpdates:          toDocumentLinkUpdates(plan.LinkUpdates),
+		IndexUpdates:         toDocumentIndexUpdates(plan.IndexUpdates),
+		ProjectionRefresh:    toDocumentProjectionRefresh(plan.ProjectionRefresh),
+		ValidationWarnings:   append([]string(nil), plan.ValidationWarnings...),
+		WriteStatus:          plan.WriteStatus,
+		ApprovalBoundary:     plan.ApprovalBoundary,
+		ValidationBoundaries: plan.ValidationBoundaries,
+	}
+}
+
+func toDocumentMoveResult(result domain.DocumentMoveResult) DocumentMoveResult {
+	return DocumentMoveResult{
+		Plan:                toDocumentMovePlan(result.Plan),
+		Document:            toDocument(result.Document),
+		LinkUpdatesApplied:  toDocumentLinkUpdates(result.LinkUpdatesApplied),
+		IndexUpdatesApplied: toDocumentIndexUpdates(result.IndexUpdatesApplied),
+		ProvenanceRefs:      append([]string(nil), result.ProvenanceRefs...),
+		ProjectionFreshness: toProjectionStates(result.ProjectionFreshness),
+		WriteStatus:         result.WriteStatus,
+	}
+}
+
+func toDocumentLinkUpdates(updates []domain.DocumentLinkUpdate) []DocumentLinkUpdate {
+	result := make([]DocumentLinkUpdate, 0, len(updates))
+	for _, update := range updates {
+		result = append(result, DocumentLinkUpdate{
+			DocID:          update.DocID,
+			Path:           update.Path,
+			OldTarget:      update.OldTarget,
+			NewTarget:      update.NewTarget,
+			Occurrences:    update.Occurrences,
+			IndexCandidate: update.IndexCandidate,
+		})
+	}
+	return result
+}
+
+func toDocumentIndexUpdates(updates []domain.DocumentIndexUpdate) []DocumentIndexUpdate {
+	result := make([]DocumentIndexUpdate, 0, len(updates))
+	for _, update := range updates {
+		result = append(result, DocumentIndexUpdate{
+			Path:   update.Path,
+			Status: update.Status,
+			Reason: update.Reason,
+		})
+	}
+	return result
+}
+
+func toDocumentProjectionRefresh(refresh []domain.DocumentProjectionRefresh) []DocumentProjectionRefresh {
+	result := make([]DocumentProjectionRefresh, 0, len(refresh))
+	for _, item := range refresh {
+		result = append(result, DocumentProjectionRefresh{
+			Projection: item.Projection,
+			RefKind:    item.RefKind,
+			RefID:      item.RefID,
+			Status:     item.Status,
+		})
+	}
+	return result
+}
+
 func toGraphNeighborhood(neighborhood domain.GraphNeighborhood) GraphNeighborhood {
 	nodes := make([]GraphNode, 0, len(neighborhood.Nodes))
 	for _, node := range neighborhood.Nodes {

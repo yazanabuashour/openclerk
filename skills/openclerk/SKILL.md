@@ -39,6 +39,8 @@ Prefer a promoted workflow action over manual primitive choreography when it mat
 - Artifact candidate intake and explicit local OCR review: document
   `artifact_candidate_plan`, then answer from `artifact_candidate_plan.agent_handoff`;
   approved durable writes remain `create_document` or `ingest_source_url`.
+- Vault structure stewardship: document `plan_move_document` first; approved
+  writes use `move_document`, `rename_document`, or `promote_candidate`, never raw filesystem moves.
 - Source-sensitive audit explain/repair: retrieval
   `{"action":"source_audit_report","source_audit":{"query":"...","target_path":"...","mode":"explain|repair_existing","conflict_query":"...","limit":10}}`,
   then answer from `source_audit.agent_handoff`.
@@ -168,8 +170,9 @@ Run document tasks with:
 openclerk document
 ```
 
-Common actions are `validate`, `create_document`, `ingest_source_url`, `ingest_video_url`, `web_search_plan`, `artifact_candidate_plan`, `list_documents`, `get_document`, `append_document`, `replace_section`, `resolve_paths`, `inspect_layout`, `compile_synthesis`, `validation_synthesis_report`, and `git_lifecycle_report`.
-Use `openclerk document --help` for request shapes.
+Common actions are `validate`, `create_document`, `ingest_source_url`, `ingest_video_url`, `web_search_plan`, `artifact_candidate_plan`, `plan_move_document`, `move_document`, `rename_document`, `promote_candidate`, `list_documents`, `get_document`, `append_document`, `replace_section`, `resolve_paths`, `inspect_layout`, `compile_synthesis`, `validation_synthesis_report`, and `git_lifecycle_report`. Use `openclerk document --help` for request shapes.
+
+Move actions use `move` with `doc_id` or `path` plus `target_path`; planning reports stable id, duplicate risk, links, index candidates, projections, warnings, and approval boundary. Writes refuse existing targets; `rename_document` is same-directory only; `promote_candidate` leaves `notes/candidates/`.
 
 Validation rejections use `rejected: true`; runtime failures exit non-zero.
 
@@ -217,6 +220,3 @@ listing evidence. Preserve citation paths, source refs, doc ids, chunk ids,
 provenance, projection freshness, validation boundaries, and authority limits
 for source-sensitive claims. For retrieval-only repeats, confirm no durable
 write only when asked, but still restate the answer and citations.
-
-For unsupported workflows not covered above, say the production OpenClerk
-runner does not support that workflow yet.

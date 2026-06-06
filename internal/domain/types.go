@@ -224,6 +224,66 @@ type ReplaceDocumentInput struct {
 	Body  string
 }
 
+type MoveDocumentInput struct {
+	DocID         string
+	Path          string
+	TargetPath    string
+	UpdateLinks   bool
+	UpdateIndexes bool
+}
+
+type DocumentMovePlan struct {
+	DocID                string
+	SourcePath           string
+	TargetPath           string
+	Title                string
+	FrontmatterID        string
+	StableIDStatus       string
+	DuplicateRisk        string
+	ExistingTarget       *DocumentSummary
+	OutgoingLinks        []DocumentLink
+	IncomingLinks        []DocumentLink
+	LinkUpdates          []DocumentLinkUpdate
+	IndexUpdates         []DocumentIndexUpdate
+	ProjectionRefresh    []DocumentProjectionRefresh
+	ValidationWarnings   []string
+	WriteStatus          string
+	ApprovalBoundary     string
+	ValidationBoundaries string
+}
+
+type DocumentMoveResult struct {
+	Plan                DocumentMovePlan
+	Document            Document
+	LinkUpdatesApplied  []DocumentLinkUpdate
+	IndexUpdatesApplied []DocumentIndexUpdate
+	ProvenanceRefs      []string
+	ProjectionFreshness []ProjectionState
+	WriteStatus         string
+}
+
+type DocumentLinkUpdate struct {
+	DocID          string
+	Path           string
+	OldTarget      string
+	NewTarget      string
+	Occurrences    int
+	IndexCandidate bool
+}
+
+type DocumentIndexUpdate struct {
+	Path   string
+	Status string
+	Reason string
+}
+
+type DocumentProjectionRefresh struct {
+	Projection string
+	RefKind    string
+	RefID      string
+	Status     string
+}
+
 type GraphNeighborhoodInput struct {
 	DocID   string
 	ChunkID string
@@ -412,6 +472,8 @@ type Store interface {
 	AppendDocument(context.Context, string, AppendDocumentInput) (Document, error)
 	ReplaceDocumentSection(context.Context, string, ReplaceSectionInput) (Document, error)
 	ReplaceDocument(context.Context, string, ReplaceDocumentInput) (Document, error)
+	PlanMoveDocument(context.Context, MoveDocumentInput) (DocumentMovePlan, error)
+	MoveDocument(context.Context, MoveDocumentInput) (DocumentMoveResult, error)
 	GetChunk(context.Context, string) (Chunk, error)
 	GraphNeighborhood(context.Context, GraphNeighborhoodInput) (GraphNeighborhood, error)
 	RecordsLookup(context.Context, RecordLookupInput) (RecordLookupResult, error)

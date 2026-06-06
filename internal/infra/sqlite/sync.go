@@ -231,7 +231,7 @@ func (s *Store) syncDocumentFromDiskWithOptions(ctx context.Context, relPath str
 	}
 	body := string(bodyBytes)
 	headings, sections, frontmatter := parseMarkdown(body, relPath)
-	docID := docIDForPath(relPath)
+	docID := docIDForDocument(relPath, frontmatter)
 	now := s.now().UTC()
 	headingsJSON, _ := json.Marshal(headings)
 	metadataJSON, _ := json.Marshal(frontmatter)
@@ -264,23 +264,58 @@ func (s *Store) syncDocumentFromDiskWithOptions(ctx context.Context, relPath str
 	var existingBody string
 	var existingHeadingsJSON string
 	var existingMetadataJSON string
+	var existingDocID string
+	var existingPath string
 	var createdAtExisting string
 	var updatedAtExisting string
 	eventType := "document_created"
 	err = tx.QueryRowContext(ctx, `
-SELECT created_at, updated_at, title, body, headings_json, metadata_json
+SELECT created_at, updated_at, path, title, body, headings_json, metadata_json
 FROM documents
 WHERE doc_id = ?`, docID).Scan(
 		&createdAtExisting,
 		&updatedAtExisting,
+		&existingPath,
 		&existingTitle,
 		&existingBody,
 		&existingHeadingsJSON,
 		&existingMetadataJSON,
 	)
 	if err == nil {
+		existingDocID = docID
+		if existingPath != relPath {
+			if _, statErr := osStat(filepath.Join(s.vaultRoot, filepath.FromSlash(existingPath))); statErr == nil {
+				return documentSyncResult{}, domain.ConflictError("frontmatter id is already used by another live document", map[string]any{
+					"doc_id":        docID,
+					"existing_path": existingPath,
+					"path":          relPath,
+				})
+			} else if !errors.Is(statErr, fs.ErrNotExist) {
+				return documentSyncResult{}, domain.InternalError("stat existing document path for frontmatter id conflict", statErr)
+			}
+		}
 		createdAt = createdAtExisting
 		eventType = "document_updated"
+	} else if errors.Is(err, sql.ErrNoRows) {
+		err = tx.QueryRowContext(ctx, `
+SELECT doc_id, created_at, updated_at, path, title, body, headings_json, metadata_json
+FROM documents
+WHERE path = ?`, relPath).Scan(
+			&existingDocID,
+			&createdAtExisting,
+			&updatedAtExisting,
+			&existingPath,
+			&existingTitle,
+			&existingBody,
+			&existingHeadingsJSON,
+			&existingMetadataJSON,
+		)
+		if err == nil {
+			createdAt = createdAtExisting
+			eventType = "document_updated"
+		} else if !errors.Is(err, sql.ErrNoRows) {
+			return documentSyncResult{}, domain.InternalError("query existing document by path", err)
+		}
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		return documentSyncResult{}, domain.InternalError("query existing document timestamp", err)
 	}
@@ -291,6 +326,7 @@ WHERE doc_id = ?`, docID).Scan(
 
 	title := resolvedDocumentTitle(relPath, body, headings, frontmatter, preferredTitle, existingTitle)
 	contentChanged := eventType == "document_created" ||
+		(existingDocID != "" && existingDocID != docID) ||
 		existingTitle != title ||
 		existingBody != body ||
 		existingHeadingsJSON != string(headingsJSON) ||
@@ -310,6 +346,14 @@ WHERE doc_id = ?`, docID).Scan(
 	if options.DeferFTS {
 		if err := s.markFTSRebuildPending(ctx, tx, now); err != nil {
 			return documentSyncResult{}, err
+		}
+	}
+	if existingDocID != "" && existingDocID != docID {
+		if _, err := tx.ExecContext(ctx, `DELETE FROM chunk_fts WHERE doc_id = ?`, existingDocID); err != nil {
+			return documentSyncResult{}, domain.InternalError("delete previous document indexed chunks", err)
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM documents WHERE doc_id = ?`, existingDocID); err != nil {
+			return documentSyncResult{}, domain.InternalError("delete previous document id row", err)
 		}
 	}
 	if _, err := tx.ExecContext(ctx, `
