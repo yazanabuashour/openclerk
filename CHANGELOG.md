@@ -2,6 +2,7 @@
 
 This CHANGELOG summarizes public releases. Full OpenClerk release notes are published on GitHub Releases:
 
+- [v0.2.12](https://github.com/yazanabuashour/openclerk/releases/tag/v0.2.12) adds runner-owned note move, rename, candidate promotion, and proposal-first path cleanup surfaces with stable id preservation, reported link/index/projection updates, bounded autonomous apply, and no-overwrite local-first boundaries.
 - [v0.2.11](https://github.com/yazanabuashour/openclerk/releases/tag/v0.2.11) adds explicit retrieval regression capture/replay, search diagnostics, and maintenance posture reports while preserving local-first runner-only boundaries and unchanged default lexical search behavior.
 - [v0.2.10](https://github.com/yazanabuashour/openclerk/releases/tag/v0.2.10) promotes relationship graph report and maintenance-plan surfaces, adds optional OCKP smoke-suite interop, hardens runner URL/path-hint validation, and preserves local-first runner-only boundaries.
 - [v0.2.9](https://github.com/yazanabuashour/openclerk/releases/tag/v0.2.9) promotes the documented Records, Graph, Artifacts, and Modules capability surfaces, adds release-facing support matrices/help for structured records, structural graph retrieval, artifact/OCR boundaries, refreshes module smoke evidence, and preserves local-first runner-only boundaries.
