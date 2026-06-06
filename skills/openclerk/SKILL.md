@@ -39,8 +39,7 @@ Prefer a promoted workflow action over manual primitive choreography when it mat
 - Artifact candidate intake and explicit local OCR review: document
   `artifact_candidate_plan`, then answer from `artifact_candidate_plan.agent_handoff`;
   approved durable writes remain `create_document` or `ingest_source_url`.
-- Vault structure stewardship: document `plan_move_document` first; approved
-  writes use `move_document`, `rename_document`, or `promote_candidate`, never raw filesystem moves.
+- Vault structure stewardship: document `plan_move_document` first, or `plan_path_cleanup` for runner-owned name/path proposals; approved writes use move actions, never raw filesystem moves.
 - Source-sensitive audit explain/repair: retrieval
   `{"action":"source_audit_report","source_audit":{"query":"...","target_path":"...","mode":"explain|repair_existing","conflict_query":"...","limit":10}}`,
   then answer from `source_audit.agent_handoff`.
@@ -170,9 +169,9 @@ Run document tasks with:
 openclerk document
 ```
 
-Common actions are `validate`, `create_document`, `ingest_source_url`, `ingest_video_url`, `web_search_plan`, `artifact_candidate_plan`, `plan_move_document`, `move_document`, `rename_document`, `promote_candidate`, `list_documents`, `get_document`, `append_document`, `replace_section`, `resolve_paths`, `inspect_layout`, `compile_synthesis`, `validation_synthesis_report`, and `git_lifecycle_report`. Use `openclerk document --help` for request shapes.
+Common actions are `validate`, `create_document`, `ingest_source_url`, `ingest_video_url`, `web_search_plan`, `artifact_candidate_plan`, `plan_move_document`, `move_document`, `rename_document`, `promote_candidate`, `plan_path_cleanup`, `list_documents`, `get_document`, `append_document`, `replace_section`, `resolve_paths`, `inspect_layout`, `compile_synthesis`, `validation_synthesis_report`, and `git_lifecycle_report`. Use `openclerk document --help` for request shapes.
 
-Move actions use `move` with `doc_id` or `path` plus `target_path`; planning reports stable id, duplicate risk, links, index candidates, projections, warnings, and approval boundary. Writes refuse existing targets; `rename_document` is same-directory only; `promote_candidate` leaves `notes/candidates/`.
+Move actions use `move` with `doc_id` or `path` plus `target_path`; `plan_path_cleanup` proposes exact next requests and apply mode needs autonomous trusted/disposable. Writes refuse existing targets; `rename_document` is same-directory only; `promote_candidate` leaves `notes/candidates/`.
 
 Validation rejections use `rejected: true`; runtime failures exit non-zero.
 

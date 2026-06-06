@@ -195,6 +195,15 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 			MovePlan: &converted,
 			Summary:  fmt.Sprintf("planned move from %s to %s", converted.SourcePath, converted.TargetPath),
 		}, nil
+	case DocumentTaskActionPlanPathCleanup:
+		plan, err := runPathCleanupPlan(ctx, client, normalized.PathCleanup, normalized.Autonomy)
+		if err != nil {
+			return DocumentTaskResult{}, err
+		}
+		return DocumentTaskResult{
+			PathCleanup: &plan,
+			Summary:     fmt.Sprintf("planned path cleanup for %d documents", len(plan.Candidates)),
+		}, nil
 	case DocumentTaskActionInspectLayout:
 		layout, err := inspectKnowledgeLayout(ctx, client)
 		if err != nil {
@@ -225,6 +234,8 @@ func isMutatingDocumentAction(normalized normalizedDocumentTaskRequest) bool {
 		DocumentTaskActionRenameDocument,
 		DocumentTaskActionPromoteCandidate:
 		return true
+	case DocumentTaskActionPlanPathCleanup:
+		return normalized.PathCleanup.Mode == pathCleanupModeApply
 	case DocumentTaskActionIngestSourceURL:
 		return normalized.Source.Mode != "plan"
 	default:
@@ -354,6 +365,15 @@ func runMutatingDocumentTask(ctx context.Context, client *runclient.Client, norm
 			MoveResult: &converted,
 			Summary:    fmt.Sprintf("moved document from %s to %s", converted.Plan.SourcePath, converted.Plan.TargetPath),
 		}, nil
+	case DocumentTaskActionPlanPathCleanup:
+		plan, err := runPathCleanupPlan(ctx, client, normalized.PathCleanup, normalized.Autonomy)
+		if err != nil {
+			return DocumentTaskResult{}, err
+		}
+		return DocumentTaskResult{
+			PathCleanup: &plan,
+			Summary:     fmt.Sprintf("applied path cleanup to %d documents", plan.AppliedCount),
+		}, nil
 	default:
 		return DocumentTaskResult{}, fmt.Errorf("unsupported mutating document task action %q", normalized.Action)
 	}
@@ -406,6 +426,7 @@ type normalizedDocumentTaskRequest struct {
 	WebSearch           WebSearchPlanOptions
 	Artifact            ArtifactPlanOptions
 	Move                MoveDocumentOptions
+	PathCleanup         PathCleanupOptions
 	DocID               string
 	Content             string
 	Heading             string
@@ -429,6 +450,7 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		WebSearch:           trimWebSearchPlanOptions(request.WebSearch),
 		Artifact:            trimArtifactPlanOptions(request.Artifact),
 		Move:                trimMoveDocumentOptions(moveDocumentOptionsFromRequest(request)),
+		PathCleanup:         trimPathCleanupOptions(pathCleanupOptionsFromRequest(request)),
 		DocID:               strings.TrimSpace(request.DocID),
 		Content:             request.Content,
 		Heading:             strings.TrimSpace(request.Heading),
@@ -446,6 +468,7 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		request.GitLifecycle.Limit,
 		request.WebSearch.Limit,
 		request.Artifact.Limit,
+		request.PathCleanup.Limit,
 	); rejection != "" {
 		return normalizedDocumentTaskRequest{}, rejection
 	}
@@ -582,6 +605,20 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 			return normalizedDocumentTaskRequest{}, rejection
 		}
 		return normalized, ""
+	case DocumentTaskActionPlanPathCleanup:
+		if rejection := validatePathCleanupOptions(normalized.PathCleanup); rejection != "" {
+			return normalizedDocumentTaskRequest{}, rejection
+		}
+		if normalized.PathCleanup.Mode == pathCleanupModeApply && pathCleanupShouldEnforceAutonomy(request) {
+			if rejection := rejectDocumentAutonomyWrite(normalized); rejection != "" {
+				return normalizedDocumentTaskRequest{}, rejection
+			}
+			if normalized.Autonomy.ApprovalMode != ApprovalModeAutonomousTrusted &&
+				normalized.Autonomy.ApprovalMode != ApprovalModeAutonomousDisposable {
+				return normalizedDocumentTaskRequest{}, "path_cleanup.mode apply requires autonomy.approval_mode autonomous_trusted or autonomous_disposable"
+			}
+		}
+		return normalized, ""
 	case DocumentTaskActionMoveDocument, DocumentTaskActionRenameDocument, DocumentTaskActionPromoteCandidate:
 		if rejection := rejectDocumentAutonomyWrite(normalized); rejection != "" {
 			return normalizedDocumentTaskRequest{}, rejection
@@ -614,6 +651,10 @@ func rejectDocumentAutonomyWrite(normalized normalizedDocumentTaskRequest) strin
 		return "autonomy.write_target_mode existing_only does not allow create_or_update validation_synthesis writes"
 	}
 	return ""
+}
+
+func pathCleanupShouldEnforceAutonomy(request DocumentTaskRequest) bool {
+	return request.Autonomy != (AutonomyModes{})
 }
 
 func compileSynthesisInputFromRequest(request DocumentTaskRequest) CompileSynthesisInput {
@@ -662,6 +703,17 @@ func moveDocumentOptionsFromRequest(request DocumentTaskRequest) MoveDocumentOpt
 	return options
 }
 
+func pathCleanupOptionsFromRequest(request DocumentTaskRequest) PathCleanupOptions {
+	options := request.PathCleanup
+	if options.DocID == "" {
+		options.DocID = request.DocID
+	}
+	if options.Path == "" {
+		options.Path = request.Path
+	}
+	return options
+}
+
 func trimMoveDocumentOptions(options MoveDocumentOptions) MoveDocumentOptions {
 	trimmed := MoveDocumentOptions{
 		DocID:         strings.TrimSpace(options.DocID),
@@ -674,6 +726,20 @@ func trimMoveDocumentOptions(options MoveDocumentOptions) MoveDocumentOptions {
 		trimmed.UpdateLinks = &updateLinks
 	}
 	return trimmed
+}
+
+func trimPathCleanupOptions(options PathCleanupOptions) PathCleanupOptions {
+	return PathCleanupOptions{
+		DocID:         strings.TrimSpace(options.DocID),
+		Path:          normalizeVaultRelativePath(options.Path),
+		PathPrefix:    normalizeVaultRelativePrefix(options.PathPrefix),
+		Query:         strings.TrimSpace(options.Query),
+		Mode:          normalizePathCleanupMode(options.Mode),
+		CleanupKind:   normalizePathCleanupKind(options.CleanupKind),
+		TargetPrefix:  normalizeVaultRelativePrefix(options.TargetPrefix),
+		UpdateIndexes: options.UpdateIndexes,
+		Limit:         options.Limit,
+	}
 }
 
 func validateMoveDocumentOptions(options MoveDocumentOptions) string {
@@ -696,6 +762,51 @@ func validateMoveDocumentOptions(options MoveDocumentOptions) string {
 	}
 	if path.Ext(options.TargetPath) != "" && path.Ext(options.TargetPath) != ".md" {
 		return "move.target_path must be a vault-relative markdown path"
+	}
+	return ""
+}
+
+func validatePathCleanupOptions(options PathCleanupOptions) string {
+	targets := 0
+	for _, value := range []string{options.DocID, options.Path, options.PathPrefix, options.Query} {
+		if strings.TrimSpace(value) != "" {
+			targets++
+		}
+	}
+	if targets == 0 {
+		return "path_cleanup requires one of doc_id, path, path_prefix, or query"
+	}
+	if targets > 1 {
+		return "path_cleanup accepts only one of doc_id, path, path_prefix, or query"
+	}
+	if options.Path != "" {
+		if _, rejection := validateRequiredVaultPath(options.Path, "path_cleanup.path is required", "path_cleanup.path must be relative to the vault root", "path_cleanup.path must stay inside the vault root"); rejection != "" {
+			return rejection
+		}
+		if path.Ext(options.Path) != "" && path.Ext(options.Path) != ".md" {
+			return "path_cleanup.path must be a vault-relative markdown path"
+		}
+	}
+	if options.PathPrefix != "" {
+		if _, rejection := validateRequiredVaultPath(options.PathPrefix, "path_cleanup.path_prefix is required", "path_cleanup.path_prefix must be relative to the vault root", "path_cleanup.path_prefix must stay inside the vault root"); rejection != "" {
+			return rejection
+		}
+	}
+	if options.TargetPrefix != "" {
+		if _, rejection := validateRequiredVaultPath(options.TargetPrefix, "path_cleanup.target_prefix is required", "path_cleanup.target_prefix must be relative to the vault root", "path_cleanup.target_prefix must stay inside the vault root"); rejection != "" {
+			return rejection
+		}
+		if !strings.HasSuffix(options.TargetPrefix, "/") {
+			return "path_cleanup.target_prefix must end with /"
+		}
+	}
+	if options.Mode != pathCleanupModePlan && options.Mode != pathCleanupModeApply {
+		return "path_cleanup.mode must be plan or apply"
+	}
+	if options.CleanupKind != pathCleanupKindAuto &&
+		options.CleanupKind != pathCleanupKindRename &&
+		options.CleanupKind != pathCleanupKindCandidatePromotion {
+		return "path_cleanup.cleanup_kind must be auto, rename, or candidate_promotion"
 	}
 	return ""
 }

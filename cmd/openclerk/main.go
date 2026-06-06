@@ -155,6 +155,7 @@ func buildCapabilitiesResult() capabilitiesResult {
 					{Action: "move_document", Purpose: "move an approved markdown document while preserving stable id and updating reported links", Posture: "durable_write_requires_approval_no_overwrite"},
 					{Action: "rename_document", Purpose: "same-directory move convenience wrapper for path/title cleanup", Posture: "durable_write_requires_approval_no_overwrite"},
 					{Action: "promote_candidate", Purpose: "promote a notes/candidates document into a canonical destination with duplicate checks", Posture: "durable_write_requires_approval_no_overwrite"},
+					{Action: "plan_path_cleanup", Purpose: "propose title/taxonomy path cleanup candidates and optionally apply low-risk candidates under autonomous modes", Posture: "read_only_or_autonomous_apply_no_overwrite"},
 					{Action: "resolve_paths", Purpose: "show configured database and vault paths", Posture: "read_only_diagnostic"},
 					{Action: "inspect_layout", Purpose: "inspect configured OpenClerk layout", Posture: "read_only_diagnostic"},
 				},
@@ -560,6 +561,8 @@ func documentUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, `  plan move: {"action":"plan_move_document","move":{"path":"technology/projects.md","target_path":"technology/project-ideas.md","update_indexes":true}}`)
 	_, _ = fmt.Fprintln(w, `  move/rename/promote: {"action":"move_document","move":{"doc_id":"doc_id_from_json","target_path":"notes/projects/example.md"}} | {"action":"rename_document","move":{"path":"notes/projects/rough.md","target_path":"notes/projects/precise.md"}} | {"action":"promote_candidate","move":{"path":"notes/candidates/idea.md","target_path":"notes/projects/idea.md"}}`)
 	_, _ = fmt.Fprintln(w, "  Move actions preserve stable id, update only reported markdown links/index links, record provenance, refresh projections, and refuse existing targets instead of overwriting.")
+	_, _ = fmt.Fprintln(w, `  plan/apply path cleanup: {"action":"plan_path_cleanup","path_cleanup":{"path_prefix":"notes/candidates/","cleanup_kind":"candidate_promotion","target_prefix":"notes/projects/","limit":5}} | {"action":"plan_path_cleanup","autonomy":{"approval_mode":"autonomous_trusted"},"path_cleanup":{"doc_id":"doc_id_from_json","mode":"apply"}}`)
+	_, _ = fmt.Fprintln(w, "  Path cleanup plan mode is read-only. Apply mode uses returned low-risk move candidates only and requires autonomous_trusted or autonomous_disposable.")
 	_, _ = fmt.Fprintln(w, `  diagnostics: {"action":"resolve_paths"} | {"action":"inspect_layout"}`)
 	_, _ = fmt.Fprintln(w, "Promoted workflow action:")
 	_, _ = fmt.Fprintln(w, `  compile_synthesis: {"action":"compile_synthesis","synthesis":{"path":"synthesis/example.md","title":"Example","source_refs":["sources/a.md"],"body":"...","body_facts":["..."],"freshness_note":"...","mode":"create_or_update"}}`)

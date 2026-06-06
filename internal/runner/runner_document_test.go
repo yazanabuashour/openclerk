@@ -295,6 +295,196 @@ func TestDocumentTaskRenameAndPromoteCandidateWrappers(t *testing.T) {
 	}
 }
 
+func TestDocumentTaskPathCleanupPlansRenameAndCandidatePromotion(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	rough := createDocument(t, ctx, config, "notes/projects/projects.md", "Project Ideas", "# Project Ideas\n")
+	candidate := createDocument(t, ctx, config, "notes/candidates/project.md", "Great Project Idea", "# Great Project Idea\n")
+
+	renamePlan, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionPlanPathCleanup,
+		PathCleanup: runner.PathCleanupOptions{
+			DocID: rough.DocID,
+		},
+	})
+	if err != nil {
+		t.Fatalf("plan rename path cleanup: %v", err)
+	}
+	if renamePlan.PathCleanup == nil ||
+		renamePlan.PathCleanup.WriteStatus != "planned_no_write" ||
+		len(renamePlan.PathCleanup.Candidates) != 1 ||
+		renamePlan.PathCleanup.Candidates[0].RecommendedAction != runner.DocumentTaskActionRenameDocument ||
+		renamePlan.PathCleanup.Candidates[0].ProposedTargetPath != "notes/projects/project-ideas.md" ||
+		renamePlan.PathCleanup.Candidates[0].DuplicateRisk != "none" ||
+		!strings.Contains(renamePlan.PathCleanup.Candidates[0].NextRequest, "rename_document") {
+		t.Fatalf("rename cleanup plan = %+v", renamePlan.PathCleanup)
+	}
+
+	promotionPlan, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionPlanPathCleanup,
+		PathCleanup: runner.PathCleanupOptions{
+			Path:        candidate.Path,
+			CleanupKind: "candidate_promotion",
+		},
+	})
+	if err != nil {
+		t.Fatalf("plan candidate promotion cleanup: %v", err)
+	}
+	if promotionPlan.PathCleanup == nil ||
+		len(promotionPlan.PathCleanup.Candidates) != 1 ||
+		promotionPlan.PathCleanup.Candidates[0].RecommendedAction != runner.DocumentTaskActionPromoteCandidate ||
+		promotionPlan.PathCleanup.Candidates[0].ProposedTargetPath != "notes/projects/great-project-idea.md" ||
+		!strings.Contains(promotionPlan.PathCleanup.Candidates[0].NextRequest, "promote_candidate") {
+		t.Fatalf("promotion cleanup plan = %+v", promotionPlan.PathCleanup)
+	}
+}
+
+func TestDocumentTaskPathCleanupReportsDuplicateRiskAndAppliesAutonomously(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	duplicateSource := createDocument(t, ctx, config, "notes/projects/projects.md", "Project Ideas", "# Project Ideas\n")
+	if duplicateSource.DocID == "" {
+		t.Fatalf("duplicate source missing doc id")
+	}
+	createDocument(t, ctx, config, "notes/projects/project-ideas.md", "Existing Project Ideas", "# Existing Project Ideas\n")
+	applySource := createDocument(t, ctx, config, "notes/projects/rough.md", "Precise Project Name", "# Precise Project Name\n")
+
+	duplicatePlan, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionPlanPathCleanup,
+		PathCleanup: runner.PathCleanupOptions{
+			Path: "notes/projects/projects.md",
+		},
+	})
+	if err != nil {
+		t.Fatalf("plan duplicate cleanup: %v", err)
+	}
+	if duplicatePlan.PathCleanup == nil ||
+		len(duplicatePlan.PathCleanup.Candidates) != 1 ||
+		duplicatePlan.PathCleanup.Candidates[0].DuplicateRisk != "target_document_exists" ||
+		duplicatePlan.PathCleanup.Candidates[0].NextRequest != "" {
+		t.Fatalf("duplicate cleanup plan = %+v", duplicatePlan.PathCleanup)
+	}
+
+	blockedApply, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionPlanPathCleanup,
+		PathCleanup: runner.PathCleanupOptions{
+			DocID: applySource.DocID,
+			Mode:  "apply",
+		},
+	})
+	if err != nil {
+		t.Fatalf("blocked apply path cleanup: %v", err)
+	}
+	if !blockedApply.Rejected || !strings.Contains(blockedApply.RejectionReason, "autonomous_trusted") {
+		t.Fatalf("blocked apply result = %+v", blockedApply)
+	}
+
+	applied, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionPlanPathCleanup,
+		Autonomy: runner.AutonomyModes{
+			ApprovalMode: runner.ApprovalModeAutonomousTrusted,
+		},
+		PathCleanup: runner.PathCleanupOptions{
+			DocID: applySource.DocID,
+			Mode:  "apply",
+		},
+	})
+	if err != nil {
+		t.Fatalf("autonomous apply path cleanup: %v", err)
+	}
+	if applied.PathCleanup == nil ||
+		applied.PathCleanup.AppliedCount != 1 ||
+		applied.PathCleanup.Candidates[0].WriteStatus != "applied" ||
+		applied.PathCleanup.Candidates[0].MoveResult == nil ||
+		applied.PathCleanup.Candidates[0].MoveResult.Document.Path != "notes/projects/precise-project-name.md" {
+		t.Fatalf("applied path cleanup = %+v", applied.PathCleanup)
+	}
+
+	persistedSource := createDocument(t, ctx, config, "notes/projects/temp-name.md", "Persisted Profile Name", "# Persisted Profile Name\n")
+	if _, err := runner.RunConfigTask(ctx, config, runner.ConfigTaskRequest{
+		Action:  runner.ConfigTaskActionConfigureProfile,
+		Profile: runner.AutonomyModes{ApprovalMode: runner.ApprovalModeAutonomousTrusted},
+	}); err != nil {
+		t.Fatalf("configure autonomous profile: %v", err)
+	}
+	persistedApplied, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionPlanPathCleanup,
+		PathCleanup: runner.PathCleanupOptions{
+			DocID: persistedSource.DocID,
+			Mode:  "apply",
+		},
+	})
+	if err != nil {
+		t.Fatalf("persisted autonomous apply path cleanup: %v", err)
+	}
+	if persistedApplied.PathCleanup == nil ||
+		persistedApplied.PathCleanup.AppliedCount != 1 ||
+		persistedApplied.PathCleanup.Candidates[0].MoveResult == nil ||
+		persistedApplied.PathCleanup.Candidates[0].MoveResult.Document.Path != "notes/projects/persisted-profile-name.md" {
+		t.Fatalf("persisted applied path cleanup = %+v", persistedApplied.PathCleanup)
+	}
+}
+
+func TestDocumentTaskPathCleanupSkipsTargetCollisionsBeforeApply(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	first := createDocument(t, ctx, config, "notes/projects/alpha.md", "Shared Cleanup Name", "# Shared Cleanup Name\n")
+	second := createDocument(t, ctx, config, "notes/projects/beta.md", "Shared Cleanup Name", "# Shared Cleanup Name\n")
+
+	applied, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionPlanPathCleanup,
+		Autonomy: runner.AutonomyModes{
+			ApprovalMode: runner.ApprovalModeAutonomousTrusted,
+		},
+		PathCleanup: runner.PathCleanupOptions{
+			PathPrefix: "notes/projects/",
+			Mode:       "apply",
+		},
+	})
+	if err != nil {
+		t.Fatalf("apply colliding path cleanup: %v", err)
+	}
+	if applied.PathCleanup == nil ||
+		applied.PathCleanup.AppliedCount != 0 ||
+		applied.PathCleanup.WriteStatus != "no_low_risk_candidates_applied" ||
+		len(applied.PathCleanup.Candidates) != 2 {
+		t.Fatalf("colliding path cleanup = %+v", applied.PathCleanup)
+	}
+	for _, candidate := range applied.PathCleanup.Candidates {
+		if candidate.DuplicateRisk != "target_collision_in_plan" ||
+			candidate.NextRequest != "" ||
+			candidate.WriteStatus != "skipped_not_low_risk" ||
+			!strings.Contains(candidate.Reason, "target_collision_in_plan") {
+			t.Fatalf("colliding candidate = %+v", candidate)
+		}
+	}
+
+	firstRead, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGet,
+		DocID:  first.DocID,
+	})
+	if err != nil {
+		t.Fatalf("read first colliding source: %v", err)
+	}
+	secondRead, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGet,
+		DocID:  second.DocID,
+	})
+	if err != nil {
+		t.Fatalf("read second colliding source: %v", err)
+	}
+	if firstRead.Document == nil || firstRead.Document.Path != first.Path ||
+		secondRead.Document == nil || secondRead.Document.Path != second.Path {
+		t.Fatalf("colliding sources moved unexpectedly: first=%+v second=%+v", firstRead.Document, secondRead.Document)
+	}
+}
+
 func TestDocumentTaskGitLifecycleStatusAndHistory(t *testing.T) {
 	t.Parallel()
 

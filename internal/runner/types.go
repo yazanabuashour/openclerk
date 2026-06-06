@@ -31,6 +31,7 @@ const (
 	DocumentTaskActionMoveDocument        = "move_document"
 	DocumentTaskActionRenameDocument      = "rename_document"
 	DocumentTaskActionPromoteCandidate    = "promote_candidate"
+	DocumentTaskActionPlanPathCleanup     = "plan_path_cleanup"
 
 	RetrievalTaskActionValidate                     = "validate"
 	RetrievalTaskActionSearch                       = "search"
@@ -117,6 +118,7 @@ type DocumentTaskRequest struct {
 	WebSearch           WebSearchPlanOptions     `json:"web_search,omitempty"`
 	Artifact            ArtifactPlanOptions      `json:"artifact,omitempty"`
 	Move                MoveDocumentOptions      `json:"move,omitempty"`
+	PathCleanup         PathCleanupOptions       `json:"path_cleanup,omitempty"`
 	Path                string                   `json:"path,omitempty"`
 	Title               string                   `json:"title,omitempty"`
 	Body                string                   `json:"body,omitempty"`
@@ -303,6 +305,7 @@ type DocumentTaskResult struct {
 	ArtifactPlan        *ArtifactCandidatePlan  `json:"artifact_candidate_plan,omitempty"`
 	MovePlan            *DocumentMovePlan       `json:"move_plan,omitempty"`
 	MoveResult          *DocumentMoveResult     `json:"move_result,omitempty"`
+	PathCleanup         *PathCleanupPlan        `json:"path_cleanup,omitempty"`
 	Documents           []DocumentSummary       `json:"documents,omitempty"`
 	Paths               *Paths                  `json:"paths,omitempty"`
 	Layout              *KnowledgeLayout        `json:"layout,omitempty"`
@@ -675,6 +678,18 @@ type MoveDocumentOptions struct {
 	TargetPath    string `json:"target_path,omitempty"`
 	UpdateLinks   *bool  `json:"update_links,omitempty"`
 	UpdateIndexes bool   `json:"update_indexes,omitempty"`
+}
+
+type PathCleanupOptions struct {
+	DocID         string `json:"doc_id,omitempty"`
+	Path          string `json:"path,omitempty"`
+	PathPrefix    string `json:"path_prefix,omitempty"`
+	Query         string `json:"query,omitempty"`
+	Mode          string `json:"mode,omitempty"`
+	CleanupKind   string `json:"cleanup_kind,omitempty"`
+	TargetPrefix  string `json:"target_prefix,omitempty"`
+	UpdateIndexes bool   `json:"update_indexes,omitempty"`
+	Limit         int    `json:"limit,omitempty"`
 }
 
 type RetrievalTaskResult struct {
@@ -1578,6 +1593,35 @@ type DocumentProjectionRefresh struct {
 	RefKind    string `json:"ref_kind"`
 	RefID      string `json:"ref_id"`
 	Status     string `json:"status"`
+}
+
+type PathCleanupPlan struct {
+	Mode                 string                 `json:"mode"`
+	CleanupKind          string                 `json:"cleanup_kind"`
+	Scope                string                 `json:"scope"`
+	Candidates           []PathCleanupCandidate `json:"candidates,omitempty"`
+	AppliedCount         int                    `json:"applied_count,omitempty"`
+	WriteStatus          string                 `json:"write_status"`
+	ApprovalBoundary     string                 `json:"approval_boundary"`
+	ValidationBoundaries string                 `json:"validation_boundaries"`
+	AuthorityLimits      string                 `json:"authority_limits"`
+	AgentHandoff         *AgentHandoff          `json:"agent_handoff,omitempty"`
+}
+
+type PathCleanupCandidate struct {
+	Rank               int                 `json:"rank"`
+	DocID              string              `json:"doc_id"`
+	CurrentPath        string              `json:"current_path"`
+	Title              string              `json:"title"`
+	ProposedTargetPath string              `json:"proposed_target_path,omitempty"`
+	RecommendedAction  string              `json:"recommended_action,omitempty"`
+	Confidence         string              `json:"confidence"`
+	Reason             string              `json:"reason"`
+	DuplicateRisk      string              `json:"duplicate_risk"`
+	MovePlan           *DocumentMovePlan   `json:"move_plan,omitempty"`
+	NextRequest        string              `json:"next_request,omitempty"`
+	MoveResult         *DocumentMoveResult `json:"move_result,omitempty"`
+	WriteStatus        string              `json:"write_status"`
 }
 
 type GraphNode struct {

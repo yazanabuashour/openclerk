@@ -109,6 +109,8 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 				"rename_document",
 				"promote_candidate",
 				"refuse existing targets",
+				"plan_path_cleanup",
+				"autonomous_trusted",
 				"ocr_review",
 				"verified local OCR module",
 				"git_lifecycle_report",
