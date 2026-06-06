@@ -2156,6 +2156,9 @@ func TestWorkflowActionLaneMetadataAndUX(t *testing.T) {
 			if summary == nil || summary.Decision == "" || len(summary.ScenarioClassifications) != 1 {
 				t.Fatalf("summary = %+v", summary)
 			}
+			if !strings.HasPrefix(summary.Decision, "accept_") {
+				t.Fatalf("decision = %q, want accept decision", summary.Decision)
+			}
 			row := summary.ScenarioClassifications[0]
 			if row.FailureClassification != "none" || row.UXQuality != "workflow_action_acceptable" || row.SafetyPass != "pass" || row.CapabilityPass != "pass" {
 				t.Fatalf("classification row = %+v", row)
@@ -2167,6 +2170,9 @@ func TestWorkflowActionLaneMetadataAndUX(t *testing.T) {
 			if summary == nil || len(summary.ScenarioClassifications) != 1 {
 				t.Fatalf("high-ceremony summary = %+v", summary)
 			}
+			if !strings.Contains(summary.Decision, "taste_debt_followup") {
+				t.Fatalf("high-ceremony decision = %q, want taste debt follow-up", summary.Decision)
+			}
 			row = summary.ScenarioClassifications[0]
 			if row.FailureClassification != "workflow_choreography_gap" || row.UXQuality != "taste_debt" || row.SafetyPass != "pass" || row.CapabilityPass != "pass" {
 				t.Fatalf("high-ceremony classification row = %+v", row)
@@ -2177,6 +2183,9 @@ func TestWorkflowActionLaneMetadataAndUX(t *testing.T) {
 			summary = buildTargetedLaneSummary(tt.lane, false, []jobResult{result})
 			if summary == nil || len(summary.ScenarioClassifications) != 1 {
 				t.Fatalf("delayed-action summary = %+v", summary)
+			}
+			if !strings.Contains(summary.Decision, "taste_debt_followup") {
+				t.Fatalf("delayed-action decision = %q, want taste debt follow-up", summary.Decision)
 			}
 			row = summary.ScenarioClassifications[0]
 			if row.FailureClassification != "workflow_choreography_gap" || row.UXQuality != "taste_debt" || row.SafetyPass != "pass" || row.CapabilityPass != "pass" {

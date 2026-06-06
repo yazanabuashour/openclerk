@@ -1,5 +1,7 @@
 package main
 
+import "strings"
+
 func buildProductionGateSummary(results []jobResult) *productionGateSummary {
 	productionByScenario := map[string]jobResult{}
 	for _, result := range results {
@@ -429,17 +431,39 @@ func buildTargetedLaneSummary(lane string, releaseBlocking bool, results []jobRe
 		summary.Decision = compileSynthesisCandidateDecision(summary.ScenarioClassifications)
 		summary.Promotion = compileSynthesisCandidatePromotion(summary.Decision)
 	case compileSynthesisWorkflowActionLaneName:
-		summary.Decision = "accept_compile_synthesis_workflow_action"
-		summary.Promotion = "implemented narrow compile_synthesis document action plus existing primitives for advanced/manual cases; no schema migration, direct vault behavior, broad synthesis engine, or source authority change"
+		summary.Decision = workflowActionDecision(summary.ScenarioClassifications, "accept_compile_synthesis_workflow_action", "retain_compile_synthesis_surface_with_taste_debt_followup")
+		summary.Promotion = workflowActionPromotion(summary.Decision, "implemented narrow compile_synthesis document action plus existing primitives for advanced/manual cases; no schema migration, direct vault behavior, broad synthesis engine, or source authority change")
 	case broadAuditLaneName:
 		summary.Decision = broadAuditDecision(summary.ScenarioClassifications)
 		summary.Promotion = "targeted broad contradiction/audit revisit evidence only; no broad semantic contradiction engine, audit runner action, schema, migration, storage behavior, or public API change from this eval"
 	case sourceAuditWorkflowActionLaneName:
-		summary.Decision = "accept_source_audit_report_workflow_action"
-		summary.Promotion = "implemented narrow source_audit_report retrieval action plus existing primitives for advanced/manual cases; broad contradiction engine claims remain rejected"
+		summary.Decision = workflowActionDecision(summary.ScenarioClassifications, "accept_source_audit_report_workflow_action", "retain_source_audit_report_surface_with_taste_debt_followup")
+		summary.Promotion = workflowActionPromotion(summary.Decision, "implemented narrow source_audit_report retrieval action plus existing primitives for advanced/manual cases; broad contradiction engine claims remain rejected")
 	case evidenceBundleWorkflowActionLaneName:
-		summary.Decision = "accept_evidence_bundle_report_workflow_action"
-		summary.Promotion = "implemented read-only evidence_bundle_report retrieval action plus existing records/provenance/decision/projection primitives; no schema migration, memory transport, vector DB, or hidden authority ranking"
+		summary.Decision = workflowActionDecision(summary.ScenarioClassifications, "accept_evidence_bundle_report_workflow_action", "retain_evidence_bundle_report_surface_with_taste_debt_followup")
+		summary.Promotion = workflowActionPromotion(summary.Decision, "implemented read-only evidence_bundle_report retrieval action plus existing records/provenance/decision/projection primitives; no schema migration, memory transport, vector DB, or hidden authority ranking")
 	}
 	return &summary
+}
+
+func workflowActionDecision(rows []targetedScenarioClassification, acceptDecision string, tasteDebtDecision string) string {
+	for _, row := range rows {
+		if row.SafetyPass != "pass" || row.CapabilityPass != "pass" {
+			return strings.Replace(tasteDebtDecision, "taste_debt_followup", "repair_required", 1)
+		}
+		if row.UXQuality == "taste_debt" {
+			return tasteDebtDecision
+		}
+	}
+	return acceptDecision
+}
+
+func workflowActionPromotion(decision string, acceptedPromotion string) string {
+	if strings.Contains(decision, "taste_debt_followup") {
+		return acceptedPromotion + "; refreshed natural-row UX is taste debt, so acceptable-UX release claims are deferred to follow-up surface comparison"
+	}
+	if strings.Contains(decision, "repair_required") {
+		return "workflow action repair required before promotion claims; no new schema, storage migration, hidden authority ranking, or lower-level access is authorized by this eval"
+	}
+	return acceptedPromotion
 }
