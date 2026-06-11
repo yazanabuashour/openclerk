@@ -1163,16 +1163,17 @@ func looksLikeHTML(body []byte) bool {
 }
 
 func classifySourceBody(sourceURL string, body []byte, mimeType string, requestedType string) (string, string, error) {
+	baseMIME := sourceBaseMIMEType(mimeType)
 	if looksLikePDF(body) {
 		if requestedType == sourceTypeWeb {
 			return "", "", domain.ValidationError("source URL returned a PDF, not a web page", nil)
 		}
-		if mimeType == "" || mimeType == "application/octet-stream" || mimeType == "text/plain" {
+		if baseMIME == "" || baseMIME == "application/octet-stream" || baseMIME == "text/plain" {
 			mimeType = "application/pdf"
 		}
 		return sourceTypePDF, mimeType, nil
 	}
-	if mimeType == "text/html" || looksLikeHTML(body) {
+	if baseMIME == "text/html" || looksLikeHTML(body) {
 		if requestedType == sourceTypePDF {
 			return "", "", domain.ValidationError("source URL did not return a PDF", nil)
 		}
@@ -1194,7 +1195,7 @@ func classifySourceBody(sourceURL string, body []byte, mimeType string, requeste
 }
 
 func isMarkdownSource(sourceURL string, mimeType string) bool {
-	normalizedMIME := strings.ToLower(strings.TrimSpace(mimeType))
+	normalizedMIME := sourceBaseMIMEType(mimeType)
 	if normalizedMIME == "text/markdown" || normalizedMIME == "text/x-markdown" {
 		return true
 	}
@@ -1206,6 +1207,14 @@ func isMarkdownSource(sourceURL string, mimeType string) bool {
 		return false
 	}
 	return isMarkdownPathExtension(strings.ToLower(path.Ext(parsed.Path)))
+}
+
+func sourceBaseMIMEType(mimeType string) string {
+	normalized := strings.ToLower(strings.TrimSpace(mimeType))
+	if parsed, _, err := mime.ParseMediaType(normalized); err == nil {
+		return strings.ToLower(strings.TrimSpace(parsed))
+	}
+	return normalized
 }
 
 func isMarkdownPathExtension(ext string) bool {
