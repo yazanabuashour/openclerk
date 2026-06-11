@@ -75,7 +75,7 @@ func (s *Store) createVideoURL(ctx context.Context, input domain.VideoURLInput, 
 			return domain.VideoIngestionResult{}, err
 		}
 	}
-	if exists, err := s.sourceURLExists(ctx, videoURL); err != nil {
+	if exists, err := s.sourceURLExists(ctx, []string{videoURL}); err != nil {
 		return domain.VideoIngestionResult{}, err
 	} else if exists {
 		return domain.VideoIngestionResult{}, domain.AlreadyExistsError("source URL", videoURL)
@@ -222,7 +222,7 @@ func (s *Store) updateVideoURL(ctx context.Context, input domain.VideoURLInput, 
 }
 
 func (s *Store) videoDocumentByURL(ctx context.Context, sourceURL string) (domain.Document, error) {
-	document, err := s.sourceDocumentByURL(ctx, sourceURL)
+	document, _, err := s.sourceDocumentByURL(ctx, []string{sourceURL})
 	if err != nil {
 		return domain.Document{}, err
 	}

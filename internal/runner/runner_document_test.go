@@ -2453,6 +2453,61 @@ func TestDocumentTaskIngestSourceURLWeb(t *testing.T) {
 	}
 }
 
+func TestDocumentTaskIngestSourceURLWebMarkdown(t *testing.T) {
+	markdownBody := "# Runner Markdown README\n\nRunner Markdown source evidence for OpenClerk.\n\n## Install\n\nStore public README docs through ingest_source_url.\n"
+	fixtureRoot := t.TempDir()
+	fixturePath := filepath.Join(fixtureRoot, "web", "README.md")
+	if err := os.MkdirAll(filepath.Dir(fixturePath), 0o755); err != nil {
+		t.Fatalf("mkdir markdown fixture: %v", err)
+	}
+	if err := os.WriteFile(fixturePath, []byte(markdownBody), 0o644); err != nil {
+		t.Fatalf("write markdown fixture: %v", err)
+	}
+	t.Setenv("OPENCLERK_ENABLE_EVAL_SOURCE_FIXTURES", "1")
+	t.Setenv("OPENCLERK_EVAL_SOURCE_FIXTURE_ROOT", fixtureRoot)
+	sourceURL := "http://openclerk-eval.local/web/README.md"
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	config := runclient.Config{DatabasePath: dbPath}
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestSourceURL,
+		Source: runner.SourceURLInput{
+			URL:        sourceURL,
+			PathHint:   "sources/web/runner-markdown-readme.md",
+			SourceType: "web",
+		},
+	})
+	if err != nil {
+		t.Fatalf("ingest markdown source URL: %v", err)
+	}
+	if result.Rejected || result.Ingestion == nil {
+		t.Fatalf("ingest result = %+v", result)
+	}
+	if result.Ingestion.SourceType != "web" ||
+		result.Ingestion.SourceURL != sourceURL ||
+		result.Ingestion.MIMEType != "text/markdown" ||
+		result.Ingestion.AssetPath != "" ||
+		len(result.Ingestion.Citations) == 0 {
+		t.Fatalf("markdown ingestion = %+v", result.Ingestion)
+	}
+
+	get, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGet,
+		DocID:  result.Ingestion.DocID,
+	})
+	if err != nil {
+		t.Fatalf("get markdown source document: %v", err)
+	}
+	if get.Document == nil ||
+		get.Document.Metadata["source_title"] != "Runner Markdown README" ||
+		get.Document.Metadata["mime_type"] != "text/markdown" ||
+		!strings.Contains(get.Document.Body, "Runner Markdown source evidence for OpenClerk.") ||
+		!strings.Contains(get.Document.Body, "Store public README docs through ingest_source_url.") {
+		t.Fatalf("markdown document = %+v", get.Document)
+	}
+}
+
 func TestDocumentTaskIngestVideoURLSuppliedTranscript(t *testing.T) {
 	t.Parallel()
 

@@ -471,6 +471,155 @@ func TestIngestSourceURLWebCreateAndUpdateMode(t *testing.T) {
 	}
 }
 
+func TestIngestSourceURLWebMarkdownREADME(t *testing.T) {
+	fixtureRoot := t.TempDir()
+	fixturePath := filepath.Join(fixtureRoot, "web", "README.md")
+	if err := os.MkdirAll(filepath.Dir(fixturePath), 0o755); err != nil {
+		t.Fatalf("mkdir markdown fixture: %v", err)
+	}
+	markdownBody := "# last30days-skill\n\nRunner-owned README evidence for OpenClerk.\n\n## Usage\n\nUse public project docs without a browser fetch bypass.\n"
+	if err := os.WriteFile(fixturePath, []byte(markdownBody), 0o644); err != nil {
+		t.Fatalf("write markdown fixture: %v", err)
+	}
+	t.Setenv(evalSourceFixtureEnableEnv, "1")
+	t.Setenv(evalSourceFixtureRootEnv, fixtureRoot)
+
+	ctx := context.Background()
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+
+	sourceURL := "http://openclerk-eval.local/web/README.md?download=1"
+	created, err := store.IngestSourceURL(ctx, domain.SourceURLInput{
+		URL:        sourceURL,
+		PathHint:   "sources/web/last30days-skill-readme.md",
+		SourceType: "web",
+	})
+	if err != nil {
+		t.Fatalf("create markdown web source URL: %v", err)
+	}
+	if created.SourceType != "web" ||
+		created.SourceURL != sourceURL ||
+		created.MIMEType != "text/markdown" ||
+		created.AssetPath != "" ||
+		len(created.Citations) == 0 {
+		t.Fatalf("created markdown web ingestion = %+v", created)
+	}
+	doc, err := store.GetDocument(ctx, created.DocID)
+	if err != nil {
+		t.Fatalf("get markdown web source: %v", err)
+	}
+	if doc.Metadata["source_type"] != "web" ||
+		doc.Metadata["source_url"] != sourceURL ||
+		doc.Metadata["source_title"] != "last30days-skill" ||
+		doc.Metadata["mime_type"] != "text/markdown" ||
+		!strings.Contains(doc.Body, "Runner-owned README evidence for OpenClerk.") ||
+		!strings.Contains(doc.Body, "Use public project docs without a browser fetch bypass.") {
+		t.Fatalf("markdown web source document = %+v", doc)
+	}
+	search, err := store.Search(ctx, domain.SearchQuery{Text: "README evidence", PathPrefix: "sources/", Limit: 10})
+	if err != nil {
+		t.Fatalf("search markdown source: %v", err)
+	}
+	if len(search.Hits) == 0 || search.Hits[0].Citations[0].DocID != created.DocID {
+		t.Fatalf("search markdown source = %+v", search)
+	}
+}
+
+func TestIngestSourceURLGitHubAliasesLegacyStoredURL(t *testing.T) {
+	allowPrivateSourceHosts(t)
+	oldClient := sourceHTTPClient
+	sourceHTTPClient = func(checkRedirect func(*http.Request, []*http.Request) error) *http.Client {
+		return &http.Client{
+			CheckRedirect: checkRedirect,
+			Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+				const canonicalURL = "https://raw.githubusercontent.com/mvanhorn/last30days-skill/HEAD/README.md"
+				if request.URL.String() != canonicalURL {
+					t.Fatalf("request URL = %q, want %q", request.URL.String(), canonicalURL)
+				}
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Header:     http.Header{"Content-Type": []string{"text/plain; charset=utf-8"}},
+					Body:       io.NopCloser(strings.NewReader("# mvanhorn/last30days-skill\n\nLegacy GitHub alias update evidence.\n")),
+					Request:    request,
+				}, nil
+			}),
+		}
+	}
+	t.Cleanup(func() {
+		sourceHTTPClient = oldClient
+	})
+
+	ctx := context.Background()
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+
+	const legacyURL = "https://github.com/mvanhorn/last30days-skill"
+	const canonicalURL = "https://raw.githubusercontent.com/mvanhorn/last30days-skill/HEAD/README.md"
+	created, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+		Path:  "sources/web/legacy-github.md",
+		Title: "Legacy GitHub",
+		Body: strings.TrimSpace(`---
+type: source
+source_type: web
+modality: markdown
+source_url: https://github.com/mvanhorn/last30days-skill
+derived_path: sources/web/legacy-github.md
+sha256: old-sha
+---
+# Legacy GitHub
+
+Old GitHub source evidence.
+`) + "\n",
+	})
+	if err != nil {
+		t.Fatalf("create legacy GitHub source: %v", err)
+	}
+
+	var appErr *domain.Error
+	_, err = store.IngestSourceURL(ctx, domain.SourceURLInput{
+		URL:        legacyURL,
+		PathHint:   "sources/web/legacy-github-copy.md",
+		SourceType: "web",
+	})
+	if !errors.As(err, &appErr) || appErr.Status != 409 || appErr.Code != "already_exists" {
+		t.Fatalf("legacy duplicate create error = %v, want already_exists 409", err)
+	}
+
+	updated, err := store.IngestSourceURL(ctx, domain.SourceURLInput{
+		URL:        legacyURL,
+		PathHint:   "sources/web/legacy-github.md",
+		SourceType: "web",
+		Mode:       "update",
+	})
+	if err != nil {
+		t.Fatalf("update legacy GitHub source URL: %v", err)
+	}
+	if updated.DocID != created.DocID ||
+		updated.SourceURL != canonicalURL ||
+		updated.SourceType != "web" ||
+		updated.MIMEType != "text/markdown" ||
+		updated.UpdateStatus != "changed" {
+		t.Fatalf("updated legacy GitHub source = %+v", updated)
+	}
+	doc, err := store.GetDocument(ctx, created.DocID)
+	if err != nil {
+		t.Fatalf("get updated legacy GitHub source: %v", err)
+	}
+	if doc.Metadata["source_url"] != canonicalURL ||
+		doc.Metadata["mime_type"] != "text/markdown" ||
+		!strings.Contains(doc.Body, "Legacy GitHub alias update evidence.") {
+		t.Fatalf("updated legacy GitHub document = %+v", doc)
+	}
+}
+
 func TestIngestSourceURLUpdateImpactPagesSynthesisProjections(t *testing.T) {
 	initialHTML := `<!doctype html><html><head><title>Paged Source</title></head><body><h1>Paged Source</h1><p>Initial paged source evidence.</p></body></html>`
 	updatedHTML := `<!doctype html><html><head><title>Paged Source Updated</title></head><body><h1>Paged Source Updated</h1><p>Updated paged source evidence.</p></body></html>`

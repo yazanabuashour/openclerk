@@ -392,16 +392,18 @@ Required implementation coverage:
 ## `oc-v1ed` Web URL Intake Decision
 
 Decision: extend `openclerk document` action `ingest_source_url` to support
-public HTML/web-page source ingestion under the same runner-owned URL intake
-surface.
+public HTML/web-page and Markdown source ingestion under the same runner-owned
+URL intake surface.
 
 The request shape adds optional `source.source_type`. `source_type: "pdf"`
 keeps the existing PDF behavior and still requires `source.path_hint` plus
 `source.asset_path_hint` in create mode. `source_type: "web"` creates a
-canonical `sources/*.md` web source note from public HTML and requires
-`source.path_hint`; `source.asset_path_hint` is not used. When
-`source.source_type` is omitted, the runner detects PDF versus HTML from the
-URL and response. Unsupported content types reject without writing.
+canonical `sources/*.md` web source note from public HTML or Markdown and
+requires `source.path_hint`; `source.asset_path_hint` is not used. GitHub
+repository landing URLs normalize to the public raw README, and GitHub Markdown
+blob URLs normalize to their public raw content URL. When `source.source_type`
+is omitted, the runner detects PDF versus HTML/Markdown from the URL and
+response. Unsupported content types reject without writing.
 
 A user-provided URL is sufficient permission for the runner to fetch the page;
 agents must not ask for a separate pre-fetch approval. Durable writes still
@@ -411,10 +413,10 @@ fields are missing.
 Web source notes use canonical markdown authority with `type: source`,
 `source_type: web`, `modality: markdown`, normalized `source_url`,
 `derived_path`, SHA256 content hash, MIME type, capture timestamp, and visible
-page text. Create mode rejects duplicate normalized source URLs. Update mode
-targets the existing web source by normalized `source.url`, preserves `doc_id`
-and path, no-ops on unchanged content hash, and marks dependent synthesis stale
-when fetched visible content changes.
+HTML text or Markdown content. Create mode rejects duplicate normalized source
+URLs. Update mode targets the existing web source by normalized `source.url`,
+preserves `doc_id` and path, no-ops on unchanged content hash, and marks
+dependent synthesis stale when fetched visible content changes.
 
 Product-page behavior is public-visible only. Committed documentation uses
 neutral placeholders such as `<amazon-product-url>`, `<product-title>`, and

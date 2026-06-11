@@ -116,7 +116,7 @@ func normalizeSourcePlacementURL(raw string) string {
 	parsed.Scheme = strings.ToLower(parsed.Scheme)
 	parsed.Host = strings.ToLower(parsed.Host)
 	parsed.Fragment = ""
-	return parsed.String()
+	return normalizeGitHubPlacementSourceURL(parsed.String())
 }
 
 func sourcePlacementType(input SourceURLInput) string {
@@ -132,6 +132,12 @@ func sourcePlacementType(input SourceURLInput) string {
 
 func sourcePlacementSlug(input SourceURLInput, sourceURL string) string {
 	label := input.Title
+	if label == "" {
+		label = githubPlacementLabel(input.URL)
+	}
+	if label == "" {
+		label = githubPlacementLabel(sourceURL)
+	}
 	if label == "" {
 		if parsed, err := url.Parse(sourceURL); err == nil {
 			base := strings.TrimSuffix(path.Base(parsed.Path), path.Ext(parsed.Path))
@@ -170,6 +176,118 @@ func slugifyPlacementLabel(label string) string {
 		return "source"
 	}
 	return slug
+}
+
+func normalizeGitHubPlacementSourceURL(sourceURL string) string {
+	parsed, err := url.Parse(sourceURL)
+	if err != nil {
+		return sourceURL
+	}
+	host := strings.ToLower(parsed.Hostname())
+	if host != "github.com" {
+		return sourceURL
+	}
+	segments, ok := placementURLPathSegments(parsed)
+	if !ok || len(segments) < 2 {
+		return sourceURL
+	}
+	owner := segments[0]
+	repo := strings.TrimSuffix(segments[1], ".git")
+	if owner == "" || repo == "" {
+		return sourceURL
+	}
+	if len(segments) == 2 {
+		return githubPlacementRawContentURL(owner, repo, "HEAD", []string{"README.md"})
+	}
+	if len(segments) >= 5 && (segments[2] == "blob" || segments[2] == "raw") && isMarkdownPlacementPathSegments(segments[4:]) {
+		return githubPlacementRawContentURL(owner, repo, segments[3], segments[4:])
+	}
+	if len(segments) == 4 && segments[2] == "tree" {
+		return githubPlacementRawContentURL(owner, repo, segments[3], []string{"README.md"})
+	}
+	return sourceURL
+}
+
+func githubPlacementLabel(raw string) string {
+	parsed, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil {
+		return ""
+	}
+	host := strings.ToLower(parsed.Hostname())
+	segments, ok := placementURLPathSegments(parsed)
+	if !ok {
+		return ""
+	}
+	switch host {
+	case "github.com":
+		if len(segments) < 2 {
+			return ""
+		}
+		owner := segments[0]
+		repo := strings.TrimSuffix(segments[1], ".git")
+		if len(segments) == 2 || (len(segments) == 4 && segments[2] == "tree") {
+			return owner + " " + repo
+		}
+		if len(segments) >= 5 && (segments[2] == "blob" || segments[2] == "raw") && isMarkdownPlacementPathSegments(segments[4:]) {
+			return githubPlacementContentLabel(owner, repo, segments[4:])
+		}
+	case "raw.githubusercontent.com":
+		if len(segments) >= 4 && isMarkdownPlacementPathSegments(segments[3:]) {
+			return githubPlacementContentLabel(segments[0], segments[1], segments[3:])
+		}
+	}
+	return ""
+}
+
+func githubPlacementContentLabel(owner string, repo string, filePath []string) string {
+	label := owner + " " + repo
+	base := ""
+	if len(filePath) > 0 {
+		base = strings.TrimSuffix(path.Base(filePath[len(filePath)-1]), path.Ext(filePath[len(filePath)-1]))
+	}
+	if base != "" {
+		label += " " + base
+	}
+	return label
+}
+
+func placementURLPathSegments(parsed *url.URL) ([]string, bool) {
+	trimmed := strings.Trim(parsed.EscapedPath(), "/")
+	if trimmed == "" {
+		return nil, false
+	}
+	rawSegments := strings.Split(trimmed, "/")
+	segments := make([]string, 0, len(rawSegments))
+	for _, rawSegment := range rawSegments {
+		segment, err := url.PathUnescape(rawSegment)
+		if err != nil || segment == "" {
+			return nil, false
+		}
+		segments = append(segments, segment)
+	}
+	return segments, true
+}
+
+func githubPlacementRawContentURL(owner string, repo string, ref string, filePath []string) string {
+	segments := []string{owner, repo, ref}
+	segments = append(segments, filePath...)
+	escaped := make([]string, 0, len(segments))
+	for _, segment := range segments {
+		escaped = append(escaped, url.PathEscape(segment))
+	}
+	return "https://raw.githubusercontent.com/" + strings.Join(escaped, "/")
+}
+
+func isMarkdownPlacementPathSegments(segments []string) bool {
+	if len(segments) == 0 {
+		return false
+	}
+	switch strings.ToLower(path.Ext(segments[len(segments)-1])) {
+	case ".md", ".markdown", ".mdown", ".mkd":
+		return true
+	default:
+		return false
+	}
 }
 
 func sourcePlacementExistingSource(ctx context.Context, client *runclient.Client, normalizedURL string, rawURL string) (*DocumentSummary, error) {

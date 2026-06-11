@@ -47,6 +47,7 @@ type normalizedSourceURLRequest struct {
 	URL           string
 	Mode          string
 	RequestedType string
+	LookupURLs    []string
 }
 
 type noteMutationLabels struct {
@@ -80,16 +81,16 @@ func (s *Store) IngestSourceURL(ctx context.Context, input domain.SourceURLInput
 	}
 	switch request.Mode {
 	case sourceURLModeCreate:
-		return s.createSourceURL(ctx, input, request.URL, request.RequestedType)
+		return s.createSourceURL(ctx, input, request.URL, request.RequestedType, request.LookupURLs)
 	case sourceURLModeUpdate:
-		return s.updateSourceURL(ctx, input, request.URL, request.RequestedType)
+		return s.updateSourceURL(ctx, input, request.URL, request.RequestedType, request.LookupURLs)
 	default:
 		return domain.SourceIngestionResult{}, domain.ValidationError("source mode must be create or update", map[string]any{"mode": input.Mode})
 	}
 }
 
 func normalizeSourceURLRequest(input domain.SourceURLInput) (normalizedSourceURLRequest, error) {
-	sourceURL, err := normalizeSourceURL(input.URL)
+	sourceURL, lookupURLs, err := normalizeDocumentSourceURLWithAliases(input.URL)
 	if err != nil {
 		return normalizedSourceURLRequest{}, err
 	}
@@ -105,15 +106,16 @@ func normalizeSourceURLRequest(input domain.SourceURLInput) (normalizedSourceURL
 		URL:           sourceURL,
 		Mode:          mode,
 		RequestedType: requestedType,
+		LookupURLs:    lookupURLs,
 	}, nil
 }
 
-func (s *Store) createSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string, requestedType string) (domain.SourceIngestionResult, error) {
+func (s *Store) createSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string, requestedType string, lookupURLs []string) (domain.SourceIngestionResult, error) {
 	sourcePath, err := normalizeSourceDocumentPath(input.PathHint)
 	if err != nil {
 		return domain.SourceIngestionResult{}, err
 	}
-	if exists, err := s.sourceURLExists(ctx, sourceURL); err != nil {
+	if exists, err := s.sourceURLExists(ctx, lookupURLs); err != nil {
 		return domain.SourceIngestionResult{}, err
 	} else if exists {
 		return domain.SourceIngestionResult{}, domain.AlreadyExistsError("source URL", sourceURL)
@@ -218,7 +220,7 @@ func (s *Store) createWebSourceURL(ctx context.Context, input domain.SourceURLIn
 	if strings.TrimSpace(input.AssetPathHint) != "" {
 		return domain.SourceIngestionResult{}, domain.ValidationError("source.asset_path_hint is not supported for web source ingestion", nil)
 	}
-	extracted, err := extractWebPage(download.Body)
+	extracted, err := extractWebSource(sourceURL, download.MIMEType, download.Body)
 	if err != nil {
 		return domain.SourceIngestionResult{}, err
 	}
@@ -259,10 +261,13 @@ func (s *Store) createWebSourceURL(ctx context.Context, input domain.SourceURLIn
 	}, nil
 }
 
-func (s *Store) updateSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string, requestedType string) (domain.SourceIngestionResult, error) {
-	document, err := s.sourceDocumentByURL(ctx, sourceURL)
+func (s *Store) updateSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string, requestedType string, lookupURLs []string) (domain.SourceIngestionResult, error) {
+	document, storedSourceURL, err := s.sourceDocumentByURL(ctx, lookupURLs)
 	if err != nil {
 		return domain.SourceIngestionResult{}, err
+	}
+	if storedSourceURL == "" {
+		storedSourceURL = sourceURL
 	}
 	storedType := strings.TrimSpace(document.Metadata["source_type"])
 	if storedType == "" {
@@ -273,16 +278,16 @@ func (s *Store) updateSourceURL(ctx context.Context, input domain.SourceURLInput
 	}
 	switch storedType {
 	case sourceTypePDF:
-		return s.updatePDFSourceURL(ctx, input, sourceURL, document)
+		return s.updatePDFSourceURL(ctx, input, sourceURL, storedSourceURL, document)
 	case sourceTypeWeb:
-		return s.updateWebSourceURL(ctx, input, sourceURL, document)
+		return s.updateWebSourceURL(ctx, input, sourceURL, storedSourceURL, document)
 	default:
 		return domain.SourceIngestionResult{}, domain.ConflictError("source URL belongs to an unsupported source type", map[string]any{"source_url": sourceURL, "source_type": storedType, "path": document.Path})
 	}
 }
 
-func (s *Store) updatePDFSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string, document domain.Document) (domain.SourceIngestionResult, error) {
-	sourcePath, assetPath, err := validateStoredPDFSourceDocument(s.vaultRoot, document, sourceURL)
+func (s *Store) updatePDFSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string, storedSourceURL string, document domain.Document) (domain.SourceIngestionResult, error) {
+	sourcePath, assetPath, err := validateStoredPDFSourceDocument(s.vaultRoot, document, storedSourceURL)
 	if err != nil {
 		return domain.SourceIngestionResult{}, err
 	}
@@ -385,8 +390,8 @@ func (s *Store) updatePDFSourceURL(ctx context.Context, input domain.SourceURLIn
 	return s.withSourceURLUpdateImpact(ctx, result, sourceURL, strings.TrimSpace(document.Metadata["sha256"]), shaHex, true)
 }
 
-func (s *Store) updateWebSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string, document domain.Document) (domain.SourceIngestionResult, error) {
-	sourcePath, err := validateStoredWebSourceDocument(s.vaultRoot, document, sourceURL)
+func (s *Store) updateWebSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string, storedSourceURL string, document domain.Document) (domain.SourceIngestionResult, error) {
+	sourcePath, err := validateStoredWebSourceDocument(s.vaultRoot, document, storedSourceURL)
 	if err != nil {
 		return domain.SourceIngestionResult{}, err
 	}
@@ -415,7 +420,7 @@ func (s *Store) updateWebSourceURL(ctx context.Context, input domain.SourceURLIn
 		}
 		return s.withSourceURLUpdateImpact(ctx, result, sourceURL, shaHex, shaHex, false)
 	}
-	extracted, err := extractWebPage(download.Body)
+	extracted, err := extractWebSource(sourceURL, download.MIMEType, download.Body)
 	if err != nil {
 		return domain.SourceIngestionResult{}, err
 	}
@@ -607,37 +612,44 @@ func sourceProvenanceRef(event domain.ProvenanceEvent) domain.SourceProvenanceRe
 	}
 }
 
-func (s *Store) sourceDocumentByURL(ctx context.Context, sourceURL string) (domain.Document, error) {
-	var docID string
-	err := s.db.QueryRowContext(ctx, `
+func (s *Store) sourceDocumentByURL(ctx context.Context, sourceURLs []string) (domain.Document, string, error) {
+	for _, sourceURL := range uniqueNonEmptyStrings(sourceURLs) {
+		var docID string
+		err := s.db.QueryRowContext(ctx, `
 SELECT doc_id
 FROM document_metadata
 WHERE key_name = 'source_url' AND value_text = ?
 ORDER BY doc_id
 LIMIT 1`, sourceURL).Scan(&docID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return domain.Document{}, domain.NotFoundError("source URL", sourceURL)
+		if errors.Is(err, sql.ErrNoRows) {
+			continue
+		}
+		if err != nil {
+			return domain.Document{}, "", domain.InternalError("query source URL document", err)
+		}
+		document, err := s.GetDocument(ctx, docID)
+		return document, sourceURL, err
 	}
-	if err != nil {
-		return domain.Document{}, domain.InternalError("query source URL document", err)
-	}
-	return s.GetDocument(ctx, docID)
+	return domain.Document{}, "", domain.NotFoundError("source URL", firstNonEmpty(sourceURLs...))
 }
 
-func (s *Store) sourceURLExists(ctx context.Context, sourceURL string) (bool, error) {
-	var found string
-	err := s.db.QueryRowContext(ctx, `
+func (s *Store) sourceURLExists(ctx context.Context, sourceURLs []string) (bool, error) {
+	for _, sourceURL := range uniqueNonEmptyStrings(sourceURLs) {
+		var found string
+		err := s.db.QueryRowContext(ctx, `
 SELECT doc_id
 FROM document_metadata
 WHERE key_name = 'source_url' AND value_text = ?
 LIMIT 1`, sourceURL).Scan(&found)
-	if errors.Is(err, sql.ErrNoRows) {
-		return false, nil
+		if errors.Is(err, sql.ErrNoRows) {
+			continue
+		}
+		if err != nil {
+			return false, domain.InternalError("query duplicate source URL", err)
+		}
+		return true, nil
 	}
-	if err != nil {
-		return false, domain.InternalError("query duplicate source URL", err)
-	}
-	return true, nil
+	return false, nil
 }
 
 func (s *Store) sourceIngestionResultFromDocument(ctx context.Context, document domain.Document) (domain.SourceIngestionResult, error) {
@@ -788,7 +800,11 @@ func downloadSource(ctx context.Context, sourceURL string, requestedType string)
 		if len(body) > maxSourceDownloadBytes {
 			return sourceDownload{}, domain.ValidationError("source URL exceeds maximum supported size", map[string]any{"max_bytes": maxSourceDownloadBytes})
 		}
-		kind, mimeType, err := classifySourceBody(body, "application/pdf", requestedType)
+		mimeType := mime.TypeByExtension(strings.ToLower(filepath.Ext(fixturePath)))
+		if mimeType == "" {
+			mimeType = "application/octet-stream"
+		}
+		kind, mimeType, err := classifySourceBody(sourceURL, body, mimeType, requestedType)
 		if err != nil {
 			return sourceDownload{}, err
 		}
@@ -846,7 +862,7 @@ func downloadSource(ctx context.Context, sourceURL string, requestedType string)
 	} else {
 		mimeType = http.DetectContentType(body)
 	}
-	kind, mimeType, err := classifySourceBody(body, mimeType, requestedType)
+	kind, mimeType, err := classifySourceBody(sourceURL, body, mimeType, requestedType)
 	if err != nil {
 		return sourceDownload{}, err
 	}
@@ -1093,7 +1109,7 @@ func looksLikeHTML(body []byte) bool {
 	return strings.Contains(prefix, "<!doctype html") || strings.Contains(prefix, "<html") || strings.Contains(prefix, "<head") || strings.Contains(prefix, "<body")
 }
 
-func classifySourceBody(body []byte, mimeType string, requestedType string) (string, string, error) {
+func classifySourceBody(sourceURL string, body []byte, mimeType string, requestedType string) (string, string, error) {
 	if looksLikePDF(body) {
 		if requestedType == sourceTypeWeb {
 			return "", "", domain.ValidationError("source URL returned a PDF, not a web page", nil)
@@ -1109,13 +1125,43 @@ func classifySourceBody(body []byte, mimeType string, requestedType string) (str
 		}
 		return sourceTypeWeb, "text/html", nil
 	}
+	if isMarkdownSource(sourceURL, mimeType) {
+		if requestedType == sourceTypePDF {
+			return "", "", domain.ValidationError("source URL did not return a PDF", nil)
+		}
+		return sourceTypeWeb, "text/markdown", nil
+	}
 	if requestedType == sourceTypePDF {
 		return "", "", domain.ValidationError("source URL did not return a PDF", nil)
 	}
 	if requestedType == sourceTypeWeb {
-		return "", "", domain.ValidationError("source URL did not return an HTML web page", map[string]any{"mime_type": mimeType})
+		return "", "", domain.ValidationError("source URL did not return an HTML or Markdown web source", map[string]any{"mime_type": mimeType})
 	}
 	return "", "", domain.ValidationError("source URL returned an unsupported content type", map[string]any{"mime_type": mimeType})
+}
+
+func isMarkdownSource(sourceURL string, mimeType string) bool {
+	normalizedMIME := strings.ToLower(strings.TrimSpace(mimeType))
+	if normalizedMIME == "text/markdown" || normalizedMIME == "text/x-markdown" {
+		return true
+	}
+	if normalizedMIME != "" && normalizedMIME != "text/plain" && normalizedMIME != "application/octet-stream" {
+		return false
+	}
+	parsed, err := url.Parse(sourceURL)
+	if err != nil {
+		return false
+	}
+	return isMarkdownPathExtension(strings.ToLower(path.Ext(parsed.Path)))
+}
+
+func isMarkdownPathExtension(ext string) bool {
+	switch ext {
+	case ".md", ".markdown", ".mdown", ".mkd":
+		return true
+	default:
+		return false
+	}
 }
 
 func extractPDF(assetPath string) (pdfExtraction, error) {
@@ -1309,6 +1355,59 @@ func extractWebPage(body []byte) (webExtraction, error) {
 		return webExtraction{}, domain.ValidationError("source URL did not expose visible HTML text", nil)
 	}
 	return webExtraction{Title: title, Text: text}, nil
+}
+
+func extractWebSource(sourceURL string, mimeType string, body []byte) (webExtraction, error) {
+	if isMarkdownSource(sourceURL, mimeType) {
+		return extractMarkdownSource(body)
+	}
+	return extractWebPage(body)
+}
+
+func extractMarkdownSource(body []byte) (webExtraction, error) {
+	text := strings.TrimSpace(strings.ReplaceAll(string(body), "\r\n", "\n"))
+	if text == "" {
+		return webExtraction{}, domain.ValidationError("source URL did not expose Markdown text", nil)
+	}
+	return webExtraction{Title: markdownSourceTitle(text), Text: text}, nil
+}
+
+func markdownSourceTitle(text string) string {
+	lines := strings.Split(text, "\n")
+	bodyStart := 0
+	if len(lines) > 0 && strings.TrimSpace(lines[0]) == "---" {
+		for idx := 1; idx < len(lines) && idx < 80; idx++ {
+			line := strings.TrimSpace(lines[idx])
+			if line == "---" {
+				bodyStart = idx + 1
+				break
+			}
+			if key, value, ok := strings.Cut(line, ":"); ok && strings.EqualFold(strings.TrimSpace(key), "title") {
+				if title := cleanMarkdownTitle(value); title != "" {
+					return title
+				}
+			}
+		}
+	}
+	for _, line := range lines[bodyStart:] {
+		trimmed := strings.TrimSpace(line)
+		hashes := 0
+		for hashes < len(trimmed) && trimmed[hashes] == '#' {
+			hashes++
+		}
+		if hashes > 0 && hashes <= 6 && hashes < len(trimmed) && trimmed[hashes] == ' ' {
+			if title := cleanMarkdownTitle(trimmed[hashes:]); title != "" {
+				return title
+			}
+		}
+	}
+	return ""
+}
+
+func cleanMarkdownTitle(value string) string {
+	value = strings.TrimSpace(value)
+	value = strings.Trim(value, `"'`)
+	return strings.TrimSpace(value)
 }
 
 func cleanExtractedHTMLText(value string) string {

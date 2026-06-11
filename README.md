@@ -90,7 +90,7 @@ approved. The current support matrix is:
 
 | Input | Supported path | Boundary |
 |---|---|---|
-| Public PDF or web URL | `ingest_source_url` | Runner-owned fetch, provenance, duplicate checks, and approved create/update only |
+| Public PDF, HTML, Markdown, or GitHub README/blob URL | `ingest_source_url` | Runner-owned fetch, provenance, duplicate checks, and approved create/update only |
 | Supplied video transcript | `ingest_video_url` | Transcript text and provenance must be supplied; no native media acquisition |
 | Pasted or explicit content | `artifact_candidate_plan` | Read-only path/title/body/tags/fields/duplicate proposal before approval |
 | Explicit local text, markdown, or text-bearing PDF | `artifact_candidate_plan` with `local_path` | Reads only the supplied file; no durable write |

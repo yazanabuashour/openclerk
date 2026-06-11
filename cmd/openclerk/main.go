@@ -145,7 +145,7 @@ func buildCapabilitiesResult() capabilitiesResult {
 				Primitive: []capabilityAction{
 					{Action: "validate", Purpose: "validate a candidate document without writing", Posture: "read_only"},
 					{Action: "create_document", Purpose: "create an approved vault-relative markdown document", Posture: "durable_write_requires_approval"},
-					{Action: "ingest_source_url", Purpose: "plan, create, or update public web/PDF source notes through the runner", Posture: "plan_read_only_or_approved_write"},
+					{Action: "ingest_source_url", Purpose: "plan, create, or update public web, Markdown, or PDF source notes through the runner", Posture: "plan_read_only_or_approved_write"},
 					{Action: "ingest_video_url", Purpose: "create or update video source notes from supplied transcripts", Posture: "approved_write_with_user_supplied_transcript"},
 					{Action: "list_documents", Purpose: "list runner-visible documents", Posture: "read_only"},
 					{Action: "get_document", Purpose: "read one runner-visible document by doc_id", Posture: "read_only"},
@@ -553,6 +553,7 @@ func documentUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, `  validate/create_document: {"action":"validate","document":{"path":"notes/example.md","title":"Example","body":"# Example\n\nBody."}}`)
 	_, _ = fmt.Fprintln(w, `  ingest_source_url PDF create: {"action":"ingest_source_url","source":{"url":"https://example.test/source.pdf","path_hint":"sources/example.md","asset_path_hint":"assets/sources/example.pdf","title":"Optional title"}}`)
 	_, _ = fmt.Fprintln(w, `  ingest_source_url web create: {"action":"ingest_source_url","source":{"url":"https://example.test/page.html","path_hint":"sources/web/example.md","source_type":"web","title":"Optional title"}}`)
+	_, _ = fmt.Fprintln(w, `  ingest_source_url markdown create: {"action":"ingest_source_url","source":{"url":"https://github.com/owner/repo/blob/main/README.md","path_hint":"sources/web/repo-readme.md","source_type":"web","title":"Optional title"}}`)
 	_, _ = fmt.Fprintln(w, `  ingest_source_url update: {"action":"ingest_source_url","source":{"url":"https://example.test/page.html","mode":"update","source_type":"web"}}`)
 	_, _ = fmt.Fprintln(w, `  ingest_source_url placement plan: {"action":"ingest_source_url","source":{"url":"https://example.test/page.html","mode":"plan","source_type":"web","title":"Optional title"}}`)
 	_, _ = fmt.Fprintln(w, `  ingest_video_url create: {"action":"ingest_video_url","video":{"url":"https://youtube.example.test/watch?v=demo","path_hint":"sources/video-youtube/demo.md","transcript":{"text":"Supplied transcript text.","policy":"supplied","origin":"user_supplied_transcript"}}}`)

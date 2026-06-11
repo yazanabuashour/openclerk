@@ -45,6 +45,46 @@ func TestSourceURLPlacementPlansPDFSurface(t *testing.T) {
 	}
 }
 
+func TestSourceURLPlacementCanonicalizesGitHubMarkdownSources(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	client := openReadOnlyPlacementClient(t)
+	defer func() {
+		_ = client.Close()
+	}()
+
+	placement, err := planSourceURLPlacement(ctx, client, sourceURLPlacementInput{
+		URL: "https://github.com/mvanhorn/last30days-skill",
+	})
+	if err != nil {
+		t.Fatalf("source URL placement: %v", err)
+	}
+	if placement.SourceURL != "https://raw.githubusercontent.com/mvanhorn/last30days-skill/HEAD/README.md" ||
+		placement.SourceType != "web" ||
+		placement.Slug != "mvanhorn-last30days-skill" ||
+		!slices.Contains(placement.CandidateSourcePaths, "sources/web/mvanhorn-last30days-skill.md") {
+		t.Fatalf("repository placement = %+v", placement)
+	}
+	next := placement.NextIngestSourceRequest("public_candidate_requires_ingest_source_url_approval")
+	if !strings.Contains(next, `"url":"https://raw.githubusercontent.com/mvanhorn/last30days-skill/HEAD/README.md"`) ||
+		!strings.Contains(next, `"path_hint":"sources/web/mvanhorn-last30days-skill.md"`) {
+		t.Fatalf("repository next ingest request = %s", next)
+	}
+
+	blob, err := planSourceURLPlacement(ctx, client, sourceURLPlacementInput{
+		URL: "https://github.com/mvanhorn/last30days-skill/blob/main/skills/last30days/SKILL.md",
+	})
+	if err != nil {
+		t.Fatalf("source URL placement for blob: %v", err)
+	}
+	if blob.SourceURL != "https://raw.githubusercontent.com/mvanhorn/last30days-skill/main/skills/last30days/SKILL.md" ||
+		blob.Slug != "mvanhorn-last30days-skill-skill" ||
+		!slices.Contains(blob.CandidateSourcePaths, "sources/web/mvanhorn-last30days-skill-skill.md") {
+		t.Fatalf("blob placement = %+v", blob)
+	}
+}
+
 func TestSourceURLPlacementFindsExistingRawSourceURL(t *testing.T) {
 	t.Parallel()
 
