@@ -6,10 +6,10 @@
 - Release blocking: `false`
 - Configured parallelism: `4`
 - Cache mode: `shared`
-- Cache prewarm seconds: `21.89`
-- Harness elapsed seconds: `65.25`
-- Effective parallel speedup: `0.41x`
-- Parallel efficiency: `0.10`
+- Cache prewarm seconds: `29.73`
+- Harness elapsed seconds: `61.51`
+- Effective parallel speedup: `0.46x`
+- Parallel efficiency: `0.12`
 - Raw logs: `<run-root>/<variant>/<scenario>/turn-N/events.jsonl`
 
 ## Production Gate
@@ -35,29 +35,29 @@ Recommendation: `fix_production_agentops_before_release`
 | Phase | Seconds |
 | --- | ---: |
 | prepare_run_dir | 0.00 |
-| copy_repo | 0.10 |
-| install_variant | 16.69 |
+| copy_repo | 0.16 |
+| install_variant | 3.45 |
 | warm_cache | 0.00 |
-| seed_data | 0.04 |
-| agent_run | 26.48 |
+| seed_data | 0.03 |
+| agent_run | 28.08 |
 | parse_metrics | 0.00 |
 | verify | 0.05 |
-| total | 43.36 |
+| total | 31.78 |
 
 ## Results
 
 | Variant | Scenario | Status | Tools | Commands | Assistant Calls | Non-Cached Input | Wall Seconds | Raw Log |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `production` | `compile-synthesis-workflow-action-natural` | `completed` | 2 | 2 | 3 | 11035 | 26.48 | `<run-root>/production/compile-synthesis-workflow-action-natural/turn-1/events.jsonl` |
+| `production` | `compile-synthesis-workflow-action-natural` | `completed` | 2 | 2 | 3 | 10487 | 28.08 | `<run-root>/production/compile-synthesis-workflow-action-natural/turn-1/events.jsonl` |
 
 ## Targeted Lane Summary
 
-Decision: `accept_compile_synthesis_workflow_action`
+Decision: `retain_compile_synthesis_surface_with_taste_debt_followup`
 
 Public surface: `openclerk document`, `openclerk retrieval`
 
-Promotion: implemented narrow compile_synthesis document action plus existing primitives for advanced/manual cases; no schema migration, direct vault behavior, broad synthesis engine, or source authority change.
+Promotion: implemented narrow compile_synthesis document action plus existing primitives for advanced/manual cases; no schema migration, direct vault behavior, broad synthesis engine, or source authority change; refreshed natural-row UX is taste debt, so acceptable-UX release claims are deferred to follow-up surface comparison.
 
 | Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Workflow first command | Workflow calls | Setup discovery | Pre-action setup discovery | Pre-action primitives | Post-action primitives | Final-answer repair turns | Latency | Guidance dependence | Safety pass | Capability pass | UX quality | Safety risks | Fixture preflight | Evidence posture |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- |
-| `production` | `compile-synthesis-workflow-action-natural` | `completed` | `none` | 2 | 2 | 3 | 26.48 | `natural-user-intent` | `completed` | `normal` | 0 | 2 | 2 | 1 | 0 | 0 | 0 | 0 | 0 | `medium` | `low_natural_promoted_workflow_action` | `pass` | `pass` | `workflow_action_acceptable` | `none_observed` | `not_applicable` | compile_synthesis preserved source authority, selected the existing target, prevented duplicates, returned provenance/freshness evidence, and reduced workflow ceremony |
+| `production` | `compile-synthesis-workflow-action-natural` | `completed` | `workflow_choreography_gap` | 2 | 2 | 3 | 28.08 | `natural-user-intent` | `completed` | `normal` | 0 | 2 | 1 | 2 | 0 | 0 | 0 | 0 | 0 | `medium` | `high_ceremony_promoted_workflow_action` | `pass` | `pass` | `taste_debt` | `none_observed` | `not_applicable` | compile_synthesis preserved source authority and passed, but natural workflow-action use still required more commands or assistant turns than the low-ceremony UX threshold |

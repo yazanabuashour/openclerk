@@ -152,7 +152,7 @@ capability, and UX quality. `ux_quality: workflow_action_acceptable` is
 required before release notes claim acceptable natural-row UX. If refreshed
 rows pass safety/capability but classify as `taste_debt`, keep the narrow
 runner surface claim but track the delayed or repeated action ceremony in a
-follow-up Bead such as `oc-nft5`. The installed runner may expose compact
+follow-up Bead before claiming acceptable natural-row UX. The installed runner may expose compact
 request-shape help through `openclerk document --help` and `openclerk retrieval
 --help`; do not move long workflow recipes into `skills/openclerk/SKILL.md` to
 satisfy these lanes.
