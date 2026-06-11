@@ -41,6 +41,7 @@ type sourceDownload struct {
 	Body       []byte
 	MIMEType   string
 	SourceType string
+	FinalURL   string
 }
 
 type normalizedSourceURLRequest struct {
@@ -61,7 +62,11 @@ type noteMutationLabels struct {
 var sourceHTTPClient = defaultSourceHTTPClient
 var allowPrivateSourceHostsForTests = false
 
-const maxSourceURLUpdateImpactRefs = 200
+const (
+	maxSourceURLUpdateImpactRefs = 200
+	maxSourceInspectionLinks     = 40
+	maxSourceTextPreviewRunes    = 1200
+)
 
 func defaultSourceHTTPClient(checkRedirect func(*http.Request, []*http.Request) error) *http.Client {
 	return &http.Client{
@@ -108,6 +113,53 @@ func normalizeSourceURLRequest(input domain.SourceURLInput) (normalizedSourceURL
 		RequestedType: requestedType,
 		LookupURLs:    lookupURLs,
 	}, nil
+}
+
+func (s *Store) InspectSourceURL(ctx context.Context, input domain.SourceURLInput) (domain.SourceURLInspection, error) {
+	sourceURL, _, err := normalizeDocumentSourceURLWithAliases(input.URL)
+	if err != nil {
+		return domain.SourceURLInspection{}, err
+	}
+	requestedType, err := normalizeSourceType(input.SourceType)
+	if err != nil {
+		return domain.SourceURLInspection{}, err
+	}
+	download, err := downloadSource(ctx, sourceURL, requestedType)
+	if err != nil {
+		return domain.SourceURLInspection{}, err
+	}
+	sha := sha256.Sum256(download.Body)
+	shaHex := hex.EncodeToString(sha[:])
+	inspection := domain.SourceURLInspection{
+		SourceURL:  sourceURL,
+		SourceType: download.SourceType,
+		SHA256:     shaHex,
+		SizeBytes:  int64(len(download.Body)),
+		MIMEType:   download.MIMEType,
+	}
+	switch download.SourceType {
+	case sourceTypePDF:
+		extracted, err := extractPDFBytes(download.Body)
+		if err != nil {
+			return domain.SourceURLInspection{}, err
+		}
+		inspection.Title = resolvedInspectionTitle(input.Title, extracted.Metadata.Title, sourceURL)
+		inspection.TextPreview = sourceTextPreview(extracted.Text)
+		inspection.PageCount = extracted.Pages
+		inspection.PDFMetadata = extracted.Metadata
+	case sourceTypeWeb:
+		linkBaseURL := firstNonEmpty(download.FinalURL, sourceURL)
+		extracted, err := extractWebSource(linkBaseURL, download.MIMEType, download.Body)
+		if err != nil {
+			return domain.SourceURLInspection{}, err
+		}
+		inspection.Title = resolvedInspectionTitle(input.Title, extracted.Title, sourceURL)
+		inspection.TextPreview = sourceTextPreview(extracted.Text)
+		inspection.Links = extractSourceLinks(linkBaseURL, download.MIMEType, download.Body, maxSourceInspectionLinks)
+	default:
+		return domain.SourceURLInspection{}, domain.ValidationError("source URL returned an unsupported content type", map[string]any{"mime_type": download.MIMEType})
+	}
+	return inspection, nil
 }
 
 func (s *Store) createSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string, requestedType string, lookupURLs []string) (domain.SourceIngestionResult, error) {
@@ -808,7 +860,7 @@ func downloadSource(ctx context.Context, sourceURL string, requestedType string)
 		if err != nil {
 			return sourceDownload{}, err
 		}
-		return sourceDownload{Body: body, MIMEType: mimeType, SourceType: kind}, nil
+		return sourceDownload{Body: body, MIMEType: mimeType, SourceType: kind, FinalURL: sourceURL}, nil
 	}
 	parsedURL, err := validateSourceFetchURL(sourceURL)
 	if err != nil {
@@ -862,10 +914,6 @@ func downloadSource(ctx context.Context, sourceURL string, requestedType string)
 	} else {
 		mimeType = http.DetectContentType(body)
 	}
-	kind, mimeType, err := classifySourceBody(sourceURL, body, mimeType, requestedType)
-	if err != nil {
-		return sourceDownload{}, err
-	}
 	finalURL := response.Request.URL
 	if finalURL == nil {
 		finalURL = parsedURL
@@ -873,7 +921,12 @@ func downloadSource(ctx context.Context, sourceURL string, requestedType string)
 	if err := validateSourceFetchURLTarget(ctx, finalURL); err != nil {
 		return sourceDownload{}, err
 	}
-	return sourceDownload{Body: body, MIMEType: mimeType, SourceType: kind}, nil
+	finalSourceURL := finalURL.String()
+	kind, mimeType, err := classifySourceBody(finalSourceURL, body, mimeType, requestedType)
+	if err != nil {
+		return sourceDownload{}, err
+	}
+	return sourceDownload{Body: body, MIMEType: mimeType, SourceType: kind, FinalURL: finalSourceURL}, nil
 }
 
 func validateSourceFetchURL(sourceURL string) (*url.URL, error) {
@@ -1215,6 +1268,25 @@ func extractPDF(assetPath string) (pdfExtraction, error) {
 	}, nil
 }
 
+func extractPDFBytes(body []byte) (pdfExtraction, error) {
+	file, err := os.CreateTemp("", "openclerk-source-inspect-*.pdf")
+	if err != nil {
+		return pdfExtraction{}, domain.InternalError("create source inspection PDF staging file", err)
+	}
+	tempPath := file.Name()
+	defer func() {
+		_ = osRemove(tempPath)
+	}()
+	if _, err := file.Write(body); err != nil {
+		_ = file.Close()
+		return pdfExtraction{}, domain.InternalError("write source inspection PDF staging file", err)
+	}
+	if err := file.Close(); err != nil {
+		return pdfExtraction{}, domain.InternalError("close source inspection PDF staging file", err)
+	}
+	return extractPDF(tempPath)
+}
+
 func pdfText(value pdf.Value) string {
 	text := strings.TrimSpace(value.Text())
 	if text != "" {
@@ -1235,6 +1307,26 @@ func resolvedSourceTitle(requestTitle string, pdfTitle string, sourcePath string
 		return title
 	}
 	return strings.TrimSuffix(path.Base(sourcePath), path.Ext(sourcePath))
+}
+
+func resolvedInspectionTitle(requestTitle string, extractedTitle string, sourceURL string) string {
+	if title := strings.TrimSpace(requestTitle); title != "" {
+		return title
+	}
+	if title := strings.TrimSpace(extractedTitle); title != "" {
+		return title
+	}
+	parsed, err := url.Parse(sourceURL)
+	if err == nil {
+		base := strings.TrimSuffix(path.Base(parsed.Path), path.Ext(parsed.Path))
+		if base != "" && base != "." && base != "/" {
+			return base
+		}
+		if parsed.Hostname() != "" {
+			return parsed.Hostname()
+		}
+	}
+	return "source"
 }
 
 func buildPDFSourceNoteBody(sourceURL string, sourcePath string, assetPath string, title string, sha string, sizeBytes int64, mimeType string, capturedAt time.Time, extracted pdfExtraction) string {
@@ -1328,11 +1420,14 @@ func buildWebSourceNoteBody(sourceURL string, sourcePath string, title string, s
 }
 
 var (
-	htmlScriptStylePattern = regexp.MustCompile(`(?is)<(script|style|noscript|svg|template)\b[^>]*>.*?</(script|style|noscript|svg|template)>`)
-	htmlCommentPattern     = regexp.MustCompile(`(?is)<!--.*?-->`)
-	htmlTitlePattern       = regexp.MustCompile(`(?is)<title\b[^>]*>(.*?)</title>`)
-	htmlTagPattern         = regexp.MustCompile(`(?is)<[^>]+>`)
-	htmlWhitespacePattern  = regexp.MustCompile(`[ \t\r\n]+`)
+	htmlScriptStylePattern  = regexp.MustCompile(`(?is)<(script|style|noscript|svg|template)\b[^>]*>.*?</(script|style|noscript|svg|template)>`)
+	htmlCommentPattern      = regexp.MustCompile(`(?is)<!--.*?-->`)
+	htmlTitlePattern        = regexp.MustCompile(`(?is)<title\b[^>]*>(.*?)</title>`)
+	htmlTagPattern          = regexp.MustCompile(`(?is)<[^>]+>`)
+	htmlWhitespacePattern   = regexp.MustCompile(`[ \t\r\n]+`)
+	htmlAnchorPattern       = regexp.MustCompile(`(?is)<a\b[^>]*\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^'"\s>]+))[^>]*>(.*?)</a>`)
+	markdownLinkPattern     = regexp.MustCompile(`(?m)\[([^\]\n]{0,180})\]\(([^)\s]+)(?:\s+["'][^)]*["'])?\)`)
+	markdownAutolinkPattern = regexp.MustCompile(`(?i)<(https?://[^>\s]+)>`)
 )
 
 func extractWebPage(body []byte) (webExtraction, error) {
@@ -1415,6 +1510,111 @@ func cleanExtractedHTMLText(value string) string {
 	value = strings.ReplaceAll(value, "\u00a0", " ")
 	value = htmlWhitespacePattern.ReplaceAllString(value, " ")
 	return strings.TrimSpace(value)
+}
+
+func sourceTextPreview(value string) string {
+	preview := strings.Join(strings.Fields(value), " ")
+	runes := []rune(preview)
+	if len(runes) <= maxSourceTextPreviewRunes {
+		return preview
+	}
+	return string(runes[:maxSourceTextPreviewRunes])
+}
+
+func extractSourceLinks(sourceURL string, mimeType string, body []byte, limit int) []domain.SourceURLInspectionLink {
+	if limit <= 0 {
+		return nil
+	}
+	if isMarkdownSource(sourceURL, mimeType) {
+		return extractMarkdownSourceLinks(sourceURL, string(body), limit)
+	}
+	return extractHTMLSourceLinks(sourceURL, string(body), limit)
+}
+
+func extractMarkdownSourceLinks(sourceURL string, body string, limit int) []domain.SourceURLInspectionLink {
+	links := []domain.SourceURLInspectionLink{}
+	for _, match := range markdownLinkPattern.FindAllStringSubmatch(body, -1) {
+		if len(match) < 3 {
+			continue
+		}
+		links = appendInspectionLink(links, sourceURL, match[2], match[1])
+		if len(links) >= limit {
+			return links
+		}
+	}
+	for _, match := range markdownAutolinkPattern.FindAllStringSubmatch(body, -1) {
+		if len(match) < 2 {
+			continue
+		}
+		links = appendInspectionLink(links, sourceURL, match[1], "")
+		if len(links) >= limit {
+			return links
+		}
+	}
+	return links
+}
+
+func extractHTMLSourceLinks(sourceURL string, body string, limit int) []domain.SourceURLInspectionLink {
+	links := []domain.SourceURLInspectionLink{}
+	for _, match := range htmlAnchorPattern.FindAllStringSubmatch(body, -1) {
+		if len(match) < 5 {
+			continue
+		}
+		href := firstNonEmpty(match[1], match[2], match[3])
+		text := cleanExtractedHTMLText(htmlTagPattern.ReplaceAllString(match[4], " "))
+		links = appendInspectionLink(links, sourceURL, href, text)
+		if len(links) >= limit {
+			return links
+		}
+	}
+	return links
+}
+
+func appendInspectionLink(links []domain.SourceURLInspectionLink, sourceURL string, rawURL string, text string) []domain.SourceURLInspectionLink {
+	normalizedURL, ok := normalizeInspectionLinkURL(sourceURL, rawURL)
+	if !ok {
+		return links
+	}
+	for _, existing := range links {
+		if existing.URL == normalizedURL {
+			return links
+		}
+	}
+	return append(links, domain.SourceURLInspectionLink{
+		URL:  normalizedURL,
+		Text: sourceTextPreview(text),
+	})
+}
+
+func normalizeInspectionLinkURL(sourceURL string, rawURL string) (string, bool) {
+	rawURL = strings.TrimSpace(rawURL)
+	if rawURL == "" || strings.HasPrefix(rawURL, "#") {
+		return "", false
+	}
+	lower := strings.ToLower(rawURL)
+	for _, prefix := range []string{"mailto:", "javascript:", "tel:", "data:"} {
+		if strings.HasPrefix(lower, prefix) {
+			return "", false
+		}
+	}
+	base, err := url.Parse(sourceURL)
+	if err != nil {
+		return "", false
+	}
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return "", false
+	}
+	resolved := base.ResolveReference(parsed)
+	resolved.Fragment = ""
+	if resolved.Scheme != "http" && resolved.Scheme != "https" {
+		return "", false
+	}
+	normalized, err := normalizeSourceURL(resolved.String())
+	if err != nil {
+		return "", false
+	}
+	return normalizeGitHubMarkdownSourceURL(normalized), true
 }
 
 func sourceMetadataFallbackText(metadata domain.SourcePDFMetadata, title string) string {

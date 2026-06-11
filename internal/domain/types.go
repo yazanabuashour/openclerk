@@ -113,6 +113,7 @@ type SourceURLInput struct {
 	Title         string
 	Mode          string
 	SourceType    string
+	Limit         int
 }
 
 type VideoURLInput struct {
@@ -167,6 +168,24 @@ type SourceIngestionResult struct {
 	ProvenanceRefs      []SourceProvenanceRef
 	SynthesisRepaired   bool
 	NoRepairWarning     string
+}
+
+type SourceURLInspection struct {
+	SourceURL   string
+	SourceType  string
+	Title       string
+	TextPreview string
+	SHA256      string
+	SizeBytes   int64
+	MIMEType    string
+	PageCount   int
+	PDFMetadata SourcePDFMetadata
+	Links       []SourceURLInspectionLink
+}
+
+type SourceURLInspectionLink struct {
+	URL  string
+	Text string
 }
 
 type SourceStaleDependent struct {
@@ -465,6 +484,7 @@ type Store interface {
 	Search(context.Context, SearchQuery) (SearchResult, error)
 	ListDocuments(context.Context, DocumentListQuery) (DocumentListResult, error)
 	CreateDocument(context.Context, CreateDocumentInput) (Document, error)
+	InspectSourceURL(context.Context, SourceURLInput) (SourceURLInspection, error)
 	IngestSourceURL(context.Context, SourceURLInput) (SourceIngestionResult, error)
 	IngestVideoURL(context.Context, VideoURLInput) (VideoIngestionResult, error)
 	GetDocument(context.Context, string) (Document, error)

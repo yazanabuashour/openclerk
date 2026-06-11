@@ -107,6 +107,16 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 
 	switch normalized.Action {
 	case DocumentTaskActionIngestSourceURL:
+		if normalized.Source.Mode == "inspect" {
+			plan, err := runSourceURLIntakePlan(ctx, client, normalized.Source)
+			if err != nil {
+				return DocumentTaskResult{}, err
+			}
+			return DocumentTaskResult{
+				SourceIntakePlan: &plan,
+				Summary:          sourceURLIntakePlanSummary(plan),
+			}, nil
+		}
 		plan, err := runSourcePlacementPlan(ctx, client, normalized.Source)
 		if err != nil {
 			return DocumentTaskResult{}, err
@@ -237,7 +247,7 @@ func isMutatingDocumentAction(normalized normalizedDocumentTaskRequest) bool {
 	case DocumentTaskActionPlanPathCleanup:
 		return normalized.PathCleanup.Mode == pathCleanupModeApply
 	case DocumentTaskActionIngestSourceURL:
-		return normalized.Source.Mode != "plan"
+		return normalized.Source.Mode != "plan" && normalized.Source.Mode != "inspect"
 	default:
 		return false
 	}
@@ -823,6 +833,7 @@ func trimSourceURLInput(input SourceURLInput) SourceURLInput {
 		Title:         strings.TrimSpace(input.Title),
 		Mode:          strings.TrimSpace(input.Mode),
 		SourceType:    strings.TrimSpace(input.SourceType),
+		Limit:         input.Limit,
 	}
 }
 
@@ -1145,13 +1156,16 @@ func validateSourceURLInput(input SourceURLInput) string {
 	if mode == "" {
 		mode = "create"
 	}
-	if mode != "create" && mode != "update" && mode != "plan" {
-		return "source.mode must be create, update, or plan"
+	if mode != "create" && mode != "update" && mode != "plan" && mode != "inspect" {
+		return "source.mode must be create, update, plan, or inspect"
 	}
-	if mode == "plan" {
+	if mode == "plan" || mode == "inspect" {
 		if rejection := validateRunnerPublicURLHost(parsed, "source.url"); rejection != "" {
 			return rejection
 		}
+	}
+	if input.Limit < 0 {
+		return "source.limit must be non-negative"
 	}
 	sourceType := input.SourceType
 	if sourceType != "" && sourceType != "pdf" && sourceType != "web" {

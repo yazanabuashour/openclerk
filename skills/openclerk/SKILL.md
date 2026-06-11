@@ -30,6 +30,7 @@ Prefer a promoted workflow action over manual primitive choreography when it mat
 - Representative source discovery: retrieval `source_discovery_report` once;
   answer from `source_discovery.agent_handoff`, using categories/counts instead
   of private paths, titles, snippets, ids, or raw JSON for private telemetry.
+- Source URL artifact/source inspection before durable write: document `ingest_source_url` with `mode: "inspect"` for runner-owned preview, discovered link candidates, duplicate status, and next approved requests; answer from `source_url_intake_plan.agent_handoff`.
 - Source URL placement before durable fetch/write: document
   `ingest_source_url` with `mode: "plan"`, then answer from
   `source_placement_plan.agent_handoff`.
@@ -137,8 +138,7 @@ or runner-supported public-source context is present:
   handoff need one runner-owned plan
 - duplicate-risk checks may use runner-visible retrieval/list/get/provenance
   evidence before choosing update versus new
-- public-link placement may propose source and synthesis paths before durable
-  fetch or write
+- public-link inspection may fetch a supplied public URL through the runner, propose related source candidates, and still require approval before durable source writes
 
 Opaque screenshots, images, slide decks or PPTX files, email archives, exported
 chats, forms, and bundles are unsupported as opaque input unless the user pasted
@@ -154,7 +154,7 @@ policies and let runner results drive the answer:
 - Candidate documents and artifacts: preserve explicit user path/title/body/type/tag/field/naming instructions; choose omitted path, title, body preview, tags, and fields from explicit content or runner-supported public-source context by default; use `artifact_candidate_plan` when tags, fields, confidence, duplicate status, or create/ingest handoff are relevant; otherwise validate with `openclerk document` before presenting a candidate; show `Path:`, `Title:`, and `Body preview:`; state no document was created; ask for approval before durable writes; for note-like candidates without an explicit path, use `notes/candidates/<slug-from-title>.md`, derive a concise singular noun phrase title, and Include `type: note` frontmatter plus a `# <Title>` heading.
 - OCR artifact review: text-extractable documents do not need OCR; use OCR review only for common images, scan-only PDFs, or PDFs whose embedded text is bad or partial, and treat returned OCR text as candidate evidence until durable-write approval.
 - Duplicate checks: when duplicate risk is requested or plausible, use runner-visible evidence before validating or writing; report the likely target, evidence inspected, and that no document was created or updated; ask whether to update the existing target or create a confirmed new path.
-- Public URL/source intake: use `web_search_plan` for supplied search results and `ingest_source_url` for HTTP/HTTPS PDF and public web sources. Do not fetch URLs with browser, HTTP, filesystem, or other non-runner tools; when placement is missing, propose source/synthesis paths and ask for approval before durable fetch or write.
+- Public URL/source intake: use `web_search_plan` for supplied search results and `ingest_source_url` for HTTP/HTTPS PDF and public web sources. Use `mode: "inspect"` when the agent should inspect a supplied public URL, extract a preview, and propose related source candidates; use `mode: "plan"` only for no-fetch placement. Do not fetch URLs with browser, HTTP, filesystem, or other non-runner tools; ask for approval before durable source writes.
 - Video/YouTube source intake: use `ingest_video_url` only with user-supplied transcript text and provenance; do not acquire media or transcripts externally.
 - Document lifecycle review, rollback, restore, and semantic diff: stay inside `openclerk document` and `openclerk retrieval`. Use `git_lifecycle_report` only for local Git status/history/checkpoints; it is storage history, not semantic provenance, and checkpoint mode needs explicit runner config. There is no public raw diff, restore, or rollback action.
 - Messy populated-vault retrieval: answer from runner-visible authority such as metadata-filtered authority results, active canonical sources, cited source paths, `doc_id`, and `chunk_id`; treat polluted, decoy, stale, draft, archived, duplicate, or candidate documents as non-authority unless runner-visible source authority says otherwise.

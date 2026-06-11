@@ -529,6 +529,119 @@ func TestIngestSourceURLWebMarkdownREADME(t *testing.T) {
 	}
 }
 
+func TestInspectSourceURLWebMarkdownLinks(t *testing.T) {
+	fixtureRoot := t.TempDir()
+	fixturePath := filepath.Join(fixtureRoot, "web", "README.md")
+	if err := os.MkdirAll(filepath.Dir(fixturePath), 0o755); err != nil {
+		t.Fatalf("mkdir markdown fixture: %v", err)
+	}
+	markdownBody := strings.Join([]string{
+		"# last30days-skill",
+		"",
+		"Runner-owned README evidence for OpenClerk.",
+		"",
+		"See [Skill](skills/last30days/SKILL.md), [Hermes Setup](HERMES_SETUP.md), [External](https://example.com/nope.md), and [Badge](badge.svg).",
+		"",
+		"<https://openclerk-eval.local/web/docs/manual.md>",
+	}, "\n")
+	if err := os.WriteFile(fixturePath, []byte(markdownBody), 0o644); err != nil {
+		t.Fatalf("write markdown fixture: %v", err)
+	}
+	t.Setenv(evalSourceFixtureEnableEnv, "1")
+	t.Setenv(evalSourceFixtureRootEnv, fixtureRoot)
+
+	ctx := context.Background()
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+
+	inspection, err := store.InspectSourceURL(ctx, domain.SourceURLInput{
+		URL:        "http://openclerk-eval.local/web/README.md",
+		SourceType: "web",
+	})
+	if err != nil {
+		t.Fatalf("inspect markdown source URL: %v", err)
+	}
+	if inspection.SourceType != "web" ||
+		inspection.MIMEType != "text/markdown" ||
+		inspection.Title != "last30days-skill" ||
+		len(inspection.SHA256) != 64 ||
+		!strings.Contains(inspection.TextPreview, "Runner-owned README evidence") {
+		t.Fatalf("inspection = %+v", inspection)
+	}
+	wantLinks := map[string]string{
+		"http://openclerk-eval.local/web/skills/last30days/SKILL.md": "Skill",
+		"http://openclerk-eval.local/web/HERMES_SETUP.md":            "Hermes Setup",
+		"https://example.com/nope.md":                                "External",
+		"http://openclerk-eval.local/web/badge.svg":                  "Badge",
+		"https://openclerk-eval.local/web/docs/manual.md":            "",
+	}
+	for wantURL, wantText := range wantLinks {
+		var found bool
+		for _, link := range inspection.Links {
+			if link.URL == wantURL && link.Text == wantText {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("inspection links missing %q/%q: %+v", wantURL, wantText, inspection.Links)
+		}
+	}
+	docs, err := store.ListDocuments(ctx, domain.DocumentListQuery{PathPrefix: "sources/", Limit: 10})
+	if err != nil {
+		t.Fatalf("list sources after inspect: %v", err)
+	}
+	if len(docs.Documents) != 0 {
+		t.Fatalf("inspect wrote source documents: %+v", docs.Documents)
+	}
+	if _, err := os.Stat(filepath.Join(vaultRoot, "sources")); !os.IsNotExist(err) {
+		t.Fatalf("inspect created source directory: %v", err)
+	}
+}
+
+func TestInspectSourceURLWebResolvesLinksAgainstFinalURL(t *testing.T) {
+	allowPrivateSourceHosts(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/docs":
+			http.Redirect(w, r, "/docs/", http.StatusMovedPermanently)
+		case "/docs/":
+			w.Header().Set("Content-Type", "text/markdown")
+			_, _ = w.Write([]byte("# Redirected Docs\n\nSee [Guide](guide.md).\n"))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(server.Close)
+
+	ctx := context.Background()
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+
+	sourceURL := server.URL + "/docs"
+	inspection, err := store.InspectSourceURL(ctx, domain.SourceURLInput{
+		URL:        sourceURL,
+		SourceType: "web",
+	})
+	if err != nil {
+		t.Fatalf("inspect redirected markdown source URL: %v", err)
+	}
+	if inspection.SourceURL != sourceURL ||
+		inspection.Title != "Redirected Docs" ||
+		len(inspection.Links) != 1 ||
+		inspection.Links[0].URL != server.URL+"/docs/guide.md" {
+		t.Fatalf("redirected inspection = %+v", inspection)
+	}
+}
+
 func TestIngestSourceURLGitHubAliasesLegacyStoredURL(t *testing.T) {
 	allowPrivateSourceHosts(t)
 	oldClient := sourceHTTPClient

@@ -456,9 +456,10 @@ func TestRetrievalTaskWorkflowGuideReportRoutesPublicScannedPDFURL(t *testing.T)
 		t.Fatalf("workflow guide public PDF result = %+v", result)
 	}
 	report := result.WorkflowGuide
-	if report.RecommendedSurface != "ingest_source_url plan" ||
+	if report.RecommendedSurface != "ingest_source_url inspect" ||
 		report.RunnerDomain != "document" ||
 		!strings.Contains(report.RequestShape, "ingest_source_url") ||
+		!strings.Contains(report.RequestShape, `"mode":"inspect"`) ||
 		strings.Contains(report.RequestShape, "local_path") {
 		t.Fatalf("workflow guide public PDF report = %+v", report)
 	}

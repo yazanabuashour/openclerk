@@ -90,7 +90,7 @@ approved. The current support matrix is:
 
 | Input | Supported path | Boundary |
 |---|---|---|
-| Public PDF, HTML, Markdown, or GitHub README/blob URL | `ingest_source_url` | Runner-owned fetch, provenance, duplicate checks, and approved create/update only |
+| Public PDF, HTML, Markdown, or GitHub README/blob URL | `ingest_source_url` | Runner-owned inspect/plan, fetch, provenance, duplicate checks, and approved create/update only |
 | Supplied video transcript | `ingest_video_url` | Transcript text and provenance must be supplied; no native media acquisition |
 | Pasted or explicit content | `artifact_candidate_plan` | Read-only path/title/body/tags/fields/duplicate proposal before approval |
 | Explicit local text, markdown, or text-bearing PDF | `artifact_candidate_plan` with `local_path` | Reads only the supplied file; no durable write |
@@ -143,7 +143,7 @@ openclerk capabilities
 
 ## What is explicitly not supported yet
 
-- **Browsing / URL ingestion as a default path** — `ingest_source_url` exists but is placement-plan-first; it does not browse the open web autonomously.
+- **Autonomous browsing / recursive URL crawling** — `ingest_source_url` can inspect, plan, or ingest supplied public URLs through the runner, but it does not browse the open web autonomously or recursively crawl discovered links.
 - **Automatic video transcript acquisition** — not supported.
 - **Hosted service or cloud sync** — fully local. No OpenClerk server, no SaaS.
 - **Multi-user / team server** — single-user, single-machine runtime.

@@ -145,6 +145,7 @@ type SourceURLInput struct {
 	Title         string `json:"title,omitempty"`
 	Mode          string `json:"mode,omitempty"`
 	SourceType    string `json:"source_type,omitempty"`
+	Limit         int    `json:"limit,omitempty"`
 }
 
 type VideoURLInput struct {
@@ -239,6 +240,43 @@ type SourcePlacementPlan struct {
 	AgentHandoff           *AgentHandoff    `json:"agent_handoff,omitempty"`
 }
 
+type SourceURLIntakePlan struct {
+	SourceURL            string                     `json:"source_url"`
+	SourceType           string                     `json:"source_type"`
+	Title                string                     `json:"title,omitempty"`
+	MIMEType             string                     `json:"mime_type"`
+	SizeBytes            int64                      `json:"size_bytes"`
+	SHA256               string                     `json:"sha256"`
+	PageCount            int                        `json:"page_count,omitempty"`
+	TextPreview          string                     `json:"text_preview,omitempty"`
+	DiscoveredLinkCount  int                        `json:"discovered_link_count"`
+	PrimaryCandidate     *SourceURLIntakeCandidate  `json:"primary_candidate,omitempty"`
+	RelatedCandidates    []SourceURLIntakeCandidate `json:"related_candidates,omitempty"`
+	FetchStatus          string                     `json:"fetch_status"`
+	WriteStatus          string                     `json:"write_status"`
+	ApprovalBoundary     string                     `json:"approval_boundary"`
+	ValidationBoundaries string                     `json:"validation_boundaries"`
+	AuthorityLimits      string                     `json:"authority_limits"`
+	AgentHandoff         *AgentHandoff              `json:"agent_handoff,omitempty"`
+}
+
+type SourceURLIntakeCandidate struct {
+	Rank                    int              `json:"rank"`
+	Relation                string           `json:"relation"`
+	URL                     string           `json:"url"`
+	NormalizedURL           string           `json:"normalized_url"`
+	Title                   string           `json:"title,omitempty"`
+	LinkText                string           `json:"link_text,omitempty"`
+	SourceType              string           `json:"source_type"`
+	CandidateStatus         string           `json:"candidate_status"`
+	DuplicateStatus         string           `json:"duplicate_status"`
+	CandidateSourcePaths    []string         `json:"candidate_source_paths,omitempty"`
+	CandidateAssetPaths     []string         `json:"candidate_asset_paths,omitempty"`
+	CandidateSynthesisPath  string           `json:"candidate_synthesis_path,omitempty"`
+	ExistingSource          *DocumentSummary `json:"existing_source,omitempty"`
+	NextIngestSourceRequest string           `json:"next_ingest_source_request,omitempty"`
+}
+
 type SourceStaleDependent struct {
 	Path            string   `json:"path"`
 	DocID           string   `json:"doc_id"`
@@ -297,6 +335,7 @@ type DocumentTaskResult struct {
 	Document            *Document               `json:"document,omitempty"`
 	Ingestion           *SourceIngestionResult  `json:"ingestion,omitempty"`
 	SourcePlacement     *SourcePlacementPlan    `json:"source_placement_plan,omitempty"`
+	SourceIntakePlan    *SourceURLIntakePlan    `json:"source_url_intake_plan,omitempty"`
 	VideoIngestion      *VideoIngestionResult   `json:"video_ingestion,omitempty"`
 	CompileSynthesis    *CompileSynthesisResult `json:"compile_synthesis,omitempty"`
 	ValidationSynthesis *CompileSynthesisResult `json:"validation_synthesis,omitempty"`

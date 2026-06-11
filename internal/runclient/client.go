@@ -88,6 +88,14 @@ func (c *Client) IngestSourceURL(ctx context.Context, input domain.SourceURLInpu
 	return wrapResult(store.IngestSourceURL(ctx, input))
 }
 
+func (c *Client) InspectSourceURL(ctx context.Context, input domain.SourceURLInput) (domain.SourceURLInspection, error) {
+	store, err := c.store()
+	if err != nil {
+		return domain.SourceURLInspection{}, err
+	}
+	return wrapResult(store.InspectSourceURL(ctx, input))
+}
+
 func (c *Client) IngestVideoURL(ctx context.Context, input domain.VideoURLInput) (domain.VideoIngestionResult, error) {
 	store, err := c.store()
 	if err != nil {

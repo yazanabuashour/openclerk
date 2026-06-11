@@ -405,10 +405,33 @@ blob URLs normalize to their public raw content URL. When `source.source_type`
 is omitted, the runner detects PDF versus HTML/Markdown from the URL and
 response. Unsupported content types reject without writing.
 
+The request shape also supports `source.mode: "inspect"` as a read-only URL
+artifact/source intake plan. Inspect mode performs a runner-owned bounded fetch
+of the supplied public URL, extracts a text preview and bounded discovered links
+for web/Markdown sources, checks duplicate source URL placement, and returns
+approval-ready primary and related `ingest_source_url` requests. `mode: "plan"`
+remains the no-fetch placement-only surface.
+
 A user-provided URL is sufficient permission for the runner to fetch the page;
 agents must not ask for a separate pre-fetch approval. Durable writes still
 require complete runner fields or an approved candidate workflow when required
 fields are missing.
+
+Safety pass: inspect mode uses the same public URL validation, redirect policy,
+content-type handling, duplicate lookup, runner-only transport, and durable
+write approval boundary as create/update. It does not authorize browser
+automation, private networks, login-gated pages, recursive crawling, direct
+vault inspection, direct SQLite, or source-built runner bypass.
+
+Capability pass: inspect mode can turn a public README, Markdown page, HTML
+page, or PDF URL into a primary source candidate and related source candidates
+without asking the user for premature path hints. It preserves create/update
+ingestion as the only durable source authority path.
+
+UX quality pass: public URLs are treated as explorable intake artifacts instead
+of forcing exact prompt choreography around path placement. The agent can answer
+from `source_url_intake_plan.agent_handoff`, show next approved requests, and
+delay durable-write approval until the user chooses which sources to ingest.
 
 Web source notes use canonical markdown authority with `type: source`,
 `source_type: web`, `modality: markdown`, normalized `source_url`,

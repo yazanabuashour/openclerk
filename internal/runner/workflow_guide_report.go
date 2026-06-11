@@ -54,12 +54,12 @@ func selectWorkflowGuideCandidate(intent string) workflowGuideSelection {
 		}
 	case containsAny(normalized, "public url", "public link", "source url", "fetch url", "ingest url", "web page", "pdf url", "public pdf"):
 		return workflowGuideSelection{
-			Surface:        "ingest_source_url plan",
+			Surface:        "ingest_source_url inspect",
 			RunnerDomain:   "document",
-			RequestShape:   `{"action":"ingest_source_url","source":{"url":"https://example.test/page.html","mode":"plan","source_type":"web","title":"Optional title"}}`,
-			UseWhen:        "use for public URL source placement before durable fetch or write approval",
+			RequestShape:   `{"action":"ingest_source_url","source":{"url":"https://example.test/page.html","mode":"inspect","source_type":"web","title":"Optional title","limit":8}}`,
+			UseWhen:        "use for read-only inspection of a supplied public URL plus related source candidates before durable write approval",
 			DoNotUseFor:    []string{"login-gated pages", "purchases", "captcha/paywall bypasses", "non-runner HTTP/browser fetch"},
-			HandoffSummary: "Use document ingest_source_url with mode plan for public-link placement; public read/fetch permission is separate from durable-write approval.",
+			HandoffSummary: "Use document ingest_source_url with mode inspect for public-link exploration; public read/fetch permission is separate from durable-write approval.",
 		}
 	case containsAny(normalized, "artifact", "invoice", "receipt", "legal document", "transcript", "auto-file", "autofile", "candidate path", "body preview", "metadata field", "tags", "ocr", "scan-only", "scanned pdf", "local file"):
 		return workflowGuideSelection{
@@ -93,7 +93,7 @@ func selectWorkflowGuideCandidate(intent string) workflowGuideSelection {
 			Surface:        "ingest_source_url plan",
 			RunnerDomain:   "document",
 			RequestShape:   `{"action":"ingest_source_url","source":{"url":"https://example.test/page.html","mode":"plan","source_type":"web","title":"Optional title"}}`,
-			UseWhen:        "use for public URL source placement before durable fetch or write approval",
+			UseWhen:        "use for no-fetch public URL source placement before durable fetch or write approval",
 			DoNotUseFor:    []string{"login-gated pages", "purchases", "captcha/paywall bypasses", "non-runner HTTP/browser fetch"},
 			HandoffSummary: "Use document ingest_source_url with mode plan for public-link placement; public read/fetch permission is separate from durable-write approval.",
 		}
@@ -240,7 +240,7 @@ func workflowGuideCandidates() []WorkflowGuideCandidate {
 			Status:         "prefer_when_input_belongs_to_existing_action",
 			SelectionRule:  "use when an adjacent mode on an existing action preserves the natural workflow surface",
 			Boundary:       "public read/fetch/inspect permission is separate from durable-write approval",
-			RequestExample: `{"action":"ingest_source_url","source":{"url":"https://example.test/page.html","mode":"plan","source_type":"web"}}`,
+			RequestExample: `{"action":"ingest_source_url","source":{"url":"https://example.test/page.html","mode":"inspect","source_type":"web","limit":8}}`,
 		},
 		{
 			Surface:        "artifact_candidate_plan",

@@ -145,7 +145,7 @@ func buildCapabilitiesResult() capabilitiesResult {
 				Primitive: []capabilityAction{
 					{Action: "validate", Purpose: "validate a candidate document without writing", Posture: "read_only"},
 					{Action: "create_document", Purpose: "create an approved vault-relative markdown document", Posture: "durable_write_requires_approval"},
-					{Action: "ingest_source_url", Purpose: "plan, create, or update public web, Markdown, or PDF source notes through the runner", Posture: "plan_read_only_or_approved_write"},
+					{Action: "ingest_source_url", Purpose: "inspect, plan, create, or update public web, Markdown, or PDF source notes through the runner", Posture: "inspect_or_plan_read_only_or_approved_write"},
 					{Action: "ingest_video_url", Purpose: "create or update video source notes from supplied transcripts", Posture: "approved_write_with_user_supplied_transcript"},
 					{Action: "list_documents", Purpose: "list runner-visible documents", Posture: "read_only"},
 					{Action: "get_document", Purpose: "read one runner-visible document by doc_id", Posture: "read_only"},
@@ -513,7 +513,7 @@ func usage(stderr io.Writer) {
 	_, _ = fmt.Fprintln(stderr, "       openclerk document --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk retrieval --help")
 	_, _ = fmt.Fprintln(stderr, "document/retrieval read strict JSON from stdin and use configured paths by default; pass --db only for an explicit dataset.")
-	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, validation_synthesis_report, ingest_source_url plan, web_search_plan, artifact_candidate_plan, git_lifecycle_report, source_discovery_report, source_audit_report, evidence_bundle_report, decision_lookup_report, duplicate_candidate_report, workflow_guide_report, memory_router_recall_report, structured_store_report, hybrid_retrieval_report, graph_context_report, graph_relationship_report, graph_relationship_maintenance_plan, semantic_search, retrieval_eval_capture, retrieval_eval_replay, search_diagnostics_report, maintenance_report")
+	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, validation_synthesis_report, ingest_source_url inspect/plan, web_search_plan, artifact_candidate_plan, git_lifecycle_report, source_discovery_report, source_audit_report, evidence_bundle_report, decision_lookup_report, duplicate_candidate_report, workflow_guide_report, memory_router_recall_report, structured_store_report, hybrid_retrieval_report, graph_context_report, graph_relationship_report, graph_relationship_maintenance_plan, semantic_search, retrieval_eval_capture, retrieval_eval_replay, search_diagnostics_report, maintenance_report")
 }
 
 func configUsage(w io.Writer) {
@@ -556,6 +556,7 @@ func documentUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, `  ingest_source_url markdown create: {"action":"ingest_source_url","source":{"url":"https://github.com/owner/repo/blob/main/README.md","path_hint":"sources/web/repo-readme.md","source_type":"web","title":"Optional title"}}`)
 	_, _ = fmt.Fprintln(w, `  ingest_source_url update: {"action":"ingest_source_url","source":{"url":"https://example.test/page.html","mode":"update","source_type":"web"}}`)
 	_, _ = fmt.Fprintln(w, `  ingest_source_url placement plan: {"action":"ingest_source_url","source":{"url":"https://example.test/page.html","mode":"plan","source_type":"web","title":"Optional title"}}`)
+	_, _ = fmt.Fprintln(w, `  ingest_source_url inspect: {"action":"ingest_source_url","source":{"url":"https://github.com/owner/repo","mode":"inspect","source_type":"web","title":"Optional title","limit":8}}`)
 	_, _ = fmt.Fprintln(w, `  ingest_video_url create: {"action":"ingest_video_url","video":{"url":"https://youtube.example.test/watch?v=demo","path_hint":"sources/video-youtube/demo.md","transcript":{"text":"Supplied transcript text.","policy":"supplied","origin":"user_supplied_transcript"}}}`)
 	_, _ = fmt.Fprintln(w, `  ingest_video_url update: {"action":"ingest_video_url","video":{"url":"https://youtube.example.test/watch?v=demo","mode":"update","transcript":{"text":"Updated supplied transcript text.","policy":"supplied","origin":"user_supplied_transcript"}}}`)
 	_, _ = fmt.Fprintln(w, `  list/get/edit: {"action":"list_documents","list":{"path_prefix":"notes/","limit":20}} | {"action":"get_document","doc_id":"doc_id_from_json"} | {"action":"replace_section","doc_id":"doc_id_from_json","heading":"Summary","content":"Updated summary."}`)

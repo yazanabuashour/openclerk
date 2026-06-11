@@ -2508,6 +2508,102 @@ func TestDocumentTaskIngestSourceURLWebMarkdown(t *testing.T) {
 	}
 }
 
+func TestDocumentTaskIngestSourceURLInspectMarkdownLinks(t *testing.T) {
+	markdownBody := strings.Join([]string{
+		"# last30days-skill",
+		"",
+		"Runner Markdown source evidence for OpenClerk.",
+		"",
+		"See [Skill](skills/last30days/SKILL.md), [Hermes Setup](HERMES_SETUP.md), [Login](/login), [External](https://example.com/nope.md), and [Badge](badge.svg).",
+	}, "\n")
+	fixtureRoot := t.TempDir()
+	fixturePath := filepath.Join(fixtureRoot, "web", "README.md")
+	if err := os.MkdirAll(filepath.Dir(fixturePath), 0o755); err != nil {
+		t.Fatalf("mkdir markdown fixture: %v", err)
+	}
+	if err := os.WriteFile(fixturePath, []byte(markdownBody), 0o644); err != nil {
+		t.Fatalf("write markdown fixture: %v", err)
+	}
+	t.Setenv("OPENCLERK_ENABLE_EVAL_SOURCE_FIXTURES", "1")
+	t.Setenv("OPENCLERK_EVAL_SOURCE_FIXTURE_ROOT", fixtureRoot)
+	sourceURL := "http://openclerk-eval.local/web/README.md"
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	config := runclient.Config{DatabasePath: dbPath}
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionIngestSourceURL,
+		Source: runner.SourceURLInput{
+			URL:        sourceURL,
+			Mode:       "inspect",
+			SourceType: "web",
+			Title:      "last30days-skill",
+			Limit:      5,
+		},
+	})
+	if err != nil {
+		t.Fatalf("inspect markdown source URL: %v", err)
+	}
+	plan := result.SourceIntakePlan
+	if result.Rejected ||
+		plan == nil ||
+		plan.SourceURL != sourceURL ||
+		plan.SourceType != "web" ||
+		plan.MIMEType != "text/markdown" ||
+		plan.FetchStatus != "inspected_public_source" ||
+		plan.WriteStatus != "planned_no_write" ||
+		plan.PrimaryCandidate == nil ||
+		plan.AgentHandoff == nil ||
+		!strings.Contains(plan.TextPreview, "Runner Markdown source evidence") {
+		t.Fatalf("inspect plan = %+v", plan)
+	}
+	if plan.PrimaryCandidate.Relation != "primary" ||
+		plan.PrimaryCandidate.CandidateStatus != "public_candidate_requires_ingest_source_url_approval" ||
+		!containsString(plan.PrimaryCandidate.CandidateSourcePaths, "sources/web/last30days-skill.md") ||
+		!strings.Contains(plan.PrimaryCandidate.NextIngestSourceRequest, `"action":"ingest_source_url"`) ||
+		!strings.Contains(plan.PrimaryCandidate.NextIngestSourceRequest, `"path_hint":"sources/web/last30days-skill.md"`) {
+		t.Fatalf("primary inspect candidate = %+v", plan.PrimaryCandidate)
+	}
+	var sawSkill, sawHermes bool
+	for _, candidate := range plan.RelatedCandidates {
+		if candidate.URL == "http://openclerk-eval.local/web/skills/last30days/SKILL.md" &&
+			candidate.LinkText == "Skill" &&
+			containsString(candidate.CandidateSourcePaths, "sources/web/skill.md") &&
+			strings.Contains(candidate.NextIngestSourceRequest, `"url":"http://openclerk-eval.local/web/skills/last30days/SKILL.md"`) {
+			sawSkill = true
+		}
+		if candidate.URL == "http://openclerk-eval.local/web/HERMES_SETUP.md" &&
+			candidate.LinkText == "Hermes Setup" &&
+			containsString(candidate.CandidateSourcePaths, "sources/web/hermes-setup.md") {
+			sawHermes = true
+		}
+		if strings.Contains(candidate.URL, "example.com") || strings.HasSuffix(candidate.URL, ".svg") || strings.HasSuffix(candidate.URL, "/login") {
+			t.Fatalf("inspect related candidates included unsupported link: %+v", candidate)
+		}
+	}
+	if !sawSkill || !sawHermes {
+		t.Fatalf("related inspect candidates = %+v", plan.RelatedCandidates)
+	}
+	if !strings.Contains(plan.ApprovalBoundary, "not durable-write approval") ||
+		!strings.Contains(plan.ValidationBoundaries, "no recursive crawl") ||
+		!strings.Contains(plan.AuthorityLimits, "candidate evidence only") {
+		t.Fatalf("inspect boundaries = approval:%q validation:%q authority:%q", plan.ApprovalBoundary, plan.ValidationBoundaries, plan.AuthorityLimits)
+	}
+	list, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List: runner.DocumentListOptions{
+			PathPrefix: "sources/",
+			Limit:      10,
+		},
+	})
+	if err != nil {
+		t.Fatalf("list after inspect: %v", err)
+	}
+	if len(list.Documents) != 0 {
+		t.Fatalf("inspect wrote source documents: %+v", list.Documents)
+	}
+}
+
 func TestDocumentTaskIngestVideoURLSuppliedTranscript(t *testing.T) {
 	t.Parallel()
 
