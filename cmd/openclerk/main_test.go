@@ -64,7 +64,9 @@ func TestCapabilitiesManifestShowsBuildingBlocks(t *testing.T) {
 		!hasCapabilityAction(result, "retrieval", "search_diagnostics_report") ||
 		!hasCapabilityAction(result, "retrieval", "maintenance_report") ||
 		!hasCapabilityAction(result, "module", "install_module") ||
-		!hasCapabilityAction(result, "clerk", "run --once") {
+		!hasCapabilityAction(result, "clerk", "run --once") ||
+		!hasCapabilityAction(result, "clerk", "inbox_scan") ||
+		!hasCapabilityAction(result, "clerk", "context_pack") {
 		t.Fatalf("capabilities missing expected document/retrieval/module actions: %+v", result.Domains)
 	}
 	if !hasCapabilityExtension(result, "ollama-embeddings", "modules/ollama-embeddings/module.json") ||
@@ -135,12 +137,22 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 		{
 			name: "clerk",
 			args: []string{"clerk", "--help"},
-			want: []string{"Chronicler", "openclerk clerk run --once", "planned_no_write=true", "writes_performed=0", "no durable vault writes"},
+			want: []string{"Chronicler", "openclerk clerk run --once", "openclerk clerk inbox_scan", "openclerk clerk context_pack", "planned_no_write=true", "writes_performed=0", "no durable vault writes"},
 		},
 		{
 			name: "clerk run",
 			args: []string{"clerk", "run", "--help"},
 			want: []string{"openclerk-clerk.v1", "--inbox-path", "--task", "--query", "blockers", "deferred"},
+		},
+		{
+			name: "clerk inbox_scan",
+			args: []string{"clerk", "inbox_scan", "--help"},
+			want: []string{"openclerk-clerk.v1", "--inbox-path", "Output action: inbox_scan", "planned_no_write", "writes_performed"},
+		},
+		{
+			name: "clerk context_pack",
+			args: []string{"clerk", "context_pack", "--help"},
+			want: []string{"openclerk-clerk.v1", "--task", "--query", "--path-prefix", "Output action: context_pack", "context_packs"},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -156,6 +168,77 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestClerkInboxScanJSON(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	createRequest := `{"action":"create_document","document":{"path":"notes/cli-inbox-seed.md","title":"CLI Inbox Seed","body":"# CLI Inbox Seed\n\nExisting Core storage seed.\n"}}`
+	var createResult runner.DocumentTaskResult
+	code, stderr := runJSON(t, []string{"document", "--db", dbPath}, createRequest, &createResult)
+	if code != 0 {
+		t.Fatalf("create document exit = %d stderr=%s", code, stderr)
+	}
+	if createResult.Document == nil {
+		t.Fatalf("create document result = %+v", createResult)
+	}
+	inboxPath := filepath.Join(t.TempDir(), "candidate.md")
+	if err := os.WriteFile(inboxPath, []byte("# CLI Inbox Candidate\n\nCLI inbox scan marker.\n"), 0o644); err != nil {
+		t.Fatalf("write inbox: %v", err)
+	}
+
+	var result chronicler.RunEnvelope
+	code, stderr = runJSON(t, []string{"clerk", "inbox_scan", "--db", dbPath, "--inbox-path", inboxPath, "--limit", "5"}, "", &result)
+	if code != 0 {
+		t.Fatalf("clerk inbox_scan exit = %d stderr=%s", code, stderr)
+	}
+	if result.SchemaVersion != chronicler.SchemaVersion ||
+		result.Action != chronicler.ActionInboxScan ||
+		result.Result.Mode != chronicler.ActionInboxScan ||
+		!result.Result.PlannedNoWrite ||
+		result.Result.WritesPerformed != 0 ||
+		len(result.Result.InboxCandidates) != 1 ||
+		len(result.Result.ContextPacks) != 0 {
+		t.Fatalf("clerk inbox_scan result = %+v", result)
+	}
+	if result.Result.InboxCandidates[0].WriteStatus != "planned_no_write" {
+		t.Fatalf("candidate = %+v", result.Result.InboxCandidates[0])
+	}
+}
+
+func TestClerkContextPackJSON(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	createRequest := `{"action":"create_document","document":{"path":"docs/cli/context-pack.md","title":"CLI Context Pack","body":"# CLI Context Pack\n\nCLI context pack marker evidence.\n"}}`
+	var createResult runner.DocumentTaskResult
+	code, stderr := runJSON(t, []string{"document", "--db", dbPath}, createRequest, &createResult)
+	if code != 0 {
+		t.Fatalf("create document exit = %d stderr=%s", code, stderr)
+	}
+	if createResult.Document == nil {
+		t.Fatalf("create document result = %+v", createResult)
+	}
+
+	var result chronicler.RunEnvelope
+	code, stderr = runJSON(t, []string{"clerk", "context_pack", "--db", dbPath, "--task", "CLI context pack marker", "--limit", "5"}, "", &result)
+	if code != 0 {
+		t.Fatalf("clerk context_pack exit = %d stderr=%s", code, stderr)
+	}
+	if result.SchemaVersion != chronicler.SchemaVersion ||
+		result.Action != chronicler.ActionContextPack ||
+		result.Result.Mode != chronicler.ActionContextPack ||
+		!result.Result.PlannedNoWrite ||
+		result.Result.WritesPerformed != 0 ||
+		len(result.Result.InboxCandidates) != 0 ||
+		len(result.Result.ContextPacks) != 1 {
+		t.Fatalf("clerk context_pack result = %+v", result)
+	}
+	if len(result.Result.ContextPacks[0].MustRead) == 0 ||
+		result.Result.ContextPacks[0].WriteStatus != "read_only_no_write" {
+		t.Fatalf("context pack = %+v", result.Result.ContextPacks[0])
 	}
 }
 

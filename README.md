@@ -178,9 +178,14 @@ rebind it with `openclerk init --vault-root`, not `openclerk config`.
 Request-level `document` and `retrieval` `autonomy` fields override persisted
 profile defaults field-by-field. Git checkpoint enablement remains
 invocation-scoped through `--git-checkpoints` or `OPENCLERK_GIT_CHECKPOINTS`.
-`openclerk clerk run --once` is the first Chronicler MVP: a read-only,
-first-party orchestration report over Core for explicit local inbox candidate
-planning and task context packs. It performs no durable vault writes.
+`openclerk clerk run --once` is the combined Chronicler MVP report. The same
+read-only primitives are also exposed as `openclerk clerk inbox_scan` for
+explicit local inbox candidate planning and `openclerk clerk context_pack` for
+task context, must-read documents, decisions, and citations. All three emit
+`openclerk-clerk.v1`, report `planned_no_write: true`, and perform no durable
+vault writes. Planning that inspects Core evidence requires existing
+OpenClerk storage; Chronicler returns a blocker rather than initializing
+SQLite from a read-only command.
 
 Storage: `${XDG_DATA_HOME:-~/.local/share}/openclerk/openclerk.sqlite`  
 Override: `OPENCLERK_DATABASE_PATH` or `--db`

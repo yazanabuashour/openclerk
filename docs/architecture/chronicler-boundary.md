@@ -14,9 +14,11 @@ The MVP ships in the existing `openclerk` binary under:
 
 ```bash
 openclerk clerk run --once
+openclerk clerk inbox_scan
+openclerk clerk context_pack
 ```
 
-The command emits one stable JSON report:
+`run --once` emits the combined planning report:
 
 ```json
 {
@@ -36,9 +38,50 @@ The command emits one stable JSON report:
 }
 ```
 
+`inbox_scan` emits the inbox-only report:
+
+```json
+{
+  "schema_version": "openclerk-clerk.v1",
+  "action": "inbox_scan",
+  "result": {
+    "mode": "inbox_scan",
+    "planned_no_write": true,
+    "writes_performed": 0,
+    "inbox_candidates": [],
+    "context_packs": [],
+    "duplicate_risks": [],
+    "pending_review": [],
+    "blockers": []
+  }
+}
+```
+
+`context_pack` emits the context-only report:
+
+```json
+{
+  "schema_version": "openclerk-clerk.v1",
+  "action": "context_pack",
+  "result": {
+    "mode": "context_pack",
+    "planned_no_write": true,
+    "writes_performed": 0,
+    "inbox_candidates": [],
+    "context_packs": [],
+    "stale_synthesis": [],
+    "blockers": []
+  }
+}
+```
+
 Additional fields may provide authority limits, approval boundaries, and
 deferred capability labels, but the MVP always reports `planned_no_write: true`
 and `writes_performed: 0`.
+
+When a planning path would inspect Core evidence, existing OpenClerk storage is
+required. Chronicler returns a blocker rather than initializing SQLite from a
+read-only command.
 
 ## Core Authority
 
@@ -58,7 +101,9 @@ around the installed runner/service boundary.
 
 ## MVP Behavior
 
-`openclerk clerk run --once` performs one read-only planning pass.
+`openclerk clerk run --once` performs one combined read-only planning pass.
+`openclerk clerk inbox_scan` runs only the inbox-candidate part, and
+`openclerk clerk context_pack` runs only the task-context part.
 
 Supported inputs:
 
@@ -78,7 +123,8 @@ directories, or write to the vault.
 
 Context packs reuse existing retrieval behavior. They return compact
 must-read documents, relevant decisions where runner-visible evidence exists,
-stale-or-missing context notes, open questions, and citations. They are
+stale-or-missing context notes, open questions, and citations. Path-prefixed
+context packs keep decision citations inside the requested prefix. They are
 supporting task context only; source-sensitive answers still depend on Core
 citations, provenance, projection freshness, and authority limits.
 

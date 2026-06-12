@@ -77,6 +77,27 @@ func ResolvePathsWithSource(cfg Config) (ResolvedPaths, error) {
 	return resolvePathsWithSource(cfg, true)
 }
 
+// ExistingDatabasePath resolves the effective database path without creating
+// storage and reports whether a database file already exists there.
+func ExistingDatabasePath(cfg Config) (string, bool, error) {
+	databasePath, err := resolveDatabasePath(cfg)
+	if err != nil {
+		return "", false, err
+	}
+	databasePath = filepath.Clean(databasePath)
+	info, err := os.Stat(databasePath)
+	if err == nil {
+		if info.IsDir() {
+			return databasePath, false, domain.ValidationError("database path must be a file", map[string]any{"database_path": databasePath})
+		}
+		return databasePath, true, nil
+	}
+	if errors.Is(err, os.ErrNotExist) {
+		return databasePath, false, nil
+	}
+	return databasePath, false, domain.InternalError("inspect OpenClerk database", err)
+}
+
 func resolvePaths(cfg Config, lock bool) (Paths, error) {
 	resolved, err := resolvePathsWithSource(cfg, lock)
 	if err != nil {

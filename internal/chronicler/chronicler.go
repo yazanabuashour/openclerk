@@ -16,8 +16,12 @@ import (
 )
 
 const (
-	SchemaVersion = "openclerk-clerk.v1"
-	ActionRun     = "clerk_run"
+	SchemaVersion     = "openclerk-clerk.v1"
+	ActionRun         = "clerk_run"
+	ActionInboxScan   = "inbox_scan"
+	ActionContextPack = "context_pack"
+
+	storageMissingBlocker = "OpenClerk storage must already exist for Chronicler read-only planning; Chronicler will not initialize SQLite"
 )
 
 type RunRequest struct {
@@ -119,8 +123,42 @@ type PendingReview struct {
 }
 
 func RunOnce(ctx context.Context, config runclient.Config, request RunRequest) (RunEnvelope, error) {
+	return runPlan(ctx, config, request, runPlanOptions{
+		action:         ActionRun,
+		mode:           "once",
+		includeInbox:   true,
+		includeContext: true,
+	})
+}
+
+func RunInboxScan(ctx context.Context, config runclient.Config, request RunRequest) (RunEnvelope, error) {
+	return runPlan(ctx, config, request, runPlanOptions{
+		action:       ActionInboxScan,
+		mode:         ActionInboxScan,
+		includeInbox: true,
+	})
+}
+
+func RunContextPack(ctx context.Context, config runclient.Config, request RunRequest) (RunEnvelope, error) {
+	return runPlan(ctx, config, request, runPlanOptions{
+		action:         ActionContextPack,
+		mode:           ActionContextPack,
+		includeContext: true,
+		requireContext: true,
+	})
+}
+
+type runPlanOptions struct {
+	action         string
+	mode           string
+	includeInbox   bool
+	includeContext bool
+	requireContext bool
+}
+
+func runPlan(ctx context.Context, config runclient.Config, request RunRequest, options runPlanOptions) (RunEnvelope, error) {
 	result := RunResult{
-		Mode:             "once",
+		Mode:             options.mode,
 		PlannedNoWrite:   true,
 		WritesPerformed:  0,
 		InboxCandidates:  []InboxCandidate{},
@@ -141,7 +179,7 @@ func RunOnce(ctx context.Context, config runclient.Config, request RunRequest) (
 	}
 	if request.Limit < 0 {
 		result.Blockers = append(result.Blockers, "limit must be greater than or equal to 0")
-		return runEnvelope(result), nil
+		return runEnvelope(options.action, result), nil
 	}
 	normalizedPathPrefix, pathPrefixBlocker := normalizeContextPathPrefix(request.PathPrefix)
 	if pathPrefixBlocker != "" {
@@ -150,8 +188,46 @@ func RunOnce(ctx context.Context, config runclient.Config, request RunRequest) (
 		request.PathPrefix = normalizedPathPrefix
 	}
 
+	if options.includeInbox {
+		if err := addInboxScan(ctx, config, request, &result); err != nil {
+			return RunEnvelope{}, err
+		}
+	}
+
+	query := contextQuery(request)
+	if options.requireContext && query == "" {
+		result.Blockers = append(result.Blockers, "task or query is required for context_pack")
+	}
+	if options.includeContext && query != "" && pathPrefixBlocker == "" {
+		storageReady, err := requireExistingStorage(config, &result)
+		if err != nil {
+			return RunEnvelope{}, err
+		}
+		if !storageReady {
+			return runEnvelope(options.action, result), nil
+		}
+		contextPack, err := buildContextPack(ctx, config, request, query)
+		if err != nil {
+			return RunEnvelope{}, err
+		}
+		result.ContextPacks = append(result.ContextPacks, contextPack)
+	}
+
+	return runEnvelope(options.action, result), nil
+}
+
+func addInboxScan(ctx context.Context, config runclient.Config, request RunRequest, result *RunResult) error {
 	inboxFiles, blockers := explicitInboxFiles(request.InboxPaths)
 	result.Blockers = append(result.Blockers, blockers...)
+	if len(inboxFiles) > 0 {
+		storageReady, err := requireExistingStorage(config, result)
+		if err != nil {
+			return err
+		}
+		if !storageReady {
+			return nil
+		}
+	}
 	for _, inboxFile := range inboxFiles {
 		taskResult, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
 			Action: runner.DocumentTaskActionArtifactPlan,
@@ -162,7 +238,7 @@ func RunOnce(ctx context.Context, config runclient.Config, request RunRequest) (
 			},
 		})
 		if err != nil {
-			return RunEnvelope{}, err
+			return err
 		}
 		sourceRef := inboxSourceRef(inboxFile)
 		if taskResult.Rejected {
@@ -192,17 +268,28 @@ func RunOnce(ctx context.Context, config runclient.Config, request RunRequest) (
 			result.DuplicateRisks = append(result.DuplicateRisks, risk)
 		}
 	}
+	return nil
+}
 
-	query := contextQuery(request)
-	if query != "" && pathPrefixBlocker == "" {
-		contextPack, err := buildContextPack(ctx, config, request, query)
-		if err != nil {
-			return RunEnvelope{}, err
-		}
-		result.ContextPacks = append(result.ContextPacks, contextPack)
+func requireExistingStorage(config runclient.Config, result *RunResult) (bool, error) {
+	_, exists, err := runclient.ExistingDatabasePath(config)
+	if err != nil {
+		return false, err
 	}
+	if !exists {
+		appendBlockerOnce(result, storageMissingBlocker)
+		return false, nil
+	}
+	return true, nil
+}
 
-	return runEnvelope(result), nil
+func appendBlockerOnce(result *RunResult, blocker string) {
+	for _, existing := range result.Blockers {
+		if existing == blocker {
+			return
+		}
+	}
+	result.Blockers = append(result.Blockers, blocker)
 }
 
 func normalizeContextPathPrefix(pathPrefix string) (string, string) {
@@ -213,10 +300,10 @@ func normalizeContextPathPrefix(pathPrefix string) (string, string) {
 	return "", "path_prefix must be vault-relative and stay inside the vault root"
 }
 
-func runEnvelope(result RunResult) RunEnvelope {
+func runEnvelope(action string, result RunResult) RunEnvelope {
 	return RunEnvelope{
 		SchemaVersion: SchemaVersion,
-		Action:        ActionRun,
+		Action:        action,
 		Result:        result,
 	}
 }

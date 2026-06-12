@@ -2,8 +2,11 @@ package chronicler
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -107,12 +110,74 @@ func TestRunOncePlansExplicitInboxNonRecursive(t *testing.T) {
 	}
 }
 
+func TestRunInboxScanPlansExplicitInboxOnly(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	config := runclient.Config{DatabasePath: dbPath}
+	createDocument(t, ctx, config, "notes/inbox-scan-seed.md", "Inbox Scan Seed", "# Inbox Scan Seed\n\nExisting Core storage seed.\n")
+	inboxPath := filepath.Join(t.TempDir(), "candidate.txt")
+	if err := os.WriteFile(inboxPath, []byte("Inbox scan standalone marker."), 0o644); err != nil {
+		t.Fatalf("write inbox: %v", err)
+	}
+
+	result, err := RunInboxScan(ctx, config, RunRequest{
+		InboxPaths: []string{inboxPath},
+		Task:       "must not build context pack",
+		Limit:      5,
+	})
+	if err != nil {
+		t.Fatalf("inbox scan: %v", err)
+	}
+	if result.SchemaVersion != SchemaVersion ||
+		result.Action != ActionInboxScan ||
+		result.Result.Mode != ActionInboxScan ||
+		!result.Result.PlannedNoWrite ||
+		result.Result.WritesPerformed != 0 {
+		t.Fatalf("identity/write posture = %+v", result)
+	}
+	if len(result.Result.InboxCandidates) != 1 || len(result.Result.ContextPacks) != 0 {
+		t.Fatalf("scan result = %+v", result.Result)
+	}
+	if result.Result.InboxCandidates[0].WriteStatus != "planned_no_write" {
+		t.Fatalf("candidate = %+v", result.Result.InboxCandidates[0])
+	}
+}
+
+func TestRunInboxScanRequiresExistingStorageWithoutCreatingIt(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	inboxPath := filepath.Join(t.TempDir(), "candidate.md")
+	if err := os.WriteFile(inboxPath, []byte("# Candidate\n\nStorage must already exist.\n"), 0o644); err != nil {
+		t.Fatalf("write inbox: %v", err)
+	}
+	result, err := RunInboxScan(context.Background(), runclient.Config{DatabasePath: dbPath}, RunRequest{
+		InboxPaths: []string{inboxPath},
+	})
+	if err != nil {
+		t.Fatalf("inbox scan: %v", err)
+	}
+	if result.Action != ActionInboxScan ||
+		len(result.Result.Blockers) != 1 ||
+		result.Result.Blockers[0] != storageMissingBlocker ||
+		len(result.Result.InboxCandidates) != 0 ||
+		result.Result.WritesPerformed != 0 {
+		t.Fatalf("result = %+v", result)
+	}
+	if _, err := os.Stat(filepath.Dir(dbPath)); !os.IsNotExist(err) {
+		t.Fatalf("inbox scan created storage directory: %v", err)
+	}
+}
+
 func TestRunOnceDoesNotReportCleanInboxCandidateAsDuplicateRisk(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
 	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
 	config := runclient.Config{DatabasePath: dbPath}
+	createDocument(t, ctx, config, "notes/clean-candidate-seed.md", "Clean Candidate Seed", "# Clean Candidate Seed\n\nExisting Core storage seed.\n")
 	inboxPath := filepath.Join(t.TempDir(), "unique-note.md")
 	if err := os.WriteFile(inboxPath, []byte("# Unique Note\n\nUnique chronicler marker qwerty.\n"), 0o644); err != nil {
 		t.Fatalf("write inbox: %v", err)
@@ -133,6 +198,109 @@ func TestRunOnceDoesNotReportCleanInboxCandidateAsDuplicateRisk(t *testing.T) {
 	}
 	if result.Result.InboxCandidates[0].RecommendedAction != "review_then_approve_create_document" {
 		t.Fatalf("candidate action = %+v", result.Result.InboxCandidates[0])
+	}
+}
+
+func TestRunContextPackBuildsContextOnly(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	config := runclient.Config{DatabasePath: dbPath}
+	createDocument(t, ctx, config, "docs/context/context-pack-test.md", "Context Pack Test", "# Context Pack Test\n\nContext pack standalone marker evidence.\n")
+
+	result, err := RunContextPack(ctx, config, RunRequest{
+		Task:  "Context pack standalone marker",
+		Limit: 5,
+	})
+	if err != nil {
+		t.Fatalf("context pack: %v", err)
+	}
+	if result.SchemaVersion != SchemaVersion ||
+		result.Action != ActionContextPack ||
+		result.Result.Mode != ActionContextPack ||
+		!result.Result.PlannedNoWrite ||
+		result.Result.WritesPerformed != 0 {
+		t.Fatalf("identity/write posture = %+v", result)
+	}
+	if len(result.Result.InboxCandidates) != 0 || len(result.Result.ContextPacks) != 1 {
+		t.Fatalf("context result = %+v", result.Result)
+	}
+	if result.Result.ContextPacks[0].WriteStatus != "read_only_no_write" ||
+		len(result.Result.ContextPacks[0].MustRead) == 0 {
+		t.Fatalf("context pack = %+v", result.Result.ContextPacks[0])
+	}
+}
+
+func TestRunContextPackRequiresTaskOrQueryWithoutStorage(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	result, err := RunContextPack(context.Background(), runclient.Config{DatabasePath: dbPath}, RunRequest{})
+	if err != nil {
+		t.Fatalf("context pack: %v", err)
+	}
+	if result.Action != ActionContextPack ||
+		result.Result.Mode != ActionContextPack ||
+		len(result.Result.Blockers) != 1 ||
+		result.Result.Blockers[0] != "task or query is required for context_pack" {
+		t.Fatalf("result = %+v", result)
+	}
+	if len(result.Result.ContextPacks) != 0 || result.Result.WritesPerformed != 0 {
+		t.Fatalf("context result = %+v", result.Result)
+	}
+	if _, err := os.Stat(filepath.Dir(dbPath)); !os.IsNotExist(err) {
+		t.Fatalf("missing context query created storage directory: %v", err)
+	}
+}
+
+func TestRunContextPackRequiresExistingStorageWithoutCreatingIt(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	result, err := RunContextPack(context.Background(), runclient.Config{DatabasePath: dbPath}, RunRequest{
+		Task: "Storage must already exist",
+	})
+	if err != nil {
+		t.Fatalf("context pack: %v", err)
+	}
+	if result.Action != ActionContextPack ||
+		len(result.Result.Blockers) != 1 ||
+		result.Result.Blockers[0] != storageMissingBlocker ||
+		len(result.Result.ContextPacks) != 0 ||
+		result.Result.WritesPerformed != 0 {
+		t.Fatalf("result = %+v", result)
+	}
+	if _, err := os.Stat(filepath.Dir(dbPath)); !os.IsNotExist(err) {
+		t.Fatalf("context pack created storage directory: %v", err)
+	}
+}
+
+func TestRunOnceRequiresExistingStorageForPlanningWithoutCreatingIt(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	inboxPath := filepath.Join(t.TempDir(), "candidate.md")
+	if err := os.WriteFile(inboxPath, []byte("# Candidate\n\nStorage must already exist.\n"), 0o644); err != nil {
+		t.Fatalf("write inbox: %v", err)
+	}
+	result, err := RunOnce(context.Background(), runclient.Config{DatabasePath: dbPath}, RunRequest{
+		InboxPaths: []string{inboxPath},
+		Task:       "Storage must already exist",
+	})
+	if err != nil {
+		t.Fatalf("run once: %v", err)
+	}
+	if result.Action != ActionRun ||
+		len(result.Result.Blockers) != 1 ||
+		result.Result.Blockers[0] != storageMissingBlocker ||
+		len(result.Result.InboxCandidates) != 0 ||
+		len(result.Result.ContextPacks) != 0 ||
+		result.Result.WritesPerformed != 0 {
+		t.Fatalf("result = %+v", result)
+	}
+	if _, err := os.Stat(filepath.Dir(dbPath)); !os.IsNotExist(err) {
+		t.Fatalf("run once created storage directory: %v", err)
 	}
 }
 
@@ -236,6 +404,7 @@ func TestRunOnceDoesNotCreateDocumentsOrProvenance(t *testing.T) {
 	beforeBody := getDocumentBody(t, ctx, config, doc.DocID)
 	beforeDocs := listDocumentCount(t, ctx, config)
 	beforeEvents := provenanceEventCount(t, ctx, config)
+	beforeStorage := storageSnapshot(t, filepath.Dir(dbPath))
 
 	inboxPath := filepath.Join(t.TempDir(), "new-note.txt")
 	if err := os.WriteFile(inboxPath, []byte("Stable chronicler no-write marker candidate."), 0o644); err != nil {
@@ -252,6 +421,79 @@ func TestRunOnceDoesNotCreateDocumentsOrProvenance(t *testing.T) {
 	if !result.Result.PlannedNoWrite || result.Result.WritesPerformed != 0 {
 		t.Fatalf("write posture = %+v", result.Result)
 	}
+	assertStorageUnchanged(t, beforeStorage, storageSnapshot(t, filepath.Dir(dbPath)))
+	if got := getDocumentBody(t, ctx, config, doc.DocID); got != beforeBody {
+		t.Fatalf("document body changed:\n%s", got)
+	}
+	if got := listDocumentCount(t, ctx, config); got != beforeDocs {
+		t.Fatalf("document count = %d, want %d", got, beforeDocs)
+	}
+	if got := provenanceEventCount(t, ctx, config); got != beforeEvents {
+		t.Fatalf("provenance event count = %d, want %d", got, beforeEvents)
+	}
+}
+
+func TestRunInboxScanDoesNotCreateDocumentsOrProvenance(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	config := runclient.Config{DatabasePath: dbPath}
+	doc := createDocument(t, ctx, config, "notes/inbox-stable.md", "Inbox Stable", "# Inbox Stable\n\nStable inbox scan no-write marker.\n")
+	beforeBody := getDocumentBody(t, ctx, config, doc.DocID)
+	beforeDocs := listDocumentCount(t, ctx, config)
+	beforeEvents := provenanceEventCount(t, ctx, config)
+	beforeStorage := storageSnapshot(t, filepath.Dir(dbPath))
+
+	inboxPath := filepath.Join(t.TempDir(), "new-note.txt")
+	if err := os.WriteFile(inboxPath, []byte("Stable inbox scan no-write marker candidate."), 0o644); err != nil {
+		t.Fatalf("write inbox: %v", err)
+	}
+	result, err := RunInboxScan(ctx, config, RunRequest{
+		InboxPaths: []string{inboxPath},
+		Limit:      10,
+	})
+	if err != nil {
+		t.Fatalf("inbox scan: %v", err)
+	}
+	if result.Action != ActionInboxScan || !result.Result.PlannedNoWrite || result.Result.WritesPerformed != 0 {
+		t.Fatalf("write posture = %+v", result.Result)
+	}
+	assertStorageUnchanged(t, beforeStorage, storageSnapshot(t, filepath.Dir(dbPath)))
+	if got := getDocumentBody(t, ctx, config, doc.DocID); got != beforeBody {
+		t.Fatalf("document body changed:\n%s", got)
+	}
+	if got := listDocumentCount(t, ctx, config); got != beforeDocs {
+		t.Fatalf("document count = %d, want %d", got, beforeDocs)
+	}
+	if got := provenanceEventCount(t, ctx, config); got != beforeEvents {
+		t.Fatalf("provenance event count = %d, want %d", got, beforeEvents)
+	}
+}
+
+func TestRunContextPackDoesNotCreateDocumentsOrProvenance(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	config := runclient.Config{DatabasePath: dbPath}
+	doc := createDocument(t, ctx, config, "notes/context-stable.md", "Context Stable", "# Context Stable\n\nStable context pack no-write marker.\n")
+	beforeBody := getDocumentBody(t, ctx, config, doc.DocID)
+	beforeDocs := listDocumentCount(t, ctx, config)
+	beforeEvents := provenanceEventCount(t, ctx, config)
+	beforeStorage := storageSnapshot(t, filepath.Dir(dbPath))
+
+	result, err := RunContextPack(ctx, config, RunRequest{
+		Task:  "Stable context pack no-write marker",
+		Limit: 10,
+	})
+	if err != nil {
+		t.Fatalf("context pack: %v", err)
+	}
+	if result.Action != ActionContextPack || !result.Result.PlannedNoWrite || result.Result.WritesPerformed != 0 {
+		t.Fatalf("write posture = %+v", result.Result)
+	}
+	assertStorageUnchanged(t, beforeStorage, storageSnapshot(t, filepath.Dir(dbPath)))
 	if got := getDocumentBody(t, ctx, config, doc.DocID); got != beforeBody {
 		t.Fatalf("document body changed:\n%s", got)
 	}
@@ -340,4 +582,41 @@ func provenanceEventCount(t *testing.T, ctx context.Context, config runclient.Co
 		t.Fatalf("provenance result = %+v", result)
 	}
 	return len(result.Provenance.Events)
+}
+
+func storageSnapshot(t *testing.T, root string) map[string]string {
+	t.Helper()
+	snapshot := map[string]string{}
+	if _, err := os.Stat(root); os.IsNotExist(err) {
+		return snapshot
+	}
+	if err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		sum := sha256.Sum256(data)
+		relative, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		snapshot[filepath.ToSlash(relative)] = hex.EncodeToString(sum[:])
+		return nil
+	}); err != nil {
+		t.Fatalf("snapshot storage: %v", err)
+	}
+	return snapshot
+}
+
+func assertStorageUnchanged(t *testing.T, before map[string]string, after map[string]string) {
+	t.Helper()
+	if !reflect.DeepEqual(after, before) {
+		t.Fatalf("storage changed:\nbefore=%+v\nafter=%+v", before, after)
+	}
 }
