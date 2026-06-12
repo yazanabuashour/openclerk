@@ -9,7 +9,9 @@ import (
 	"io"
 	"os"
 	"runtime/debug"
+	"strings"
 
+	"github.com/yazanabuashour/openclerk/internal/chronicler"
 	"github.com/yazanabuashour/openclerk/internal/runclient"
 	"github.com/yazanabuashour/openclerk/internal/runner"
 )
@@ -45,6 +47,8 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 		return runDocument(args[1:], stdin, stdout, stderr)
 	case "retrieval":
 		return runRetrieval(args[1:], stdin, stdout, stderr)
+	case "clerk":
+		return runClerk(args[1:], stdout, stderr)
 	default:
 		_, _ = fmt.Fprintf(stderr, "unknown openclerk command %q\n", args[0])
 		usage(stderr)
@@ -215,6 +219,15 @@ func buildCapabilitiesResult() capabilitiesResult {
 					{Action: "configure_module", Purpose: "enable, disable, or update redacted provider defaults", Posture: "configuration_write"},
 					{Action: "remove_module", Purpose: "remove OpenClerk module registration without deleting unrelated provider state", Posture: "configuration_write"},
 					{Action: "list_modules", Purpose: "list verified module/provider state", Posture: "read_only"},
+				},
+				Workflow: []capabilityAction{},
+			},
+			{
+				Name:    "clerk",
+				Command: "openclerk clerk",
+				Posture: "optional first-party Chronicler orchestration over Core; MVP is read-only and no-write",
+				Primitive: []capabilityAction{
+					{Action: "run --once", Purpose: "plan explicit local inbox candidates and task context packs without durable writes", Posture: "read_only_planned_no_write", Handoff: "openclerk-clerk.v1"},
 				},
 				Workflow: []capabilityAction{},
 			},
@@ -429,6 +442,47 @@ func runRetrieval(args []string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 	return 0
 }
 
+func runClerk(args []string, stdout io.Writer, stderr io.Writer) int {
+	if len(args) == 0 || isHelpArg(args[0]) {
+		clerkUsage(stdout)
+		return 0
+	}
+	switch args[0] {
+	case "run":
+		return runClerkRun(args[1:], stdout, stderr)
+	default:
+		_, _ = fmt.Fprintf(stderr, "unknown openclerk clerk command %q\n", args[0])
+		clerkUsage(stderr)
+		return 2
+	}
+}
+
+func runClerkRun(args []string, stdout io.Writer, stderr io.Writer) int {
+	if len(args) == 1 && isHelpArg(args[0]) {
+		clerkRunUsage(stdout)
+		return 0
+	}
+	config, request, once, ok := parseClerkRunConfig(args, stderr)
+	if !ok {
+		return 2
+	}
+	if !once {
+		_, _ = fmt.Fprintln(stderr, "usage: openclerk clerk run --once [--db path] [--inbox-path path] [--task text] [--query text] [--path-prefix prefix] [--limit n]")
+		_, _ = fmt.Fprintln(stderr, "clerk MVP only supports read-only --once runs; daemon/watch mode is deferred.")
+		return 2
+	}
+	result, err := chronicler.RunOnce(context.Background(), config, request)
+	if err != nil {
+		_, _ = fmt.Fprintf(stderr, "run clerk task: %v\n", err)
+		return 1
+	}
+	if err := json.NewEncoder(stdout).Encode(result); err != nil {
+		_, _ = fmt.Fprintf(stderr, "encode clerk result: %v\n", err)
+		return 1
+	}
+	return 0
+}
+
 func parseConfig(name string, args []string, stderr io.Writer) (runclient.Config, bool) {
 	fs := flag.NewFlagSet("openclerk "+name, flag.ContinueOnError)
 	fs.SetOutput(stderr)
@@ -446,12 +500,20 @@ func parseConfig(name string, args []string, stderr io.Writer) (runclient.Config
 
 func wantsSubcommandHelp(args []string) bool {
 	for _, arg := range args {
-		switch arg {
-		case "help", "-h", "--help":
+		if isHelpArg(arg) {
 			return true
 		}
 	}
 	return false
+}
+
+func isHelpArg(arg string) bool {
+	switch arg {
+	case "help", "-h", "--help":
+		return true
+	default:
+		return false
+	}
 }
 
 func parseInitConfig(args []string, stderr io.Writer) (runclient.Config, string, bool) {
@@ -467,6 +529,45 @@ func parseInitConfig(args []string, stderr io.Writer) (runclient.Config, string,
 		return runclient.Config{}, "", false
 	}
 	return runclient.Config{DatabasePath: *databasePath}, *vaultRoot, true
+}
+
+type stringListFlag []string
+
+func (f *stringListFlag) String() string {
+	return strings.Join(*f, ",")
+}
+
+func (f *stringListFlag) Set(value string) error {
+	*f = append(*f, value)
+	return nil
+}
+
+func parseClerkRunConfig(args []string, stderr io.Writer) (runclient.Config, chronicler.RunRequest, bool, bool) {
+	fs := flag.NewFlagSet("openclerk clerk run", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	databasePath := fs.String("db", "", "OpenClerk SQLite database path")
+	once := fs.Bool("once", false, "run one read-only Chronicler pass")
+	task := fs.String("task", "", "user task text for context-pack generation")
+	query := fs.String("query", "", "optional retrieval query for context-pack generation")
+	pathPrefix := fs.String("path-prefix", "", "optional vault-relative path prefix for context-pack retrieval")
+	limit := fs.Int("limit", 0, "optional result limit")
+	var inboxPaths stringListFlag
+	fs.Var(&inboxPaths, "inbox-path", "explicit local inbox file or directory; may be repeated")
+	fs.Var(&inboxPaths, "inbox", "alias for --inbox-path")
+	if err := fs.Parse(args); err != nil {
+		return runclient.Config{}, chronicler.RunRequest{}, false, false
+	}
+	if fs.NArg() != 0 {
+		_, _ = fmt.Fprintf(stderr, "unexpected positional arguments: %v\n", fs.Args())
+		return runclient.Config{}, chronicler.RunRequest{}, false, false
+	}
+	return runclient.Config{DatabasePath: *databasePath}, chronicler.RunRequest{
+		InboxPaths: append([]string(nil), inboxPaths...),
+		Task:       *task,
+		Query:      *query,
+		PathPrefix: *pathPrefix,
+		Limit:      *limit,
+	}, *once, true
 }
 
 func decodeRequest[T any](stdin io.Reader, request *T) error {
@@ -505,15 +606,16 @@ func resolvedVersion(linkerVersion string, info *debug.BuildInfo, ok bool) strin
 }
 
 func usage(stderr io.Writer) {
-	_, _ = fmt.Fprintln(stderr, "usage: openclerk <version|capabilities|init|config|module|document|retrieval> [--db path]")
+	_, _ = fmt.Fprintln(stderr, "usage: openclerk <version|capabilities|init|config|module|document|retrieval|clerk> [--db path]")
 	_, _ = fmt.Fprintln(stderr, "       openclerk init [--db path] [--vault-root path]")
 	_, _ = fmt.Fprintln(stderr, "       openclerk capabilities")
 	_, _ = fmt.Fprintln(stderr, "       openclerk config --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk module --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk document --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk retrieval --help")
+	_, _ = fmt.Fprintln(stderr, "       openclerk clerk --help")
 	_, _ = fmt.Fprintln(stderr, "document/retrieval read strict JSON from stdin and use configured paths by default; pass --db only for an explicit dataset.")
-	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, validation_synthesis_report, ingest_source_url inspect/plan, web_search_plan, artifact_candidate_plan, git_lifecycle_report, source_discovery_report, source_audit_report, evidence_bundle_report, decision_lookup_report, duplicate_candidate_report, workflow_guide_report, memory_router_recall_report, structured_store_report, hybrid_retrieval_report, graph_context_report, graph_relationship_report, graph_relationship_maintenance_plan, semantic_search, retrieval_eval_capture, retrieval_eval_replay, search_diagnostics_report, maintenance_report")
+	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, validation_synthesis_report, ingest_source_url inspect/plan, web_search_plan, artifact_candidate_plan, git_lifecycle_report, source_discovery_report, source_audit_report, evidence_bundle_report, decision_lookup_report, duplicate_candidate_report, workflow_guide_report, memory_router_recall_report, structured_store_report, hybrid_retrieval_report, graph_context_report, graph_relationship_report, graph_relationship_maintenance_plan, semantic_search, retrieval_eval_capture, retrieval_eval_replay, search_diagnostics_report, maintenance_report, clerk run --once")
 }
 
 func configUsage(w io.Writer) {
@@ -629,4 +731,23 @@ func retrievalUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  Read-only. Recommends search versus explicit semantic_search with visible filters, module readiness, cost/latency posture, and no default ranking change.")
 	_, _ = fmt.Fprintln(w, `  maintenance_report: {"action":"maintenance_report","maintenance":{"query":"renewal packaging notes","path_prefix":"notes/","limit":20}}`)
 	_, _ = fmt.Fprintln(w, "  Read-only. Packages layout validity, projection freshness, relationship context, duplicate risk, module posture, and git lifecycle posture; it does not run repairs, cron, or background jobs.")
+}
+
+func clerkUsage(w io.Writer) {
+	_, _ = fmt.Fprintln(w, "usage: openclerk clerk <run> [options]")
+	_, _ = fmt.Fprintln(w, "")
+	_, _ = fmt.Fprintln(w, "Chronicler is optional first-party orchestration over OpenClerk Core. Core remains the canonical authority.")
+	_, _ = fmt.Fprintln(w, "MVP command:")
+	_, _ = fmt.Fprintln(w, "  openclerk clerk run --once [--db path] [--inbox-path path] [--task text] [--query text] [--path-prefix prefix] [--limit n]")
+	_, _ = fmt.Fprintln(w, "The MVP is read-only: planned_no_write=true, writes_performed=0, no daemon/watch mode, no autonomous routing, no hidden memory, and no durable vault writes.")
+}
+
+func clerkRunUsage(w io.Writer) {
+	_, _ = fmt.Fprintln(w, "usage: openclerk clerk run --once [--db path] [--inbox-path path] [--task text] [--query text] [--path-prefix prefix] [--limit n]")
+	_, _ = fmt.Fprintln(w, "")
+	_, _ = fmt.Fprintln(w, "Runs one read-only Chronicler pass and writes one openclerk-clerk.v1 JSON report.")
+	_, _ = fmt.Fprintln(w, "  --inbox-path may be a markdown/text file or an explicit non-recursive directory; it may be repeated.")
+	_, _ = fmt.Fprintln(w, "  --task creates a context pack; --query overrides the retrieval query; --path-prefix narrows retrieval.")
+	_, _ = fmt.Fprintln(w, "  --limit caps planner/retrieval results.")
+	_, _ = fmt.Fprintln(w, "Output action: clerk_run. Result fields include planned_no_write, writes_performed, inbox_candidates, context_packs, duplicate_risks, pending_review, blockers, and deferred.")
 }

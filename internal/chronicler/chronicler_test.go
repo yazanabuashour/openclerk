@@ -1,0 +1,343 @@
+package chronicler
+
+import (
+	"context"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/yazanabuashour/openclerk/internal/runclient"
+	"github.com/yazanabuashour/openclerk/internal/runner"
+)
+
+func TestRunOnceEmptyIsReadOnlyReport(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	result, err := RunOnce(context.Background(), runclient.Config{DatabasePath: dbPath}, RunRequest{})
+	if err != nil {
+		t.Fatalf("run once: %v", err)
+	}
+	if result.SchemaVersion != SchemaVersion || result.Action != ActionRun {
+		t.Fatalf("identity = %+v", result)
+	}
+	if result.Result.Mode != "once" || !result.Result.PlannedNoWrite || result.Result.WritesPerformed != 0 {
+		t.Fatalf("write posture = %+v", result.Result)
+	}
+	if len(result.Result.InboxCandidates) != 0 ||
+		len(result.Result.ContextPacks) != 0 ||
+		len(result.Result.Blockers) != 0 {
+		t.Fatalf("empty result = %+v", result.Result)
+	}
+	if _, err := os.Stat(filepath.Dir(dbPath)); !os.IsNotExist(err) {
+		t.Fatalf("empty run created storage directory: %v", err)
+	}
+}
+
+func TestRunOnceRejectsInvalidInboxPathWithoutStorage(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	result, err := RunOnce(context.Background(), runclient.Config{DatabasePath: dbPath}, RunRequest{
+		InboxPaths: []string{filepath.Join(t.TempDir(), "missing.md")},
+	})
+	if err != nil {
+		t.Fatalf("run once: %v", err)
+	}
+	if len(result.Result.Blockers) != 1 ||
+		!strings.Contains(result.Result.Blockers[0], "local_inbox:missing.md") ||
+		!strings.Contains(result.Result.Blockers[0], "not readable") {
+		t.Fatalf("blockers = %+v", result.Result.Blockers)
+	}
+	if len(result.Result.InboxCandidates) != 0 || result.Result.WritesPerformed != 0 {
+		t.Fatalf("invalid inbox result = %+v", result.Result)
+	}
+	if _, err := os.Stat(filepath.Dir(dbPath)); !os.IsNotExist(err) {
+		t.Fatalf("invalid inbox created storage directory: %v", err)
+	}
+}
+
+func TestRunOncePlansExplicitInboxNonRecursive(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	config := runclient.Config{DatabasePath: dbPath}
+	createDocument(t, ctx, config, "notes/existing-renewal.md", "Existing Renewal", "# Existing Renewal\n\nRenewal marker already captured.\n")
+
+	inboxRoot := t.TempDir()
+	if err := os.WriteFile(filepath.Join(inboxRoot, "candidate.md"), []byte("# Renewal Candidate\n\nRenewal marker already captured with new details.\n"), 0o644); err != nil {
+		t.Fatalf("write candidate: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(inboxRoot, "ignored.bin"), []byte{0, 1, 2}, 0o644); err != nil {
+		t.Fatalf("write ignored binary: %v", err)
+	}
+	nestedRoot := filepath.Join(inboxRoot, "nested")
+	if err := os.MkdirAll(nestedRoot, 0o755); err != nil {
+		t.Fatalf("mkdir nested: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(nestedRoot, "nested.md"), []byte("# Nested\n\nMust not be scanned.\n"), 0o644); err != nil {
+		t.Fatalf("write nested: %v", err)
+	}
+
+	result, err := RunOnce(ctx, config, RunRequest{InboxPaths: []string{inboxRoot}, Limit: 5})
+	if err != nil {
+		t.Fatalf("run once: %v", err)
+	}
+	if len(result.Result.Blockers) != 0 {
+		t.Fatalf("blockers = %+v", result.Result.Blockers)
+	}
+	if len(result.Result.InboxCandidates) != 1 {
+		t.Fatalf("inbox candidates = %+v", result.Result.InboxCandidates)
+	}
+	candidate := result.Result.InboxCandidates[0]
+	if candidate.SourceFile != "candidate.md" ||
+		candidate.SourceRef != "local_inbox:candidate.md" ||
+		candidate.WriteStatus != "planned_no_write" ||
+		candidate.ProposedPath == "" ||
+		!strings.Contains(strings.Join(candidate.SourceRefs, " "), "sha256:") {
+		t.Fatalf("candidate = %+v", candidate)
+	}
+	if strings.Contains(candidate.Summary, "Nested") {
+		t.Fatalf("candidate summary includes nested file: %+v", candidate)
+	}
+	if len(result.Result.PendingReview) != 1 || result.Result.WritesPerformed != 0 {
+		t.Fatalf("review/write posture = %+v", result.Result)
+	}
+}
+
+func TestRunOnceDoesNotReportCleanInboxCandidateAsDuplicateRisk(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	config := runclient.Config{DatabasePath: dbPath}
+	inboxPath := filepath.Join(t.TempDir(), "unique-note.md")
+	if err := os.WriteFile(inboxPath, []byte("# Unique Note\n\nUnique chronicler marker qwerty.\n"), 0o644); err != nil {
+		t.Fatalf("write inbox: %v", err)
+	}
+
+	result, err := RunOnce(ctx, config, RunRequest{InboxPaths: []string{inboxPath}, Limit: 5})
+	if err != nil {
+		t.Fatalf("run once: %v", err)
+	}
+	if len(result.Result.InboxCandidates) != 1 {
+		t.Fatalf("inbox candidates = %+v", result.Result.InboxCandidates)
+	}
+	if result.Result.InboxCandidates[0].DuplicateRisk != "no_duplicate_found" {
+		t.Fatalf("candidate duplicate status = %+v", result.Result.InboxCandidates[0])
+	}
+	if len(result.Result.DuplicateRisks) != 0 {
+		t.Fatalf("duplicate risks = %+v", result.Result.DuplicateRisks)
+	}
+	if result.Result.InboxCandidates[0].RecommendedAction != "review_then_approve_create_document" {
+		t.Fatalf("candidate action = %+v", result.Result.InboxCandidates[0])
+	}
+}
+
+func TestRunOnceBuildsContextPackFromRetrieval(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	config := runclient.Config{DatabasePath: dbPath}
+	createDocument(t, ctx, config, "docs/architecture/chronicler-test.md", "Chronicler Test", "# Chronicler Test\n\nChronicler context marker evidence for task planning.\n")
+	createDocument(t, ctx, config, "docs/architecture/chronicler-decision.md", "Chronicler Decision", "---\ndecision_id: adr-chronicler-test\ndecision_title: Chronicler stays read only\ndecision_status: accepted\ndecision_scope: chronicler\ndecision_owner: platform\ndecision_date: 2026-06-11\n---\n# Chronicler Decision\n\n## Summary\nChronicler context marker evidence says the MVP stays read only.\n")
+
+	result, err := RunOnce(ctx, config, RunRequest{
+		Task:       "Prepare Chronicler context marker implementation",
+		Query:      "Chronicler stays read only",
+		PathPrefix: "docs/architecture/",
+		Limit:      10,
+	})
+	if err != nil {
+		t.Fatalf("run once: %v", err)
+	}
+	if len(result.Result.ContextPacks) != 1 {
+		t.Fatalf("context packs = %+v", result.Result.ContextPacks)
+	}
+	pack := result.Result.ContextPacks[0]
+	if pack.WriteStatus != "read_only_no_write" ||
+		len(pack.MustRead) == 0 ||
+		len(pack.RelevantDecisions) == 0 ||
+		len(pack.Citations) == 0 ||
+		!strings.Contains(pack.Summary, "Read-only context pack") {
+		t.Fatalf("context pack = %+v", pack)
+	}
+	if pack.RelevantDecisions[0].DecisionID != "adr-chronicler-test" {
+		t.Fatalf("decisions = %+v", pack.RelevantDecisions)
+	}
+}
+
+func TestRunOnceFiltersDecisionContextByPathPrefix(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	config := runclient.Config{DatabasePath: dbPath}
+	createDocument(t, ctx, config, "notes/in-prefix.md", "In Prefix", "# In Prefix\n\nNeedle note text.\n")
+	createDocument(t, ctx, config, "docs/architecture/out-of-prefix-decision.md", "Out Of Prefix Decision", "---\ndecision_id: adr-out-of-prefix\ndecision_title: Out of Prefix Decision\ndecision_status: accepted\ndecision_scope: chronicler\ndecision_owner: platform\ndecision_date: 2026-06-11\n---\n# Out Of Prefix Decision\n\nNeedle note text.\n")
+
+	result, err := RunOnce(ctx, config, RunRequest{
+		Task:       "Needle note text",
+		PathPrefix: "notes/",
+		Limit:      10,
+	})
+	if err != nil {
+		t.Fatalf("run once: %v", err)
+	}
+	if len(result.Result.ContextPacks) != 1 {
+		t.Fatalf("context packs = %+v", result.Result.ContextPacks)
+	}
+	pack := result.Result.ContextPacks[0]
+	if len(pack.MustRead) != 1 || pack.MustRead[0].Path != "notes/in-prefix.md" {
+		t.Fatalf("must read = %+v", pack.MustRead)
+	}
+	if len(pack.RelevantDecisions) != 0 {
+		t.Fatalf("out-of-prefix decisions included = %+v", pack.RelevantDecisions)
+	}
+	for _, citation := range pack.Citations {
+		if !strings.HasPrefix(citation.Path, "notes/") {
+			t.Fatalf("out-of-prefix citation included = %+v", pack.Citations)
+		}
+	}
+}
+
+func TestRunOnceRejectsInvalidContextPathPrefixWithoutStorage(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	result, err := RunOnce(context.Background(), runclient.Config{DatabasePath: dbPath}, RunRequest{
+		Task:       "blocked",
+		PathPrefix: "../outside",
+	})
+	if err != nil {
+		t.Fatalf("run once: %v", err)
+	}
+	if len(result.Result.Blockers) != 1 || result.Result.Blockers[0] != "path_prefix must be vault-relative and stay inside the vault root" {
+		t.Fatalf("blockers = %+v", result.Result.Blockers)
+	}
+	if len(result.Result.ContextPacks) != 0 {
+		t.Fatalf("context packs = %+v", result.Result.ContextPacks)
+	}
+	if _, err := os.Stat(filepath.Dir(dbPath)); !os.IsNotExist(err) {
+		t.Fatalf("invalid path prefix created storage directory: %v", err)
+	}
+}
+
+func TestRunOnceDoesNotCreateDocumentsOrProvenance(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	config := runclient.Config{DatabasePath: dbPath}
+	doc := createDocument(t, ctx, config, "notes/stable.md", "Stable", "# Stable\n\nStable chronicler no-write marker.\n")
+	beforeBody := getDocumentBody(t, ctx, config, doc.DocID)
+	beforeDocs := listDocumentCount(t, ctx, config)
+	beforeEvents := provenanceEventCount(t, ctx, config)
+
+	inboxPath := filepath.Join(t.TempDir(), "new-note.txt")
+	if err := os.WriteFile(inboxPath, []byte("Stable chronicler no-write marker candidate."), 0o644); err != nil {
+		t.Fatalf("write inbox: %v", err)
+	}
+	result, err := RunOnce(ctx, config, RunRequest{
+		InboxPaths: []string{inboxPath},
+		Task:       "Stable chronicler no-write marker",
+		Limit:      10,
+	})
+	if err != nil {
+		t.Fatalf("run once: %v", err)
+	}
+	if !result.Result.PlannedNoWrite || result.Result.WritesPerformed != 0 {
+		t.Fatalf("write posture = %+v", result.Result)
+	}
+	if got := getDocumentBody(t, ctx, config, doc.DocID); got != beforeBody {
+		t.Fatalf("document body changed:\n%s", got)
+	}
+	if got := listDocumentCount(t, ctx, config); got != beforeDocs {
+		t.Fatalf("document count = %d, want %d", got, beforeDocs)
+	}
+	if got := provenanceEventCount(t, ctx, config); got != beforeEvents {
+		t.Fatalf("provenance event count = %d, want %d", got, beforeEvents)
+	}
+}
+
+func TestRunOnceNegativeLimitReturnsBlocker(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	result, err := RunOnce(context.Background(), runclient.Config{DatabasePath: dbPath}, RunRequest{
+		Limit: -1,
+	})
+	if err != nil {
+		t.Fatalf("run once: %v", err)
+	}
+	if len(result.Result.Blockers) != 1 || result.Result.Blockers[0] != "limit must be greater than or equal to 0" {
+		t.Fatalf("blockers = %+v", result.Result.Blockers)
+	}
+	if _, err := os.Stat(filepath.Dir(dbPath)); !os.IsNotExist(err) {
+		t.Fatalf("negative limit created storage directory: %v", err)
+	}
+}
+
+func createDocument(t *testing.T, ctx context.Context, config runclient.Config, path string, title string, body string) runner.Document {
+	t.Helper()
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionCreate,
+		Document: runner.DocumentInput{
+			Path:  path,
+			Title: title,
+			Body:  body,
+		},
+	})
+	if err != nil {
+		t.Fatalf("create %s: %v", path, err)
+	}
+	if result.Document == nil {
+		t.Fatalf("create %s result = %+v", path, result)
+	}
+	return *result.Document
+}
+
+func getDocumentBody(t *testing.T, ctx context.Context, config runclient.Config, docID string) string {
+	t.Helper()
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGet,
+		DocID:  docID,
+	})
+	if err != nil {
+		t.Fatalf("get %s: %v", docID, err)
+	}
+	if result.Document == nil {
+		t.Fatalf("get %s result = %+v", docID, result)
+	}
+	return result.Document.Body
+}
+
+func listDocumentCount(t *testing.T, ctx context.Context, config runclient.Config) int {
+	t.Helper()
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{Limit: 100},
+	})
+	if err != nil {
+		t.Fatalf("list documents: %v", err)
+	}
+	return len(result.Documents)
+}
+
+func provenanceEventCount(t *testing.T, ctx context.Context, config runclient.Config) int {
+	t.Helper()
+	result, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action:     runner.RetrievalTaskActionProvenanceEvents,
+		Provenance: runner.ProvenanceEventOptions{Limit: 100},
+	})
+	if err != nil {
+		t.Fatalf("list provenance: %v", err)
+	}
+	if result.Provenance == nil {
+		t.Fatalf("provenance result = %+v", result)
+	}
+	return len(result.Provenance.Events)
+}

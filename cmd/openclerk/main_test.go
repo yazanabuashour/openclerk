@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/yazanabuashour/openclerk/internal/chronicler"
 	"github.com/yazanabuashour/openclerk/internal/runner"
 )
 
@@ -62,7 +63,8 @@ func TestCapabilitiesManifestShowsBuildingBlocks(t *testing.T) {
 		!hasCapabilityAction(result, "retrieval", "retrieval_eval_replay") ||
 		!hasCapabilityAction(result, "retrieval", "search_diagnostics_report") ||
 		!hasCapabilityAction(result, "retrieval", "maintenance_report") ||
-		!hasCapabilityAction(result, "module", "install_module") {
+		!hasCapabilityAction(result, "module", "install_module") ||
+		!hasCapabilityAction(result, "clerk", "run --once") {
 		t.Fatalf("capabilities missing expected document/retrieval/module actions: %+v", result.Domains)
 	}
 	if !hasCapabilityExtension(result, "ollama-embeddings", "modules/ollama-embeddings/module.json") ||
@@ -130,6 +132,16 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 			args: []string{"module", "--help"},
 			want: []string{"install_module", "configure_module", "remove_module", "list_modules", "runtime_config:GEMINI_API_KEY", "redacted"},
 		},
+		{
+			name: "clerk",
+			args: []string{"clerk", "--help"},
+			want: []string{"Chronicler", "openclerk clerk run --once", "planned_no_write=true", "writes_performed=0", "no durable vault writes"},
+		},
+		{
+			name: "clerk run",
+			args: []string{"clerk", "run", "--help"},
+			want: []string{"openclerk-clerk.v1", "--inbox-path", "--task", "--query", "blockers", "deferred"},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			var stdout bytes.Buffer
@@ -144,6 +156,27 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestClerkRunOnceEmptyJSON(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	var result chronicler.RunEnvelope
+	code, stderr := runJSON(t, []string{"clerk", "run", "--once", "--db", dbPath}, "", &result)
+	if code != 0 {
+		t.Fatalf("clerk run exit = %d stderr=%s", code, stderr)
+	}
+	if result.SchemaVersion != chronicler.SchemaVersion ||
+		result.Action != chronicler.ActionRun ||
+		result.Result.Mode != "once" ||
+		!result.Result.PlannedNoWrite ||
+		result.Result.WritesPerformed != 0 ||
+		len(result.Result.InboxCandidates) != 0 ||
+		len(result.Result.ContextPacks) != 0 ||
+		len(result.Result.Blockers) != 0 {
+		t.Fatalf("clerk result = %+v", result)
 	}
 }
 

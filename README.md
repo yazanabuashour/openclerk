@@ -156,6 +156,7 @@ openclerk capabilities
 openclerk config      # persisted product/profile config
 openclerk document    # doc writes, registry, paths
 openclerk retrieval   # search, graph context/reports, records, provenance
+openclerk clerk       # optional read-only Chronicler orchestration
 openclerk capabilities
 ```
 
@@ -165,6 +166,7 @@ JSON in, JSON out. See runner help:
 openclerk config --help
 openclerk document --help
 openclerk retrieval --help
+openclerk clerk --help
 ```
 
 `openclerk config inspect_config` is the read-only effective config summary for
@@ -176,13 +178,17 @@ rebind it with `openclerk init --vault-root`, not `openclerk config`.
 Request-level `document` and `retrieval` `autonomy` fields override persisted
 profile defaults field-by-field. Git checkpoint enablement remains
 invocation-scoped through `--git-checkpoints` or `OPENCLERK_GIT_CHECKPOINTS`.
+`openclerk clerk run --once` is the first Chronicler MVP: a read-only,
+first-party orchestration report over Core for explicit local inbox candidate
+planning and task context packs. It performs no durable vault writes.
 
 Storage: `${XDG_DATA_HOME:-~/.local/share}/openclerk/openclerk.sqlite`  
 Override: `OPENCLERK_DATABASE_PATH` or `--db`
 
 ## Architecture
 
-[Agent knowledge plane →](docs/architecture/agent-knowledge-plane.md)
+[Agent knowledge plane →](docs/architecture/agent-knowledge-plane.md)  
+[Chronicler boundary →](docs/architecture/chronicler-boundary.md)
 
 ## Contributing
 
