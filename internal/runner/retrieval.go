@@ -45,6 +45,25 @@ func RunRetrievalTask(ctx context.Context, config runclient.Config, request Retr
 		}, nil
 	}
 
+	if normalized.Action == RetrievalTaskActionRetrievalEvalCapture {
+		var result RetrievalTaskResult
+		err := runclient.WithWriteLock(ctx, config, func() error {
+			client, err := runclient.Open(config)
+			if err != nil {
+				return err
+			}
+			defer func() {
+				_ = client.Close()
+			}()
+			result, err = runRetrievalTaskWithClient(ctx, client, normalized, config)
+			return err
+		})
+		if err != nil {
+			return RetrievalTaskResult{}, err
+		}
+		return result, nil
+	}
+
 	if isMutatingRetrievalAction(normalized) {
 		var result RetrievalTaskResult
 		err := runclient.WithWriteLock(ctx, config, func() error {
@@ -78,6 +97,10 @@ func RunRetrievalTask(ctx context.Context, config runclient.Config, request Retr
 func isMutatingRetrievalAction(normalized normalizedRetrievalTaskRequest) bool {
 	return (normalized.Action == RetrievalTaskActionAuditContradictions && normalized.Audit.Mode == "repair_existing") ||
 		(normalized.Action == RetrievalTaskActionSourceAuditReport && normalized.SourceAudit.Mode == "repair_existing")
+}
+
+func requiresRetrievalWriteApproval(normalized normalizedRetrievalTaskRequest) bool {
+	return normalized.Action == RetrievalTaskActionRetrievalEvalCapture || isMutatingRetrievalAction(normalized)
 }
 
 func runRetrievalTaskWithClient(ctx context.Context, client *runclient.Client, normalized normalizedRetrievalTaskRequest, config runclient.Config) (RetrievalTaskResult, error) {
@@ -803,6 +826,9 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 			}
 			normalized.RetrievalEval.Search = nested.Search
 			normalized.RetrievalEval.Search.Text = strings.TrimSpace(nested.Search.Text)
+			if rejection := rejectRetrievalAutonomyWrite(normalized); rejection != "" {
+				return normalizedRetrievalTaskRequest{}, rejection
+			}
 			return normalized, ""
 		case RetrievalTaskActionSemanticSearch:
 			nested, rejection := normalizeRetrievalTaskRequest(RetrievalTaskRequest{
@@ -813,6 +839,9 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 				return normalizedRetrievalTaskRequest{}, strings.Replace(rejection, "semantic_search.", "retrieval_eval.semantic_search.", 1)
 			}
 			normalized.RetrievalEval.SemanticSearch = nested.SemanticSearch
+			if rejection := rejectRetrievalAutonomyWrite(normalized); rejection != "" {
+				return normalizedRetrievalTaskRequest{}, rejection
+			}
 			return normalized, ""
 		default:
 			return normalizedRetrievalTaskRequest{}, "retrieval_eval.action must be search or semantic_search"
@@ -856,7 +885,7 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 }
 
 func rejectRetrievalAutonomyWrite(normalized normalizedRetrievalTaskRequest) string {
-	if !isMutatingRetrievalAction(normalized) {
+	if !requiresRetrievalWriteApproval(normalized) {
 		return ""
 	}
 	if normalized.Autonomy.ApprovalMode == ApprovalModeProposeOnly {

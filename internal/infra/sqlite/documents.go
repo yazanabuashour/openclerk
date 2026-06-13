@@ -61,8 +61,8 @@ FROM documents d`
 	args := []any{}
 	clauses := []string{}
 	if prefix := strings.TrimSpace(query.PathPrefix); prefix != "" {
-		clauses = append(clauses, "d.path LIKE ?")
-		args = append(args, prefix+"%")
+		clauses = append(clauses, "d.path LIKE ? ESCAPE '\\'")
+		args = append(args, pathPrefixLikePattern(prefix))
 	}
 	if query.MetadataKey != "" {
 		sqlQuery += `
@@ -154,11 +154,14 @@ func (s *Store) CreateDocument(ctx context.Context, input domain.CreateDocumentI
 	if strings.TrimSpace(input.Body) == "" {
 		return domain.Document{}, domain.ValidationError("body is required", nil)
 	}
-	absPath := filepath.Join(s.vaultRoot, filepath.FromSlash(relPath))
+	absPath, err := s.vaultCreateAbsPath(relPath, "validate document path")
+	if err != nil {
+		return domain.Document{}, err
+	}
 	if err := ensureDir(filepath.Dir(absPath)); err != nil {
 		return domain.Document{}, domain.InternalError("create document directory", err)
 	}
-	if _, err := osStat(absPath); err == nil {
+	if _, err := osLstat(absPath); err == nil {
 		return domain.Document{}, domain.AlreadyExistsError("document path", relPath)
 	} else if !errors.Is(err, fs.ErrNotExist) {
 		return domain.Document{}, domain.InternalError("stat document path", err)
@@ -217,7 +220,11 @@ func (s *Store) AppendDocument(ctx context.Context, docID string, input domain.A
 	}
 	body := strings.TrimRight(doc.Body, "\n")
 	body = body + "\n\n" + strings.TrimSpace(input.Content) + "\n"
-	if err := osWriteFile(filepath.Join(s.vaultRoot, filepath.FromSlash(doc.Path)), body); err != nil {
+	absPath, err := s.vaultExistingAbsPath(doc.Path, "validate document path")
+	if err != nil {
+		return domain.Document{}, err
+	}
+	if err := osWriteFile(absPath, body); err != nil {
 		return domain.Document{}, domain.InternalError("append document content", err)
 	}
 	if err := s.syncDocumentFromDisk(ctx, doc.Path, doc.Title); err != nil {
@@ -238,7 +245,11 @@ func (s *Store) ReplaceDocumentSection(ctx context.Context, docID string, input 
 	if err != nil {
 		return domain.Document{}, err
 	}
-	if err := osWriteFile(filepath.Join(s.vaultRoot, filepath.FromSlash(doc.Path)), body); err != nil {
+	absPath, err := s.vaultExistingAbsPath(doc.Path, "validate document path")
+	if err != nil {
+		return domain.Document{}, err
+	}
+	if err := osWriteFile(absPath, body); err != nil {
 		return domain.Document{}, domain.InternalError("replace document section", err)
 	}
 	if err := s.syncDocumentFromDisk(ctx, doc.Path, ""); err != nil {
@@ -255,7 +266,11 @@ func (s *Store) ReplaceDocument(ctx context.Context, docID string, input domain.
 	if err != nil {
 		return domain.Document{}, err
 	}
-	if err := osWriteFile(filepath.Join(s.vaultRoot, filepath.FromSlash(doc.Path)), strings.TrimRight(input.Body, "\n")+"\n"); err != nil {
+	absPath, err := s.vaultExistingAbsPath(doc.Path, "validate document path")
+	if err != nil {
+		return domain.Document{}, err
+	}
+	if err := osWriteFile(absPath, strings.TrimRight(input.Body, "\n")+"\n"); err != nil {
 		return domain.Document{}, domain.InternalError("replace document", err)
 	}
 	if err := s.syncDocumentFromDisk(ctx, doc.Path, strings.TrimSpace(input.Title)); err != nil {
@@ -490,8 +505,8 @@ func filteredDocumentClauses(query domain.SearchQuery) (string, []any) {
 	clauses := []string{}
 	args := []any{}
 	if prefix := strings.TrimSpace(query.PathPrefix); prefix != "" {
-		clauses = append(clauses, "d.path LIKE ?")
-		args = append(args, prefix+"%")
+		clauses = append(clauses, "d.path LIKE ? ESCAPE '\\'")
+		args = append(args, pathPrefixLikePattern(prefix))
 	}
 	if query.MetadataKey != "" && query.MetadataValue != "" {
 		clauses = append(clauses, `EXISTS (
@@ -502,6 +517,22 @@ WHERE dm.doc_id = d.doc_id AND dm.key_name = ? AND dm.value_text = ?
 		args = append(args, strings.ToLower(strings.TrimSpace(query.MetadataKey)), strings.TrimSpace(query.MetadataValue))
 	}
 	return strings.Join(clauses, " AND "), args
+}
+
+func pathPrefixLikePattern(prefix string) string {
+	return escapeLikeLiteral(prefix) + "%"
+}
+
+func escapeLikeLiteral(value string) string {
+	var builder strings.Builder
+	for _, char := range value {
+		switch char {
+		case '\\', '%', '_':
+			builder.WriteRune('\\')
+		}
+		builder.WriteRune(char)
+	}
+	return builder.String()
 }
 
 func snippetForSearch(content string, query string) string {

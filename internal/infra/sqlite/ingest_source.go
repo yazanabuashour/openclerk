@@ -65,6 +65,7 @@ var allowPrivateSourceHostsForTests = false
 const (
 	maxSourceURLUpdateImpactRefs = 200
 	maxSourceInspectionLinks     = 40
+	maxSourceInspectionLinkScans = 1000
 	maxSourceTextPreviewRunes    = 1200
 )
 
@@ -1542,7 +1543,7 @@ func extractSourceLinks(sourceURL string, mimeType string, body []byte, limit in
 
 func extractMarkdownSourceLinks(sourceURL string, body string, limit int) []domain.SourceURLInspectionLink {
 	links := []domain.SourceURLInspectionLink{}
-	for _, match := range markdownLinkPattern.FindAllStringSubmatch(body, -1) {
+	for _, match := range boundedRegexpSubmatches(markdownLinkPattern, body, maxSourceInspectionLinkScans) {
 		if len(match) < 3 {
 			continue
 		}
@@ -1551,7 +1552,7 @@ func extractMarkdownSourceLinks(sourceURL string, body string, limit int) []doma
 			return links
 		}
 	}
-	for _, match := range markdownAutolinkPattern.FindAllStringSubmatch(body, -1) {
+	for _, match := range boundedRegexpSubmatches(markdownAutolinkPattern, body, maxSourceInspectionLinkScans) {
 		if len(match) < 2 {
 			continue
 		}
@@ -1565,7 +1566,7 @@ func extractMarkdownSourceLinks(sourceURL string, body string, limit int) []doma
 
 func extractHTMLSourceLinks(sourceURL string, body string, limit int) []domain.SourceURLInspectionLink {
 	links := []domain.SourceURLInspectionLink{}
-	for _, match := range htmlAnchorPattern.FindAllStringSubmatch(body, -1) {
+	for _, match := range boundedRegexpSubmatches(htmlAnchorPattern, body, maxSourceInspectionLinkScans) {
 		if len(match) < 5 {
 			continue
 		}
@@ -1577,6 +1578,34 @@ func extractHTMLSourceLinks(sourceURL string, body string, limit int) []domain.S
 		}
 	}
 	return links
+}
+
+func boundedRegexpSubmatches(pattern *regexp.Regexp, body string, maxScans int) [][]string {
+	if maxScans <= 0 {
+		return nil
+	}
+	matches := make([][]string, 0, min(maxScans, maxSourceInspectionLinks))
+	start := 0
+	for scans := 0; scans < maxScans && start <= len(body); scans++ {
+		indexes := pattern.FindStringSubmatchIndex(body[start:])
+		if indexes == nil {
+			break
+		}
+		match := make([]string, len(indexes)/2)
+		for i := 0; i < len(indexes); i += 2 {
+			if indexes[i] < 0 || indexes[i+1] < 0 {
+				continue
+			}
+			match[i/2] = body[start+indexes[i] : start+indexes[i+1]]
+		}
+		matches = append(matches, match)
+		advance := indexes[1]
+		if advance <= 0 {
+			advance = 1
+		}
+		start += advance
+	}
+	return matches
 }
 
 func appendInspectionLink(links []domain.SourceURLInspectionLink, sourceURL string, rawURL string, text string) []domain.SourceURLInspectionLink {

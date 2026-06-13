@@ -326,6 +326,9 @@ func copyPublicMarkdownSubtree(sourceRoot string, subdir string, vaultRoot strin
 		if entry.IsDir() {
 			return nil
 		}
+		if entry.Type()&fs.ModeSymlink != 0 {
+			return fmt.Errorf("public corpus must not contain symlinked source files: %s", filepath.ToSlash(path))
+		}
 		ext := strings.ToLower(filepath.Ext(entry.Name()))
 		if _, ok := allowedExtensions[ext]; !ok {
 			return nil

@@ -129,6 +129,35 @@ func TestMaterializePublicVaultCorpusConvertsTextCorpusToMarkdown(t *testing.T) 
 	}
 }
 
+func TestMaterializePublicVaultCorpusRejectsSymlinkedSourceFiles(t *testing.T) {
+	ctx := context.Background()
+	sourceRoot := t.TempDir()
+	outsideRoot := t.TempDir()
+	writePublicVaultSourceFileForTest(t, outsideRoot, "private.md", "# Private\n\nmust not be copied")
+	if err := os.MkdirAll(filepath.Join(sourceRoot, "content", "en", "docs"), 0o755); err != nil {
+		t.Fatalf("create source dir: %v", err)
+	}
+	if err := os.Symlink(filepath.Join(outsideRoot, "private.md"), filepath.Join(sourceRoot, "content", "en", "docs", "leak.md")); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	config := publicVaultConfig{
+		RunRoot:        t.TempDir(),
+		PublicRepoURL:  sourceRoot,
+		PublicRepoRef:  "local-test",
+		PublicSubdir:   "content/en/docs",
+		SourcePrefix:   "sources/kubernetes/website/content/en/docs",
+		FileExtensions: []string{".md"},
+		SynthesisSlug:  "kubernetes-docs",
+	}
+	_, err := materializePublicVaultCorpus(ctx, config)
+	if err == nil || !strings.Contains(err.Error(), "symlinked source files") {
+		t.Fatalf("symlinked source error = %v", err)
+	}
+	if _, statErr := os.Stat(filepath.Join(config.RunRoot, "public-vault-copy", "sources", "kubernetes", "website", "content", "en", "docs", "leak.md")); !os.IsNotExist(statErr) {
+		t.Fatalf("leaked symlink target into vault, stat err = %v", statErr)
+	}
+}
+
 func TestExecutePublicVaultWritesPublicReports(t *testing.T) {
 	runRoot := t.TempDir()
 	reportDir := t.TempDir()

@@ -246,6 +246,8 @@ func isMutatingDocumentAction(normalized normalizedDocumentTaskRequest) bool {
 		return true
 	case DocumentTaskActionPlanPathCleanup:
 		return normalized.PathCleanup.Mode == pathCleanupModeApply
+	case DocumentTaskActionGitLifecycle:
+		return normalized.GitLifecycle.Mode == gitLifecycleModeCheckpoint
 	case DocumentTaskActionIngestSourceURL:
 		return normalized.Source.Mode != "plan" && normalized.Source.Mode != "inspect"
 	default:
@@ -587,6 +589,9 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 			}
 			if strings.TrimSpace(normalized.GitLifecycle.Message) == "" {
 				return normalizedDocumentTaskRequest{}, "git_lifecycle.message is required for checkpoint mode"
+			}
+			if rejection := rejectDocumentAutonomyWrite(normalized); rejection != "" {
+				return normalizedDocumentTaskRequest{}, rejection
 			}
 			return normalized, ""
 		default:

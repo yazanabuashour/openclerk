@@ -26,7 +26,7 @@ func runGraphContextReport(ctx context.Context, client *runclient.Client, option
 		return GraphContextReport{}, err
 	}
 
-	links, err := client.GetDocumentLinks(ctx, source.DocID)
+	links, err := client.GetDocumentLinks(ctx, source.DocID, limit)
 	if err != nil {
 		return GraphContextReport{}, err
 	}

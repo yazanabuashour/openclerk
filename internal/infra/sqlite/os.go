@@ -4,6 +4,7 @@ import "os"
 
 var (
 	osMkdirAll   = os.MkdirAll
+	osLstat      = os.Lstat
 	osRename     = os.Rename
 	osRemove     = os.Remove
 	osReadFile   = os.ReadFile

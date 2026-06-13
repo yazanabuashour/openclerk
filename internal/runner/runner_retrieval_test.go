@@ -191,7 +191,7 @@ func TestRetrievalEvalCaptureAndReplayAreSanitizedAndLocal(t *testing.T) {
 	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
 	createDocument(t, ctx, config, "notes/eval/retrieval-target.md", "Retrieval Eval Target", "# Retrieval Eval Target\n\n## Summary\nRetrieval eval marker appears here. Raw vault body secret should not enter capture rows.\n")
 	createDocument(t, ctx, config, "notes/eval/other.md", "Other Eval Note", "# Other Eval Note\n\n## Summary\nAdjacent retrieval eval content.\n")
-	capturePath := filepath.Join(t.TempDir(), "captures", "retrieval-eval.jsonl")
+	capturePath := filepath.Join(filepath.Dir(config.DatabasePath), "captures", "retrieval-eval.jsonl")
 
 	capture, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
 		Action: runner.RetrievalTaskActionRetrievalEvalCapture,
@@ -254,6 +254,31 @@ func TestRetrievalEvalCaptureAndReplayAreSanitizedAndLocal(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "must not be inside the vault root") {
 		t.Fatalf("capture inside vault err = %v, want vault-root rejection", err)
 	}
+	_, err = runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionRetrievalEvalCapture,
+		RetrievalEval: runner.RetrievalEvalOptions{
+			Action:      runner.RetrievalTaskActionSearch,
+			CapturePath: filepath.Join(t.TempDir(), "capture.jsonl"),
+			Search:      runner.SearchOptions{Text: "Retrieval eval marker", Limit: 10},
+		},
+	})
+	if err == nil || !strings.Contains(err.Error(), "OpenClerk data directory") {
+		t.Fatalf("capture outside data dir err = %v, want data-dir rejection", err)
+	}
+	proposeOnly, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action:   runner.RetrievalTaskActionRetrievalEvalCapture,
+		Autonomy: runner.AutonomyModes{ApprovalMode: runner.ApprovalModeProposeOnly},
+		RetrievalEval: runner.RetrievalEvalOptions{
+			Action: runner.RetrievalTaskActionSearch,
+			Search: runner.SearchOptions{Text: "Retrieval eval marker", Limit: 10},
+		},
+	})
+	if err != nil {
+		t.Fatalf("propose-only capture: %v", err)
+	}
+	if !proposeOnly.Rejected || !strings.Contains(proposeOnly.RejectionReason, "propose_only") {
+		t.Fatalf("propose-only capture result = %+v", proposeOnly)
+	}
 }
 
 func TestRetrievalEvalCaptureExecutesStoredSanitizedQuery(t *testing.T) {
@@ -262,7 +287,7 @@ func TestRetrievalEvalCaptureExecutesStoredSanitizedQuery(t *testing.T) {
 	ctx := context.Background()
 	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
 	createDocument(t, ctx, config, "notes/eval/long-query.md", "Long Query Target", "# Long Query Target\n\n## Summary\nOnly the tail marker should match this document.\n")
-	capturePath := filepath.Join(t.TempDir(), "captures", "long-query.jsonl")
+	capturePath := filepath.Join(filepath.Dir(config.DatabasePath), "captures", "long-query.jsonl")
 	longQuery := strings.Repeat("prefix ", 60) + "tail marker"
 
 	capture, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
@@ -295,6 +320,36 @@ func TestRetrievalEvalCaptureExecutesStoredSanitizedQuery(t *testing.T) {
 		replay.RetrievalEvalReplay.AverageJaccard != 1 ||
 		replay.RetrievalEvalReplay.Top1MatchRate != 1 {
 		t.Fatalf("long-query replay = %+v", replay.RetrievalEvalReplay)
+	}
+}
+
+func TestRetrievalEvalCaptureRefreshesVaultIndexBeforeWriting(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	document := createDocument(t, ctx, config, "notes/eval/fresh.md", "Fresh Eval", "# Fresh Eval\n\n## Summary\nOld indexed marker.\n")
+	paths, err := runclient.ResolvePaths(config)
+	if err != nil {
+		t.Fatalf("resolve paths: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(paths.VaultRoot, filepath.FromSlash(document.Path)), []byte("# Fresh Eval\n\n## Summary\nFresh capture marker from disk.\n"), 0o600); err != nil {
+		t.Fatalf("write fresh vault file: %v", err)
+	}
+
+	capture, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionRetrievalEvalCapture,
+		RetrievalEval: runner.RetrievalEvalOptions{
+			Action:      runner.RetrievalTaskActionSearch,
+			CapturePath: filepath.Join(filepath.Dir(config.DatabasePath), "captures", "fresh.jsonl"),
+			Search:      runner.SearchOptions{Text: "Fresh capture marker", Limit: 10},
+		},
+	})
+	if err != nil {
+		t.Fatalf("capture fresh eval: %v", err)
+	}
+	if capture.RetrievalEvalCapture == nil || len(capture.RetrievalEvalCapture.Case.Results) == 0 || capture.RetrievalEvalCapture.Case.Results[0].Path != document.Path {
+		t.Fatalf("fresh capture result = %+v", capture.RetrievalEvalCapture)
 	}
 }
 
@@ -758,6 +813,43 @@ Graph context report marker requires [Routing](routing.md), supersedes [Freshnes
 	}
 	if len(list.Documents) != 4 {
 		t.Fatalf("graph context report mutated documents: %+v", list.Documents)
+	}
+}
+
+func TestRetrievalTaskGraphContextReportLimitsLinksAndBacklinks(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	source := createDocument(t, ctx, config, "notes/graph/limit/index.md", "Graph Context Limit", "# Graph Context Limit\n\n## Links\nSee [One](one.md), [Two](two.md), [Three](three.md), [Four](four.md), and [Five](five.md).\n")
+	for _, note := range []struct {
+		name  string
+		title string
+	}{
+		{name: "one", title: "One"},
+		{name: "two", title: "Two"},
+		{name: "three", title: "Three"},
+		{name: "four", title: "Four"},
+		{name: "five", title: "Five"},
+	} {
+		createDocument(t, ctx, config, "notes/graph/limit/"+note.name+".md", note.title, "# "+note.title+"\n\n## Links\nBack to [Graph Context Limit](index.md).\n")
+	}
+
+	result, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionGraphContext,
+		GraphContext: runner.GraphContextOptions{
+			Path:  source.Path,
+			Limit: 2,
+		},
+	})
+	if err != nil {
+		t.Fatalf("graph context limited links: %v", err)
+	}
+	if result.GraphContext == nil || result.GraphContext.Links == nil {
+		t.Fatalf("graph context result = %+v", result)
+	}
+	if len(result.GraphContext.Links.Outgoing) > 2 || len(result.GraphContext.Links.Incoming) > 2 {
+		t.Fatalf("graph context links were not limited: outgoing=%d incoming=%d", len(result.GraphContext.Links.Outgoing), len(result.GraphContext.Links.Incoming))
 	}
 }
 

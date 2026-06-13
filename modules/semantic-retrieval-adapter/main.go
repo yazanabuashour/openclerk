@@ -610,7 +610,11 @@ func loadChunks(ctx context.Context, client *runclient.Client, request searchReq
 		if err != nil {
 			return nil, err
 		}
-		chunks = append(chunks, chunksForDocument(doc)...)
+		docChunks, err := chunksForDocumentLimited(doc, maxSemanticChunks-len(chunks))
+		if err != nil {
+			return nil, err
+		}
+		chunks = append(chunks, docChunks...)
 		if len(chunks) > maxSemanticChunks {
 			return nil, fmt.Errorf("semantic corpus exceeds maximum supported chunks (%d)", maxSemanticChunks)
 		}
@@ -619,6 +623,14 @@ func loadChunks(ctx context.Context, client *runclient.Client, request searchReq
 }
 
 func chunksForDocument(doc domain.Document) []semanticChunk {
+	chunks, _ := chunksForDocumentLimited(doc, math.MaxInt)
+	return chunks
+}
+
+func chunksForDocumentLimited(doc domain.Document, budget int) ([]semanticChunk, error) {
+	if budget < 0 {
+		budget = 0
+	}
 	lines := strings.Split(strings.ReplaceAll(doc.Body, "\r\n", "\n"), "\n")
 	type section struct {
 		heading string
@@ -643,13 +655,23 @@ func chunksForDocument(doc domain.Document) []semanticChunk {
 	}
 	chunks := []semanticChunk{}
 	for _, section := range sections {
-		chunks = append(chunks, chunksForSection(doc, section.heading, section.start, section.lines)...)
+		sectionChunks, err := chunksForSectionLimited(doc, section.heading, section.start, section.lines, budget-len(chunks))
+		if err != nil {
+			return nil, err
+		}
+		chunks = append(chunks, sectionChunks...)
 	}
-	return chunks
+	return chunks, nil
 }
 
-func chunksForSection(doc domain.Document, heading string, start int, lines []string) []semanticChunk {
-	parts := splitSectionParts(start, lines)
+func chunksForSectionLimited(doc domain.Document, heading string, start int, lines []string, budget int) ([]semanticChunk, error) {
+	if budget < 0 {
+		budget = 0
+	}
+	parts, err := splitSectionPartsLimited(start, lines, budget)
+	if err != nil {
+		return nil, err
+	}
 	chunks := make([]semanticChunk, 0, len(parts))
 	for idx, part := range parts {
 		content := strings.TrimSpace(strings.Join(part.lines, "\n"))
@@ -675,40 +697,63 @@ func chunksForSection(doc domain.Document, heading string, start int, lines []st
 			Hash:         hash,
 		})
 	}
-	return chunks
+	return chunks, nil
 }
 
-func splitSectionParts(start int, lines []string) []sectionPart {
+func splitSectionPartsLimited(start int, lines []string, budget int) ([]sectionPart, error) {
 	parts := []sectionPart{}
+	if budget < 0 {
+		budget = 0
+	}
 	current := []string{}
 	currentStart := start
 	currentLength := 0
-	flush := func(end int) {
+	appendPart := func(part sectionPart) error {
+		if len(parts) >= budget {
+			return fmt.Errorf("semantic corpus exceeds maximum supported chunks (%d)", maxSemanticChunks)
+		}
+		parts = append(parts, part)
+		return nil
+	}
+	flush := func(end int) error {
 		if strings.TrimSpace(strings.Join(current, "\n")) == "" {
 			current = nil
 			currentLength = 0
-			return
+			return nil
 		}
 		copied := append([]string(nil), current...)
-		parts = append(parts, sectionPart{lineStart: currentStart, lineEnd: end, lines: copied})
+		if err := appendPart(sectionPart{lineStart: currentStart, lineEnd: end, lines: copied}); err != nil {
+			return err
+		}
 		current = nil
 		currentLength = 0
+		return nil
 	}
 	for idx, line := range lines {
 		lineNo := start + idx
 		if len([]rune(line)) > semanticChunkTargetCharacters {
 			if len(current) > 0 {
-				flush(lineNo - 1)
+				if err := flush(lineNo - 1); err != nil {
+					return nil, err
+				}
 			}
-			for _, segment := range splitLongLine(line, semanticChunkTargetCharacters) {
-				parts = append(parts, sectionPart{lineStart: lineNo, lineEnd: lineNo, lines: []string{segment}})
+			segmentsNeeded := remainingLongLineSegments(line, semanticChunkTargetCharacters)
+			if segmentsNeeded > budget-len(parts) {
+				return nil, fmt.Errorf("semantic corpus exceeds maximum supported chunks (%d)", maxSemanticChunks)
+			}
+			for _, segment := range splitLongLineLimited(line, semanticChunkTargetCharacters, segmentsNeeded) {
+				if err := appendPart(sectionPart{lineStart: lineNo, lineEnd: lineNo, lines: []string{segment}}); err != nil {
+					return nil, err
+				}
 			}
 			currentStart = lineNo + 1
 			continue
 		}
 		lineLength := len([]rune(line)) + 1
 		if len(current) > 0 && currentLength+lineLength > semanticChunkTargetCharacters {
-			flush(lineNo - 1)
+			if err := flush(lineNo - 1); err != nil {
+				return nil, err
+			}
 			currentStart = lineNo
 		}
 		if len(current) == 0 {
@@ -718,25 +763,38 @@ func splitSectionParts(start int, lines []string) []sectionPart {
 		currentLength += lineLength
 	}
 	if len(current) > 0 {
-		flush(start + len(lines) - 1)
+		if err := flush(start + len(lines) - 1); err != nil {
+			return nil, err
+		}
 	}
-	return parts
+	return parts, nil
 }
 
-func splitLongLine(line string, limit int) []string {
+func splitLongLineLimited(line string, limit int, budget int) []string {
 	if limit <= 0 {
 		return []string{line}
 	}
 	runes := []rune(line)
 	parts := []string{}
-	for len(runes) > limit {
+	for len(runes) > limit && len(parts) < budget {
 		parts = append(parts, string(runes[:limit]))
 		runes = runes[limit:]
 	}
-	if len(runes) > 0 || len(parts) == 0 {
+	if (len(runes) > 0 || len(parts) == 0) && len(parts) < budget {
 		parts = append(parts, string(runes))
 	}
 	return parts
+}
+
+func remainingLongLineSegments(line string, limit int) int {
+	if limit <= 0 {
+		return 1
+	}
+	length := len([]rune(line))
+	if length == 0 {
+		return 1
+	}
+	return (length + limit - 1) / limit
 }
 
 func cacheForRequest(request searchRequest, chunks []semanticChunk) (cacheFile, string, string) {

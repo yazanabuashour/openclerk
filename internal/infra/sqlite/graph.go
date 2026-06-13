@@ -13,12 +13,20 @@ import (
 	"github.com/yazanabuashour/openclerk/internal/domain"
 )
 
-func (s *Store) GetDocumentLinks(ctx context.Context, docID string) (domain.DocumentLinks, error) {
+func (s *Store) GetDocumentLinks(ctx context.Context, docID string, limits ...int) (domain.DocumentLinks, error) {
 	if !supportsGraph(s.backend) {
 		return domain.DocumentLinks{}, domain.UnsupportedError("document links", s.backend)
 	}
 	if _, err := s.GetDocument(ctx, docID); err != nil {
 		return domain.DocumentLinks{}, err
+	}
+	linkLimit := 0
+	if len(limits) > 0 {
+		normalized, err := normalizePageLimit(limits[0], 20)
+		if err != nil {
+			return domain.DocumentLinks{}, err
+		}
+		linkLimit = normalized
 	}
 
 	outgoing, err := s.loadDocumentLinks(ctx, `
@@ -26,7 +34,7 @@ SELECT d.doc_id, d.path, d.title, ge.evidence_doc_id, ge.evidence_chunk_id, ge.e
 FROM graph_edges ge
 JOIN documents d ON d.doc_id = SUBSTR(ge.to_node_id, 5)
 WHERE ge.kind = 'links_to' AND ge.from_node_id = ? AND ge.to_node_id LIKE 'doc:%'
-ORDER BY d.path`, "doc:"+docID)
+ORDER BY d.path`, "doc:"+docID, linkLimit)
 	if err != nil {
 		return domain.DocumentLinks{}, err
 	}
@@ -35,7 +43,7 @@ SELECT d.doc_id, d.path, d.title, ge.evidence_doc_id, ge.evidence_chunk_id, ge.e
 FROM graph_edges ge
 JOIN documents d ON d.doc_id = SUBSTR(ge.from_node_id, 5)
 WHERE ge.kind = 'links_to' AND ge.to_node_id = ? AND ge.from_node_id LIKE 'doc:%'
-ORDER BY d.path`, "doc:"+docID)
+ORDER BY d.path`, "doc:"+docID, linkLimit)
 	if err != nil {
 		return domain.DocumentLinks{}, err
 	}
@@ -288,8 +296,13 @@ func (s *Store) rebuildGraph(ctx context.Context) error {
 	return nil
 }
 
-func (s *Store) loadDocumentLinks(ctx context.Context, query string, nodeID string) ([]domain.DocumentLink, error) {
-	rows, err := s.db.QueryContext(ctx, query, nodeID)
+func (s *Store) loadDocumentLinks(ctx context.Context, query string, nodeID string, limit int) ([]domain.DocumentLink, error) {
+	args := []any{nodeID}
+	if limit > 0 {
+		query += "\nLIMIT ?"
+		args = append(args, limit)
+	}
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, domain.InternalError("query document links", err)
 	}

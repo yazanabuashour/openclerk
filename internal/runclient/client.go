@@ -168,12 +168,12 @@ func (c *Client) MoveDocument(ctx context.Context, input domain.MoveDocumentInpu
 	return wrapResult(store.MoveDocument(ctx, input))
 }
 
-func (c *Client) GetDocumentLinks(ctx context.Context, docID string) (domain.DocumentLinks, error) {
+func (c *Client) GetDocumentLinks(ctx context.Context, docID string, limits ...int) (domain.DocumentLinks, error) {
 	store, err := c.store()
 	if err != nil {
 		return domain.DocumentLinks{}, err
 	}
-	return wrapResult(store.GetDocumentLinks(ctx, docID))
+	return wrapResult(store.GetDocumentLinks(ctx, docID, limits...))
 }
 
 func (c *Client) GraphNeighborhood(ctx context.Context, input domain.GraphNeighborhoodInput) (domain.GraphNeighborhood, error) {

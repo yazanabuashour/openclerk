@@ -488,7 +488,7 @@ type Store interface {
 	IngestSourceURL(context.Context, SourceURLInput) (SourceIngestionResult, error)
 	IngestVideoURL(context.Context, VideoURLInput) (VideoIngestionResult, error)
 	GetDocument(context.Context, string) (Document, error)
-	GetDocumentLinks(context.Context, string) (DocumentLinks, error)
+	GetDocumentLinks(context.Context, string, ...int) (DocumentLinks, error)
 	AppendDocument(context.Context, string, AppendDocumentInput) (Document, error)
 	ReplaceDocumentSection(context.Context, string, ReplaceSectionInput) (Document, error)
 	ReplaceDocument(context.Context, string, ReplaceDocumentInput) (Document, error)

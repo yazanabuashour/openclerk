@@ -603,6 +603,22 @@ func TestInspectSourceURLWebMarkdownLinks(t *testing.T) {
 	}
 }
 
+func TestExtractSourceLinksStopsAfterBoundedScanBudget(t *testing.T) {
+	t.Parallel()
+
+	var body strings.Builder
+	for i := 0; i < maxSourceInspectionLinkScans+25; i++ {
+		fmt.Fprintf(&body, "[link %d](https://example.com/%d)\n", i, i)
+	}
+	links := extractSourceLinks("https://example.com/source.md", "text/markdown", []byte(body.String()), maxSourceInspectionLinkScans+25)
+	if len(links) != maxSourceInspectionLinkScans {
+		t.Fatalf("bounded links = %d, want %d", len(links), maxSourceInspectionLinkScans)
+	}
+	if links[len(links)-1].URL != "https://example.com/999" {
+		t.Fatalf("last bounded link = %+v", links[len(links)-1])
+	}
+}
+
 func TestInspectSourceURLWebResolvesLinksAgainstFinalURL(t *testing.T) {
 	allowPrivateSourceHosts(t)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

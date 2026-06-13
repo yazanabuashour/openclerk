@@ -209,6 +209,20 @@ func TestSemanticRetrievalAdapterRejectsOversizedChunkCorpus(t *testing.T) {
 	}
 }
 
+func TestChunksForDocumentLimitedRejectsHugeSingleDocumentBeforeFullAllocation(t *testing.T) {
+	t.Parallel()
+
+	_, err := chunksForDocumentLimited(domain.Document{
+		DocID: "doc_huge",
+		Path:  "derived/text/huge.md",
+		Title: "Huge Extracted Text",
+		Body:  strings.Repeat("semantic ", semanticChunkTargetCharacters*3),
+	}, 2)
+	if err == nil || !strings.Contains(err.Error(), "semantic corpus exceeds maximum supported chunks") {
+		t.Fatalf("limited huge document error = %v", err)
+	}
+}
+
 func TestSemanticRetrievalAdapterPathPrefixAndStaleCache(t *testing.T) {
 	t.Parallel()
 

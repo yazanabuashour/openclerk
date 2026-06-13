@@ -171,15 +171,19 @@ func runRetrievalEvalReplay(ctx context.Context, client *runclient.Client, optio
 }
 
 func resolveRetrievalEvalPath(paths runclient.Paths, raw string) (string, error) {
+	dataDir := filepath.Dir(paths.DatabasePath)
 	if strings.TrimSpace(raw) == "" {
-		return filepath.Join(filepath.Dir(paths.DatabasePath), "retrieval-eval-capture.jsonl"), nil
+		return filepath.Join(dataDir, "retrieval-eval-capture.jsonl"), nil
 	}
 	cleaned := filepath.Clean(strings.TrimSpace(raw))
 	if !filepath.IsAbs(cleaned) {
 		if cleaned == "." || strings.HasPrefix(cleaned, ".."+string(filepath.Separator)) || cleaned == ".." {
 			return "", domain.ValidationError("retrieval eval capture_path must stay within the OpenClerk data directory when relative", nil)
 		}
-		cleaned = filepath.Join(filepath.Dir(paths.DatabasePath), cleaned)
+		cleaned = filepath.Join(dataDir, cleaned)
+	}
+	if !insidePath(dataDir, cleaned) {
+		return "", domain.ValidationError("retrieval eval capture_path must stay within the OpenClerk data directory", nil)
 	}
 	if insidePath(paths.VaultRoot, cleaned) {
 		return "", domain.ValidationError("retrieval eval capture_path must not be inside the vault root", nil)

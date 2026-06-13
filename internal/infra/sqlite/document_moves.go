@@ -60,12 +60,18 @@ func (s *Store) MoveDocument(ctx context.Context, input domain.MoveDocumentInput
 		})
 	}
 
-	sourceAbs := filepath.Join(s.vaultRoot, filepath.FromSlash(plan.SourcePath))
-	targetAbs := filepath.Join(s.vaultRoot, filepath.FromSlash(plan.TargetPath))
+	sourceAbs, err := s.vaultExistingAbsPath(plan.SourcePath, "validate source document path")
+	if err != nil {
+		return domain.DocumentMoveResult{}, err
+	}
+	targetAbs, err := s.vaultCreateAbsPath(plan.TargetPath, "validate target document path")
+	if err != nil {
+		return domain.DocumentMoveResult{}, err
+	}
 	if err := ensureDir(filepath.Dir(targetAbs)); err != nil {
 		return domain.DocumentMoveResult{}, domain.InternalError("create target document directory", err)
 	}
-	if _, err := osStat(targetAbs); err == nil {
+	if _, err := osLstat(targetAbs); err == nil {
 		return domain.DocumentMoveResult{}, domain.ConflictError("target_path already exists; choose an empty target path", map[string]any{
 			"target_path": plan.TargetPath,
 		})
@@ -118,7 +124,10 @@ func (s *Store) MoveDocument(ctx context.Context, input domain.MoveDocumentInput
 			continue
 		}
 		updatePath := update.Path
-		absPath := filepath.Join(s.vaultRoot, filepath.FromSlash(updatePath))
+		absPath, err := s.vaultExistingAbsPath(updatePath, "validate link update document path")
+		if err != nil {
+			return domain.DocumentMoveResult{}, err
+		}
 		bodyBytes, err := osReadFile(absPath)
 		if err != nil {
 			return domain.DocumentMoveResult{}, domain.InternalError("read document for move link update", err)
@@ -207,7 +216,9 @@ func (s *Store) planMoveDocument(ctx context.Context, input domain.MoveDocumentI
 		duplicateRisk = moveDuplicateTargetDoc
 		summary := documentSummaryFromDocument(targetDoc)
 		existingTarget = &summary
-	} else if _, statErr := osStat(filepath.Join(s.vaultRoot, filepath.FromSlash(targetPath))); statErr == nil {
+	} else if targetAbs, err := s.vaultCreateAbsPath(targetPath, "validate target document path"); err != nil {
+		return domain.DocumentMovePlan{}, err
+	} else if _, statErr := osLstat(targetAbs); statErr == nil {
 		duplicateRisk = moveDuplicateTargetFile
 	} else if !errors.Is(statErr, fs.ErrNotExist) {
 		return domain.DocumentMovePlan{}, domain.InternalError("stat target document path", statErr)

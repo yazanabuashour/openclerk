@@ -48,6 +48,70 @@ func TestCreateDocumentRejectsDuplicatePath(t *testing.T) {
 	}
 }
 
+func TestCreateDocumentRejectsSymlinkedParent(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	vaultRoot := t.TempDir()
+	outsideRoot := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(vaultRoot, "links"), 0o755); err != nil {
+		t.Fatalf("create links dir: %v", err)
+	}
+	if err := os.Symlink(outsideRoot, filepath.Join(vaultRoot, "links", "outside")); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	store := openTestStore(t, domain.BackendOpenClerk, filepath.Join(t.TempDir(), "openclerk.sqlite"), vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+
+	_, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+		Path:  "links/outside/escape.md",
+		Title: "Escape",
+		Body:  "# Escape\n",
+	})
+	if err == nil || !strings.Contains(err.Error(), "vault root") {
+		t.Fatalf("symlinked parent create err = %v, want vault-root rejection", err)
+	}
+	if _, statErr := os.Stat(filepath.Join(outsideRoot, "escape.md")); !errors.Is(statErr, os.ErrNotExist) {
+		t.Fatalf("outside file stat err = %v, want not exist", statErr)
+	}
+}
+
+func TestPathPrefixTreatsSQLWildcardsLiterally(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	store := openTestStore(t, domain.BackendOpenClerk, filepath.Join(t.TempDir(), "openclerk.sqlite"), t.TempDir())
+	defer func() {
+		_ = store.Close()
+	}()
+	for _, path := range []string{"notes/%/literal.md", "notes/a/literal.md", "notes/_/literal.md"} {
+		if _, err := store.CreateDocument(ctx, domain.CreateDocumentInput{
+			Path:  path,
+			Title: "Literal Prefix",
+			Body:  "# Literal Prefix\n\nwildcard marker literal prefix\n",
+		}); err != nil {
+			t.Fatalf("create %s: %v", path, err)
+		}
+	}
+
+	list, err := store.ListDocuments(ctx, domain.DocumentListQuery{PathPrefix: "notes/%/", Limit: 10})
+	if err != nil {
+		t.Fatalf("list literal wildcard prefix: %v", err)
+	}
+	if len(list.Documents) != 1 || list.Documents[0].Path != "notes/%/literal.md" {
+		t.Fatalf("list literal wildcard prefix = %+v", list.Documents)
+	}
+	search, err := store.Search(ctx, domain.SearchQuery{Text: "wildcard marker", PathPrefix: "notes/%/", Limit: 10})
+	if err != nil {
+		t.Fatalf("search literal wildcard prefix: %v", err)
+	}
+	if len(search.Hits) != 1 || len(search.Hits[0].Citations) == 0 || search.Hits[0].Citations[0].Path != "notes/%/literal.md" {
+		t.Fatalf("search literal wildcard prefix = %+v", search.Hits)
+	}
+}
+
 func TestMoveDocumentPreservesStableIDAndUpdatesLinks(t *testing.T) {
 	t.Parallel()
 
@@ -186,6 +250,38 @@ func TestMoveDocumentRejectsExistingTarget(t *testing.T) {
 	var appErr *domain.Error
 	if !errors.As(err, &appErr) || appErr.Code != "conflict" {
 		t.Fatalf("move duplicate error = %v, want conflict", err)
+	}
+}
+
+func TestMoveDocumentRejectsSymlinkedTargetParent(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	vaultRoot := t.TempDir()
+	outsideRoot := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(vaultRoot, "links"), 0o755); err != nil {
+		t.Fatalf("create links dir: %v", err)
+	}
+	if err := os.Symlink(outsideRoot, filepath.Join(vaultRoot, "links", "outside")); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	store := openTestStore(t, domain.BackendOpenClerk, filepath.Join(t.TempDir(), "openclerk.sqlite"), vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+	if _, err := store.CreateDocument(ctx, domain.CreateDocumentInput{Path: "notes/source.md", Title: "Source", Body: "# Source\n"}); err != nil {
+		t.Fatalf("create source: %v", err)
+	}
+
+	_, err := store.MoveDocument(ctx, domain.MoveDocumentInput{Path: "notes/source.md", TargetPath: "links/outside/moved.md"})
+	if err == nil || !strings.Contains(err.Error(), "vault root") {
+		t.Fatalf("symlinked target move err = %v, want vault-root rejection", err)
+	}
+	if _, statErr := os.Stat(filepath.Join(outsideRoot, "moved.md")); !errors.Is(statErr, os.ErrNotExist) {
+		t.Fatalf("outside moved stat err = %v, want not exist", statErr)
+	}
+	if _, statErr := os.Stat(filepath.Join(vaultRoot, "notes", "source.md")); statErr != nil {
+		t.Fatalf("source document moved despite rejection: %v", statErr)
 	}
 }
 

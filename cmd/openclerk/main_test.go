@@ -556,7 +556,7 @@ func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 		t.Fatalf("search result = %+v", searchResult)
 	}
 
-	capturePath := filepath.Join(t.TempDir(), "retrieval-eval.jsonl")
+	capturePath := filepath.Join(filepath.Dir(dbPath), "retrieval-eval.jsonl")
 	captureRequestBytes, err := json.Marshal(runner.RetrievalTaskRequest{
 		Action: runner.RetrievalTaskActionRetrievalEvalCapture,
 		RetrievalEval: runner.RetrievalEvalOptions{

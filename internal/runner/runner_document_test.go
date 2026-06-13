@@ -604,6 +604,35 @@ func TestDocumentTaskGitLifecycleCheckpointRequiresConfig(t *testing.T) {
 	}
 }
 
+func TestDocumentTaskGitLifecycleCheckpointRejectsProposeOnly(t *testing.T) {
+	t.Parallel()
+
+	vaultRoot := initGitLifecycleTestRepo(t)
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	if _, err := runclient.InitializePaths(runclient.Config{DatabasePath: dbPath}, vaultRoot); err != nil {
+		t.Fatalf("initialize paths: %v", err)
+	}
+	config := runclient.Config{DatabasePath: dbPath, GitCheckpoints: true}
+	ctx := context.Background()
+	createDocument(t, ctx, config, "notes/propose-only-checkpoint.md", "Propose Only Checkpoint", "# Propose Only Checkpoint\n\n## Summary\nCheckpoint must require write approval.\n")
+
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action:   runner.DocumentTaskActionGitLifecycle,
+		Autonomy: runner.AutonomyModes{ApprovalMode: runner.ApprovalModeProposeOnly},
+		GitLifecycle: runner.GitLifecycleOptions{
+			Mode:    "checkpoint",
+			Paths:   []string{"notes/propose-only-checkpoint.md"},
+			Message: "openclerk: checkpoint should be rejected",
+		},
+	})
+	if err != nil {
+		t.Fatalf("git lifecycle propose-only checkpoint: %v", err)
+	}
+	if !result.Rejected || !strings.Contains(result.RejectionReason, "propose_only") {
+		t.Fatalf("propose-only checkpoint result = %+v", result)
+	}
+}
+
 func TestDocumentTaskGitLifecycleUnavailableForNestedVault(t *testing.T) {
 	t.Parallel()
 
