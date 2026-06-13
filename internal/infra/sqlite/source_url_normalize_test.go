@@ -1,7 +1,10 @@
 package sqlite
 
 import (
+	"context"
+	"net/url"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -59,5 +62,29 @@ func TestNormalizeDocumentSourceURLWithAliasesIncludesGitHubOriginals(t *testing
 		!slices.Contains(lookupURLs, "https://github.com/mvanhorn/last30days-skill/") ||
 		!slices.Contains(lookupURLs, "https://github.com/mvanhorn/last30days-skill/blob/HEAD/README.md") {
 		t.Fatalf("sourceURL=%q lookupURLs=%+v", sourceURL, lookupURLs)
+	}
+}
+
+func TestNormalizeDocumentSourceURLRejectsUserinfo(t *testing.T) {
+	t.Parallel()
+
+	_, err := normalizeDocumentSourceURL("https://user:pass@example.test/source.md")
+	if err == nil || !strings.Contains(err.Error(), "userinfo") {
+		t.Fatalf("normalize userinfo URL error = %v, want userinfo rejection", err)
+	}
+}
+
+func TestSourceFetchValidationRejectsUserinfo(t *testing.T) {
+	t.Parallel()
+
+	if _, err := validateSourceFetchURL("https://user:pass@example.test/source.md"); err == nil || !strings.Contains(err.Error(), "userinfo") {
+		t.Fatalf("fetch URL userinfo error = %v, want userinfo rejection", err)
+	}
+	parsed, err := url.Parse("https://user:pass@example.test/source.md")
+	if err != nil {
+		t.Fatalf("parse URL: %v", err)
+	}
+	if err := validateSourceFetchURLTarget(context.Background(), parsed); err == nil || !strings.Contains(err.Error(), "userinfo") {
+		t.Fatalf("fetch target userinfo error = %v, want userinfo rejection", err)
 	}
 }

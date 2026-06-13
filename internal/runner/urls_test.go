@@ -45,6 +45,12 @@ func TestRunnerHTTPURLValidation(t *testing.T) {
 			want:     "source.url must use http or https",
 		},
 		{
+			name:     "public URL rejects userinfo",
+			validate: validateOptionalRunnerHTTPURL,
+			raw:      "https://user:pass@example.test/source.pdf",
+			want:     "source.url must not include userinfo",
+		},
+		{
 			name:     "optional URL accepts missing",
 			validate: validateOptionalRunnerHTTPURL,
 		},
@@ -59,6 +65,12 @@ func TestRunnerHTTPURLValidation(t *testing.T) {
 			validate: validateRequiredRunnerHTTPURLSyntax,
 			raw:      "http://127.0.0.1/source.pdf",
 			wantPath: "/source.pdf",
+		},
+		{
+			name:     "syntax-only URL rejects userinfo",
+			validate: validateRequiredRunnerHTTPURLSyntax,
+			raw:      "https://user:pass@example.test/source.pdf",
+			want:     "source.url must not include userinfo",
 		},
 	}
 
@@ -91,6 +103,9 @@ func TestRunnerLoopbackHTTPURLValidation(t *testing.T) {
 	}
 	if rejection := validateOptionalRunnerLoopbackHTTPURL("file:///tmp/ollama.sock", "semantic_search.ollama_url"); rejection != "semantic_search.ollama_url must be a loopback HTTP URL" {
 		t.Fatalf("invalid loopback URL rejection = %q", rejection)
+	}
+	if rejection := validateOptionalRunnerLoopbackHTTPURL("http://user:pass@localhost:11434", "semantic_search.ollama_url"); rejection != "semantic_search.ollama_url must be a loopback HTTP URL" {
+		t.Fatalf("userinfo loopback rejection = %q", rejection)
 	}
 }
 

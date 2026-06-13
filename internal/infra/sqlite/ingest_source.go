@@ -938,6 +938,9 @@ func validateSourceFetchURL(sourceURL string) (*url.URL, error) {
 	if parsed.Scheme != "http" && parsed.Scheme != "https" {
 		return nil, domain.ValidationError("source URL must use http or https", map[string]any{"scheme": parsed.Scheme})
 	}
+	if parsed.User != nil {
+		return nil, domain.ValidationError("source URL must not include userinfo", nil)
+	}
 	return parsed, nil
 }
 
@@ -977,6 +980,9 @@ func validateSourceFetchURLTarget(ctx context.Context, parsed *url.URL) error {
 	}
 	if parsed.Scheme != "http" && parsed.Scheme != "https" {
 		return domain.ValidationError("source URL must use http or https", map[string]any{"scheme": parsed.Scheme})
+	}
+	if parsed.User != nil {
+		return domain.ValidationError("source URL must not include userinfo", nil)
 	}
 	return validatePublicSourceHost(ctx, parsed)
 }

@@ -61,6 +61,9 @@ func parseRunnerHTTPURL(raw string, field string) (*url.URL, string) {
 	if parsed.Scheme != "http" && parsed.Scheme != "https" {
 		return nil, field + " must use http or https"
 	}
+	if parsed.User != nil {
+		return nil, field + " must not include userinfo"
+	}
 	return parsed, ""
 }
 

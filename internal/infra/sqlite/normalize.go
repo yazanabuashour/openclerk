@@ -38,6 +38,9 @@ func normalizeSourceURL(raw string) (string, error) {
 	if parsed.Scheme != "http" && parsed.Scheme != "https" {
 		return "", domain.ValidationError("source url must use http or https", map[string]any{"scheme": parsed.Scheme})
 	}
+	if parsed.User != nil {
+		return "", domain.ValidationError("source url must not include userinfo", nil)
+	}
 	parsed.Scheme = strings.ToLower(parsed.Scheme)
 	parsed.Host = strings.ToLower(parsed.Host)
 	parsed.Fragment = ""
