@@ -192,8 +192,9 @@ Override: `OPENCLERK_DATABASE_PATH` or `--db`
 
 ## Architecture
 
-[Agent knowledge plane →](docs/architecture/agent-knowledge-plane.md)  
-[Chronicler boundary →](docs/architecture/chronicler-boundary.md)
+- [Agent knowledge plane →](docs/architecture/agent-knowledge-plane.md)
+- [Chronicler boundary →](docs/architecture/chronicler-boundary.md)
+- [Consumer infrastructure and purchase ledger roadmap →](docs/architecture/consumer-infrastructure-and-purchase-ledger-roadmap.md)
 
 ## Contributing
 

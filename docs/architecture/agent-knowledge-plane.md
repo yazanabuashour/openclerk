@@ -21,6 +21,14 @@ clear.
 
 It is also positioned as infrastructure for persistent agent-maintained knowledge: useful synthesis should become cited, inspectable markdown instead of being rediscovered from scratch on every query.
 
+OpenClerk is also expected to be consumed by automated and user-facing systems
+as infrastructure, not only by a human driving one-off prompts. That direction
+is recorded in
+[`consumer-infrastructure-and-purchase-ledger-roadmap.md`](consumer-infrastructure-and-purchase-ledger-roadmap.md):
+consumers may automate read-only planning and inspection through runner JSON,
+while durable writes continue to require approved Core document or promoted
+domain lifecycles.
+
 The product model is:
 
 - canonical docs remain markdown in the vault
