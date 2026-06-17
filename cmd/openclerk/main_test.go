@@ -154,6 +154,21 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 			args: []string{"clerk", "context_pack", "--help"},
 			want: []string{"openclerk-clerk.v1", "--task", "--query", "--path-prefix", "Output action: context_pack", "context_packs"},
 		},
+		{
+			name: "demo",
+			args: []string{"demo", "--help"},
+			want: []string{"openclerk demo <init|ask>", "stale projection freshness", "compile_synthesis repair request"},
+		},
+		{
+			name: "demo init",
+			args: []string{"demo", "init", "--help"},
+			want: []string{"openclerk demo init", "empty or already marked"},
+		},
+		{
+			name: "demo ask",
+			args: []string{"demo", "ask", "--help"},
+			want: []string{"openclerk demo ask", "stale projection evidence"},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			var stdout bytes.Buffer
@@ -168,6 +183,68 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestDemoInitRejectsUnmarkedNonEmptyRoot(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	vaultPath := filepath.Join(root, "vault", "real.md")
+	if err := os.MkdirAll(filepath.Dir(vaultPath), 0o755); err != nil {
+		t.Fatalf("mkdir existing vault: %v", err)
+	}
+	if err := os.WriteFile(vaultPath, []byte("# Real vault\n"), 0o644); err != nil {
+		t.Fatalf("write existing vault: %v", err)
+	}
+
+	code, stderr := runJSON(t, []string{"demo", "init", "--root", root}, "", nil)
+	if code != 1 || !strings.Contains(stderr, "not empty and is not marked") {
+		t.Fatalf("demo init exit=%d stderr=%s", code, stderr)
+	}
+	if _, err := os.Stat(vaultPath); err != nil {
+		t.Fatalf("existing vault was not preserved: %v", err)
+	}
+}
+
+func TestDemoInitAndAskJSON(t *testing.T) {
+	t.Parallel()
+
+	root := filepath.Join(t.TempDir(), "openclerk-demo")
+	var initResult demoResult
+	code, stderr := runJSON(t, []string{"demo", "init", "--root", root}, "", &initResult)
+	if code != 0 {
+		t.Fatalf("demo init exit = %d stderr=%s", code, stderr)
+	}
+	if initResult.SchemaVersion != "openclerk-demo.v1" ||
+		initResult.Action != "init" ||
+		initResult.SourcePath != "sources/plan.md" ||
+		initResult.SynthesisPath != "synthesis/account-memory.md" ||
+		initResult.RepairRequest == nil ||
+		initResult.RepairRequest.Action != runner.DocumentTaskActionCompileSynthesis {
+		t.Fatalf("demo init result = %+v", initResult)
+	}
+	if len(initResult.ProjectionFreshness) != 1 ||
+		initResult.ProjectionFreshness[0].Freshness != "stale" ||
+		initResult.ProjectionFreshness[0].StaleSourceRefs != "sources/plan.md" {
+		t.Fatalf("demo init projection = %+v", initResult.ProjectionFreshness)
+	}
+	if _, err := os.Stat(filepath.Join(root, demoMarkerFile)); err != nil {
+		t.Fatalf("demo marker missing: %v", err)
+	}
+
+	var askResult demoResult
+	code, stderr = runJSON(t, []string{"demo", "ask", "--root", root, "what changed and what is stale?"}, "", &askResult)
+	if code != 0 {
+		t.Fatalf("demo ask exit = %d stderr=%s", code, stderr)
+	}
+	if askResult.Action != "ask" ||
+		!strings.Contains(askResult.Summary, "synthesis/account-memory.md") ||
+		!strings.Contains(askResult.Summary, "sources/plan.md") ||
+		askResult.RepairRequest == nil ||
+		len(askResult.RepairRequest.Synthesis.SourceRefs) != 1 ||
+		askResult.RepairRequest.Synthesis.SourceRefs[0] != "sources/plan.md" {
+		t.Fatalf("demo ask result = %+v", askResult)
 	}
 }
 

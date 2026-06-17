@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/yazanabuashour/openclerk/internal/chronicler"
 	"github.com/yazanabuashour/openclerk/internal/runclient"
@@ -17,6 +19,8 @@ import (
 )
 
 var version string
+
+const demoMarkerFile = ".openclerk-demo-root"
 
 func main() {
 	os.Exit(run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
@@ -49,6 +53,8 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 		return runRetrieval(args[1:], stdin, stdout, stderr)
 	case "clerk":
 		return runClerk(args[1:], stdout, stderr)
+	case "demo":
+		return runDemo(args[1:], stdout, stderr)
 	default:
 		_, _ = fmt.Fprintf(stderr, "unknown openclerk command %q\n", args[0])
 		usage(stderr)
@@ -531,6 +537,359 @@ func runClerkContextPack(args []string, stdout io.Writer, stderr io.Writer) int 
 	return 0
 }
 
+type demoResult struct {
+	SchemaVersion       string             `json:"schema_version"`
+	Action              string             `json:"action"`
+	Question            string             `json:"question,omitempty"`
+	Summary             string             `json:"summary"`
+	DemoRoot            string             `json:"demo_root"`
+	DatabasePath        string             `json:"database_path"`
+	VaultRoot           string             `json:"vault_root"`
+	SourcePath          string             `json:"source_path,omitempty"`
+	SynthesisPath       string             `json:"synthesis_path,omitempty"`
+	SynthesisDocID      string             `json:"synthesis_doc_id,omitempty"`
+	ProjectionFreshness []demoProjection   `json:"projection_freshness,omitempty"`
+	Citations           []demoCitation     `json:"citations,omitempty"`
+	RepairRequest       *demoRepairRequest `json:"repair_request,omitempty"`
+	Next                []string           `json:"next,omitempty"`
+}
+
+type demoProjection struct {
+	Path            string `json:"path"`
+	Freshness       string `json:"freshness"`
+	FreshnessReason string `json:"freshness_reason,omitempty"`
+	StaleSourceRefs string `json:"stale_source_refs,omitempty"`
+}
+
+type demoCitation struct {
+	Path      string `json:"path"`
+	Heading   string `json:"heading,omitempty"`
+	LineStart int    `json:"line_start,omitempty"`
+	LineEnd   int    `json:"line_end,omitempty"`
+}
+
+type demoRepairRequest struct {
+	Action    string                       `json:"action"`
+	Synthesis runner.CompileSynthesisInput `json:"synthesis"`
+}
+
+func runDemo(args []string, stdout io.Writer, stderr io.Writer) int {
+	if len(args) == 0 || isHelpArg(args[0]) {
+		demoUsage(stdout)
+		return 0
+	}
+	switch args[0] {
+	case "init":
+		return runDemoInit(args[1:], stdout, stderr)
+	case "ask":
+		return runDemoAsk(args[1:], stdout, stderr)
+	default:
+		_, _ = fmt.Fprintf(stderr, "unknown openclerk demo command %q\n", args[0])
+		demoUsage(stderr)
+		return 2
+	}
+}
+
+func runDemoInit(args []string, stdout io.Writer, stderr io.Writer) int {
+	if wantsSubcommandHelp(args) {
+		demoInitUsage(stdout)
+		return 0
+	}
+	root, _, ok := parseDemoConfig("init", args, stderr)
+	if !ok {
+		return 2
+	}
+	result, err := seedDemo(context.Background(), root)
+	if err != nil {
+		_, _ = fmt.Fprintf(stderr, "run demo init: %v\n", err)
+		return 1
+	}
+	if err := json.NewEncoder(stdout).Encode(result); err != nil {
+		_, _ = fmt.Fprintf(stderr, "encode demo result: %v\n", err)
+		return 1
+	}
+	return 0
+}
+
+func runDemoAsk(args []string, stdout io.Writer, stderr io.Writer) int {
+	if wantsSubcommandHelp(args) {
+		demoAskUsage(stdout)
+		return 0
+	}
+	root, remaining, ok := parseDemoConfig("ask", args, stderr)
+	if !ok {
+		return 2
+	}
+	question := strings.TrimSpace(strings.Join(remaining, " "))
+	if question == "" {
+		question = "what changed and what is stale?"
+	}
+	result, err := answerDemo(context.Background(), root, question)
+	if err != nil {
+		_, _ = fmt.Fprintf(stderr, "run demo ask: %v\n", err)
+		return 1
+	}
+	if err := json.NewEncoder(stdout).Encode(result); err != nil {
+		_, _ = fmt.Fprintf(stderr, "encode demo answer: %v\n", err)
+		return 1
+	}
+	return 0
+}
+
+func parseDemoConfig(name string, args []string, stderr io.Writer) (string, []string, bool) {
+	fs := flag.NewFlagSet("openclerk demo "+name, flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	root := fs.String("root", defaultDemoRoot(), "isolated demo root")
+	if err := fs.Parse(args); err != nil {
+		return "", nil, false
+	}
+	if strings.TrimSpace(*root) == "" {
+		_, _ = fmt.Fprintln(stderr, "demo root is required")
+		return "", nil, false
+	}
+	absRoot, err := filepath.Abs(*root)
+	if err != nil {
+		_, _ = fmt.Fprintf(stderr, "resolve demo root: %v\n", err)
+		return "", nil, false
+	}
+	return absRoot, fs.Args(), true
+}
+
+func defaultDemoRoot() string {
+	base, err := os.UserCacheDir()
+	if err != nil || strings.TrimSpace(base) == "" {
+		base = os.TempDir()
+	}
+	return filepath.Join(base, "openclerk", "demo")
+}
+
+func seedDemo(ctx context.Context, root string) (demoResult, error) {
+	paths, err := resetDemoPaths(root)
+	if err != nil {
+		return demoResult{}, err
+	}
+	config := runclient.Config{DatabasePath: paths.DatabasePath}
+	if _, err := runclient.InitializePaths(config, paths.VaultRoot); err != nil {
+		return demoResult{}, err
+	}
+
+	source, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionCreate,
+		Document: runner.DocumentInput{
+			Path:  "sources/plan.md",
+			Title: "Plan Source",
+			Body:  "# Plan Source\n\n## Summary\nAcme plan includes 10 seats.\n",
+		},
+	})
+	if err != nil {
+		return demoResult{}, err
+	}
+	if source.Document == nil {
+		return demoResult{}, fmt.Errorf("demo source was not created")
+	}
+
+	synthesis, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionCompileSynthesis,
+		Synthesis: runner.CompileSynthesisInput{
+			Path:          "synthesis/account-memory.md",
+			Title:         "Account Memory",
+			SourceRefs:    []string{"sources/plan.md"},
+			BodyFacts:     []string{"Acme plan includes 10 seats."},
+			FreshnessNote: "Checked current source evidence through the demo.",
+			Mode:          "create_or_update",
+		},
+	})
+	if err != nil {
+		return demoResult{}, err
+	}
+	if synthesis.CompileSynthesis == nil {
+		return demoResult{}, fmt.Errorf("demo synthesis was not created")
+	}
+
+	time.Sleep(time.Millisecond)
+	if _, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action:  runner.DocumentTaskActionReplaceSection,
+		DocID:   source.Document.DocID,
+		Heading: "Summary",
+		Content: "Acme plan now includes 25 seats. The old 10-seat synthesis is stale.",
+	}); err != nil {
+		return demoResult{}, err
+	}
+
+	answer, err := buildDemoAnswer(ctx, root, config, paths, "what changed and what is stale?", synthesis.CompileSynthesis.DocumentID)
+	if err != nil {
+		return demoResult{}, err
+	}
+	answer.Action = "init"
+	answer.Summary = "seeded demo vault and detected stale synthesis"
+	answer.Next = []string{`openclerk demo ask "what changed and what is stale?"`}
+	return answer, nil
+}
+
+func resetDemoPaths(root string) (runclient.Paths, error) {
+	root = filepath.Clean(root)
+	paths := runclient.Paths{
+		DatabasePath: filepath.Join(root, "openclerk.sqlite"),
+		VaultRoot:    filepath.Join(root, "vault"),
+	}
+	if err := guardDemoRoot(root); err != nil {
+		return runclient.Paths{}, err
+	}
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		return runclient.Paths{}, fmt.Errorf("create demo root: %w", err)
+	}
+	for _, path := range []string{
+		paths.VaultRoot,
+		paths.DatabasePath,
+		paths.DatabasePath + "-shm",
+		paths.DatabasePath + "-wal",
+		paths.DatabasePath + ".runner-write.lock",
+		paths.DatabasePath + ".runtime-config.lock",
+	} {
+		if err := os.RemoveAll(path); err != nil {
+			return runclient.Paths{}, fmt.Errorf("reset demo path %q: %w", path, err)
+		}
+	}
+	if err := os.MkdirAll(paths.VaultRoot, 0o755); err != nil {
+		return runclient.Paths{}, fmt.Errorf("create demo vault: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, demoMarkerFile), []byte("openclerk demo root\n"), 0o644); err != nil {
+		return runclient.Paths{}, fmt.Errorf("write demo marker: %w", err)
+	}
+	return paths, nil
+}
+
+func guardDemoRoot(root string) error {
+	info, err := os.Stat(root)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("inspect demo root: %w", err)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("demo root must be a directory")
+	}
+	if _, err := os.Stat(filepath.Join(root, demoMarkerFile)); err == nil {
+		return nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("inspect demo marker: %w", err)
+	}
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		return fmt.Errorf("inspect demo root entries: %w", err)
+	}
+	if len(entries) != 0 {
+		return fmt.Errorf("demo root %q is not empty and is not marked as an OpenClerk demo root", root)
+	}
+	return nil
+}
+
+func answerDemo(ctx context.Context, root string, question string) (demoResult, error) {
+	paths := runclient.Paths{
+		DatabasePath: filepath.Join(root, "openclerk.sqlite"),
+		VaultRoot:    filepath.Join(root, "vault"),
+	}
+	config := runclient.Config{DatabasePath: paths.DatabasePath}
+	list, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{PathPrefix: "synthesis/", Limit: 10},
+	})
+	if err != nil {
+		return demoResult{}, fmt.Errorf("read demo vault; run openclerk demo init first: %w", err)
+	}
+	if len(list.Documents) == 0 {
+		return demoResult{}, fmt.Errorf("demo synthesis missing; run openclerk demo init first")
+	}
+	return buildDemoAnswer(ctx, root, config, paths, question, list.Documents[0].DocID)
+}
+
+func buildDemoAnswer(ctx context.Context, root string, config runclient.Config, paths runclient.Paths, question string, synthesisDocID string) (demoResult, error) {
+	projections, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionProjectionStates,
+		Projection: runner.ProjectionStateOptions{
+			Projection: "synthesis",
+			RefKind:    "document",
+			RefID:      synthesisDocID,
+			Limit:      10,
+		},
+	})
+	if err != nil {
+		return demoResult{}, err
+	}
+	search, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSearch,
+		Search: runner.SearchOptions{Text: "Acme plan seats stale", Limit: 5},
+	})
+	if err != nil {
+		return demoResult{}, err
+	}
+
+	summary := "sources/plan.md changed after synthesis/account-memory.md; synthesis is stale and should be repaired through compile_synthesis."
+	return demoResult{
+		SchemaVersion:       "openclerk-demo.v1",
+		Action:              "ask",
+		Question:            question,
+		Summary:             summary,
+		DemoRoot:            root,
+		DatabasePath:        paths.DatabasePath,
+		VaultRoot:           paths.VaultRoot,
+		SourcePath:          "sources/plan.md",
+		SynthesisPath:       "synthesis/account-memory.md",
+		SynthesisDocID:      synthesisDocID,
+		ProjectionFreshness: demoProjections(projections.Projections),
+		Citations:           demoCitations(search.Search),
+		RepairRequest: &demoRepairRequest{
+			Action: runner.DocumentTaskActionCompileSynthesis,
+			Synthesis: runner.CompileSynthesisInput{
+				Path:          "synthesis/account-memory.md",
+				Title:         "Account Memory",
+				SourceRefs:    []string{"sources/plan.md"},
+				BodyFacts:     []string{"Acme plan now includes 25 seats."},
+				FreshnessNote: "Repair stale synthesis after source change.",
+				Mode:          "create_or_update",
+			},
+		},
+	}, nil
+}
+
+func demoProjections(list *runner.ProjectionStateList) []demoProjection {
+	if list == nil {
+		return nil
+	}
+	result := make([]demoProjection, 0, len(list.Projections))
+	for _, projection := range list.Projections {
+		result = append(result, demoProjection{
+			Path:            projection.Details["synthesis_path"],
+			Freshness:       projection.Freshness,
+			FreshnessReason: projection.Details["freshness_reason"],
+			StaleSourceRefs: projection.Details["stale_source_refs"],
+		})
+	}
+	return result
+}
+
+func demoCitations(search *runner.SearchResult) []demoCitation {
+	if search == nil {
+		return nil
+	}
+	result := []demoCitation{}
+	for _, hit := range search.Hits {
+		for _, citation := range hit.Citations {
+			result = append(result, demoCitation{
+				Path:      citation.Path,
+				Heading:   citation.Heading,
+				LineStart: citation.LineStart,
+				LineEnd:   citation.LineEnd,
+			})
+			if len(result) == 5 {
+				return result
+			}
+		}
+	}
+	return result
+}
+
 func parseConfig(name string, args []string, stderr io.Writer) (runclient.Config, bool) {
 	fs := flag.NewFlagSet("openclerk "+name, flag.ContinueOnError)
 	fs.SetOutput(stderr)
@@ -698,7 +1057,7 @@ func resolvedVersion(linkerVersion string, info *debug.BuildInfo, ok bool) strin
 }
 
 func usage(stderr io.Writer) {
-	_, _ = fmt.Fprintln(stderr, "usage: openclerk <version|capabilities|init|config|module|document|retrieval|clerk> [--db path]")
+	_, _ = fmt.Fprintln(stderr, "usage: openclerk <version|capabilities|init|config|module|document|retrieval|clerk|demo> [--db path]")
 	_, _ = fmt.Fprintln(stderr, "       openclerk init [--db path] [--vault-root path]")
 	_, _ = fmt.Fprintln(stderr, "       openclerk capabilities")
 	_, _ = fmt.Fprintln(stderr, "       openclerk config --help")
@@ -706,8 +1065,31 @@ func usage(stderr io.Writer) {
 	_, _ = fmt.Fprintln(stderr, "       openclerk document --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk retrieval --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk clerk --help")
+	_, _ = fmt.Fprintln(stderr, "       openclerk demo --help")
 	_, _ = fmt.Fprintln(stderr, "document/retrieval read strict JSON from stdin and use configured paths by default; pass --db only for an explicit dataset.")
 	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, validation_synthesis_report, ingest_source_url inspect/plan, web_search_plan, artifact_candidate_plan, git_lifecycle_report, source_discovery_report, source_audit_report, evidence_bundle_report, decision_lookup_report, duplicate_candidate_report, workflow_guide_report, memory_router_recall_report, structured_store_report, hybrid_retrieval_report, graph_context_report, graph_relationship_report, graph_relationship_maintenance_plan, semantic_search, retrieval_eval_capture, retrieval_eval_replay, search_diagnostics_report, maintenance_report, clerk run --once, clerk inbox_scan, clerk context_pack")
+}
+
+func demoUsage(w io.Writer) {
+	_, _ = fmt.Fprintln(w, "usage: openclerk demo <init|ask> [--root path]")
+	_, _ = fmt.Fprintln(w, "")
+	_, _ = fmt.Fprintln(w, "Creates and queries an isolated demo vault/database under the demo root.")
+	_, _ = fmt.Fprintln(w, `  openclerk demo init`)
+	_, _ = fmt.Fprintln(w, `  openclerk demo ask "what changed and what is stale?"`)
+	_, _ = fmt.Fprintln(w, "The demo seeds one source note, one synthesis page, updates the source, reports stale projection freshness, and returns a compile_synthesis repair request.")
+}
+
+func demoInitUsage(w io.Writer) {
+	_, _ = fmt.Fprintln(w, "usage: openclerk demo init [--root path]")
+	_, _ = fmt.Fprintln(w, "")
+	_, _ = fmt.Fprintln(w, "Seeds an isolated demo vault/database, then reports stale synthesis evidence.")
+	_, _ = fmt.Fprintln(w, "The root must be empty or already marked as an OpenClerk demo root.")
+}
+
+func demoAskUsage(w io.Writer) {
+	_, _ = fmt.Fprintln(w, `usage: openclerk demo ask [--root path] ["question"]`)
+	_, _ = fmt.Fprintln(w, "")
+	_, _ = fmt.Fprintln(w, "Reads the isolated demo vault and returns stale projection evidence plus a compile_synthesis repair request.")
 }
 
 func configUsage(w io.Writer) {

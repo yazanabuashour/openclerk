@@ -1,6 +1,21 @@
 # OpenClerk
 
-A local-first knowledge-plane runtime for agents. One binary. One `SKILL.md`.
+The governance layer for LLM-maintained Markdown wikis. One binary. One `SKILL.md`.
+
+Local-first, citation-bearing memory for coding agents that should not reread,
+duplicate, or silently rewrite truth.
+
+## Watch OpenClerk catch stale memory in 60 seconds
+
+```bash
+curl -fsSL https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh | sh
+openclerk demo init
+openclerk demo ask "what changed and what is stale?"
+```
+
+The demo creates an isolated sample vault, writes a source note and synthesis
+page, changes the source, and reports the synthesis as stale with citations and
+a `compile_synthesis` repair request.
 
 ## What is this?
 
@@ -30,6 +45,8 @@ Many RAG setups make the index the primary agent interface. OpenClerk keeps
 markdown as the human-readable authority and treats indexes and projections as
 derived recall layers. Obsidian has no agent-write contract. NotebookLM is not
 local.
+
+For a more detailed buyer matrix, see [`docs/comparison.md`](docs/comparison.md).
 
 ## Try it in 5 minutes
 
