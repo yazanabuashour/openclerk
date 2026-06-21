@@ -8,9 +8,11 @@ import (
 )
 
 const (
-	ConfigTaskActionInspectConfig    = "inspect_config"
-	ConfigTaskActionConfigureProfile = "configure_profile"
-	ConfigTaskActionClearProfile     = "clear_profile"
+	ConfigTaskActionInspectConfig         = "inspect_config"
+	ConfigTaskActionConfigureProfile      = "configure_profile"
+	ConfigTaskActionClearProfile          = "clear_profile"
+	ConfigTaskActionConfigureVaultIgnores = "configure_vault_ignore_paths"
+	ConfigTaskActionClearVaultIgnores     = "clear_vault_ignore_paths"
 
 	DocumentTaskActionValidate            = "validate"
 	DocumentTaskActionCreate              = "create_document"
@@ -66,8 +68,9 @@ const (
 )
 
 type ConfigTaskRequest struct {
-	Action  string        `json:"action"`
-	Profile AutonomyModes `json:"profile,omitempty"`
+	Action           string        `json:"action"`
+	Profile          AutonomyModes `json:"profile,omitempty"`
+	VaultIgnorePaths *[]string     `json:"vault_ignore_paths,omitempty"`
 }
 
 type ConfigTaskResult struct {
@@ -82,10 +85,12 @@ type ConfigTaskResult struct {
 }
 
 type ConfigStorageSummary struct {
-	DatabasePath     string   `json:"database_path"`
-	VaultRoot        string   `json:"vault_root"`
-	DatabaseSource   string   `json:"database_source"`
-	VaultIgnorePaths []string `json:"vault_ignore_paths,omitempty"`
+	DatabasePath            string   `json:"database_path"`
+	VaultRoot               string   `json:"vault_root"`
+	DatabaseSource          string   `json:"database_source"`
+	VaultIgnorePaths        []string `json:"vault_ignore_paths,omitempty"`
+	DefaultVaultIgnorePaths []string `json:"default_vault_ignore_paths,omitempty"`
+	CustomVaultIgnorePaths  []string `json:"custom_vault_ignore_paths,omitempty"`
 }
 
 type ConfigModuleSummary struct {

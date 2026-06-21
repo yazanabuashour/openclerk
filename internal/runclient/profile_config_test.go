@@ -51,3 +51,52 @@ func TestDefaultProfileRuntimeConfigRoundTrip(t *testing.T) {
 		t.Fatalf("cleared profile = %+v", cleared)
 	}
 }
+
+func TestVaultIgnorePathRuntimeConfigRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	initial, err := ReadVaultIgnorePathConfig(ctx, config)
+	if err != nil {
+		t.Fatalf("read initial vault ignore paths: %v", err)
+	}
+	if len(initial) != 0 {
+		t.Fatalf("initial vault ignore paths = %+v", initial)
+	}
+
+	written, err := WriteVaultIgnorePathConfig(ctx, config, []string{"scratch/", `private\drafts`, "scratch"})
+	if err != nil {
+		t.Fatalf("write vault ignore paths: %v", err)
+	}
+	want := []string{"scratch", "private/drafts"}
+	if len(written) != len(want) {
+		t.Fatalf("written vault ignore paths = %+v, want %+v", written, want)
+	}
+	for i, path := range want {
+		if written[i] != path {
+			t.Fatalf("written[%d] = %q, want %q; written=%+v", i, written[i], path, written)
+		}
+	}
+
+	read, err := ReadVaultIgnorePathConfig(ctx, config)
+	if err != nil {
+		t.Fatalf("read vault ignore paths: %v", err)
+	}
+	for i, path := range want {
+		if read[i] != path {
+			t.Fatalf("read[%d] = %q, want %q; read=%+v", i, read[i], path, read)
+		}
+	}
+
+	if err := ClearVaultIgnorePathConfig(ctx, config); err != nil {
+		t.Fatalf("clear vault ignore paths: %v", err)
+	}
+	cleared, err := ReadVaultIgnorePathConfig(ctx, config)
+	if err != nil {
+		t.Fatalf("read cleared vault ignore paths: %v", err)
+	}
+	if len(cleared) != 0 {
+		t.Fatalf("cleared vault ignore paths = %+v", cleared)
+	}
+}

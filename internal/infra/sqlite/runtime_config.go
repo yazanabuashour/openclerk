@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"github.com/yazanabuashour/openclerk/internal/domain"
 	_ "modernc.org/sqlite"
@@ -17,7 +18,6 @@ type Config struct {
 	Backend             domain.BackendKind
 	DatabasePath        string
 	VaultRoot           string
-	VaultIgnorePaths    []string
 	SyncDiagnosticsPath string
 }
 
@@ -223,4 +223,23 @@ VALUES (?, ?, ?)`, key, value, updatedAt); err != nil {
 		return domain.InternalError("initialize runtime config", err)
 	}
 	return nil
+}
+
+func configuredVaultIgnorePaths(ctx context.Context, db *sql.DB) ([]string, error) {
+	value, err := runtimeConfigValue(ctx, db, configKeyVaultIgnorePaths)
+	if err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(value) == "" {
+		return nil, nil
+	}
+	var paths []string
+	if err := json.Unmarshal([]byte(value), &paths); err != nil {
+		return nil, domain.InternalError("decode vault ignore paths config", err)
+	}
+	normalized, err := domain.NormalizeVaultIgnorePaths(paths)
+	if err != nil {
+		return nil, err
+	}
+	return normalized, nil
 }

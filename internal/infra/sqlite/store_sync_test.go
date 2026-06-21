@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestSyncVaultPrunesDeletedDocuments(t *testing.T) {
@@ -135,13 +136,13 @@ func TestSyncVaultConfigurableIgnorePathsPruneExistingDocument(t *testing.T) {
 	if err := store.Close(); err != nil {
 		t.Fatalf("close initial store: %v", err)
 	}
+	writeVaultIgnoreConfigForTest(t, dbPath, vaultRoot, []string{"drafts/"})
 
 	diagnosticsPath := filepath.Join(t.TempDir(), "sync.json")
 	reopened, err := New(context.Background(), Config{
 		Backend:             domain.BackendOpenClerk,
 		DatabasePath:        dbPath,
 		VaultRoot:           vaultRoot,
-		VaultIgnorePaths:    []string{"drafts/"},
 		SyncDiagnosticsPath: diagnosticsPath,
 	})
 	if err != nil {
@@ -182,11 +183,11 @@ func TestSyncVaultRejectsDirectCreateUnderIgnoredPath(t *testing.T) {
 
 	vaultRoot := t.TempDir()
 	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	writeVaultIgnoreConfigForTest(t, dbPath, vaultRoot, []string{"drafts/"})
 	store, err := New(context.Background(), Config{
-		Backend:          domain.BackendOpenClerk,
-		DatabasePath:     dbPath,
-		VaultRoot:        vaultRoot,
-		VaultIgnorePaths: []string{"drafts/"},
+		Backend:      domain.BackendOpenClerk,
+		DatabasePath: dbPath,
+		VaultRoot:    vaultRoot,
 	})
 	if err != nil {
 		t.Fatalf("open store: %v", err)
@@ -615,6 +616,33 @@ func readSyncDiagnosticsForTest(t *testing.T, path string) SyncDiagnostics {
 		t.Fatalf("decode sync diagnostics: %v", err)
 	}
 	return diagnostics
+}
+
+func writeVaultIgnoreConfigForTest(t *testing.T, dbPath string, vaultRoot string, paths []string) {
+	t.Helper()
+	ctx := context.Background()
+	store, err := NewUnsynced(ctx, Config{
+		Backend:      domain.BackendOpenClerk,
+		DatabasePath: dbPath,
+		VaultRoot:    vaultRoot,
+	})
+	if err != nil {
+		t.Fatalf("open store for vault ignore config: %v", err)
+	}
+	defer func() {
+		_ = store.Close()
+	}()
+	normalized, err := domain.NormalizeVaultIgnorePaths(paths)
+	if err != nil {
+		t.Fatalf("normalize vault ignore paths: %v", err)
+	}
+	content, err := json.Marshal(normalized)
+	if err != nil {
+		t.Fatalf("encode vault ignore paths: %v", err)
+	}
+	if err := upsertRuntimeConfigValue(ctx, store.db, configKeyVaultIgnorePaths, string(content), testClock().Format(time.RFC3339Nano)); err != nil {
+		t.Fatalf("write vault ignore config: %v", err)
+	}
 }
 
 func syncDiagnosticsContains(values []string, want string) bool {

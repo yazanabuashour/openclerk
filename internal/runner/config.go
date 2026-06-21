@@ -53,12 +53,29 @@ func RunConfigTask(ctx context.Context, config runclient.Config, request ConfigT
 			Profile: profile,
 			Summary: "cleared default profile",
 		}, nil
+	case ConfigTaskActionConfigureVaultIgnores:
+		if request.VaultIgnorePaths == nil {
+			return rejectedConfig(convertedPaths, "vault_ignore_paths is required"), nil
+		}
+		if _, err := runclient.WriteVaultIgnorePathConfig(ctx, config, *request.VaultIgnorePaths); err != nil {
+			return ConfigTaskResult{}, err
+		}
+		return inspectConfigResultWithSummary(ctx, config, resolved, convertedPaths, "configured vault ignore paths")
+	case ConfigTaskActionClearVaultIgnores:
+		if err := runclient.ClearVaultIgnorePathConfig(ctx, config); err != nil {
+			return ConfigTaskResult{}, err
+		}
+		return inspectConfigResultWithSummary(ctx, config, resolved, convertedPaths, "cleared vault ignore paths")
 	default:
 		return rejectedConfig(convertedPaths, fmt.Sprintf("unsupported config action %q", action)), nil
 	}
 }
 
 func inspectConfigResult(ctx context.Context, config runclient.Config, resolved runclient.ResolvedPaths, convertedPaths Paths) (ConfigTaskResult, error) {
+	return inspectConfigResultWithSummary(ctx, config, resolved, convertedPaths, "inspected OpenClerk config")
+}
+
+func inspectConfigResultWithSummary(ctx context.Context, config runclient.Config, resolved runclient.ResolvedPaths, convertedPaths Paths, summary string) (ConfigTaskResult, error) {
 	profile, err := configuredProfileAutonomyModes(ctx, config)
 	if err != nil {
 		return ConfigTaskResult{}, err
@@ -67,7 +84,7 @@ func inspectConfigResult(ctx context.Context, config runclient.Config, resolved 
 	if err != nil {
 		return ConfigTaskResult{}, err
 	}
-	storage, err := storageSummary(resolved, config)
+	storage, err := storageSummary(ctx, resolved, config)
 	if err != nil {
 		return ConfigTaskResult{}, err
 	}
@@ -82,20 +99,26 @@ func inspectConfigResult(ctx context.Context, config runclient.Config, resolved 
 			CheckpointEnablementSource:     gitLifecycleCheckpointEnablementSource(config),
 			CheckpointApprovalBoundary:     gitLifecycleApprovalBoundary("checkpoint"),
 		},
-		Summary: "inspected OpenClerk config",
+		Summary: summary,
 	}, nil
 }
 
-func storageSummary(resolved runclient.ResolvedPaths, config runclient.Config) (*ConfigStorageSummary, error) {
-	vaultIgnorePaths, err := domain.EffectiveVaultIgnorePaths(config.VaultIgnorePaths)
+func storageSummary(ctx context.Context, resolved runclient.ResolvedPaths, config runclient.Config) (*ConfigStorageSummary, error) {
+	customVaultIgnorePaths, err := runclient.ReadVaultIgnorePathConfig(ctx, config)
+	if err != nil {
+		return nil, err
+	}
+	vaultIgnorePaths, err := domain.EffectiveVaultIgnorePaths(customVaultIgnorePaths)
 	if err != nil {
 		return nil, err
 	}
 	return &ConfigStorageSummary{
-		DatabasePath:     resolved.DatabasePath,
-		VaultRoot:        resolved.VaultRoot,
-		DatabaseSource:   resolved.DatabaseSource,
-		VaultIgnorePaths: vaultIgnorePaths,
+		DatabasePath:            resolved.DatabasePath,
+		VaultRoot:               resolved.VaultRoot,
+		DatabaseSource:          resolved.DatabaseSource,
+		VaultIgnorePaths:        vaultIgnorePaths,
+		DefaultVaultIgnorePaths: domain.DefaultVaultIgnorePaths(),
+		CustomVaultIgnorePaths:  customVaultIgnorePaths,
 	}, nil
 }
 

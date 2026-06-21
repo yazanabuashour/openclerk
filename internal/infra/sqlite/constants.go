@@ -4,6 +4,7 @@ import "regexp"
 
 const (
 	configKeyVaultRoot                = "vault_root"
+	configKeyVaultIgnorePaths         = "vault_ignore_paths"
 	configKeyLayoutConventionVersion  = "layout_convention_version"
 	configKeyProjectionRebuildPending = "projection_rebuild_pending"
 	configKeyFTSRebuildPending        = "fts_rebuild_pending"

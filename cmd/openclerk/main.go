@@ -145,6 +145,8 @@ func buildCapabilitiesResult() capabilitiesResult {
 					{Action: "inspect_config", Purpose: "inspect effective storage, profile, module, and git lifecycle configuration without exposing raw runtime_config keys", Posture: "read_only"},
 					{Action: "configure_profile", Purpose: "persist default autonomy/profile preferences for document and retrieval requests", Posture: "configuration_write"},
 					{Action: "clear_profile", Purpose: "clear persisted profile preferences and return to built-in defaults", Posture: "configuration_write"},
+					{Action: "configure_vault_ignore_paths", Purpose: "persist additional vault-relative paths excluded from sync", Posture: "configuration_write"},
+					{Action: "clear_vault_ignore_paths", Purpose: "clear persisted additional vault sync ignores while keeping built-in defaults", Posture: "configuration_write"},
 				},
 				Workflow: []capabilityAction{},
 			},
@@ -895,8 +897,6 @@ func parseConfig(name string, args []string, stderr io.Writer) (runclient.Config
 	fs.SetOutput(stderr)
 	databasePath := fs.String("db", "", "OpenClerk SQLite database path")
 	gitCheckpoints := fs.Bool("git-checkpoints", false, "enable explicit local git checkpoint writes")
-	var vaultIgnorePaths stringListFlag
-	fs.Var(&vaultIgnorePaths, "vault-ignore", "vault-relative path to ignore during sync; may be repeated")
 	if err := fs.Parse(args); err != nil {
 		return runclient.Config{}, false
 	}
@@ -905,9 +905,8 @@ func parseConfig(name string, args []string, stderr io.Writer) (runclient.Config
 		return runclient.Config{}, false
 	}
 	return runclient.Config{
-		DatabasePath:     *databasePath,
-		VaultIgnorePaths: append([]string(nil), vaultIgnorePaths...),
-		GitCheckpoints:   *gitCheckpoints,
+		DatabasePath:   *databasePath,
+		GitCheckpoints: *gitCheckpoints,
 	}, true
 }
 
@@ -1099,13 +1098,14 @@ func demoAskUsage(w io.Writer) {
 }
 
 func configUsage(w io.Writer) {
-	_, _ = fmt.Fprintln(w, "usage: openclerk config [--db path] [--vault-ignore path] [--git-checkpoints] < request.json")
+	_, _ = fmt.Fprintln(w, "usage: openclerk config [--db path] [--git-checkpoints] < request.json")
 	_, _ = fmt.Fprintln(w, "")
 	_, _ = fmt.Fprintln(w, "Reads one strict JSON object from stdin and writes one JSON result.")
 	_, _ = fmt.Fprintln(w, "Inspects effective storage/profile/module/git lifecycle config and manages persisted product/profile configuration.")
 	_, _ = fmt.Fprintln(w, `  inspect: {"action":"inspect_config"}`)
 	_, _ = fmt.Fprintln(w, `  configure profile: {"action":"configure_profile","profile":{"approval_mode":"approve_write","drafting_mode":"suggest_fields","write_target_mode":"create_or_update","citation_mode":"balanced","privacy_mode":"allow_paths","audience_mode":"technical"}}`)
 	_, _ = fmt.Fprintln(w, `  clear profile: {"action":"clear_profile"}`)
+	_, _ = fmt.Fprintln(w, `  configure vault ignores: {"action":"configure_vault_ignore_paths","vault_ignore_paths":["scratch/","private/drafts/"]} | {"action":"clear_vault_ignore_paths"}`)
 	_, _ = fmt.Fprintln(w, "inspect_config returns storage, profile, modules, and git_lifecycle summaries; checkpoint_persistence is unsupported by design.")
 	_, _ = fmt.Fprintln(w, "Storage is read-only here; initialize or intentionally rebind vault_root with openclerk init --vault-root.")
 	_, _ = fmt.Fprintln(w, "Request-level document/retrieval autonomy fields override persisted profile defaults field-by-field.")
@@ -1113,7 +1113,7 @@ func configUsage(w io.Writer) {
 }
 
 func moduleUsage(w io.Writer) {
-	_, _ = fmt.Fprintln(w, "usage: openclerk module [--db path] [--vault-ignore path] < request.json")
+	_, _ = fmt.Fprintln(w, "usage: openclerk module [--db path] < request.json")
 	_, _ = fmt.Fprintln(w, "")
 	_, _ = fmt.Fprintln(w, "Reads one strict JSON object from stdin and writes one JSON result.")
 	_, _ = fmt.Fprintln(w, "Manages optional embedding and OCR modules through redacted runtime_config state.")
@@ -1127,10 +1127,10 @@ func moduleUsage(w io.Writer) {
 }
 
 func documentUsage(w io.Writer) {
-	_, _ = fmt.Fprintln(w, "usage: openclerk document [--db path] [--vault-ignore path] [--git-checkpoints] < request.json")
+	_, _ = fmt.Fprintln(w, "usage: openclerk document [--db path] [--git-checkpoints] < request.json")
 	_, _ = fmt.Fprintln(w, "")
 	_, _ = fmt.Fprintln(w, "Reads one strict JSON object from stdin and writes one JSON result.")
-	_, _ = fmt.Fprintln(w, "Uses configured paths by default; pass --db only for an explicit dataset. Pass --vault-ignore for additional vault-relative paths excluded from sync.")
+	_, _ = fmt.Fprintln(w, "Uses configured paths by default; pass --db only for an explicit dataset. Configure additional vault-relative sync ignores through openclerk config.")
 	_, _ = fmt.Fprintln(w, "Primitive request shapes:")
 	_, _ = fmt.Fprintln(w, `  validate/create_document: {"action":"validate","document":{"path":"notes/example.md","title":"Example","body":"# Example\n\nBody."}}`)
 	_, _ = fmt.Fprintln(w, `  ingest_source_url PDF create: {"action":"ingest_source_url","source":{"url":"https://example.test/source.pdf","path_hint":"sources/example.md","asset_path_hint":"assets/sources/example.pdf","title":"Optional title"}}`)
@@ -1165,10 +1165,10 @@ func documentUsage(w io.Writer) {
 }
 
 func retrievalUsage(w io.Writer) {
-	_, _ = fmt.Fprintln(w, "usage: openclerk retrieval [--db path] [--vault-ignore path] < request.json")
+	_, _ = fmt.Fprintln(w, "usage: openclerk retrieval [--db path] < request.json")
 	_, _ = fmt.Fprintln(w, "")
 	_, _ = fmt.Fprintln(w, "Reads one strict JSON object from stdin and writes one JSON result.")
-	_, _ = fmt.Fprintln(w, "Uses configured paths by default; pass --db only for an explicit dataset. Pass --vault-ignore for additional vault-relative paths excluded from sync.")
+	_, _ = fmt.Fprintln(w, "Uses configured paths by default; pass --db only for an explicit dataset. Configure additional vault-relative sync ignores through openclerk config.")
 	_, _ = fmt.Fprintln(w, "Primitive read-only actions:")
 	_, _ = fmt.Fprintln(w, `  document_links: {"action":"document_links","doc_id":"doc_..."}`)
 	_, _ = fmt.Fprintln(w, `  graph_neighborhood: {"action":"graph_neighborhood","doc_id":"doc_...","limit":10}`)

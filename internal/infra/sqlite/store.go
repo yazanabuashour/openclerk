@@ -44,10 +44,6 @@ func newStore(ctx context.Context, cfg Config, syncVault bool) (*Store, error) {
 	if err := ensureDir(filepath.Dir(cfg.DatabasePath)); err != nil {
 		return nil, domain.InternalError("create database directory", err)
 	}
-	vaultIgnorePaths, vaultIgnoreMatcher, err := prepareVaultIgnoreMatcher(cfg.VaultIgnorePaths)
-	if err != nil {
-		return nil, err
-	}
 
 	db, err := openSQLiteDatabase(ctx, cfg.DatabasePath)
 	if err != nil {
@@ -58,8 +54,6 @@ func newStore(ctx context.Context, cfg Config, syncVault bool) (*Store, error) {
 		db:                  db,
 		backend:             cfg.Backend,
 		vaultRoot:           cfg.VaultRoot,
-		vaultIgnorePaths:    vaultIgnorePaths,
-		vaultIgnoreMatcher:  vaultIgnoreMatcher,
 		syncDiagnosticsPath: cfg.SyncDiagnosticsPath,
 		now:                 time.Now,
 	}
@@ -73,6 +67,10 @@ func newStore(ctx context.Context, cfg Config, syncVault bool) (*Store, error) {
 		return nil, err
 	}
 	if err := insertRuntimeConfigValueIfAbsent(ctx, db, configKeyLayoutConventionVersion, defaultLayoutConventionVersion, now); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	if err := store.loadVaultIgnoreConfig(ctx); err != nil {
 		_ = db.Close()
 		return nil, err
 	}
@@ -92,10 +90,6 @@ func newReadOnlyStore(ctx context.Context, cfg Config) (*Store, error) {
 	if cfg.VaultRoot == "" {
 		return nil, domain.ValidationError("vault root is required", nil)
 	}
-	vaultIgnorePaths, vaultIgnoreMatcher, err := prepareVaultIgnoreMatcher(cfg.VaultIgnorePaths)
-	if err != nil {
-		return nil, err
-	}
 	if initialized, err := sqliteStoreInitialized(ctx, cfg.DatabasePath); err != nil {
 		return nil, err
 	} else if !initialized {
@@ -105,14 +99,17 @@ func newReadOnlyStore(ctx context.Context, cfg Config) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Store{
-		db:                 db,
-		backend:            cfg.Backend,
-		vaultRoot:          cfg.VaultRoot,
-		vaultIgnorePaths:   vaultIgnorePaths,
-		vaultIgnoreMatcher: vaultIgnoreMatcher,
-		now:                time.Now,
-	}, nil
+	store := &Store{
+		db:        db,
+		backend:   cfg.Backend,
+		vaultRoot: cfg.VaultRoot,
+		now:       time.Now,
+	}
+	if err := store.loadVaultIgnoreConfig(ctx); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	return store, nil
 }
 
 func prepareVaultIgnoreMatcher(paths []string) ([]string, domain.VaultIgnoreMatcher, error) {
@@ -125,6 +122,20 @@ func prepareVaultIgnoreMatcher(paths []string) ([]string, domain.VaultIgnoreMatc
 		return nil, domain.VaultIgnoreMatcher{}, err
 	}
 	return effective, matcher, nil
+}
+
+func (s *Store) loadVaultIgnoreConfig(ctx context.Context) error {
+	configured, err := configuredVaultIgnorePaths(ctx, s.db)
+	if err != nil {
+		return err
+	}
+	effective, matcher, err := prepareVaultIgnoreMatcher(configured)
+	if err != nil {
+		return err
+	}
+	s.vaultIgnorePaths = effective
+	s.vaultIgnoreMatcher = matcher
+	return nil
 }
 
 func (s *Store) Close() error {

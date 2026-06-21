@@ -16,10 +16,7 @@ func TestConfigTaskProfileInspectConfigureAndClear(t *testing.T) {
 	t.Setenv("OPENCLERK_GIT_CHECKPOINTS", "")
 
 	ctx := context.Background()
-	config := runclient.Config{
-		DatabasePath:     filepath.Join(t.TempDir(), "data", "openclerk.sqlite"),
-		VaultIgnorePaths: []string{"scratch/"},
-	}
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
 
 	inspect, err := runner.RunConfigTask(ctx, config, runner.ConfigTaskRequest{Action: runner.ConfigTaskActionInspectConfig})
 	if err != nil {
@@ -40,7 +37,7 @@ func TestConfigTaskProfileInspectConfigureAndClear(t *testing.T) {
 		inspect.Storage.DatabaseSource != "flag" {
 		t.Fatalf("storage summary = %+v", inspect.Storage)
 	}
-	for _, path := range []string{".git", ".stversions", ".openclerk", ".backups", "scratch"} {
+	for _, path := range []string{".git", ".stversions", ".openclerk", ".backups"} {
 		if !containsString(inspect.Storage.VaultIgnorePaths, path) {
 			t.Fatalf("storage ignore paths = %+v, missing %s", inspect.Storage.VaultIgnorePaths, path)
 		}
@@ -111,6 +108,62 @@ func TestConfigTaskProfileInspectConfigureAndClear(t *testing.T) {
 		cleared.Profile.ApprovalMode != runner.ApprovalModeApproveWrite ||
 		cleared.Profile.AudienceMode != runner.AudienceModeTechnical {
 		t.Fatalf("cleared profile = %+v", cleared)
+	}
+}
+
+func TestConfigTaskVaultIgnorePathsPersistInRuntimeConfig(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	paths := []string{"scratch/", `private\drafts`}
+	configured, err := runner.RunConfigTask(ctx, config, runner.ConfigTaskRequest{
+		Action:           runner.ConfigTaskActionConfigureVaultIgnores,
+		VaultIgnorePaths: &paths,
+	})
+	if err != nil {
+		t.Fatalf("configure vault ignores: %v", err)
+	}
+	if configured.Storage == nil {
+		t.Fatalf("configured storage = nil")
+	}
+	for _, path := range []string{".git", ".stversions", ".openclerk", ".backups", "scratch", "private/drafts"} {
+		if !containsString(configured.Storage.VaultIgnorePaths, path) {
+			t.Fatalf("configured ignore paths = %+v, missing %s", configured.Storage.VaultIgnorePaths, path)
+		}
+	}
+	if !containsString(configured.Storage.CustomVaultIgnorePaths, "scratch") ||
+		!containsString(configured.Storage.CustomVaultIgnorePaths, "private/drafts") {
+		t.Fatalf("custom ignore paths = %+v", configured.Storage.CustomVaultIgnorePaths)
+	}
+
+	reloaded, err := runner.RunConfigTask(ctx, config, runner.ConfigTaskRequest{Action: runner.ConfigTaskActionInspectConfig})
+	if err != nil {
+		t.Fatalf("reload vault ignores: %v", err)
+	}
+	if reloaded.Storage == nil ||
+		!containsString(reloaded.Storage.CustomVaultIgnorePaths, "scratch") ||
+		!containsString(reloaded.Storage.CustomVaultIgnorePaths, "private/drafts") {
+		t.Fatalf("reloaded storage = %+v", reloaded.Storage)
+	}
+
+	cleared, err := runner.RunConfigTask(ctx, config, runner.ConfigTaskRequest{Action: runner.ConfigTaskActionClearVaultIgnores})
+	if err != nil {
+		t.Fatalf("clear vault ignores: %v", err)
+	}
+	if cleared.Storage == nil || len(cleared.Storage.CustomVaultIgnorePaths) != 0 {
+		t.Fatalf("cleared storage = %+v", cleared.Storage)
+	}
+	if !containsString(cleared.Storage.VaultIgnorePaths, ".git") {
+		t.Fatalf("cleared effective ignore paths = %+v, want built-in defaults", cleared.Storage.VaultIgnorePaths)
+	}
+
+	missing, err := runner.RunConfigTask(ctx, config, runner.ConfigTaskRequest{Action: runner.ConfigTaskActionConfigureVaultIgnores})
+	if err != nil {
+		t.Fatalf("missing vault ignores config: %v", err)
+	}
+	if !missing.Rejected || !strings.Contains(missing.RejectionReason, "vault_ignore_paths") {
+		t.Fatalf("missing vault ignores result = %+v", missing)
 	}
 }
 

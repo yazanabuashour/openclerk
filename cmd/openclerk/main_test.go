@@ -92,7 +92,7 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 		{
 			name: "config",
 			args: []string{"config", "--help"},
-			want: []string{"inspect_config", "configure_profile", "clear_profile", "approval_mode", "storage", "vault_root", "openclerk init --vault-root", "git_lifecycle", "checkpoint_persistence", "openclerk module configure_module"},
+			want: []string{"inspect_config", "configure_profile", "clear_profile", "configure_vault_ignore_paths", "vault_ignore_paths", "approval_mode", "storage", "vault_root", "openclerk init --vault-root", "git_lifecycle", "checkpoint_persistence", "openclerk module configure_module"},
 		},
 		{
 			name: "document",
@@ -395,12 +395,22 @@ func TestRunnerConfigProfileJSONPersistsAcrossInvocations(t *testing.T) {
 	}
 }
 
-func TestRunnerConfigVaultIgnoreFlag(t *testing.T) {
+func TestRunnerConfigVaultIgnoreJSONPersistsAcrossInvocations(t *testing.T) {
 	t.Parallel()
 
 	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	configureRequest := `{"action":"configure_vault_ignore_paths","vault_ignore_paths":["scratch/"]}`
+	var configured runner.ConfigTaskResult
+	code, stderr := runJSON(t, []string{"config", "--db", dbPath}, configureRequest, &configured)
+	if code != 0 {
+		t.Fatalf("configure vault ignores exit = %d stderr=%s", code, stderr)
+	}
+	if configured.Storage == nil || !containsString(configured.Storage.CustomVaultIgnorePaths, "scratch") {
+		t.Fatalf("configured storage = %+v", configured.Storage)
+	}
+
 	var inspected runner.ConfigTaskResult
-	code, stderr := runJSON(t, []string{"config", "--db", dbPath, "--vault-ignore", "scratch/"}, `{"action":"inspect_config"}`, &inspected)
+	code, stderr = runJSON(t, []string{"config", "--db", dbPath}, `{"action":"inspect_config"}`, &inspected)
 	if code != 0 {
 		t.Fatalf("inspect config exit = %d stderr=%s", code, stderr)
 	}
@@ -411,6 +421,9 @@ func TestRunnerConfigVaultIgnoreFlag(t *testing.T) {
 		if !containsString(inspected.Storage.VaultIgnorePaths, path) {
 			t.Fatalf("vault ignore paths = %+v, missing %s", inspected.Storage.VaultIgnorePaths, path)
 		}
+	}
+	if !containsString(inspected.Storage.CustomVaultIgnorePaths, "scratch") {
+		t.Fatalf("custom vault ignore paths = %+v, missing scratch", inspected.Storage.CustomVaultIgnorePaths)
 	}
 }
 

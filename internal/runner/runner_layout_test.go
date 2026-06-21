@@ -64,12 +64,16 @@ func TestDocumentTaskInspectLayoutReportsIgnoredPaths(t *testing.T) {
 	ctx := context.Background()
 	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
 	vaultRoot := filepath.Join(t.TempDir(), "vault")
-	config := runclient.Config{
-		DatabasePath:     dbPath,
-		VaultIgnorePaths: []string{"scratch/"},
-	}
+	config := runclient.Config{DatabasePath: dbPath}
 	if _, err := runclient.InitializePaths(config, vaultRoot); err != nil {
 		t.Fatalf("initialize paths: %v", err)
+	}
+	ignoredPaths := []string{"scratch/"}
+	if _, err := runner.RunConfigTask(ctx, config, runner.ConfigTaskRequest{
+		Action:           runner.ConfigTaskActionConfigureVaultIgnores,
+		VaultIgnorePaths: &ignoredPaths,
+	}); err != nil {
+		t.Fatalf("configure vault ignores: %v", err)
 	}
 	writeRunnerLayoutFile(t, vaultRoot, "sources/live.md", "# Live\n\n## Summary\nVisible source.\n")
 	writeRunnerLayoutFile(t, vaultRoot, "scratch/ignored.md", "# Ignored\n\nHidden scratch note.\n")
