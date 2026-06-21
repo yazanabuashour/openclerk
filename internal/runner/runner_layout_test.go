@@ -2,6 +2,7 @@ package runner_test
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -54,6 +55,45 @@ Checked source refs.
 		!layoutChecksInclude(result.Layout.Checks, "decision_identity_metadata", "pass") ||
 		!layoutChecksInclude(result.Layout.Checks, "record_identity_metadata", "pass") {
 		t.Fatalf("layout checks = %+v", result.Layout.Checks)
+	}
+}
+
+func TestDocumentTaskInspectLayoutReportsIgnoredPaths(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	vaultRoot := filepath.Join(t.TempDir(), "vault")
+	config := runclient.Config{
+		DatabasePath:     dbPath,
+		VaultIgnorePaths: []string{"scratch/"},
+	}
+	if _, err := runclient.InitializePaths(config, vaultRoot); err != nil {
+		t.Fatalf("initialize paths: %v", err)
+	}
+	writeRunnerLayoutFile(t, vaultRoot, "sources/live.md", "# Live\n\n## Summary\nVisible source.\n")
+	writeRunnerLayoutFile(t, vaultRoot, "scratch/ignored.md", "# Ignored\n\nHidden scratch note.\n")
+
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionInspectLayout,
+	})
+	if err != nil {
+		t.Fatalf("inspect layout: %v", err)
+	}
+	if result.Layout == nil {
+		t.Fatalf("layout = nil")
+	}
+	if result.Layout.IgnoredPathCount != 1 || result.Layout.IgnoredDirectoryCount != 1 || result.Layout.IgnoredFileCount != 0 {
+		t.Fatalf("ignored counts = %+v", result.Layout)
+	}
+	if !containsString(result.Layout.IgnoredPathRules, "scratch") {
+		t.Fatalf("ignored path rules = %+v, want scratch", result.Layout.IgnoredPathRules)
+	}
+	if !containsString(result.Layout.IgnoredPaths, "scratch") {
+		t.Fatalf("ignored paths = %+v, want scratch", result.Layout.IgnoredPaths)
+	}
+	if !layoutChecksInclude(result.Layout.Checks, "vault_ignored_paths", "pass") {
+		t.Fatalf("layout checks = %+v, want ignored path check", result.Layout.Checks)
 	}
 }
 
@@ -221,4 +261,15 @@ func layoutPathConventionsInclude(conventions []runner.LayoutPathConvention, pat
 		}
 	}
 	return false
+}
+
+func writeRunnerLayoutFile(t *testing.T, vaultRoot string, relPath string, content string) {
+	t.Helper()
+	absPath := filepath.Join(vaultRoot, filepath.FromSlash(relPath))
+	if err := os.MkdirAll(filepath.Dir(absPath), 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", relPath, err)
+	}
+	if err := os.WriteFile(absPath, []byte(content), 0o644); err != nil {
+		t.Fatalf("write %s: %v", relPath, err)
+	}
 }

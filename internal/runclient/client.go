@@ -4,11 +4,21 @@ import (
 	"context"
 
 	"github.com/yazanabuashour/openclerk/internal/domain"
+	"github.com/yazanabuashour/openclerk/internal/infra/sqlite"
 )
 
 // Client is the preferred internal runner client for the embedded OpenClerk runtime.
 type Client struct {
 	runtime *Runtime
+}
+
+type SyncDiagnostics struct {
+	PathsIgnored          int
+	IgnoredDirectories    int
+	IgnoredFiles          int
+	IgnoredPathRules      []string
+	IgnoredPaths          []string
+	IgnoredPathsTruncated bool
 }
 
 // Open creates the primary embedded OpenClerk client without binding a local port.
@@ -62,6 +72,28 @@ func (c *Client) Paths() Paths {
 		return Paths{}
 	}
 	return c.runtime.Paths()
+}
+
+func (c *Client) SyncDiagnostics() (SyncDiagnostics, bool) {
+	store, err := c.store()
+	if err != nil {
+		return SyncDiagnostics{}, false
+	}
+	provider, ok := store.(interface {
+		LatestSyncDiagnostics() (sqlite.SyncDiagnostics, bool)
+	})
+	if !ok {
+		return SyncDiagnostics{}, false
+	}
+	diagnostics, ok := provider.LatestSyncDiagnostics()
+	return SyncDiagnostics{
+		PathsIgnored:          diagnostics.PathsIgnored,
+		IgnoredDirectories:    diagnostics.IgnoredDirectories,
+		IgnoredFiles:          diagnostics.IgnoredFiles,
+		IgnoredPathRules:      append([]string(nil), diagnostics.IgnoredPathRules...),
+		IgnoredPaths:          append([]string(nil), diagnostics.IgnoredPaths...),
+		IgnoredPathsTruncated: diagnostics.IgnoredPathsTruncated,
+	}, ok
 }
 
 func (c *Client) Capabilities(ctx context.Context) (domain.Capabilities, error) {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/yazanabuashour/openclerk/internal/domain"
 	"github.com/yazanabuashour/openclerk/internal/runclient"
 )
 
@@ -66,9 +67,13 @@ func inspectConfigResult(ctx context.Context, config runclient.Config, resolved 
 	if err != nil {
 		return ConfigTaskResult{}, err
 	}
+	storage, err := storageSummary(resolved, config)
+	if err != nil {
+		return ConfigTaskResult{}, err
+	}
 	return ConfigTaskResult{
 		Paths:   &convertedPaths,
-		Storage: storageSummary(resolved),
+		Storage: storage,
 		Profile: profile,
 		Modules: modules,
 		GitLifecycle: &ConfigGitLifecycleSummary{
@@ -81,12 +86,17 @@ func inspectConfigResult(ctx context.Context, config runclient.Config, resolved 
 	}, nil
 }
 
-func storageSummary(resolved runclient.ResolvedPaths) *ConfigStorageSummary {
-	return &ConfigStorageSummary{
-		DatabasePath:   resolved.DatabasePath,
-		VaultRoot:      resolved.VaultRoot,
-		DatabaseSource: resolved.DatabaseSource,
+func storageSummary(resolved runclient.ResolvedPaths, config runclient.Config) (*ConfigStorageSummary, error) {
+	vaultIgnorePaths, err := domain.EffectiveVaultIgnorePaths(config.VaultIgnorePaths)
+	if err != nil {
+		return nil, err
 	}
+	return &ConfigStorageSummary{
+		DatabasePath:     resolved.DatabasePath,
+		VaultRoot:        resolved.VaultRoot,
+		DatabaseSource:   resolved.DatabaseSource,
+		VaultIgnorePaths: vaultIgnorePaths,
+	}, nil
 }
 
 func configuredModuleSummaries(ctx context.Context, config runclient.Config) ([]ConfigModuleSummary, error) {

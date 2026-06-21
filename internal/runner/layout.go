@@ -52,6 +52,7 @@ func inspectKnowledgeLayout(ctx context.Context, client *runclient.Client) (Know
 			},
 		},
 	}
+	applyLayoutSyncDiagnostics(&layout, client)
 
 	if len(documents) == 0 {
 		layout.Checks = append(layout.Checks, KnowledgeLayoutCheck{
@@ -117,6 +118,38 @@ func inspectKnowledgeLayout(ctx context.Context, client *runclient.Client) (Know
 		return layout.Checks[i].ID < layout.Checks[j].ID
 	})
 	return layout, nil
+}
+
+func applyLayoutSyncDiagnostics(layout *KnowledgeLayout, client *runclient.Client) {
+	if layout == nil || client == nil {
+		return
+	}
+	diagnostics, ok := client.SyncDiagnostics()
+	if !ok {
+		return
+	}
+	layout.IgnoredPathRules = diagnostics.IgnoredPathRules
+	layout.IgnoredPathCount = diagnostics.PathsIgnored
+	layout.IgnoredDirectoryCount = diagnostics.IgnoredDirectories
+	layout.IgnoredFileCount = diagnostics.IgnoredFiles
+	layout.IgnoredPaths = diagnostics.IgnoredPaths
+	layout.IgnoredPathsTruncated = diagnostics.IgnoredPathsTruncated
+	if diagnostics.PathsIgnored == 0 {
+		return
+	}
+	details := map[string]string{
+		"ignored_path_rules": strings.Join(diagnostics.IgnoredPathRules, ", "),
+		"ignored_paths":      strings.Join(diagnostics.IgnoredPaths, ", "),
+	}
+	if diagnostics.IgnoredPathsTruncated {
+		details["ignored_paths_truncated"] = "true"
+	}
+	layout.Checks = append(layout.Checks, KnowledgeLayoutCheck{
+		ID:      "vault_ignored_paths",
+		Status:  layoutCheckPass,
+		Message: fmt.Sprintf("Ignored %d vault path(s) during sync.", diagnostics.PathsIgnored),
+		Details: details,
+	})
 }
 
 func listAllDocuments(ctx context.Context, client *runclient.Client) ([]DocumentSummary, error) {

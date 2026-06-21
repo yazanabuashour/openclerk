@@ -14,6 +14,9 @@ func (s *Store) vaultAbsPath(relPath string) string {
 }
 
 func (s *Store) vaultCreateAbsPath(relPath string, label string) (string, error) {
+	if err := s.validateVaultPathNotIgnored(relPath); err != nil {
+		return "", err
+	}
 	absPath := s.vaultAbsPath(relPath)
 	if err := validateVaultCreatePath(s.vaultRoot, absPath, label); err != nil {
 		return "", err
@@ -22,11 +25,23 @@ func (s *Store) vaultCreateAbsPath(relPath string, label string) (string, error)
 }
 
 func (s *Store) vaultExistingAbsPath(relPath string, label string) (string, error) {
+	if err := s.validateVaultPathNotIgnored(relPath); err != nil {
+		return "", err
+	}
 	absPath := s.vaultAbsPath(relPath)
 	if err := validateExistingVaultFile(s.vaultRoot, absPath, label); err != nil {
 		return "", err
 	}
 	return absPath, nil
+}
+
+func (s *Store) validateVaultPathNotIgnored(relPath string) error {
+	if s == nil || !s.vaultIgnoreMatcher.Matches(relPath) {
+		return nil
+	}
+	return domain.ValidationError("document path is ignored by vault sync configuration", map[string]any{
+		"path": relPath,
+	})
 }
 
 func validateVaultCreatePath(vaultRoot string, absPath string, label string) error {

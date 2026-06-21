@@ -82,9 +82,10 @@ type ConfigTaskResult struct {
 }
 
 type ConfigStorageSummary struct {
-	DatabasePath   string `json:"database_path"`
-	VaultRoot      string `json:"vault_root"`
-	DatabaseSource string `json:"database_source"`
+	DatabasePath     string   `json:"database_path"`
+	VaultRoot        string   `json:"vault_root"`
+	DatabaseSource   string   `json:"database_source"`
+	VaultIgnorePaths []string `json:"vault_ignore_paths,omitempty"`
 }
 
 type ConfigModuleSummary struct {
@@ -1493,6 +1494,12 @@ type KnowledgeLayout struct {
 	ConfigArtifactRequired bool                   `json:"config_artifact_required"`
 	ConfigArtifact         string                 `json:"config_artifact"`
 	Paths                  Paths                  `json:"paths"`
+	IgnoredPathRules       []string               `json:"ignored_path_rules,omitempty"`
+	IgnoredPathCount       int                    `json:"ignored_path_count"`
+	IgnoredDirectoryCount  int                    `json:"ignored_directory_count"`
+	IgnoredFileCount       int                    `json:"ignored_file_count"`
+	IgnoredPaths           []string               `json:"ignored_paths,omitempty"`
+	IgnoredPathsTruncated  bool                   `json:"ignored_paths_truncated,omitempty"`
 	ConventionalPaths      []LayoutPathConvention `json:"conventional_paths,omitempty"`
 	DocumentKinds          []LayoutDocumentKind   `json:"document_kinds,omitempty"`
 	Checks                 []KnowledgeLayoutCheck `json:"checks,omitempty"`

@@ -65,3 +65,47 @@ func TestNormalizeOptionalVaultRelativePrefixPreservesTrailingSlash(t *testing.T
 		t.Fatalf("prefix = %q, want sources/reports/", got)
 	}
 }
+
+func TestVaultIgnoreMatcherUsesDefaultsAndConfigurablePaths(t *testing.T) {
+	t.Parallel()
+
+	rules, err := EffectiveVaultIgnorePaths([]string{`scratch\private`, ".git"})
+	if err != nil {
+		t.Fatalf("effective ignore paths: %v", err)
+	}
+	wantRules := []string{".stversions", ".git", ".openclerk", ".backups", "scratch/private"}
+	if len(rules) != len(wantRules) {
+		t.Fatalf("rules = %+v, want %+v", rules, wantRules)
+	}
+	for i, want := range wantRules {
+		if rules[i] != want {
+			t.Fatalf("rules[%d] = %q, want %q; rules=%+v", i, rules[i], want, rules)
+		}
+	}
+
+	matcher, err := NewVaultIgnoreMatcher(rules)
+	if err != nil {
+		t.Fatalf("new matcher: %v", err)
+	}
+	for _, path := range []string{".git", ".git/objects/pack", "scratch/private", "scratch/private/note.md"} {
+		if !matcher.Matches(path) {
+			t.Fatalf("matcher did not ignore %q", path)
+		}
+	}
+	for _, path := range []string{"scratch/private-notes.md", "sources/.git-notes.md", "sources/live.md"} {
+		if matcher.Matches(path) {
+			t.Fatalf("matcher unexpectedly ignored %q", path)
+		}
+	}
+}
+
+func TestVaultIgnorePathsRejectAbsoluteOrEscapingPaths(t *testing.T) {
+	t.Parallel()
+
+	if _, err := NormalizeVaultIgnorePaths([]string{"/tmp/vault"}); err == nil {
+		t.Fatalf("absolute ignore path accepted")
+	}
+	if _, err := NormalizeVaultIgnorePaths([]string{"../outside"}); err == nil {
+		t.Fatalf("escaping ignore path accepted")
+	}
+}

@@ -41,6 +41,7 @@ const (
 func (s *Store) syncVault(ctx context.Context) error {
 	totalStart := time.Now()
 	diagnostics := newSyncDiagnostics()
+	diagnostics.IgnoredPathRules = append([]string(nil), s.vaultIgnorePaths...)
 
 	paths := make([]string, 0, 32)
 	scanStart := time.Now()
@@ -48,17 +49,28 @@ func (s *Store) syncVault(ctx context.Context) error {
 		if walkErr != nil {
 			return walkErr
 		}
+		relPath := "."
+		if absPath != s.vaultRoot {
+			rel, err := filepath.Rel(s.vaultRoot, absPath)
+			if err != nil {
+				return err
+			}
+			relPath = filepath.ToSlash(rel)
+			if s.vaultIgnoreMatcher.Matches(relPath) {
+				diagnostics.recordIgnoredPath(relPath, entry.IsDir())
+				if entry.IsDir() {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+		}
 		if entry.IsDir() {
 			return nil
 		}
 		if filepath.Ext(absPath) != ".md" {
 			return nil
 		}
-		rel, err := filepath.Rel(s.vaultRoot, absPath)
-		if err != nil {
-			return err
-		}
-		paths = append(paths, filepath.ToSlash(rel))
+		paths = append(paths, relPath)
 		return nil
 	})
 	if err != nil {
@@ -153,6 +165,7 @@ func (s *Store) syncVault(ctx context.Context) error {
 	diagnostics.Status = "completed"
 	diagnostics.LastPhase = "completed"
 	diagnostics.TotalSeconds = syncSecondsSince(totalStart)
+	s.lastSyncDiagnostics = &diagnostics
 	return writeSyncDiagnostics(s.syncDiagnosticsPath, diagnostics)
 }
 
@@ -224,6 +237,9 @@ func (s *Store) syncDocumentFromDisk(ctx context.Context, relPath string, prefer
 }
 
 func (s *Store) syncDocumentFromDiskWithOptions(ctx context.Context, relPath string, preferredTitle string, options documentSyncOptions) (documentSyncResult, error) {
+	if err := s.validateVaultPathNotIgnored(relPath); err != nil {
+		return documentSyncResult{}, err
+	}
 	readParseStart := time.Now()
 	bodyBytes, err := osReadFile(filepath.Join(s.vaultRoot, filepath.FromSlash(relPath)))
 	if err != nil {

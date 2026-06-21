@@ -60,6 +60,166 @@ func TestSyncVaultPrunesDeletedDocuments(t *testing.T) {
 	}
 }
 
+func TestSyncVaultIgnoresDefaultHiddenDirectories(t *testing.T) {
+	t.Parallel()
+
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	diagnosticsPath := filepath.Join(t.TempDir(), "sync.json")
+	writeVaultFile(t, vaultRoot, ".git/ignored.md", "# Ignored Git\n\nhiddenonlymarker\n")
+	writeVaultFile(t, vaultRoot, ".stversions/history.md", "# Ignored Versions\n\nhiddenonlymarker\n")
+	writeVaultFile(t, vaultRoot, ".openclerk/state.md", "# Ignored State\n\nhiddenonlymarker\n")
+	writeVaultFile(t, vaultRoot, ".backups/backup.md", "# Ignored Backup\n\nhiddenonlymarker\n")
+	writeVaultFile(t, vaultRoot, "docs/live.md", "# Live\n\nlive marker\n")
+
+	store, err := New(context.Background(), Config{
+		Backend:             domain.BackendOpenClerk,
+		DatabasePath:        dbPath,
+		VaultRoot:           vaultRoot,
+		SyncDiagnosticsPath: diagnosticsPath,
+	})
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer func() {
+		_ = store.Close()
+	}()
+
+	live, err := store.Search(context.Background(), domain.SearchQuery{Text: "live marker", Limit: 10})
+	if err != nil {
+		t.Fatalf("search live: %v", err)
+	}
+	if len(live.Hits) != 1 {
+		t.Fatalf("live hits = %d, want 1", len(live.Hits))
+	}
+	ignored, err := store.Search(context.Background(), domain.SearchQuery{Text: "hiddenonlymarker", Limit: 10})
+	if err != nil {
+		t.Fatalf("search ignored: %v", err)
+	}
+	if len(ignored.Hits) != 0 {
+		t.Fatalf("ignored hits = %d, want 0", len(ignored.Hits))
+	}
+
+	diagnostics := readSyncDiagnosticsForTest(t, diagnosticsPath)
+	if diagnostics.PathsScanned != 1 || diagnostics.DocumentsCreated != 1 {
+		t.Fatalf("sync counts = %+v, want one scanned and created live document", diagnostics)
+	}
+	if diagnostics.PathsIgnored != 4 || diagnostics.IgnoredDirectories != 4 || diagnostics.IgnoredFiles != 0 {
+		t.Fatalf("ignored counts = %+v, want four ignored directories", diagnostics)
+	}
+	for _, path := range []string{".git", ".stversions", ".openclerk", ".backups"} {
+		if !syncDiagnosticsContains(diagnostics.IgnoredPathRules, path) {
+			t.Fatalf("ignored path rules = %+v, missing %s", diagnostics.IgnoredPathRules, path)
+		}
+		if !syncDiagnosticsContains(diagnostics.IgnoredPaths, path) {
+			t.Fatalf("ignored paths = %+v, missing %s", diagnostics.IgnoredPaths, path)
+		}
+	}
+}
+
+func TestSyncVaultConfigurableIgnorePathsPruneExistingDocument(t *testing.T) {
+	t.Parallel()
+
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	writeVaultFile(t, vaultRoot, "drafts/ignored.md", "# Ignored Draft\n\ncustom ignore marker\n")
+
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	initial, err := store.Search(context.Background(), domain.SearchQuery{Text: "custom ignore marker", Limit: 10})
+	if err != nil {
+		t.Fatalf("search before ignore: %v", err)
+	}
+	if len(initial.Hits) != 1 {
+		t.Fatalf("initial hits = %d, want 1", len(initial.Hits))
+	}
+	if err := store.Close(); err != nil {
+		t.Fatalf("close initial store: %v", err)
+	}
+
+	diagnosticsPath := filepath.Join(t.TempDir(), "sync.json")
+	reopened, err := New(context.Background(), Config{
+		Backend:             domain.BackendOpenClerk,
+		DatabasePath:        dbPath,
+		VaultRoot:           vaultRoot,
+		VaultIgnorePaths:    []string{"drafts/"},
+		SyncDiagnosticsPath: diagnosticsPath,
+	})
+	if err != nil {
+		t.Fatalf("reopen store with ignore: %v", err)
+	}
+	defer func() {
+		_ = reopened.Close()
+	}()
+
+	after, err := reopened.Search(context.Background(), domain.SearchQuery{Text: "custom ignore marker", Limit: 10})
+	if err != nil {
+		t.Fatalf("search after ignore: %v", err)
+	}
+	if len(after.Hits) != 0 {
+		t.Fatalf("after-ignore hits = %d, want 0", len(after.Hits))
+	}
+	_, err = reopened.GetDocument(context.Background(), docIDForPath("drafts/ignored.md"))
+	var appErr *domain.Error
+	if !errors.As(err, &appErr) || appErr.Status != 404 {
+		t.Fatalf("get ignored document error = %v, want not found 404", err)
+	}
+
+	diagnostics := readSyncDiagnosticsForTest(t, diagnosticsPath)
+	if diagnostics.DocumentsPruned != 1 {
+		t.Fatalf("documents pruned = %d, want 1; diagnostics=%+v", diagnostics.DocumentsPruned, diagnostics)
+	}
+	if diagnostics.PathsIgnored != 1 || diagnostics.IgnoredDirectories != 1 {
+		t.Fatalf("ignored counts = %+v, want one ignored directory", diagnostics)
+	}
+	if !syncDiagnosticsContains(diagnostics.IgnoredPathRules, "drafts") ||
+		!syncDiagnosticsContains(diagnostics.IgnoredPaths, "drafts") {
+		t.Fatalf("ignore diagnostics = %+v, want drafts rule and path", diagnostics)
+	}
+}
+
+func TestSyncVaultRejectsDirectCreateUnderIgnoredPath(t *testing.T) {
+	t.Parallel()
+
+	vaultRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	store, err := New(context.Background(), Config{
+		Backend:          domain.BackendOpenClerk,
+		DatabasePath:     dbPath,
+		VaultRoot:        vaultRoot,
+		VaultIgnorePaths: []string{"drafts/"},
+	})
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer func() {
+		_ = store.Close()
+	}()
+
+	_, err = store.CreateDocument(context.Background(), domain.CreateDocumentInput{
+		Path:  "drafts/ignored.md",
+		Title: "Ignored",
+		Body:  "# Ignored\n\nShould not be written.\n",
+	})
+	var appErr *domain.Error
+	if !errors.As(err, &appErr) || appErr.Code != "validation_error" {
+		t.Fatalf("create ignored document error = %v, want validation error", err)
+	}
+	if _, statErr := os.Stat(filepath.Join(vaultRoot, "drafts", "ignored.md")); !errors.Is(statErr, os.ErrNotExist) {
+		t.Fatalf("ignored file stat err = %v, want not exist", statErr)
+	}
+	writeVaultFile(t, vaultRoot, "drafts/manual.md", "# Manual\n\nShould not be synced.\n")
+	if _, err := store.syncDocumentFromDiskWithOptions(context.Background(), "drafts/manual.md", "", documentSyncOptions{}); !errors.As(err, &appErr) || appErr.Code != "validation_error" {
+		t.Fatalf("direct sync ignored document error = %v, want validation error", err)
+	}
+	list, err := store.ListDocuments(context.Background(), domain.DocumentListQuery{Limit: 10})
+	if err != nil {
+		t.Fatalf("list documents after rejected create: %v", err)
+	}
+	if len(list.Documents) != 0 {
+		t.Fatalf("documents after rejected create = %+v, want none", list.Documents)
+	}
+}
+
 func TestSyncVaultDiagnosticsSkipUnchangedDocumentsAndProjectionRebuild(t *testing.T) {
 	t.Parallel()
 
@@ -455,4 +615,13 @@ func readSyncDiagnosticsForTest(t *testing.T, path string) SyncDiagnostics {
 		t.Fatalf("decode sync diagnostics: %v", err)
 	}
 	return diagnostics
+}
+
+func syncDiagnosticsContains(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
 }

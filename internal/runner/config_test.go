@@ -16,7 +16,10 @@ func TestConfigTaskProfileInspectConfigureAndClear(t *testing.T) {
 	t.Setenv("OPENCLERK_GIT_CHECKPOINTS", "")
 
 	ctx := context.Background()
-	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	config := runclient.Config{
+		DatabasePath:     filepath.Join(t.TempDir(), "data", "openclerk.sqlite"),
+		VaultIgnorePaths: []string{"scratch/"},
+	}
 
 	inspect, err := runner.RunConfigTask(ctx, config, runner.ConfigTaskRequest{Action: runner.ConfigTaskActionInspectConfig})
 	if err != nil {
@@ -36,6 +39,11 @@ func TestConfigTaskProfileInspectConfigureAndClear(t *testing.T) {
 		inspect.Storage.VaultRoot != filepath.Join(filepath.Dir(config.DatabasePath), "vault") ||
 		inspect.Storage.DatabaseSource != "flag" {
 		t.Fatalf("storage summary = %+v", inspect.Storage)
+	}
+	for _, path := range []string{".git", ".stversions", ".openclerk", ".backups", "scratch"} {
+		if !containsString(inspect.Storage.VaultIgnorePaths, path) {
+			t.Fatalf("storage ignore paths = %+v, missing %s", inspect.Storage.VaultIgnorePaths, path)
+		}
 	}
 	if inspect.GitLifecycle == nil ||
 		inspect.GitLifecycle.CheckpointPersistence != "unsupported" ||

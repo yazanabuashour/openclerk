@@ -17,6 +17,7 @@ type Config struct {
 	Backend             domain.BackendKind
 	DatabasePath        string
 	VaultRoot           string
+	VaultIgnorePaths    []string
 	SyncDiagnosticsPath string
 }
 

@@ -24,6 +24,7 @@ const (
 // Config controls where the internal runtime stores SQLite-backed OpenClerk data.
 type Config struct {
 	DatabasePath        string
+	VaultIgnorePaths    []string
 	SyncDiagnosticsPath string
 	GitCheckpoints      bool
 	ModuleManifestRoot  string
@@ -201,6 +202,7 @@ func newRuntimeWithMode(backend domain.BackendKind, cfg Config, mode runtimeOpen
 		Backend:             backend,
 		DatabasePath:        paths.DatabasePath,
 		VaultRoot:           paths.VaultRoot,
+		VaultIgnorePaths:    cfg.VaultIgnorePaths,
 		SyncDiagnosticsPath: cfg.SyncDiagnosticsPath,
 	}
 	var store *sqlite.Store

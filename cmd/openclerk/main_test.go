@@ -395,6 +395,25 @@ func TestRunnerConfigProfileJSONPersistsAcrossInvocations(t *testing.T) {
 	}
 }
 
+func TestRunnerConfigVaultIgnoreFlag(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	var inspected runner.ConfigTaskResult
+	code, stderr := runJSON(t, []string{"config", "--db", dbPath, "--vault-ignore", "scratch/"}, `{"action":"inspect_config"}`, &inspected)
+	if code != 0 {
+		t.Fatalf("inspect config exit = %d stderr=%s", code, stderr)
+	}
+	if inspected.Storage == nil {
+		t.Fatalf("storage = nil")
+	}
+	for _, path := range []string{".git", ".stversions", ".openclerk", ".backups", "scratch"} {
+		if !containsString(inspected.Storage.VaultIgnorePaths, path) {
+			t.Fatalf("vault ignore paths = %+v, missing %s", inspected.Storage.VaultIgnorePaths, path)
+		}
+	}
+}
+
 func containsString(values []string, want string) bool {
 	for _, value := range values {
 		if value == want {

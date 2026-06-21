@@ -9,11 +9,19 @@ import (
 	"github.com/yazanabuashour/openclerk/internal/domain"
 )
 
+const maxSyncDiagnosticsIgnoredPaths = 100
+
 type SyncDiagnostics struct {
 	Status                     string                         `json:"status"`
 	LastPhase                  string                         `json:"last_phase"`
 	Mode                       string                         `json:"mode"`
 	PathsScanned               int                            `json:"paths_scanned"`
+	PathsIgnored               int                            `json:"paths_ignored"`
+	IgnoredDirectories         int                            `json:"ignored_directories"`
+	IgnoredFiles               int                            `json:"ignored_files"`
+	IgnoredPathRules           []string                       `json:"ignored_path_rules,omitempty"`
+	IgnoredPaths               []string                       `json:"ignored_paths,omitempty"`
+	IgnoredPathsTruncated      bool                           `json:"ignored_paths_truncated,omitempty"`
 	DocumentsCreated           int                            `json:"documents_created"`
 	DocumentsUpdated           int                            `json:"documents_updated"`
 	DocumentsUnchanged         int                            `json:"documents_unchanged"`
@@ -55,8 +63,25 @@ func newSyncDiagnostics() SyncDiagnostics {
 		Mode:              "vault_sync",
 		FTSStrategy:       "pending",
 		ReducedReportSafe: true,
-		EvidencePosture:   "reduced counters and timings only; excludes document paths, titles, snippets, raw content, database paths, vault roots, and machine-absolute paths",
+		EvidencePosture:   "reduced counters and timings plus bounded ignored vault-relative paths only; excludes titles, snippets, raw content, database paths, vault roots, and machine-absolute paths",
 	}
+}
+
+func (d *SyncDiagnostics) recordIgnoredPath(relPath string, directory bool) {
+	if d == nil {
+		return
+	}
+	d.PathsIgnored++
+	if directory {
+		d.IgnoredDirectories++
+	} else {
+		d.IgnoredFiles++
+	}
+	if len(d.IgnoredPaths) < maxSyncDiagnosticsIgnoredPaths {
+		d.IgnoredPaths = append(d.IgnoredPaths, relPath)
+		return
+	}
+	d.IgnoredPathsTruncated = true
 }
 
 func (d *SyncDiagnostics) changedDocuments() int {
@@ -64,6 +89,22 @@ func (d *SyncDiagnostics) changedDocuments() int {
 		return 0
 	}
 	return d.DocumentsCreated + d.DocumentsUpdated + d.DocumentsPruned
+}
+
+func (s *Store) LatestSyncDiagnostics() (SyncDiagnostics, bool) {
+	if s == nil {
+		return SyncDiagnostics{}, false
+	}
+	if s.lastSyncDiagnostics == nil {
+		return SyncDiagnostics{
+			IgnoredPathRules: append([]string(nil), s.vaultIgnorePaths...),
+		}, false
+	}
+	diagnostics := *s.lastSyncDiagnostics
+	diagnostics.IgnoredPathRules = append([]string(nil), diagnostics.IgnoredPathRules...)
+	diagnostics.IgnoredPaths = append([]string(nil), diagnostics.IgnoredPaths...)
+	diagnostics.ProjectionRebuilds = append([]ProjectionRebuildDiagnostics(nil), diagnostics.ProjectionRebuilds...)
+	return diagnostics, true
 }
 
 func writeSyncDiagnostics(path string, diagnostics SyncDiagnostics) error {
