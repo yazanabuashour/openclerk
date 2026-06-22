@@ -351,7 +351,11 @@ func installSkill(smoke smokeContext) (skillCheck, error) {
 
 func replaceWithOldBinary(installDir string) error {
 	oldBinary := filepath.Join(installDir, "openclerk")
-	return os.WriteFile(oldBinary, []byte("#!/bin/sh\nprintf '%s\\n' 'openclerk v0.0.0-old'\n"), 0o755)
+	tempBinary := filepath.Join(installDir, ".openclerk-old")
+	if err := os.WriteFile(tempBinary, []byte("#!/bin/sh\nprintf '%s\\n' 'openclerk v0.0.0-old'\n"), 0o755); err != nil {
+		return err
+	}
+	return os.Rename(tempBinary, oldBinary)
 }
 
 func runModuleSmoke(ctx context.Context, smoke smokeContext) (moduleSmoke, error) {

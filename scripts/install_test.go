@@ -471,7 +471,7 @@ func systemPath() string {
 	if runtime.GOOS == "darwin" {
 		return "/usr/bin:/bin:/usr/sbin:/sbin"
 	}
-	return "/usr/bin:/bin"
+	return "/usr/bin:/bin:/usr/bin/core_perl"
 }
 
 func assertFileExists(t *testing.T, path string) {

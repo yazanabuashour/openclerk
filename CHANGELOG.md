@@ -2,6 +2,7 @@
 
 This CHANGELOG summarizes public releases. Full OpenClerk release notes are published on GitHub Releases:
 
+- [v0.2.14](https://github.com/yazanabuashour/openclerk/releases/tag/v0.2.14) adds the read-only Chronicler `openclerk clerk` MVP, vault sync hidden-directory defaults and SQLite-backed custom ignores, sync diagnostics for ignored paths, source URL and CSV hardening, and preserves local-first runner-only boundaries.
 - [v0.2.13](https://github.com/yazanabuashour/openclerk/releases/tag/v0.2.13) adds runner-owned public source URL inspect mode, expands URL ingestion to public Markdown and GitHub README/blob content, keeps public fetch separate from durable-write approval, and preserves local-first runner-only boundaries.
 - [v0.2.12](https://github.com/yazanabuashour/openclerk/releases/tag/v0.2.12) adds runner-owned note move, rename, candidate promotion, and proposal-first path cleanup surfaces with stable id preservation, reported link/index/projection updates, bounded autonomous apply, and no-overwrite local-first boundaries.
 - [v0.2.11](https://github.com/yazanabuashour/openclerk/releases/tag/v0.2.11) adds explicit retrieval regression capture/replay, search diagnostics, and maintenance posture reports while preserving local-first runner-only boundaries and unchanged default lexical search behavior.

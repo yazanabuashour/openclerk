@@ -1,6 +1,6 @@
 {
   "schema_version": "openclerk-live-install-smoke.v1",
-  "generated_at": "2026-06-11T22:10:31.094467Z",
+  "generated_at": "2026-06-22T00:45:04.240177864Z",
   "version": "v0.0.0-smoke",
   "temp_environment": {
     "home": "$HOME",
@@ -10,7 +10,7 @@
   },
   "release_fixture": {
     "transport": "local curl shim for GitHub release URLs",
-    "archive": "openclerk_0.0.0-smoke_darwin_arm64.tar.gz",
+    "archive": "openclerk_0.0.0-smoke_linux_amd64.tar.gz",
     "checksum": "openclerk_0.0.0-smoke_checksums.txt",
     "install_script": "dist/install.sh",
     "real_binary": true,
