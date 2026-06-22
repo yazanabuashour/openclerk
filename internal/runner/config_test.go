@@ -147,7 +147,11 @@ func TestConfigTaskVaultIgnorePathsPersistInRuntimeConfig(t *testing.T) {
 		t.Fatalf("reloaded storage = %+v", reloaded.Storage)
 	}
 
-	cleared, err := runner.RunConfigTask(ctx, config, runner.ConfigTaskRequest{Action: runner.ConfigTaskActionClearVaultIgnores})
+	emptyPaths := []string{}
+	cleared, err := runner.RunConfigTask(ctx, config, runner.ConfigTaskRequest{
+		Action:           runner.ConfigTaskActionConfigureVaultIgnores,
+		VaultIgnorePaths: &emptyPaths,
+	})
 	if err != nil {
 		t.Fatalf("clear vault ignores: %v", err)
 	}

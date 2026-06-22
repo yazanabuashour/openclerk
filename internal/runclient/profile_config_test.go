@@ -89,7 +89,7 @@ func TestVaultIgnorePathRuntimeConfigRoundTrip(t *testing.T) {
 		}
 	}
 
-	if err := ClearVaultIgnorePathConfig(ctx, config); err != nil {
+	if _, err := WriteVaultIgnorePathConfig(ctx, config, nil); err != nil {
 		t.Fatalf("clear vault ignore paths: %v", err)
 	}
 	cleared, err := ReadVaultIgnorePathConfig(ctx, config)

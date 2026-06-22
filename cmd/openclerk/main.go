@@ -145,8 +145,7 @@ func buildCapabilitiesResult() capabilitiesResult {
 					{Action: "inspect_config", Purpose: "inspect effective storage, profile, module, and git lifecycle configuration without exposing raw runtime_config keys", Posture: "read_only"},
 					{Action: "configure_profile", Purpose: "persist default autonomy/profile preferences for document and retrieval requests", Posture: "configuration_write"},
 					{Action: "clear_profile", Purpose: "clear persisted profile preferences and return to built-in defaults", Posture: "configuration_write"},
-					{Action: "configure_vault_ignore_paths", Purpose: "persist additional vault-relative paths excluded from sync", Posture: "configuration_write"},
-					{Action: "clear_vault_ignore_paths", Purpose: "clear persisted additional vault sync ignores while keeping built-in defaults", Posture: "configuration_write"},
+					{Action: "configure_vault_ignore_paths", Purpose: "replace additional vault-relative paths excluded from sync; pass an empty list to clear custom ignores", Posture: "configuration_write"},
 				},
 				Workflow: []capabilityAction{},
 			},
@@ -1105,7 +1104,7 @@ func configUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, `  inspect: {"action":"inspect_config"}`)
 	_, _ = fmt.Fprintln(w, `  configure profile: {"action":"configure_profile","profile":{"approval_mode":"approve_write","drafting_mode":"suggest_fields","write_target_mode":"create_or_update","citation_mode":"balanced","privacy_mode":"allow_paths","audience_mode":"technical"}}`)
 	_, _ = fmt.Fprintln(w, `  clear profile: {"action":"clear_profile"}`)
-	_, _ = fmt.Fprintln(w, `  configure vault ignores: {"action":"configure_vault_ignore_paths","vault_ignore_paths":["scratch/","private/drafts/"]} | {"action":"clear_vault_ignore_paths"}`)
+	_, _ = fmt.Fprintln(w, `  configure vault ignores: {"action":"configure_vault_ignore_paths","vault_ignore_paths":["scratch/","private/drafts/"]}; pass [] to clear custom ignores`)
 	_, _ = fmt.Fprintln(w, "inspect_config returns storage, profile, modules, and git_lifecycle summaries; checkpoint_persistence is unsupported by design.")
 	_, _ = fmt.Fprintln(w, "Storage is read-only here; initialize or intentionally rebind vault_root with openclerk init --vault-root.")
 	_, _ = fmt.Fprintln(w, "Request-level document/retrieval autonomy fields override persisted profile defaults field-by-field.")

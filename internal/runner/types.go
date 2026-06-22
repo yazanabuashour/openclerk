@@ -12,7 +12,6 @@ const (
 	ConfigTaskActionConfigureProfile      = "configure_profile"
 	ConfigTaskActionClearProfile          = "clear_profile"
 	ConfigTaskActionConfigureVaultIgnores = "configure_vault_ignore_paths"
-	ConfigTaskActionClearVaultIgnores     = "clear_vault_ignore_paths"
 
 	DocumentTaskActionValidate            = "validate"
 	DocumentTaskActionCreate              = "create_document"

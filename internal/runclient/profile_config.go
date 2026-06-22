@@ -115,12 +115,3 @@ ON CONFLICT(key_name) DO UPDATE SET
 	}
 	return normalized, nil
 }
-
-func ClearVaultIgnorePathConfig(ctx context.Context, cfg Config) error {
-	return withRuntimeConfigDB(ctx, cfg, true, func(db *sql.DB) error {
-		if _, err := db.ExecContext(ctx, `DELETE FROM runtime_config WHERE key_name = ?`, vaultIgnorePathsRuntimeConfigKey); err != nil {
-			return domain.InternalError("clear vault ignore paths config", err)
-		}
-		return nil
-	})
-}

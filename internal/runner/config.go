@@ -61,11 +61,6 @@ func RunConfigTask(ctx context.Context, config runclient.Config, request ConfigT
 			return ConfigTaskResult{}, err
 		}
 		return inspectConfigResultWithSummary(ctx, config, resolved, convertedPaths, "configured vault ignore paths")
-	case ConfigTaskActionClearVaultIgnores:
-		if err := runclient.ClearVaultIgnorePathConfig(ctx, config); err != nil {
-			return ConfigTaskResult{}, err
-		}
-		return inspectConfigResultWithSummary(ctx, config, resolved, convertedPaths, "cleared vault ignore paths")
 	default:
 		return rejectedConfig(convertedPaths, fmt.Sprintf("unsupported config action %q", action)), nil
 	}
