@@ -41,6 +41,10 @@ The product model is:
   default storage shape
 - provenance and projection-state runner actions make derivation and freshness
   inspectable
+- Chronicler Lite is the after-work recorder: completed-session notes and
+  handoffs become reviewed repo-knowledge candidates through read-only
+  `openclerk clerk` planning, while autonomous/dreaming/always-on Chronicler
+  remains shelved
 - post-v0.1.0 document history and review controls should make
   agent-authored durable edits inspectable, reviewable, and restorable
 - memory and routing remain deferred until the docs, synthesis, and truth-sync

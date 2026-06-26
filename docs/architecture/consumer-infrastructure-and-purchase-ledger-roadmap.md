@@ -25,9 +25,10 @@ The infrastructure direction is partially documented already:
   the installed JSON runner plus thin skill guidance for agent workflows. It
   also states that OpenClerk is infrastructure for persistent
   agent-maintained knowledge.
-- [`chronicler-boundary.md`](chronicler-boundary.md) records Chronicler as a
-  first-party optional orchestration layer over Core, initially read-only and
-  not a second authority system.
+- [`chronicler-boundary.md`](chronicler-boundary.md) records Chronicler Lite
+  as a first-party optional orchestration layer over Core for turning completed
+  workspace sessions and handoffs into reviewed repo-knowledge candidates, with
+  autonomous/dreaming/always-on Chronicler shelved.
 - [`structured-data-canonical-stores-adr.md`](structured-data-canonical-stores-adr.md)
   records the gate for future dense or correction-heavy structured domains.
 - [`generalized-artifact-ingestion-adr.md`](generalized-artifact-ingestion-adr.md),
@@ -74,14 +75,14 @@ surfaces before implementation:
 | Candidate | Fit | Boundary |
 | --- | --- | --- |
 | Direct installed runner invocation | Best current contract for agents, scripts, and local apps. | Keep JSON in/out, no direct storage access, no hidden writes. |
-| First-party worker or Chronicler extension | Useful for scheduled read-only planning, inbox scans, context packs, and review queues. | Must compose Core runner actions and keep writes on approved document/domain APIs. |
+| Chronicler Lite or first-party worker extension | Useful for completed-session recording, explicit inbox scans, context packs, and later approval-gated review queues. | Must compose Core runner actions and keep writes on approved document/domain APIs. Autonomous always-on behavior remains shelved. |
 | Integration envelope or event contract | Useful if user-facing systems need stable job ids, proposed writes, audit events, and retryable handoffs. | Should wrap runner results rather than create a second product authority. |
 | Hosted HTTP server or multi-user service | Not the current direction. | Revisit only after local authority, review, and lifecycle contracts are mature. |
 
 Follow-up work:
 
 - `oc-ix56`: compare OpenClerk consumer integration surfaces.
-- `oc-dcy2`: compare post-MVP Chronicler surfaces.
+- `oc-dcy2`: compare post-Lite Chronicler session-recording surfaces.
 
 ## Receipt And Invoice Purchase Tracking Direction
 

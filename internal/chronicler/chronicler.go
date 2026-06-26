@@ -1,5 +1,5 @@
-// Package chronicler implements the first read-only Chronicler orchestration
-// layer over the OpenClerk Core runner.
+// Package chronicler implements Chronicler Lite: read-only planning that turns
+// explicit workspace-session notes into reviewed repo-knowledge candidates.
 package chronicler
 
 import (
@@ -21,7 +21,7 @@ const (
 	ActionInboxScan   = "inbox_scan"
 	ActionContextPack = "context_pack"
 
-	storageMissingBlocker = "OpenClerk storage must already exist for Chronicler read-only planning; Chronicler will not initialize SQLite"
+	storageMissingBlocker = "OpenClerk storage must already exist for Chronicler Lite read-only planning; Chronicler will not initialize SQLite"
 )
 
 type RunRequest struct {
@@ -167,14 +167,16 @@ func runPlan(ctx context.Context, config runclient.Config, request RunRequest, o
 		DuplicateRisks:   []DuplicateRisk{},
 		PendingReview:    []PendingReview{},
 		Blockers:         []string{},
-		AuthorityLimits:  "Chronicler is read-only orchestration; OpenClerk Core canonical markdown, citations, provenance, and projection freshness remain authority.",
-		ApprovalBoundary: "Chronicler MVP planning is not durable-write approval; future writes must go through approved OpenClerk document lifecycle APIs.",
+		AuthorityLimits:  "Chronicler Lite is read-only session-to-repo-knowledge planning; OpenClerk Core canonical markdown, citations, provenance, and projection freshness remain authority.",
+		ApprovalBoundary: "Chronicler Lite planning is not durable-write approval; future writes must go through approved OpenClerk document lifecycle APIs.",
 		Deferred: []string{
+			"autonomous/dreaming Chronicler",
 			"daemon/watch mode",
+			"always-on background improvement",
 			"review approval queue",
 			"auto-filing",
 			"autonomous routing",
-			"broad memory",
+			"broad memory or knowledge graph",
 		},
 	}
 	if request.Limit < 0 {
@@ -350,7 +352,7 @@ func explicitInboxFiles(inboxPaths []string) ([]string, []string) {
 			continue
 		}
 		if !isPreferredInboxTextPath(inboxPath) {
-			blockers = append(blockers, fmt.Sprintf("%s must be markdown or text for the Chronicler MVP", inboxSourceRef(inboxPath)))
+			blockers = append(blockers, fmt.Sprintf("%s must be markdown or text for Chronicler Lite", inboxSourceRef(inboxPath)))
 			continue
 		}
 		if !seen[inboxPath] {

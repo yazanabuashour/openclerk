@@ -304,8 +304,8 @@ func (s *Store) syncDocumentFromDiskWithOptions(ctx context.Context, relPath str
 	var existingPath string
 	var createdAtExisting string
 	var updatedAtExisting string
-	createdAt := now.Format(time.RFC3339Nano)
-	updatedAt := now.Format(time.RFC3339Nano)
+	var createdAt string
+	var updatedAt string
 	eventType := "document_created"
 	for {
 		existingTitle = ""

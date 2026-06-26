@@ -172,6 +172,7 @@ openclerk capabilities
 - **Multi-user / team server** — single-user, single-machine runtime.
 - **Broad vector DB memory** — no Pinecone, Weaviate, or default durable vector index. Semantic modules are optional and local-only by default.
 - **Autonomous memory and routing** — deferred until docs, synthesis, and truth-sync layers are reliable. See [`docs/architecture/memory-routing-reference-decision.md`](docs/architecture/memory-routing-reference-decision.md).
+- **Autonomous / dreaming / always-on Chronicler** — shelved. Chronicler Lite remains the concrete post-work surface for explicit completed-session notes, handoffs, inbox scans, and context packs. See [`docs/architecture/chronicler-boundary.md`](docs/architecture/chronicler-boundary.md).
 
 ## Runner
 
@@ -179,7 +180,7 @@ openclerk capabilities
 openclerk config      # persisted product/profile config
 openclerk document    # doc writes, registry, paths
 openclerk retrieval   # search, graph context/reports, records, provenance
-openclerk clerk       # optional read-only Chronicler orchestration
+openclerk clerk       # Chronicler Lite session-to-repo-knowledge planning
 openclerk capabilities
 ```
 
@@ -201,14 +202,17 @@ rebind it with `openclerk init --vault-root`, not `openclerk config`.
 Request-level `document` and `retrieval` `autonomy` fields override persisted
 profile defaults field-by-field. Git checkpoint enablement remains
 invocation-scoped through `--git-checkpoints` or `OPENCLERK_GIT_CHECKPOINTS`.
-`openclerk clerk run --once` is the combined Chronicler MVP report. The same
+`openclerk clerk run --once` is the combined Chronicler Lite report: a
+read-only way to turn explicit completed-session notes, handoffs, or inbox
+files into reviewed repo-knowledge candidates and task context. The same
 read-only primitives are also exposed as `openclerk clerk inbox_scan` for
 explicit local inbox candidate planning and `openclerk clerk context_pack` for
 task context, must-read documents, decisions, and citations. All three emit
 `openclerk-clerk.v1`, report `planned_no_write: true`, and perform no durable
-vault writes. Planning that inspects Core evidence requires existing
-OpenClerk storage; Chronicler returns a blocker rather than initializing
-SQLite from a read-only command.
+vault writes. Autonomous/dreaming/always-on Chronicler is shelved; planning
+that inspects Core evidence requires existing OpenClerk storage, and
+Chronicler returns a blocker rather than initializing SQLite from a read-only
+command.
 
 Storage: `${XDG_DATA_HOME:-~/.local/share}/openclerk/openclerk.sqlite`  
 Override: `OPENCLERK_DATABASE_PATH` or `--db`

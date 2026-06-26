@@ -137,7 +137,7 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 		{
 			name: "clerk",
 			args: []string{"clerk", "--help"},
-			want: []string{"Chronicler", "openclerk clerk run --once", "openclerk clerk inbox_scan", "openclerk clerk context_pack", "planned_no_write=true", "writes_performed=0", "no durable vault writes"},
+			want: []string{"Chronicler Lite", "session-to-repo-knowledge", "autonomous/dreaming/always-on Chronicler is shelved", "openclerk clerk run --once", "openclerk clerk inbox_scan", "openclerk clerk context_pack", "planned_no_write=true", "writes_performed=0", "no durable vault writes"},
 		},
 		{
 			name: "clerk run",

@@ -1096,14 +1096,6 @@ func semanticProviderConfigSecretKey(key string) bool {
 		strings.Contains(key, "api_key")
 }
 
-func sanitizedArgs(args []string) []string {
-	clean := []string{}
-	for _, arg := range args {
-		clean = append(clean, strings.TrimSpace(arg))
-	}
-	return clean
-}
-
 func mustMarshalString(value any) string {
 	data, _ := json.Marshal(value)
 	return string(data)

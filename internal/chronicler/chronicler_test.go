@@ -311,11 +311,11 @@ func TestRunOnceBuildsContextPackFromRetrieval(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
 	config := runclient.Config{DatabasePath: dbPath}
 	createDocument(t, ctx, config, "docs/architecture/chronicler-test.md", "Chronicler Test", "# Chronicler Test\n\nChronicler context marker evidence for task planning.\n")
-	createDocument(t, ctx, config, "docs/architecture/chronicler-decision.md", "Chronicler Decision", "---\ndecision_id: adr-chronicler-test\ndecision_title: Chronicler stays read only\ndecision_status: accepted\ndecision_scope: chronicler\ndecision_owner: platform\ndecision_date: 2026-06-11\n---\n# Chronicler Decision\n\n## Summary\nChronicler context marker evidence says the MVP stays read only.\n")
+	createDocument(t, ctx, config, "docs/architecture/chronicler-decision.md", "Chronicler Decision", "---\ndecision_id: adr-chronicler-test\ndecision_title: Chronicler Lite stays read only\ndecision_status: accepted\ndecision_scope: chronicler\ndecision_owner: platform\ndecision_date: 2026-06-11\n---\n# Chronicler Decision\n\n## Summary\nChronicler context marker evidence says Chronicler Lite stays read only.\n")
 
 	result, err := RunOnce(ctx, config, RunRequest{
 		Task:       "Prepare Chronicler context marker implementation",
-		Query:      "Chronicler stays read only",
+		Query:      "Chronicler Lite stays read only",
 		PathPrefix: "docs/architecture/",
 		Limit:      10,
 	})

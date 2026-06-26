@@ -232,7 +232,7 @@ func buildCapabilitiesResult() capabilitiesResult {
 			{
 				Name:    "clerk",
 				Command: "openclerk clerk",
-				Posture: "optional first-party Chronicler orchestration over Core; MVP is read-only and no-write",
+				Posture: "Chronicler Lite over Core; read-only session-to-repo-knowledge planning with no durable writes",
 				Primitive: []capabilityAction{
 					{Action: "run --once", Purpose: "plan explicit local inbox candidates and task context packs without durable writes", Posture: "read_only_planned_no_write", Handoff: "openclerk-clerk.v1"},
 					{Action: "inbox_scan", Purpose: "plan explicit local inbox candidates without durable writes", Posture: "read_only_planned_no_write", Handoff: "openclerk-clerk.v1"},
@@ -481,7 +481,7 @@ func runClerkRun(args []string, stdout io.Writer, stderr io.Writer) int {
 	}
 	if !once {
 		_, _ = fmt.Fprintln(stderr, "usage: openclerk clerk run --once [--db path] [--inbox-path path] [--task text] [--query text] [--path-prefix prefix] [--limit n]")
-		_, _ = fmt.Fprintln(stderr, "clerk MVP only supports read-only --once runs; daemon/watch mode is deferred.")
+		_, _ = fmt.Fprintln(stderr, "Chronicler Lite only supports read-only --once runs; daemon/watch mode and autonomous background improvement are shelved.")
 		return 2
 	}
 	result, err := chronicler.RunOnce(context.Background(), config, request)
@@ -1215,19 +1215,20 @@ func retrievalUsage(w io.Writer) {
 func clerkUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "usage: openclerk clerk <run|inbox_scan|context_pack> [options]")
 	_, _ = fmt.Fprintln(w, "")
-	_, _ = fmt.Fprintln(w, "Chronicler is optional first-party orchestration over OpenClerk Core. Core remains the canonical authority.")
-	_, _ = fmt.Fprintln(w, "MVP commands:")
+	_, _ = fmt.Fprintln(w, "Chronicler Lite records after-work evidence by planning session-to-repo-knowledge candidates over OpenClerk Core.")
+	_, _ = fmt.Fprintln(w, "Core remains the canonical authority; autonomous/dreaming/always-on Chronicler is shelved.")
+	_, _ = fmt.Fprintln(w, "Lite commands:")
 	_, _ = fmt.Fprintln(w, "  openclerk clerk run --once [--db path] [--inbox-path path] [--task text] [--query text] [--path-prefix prefix] [--limit n]")
 	_, _ = fmt.Fprintln(w, "  openclerk clerk inbox_scan [--db path] [--inbox-path path] [--limit n]")
 	_, _ = fmt.Fprintln(w, "  openclerk clerk context_pack [--db path] [--task text] [--query text] [--path-prefix prefix] [--limit n]")
-	_, _ = fmt.Fprintln(w, "The MVP is read-only: planned_no_write=true, writes_performed=0, no daemon/watch mode, no autonomous routing, no hidden memory, and no durable vault writes.")
+	_, _ = fmt.Fprintln(w, "Chronicler Lite is read-only: planned_no_write=true, writes_performed=0, no daemon/watch mode, no autonomous routing, no hidden memory, and no durable vault writes.")
 	_, _ = fmt.Fprintln(w, "Planning that inspects Core evidence requires existing OpenClerk storage; Chronicler will not initialize SQLite.")
 }
 
 func clerkRunUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "usage: openclerk clerk run --once [--db path] [--inbox-path path] [--task text] [--query text] [--path-prefix prefix] [--limit n]")
 	_, _ = fmt.Fprintln(w, "")
-	_, _ = fmt.Fprintln(w, "Runs one read-only Chronicler pass and writes one openclerk-clerk.v1 JSON report.")
+	_, _ = fmt.Fprintln(w, "Runs one read-only Chronicler Lite pass and writes one openclerk-clerk.v1 JSON report.")
 	_, _ = fmt.Fprintln(w, "  --inbox-path may be a markdown/text file or an explicit non-recursive directory; it may be repeated.")
 	_, _ = fmt.Fprintln(w, "  --task creates a context pack; --query overrides the retrieval query; --path-prefix narrows retrieval.")
 	_, _ = fmt.Fprintln(w, "  --limit caps planner/retrieval results.")
