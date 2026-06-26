@@ -206,7 +206,10 @@ func (s *Store) rebuildDecisions(ctx context.Context) error {
 	projected := []projectedDecision{}
 	decisionIDs := map[string]struct{}{}
 	for _, doc := range documents {
-		decision, ok := extractDecisionProjection(doc.Body)
+		decision, ok, err := extractDecisionProjection(doc.Body)
+		if err != nil {
+			return err
+		}
 		if !ok {
 			continue
 		}
@@ -257,6 +260,16 @@ func (s *Store) rebuildDecisions(ctx context.Context) error {
 			projected[idx].details["missing_replacement_ids"] = strings.Join(missingReplacements, ", ")
 		}
 	}
+	projectedByID := map[string][]projectedDecision{}
+	projectedIDs := []string{}
+	for _, item := range projected {
+		decisionID := item.decision.DecisionID
+		if _, exists := projectedByID[decisionID]; !exists {
+			projectedIDs = append(projectedIDs, decisionID)
+		}
+		projectedByID[decisionID] = append(projectedByID[decisionID], item)
+	}
+	sort.Strings(projectedIDs)
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -276,7 +289,23 @@ func (s *Store) rebuildDecisions(ctx context.Context) error {
 	}
 
 	now := s.now().UTC()
-	for _, item := range projected {
+	for _, decisionID := range projectedIDs {
+		items := projectedByID[decisionID]
+		if len(items) > 1 {
+			sources := make([]duplicateProjectionSource, 0, len(items))
+			for _, item := range items {
+				sources = append(sources, duplicateProjectionSource{DocID: item.doc.DocID, Path: item.doc.Path})
+			}
+			projection := duplicateProjectionState("decisions", "decision", decisionID, sources, previousStates, now)
+			if err := upsertProjectionState(ctx, tx, projection); err != nil {
+				return err
+			}
+			if err := insertDuplicateProjectionEvent(ctx, tx, "decision_duplicate_rejected", "decision", decisionID, projection, now); err != nil {
+				return domain.InternalError("record duplicate decision projection event", err)
+			}
+			continue
+		}
+		item := items[0]
 		decision := item.decision
 		versionInputs := []string{
 			"decision:" + decision.DecisionID,
@@ -389,9 +418,12 @@ func supportsDecisions(backend domain.BackendKind) bool {
 	return backend == domain.BackendOpenClerk
 }
 
-func extractDecisionProjection(body string) (decisionProjection, bool) {
+func extractDecisionProjection(body string) (decisionProjection, bool, error) {
 	lines := strings.Split(body, "\n")
-	frontmatter, _ := parseFrontmatter(lines)
+	frontmatter, _, err := parseFrontmatter(lines)
+	if err != nil {
+		return decisionProjection{}, false, err
+	}
 	projected := decisionProjection{
 		DecisionID:   strings.TrimSpace(frontmatter["decision_id"]),
 		Title:        strings.TrimSpace(frontmatter["decision_title"]),
@@ -404,7 +436,7 @@ func extractDecisionProjection(body string) (decisionProjection, bool) {
 		SourceRefs:   splitPathList(frontmatter["source_refs"]),
 	}
 	if projected.DecisionID == "" || projected.Title == "" || projected.Status == "" {
-		return decisionProjection{}, false
+		return decisionProjection{}, false, nil
 	}
-	return projected, true
+	return projected, true, nil
 }

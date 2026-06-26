@@ -16,10 +16,11 @@ func TestSemanticModuleRuntimeConfigRedactsAndVerifiesManifest(t *testing.T) {
 	ctx := context.Background()
 	config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
 	manifestPath := writeRunclientSemanticModuleManifest(t, t.TempDir(), "gemini")
+	commandPath := writeRunclientExecutable(t, semanticModuleCommand)
 	installed, err := InstallSemanticModule(ctx, config, SemanticModuleInstallInput{
 		Provider:     "gemini",
 		ManifestPath: manifestPath,
-		Command:      "semantic-retrieval-adapter",
+		Command:      commandPath,
 		ProviderConfig: map[string]string{
 			"embedding_model": "gemini-embedding-001",
 			"api_key":         "must-not-be-stored",
@@ -158,13 +159,15 @@ func TestOCRModuleRuntimeConfigVerifiesManifest(t *testing.T) {
 	ctx := context.Background()
 	config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
 	manifestPath := writeRunclientOCRModuleManifest(t, t.TempDir())
+	tesseractPath := writeRunclientExecutable(t, ocrModuleTesseractCommand)
+	ocrmypdfPath := writeRunclientExecutable(t, ocrModuleOCRmyPDFCommand)
 	installed, err := InstallOCRModule(ctx, config, SemanticModuleInstallInput{
 		Kind:         ModuleKindOCRProvider,
 		Provider:     OCRModuleProviderTesseract,
 		ManifestPath: manifestPath,
-		Command:      "tesseract",
+		Command:      tesseractPath,
 		ProviderConfig: map[string]string{
-			"ocrmypdf_command": "ocrmypdf",
+			"ocrmypdf_command": ocrmypdfPath,
 			"language":         "eng",
 		},
 	})
@@ -202,12 +205,15 @@ func TestModuleRuntimeConfigConfigureRemoveAndList(t *testing.T) {
 	config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
 	semanticManifest := writeRunclientSemanticModuleManifest(t, t.TempDir(), "ollama")
 	ocrManifest := writeRunclientOCRModuleManifest(t, t.TempDir())
+	semanticCommand := writeRunclientExecutable(t, semanticModuleCommand)
+	tesseractPath := writeRunclientExecutable(t, ocrModuleTesseractCommand)
+	ocrmypdfPath := writeRunclientExecutable(t, ocrModuleOCRmyPDFCommand)
 	disabled := false
 
 	if _, err := InstallSemanticModule(ctx, config, SemanticModuleInstallInput{
 		Provider:     SemanticModuleProviderOllama,
 		ManifestPath: semanticManifest,
-		Command:      "semantic-retrieval-adapter",
+		Command:      semanticCommand,
 		ProviderConfig: map[string]string{
 			"embedding_model": "embeddinggemma",
 		},
@@ -218,7 +224,10 @@ func TestModuleRuntimeConfigConfigureRemoveAndList(t *testing.T) {
 		Kind:         ModuleKindOCRProvider,
 		Provider:     OCRModuleProviderTesseract,
 		ManifestPath: ocrManifest,
-		Command:      "tesseract",
+		Command:      tesseractPath,
+		ProviderConfig: map[string]string{
+			"ocrmypdf_command": ocrmypdfPath,
+		},
 	}); err != nil {
 		t.Fatalf("install OCR module: %v", err)
 	}
@@ -262,6 +271,9 @@ func TestModuleManifestVerificationSurvivesCWDChange(t *testing.T) {
 	releaseRoot := t.TempDir()
 	semanticManifest := writeRunclientSemanticModuleManifest(t, filepath.Join(releaseRoot, "modules", "ollama-embeddings"), "ollama")
 	ocrManifest := writeRunclientOCRModuleManifest(t, filepath.Join(releaseRoot, "modules", "tesseract-ocr"))
+	semanticCommand := writeRunclientExecutable(t, semanticModuleCommand)
+	tesseractPath := writeRunclientExecutable(t, ocrModuleTesseractCommand)
+	ocrmypdfPath := writeRunclientExecutable(t, ocrModuleOCRmyPDFCommand)
 
 	originalCWD, err := os.Getwd()
 	if err != nil {
@@ -281,7 +293,7 @@ func TestModuleManifestVerificationSurvivesCWDChange(t *testing.T) {
 	if _, err := InstallSemanticModule(ctx, config, SemanticModuleInstallInput{
 		Provider:     SemanticModuleProviderOllama,
 		ManifestPath: filepath.ToSlash(semanticRel),
-		Command:      semanticModuleCommand,
+		Command:      semanticCommand,
 	}); err != nil {
 		_ = os.Chdir(originalCWD)
 		t.Fatalf("install semantic module: %v", err)
@@ -290,7 +302,10 @@ func TestModuleManifestVerificationSurvivesCWDChange(t *testing.T) {
 		Kind:         ModuleKindOCRProvider,
 		Provider:     OCRModuleProviderTesseract,
 		ManifestPath: filepath.ToSlash(ocrRel),
-		Command:      "tesseract",
+		Command:      tesseractPath,
+		ProviderConfig: map[string]string{
+			"ocrmypdf_command": ocrmypdfPath,
+		},
 	}); err != nil {
 		_ = os.Chdir(originalCWD)
 		t.Fatalf("install OCR module: %v", err)
@@ -331,6 +346,7 @@ func TestModuleManifestRootInstallInputResolvesRelativeManifests(t *testing.T) {
 	config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
 	releaseRoot := t.TempDir()
 	manifestPath := writeRunclientSemanticModuleManifest(t, filepath.Join(releaseRoot, "modules", "gemini-embeddings"), "gemini")
+	commandPath := writeRunclientExecutable(t, semanticModuleCommand)
 	manifestRel, err := filepath.Rel(releaseRoot, manifestPath)
 	if err != nil {
 		t.Fatalf("relative manifest path: %v", err)
@@ -340,7 +356,7 @@ func TestModuleManifestRootInstallInputResolvesRelativeManifests(t *testing.T) {
 		Provider:     SemanticModuleProviderGemini,
 		ManifestPath: filepath.ToSlash(manifestRel),
 		ManifestRoot: releaseRoot,
-		Command:      semanticModuleCommand,
+		Command:      commandPath,
 		ProviderConfig: map[string]string{
 			"embedding_model": "gemini-embedding-001",
 			"gemini_api_base": canonicalGeminiAPIBase,
@@ -373,6 +389,7 @@ func TestModuleManifestRootInstallInputIsAuthoritative(t *testing.T) {
 	config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
 	currentRoot := t.TempDir()
 	manifestPath := writeRunclientSemanticModuleManifest(t, filepath.Join(currentRoot, "modules", "ollama-embeddings"), "ollama")
+	commandPath := writeRunclientExecutable(t, semanticModuleCommand)
 	manifestRel, err := filepath.Rel(currentRoot, manifestPath)
 	if err != nil {
 		t.Fatalf("relative manifest path: %v", err)
@@ -394,7 +411,7 @@ func TestModuleManifestRootInstallInputIsAuthoritative(t *testing.T) {
 		Provider:     SemanticModuleProviderOllama,
 		ManifestPath: filepath.ToSlash(manifestRel),
 		ManifestRoot: filepath.Join(t.TempDir(), "missing-release-root"),
-		Command:      semanticModuleCommand,
+		Command:      commandPath,
 	})
 	if err == nil || !strings.Contains(err.Error(), "semantic module manifest could not be resolved") {
 		t.Fatalf("install err = %v, want authoritative manifest_root resolution failure", err)
@@ -415,16 +432,22 @@ func TestLegacyModuleManifestConfigFallsBackToPublicPathResolution(t *testing.T)
 		DatabasePath:       filepath.Join(t.TempDir(), "data", "openclerk.sqlite"),
 		ModuleManifestRoot: releaseRoot,
 	}
-	_, sha, err := verifySemanticModuleManifest(manifestPath, SemanticModuleProviderOllama, "")
+	commandPath := writeRunclientExecutable(t, semanticModuleCommand)
+	manifest, sha, err := verifySemanticModuleManifest(manifestPath, SemanticModuleProviderOllama, "")
 	if err != nil {
 		t.Fatalf("verify fixture manifest: %v", err)
+	}
+	command, commandSHA, err := resolveBoundModuleExecutable(commandPath, semanticModuleCommand, manifest, semanticModuleManifestPolicy)
+	if err != nil {
+		t.Fatalf("resolve fixture command: %v", err)
 	}
 	writeLegacyModuleRuntimeConfig(t, ctx, config, semanticModuleRuntimeConfig, SemanticModuleConfig{
 		Kind:               ModuleKindEmbeddingProvider,
 		Provider:           SemanticModuleProviderOllama,
 		ModuleName:         "ollama-embeddings",
 		Enabled:            true,
-		Command:            semanticModuleCommand,
+		Command:            command,
+		CommandSHA256:      commandSHA,
 		ManifestPath:       filepath.ToSlash(manifestRel),
 		ManifestSHA256:     sha,
 		ProviderConfig:     map[string]string{},
@@ -457,13 +480,9 @@ func TestModuleManifestVerificationUsesSharedResolver(t *testing.T) {
 }
 
 func TestInstallSemanticModuleLocksCommandSurface(t *testing.T) {
-	t.Parallel()
-
 	ctx := context.Background()
 
 	t.Run("rejects noncanonical command", func(t *testing.T) {
-		t.Parallel()
-
 		config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
 		manifestPath := writeRunclientSemanticModuleManifest(t, t.TempDir(), "ollama")
 		_, err := InstallSemanticModule(ctx, config, SemanticModuleInstallInput{
@@ -471,14 +490,12 @@ func TestInstallSemanticModuleLocksCommandSurface(t *testing.T) {
 			ManifestPath: manifestPath,
 			Command:      "/bin/sh",
 		})
-		if err == nil || !strings.Contains(err.Error(), "module.command must be semantic-retrieval-adapter") {
+		if err == nil || !strings.Contains(err.Error(), "semantic module command must be semantic-retrieval-adapter") {
 			t.Fatalf("err = %v, want semantic command rejection", err)
 		}
 	})
 
 	t.Run("rejects command args", func(t *testing.T) {
-		t.Parallel()
-
 		config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
 		manifestPath := writeRunclientSemanticModuleManifest(t, t.TempDir(), "ollama")
 		_, err := InstallSemanticModule(ctx, config, SemanticModuleInstallInput{
@@ -492,11 +509,11 @@ func TestInstallSemanticModuleLocksCommandSurface(t *testing.T) {
 		}
 	})
 
-	t.Run("persists canonical command when omitted", func(t *testing.T) {
-		t.Parallel()
-
+	t.Run("resolves canonical command when omitted", func(t *testing.T) {
 		config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
 		manifestPath := writeRunclientSemanticModuleManifest(t, t.TempDir(), "ollama")
+		commandPath := writeRunclientExecutable(t, semanticModuleCommand)
+		t.Setenv("PATH", filepath.Dir(commandPath)+string(os.PathListSeparator)+os.Getenv("PATH"))
 		installed, err := InstallSemanticModule(ctx, config, SemanticModuleInstallInput{
 			Provider:     SemanticModuleProviderOllama,
 			ManifestPath: manifestPath,
@@ -504,26 +521,25 @@ func TestInstallSemanticModuleLocksCommandSurface(t *testing.T) {
 		if err != nil {
 			t.Fatalf("install semantic module: %v", err)
 		}
-		if installed.Command != semanticModuleCommand || len(installed.CommandArgs) != 0 {
-			t.Fatalf("installed command surface = %q %v, want canonical command without args", installed.Command, installed.CommandArgs)
+		if installed.Command != commandPath || installed.CommandSHA256 == "" || len(installed.CommandArgs) != 0 {
+			t.Fatalf("installed command surface = %q sha=%q args=%v, want resolved command without args", installed.Command, installed.CommandSHA256, installed.CommandArgs)
 		}
 	})
 
-	t.Run("persists canonical command when provided", func(t *testing.T) {
-		t.Parallel()
-
+	t.Run("resolves canonical command when provided", func(t *testing.T) {
 		config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
 		manifestPath := writeRunclientSemanticModuleManifest(t, t.TempDir(), "gemini")
+		commandPath := writeRunclientExecutable(t, semanticModuleCommand)
 		installed, err := InstallSemanticModule(ctx, config, SemanticModuleInstallInput{
 			Provider:     SemanticModuleProviderGemini,
 			ManifestPath: manifestPath,
-			Command:      semanticModuleCommand,
+			Command:      commandPath,
 		})
 		if err != nil {
 			t.Fatalf("install semantic module: %v", err)
 		}
-		if installed.Command != semanticModuleCommand || len(installed.CommandArgs) != 0 {
-			t.Fatalf("installed command surface = %q %v, want canonical command without args", installed.Command, installed.CommandArgs)
+		if installed.Command != commandPath || installed.CommandSHA256 == "" || len(installed.CommandArgs) != 0 {
+			t.Fatalf("installed command surface = %q sha=%q args=%v, want resolved command without args", installed.Command, installed.CommandSHA256, installed.CommandArgs)
 		}
 	})
 }
@@ -537,7 +553,6 @@ func TestReadSemanticModuleConfigRejectsPoisonedStoredCommand(t *testing.T) {
 		config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
 		installed := installRunclientSemanticModuleForPoisonTest(t, config)
 		installed.Command = "/bin/sh"
-		installed.CommandArgs = []string{"-c", "echo pwned"}
 		if err := writeSemanticModuleConfig(context.Background(), config, installed); err != nil {
 			t.Fatalf("write poisoned config: %v", err)
 		}
@@ -564,6 +579,67 @@ func TestReadSemanticModuleConfigRejectsPoisonedStoredCommand(t *testing.T) {
 		read, err := ReadSemanticModuleConfig(context.Background(), config, SemanticModuleProviderOllama)
 		if err == nil || !strings.Contains(err.Error(), "semantic module command_args are unsupported") {
 			t.Fatalf("read=%+v err=%v, want poisoned command_args rejection", read, err)
+		}
+		if read.VerificationStatus != "verification_failed" {
+			t.Fatalf("verification status = %q, want verification_failed", read.VerificationStatus)
+		}
+	})
+
+	t.Run("legacy PATH command", func(t *testing.T) {
+		t.Parallel()
+
+		config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+		installed := installRunclientSemanticModuleForPoisonTest(t, config)
+		installed.Command = semanticModuleCommand
+		if err := writeSemanticModuleConfig(context.Background(), config, installed); err != nil {
+			t.Fatalf("write poisoned config: %v", err)
+		}
+
+		read, err := ReadSemanticModuleConfig(context.Background(), config, SemanticModuleProviderOllama)
+		if err == nil || !strings.Contains(err.Error(), "command must be an absolute path") {
+			t.Fatalf("read=%+v err=%v, want legacy command rejection", read, err)
+		}
+		if read.VerificationStatus != "verification_failed" {
+			t.Fatalf("verification status = %q, want verification_failed", read.VerificationStatus)
+		}
+	})
+}
+
+func TestReadOCRModuleConfigRejectsUnboundCommands(t *testing.T) {
+	t.Parallel()
+
+	t.Run("primary command", func(t *testing.T) {
+		t.Parallel()
+
+		config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+		installed := installRunclientOCRModuleForPoisonTest(t, config)
+		installed.Command = "/bin/sh"
+		if err := writeOCRModuleConfig(context.Background(), config, installed); err != nil {
+			t.Fatalf("write poisoned OCR config: %v", err)
+		}
+
+		read, err := ReadOCRModuleConfig(context.Background(), config, OCRModuleProviderTesseract)
+		if err == nil || !strings.Contains(err.Error(), "OCR module command must be tesseract") {
+			t.Fatalf("read=%+v err=%v, want poisoned OCR command rejection", read, err)
+		}
+		if read.VerificationStatus != "verification_failed" {
+			t.Fatalf("verification status = %q, want verification_failed", read.VerificationStatus)
+		}
+	})
+
+	t.Run("PDF command", func(t *testing.T) {
+		t.Parallel()
+
+		config := Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+		installed := installRunclientOCRModuleForPoisonTest(t, config)
+		installed.ProviderConfig["ocrmypdf_command"] = "/bin/sh"
+		if err := writeOCRModuleConfig(context.Background(), config, installed); err != nil {
+			t.Fatalf("write poisoned OCR config: %v", err)
+		}
+
+		read, err := ReadOCRModuleConfig(context.Background(), config, OCRModuleProviderTesseract)
+		if err == nil || !strings.Contains(err.Error(), "OCR module command must be ocrmypdf") {
+			t.Fatalf("read=%+v err=%v, want poisoned OCR PDF command rejection", read, err)
 		}
 		if read.VerificationStatus != "verification_failed" {
 			t.Fatalf("verification status = %q, want verification_failed", read.VerificationStatus)
@@ -646,6 +722,9 @@ func writeRunclientSemanticModuleManifest(t *testing.T, dir string, provider str
 			"type": "command",
 			"name": "semantic-retrieval-adapter search",
 		}},
+		"requires": map[string]any{
+			"tools": []string{"semantic-retrieval-adapter"},
+		},
 		"authority": map[string]any{
 			"default":        "read_only",
 			"durable_writes": "forbidden",
@@ -669,10 +748,11 @@ func installRunclientSemanticModuleForPoisonTest(t *testing.T, config Config) Se
 	t.Helper()
 
 	manifestPath := writeRunclientSemanticModuleManifest(t, t.TempDir(), "ollama")
+	commandPath := writeRunclientExecutable(t, semanticModuleCommand)
 	installed, err := InstallSemanticModule(context.Background(), config, SemanticModuleInstallInput{
 		Provider:     SemanticModuleProviderOllama,
 		ManifestPath: manifestPath,
-		Command:      semanticModuleCommand,
+		Command:      commandPath,
 	})
 	if err != nil {
 		t.Fatalf("install semantic module: %v", err)
@@ -696,7 +776,13 @@ func writeRunclientOCRModuleManifest(t *testing.T, dir string) string {
 		"provides": []map[string]any{{
 			"type": "command",
 			"name": "tesseract ocr",
+		}, {
+			"type": "command",
+			"name": "ocrmypdf ocr",
 		}},
+		"requires": map[string]any{
+			"tools": []string{"tesseract", "ocrmypdf"},
+		},
 		"authority": map[string]any{
 			"default":        "read_only",
 			"durable_writes": "forbidden",
@@ -712,6 +798,38 @@ func writeRunclientOCRModuleManifest(t *testing.T, dir string) string {
 	}
 	if err := os.WriteFile(path, data, 0o600); err != nil {
 		t.Fatalf("write OCR manifest: %v", err)
+	}
+	return path
+}
+
+func installRunclientOCRModuleForPoisonTest(t *testing.T, config Config) SemanticModuleConfig {
+	t.Helper()
+
+	manifestPath := writeRunclientOCRModuleManifest(t, t.TempDir())
+	tesseractPath := writeRunclientExecutable(t, ocrModuleTesseractCommand)
+	ocrmypdfPath := writeRunclientExecutable(t, ocrModuleOCRmyPDFCommand)
+	installed, err := InstallOCRModule(context.Background(), config, SemanticModuleInstallInput{
+		Kind:         ModuleKindOCRProvider,
+		Provider:     OCRModuleProviderTesseract,
+		ManifestPath: manifestPath,
+		Command:      tesseractPath,
+		ProviderConfig: map[string]string{
+			"ocrmypdf_command": ocrmypdfPath,
+		},
+	})
+	if err != nil {
+		t.Fatalf("install OCR module: %v", err)
+	}
+	return installed
+}
+
+func writeRunclientExecutable(t *testing.T, name string) string {
+	t.Helper()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, name)
+	if err := os.WriteFile(path, []byte("#!/bin/sh\nprintf '%s\\n' "+name+"\n"), 0o755); err != nil {
+		t.Fatalf("write executable %s: %v", path, err)
 	}
 	return path
 }

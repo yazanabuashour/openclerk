@@ -67,13 +67,23 @@ func (s *Store) syncVault(ctx context.Context) error {
 		if entry.IsDir() {
 			return nil
 		}
+		if entry.Type()&fs.ModeSymlink != 0 {
+			return nil
+		}
 		if filepath.Ext(absPath) != ".md" {
 			return nil
+		}
+		if len(paths) >= maxVaultMarkdownFiles {
+			return domain.ValidationError("vault sync exceeds maximum supported Markdown files", map[string]any{"max_files": maxVaultMarkdownFiles})
 		}
 		paths = append(paths, relPath)
 		return nil
 	})
 	if err != nil {
+		var appErr *domain.Error
+		if errors.As(err, &appErr) {
+			return err
+		}
 		return domain.InternalError("scan vault root", err)
 	}
 	sort.Strings(paths)
@@ -241,13 +251,25 @@ func (s *Store) syncDocumentFromDiskWithOptions(ctx context.Context, relPath str
 		return documentSyncResult{}, err
 	}
 	readParseStart := time.Now()
-	bodyBytes, err := osReadFile(filepath.Join(s.vaultRoot, filepath.FromSlash(relPath)))
+	bodyBytes, err := s.readVaultFile(relPath, "read document from disk")
 	if err != nil {
-		return documentSyncResult{}, domain.InternalError("read document from disk", err)
+		return documentSyncResult{}, err
+	}
+	if len(bodyBytes) > maxVaultMarkdownDocumentBytes {
+		return documentSyncResult{}, domain.ValidationError("document exceeds maximum supported Markdown size", map[string]any{
+			"path":      relPath,
+			"max_bytes": maxVaultMarkdownDocumentBytes,
+		})
 	}
 	body := string(bodyBytes)
-	headings, sections, frontmatter := parseMarkdown(body, relPath)
+	headings, sections, frontmatter, err := parseMarkdown(body, relPath)
+	if err != nil {
+		return documentSyncResult{}, err
+	}
+	frontmatterDocID := strings.TrimSpace(frontmatter["id"])
 	docID := docIDForDocument(relPath, frontmatter)
+	ignoredFrontmatterID := ""
+	ignoredFrontmatterExistingPath := ""
 	now := s.now().UTC()
 	headingsJSON, _ := json.Marshal(headings)
 	metadataJSON, _ := json.Marshal(frontmatter)
@@ -274,8 +296,6 @@ func (s *Store) syncDocumentFromDiskWithOptions(ctx context.Context, relPath str
 		}
 	}()
 
-	createdAt := now.Format(time.RFC3339Nano)
-	updatedAt := now.Format(time.RFC3339Nano)
 	var existingTitle string
 	var existingBody string
 	var existingHeadingsJSON string
@@ -284,40 +304,25 @@ func (s *Store) syncDocumentFromDiskWithOptions(ctx context.Context, relPath str
 	var existingPath string
 	var createdAtExisting string
 	var updatedAtExisting string
+	createdAt := now.Format(time.RFC3339Nano)
+	updatedAt := now.Format(time.RFC3339Nano)
 	eventType := "document_created"
-	err = tx.QueryRowContext(ctx, `
-SELECT created_at, updated_at, path, title, body, headings_json, metadata_json
-FROM documents
-WHERE doc_id = ?`, docID).Scan(
-		&createdAtExisting,
-		&updatedAtExisting,
-		&existingPath,
-		&existingTitle,
-		&existingBody,
-		&existingHeadingsJSON,
-		&existingMetadataJSON,
-	)
-	if err == nil {
-		existingDocID = docID
-		if existingPath != relPath {
-			if _, statErr := osStat(filepath.Join(s.vaultRoot, filepath.FromSlash(existingPath))); statErr == nil {
-				return documentSyncResult{}, domain.ConflictError("frontmatter id is already used by another live document", map[string]any{
-					"doc_id":        docID,
-					"existing_path": existingPath,
-					"path":          relPath,
-				})
-			} else if !errors.Is(statErr, fs.ErrNotExist) {
-				return documentSyncResult{}, domain.InternalError("stat existing document path for frontmatter id conflict", statErr)
-			}
-		}
-		createdAt = createdAtExisting
-		eventType = "document_updated"
-	} else if errors.Is(err, sql.ErrNoRows) {
+	for {
+		existingTitle = ""
+		existingBody = ""
+		existingHeadingsJSON = ""
+		existingMetadataJSON = ""
+		existingDocID = ""
+		existingPath = ""
+		createdAtExisting = ""
+		updatedAtExisting = ""
+		createdAt = now.Format(time.RFC3339Nano)
+		updatedAt = now.Format(time.RFC3339Nano)
+		eventType = "document_created"
 		err = tx.QueryRowContext(ctx, `
-SELECT doc_id, created_at, updated_at, path, title, body, headings_json, metadata_json
-FROM documents
-WHERE path = ?`, relPath).Scan(
-			&existingDocID,
+	SELECT created_at, updated_at, path, title, body, headings_json, metadata_json
+	FROM documents
+	WHERE doc_id = ?`, docID).Scan(
 			&createdAtExisting,
 			&updatedAtExisting,
 			&existingPath,
@@ -327,13 +332,50 @@ WHERE path = ?`, relPath).Scan(
 			&existingMetadataJSON,
 		)
 		if err == nil {
+			existingDocID = docID
+			if existingPath != relPath {
+				if _, statErr := osStat(filepath.Join(s.vaultRoot, filepath.FromSlash(existingPath))); statErr == nil {
+					if frontmatterDocID != "" && docID == frontmatterDocID {
+						ignoredFrontmatterID = frontmatterDocID
+						ignoredFrontmatterExistingPath = existingPath
+						docID = docIDForPath(relPath)
+						continue
+					}
+					return documentSyncResult{}, domain.ConflictError("frontmatter id is already used by another live document", map[string]any{
+						"doc_id":        docID,
+						"existing_path": existingPath,
+						"path":          relPath,
+					})
+				} else if !errors.Is(statErr, fs.ErrNotExist) {
+					return documentSyncResult{}, domain.InternalError("stat existing document path for frontmatter id conflict", statErr)
+				}
+			}
 			createdAt = createdAtExisting
 			eventType = "document_updated"
+		} else if errors.Is(err, sql.ErrNoRows) {
+			err = tx.QueryRowContext(ctx, `
+	SELECT doc_id, created_at, updated_at, path, title, body, headings_json, metadata_json
+	FROM documents
+	WHERE path = ?`, relPath).Scan(
+				&existingDocID,
+				&createdAtExisting,
+				&updatedAtExisting,
+				&existingPath,
+				&existingTitle,
+				&existingBody,
+				&existingHeadingsJSON,
+				&existingMetadataJSON,
+			)
+			if err == nil {
+				createdAt = createdAtExisting
+				eventType = "document_updated"
+			} else if !errors.Is(err, sql.ErrNoRows) {
+				return documentSyncResult{}, domain.InternalError("query existing document by path", err)
+			}
 		} else if !errors.Is(err, sql.ErrNoRows) {
-			return documentSyncResult{}, domain.InternalError("query existing document by path", err)
+			return documentSyncResult{}, domain.InternalError("query existing document timestamp", err)
 		}
-	} else if !errors.Is(err, sql.ErrNoRows) {
-		return documentSyncResult{}, domain.InternalError("query existing document timestamp", err)
+		break
 	}
 	previousFrontmatter := map[string]string{}
 	if eventType == "document_updated" {
@@ -485,6 +527,23 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		}); err != nil {
 			return documentSyncResult{}, domain.InternalError("record provenance event", err)
 		}
+		if ignoredFrontmatterID != "" {
+			if err := insertProvenanceEventIfAbsent(ctx, tx, domain.ProvenanceEvent{
+				EventID:    hashID("event", "document_frontmatter_id_conflict_ignored", docID, ignoredFrontmatterID, ignoredFrontmatterExistingPath),
+				EventType:  "document_frontmatter_id_conflict_ignored",
+				RefKind:    "document",
+				RefID:      docID,
+				SourceRef:  "doc:" + docID,
+				OccurredAt: now,
+				Details: map[string]string{
+					"path":             relPath,
+					"frontmatter_id":   ignoredFrontmatterID,
+					"conflicting_path": ignoredFrontmatterExistingPath,
+				},
+			}); err != nil {
+				return documentSyncResult{}, domain.InternalError("record ignored frontmatter id provenance event", err)
+			}
+		}
 		if !isSynthesisDocument(relPath, frontmatter) {
 			sourceEventType := "source_created"
 			if eventType == "document_updated" {
@@ -538,8 +597,14 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		}
 	}
 	if contentChanged && supportsRecords(s.backend) {
-		_, _, projectsRecords := extractRecordProjection(body)
-		_, _, projectedRecords := extractRecordProjection(existingBody)
+		_, _, projectsRecords, err := extractRecordProjection(body)
+		if err != nil {
+			return documentSyncResult{}, err
+		}
+		_, _, projectedRecords, err := extractRecordProjection(existingBody)
+		if err != nil {
+			return documentSyncResult{}, err
+		}
 		if projectsRecords || projectedRecords {
 			if err := insertProvenanceEvent(ctx, tx, domain.ProvenanceEvent{
 				EventID:    hashID("event", "projection_invalidated", "records", docID, now.Format(time.RFC3339Nano), contentVersion),
@@ -558,8 +623,14 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		}
 	}
 	if contentChanged && supportsServices(s.backend) {
-		_, projectsServices := extractServiceProjection(body)
-		_, projectedServices := extractServiceProjection(existingBody)
+		_, projectsServices, err := extractServiceProjection(body)
+		if err != nil {
+			return documentSyncResult{}, err
+		}
+		_, projectedServices, err := extractServiceProjection(existingBody)
+		if err != nil {
+			return documentSyncResult{}, err
+		}
 		if projectsServices || projectedServices {
 			if err := insertProvenanceEvent(ctx, tx, domain.ProvenanceEvent{
 				EventID:    hashID("event", "projection_invalidated", "services", docID, now.Format(time.RFC3339Nano), contentVersion),
@@ -578,8 +649,14 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		}
 	}
 	if contentChanged && supportsDecisions(s.backend) {
-		_, projectsDecisions := extractDecisionProjection(body)
-		_, projectedDecisions := extractDecisionProjection(existingBody)
+		_, projectsDecisions, err := extractDecisionProjection(body)
+		if err != nil {
+			return documentSyncResult{}, err
+		}
+		_, projectedDecisions, err := extractDecisionProjection(existingBody)
+		if err != nil {
+			return documentSyncResult{}, err
+		}
 		if projectsDecisions || projectedDecisions {
 			if err := insertProvenanceEvent(ctx, tx, domain.ProvenanceEvent{
 				EventID:    hashID("event", "projection_invalidated", "decisions", docID, now.Format(time.RFC3339Nano), contentVersion),

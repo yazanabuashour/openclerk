@@ -7,7 +7,6 @@ import (
 	"errors"
 	"io/fs"
 	"math"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -154,20 +153,19 @@ func (s *Store) CreateDocument(ctx context.Context, input domain.CreateDocumentI
 	if strings.TrimSpace(input.Body) == "" {
 		return domain.Document{}, domain.ValidationError("body is required", nil)
 	}
-	absPath, err := s.vaultCreateAbsPath(relPath, "validate document path")
-	if err != nil {
+	if _, err := s.vaultCreateAbsPath(relPath, "validate document path"); err != nil {
 		return domain.Document{}, err
 	}
-	if err := ensureDir(filepath.Dir(absPath)); err != nil {
-		return domain.Document{}, domain.InternalError("create document directory", err)
-	}
-	if _, err := osLstat(absPath); err == nil {
+	if _, err := s.lstatVaultPath(relPath, "stat document path"); err == nil {
 		return domain.Document{}, domain.AlreadyExistsError("document path", relPath)
 	} else if !errors.Is(err, fs.ErrNotExist) {
 		return domain.Document{}, domain.InternalError("stat document path", err)
 	}
-	if err := osWriteFile(absPath, input.Body); err != nil {
-		return domain.Document{}, domain.InternalError("write document", err)
+	if err := s.writeNewVaultFile(relPath, []byte(input.Body), "write document"); err != nil {
+		if errors.Is(err, fs.ErrExist) {
+			return domain.Document{}, domain.AlreadyExistsError("document path", relPath)
+		}
+		return domain.Document{}, err
 	}
 	if err := s.syncDocumentFromDisk(ctx, relPath, input.Title); err != nil {
 		return domain.Document{}, err
@@ -220,12 +218,11 @@ func (s *Store) AppendDocument(ctx context.Context, docID string, input domain.A
 	}
 	body := strings.TrimRight(doc.Body, "\n")
 	body = body + "\n\n" + strings.TrimSpace(input.Content) + "\n"
-	absPath, err := s.vaultExistingAbsPath(doc.Path, "validate document path")
-	if err != nil {
+	if _, err := s.vaultExistingAbsPath(doc.Path, "validate document path"); err != nil {
 		return domain.Document{}, err
 	}
-	if err := osWriteFile(absPath, body); err != nil {
-		return domain.Document{}, domain.InternalError("append document content", err)
+	if err := s.writeExistingVaultFile(doc.Path, []byte(body), "append document content"); err != nil {
+		return domain.Document{}, err
 	}
 	if err := s.syncDocumentFromDisk(ctx, doc.Path, doc.Title); err != nil {
 		return domain.Document{}, err
@@ -245,12 +242,11 @@ func (s *Store) ReplaceDocumentSection(ctx context.Context, docID string, input 
 	if err != nil {
 		return domain.Document{}, err
 	}
-	absPath, err := s.vaultExistingAbsPath(doc.Path, "validate document path")
-	if err != nil {
+	if _, err := s.vaultExistingAbsPath(doc.Path, "validate document path"); err != nil {
 		return domain.Document{}, err
 	}
-	if err := osWriteFile(absPath, body); err != nil {
-		return domain.Document{}, domain.InternalError("replace document section", err)
+	if err := s.writeExistingVaultFile(doc.Path, []byte(body), "replace document section"); err != nil {
+		return domain.Document{}, err
 	}
 	if err := s.syncDocumentFromDisk(ctx, doc.Path, ""); err != nil {
 		return domain.Document{}, err
@@ -266,12 +262,11 @@ func (s *Store) ReplaceDocument(ctx context.Context, docID string, input domain.
 	if err != nil {
 		return domain.Document{}, err
 	}
-	absPath, err := s.vaultExistingAbsPath(doc.Path, "validate document path")
-	if err != nil {
+	if _, err := s.vaultExistingAbsPath(doc.Path, "validate document path"); err != nil {
 		return domain.Document{}, err
 	}
-	if err := osWriteFile(absPath, strings.TrimRight(input.Body, "\n")+"\n"); err != nil {
-		return domain.Document{}, domain.InternalError("replace document", err)
+	if err := s.writeExistingVaultFile(doc.Path, []byte(strings.TrimRight(input.Body, "\n")+"\n"), "replace document"); err != nil {
+		return domain.Document{}, err
 	}
 	if err := s.syncDocumentFromDisk(ctx, doc.Path, strings.TrimSpace(input.Title)); err != nil {
 		return domain.Document{}, err
@@ -382,7 +377,8 @@ JOIN documents d ON d.doc_id = c.doc_id`
 	if whereClause != "" {
 		baseQuery += "\nWHERE " + whereClause
 	}
-	baseQuery += "\nORDER BY d.path, c.line_start, c.chunk_id"
+	baseQuery += "\nORDER BY d.path, c.line_start, c.chunk_id\nLIMIT ?"
+	args = append(args, maxLexicalFallbackCandidateRows)
 	rows, err := s.db.QueryContext(ctx, baseQuery, args...)
 	if err != nil {
 		return domain.SearchResult{}, domain.InternalError("run lexical fallback search", err)

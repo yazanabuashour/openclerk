@@ -16,13 +16,19 @@ OpenClerk modules are optional building blocks. Install them only through
 Run a module installer to install the latest module release:
 
 ```bash
-OPENCLERK_MODULE=ollama-embeddings sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/ollama-embeddings%2Fv0.1.1/install-module.sh)"
+tmp_dir="$(mktemp -d)"
+curl -fsSLo "$tmp_dir/install-module.sh" https://github.com/yazanabuashour/openclerk/releases/download/ollama-embeddings%2Fv0.1.1/install-module.sh
+gh attestation verify "$tmp_dir/install-module.sh" --repo yazanabuashour/openclerk
+OPENCLERK_MODULE=ollama-embeddings sh "$tmp_dir/install-module.sh"
 ```
 
 Set `OPENCLERK_MODULE_VERSION` to install a pinned module release:
 
 ```bash
-OPENCLERK_MODULE=ollama-embeddings OPENCLERK_MODULE_VERSION=v0.1.1 sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/ollama-embeddings%2Fv0.1.1/install-module.sh)"
+tmp_dir="$(mktemp -d)"
+curl -fsSLo "$tmp_dir/install-module.sh" https://github.com/yazanabuashour/openclerk/releases/download/ollama-embeddings%2Fv0.1.1/install-module.sh
+gh attestation verify "$tmp_dir/install-module.sh" --repo yazanabuashour/openclerk
+OPENCLERK_MODULE=ollama-embeddings OPENCLERK_MODULE_VERSION=v0.1.1 sh "$tmp_dir/install-module.sh"
 ```
 
 The installer downloads the module archive, verifies checksums, installs
@@ -35,7 +41,10 @@ and prints the registration command to run with `openclerk module`.
 Rerun a module installer for the latest or requested version:
 
 ```bash
-OPENCLERK_MODULE=ollama-embeddings sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/ollama-embeddings%2Fv0.1.1/install-module.sh)"
+tmp_dir="$(mktemp -d)"
+curl -fsSLo "$tmp_dir/install-module.sh" https://github.com/yazanabuashour/openclerk/releases/download/ollama-embeddings%2Fv0.1.1/install-module.sh
+gh attestation verify "$tmp_dir/install-module.sh" --repo yazanabuashour/openclerk
+OPENCLERK_MODULE=ollama-embeddings sh "$tmp_dir/install-module.sh"
 ```
 
 Then refresh registration with `openclerk module` using the installed manifest
@@ -66,9 +75,10 @@ semantic-retrieval-adapter search
 
 The adapter lives at `modules/semantic-retrieval-adapter`. Build or install it
 separately from OpenClerk core and make `semantic-retrieval-adapter` available
-on `PATH` before registering a provider module. Semantic module registration
-does not support overriding this executable or passing `command_args`; OpenClerk
-always runs `semantic-retrieval-adapter search`.
+on `PATH` before registering a provider module. Registration resolves and pins
+the executable path and digest. Semantic module registration does not support
+passing `command_args`; OpenClerk always runs the verified adapter with
+`search`.
 
 ```bash
 mise exec -- go build -o "$HOME/.local/bin/semantic-retrieval-adapter" ./modules/semantic-retrieval-adapter
@@ -77,13 +87,14 @@ command -v semantic-retrieval-adapter
 
 The OCR module uses `tesseract` for image OCR and `ocrmypdf` for PDF OCR.
 Install those tools separately and make both commands available on `PATH`
-before registering the module.
+before registering the module. Registration resolves and pins both executable
+paths and digests before OCR review can run.
 
 ## Register or Refresh Module Registration
 
 For semantic modules, `command` may be omitted or set to
-`semantic-retrieval-adapter` for compatibility with older instructions.
-`command_args` are rejected.
+`semantic-retrieval-adapter` for compatibility with older instructions; the
+runner stores the resolved executable path. `command_args` are rejected.
 
 Install Ollama embeddings:
 

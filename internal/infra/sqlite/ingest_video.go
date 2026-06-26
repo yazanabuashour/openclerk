@@ -10,7 +10,6 @@ import (
 	"github.com/yazanabuashour/openclerk/internal/domain"
 	"io/fs"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -80,32 +79,30 @@ func (s *Store) createVideoURL(ctx context.Context, input domain.VideoURLInput, 
 	} else if exists {
 		return domain.VideoIngestionResult{}, domain.AlreadyExistsError("source URL", videoURL)
 	}
-	sourceAbsPath := filepath.Join(s.vaultRoot, filepath.FromSlash(sourcePath))
-	if _, err := osStat(sourceAbsPath); err == nil {
+	if _, err := s.lstatVaultPath(sourcePath, "stat video source document path"); err == nil {
 		return domain.VideoIngestionResult{}, domain.AlreadyExistsError("document path", sourcePath)
 	} else if !errors.Is(err, fs.ErrNotExist) {
 		return domain.VideoIngestionResult{}, domain.InternalError("stat video source document path", err)
 	}
 	assetWritten := false
 	if assetPath != "" {
-		assetAbsPath := filepath.Join(s.vaultRoot, filepath.FromSlash(assetPath))
-		if _, err := osStat(assetAbsPath); err == nil {
+		if _, err := s.lstatVaultPath(assetPath, "stat video metadata asset path"); err == nil {
 			return domain.VideoIngestionResult{}, domain.AlreadyExistsError("asset path", assetPath)
 		} else if !errors.Is(err, fs.ErrNotExist) {
 			return domain.VideoIngestionResult{}, domain.InternalError("stat video metadata asset path", err)
 		}
 		assetBytes := buildVideoMetadataAsset(videoURL, sourcePath, assetPath, transcript)
-		if err := ensureDir(filepath.Dir(assetAbsPath)); err != nil {
-			return domain.VideoIngestionResult{}, domain.InternalError("create video metadata asset directory", err)
-		}
-		if err := osWriteBytes(assetAbsPath, assetBytes); err != nil {
-			return domain.VideoIngestionResult{}, domain.InternalError("write video metadata asset", err)
+		if err := s.writeNewVaultFile(assetPath, assetBytes, "write video metadata asset"); err != nil {
+			if errors.Is(err, fs.ErrExist) {
+				return domain.VideoIngestionResult{}, domain.AlreadyExistsError("asset path", assetPath)
+			}
+			return domain.VideoIngestionResult{}, err
 		}
 		assetWritten = true
 		defer func() {
 			if assetWritten {
-				if _, err := osStat(sourceAbsPath); errors.Is(err, fs.ErrNotExist) {
-					_ = osRemove(assetAbsPath)
+				if _, err := s.lstatVaultPath(sourcePath, "stat video source document path"); errors.Is(err, fs.ErrNotExist) {
+					_ = s.removeVaultPath(assetPath, "remove video metadata asset after failed source note create")
 				}
 			}
 		}()
@@ -141,6 +138,22 @@ func (s *Store) updateVideoURL(ctx context.Context, input domain.VideoURLInput, 
 	}
 	sourcePath := document.Path
 	assetPath := strings.TrimSpace(document.Metadata["asset_path"])
+	sourcePath, err = normalizeSourceDocumentPath(sourcePath)
+	if err != nil {
+		return domain.VideoIngestionResult{}, domain.ConflictError("video source document has invalid path", map[string]any{"source_url": videoURL, "path": document.Path})
+	}
+	if assetPath != "" {
+		assetPath, err = normalizeVideoAssetPath(assetPath)
+		if err != nil {
+			return domain.VideoIngestionResult{}, domain.ConflictError("video source document has invalid asset_path metadata", map[string]any{"source_url": videoURL, "path": document.Path})
+		}
+		if _, err := s.vaultExistingAbsPath(assetPath, "validate existing video metadata asset"); err != nil {
+			return domain.VideoIngestionResult{}, err
+		}
+	}
+	if _, err := s.vaultExistingAbsPath(sourcePath, "validate existing video source document"); err != nil {
+		return domain.VideoIngestionResult{}, err
+	}
 	if strings.TrimSpace(input.PathHint) != "" {
 		requestPath, err := normalizeSourceDocumentPath(input.PathHint)
 		if err != nil {
@@ -167,24 +180,21 @@ func (s *Store) updateVideoURL(ctx context.Context, input domain.VideoURLInput, 
 		return videoIngestionResultFromDocument(document, citations), nil
 	}
 
-	sourceAbsPath := filepath.Join(s.vaultRoot, filepath.FromSlash(sourcePath))
 	oldBody := document.Body
 	title := resolvedVideoTitle(firstNonEmpty(input.Title, document.Title), sourcePath)
 	body := buildVideoSourceNoteBody(videoURL, sourcePath, assetPath, title, transcript)
-	assetAbsPath := ""
 	var oldAssetBytes []byte
 	if assetPath != "" {
-		assetAbsPath = filepath.Join(s.vaultRoot, filepath.FromSlash(assetPath))
-		oldAssetBytes, err = osReadFile(assetAbsPath)
+		oldAssetBytes, err = s.readVaultFile(assetPath, "read existing video metadata asset")
 		if err != nil {
-			return domain.VideoIngestionResult{}, domain.InternalError("read existing video metadata asset", err)
+			return domain.VideoIngestionResult{}, err
 		}
 		newAssetBytes := buildVideoMetadataAsset(videoURL, sourcePath, assetPath, transcript)
-		if err := s.replaceVideoAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, newAssetBytes, body, title); err != nil {
+		if err := s.replaceVideoAssetAndNote(ctx, sourcePath, assetPath, oldBody, oldAssetBytes, newAssetBytes, body, title); err != nil {
 			return domain.VideoIngestionResult{}, err
 		}
 	} else {
-		if err := s.replaceVideoNote(ctx, sourcePath, sourceAbsPath, oldBody, body, title); err != nil {
+		if err := s.replaceVideoNote(ctx, sourcePath, oldBody, body, title); err != nil {
 			return domain.VideoIngestionResult{}, err
 		}
 	}
@@ -192,26 +202,26 @@ func (s *Store) updateVideoURL(ctx context.Context, input domain.VideoURLInput, 
 	updated, err := s.GetDocument(ctx, document.DocID)
 	if err != nil {
 		if assetPath != "" {
-			return domain.VideoIngestionResult{}, s.restoreVideoAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, err)
+			return domain.VideoIngestionResult{}, s.restoreVideoAssetAndNote(ctx, sourcePath, assetPath, oldBody, oldAssetBytes, err)
 		}
 		return domain.VideoIngestionResult{}, err
 	}
 	citations, err := s.sourceDocumentCitations(ctx, updated)
 	if err != nil {
 		if assetPath != "" {
-			return domain.VideoIngestionResult{}, s.restoreVideoAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, err)
+			return domain.VideoIngestionResult{}, s.restoreVideoAssetAndNote(ctx, sourcePath, assetPath, oldBody, oldAssetBytes, err)
 		}
 		return domain.VideoIngestionResult{}, err
 	}
 	if len(citations) == 0 {
 		if assetPath != "" {
-			return domain.VideoIngestionResult{}, s.restoreVideoAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, domain.InternalError("validate video source update citations", errors.New("updated video source has no indexed citations")))
+			return domain.VideoIngestionResult{}, s.restoreVideoAssetAndNote(ctx, sourcePath, assetPath, oldBody, oldAssetBytes, domain.InternalError("validate video source update citations", errors.New("updated video source has no indexed citations")))
 		}
 		return domain.VideoIngestionResult{}, domain.InternalError("validate video source update citations", errors.New("updated video source has no indexed citations"))
 	}
 	if err := validateIngestedVideoSource(updated, videoURL, sourcePath, assetPath); err != nil {
 		if assetPath != "" {
-			return domain.VideoIngestionResult{}, s.restoreVideoAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, err)
+			return domain.VideoIngestionResult{}, s.restoreVideoAssetAndNote(ctx, sourcePath, assetPath, oldBody, oldAssetBytes, err)
 		}
 		return domain.VideoIngestionResult{}, err
 	}
@@ -249,16 +259,16 @@ func videoIngestionResultFromDocument(document domain.Document, citations []doma
 	}
 }
 
-func (s *Store) replaceVideoAssetAndNote(ctx context.Context, sourcePath string, sourceAbsPath string, assetAbsPath string, oldBody string, oldAssetBytes []byte, newAssetBytes []byte, newBody string, title string) error {
-	return s.replaceIngestedAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, newAssetBytes, newBody, title, videoNoteMutationLabels())
+func (s *Store) replaceVideoAssetAndNote(ctx context.Context, sourcePath string, assetPath string, oldBody string, oldAssetBytes []byte, newAssetBytes []byte, newBody string, title string) error {
+	return s.replaceIngestedAssetAndNote(ctx, sourcePath, assetPath, oldBody, oldAssetBytes, newAssetBytes, newBody, title, videoNoteMutationLabels())
 }
 
-func (s *Store) restoreVideoAssetAndNote(ctx context.Context, sourcePath string, sourceAbsPath string, assetAbsPath string, oldBody string, oldAssetBytes []byte, cause error) error {
-	return s.restoreIngestedAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, cause, videoNoteMutationLabels())
+func (s *Store) restoreVideoAssetAndNote(ctx context.Context, sourcePath string, assetPath string, oldBody string, oldAssetBytes []byte, cause error) error {
+	return s.restoreIngestedAssetAndNote(ctx, sourcePath, assetPath, oldBody, oldAssetBytes, cause, videoNoteMutationLabels())
 }
 
-func (s *Store) replaceVideoNote(ctx context.Context, sourcePath string, sourceAbsPath string, oldBody string, newBody string, title string) error {
-	return s.replaceIngestedNote(ctx, sourcePath, sourceAbsPath, oldBody, newBody, title, videoNoteMutationLabels())
+func (s *Store) replaceVideoNote(ctx context.Context, sourcePath string, oldBody string, newBody string, title string) error {
+	return s.replaceIngestedNote(ctx, sourcePath, oldBody, newBody, title, videoNoteMutationLabels())
 }
 
 func videoNoteMutationLabels() noteMutationLabels {

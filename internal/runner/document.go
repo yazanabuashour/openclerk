@@ -624,7 +624,10 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		if rejection := validatePathCleanupOptions(normalized.PathCleanup); rejection != "" {
 			return normalizedDocumentTaskRequest{}, rejection
 		}
-		if normalized.PathCleanup.Mode == pathCleanupModeApply && pathCleanupShouldEnforceAutonomy(request) {
+		if normalized.PathCleanup.Mode == pathCleanupModeApply {
+			if request.Autonomy == (AutonomyModes{}) {
+				return normalizedDocumentTaskRequest{}, "path_cleanup.mode apply requires explicit autonomy.approval_mode autonomous_trusted or autonomous_disposable"
+			}
 			if rejection := rejectDocumentAutonomyWrite(normalized); rejection != "" {
 				return normalizedDocumentTaskRequest{}, rejection
 			}
@@ -666,10 +669,6 @@ func rejectDocumentAutonomyWrite(normalized normalizedDocumentTaskRequest) strin
 		return "autonomy.write_target_mode existing_only does not allow create_or_update validation_synthesis writes"
 	}
 	return ""
-}
-
-func pathCleanupShouldEnforceAutonomy(request DocumentTaskRequest) bool {
-	return request.Autonomy != (AutonomyModes{})
 }
 
 func compileSynthesisInputFromRequest(request DocumentTaskRequest) CompileSynthesisInput {

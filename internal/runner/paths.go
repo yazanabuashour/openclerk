@@ -2,6 +2,7 @@ package runner
 
 import (
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/yazanabuashour/openclerk/internal/domain"
@@ -99,4 +100,13 @@ func validateRequiredVaultPath(raw string, requiredMessage string, relativeMessa
 	default:
 		return "", stayInsideMessage
 	}
+}
+
+func containsParentPathSegment(raw string) bool {
+	for _, segment := range strings.Split(strings.ReplaceAll(filepath.ToSlash(raw), `\`, "/"), "/") {
+		if segment == ".." {
+			return true
+		}
+	}
+	return false
 }

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -176,6 +177,49 @@ func (s *Store) rebuildRecords(ctx context.Context) error {
 		return err
 	}
 
+	type projectedRecord struct {
+		doc        domain.Document
+		entityID   string
+		entityType string
+		name       string
+		summary    string
+		facts      []domain.RecordFact
+		citation   domain.Citation
+	}
+	recordsByID := map[string][]projectedRecord{}
+	recordIDs := []string{}
+	for _, doc := range documents {
+		frontmatter, facts, ok, err := extractRecordProjection(doc.Body)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			continue
+		}
+		entityType := frontmatter["entity_type"]
+		name := frontmatter["entity_name"]
+		entityID := frontmatter["entity_id"]
+		if entityType == "" || name == "" {
+			continue
+		}
+		if entityID == "" {
+			entityID = hashID("entity", doc.DocID, name)
+		}
+		if _, exists := recordsByID[entityID]; !exists {
+			recordIDs = append(recordIDs, entityID)
+		}
+		recordsByID[entityID] = append(recordsByID[entityID], projectedRecord{
+			doc:        doc,
+			entityID:   entityID,
+			entityType: entityType,
+			name:       name,
+			summary:    firstSummaryParagraph(doc.Body),
+			facts:      facts,
+			citation:   documentCitation(doc, chunksByDoc[doc.DocID]),
+		})
+	}
+	sort.Strings(recordIDs)
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return domain.InternalError("begin records rebuild", err)
@@ -195,22 +239,24 @@ func (s *Store) rebuildRecords(ctx context.Context) error {
 	}
 
 	now := s.now().UTC()
-	for _, doc := range documents {
-		frontmatter, facts, ok := extractRecordProjection(doc.Body)
-		if !ok {
+	for _, entityID := range recordIDs {
+		items := recordsByID[entityID]
+		if len(items) > 1 {
+			sources := make([]duplicateProjectionSource, 0, len(items))
+			for _, item := range items {
+				sources = append(sources, duplicateProjectionSource{DocID: item.doc.DocID, Path: item.doc.Path})
+			}
+			projection := duplicateProjectionState("records", "entity", entityID, sources, previousStates, now)
+			if err := upsertProjectionState(ctx, tx, projection); err != nil {
+				return err
+			}
+			if err := insertDuplicateProjectionEvent(ctx, tx, "record_duplicate_rejected", "entity", entityID, projection, now); err != nil {
+				return domain.InternalError("record duplicate record projection event", err)
+			}
 			continue
 		}
-		entityType := frontmatter["entity_type"]
-		name := frontmatter["entity_name"]
-		entityID := frontmatter["entity_id"]
-		if entityType == "" || name == "" {
-			continue
-		}
-		if entityID == "" {
-			entityID = hashID("entity", doc.DocID, name)
-		}
-		summary := firstSummaryParagraph(doc.Body)
-		version := hashID("records", entityID, doc.UpdatedAt.UTC().Format(time.RFC3339Nano))
+		item := items[0]
+		version := hashID("records", entityID, item.doc.UpdatedAt.UTC().Format(time.RFC3339Nano))
 		entityUpdatedAt := now
 		entityChanged := true
 		if previous, ok := previousStates[entityID]; ok && previous.ProjectionVersion == version {
@@ -218,18 +264,18 @@ func (s *Store) rebuildRecords(ctx context.Context) error {
 			entityChanged = false
 		}
 		if _, err := tx.ExecContext(ctx, `
-INSERT INTO record_entities (entity_id, entity_type, name, summary, source_doc_id, updated_at)
-VALUES (?, ?, ?, ?, ?, ?)`,
+	INSERT INTO record_entities (entity_id, entity_type, name, summary, source_doc_id, updated_at)
+	VALUES (?, ?, ?, ?, ?, ?)`,
 			entityID,
-			entityType,
-			name,
-			summary,
-			doc.DocID,
+			item.entityType,
+			item.name,
+			item.summary,
+			item.doc.DocID,
 			entityUpdatedAt.UTC().Format(time.RFC3339Nano),
 		); err != nil {
 			return domain.InternalError("insert record entity", err)
 		}
-		for _, fact := range facts {
+		for _, fact := range item.facts {
 			var observedAt *string
 			if fact.ObservedAt != nil {
 				value := fact.ObservedAt.UTC().Format(time.RFC3339Nano)
@@ -246,17 +292,16 @@ VALUES (?, ?, ?, ?)`,
 				return domain.InternalError("insert record fact", err)
 			}
 		}
-		citation := documentCitation(doc, chunksByDoc[doc.DocID])
 		if _, err := tx.ExecContext(ctx, `
-INSERT INTO record_citations (entity_id, source_doc_id, source_chunk_id, source_path, source_heading, source_line_start, source_line_end)
-VALUES (?, ?, ?, ?, ?, ?, ?)`,
+	INSERT INTO record_citations (entity_id, source_doc_id, source_chunk_id, source_path, source_heading, source_line_start, source_line_end)
+	VALUES (?, ?, ?, ?, ?, ?, ?)`,
 			entityID,
-			citation.DocID,
-			citation.ChunkID,
-			citation.Path,
-			nullIfEmpty(citation.Heading),
-			citation.LineStart,
-			citation.LineEnd,
+			item.citation.DocID,
+			item.citation.ChunkID,
+			item.citation.Path,
+			nullIfEmpty(item.citation.Heading),
+			item.citation.LineStart,
+			item.citation.LineEnd,
 		); err != nil {
 			return domain.InternalError("insert record citation", err)
 		}
@@ -268,9 +313,9 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`,
 				"record_extracted_from_doc",
 				"entity",
 				entityID,
-				"doc:"+doc.DocID,
+				"doc:"+item.doc.DocID,
 				now.Format(time.RFC3339Nano),
-				fmt.Sprintf(`{"entity_type":%q,"entity_name":%q}`, entityType, name),
+				fmt.Sprintf(`{"entity_type":%q,"entity_name":%q}`, item.entityType, item.name),
 			); err != nil {
 				return domain.InternalError("record records provenance event", err)
 			}
@@ -279,13 +324,13 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`,
 			Projection:        "records",
 			RefKind:           "entity",
 			RefID:             entityID,
-			SourceRef:         "doc:" + doc.DocID,
+			SourceRef:         "doc:" + item.doc.DocID,
 			Freshness:         "fresh",
 			ProjectionVersion: version,
 			UpdatedAt:         entityUpdatedAt,
 			Details: map[string]string{
-				"entity_type": entityType,
-				"path":        doc.Path,
+				"entity_type": item.entityType,
+				"path":        item.doc.Path,
 			},
 		}); err != nil {
 			return err
@@ -296,11 +341,11 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`,
 				EventType:  "projection_refreshed",
 				RefKind:    "projection",
 				RefID:      "records:" + entityID,
-				SourceRef:  "doc:" + doc.DocID,
+				SourceRef:  "doc:" + item.doc.DocID,
 				OccurredAt: now,
 				Details: map[string]string{
 					"projection":  "records",
-					"entity_type": entityType,
+					"entity_type": item.entityType,
 					"version":     version,
 				},
 			}); err != nil {
@@ -318,13 +363,16 @@ func supportsRecords(backend domain.BackendKind) bool {
 	return backend == domain.BackendOpenClerk
 }
 
-func extractRecordProjection(body string) (map[string]string, []domain.RecordFact, bool) {
+func extractRecordProjection(body string) (map[string]string, []domain.RecordFact, bool, error) {
 	lines := strings.Split(body, "\n")
-	frontmatter, contentStart := parseFrontmatter(lines)
-	if frontmatter["entity_type"] == "" && frontmatter["entity_name"] == "" {
-		return nil, nil, false
+	frontmatter, contentStart, err := parseFrontmatter(lines)
+	if err != nil {
+		return nil, nil, false, err
 	}
-	return frontmatter, extractRecordFacts(lines, contentStart), true
+	if frontmatter["entity_type"] == "" && frontmatter["entity_name"] == "" {
+		return nil, nil, false, nil
+	}
+	return frontmatter, extractRecordFacts(lines, contentStart), true, nil
 }
 
 func extractRecordFacts(lines []string, contentStart int) []domain.RecordFact {

@@ -17,6 +17,21 @@ import (
 	"time"
 )
 
+func TestSourceNoteTextBlockPreservesExtractedEvidence(t *testing.T) {
+	t.Parallel()
+
+	block := sourceNoteTextBlock("AT&T <tag> > value\n```source fence marker")
+	if !strings.Contains(block, "AT&T <tag> > value") {
+		t.Fatalf("source note text block = %q, want raw extracted text", block)
+	}
+	if strings.Contains(block, "&amp;") || strings.Contains(block, "&lt;") || strings.Contains(block, "&gt;") {
+		t.Fatalf("source note text block escaped evidence text: %q", block)
+	}
+	if !strings.HasPrefix(block, "````text\n") || !strings.HasSuffix(block, "\n````\n") {
+		t.Fatalf("source note text block fence = %q, want expanded fence around embedded backticks", block)
+	}
+}
+
 func TestIngestSourceURLKeepsAssetWhenSourceNotePersistsBeforeError(t *testing.T) {
 	allowPrivateSourceHosts(t)
 	pdfBytes := minimalStorePDF("Partial ingest PDF", "OpenClerk Test", "Partial ingest text")
@@ -33,18 +48,18 @@ func TestIngestSourceURLKeepsAssetWhenSourceNotePersistsBeforeError(t *testing.T
 		_ = store.Close()
 	}()
 
-	oldWriteFile := osWriteFile
-	osWriteFile = func(name string, data string) error {
-		if strings.HasSuffix(name, filepath.Join("sources", "partial-ingest.md")) {
-			if err := os.WriteFile(name, []byte(data), 0o644); err != nil {
+	oldWriteNewFile := vaultWriteNewFile
+	vaultWriteNewFile = func(store *Store, relPath string, data []byte, label string) error {
+		if relPath == "sources/partial-ingest.md" {
+			if err := oldWriteNewFile(store, relPath, data, label); err != nil {
 				return err
 			}
 			return errors.New("forced source note sync failure")
 		}
-		return oldWriteFile(name, data)
+		return oldWriteNewFile(store, relPath, data, label)
 	}
 	t.Cleanup(func() {
-		osWriteFile = oldWriteFile
+		vaultWriteNewFile = oldWriteNewFile
 	})
 
 	_, err := store.IngestSourceURL(context.Background(), domain.SourceURLInput{
@@ -1224,18 +1239,18 @@ func TestIngestSourceURLUpdateRollbackRestoresPreviousState(t *testing.T) {
 		t.Fatalf("read old asset: %v", err)
 	}
 
-	oldWriteFile := osWriteFile
-	osWriteFile = func(name string, data string) error {
-		if strings.HasSuffix(name, filepath.Join("sources", "rollback.md")) {
-			if err := os.WriteFile(name, []byte(data), 0o644); err != nil {
+	oldWriteExistingFile := vaultWriteExistingFile
+	vaultWriteExistingFile = func(store *Store, relPath string, data []byte, label string) error {
+		if relPath == "sources/rollback.md" {
+			if err := oldWriteExistingFile(store, relPath, data, label); err != nil {
 				return err
 			}
 			return errors.New("forced source update note failure")
 		}
-		return oldWriteFile(name, data)
+		return oldWriteExistingFile(store, relPath, data, label)
 	}
 	t.Cleanup(func() {
-		osWriteFile = oldWriteFile
+		vaultWriteExistingFile = oldWriteExistingFile
 	})
 
 	mu.Lock()

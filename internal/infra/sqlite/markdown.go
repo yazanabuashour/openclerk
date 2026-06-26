@@ -39,9 +39,12 @@ func markdownLine(value string) string {
 	return strings.TrimSpace(value)
 }
 
-func parseMarkdown(body string, relPath string) ([]string, []section, map[string]string) {
+func parseMarkdown(body string, relPath string) ([]string, []section, map[string]string, error) {
 	lines := strings.Split(body, "\n")
-	frontmatter, contentStart := parseFrontmatter(lines)
+	frontmatter, contentStart, err := parseFrontmatter(lines)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 	headings := []string{}
 	sections := []section{}
 	type headingInfo struct {
@@ -57,6 +60,9 @@ func parseMarkdown(body string, relPath string) ([]string, []section, map[string
 		}
 		title := strings.TrimSpace(matches[2])
 		headings = append(headings, title)
+		if len(headings) > maxVaultMarkdownSections {
+			return nil, nil, nil, domain.ValidationError("document exceeds maximum supported Markdown sections", map[string]any{"path": relPath, "max_sections": maxVaultMarkdownSections})
+		}
 		infos = append(infos, headingInfo{
 			index: idx,
 			level: len(matches[1]),
@@ -71,7 +77,7 @@ func parseMarkdown(body string, relPath string) ([]string, []section, map[string
 			Content:   strings.TrimSpace(body),
 			LineStart: contentStart + 1,
 			LineEnd:   len(lines),
-		}}, frontmatter
+		}}, frontmatter, nil
 	}
 	if infos[0].index > contentStart {
 		preamble := strings.TrimSpace(strings.Join(lines[contentStart:infos[0].index], "\n"))
@@ -90,6 +96,9 @@ func parseMarkdown(body string, relPath string) ([]string, []section, map[string
 		if i+1 < len(infos) {
 			end = infos[i+1].index
 		}
+		if len(sections) >= maxVaultMarkdownSections {
+			return nil, nil, nil, domain.ValidationError("document exceeds maximum supported Markdown sections", map[string]any{"path": relPath, "max_sections": maxVaultMarkdownSections})
+		}
 		sections = append(sections, section{
 			Heading:   info.title,
 			Level:     info.level,
@@ -98,25 +107,32 @@ func parseMarkdown(body string, relPath string) ([]string, []section, map[string
 			LineEnd:   end,
 		})
 	}
-	return headings, sections, frontmatter
+	return headings, sections, frontmatter, nil
 }
 
-func parseFrontmatter(lines []string) (map[string]string, int) {
+func parseFrontmatter(lines []string) (map[string]string, int, error) {
 	if len(lines) < 3 || strings.TrimSpace(lines[0]) != "---" {
-		return map[string]string{}, 0
+		return map[string]string{}, 0, nil
 	}
 	frontmatter := map[string]string{}
 	for idx := 1; idx < len(lines); idx++ {
 		if strings.TrimSpace(lines[idx]) == "---" {
-			return frontmatter, idx + 1
+			return frontmatter, idx + 1, nil
 		}
 		key, value, ok := strings.Cut(lines[idx], ":")
 		if !ok {
 			continue
 		}
-		frontmatter[strings.TrimSpace(strings.ToLower(key))] = cleanFrontmatterValue(value)
+		normalizedKey := strings.TrimSpace(strings.ToLower(key))
+		if normalizedKey == "" {
+			continue
+		}
+		if _, exists := frontmatter[normalizedKey]; !exists && len(frontmatter) >= maxVaultMarkdownMetadataFields {
+			return nil, 0, domain.ValidationError("document exceeds maximum supported frontmatter fields", map[string]any{"max_fields": maxVaultMarkdownMetadataFields})
+		}
+		frontmatter[normalizedKey] = cleanFrontmatterValue(value)
 	}
-	return map[string]string{}, 0
+	return map[string]string{}, 0, nil
 }
 
 func cleanFrontmatterValue(value string) string {
@@ -165,7 +181,10 @@ func resolvedDocumentTitle(relPath string, body string, headings []string, front
 
 func replaceSection(body string, targetHeading string, content string) (string, error) {
 	lines := strings.Split(body, "\n")
-	_, contentStart := parseFrontmatter(lines)
+	_, contentStart, err := parseFrontmatter(lines)
+	if err != nil {
+		return "", err
+	}
 	targetHeading = strings.TrimSpace(targetHeading)
 	for idx := contentStart; idx < len(lines); idx++ {
 		matches := headingPattern.FindStringSubmatch(lines[idx])

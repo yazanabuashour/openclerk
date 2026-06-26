@@ -24,6 +24,9 @@ func RunConfigTask(ctx context.Context, config runclient.Config, request ConfigT
 	case ConfigTaskActionInspectConfig:
 		return inspectConfigResult(ctx, config, resolved, convertedPaths)
 	case ConfigTaskActionConfigureProfile:
+		if rejection := rejectConfigWriteAutonomy(request.Autonomy); rejection != "" {
+			return rejectedConfig(convertedPaths, rejection), nil
+		}
 		current, err := configuredProfileAutonomyModes(ctx, config)
 		if err != nil {
 			return ConfigTaskResult{}, err
@@ -41,6 +44,9 @@ func RunConfigTask(ctx context.Context, config runclient.Config, request ConfigT
 			Summary: "configured default profile",
 		}, nil
 	case ConfigTaskActionClearProfile:
+		if rejection := rejectConfigWriteAutonomy(request.Autonomy); rejection != "" {
+			return rejectedConfig(convertedPaths, rejection), nil
+		}
 		if err := runclient.ClearDefaultProfileConfig(ctx, config); err != nil {
 			return ConfigTaskResult{}, err
 		}
@@ -57,6 +63,9 @@ func RunConfigTask(ctx context.Context, config runclient.Config, request ConfigT
 		if request.VaultIgnorePaths == nil {
 			return rejectedConfig(convertedPaths, "vault_ignore_paths is required"), nil
 		}
+		if rejection := rejectConfigWriteAutonomy(request.Autonomy); rejection != "" {
+			return rejectedConfig(convertedPaths, rejection), nil
+		}
 		if _, err := runclient.WriteVaultIgnorePathConfig(ctx, config, *request.VaultIgnorePaths); err != nil {
 			return ConfigTaskResult{}, err
 		}
@@ -64,6 +73,20 @@ func RunConfigTask(ctx context.Context, config runclient.Config, request ConfigT
 	default:
 		return rejectedConfig(convertedPaths, fmt.Sprintf("unsupported config action %q", action)), nil
 	}
+}
+
+func rejectConfigWriteAutonomy(input AutonomyModes) string {
+	if strings.TrimSpace(input.ApprovalMode) == "" {
+		return "config write actions require explicit autonomy.approval_mode approve_write, autonomous_disposable, or autonomous_trusted"
+	}
+	normalized, rejection := normalizeAutonomyModes(input)
+	if rejection != "" {
+		return rejection
+	}
+	if normalized.ApprovalMode == ApprovalModeProposeOnly {
+		return "autonomy.approval_mode propose_only does not allow mutating config actions"
+	}
+	return ""
 }
 
 func inspectConfigResult(ctx context.Context, config runclient.Config, resolved runclient.ResolvedPaths, convertedPaths Paths) (ConfigTaskResult, error) {

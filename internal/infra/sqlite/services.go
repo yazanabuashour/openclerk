@@ -199,6 +199,34 @@ func (s *Store) rebuildServices(ctx context.Context) error {
 		return err
 	}
 
+	type projectedService struct {
+		doc       domain.Document
+		projected serviceProjection
+		summary   string
+		citation  domain.Citation
+	}
+	servicesByID := map[string][]projectedService{}
+	serviceIDs := []string{}
+	for _, doc := range documents {
+		projected, ok, err := extractServiceProjection(doc.Body)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			continue
+		}
+		if _, exists := servicesByID[projected.ServiceID]; !exists {
+			serviceIDs = append(serviceIDs, projected.ServiceID)
+		}
+		servicesByID[projected.ServiceID] = append(servicesByID[projected.ServiceID], projectedService{
+			doc:       doc,
+			projected: projected,
+			summary:   firstSummaryParagraph(doc.Body),
+			citation:  documentCitation(doc, chunksByDoc[doc.DocID]),
+		})
+	}
+	sort.Strings(serviceIDs)
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return domain.InternalError("begin services rebuild", err)
@@ -218,39 +246,31 @@ func (s *Store) rebuildServices(ctx context.Context) error {
 	}
 
 	now := s.now().UTC()
-	seenServiceIDs := map[string]string{}
-	for _, doc := range documents {
-		projected, ok := extractServiceProjection(doc.Body)
-		if !ok {
-			continue
-		}
-		if firstPath, exists := seenServiceIDs[projected.ServiceID]; exists {
-			if err := insertProvenanceEventIfAbsent(ctx, tx, domain.ProvenanceEvent{
-				EventID:    hashID("event", "service_duplicate_skipped", projected.ServiceID, doc.DocID),
-				EventType:  "service_duplicate_skipped",
-				RefKind:    "service",
-				RefID:      projected.ServiceID,
-				SourceRef:  "doc:" + doc.DocID,
-				OccurredAt: now,
-				Details: map[string]string{
-					"service_id": projected.ServiceID,
-					"path":       doc.Path,
-					"kept_path":  firstPath,
-				},
-			}); err != nil {
-				return domain.InternalError("record duplicate service skip", err)
+	for _, serviceID := range serviceIDs {
+		items := servicesByID[serviceID]
+		if len(items) > 1 {
+			sources := make([]duplicateProjectionSource, 0, len(items))
+			for _, item := range items {
+				sources = append(sources, duplicateProjectionSource{DocID: item.doc.DocID, Path: item.doc.Path})
+			}
+			projection := duplicateProjectionState("services", "service", serviceID, sources, previousStates, now)
+			if err := upsertProjectionState(ctx, tx, projection); err != nil {
+				return err
+			}
+			if err := insertDuplicateProjectionEvent(ctx, tx, "service_duplicate_rejected", "service", serviceID, projection, now); err != nil {
+				return domain.InternalError("record duplicate service projection event", err)
 			}
 			continue
 		}
-		seenServiceIDs[projected.ServiceID] = doc.Path
-		summary := firstSummaryParagraph(doc.Body)
+		item := items[0]
+		projected := item.projected
 		versionInputs := []string{
 			"service:" + projected.ServiceID,
 			"name:" + projected.Name,
 			"status:" + projected.Status,
 			"owner:" + projected.Owner,
 			"interface:" + projected.Interface,
-			"updated:" + doc.UpdatedAt.UTC().Format(time.RFC3339Nano),
+			"updated:" + item.doc.UpdatedAt.UTC().Format(time.RFC3339Nano),
 		}
 		for _, fact := range projected.Facts {
 			versionInputs = append(versionInputs, "fact:"+fact.Key+"="+fact.Value)
@@ -271,8 +291,8 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 			projected.Status,
 			projected.Owner,
 			projected.Interface,
-			summary,
-			doc.DocID,
+			item.summary,
+			item.doc.DocID,
 			serviceUpdatedAt.UTC().Format(time.RFC3339Nano),
 		); err != nil {
 			return domain.InternalError("insert service record", err)
@@ -294,17 +314,16 @@ VALUES (?, ?, ?, ?)`,
 				return domain.InternalError("insert service fact", err)
 			}
 		}
-		citation := documentCitation(doc, chunksByDoc[doc.DocID])
 		if _, err := tx.ExecContext(ctx, `
-INSERT INTO service_citations (service_id, source_doc_id, source_chunk_id, source_path, source_heading, source_line_start, source_line_end)
-VALUES (?, ?, ?, ?, ?, ?, ?)`,
+	INSERT INTO service_citations (service_id, source_doc_id, source_chunk_id, source_path, source_heading, source_line_start, source_line_end)
+	VALUES (?, ?, ?, ?, ?, ?, ?)`,
 			projected.ServiceID,
-			citation.DocID,
-			citation.ChunkID,
-			citation.Path,
-			nullIfEmpty(citation.Heading),
-			citation.LineStart,
-			citation.LineEnd,
+			item.citation.DocID,
+			item.citation.ChunkID,
+			item.citation.Path,
+			nullIfEmpty(item.citation.Heading),
+			item.citation.LineStart,
+			item.citation.LineEnd,
 		); err != nil {
 			return domain.InternalError("insert service citation", err)
 		}
@@ -314,11 +333,11 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`,
 				EventType:  "service_extracted_from_doc",
 				RefKind:    "service",
 				RefID:      projected.ServiceID,
-				SourceRef:  "doc:" + doc.DocID,
+				SourceRef:  "doc:" + item.doc.DocID,
 				OccurredAt: now,
 				Details: map[string]string{
 					"service_name": projected.Name,
-					"path":         doc.Path,
+					"path":         item.doc.Path,
 				},
 			}); err != nil {
 				return domain.InternalError("record services provenance event", err)
@@ -328,12 +347,12 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`,
 			Projection:        "services",
 			RefKind:           "service",
 			RefID:             projected.ServiceID,
-			SourceRef:         "doc:" + doc.DocID,
+			SourceRef:         "doc:" + item.doc.DocID,
 			Freshness:         "fresh",
 			ProjectionVersion: version,
 			UpdatedAt:         serviceUpdatedAt,
 			Details: map[string]string{
-				"path":      doc.Path,
+				"path":      item.doc.Path,
 				"status":    projected.Status,
 				"owner":     projected.Owner,
 				"interface": projected.Interface,
@@ -347,7 +366,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`,
 				EventType:  "projection_refreshed",
 				RefKind:    "projection",
 				RefID:      "services:" + projected.ServiceID,
-				SourceRef:  "doc:" + doc.DocID,
+				SourceRef:  "doc:" + item.doc.DocID,
 				OccurredAt: now,
 				Details: map[string]string{
 					"projection": "services",
@@ -369,9 +388,12 @@ func supportsServices(backend domain.BackendKind) bool {
 	return backend == domain.BackendOpenClerk
 }
 
-func extractServiceProjection(body string) (serviceProjection, bool) {
+func extractServiceProjection(body string) (serviceProjection, bool, error) {
 	lines := strings.Split(body, "\n")
-	frontmatter, contentStart := parseFrontmatter(lines)
+	frontmatter, contentStart, err := parseFrontmatter(lines)
+	if err != nil {
+		return serviceProjection{}, false, err
+	}
 	recordFacts := extractRecordFacts(lines, contentStart)
 	facts := make([]domain.ServiceFact, 0, len(recordFacts))
 	for _, fact := range recordFacts {
@@ -391,7 +413,7 @@ func extractServiceProjection(body string) (serviceProjection, bool) {
 		projected.Name = strings.TrimSpace(frontmatter["entity_name"])
 	}
 	if projected.ServiceID == "" || projected.Name == "" {
-		return serviceProjection{}, false
+		return serviceProjection{}, false, nil
 	}
 	if projected.Status == "" {
 		projected.Status = serviceFactValue(facts, "status")
@@ -402,7 +424,7 @@ func extractServiceProjection(body string) (serviceProjection, bool) {
 	if projected.Interface == "" {
 		projected.Interface = serviceFactValue(facts, "interface")
 	}
-	return projected, true
+	return projected, true, nil
 }
 
 func serviceFactValue(facts []domain.ServiceFact, key string) string {
@@ -416,7 +438,10 @@ func serviceFactValue(facts []domain.ServiceFact, key string) string {
 
 func firstSummaryParagraph(body string) string {
 	lines := strings.Split(body, "\n")
-	_, contentStart := parseFrontmatter(lines)
+	_, contentStart, err := parseFrontmatter(lines)
+	if err != nil {
+		return ""
+	}
 	summaryLines := []string{}
 	inSummary := false
 	summaryLevel := 0

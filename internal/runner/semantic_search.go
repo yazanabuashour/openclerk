@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/yazanabuashour/openclerk/internal/runclient"
@@ -70,7 +71,7 @@ func runSemanticSearch(ctx context.Context, client *runclient.Client, options Se
 	if !moduleConfig.Enabled {
 		return semanticModuleBlockedResult(options, "module_disabled", errors.New("semantic embedding module is disabled")), nil
 	}
-	request := semanticModuleRequestFromOptions(options, moduleConfig.ProviderConfig)
+	request := semanticModuleRequestFromOptions(options, moduleConfig.ProviderConfig, paths)
 	if request.Provider == runclient.SemanticModuleProviderOllama {
 		if rejection := validateSemanticSearchOllamaURL(request.OllamaURL); rejection != "" {
 			return semanticModuleBlockedResult(options, "module_config_invalid", errors.New(rejection)), nil
@@ -110,7 +111,7 @@ func normalizeSemanticModuleSearchOptions(options SemanticSearchOptions) Semanti
 	return options
 }
 
-func semanticModuleRequestFromOptions(options SemanticSearchOptions, config map[string]string) semanticModuleSearchRequest {
+func semanticModuleRequestFromOptions(options SemanticSearchOptions, config map[string]string, paths runclient.Paths) semanticModuleSearchRequest {
 	request := semanticModuleSearchRequest{
 		Query:                     options.Query,
 		PathPrefix:                options.PathPrefix,
@@ -119,12 +120,12 @@ func semanticModuleRequestFromOptions(options SemanticSearchOptions, config map[
 		MetadataValue:             options.MetadataValue,
 		Limit:                     options.Limit,
 		Provider:                  options.Provider,
-		OllamaURL:                 firstNonEmpty(options.OllamaURL, config["ollama_url"]),
+		OllamaURL:                 strings.TrimSpace(config["ollama_url"]),
 		EmbeddingModel:            firstNonEmpty(options.EmbeddingModel, config["embedding_model"]),
-		GeminiAPIBase:             firstNonEmpty(options.GeminiAPIBase, config["gemini_api_base"]),
+		GeminiAPIBase:             strings.TrimSpace(config["gemini_api_base"]),
 		GeminiConfigKey:           "GEMINI_API_KEY",
 		EmbeddingOutputDimensions: options.EmbeddingOutputDimensions,
-		CacheDir:                  options.CacheDir,
+		CacheDir:                  semanticModuleCacheDir(paths.DatabasePath),
 	}
 	if request.EmbeddingOutputDimensions == 0 {
 		if value := strings.TrimSpace(config["embedding_output_dimensions"]); value != "" {
@@ -135,6 +136,10 @@ func semanticModuleRequestFromOptions(options SemanticSearchOptions, config map[
 		}
 	}
 	return request
+}
+
+func semanticModuleCacheDir(databasePath string) string {
+	return filepath.Join(filepath.Dir(databasePath), "cache", "semantic-retrieval-adapter")
 }
 
 func executeSemanticModule(ctx context.Context, moduleConfig runclient.SemanticModuleConfig, databasePath string, request semanticModuleSearchRequest) (semanticModuleSearchResponse, error) {

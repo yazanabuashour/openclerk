@@ -8,7 +8,10 @@ duplicate, or silently rewrite truth.
 ## Watch OpenClerk catch stale memory in 60 seconds
 
 ```bash
-curl -fsSL https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh | sh
+tmp_dir="$(mktemp -d)"
+curl -fsSLo "$tmp_dir/install.sh" https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh
+gh attestation verify "$tmp_dir/install.sh" --repo yazanabuashour/openclerk
+OPENCLERK_INSTALL_DIR="$HOME/.local/bin" sh "$tmp_dir/install.sh"
 openclerk demo init
 openclerk demo ask "what changed and what is stale?"
 ```
@@ -53,7 +56,10 @@ For a more detailed buyer matrix, see [`docs/comparison.md`](docs/comparison.md)
 **Direct install:**
 
 ```bash
-curl -fsSL https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh | sh
+tmp_dir="$(mktemp -d)"
+curl -fsSLo "$tmp_dir/install.sh" https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh
+gh attestation verify "$tmp_dir/install.sh" --repo yazanabuashour/openclerk
+OPENCLERK_INSTALL_DIR="$HOME/.local/bin" sh "$tmp_dir/install.sh"
 ```
 
 Full install options: [`docs/install.md`](docs/install.md)
@@ -61,13 +67,13 @@ Full install options: [`docs/install.md`](docs/install.md)
 **Or tell your agent:**
 
 ```text
-Install OpenClerk into $HOME/.local/bin using https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh or the requested release. Register release-matched skills/openclerk/SKILL.md from installer output. Verify command -v openclerk, openclerk --version, and skill path. Report only after runner and skill verify.
+Install OpenClerk into $HOME/.local/bin from https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh only after gh attestation verify passes. Register release-matched skills/openclerk/SKILL.md. Verify command -v openclerk, openclerk --version, skill path, runner and skill.
 ```
 
 **Upgrade prompt:**
 
 ```text
-Upgrade OpenClerk using https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh or the requested release. Re-register release-matched skills/openclerk/SKILL.md from installer output. Verify command -v openclerk, openclerk --version, and skill path. Report only after runner and skill verify.
+Upgrade OpenClerk from https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh only after gh attestation verify passes. Re-register release-matched skills/openclerk/SKILL.md. Verify command -v openclerk, openclerk --version, skill path, runner and skill.
 ```
 
 **Then bind your vault and verify retrieval:**
@@ -129,7 +135,7 @@ Install prompt:
 
 ```text
 Install the OpenClerk module <module-provider> using <module-manifest-path>.
-Use <module-command> on PATH, register <module-skill-path>, and verify with `openclerk module` list_modules. Do not pass command_args or edit SQLite directly.
+Use the resolved <module-command> path, register <module-skill-path>, and verify with `openclerk module` list_modules. Do not pass command_args or edit SQLite directly.
 ```
 
 Upgrade prompt:

@@ -104,7 +104,7 @@ func runRetrievalEvalCapture(ctx context.Context, client *runclient.Client, opti
 		LatencyMS:     latencyMS,
 		CapturedAt:    capturedAt,
 	}
-	if err := appendRetrievalEvalCase(capturePath, row); err != nil {
+	if err := appendRetrievalEvalCase(filepath.Dir(client.Paths().DatabasePath), capturePath, row); err != nil {
 		return RetrievalEvalCaptureReport{}, err
 	}
 	report := RetrievalEvalCaptureReport{
@@ -130,7 +130,7 @@ func runRetrievalEvalReplay(ctx context.Context, client *runclient.Client, optio
 		return RetrievalEvalReplayReport{}, err
 	}
 	limit := cappedRunnerLimit(options.Limit, 100, 1000)
-	cases, err := readRetrievalEvalCases(capturePath, limit)
+	cases, err := readRetrievalEvalCases(filepath.Dir(client.Paths().DatabasePath), capturePath, limit)
 	if err != nil {
 		return RetrievalEvalReplayReport{}, err
 	}
@@ -210,11 +210,24 @@ func insidePath(root string, candidate string) bool {
 	return rel == "." || (!strings.HasPrefix(rel, ".."+string(filepath.Separator)) && rel != "..")
 }
 
-func appendRetrievalEvalCase(path string, row RetrievalEvalCase) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return domain.InternalError("create retrieval eval directory", err)
+func appendRetrievalEvalCase(dataDir string, path string, row RetrievalEvalCase) error {
+	relPath, err := retrievalEvalRootRelPath(dataDir, path)
+	if err != nil {
+		return err
 	}
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+	root, err := os.OpenRoot(dataDir)
+	if err != nil {
+		return domain.InternalError("open retrieval eval data directory", err)
+	}
+	defer func() {
+		_ = root.Close()
+	}()
+	if parent := filepath.Dir(relPath); parent != "." {
+		if err := root.MkdirAll(parent, 0o700); err != nil {
+			return domain.InternalError("create retrieval eval directory", err)
+		}
+	}
+	file, err := root.OpenFile(relPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
 		return domain.InternalError("open retrieval eval capture", err)
 	}
@@ -231,8 +244,38 @@ func appendRetrievalEvalCase(path string, row RetrievalEvalCase) error {
 	return nil
 }
 
-func readRetrievalEvalCases(path string, limit int) ([]RetrievalEvalCase, error) {
-	file, err := os.Open(path)
+func retrievalEvalRootRelPath(dataDir string, path string) (string, error) {
+	absDataDir, err := filepath.Abs(dataDir)
+	if err != nil {
+		return "", domain.InternalError("resolve retrieval eval data directory", err)
+	}
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", domain.InternalError("resolve retrieval eval capture", err)
+	}
+	relPath, err := filepath.Rel(absDataDir, absPath)
+	if err != nil {
+		return "", domain.InternalError("resolve retrieval eval capture", err)
+	}
+	if relPath == "." || relPath == ".." || strings.HasPrefix(relPath, ".."+string(filepath.Separator)) || filepath.IsAbs(relPath) {
+		return "", domain.ValidationError("retrieval eval capture_path must stay within the OpenClerk data directory", nil)
+	}
+	return relPath, nil
+}
+
+func readRetrievalEvalCases(dataDir string, path string, limit int) ([]RetrievalEvalCase, error) {
+	relPath, err := retrievalEvalRootRelPath(dataDir, path)
+	if err != nil {
+		return nil, err
+	}
+	root, err := os.OpenRoot(dataDir)
+	if err != nil {
+		return nil, domain.InternalError("open retrieval eval data directory", err)
+	}
+	defer func() {
+		_ = root.Close()
+	}()
+	file, err := root.Open(relPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, domain.ValidationError("retrieval eval capture_path does not exist", map[string]any{"capture_path": path})

@@ -77,7 +77,7 @@ func verifyModuleAgentInstall(ctx context.Context, paths evalPaths, finalMessage
 		if module.Provider == moduleAgentInstallProvider &&
 			module.Enabled &&
 			module.ManifestPath == moduleAgentInstallManifestPath &&
-			module.Command == moduleAgentInstallCommand &&
+			moduleAgentCommandVerified(module) &&
 			module.ProviderConfig["embedding_model"] == moduleAgentInstallEmbeddingModel &&
 			module.ProviderConfig["ollama_url"] == moduleAgentInstallOllamaURL &&
 			module.VerificationStatus == "verified" &&
@@ -142,7 +142,7 @@ func verifyModuleAgentUpgrade(ctx context.Context, paths evalPaths, finalMessage
 		if module.Provider == moduleAgentInstallProvider &&
 			module.Enabled &&
 			module.ManifestPath == moduleAgentInstallManifestPath &&
-			module.Command == moduleAgentInstallCommand &&
+			moduleAgentCommandVerified(module) &&
 			module.ProviderConfig["embedding_model"] == moduleAgentUpgradeEmbeddingModel &&
 			module.ProviderConfig["ollama_url"] == moduleAgentInstallOllamaURL &&
 			module.VerificationStatus == "verified" &&
@@ -176,6 +176,13 @@ func verifyModuleAgentUpgrade(ctx context.Context, paths evalPaths, finalMessage
 		Details:       missingDetails(failures),
 		Documents:     []string{moduleAgentInstallManifestPath, moduleAgentInstallSkillPath},
 	}, nil
+}
+
+func moduleAgentCommandVerified(module runclient.SemanticModuleConfig) bool {
+	return filepath.IsAbs(module.Command) &&
+		filepath.Base(module.Command) == moduleAgentInstallCommand &&
+		module.CommandSHA256 != "" &&
+		len(module.CommandArgs) == 0
 }
 
 func installedEvalSkillPath(paths evalPaths) (string, bool) {

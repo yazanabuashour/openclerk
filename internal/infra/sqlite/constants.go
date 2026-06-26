@@ -11,6 +11,11 @@ const (
 	defaultLayoutConventionVersion    = "root_v1"
 	rootSynthesisPathPrefix           = "synthesis/"
 	maxSourceDownloadBytes            = 50 << 20
+	maxVaultMarkdownFiles             = 10000
+	maxVaultMarkdownDocumentBytes     = 5 << 20
+	maxVaultMarkdownSections          = 1000
+	maxVaultMarkdownMetadataFields    = 256
+	maxLexicalFallbackCandidateRows   = 1000
 	sourceURLModeCreate               = "create"
 	sourceURLModeUpdate               = "update"
 	sourceTypePDF                     = "pdf"

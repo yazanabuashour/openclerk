@@ -344,7 +344,7 @@ func TestRunnerConfigProfileJSONPersistsAcrossInvocations(t *testing.T) {
 	t.Parallel()
 
 	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
-	configureRequest := `{"action":"configure_profile","profile":{"approval_mode":"propose_only","drafting_mode":"require_explicit_fields","write_target_mode":"existing_only","citation_mode":"strict","privacy_mode":"private_summary_only","audience_mode":"executive_summary"}}`
+	configureRequest := `{"action":"configure_profile","autonomy":{"approval_mode":"approve_write"},"profile":{"approval_mode":"propose_only","drafting_mode":"require_explicit_fields","write_target_mode":"existing_only","citation_mode":"strict","privacy_mode":"private_summary_only","audience_mode":"executive_summary"}}`
 	var configured runner.ConfigTaskResult
 	code, stderr := runJSON(t, []string{"config", "--db", dbPath}, configureRequest, &configured)
 	if code != 0 {
@@ -377,7 +377,7 @@ func TestRunnerConfigProfileJSONPersistsAcrossInvocations(t *testing.T) {
 	}
 
 	var invalid runner.ConfigTaskResult
-	code, stderr = runJSON(t, []string{"config", "--db", dbPath}, `{"action":"configure_profile","profile":{"privacy_mode":"public_everything"}}`, &invalid)
+	code, stderr = runJSON(t, []string{"config", "--db", dbPath}, `{"action":"configure_profile","autonomy":{"approval_mode":"approve_write"},"profile":{"privacy_mode":"public_everything"}}`, &invalid)
 	if code != 0 {
 		t.Fatalf("invalid profile exit = %d stderr=%s", code, stderr)
 	}
@@ -386,7 +386,7 @@ func TestRunnerConfigProfileJSONPersistsAcrossInvocations(t *testing.T) {
 	}
 
 	var cleared runner.ConfigTaskResult
-	code, stderr = runJSON(t, []string{"config", "--db", dbPath}, `{"action":"clear_profile"}`, &cleared)
+	code, stderr = runJSON(t, []string{"config", "--db", dbPath}, `{"action":"clear_profile","autonomy":{"approval_mode":"approve_write"}}`, &cleared)
 	if code != 0 {
 		t.Fatalf("clear profile exit = %d stderr=%s", code, stderr)
 	}
@@ -399,7 +399,7 @@ func TestRunnerConfigVaultIgnoreJSONPersistsAcrossInvocations(t *testing.T) {
 	t.Parallel()
 
 	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
-	configureRequest := `{"action":"configure_vault_ignore_paths","vault_ignore_paths":["scratch/"]}`
+	configureRequest := `{"action":"configure_vault_ignore_paths","autonomy":{"approval_mode":"approve_write"},"vault_ignore_paths":["scratch/"]}`
 	var configured runner.ConfigTaskResult
 	code, stderr := runJSON(t, []string{"config", "--db", dbPath}, configureRequest, &configured)
 	if code != 0 {
@@ -464,7 +464,8 @@ func TestRunnerModuleInstallConfigureListRemoveJSON(t *testing.T) {
 
 	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
 	manifestPath := writeCLISemanticModuleManifest(t, t.TempDir(), "gemini")
-	installRequest := `{"action":"install_module","module":{"provider":"gemini","manifest_path":"` + filepath.ToSlash(manifestPath) + `","command":"semantic-retrieval-adapter","provider_config":{"embedding_model":"gemini-embedding-001","gemini_api_base":"https://generativelanguage.googleapis.com/v1beta","api_key":"do-not-store"}}}`
+	commandPath := writeCLIExecutable(t, "semantic-retrieval-adapter")
+	installRequest := `{"action":"install_module","module":{"provider":"gemini","manifest_path":"` + filepath.ToSlash(manifestPath) + `","command":"` + filepath.ToSlash(commandPath) + `","provider_config":{"embedding_model":"gemini-embedding-001","gemini_api_base":"https://generativelanguage.googleapis.com/v1beta","api_key":"do-not-store"}}}`
 	var installResult moduleTaskResult
 	code, stderr := runJSON(t, []string{"module", "--db", dbPath}, installRequest, &installResult)
 	if code != 0 {
@@ -537,7 +538,9 @@ func TestRunnerModuleInstallTesseractOCRJSON(t *testing.T) {
 
 	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
 	manifestPath := writeCLIOCRModuleManifest(t, t.TempDir())
-	installRequest := `{"action":"install_module","module":{"kind":"ocr_provider","provider":"tesseract","manifest_path":"` + filepath.ToSlash(manifestPath) + `","command":"tesseract","provider_config":{"ocrmypdf_command":"ocrmypdf","language":"eng"}}}`
+	tesseractPath := writeCLIExecutable(t, "tesseract")
+	ocrmypdfPath := writeCLIExecutable(t, "ocrmypdf")
+	installRequest := `{"action":"install_module","module":{"kind":"ocr_provider","provider":"tesseract","manifest_path":"` + filepath.ToSlash(manifestPath) + `","command":"` + filepath.ToSlash(tesseractPath) + `","provider_config":{"ocrmypdf_command":"` + filepath.ToSlash(ocrmypdfPath) + `","language":"eng"}}}`
 	var installResult moduleTaskResult
 	code, stderr := runJSON(t, []string{"module", "--db", dbPath}, installRequest, &installResult)
 	if code != 0 {
@@ -567,11 +570,12 @@ func TestRunnerModuleInstallUsesManifestRootInput(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
 	releaseRoot := t.TempDir()
 	manifestPath := writeCLISemanticModuleManifest(t, filepath.Join(releaseRoot, "modules", "ollama-embeddings"), "ollama")
+	commandPath := writeCLIExecutable(t, "semantic-retrieval-adapter")
 	manifestRel, err := filepath.Rel(releaseRoot, manifestPath)
 	if err != nil {
 		t.Fatalf("relative manifest path: %v", err)
 	}
-	installRequest := `{"action":"install_module","module":{"provider":"ollama","manifest_path":"` + filepath.ToSlash(manifestRel) + `","manifest_root":"` + filepath.ToSlash(releaseRoot) + `","command":"semantic-retrieval-adapter","provider_config":{"embedding_model":"embeddinggemma","ollama_url":"http://localhost:11434"}}}`
+	installRequest := `{"action":"install_module","module":{"provider":"ollama","manifest_path":"` + filepath.ToSlash(manifestRel) + `","manifest_root":"` + filepath.ToSlash(releaseRoot) + `","command":"` + filepath.ToSlash(commandPath) + `","provider_config":{"embedding_model":"embeddinggemma","ollama_url":"http://localhost:11434"}}}`
 	var installResult moduleTaskResult
 	code, stderr := runJSON(t, []string{"module", "--db", dbPath}, installRequest, &installResult)
 	if code != 0 {
@@ -1218,6 +1222,9 @@ func writeCLISemanticModuleManifest(t *testing.T, dir string, provider string) s
 			"type": "command",
 			"name": "semantic-retrieval-adapter search",
 		}},
+		"requires": map[string]any{
+			"tools": []string{"semantic-retrieval-adapter"},
+		},
 		"authority": map[string]any{
 			"default":        "read_only",
 			"durable_writes": "forbidden",
@@ -1253,7 +1260,13 @@ func writeCLIOCRModuleManifest(t *testing.T, dir string) string {
 		"provides": []map[string]any{{
 			"type": "command",
 			"name": "tesseract ocr",
+		}, {
+			"type": "command",
+			"name": "ocrmypdf ocr",
 		}},
+		"requires": map[string]any{
+			"tools": []string{"tesseract", "ocrmypdf"},
+		},
 		"authority": map[string]any{
 			"default":        "read_only",
 			"durable_writes": "forbidden",
@@ -1269,6 +1282,17 @@ func writeCLIOCRModuleManifest(t *testing.T, dir string) string {
 	}
 	if err := os.WriteFile(path, data, 0o600); err != nil {
 		t.Fatalf("write OCR manifest: %v", err)
+	}
+	return path
+}
+
+func writeCLIExecutable(t *testing.T, name string) string {
+	t.Helper()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, name)
+	if err := os.WriteFile(path, []byte("#!/bin/sh\nprintf '%s\\n' "+name+"\n"), 0o755); err != nil {
+		t.Fatalf("write executable %s: %v", path, err)
 	}
 	return path
 }

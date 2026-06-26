@@ -38,6 +38,7 @@ const (
 	ollamaEmbedBatchSize          = 4
 	semanticChunkTargetCharacters = 1800
 	maxSemanticChunks             = 5000
+	maxSemanticProviderDuration   = 2 * time.Minute
 )
 
 const defaultAdapterVersion = "0.1.0"
@@ -310,11 +311,13 @@ func executeSearch(ctx context.Context, config runclient.Config, request searchR
 		return baseResponse(request, providerStatus{Provider: request.Provider, Model: request.EmbeddingModel, Status: "empty_corpus"}, cacheStatus{Status: "not_used"}), nil
 	}
 	provider := providerStatus{Provider: request.Provider, Model: request.EmbeddingModel, Status: "completed"}
-	cache, cachePath, cacheRef := cacheForRequest(request, chunks)
+	cache, cachePath, cacheRef := cacheForRequest(paths.DatabasePath, request, chunks)
 	cached, cacheReadStatus := readCache(cachePath, cache, chunks)
 	cacheStatusValue := cacheStatus{Status: cacheReadStatus.Status, CacheRef: cacheRef, ChunkCount: len(chunks)}
+	embeddingCtx, cancelEmbedding := context.WithTimeout(ctx, maxSemanticProviderDuration)
+	defer cancelEmbedding()
 	if len(cached) == 0 {
-		vectorChunks, status, err := embedChunks(ctx, request, paths.DatabasePath, chunks)
+		vectorChunks, status, err := embedChunks(embeddingCtx, request, paths.DatabasePath, chunks)
 		cacheHitAfterFallback := false
 		provider = status
 		if err != nil && request.FallbackProvider != "" && request.FallbackProvider != request.Provider {
@@ -323,7 +326,7 @@ func executeSearch(ctx context.Context, config runclient.Config, request searchR
 			fallbackRequest.Provider = request.FallbackProvider
 			fallbackRequest.EmbeddingModel = defaultModel(fallbackRequest.Provider, "")
 			request = fallbackRequest
-			cache, cachePath, cacheRef = cacheForRequest(request, chunks)
+			cache, cachePath, cacheRef = cacheForRequest(paths.DatabasePath, request, chunks)
 			if fallbackCached, _ := readCache(cachePath, cache, chunks); len(fallbackCached) > 0 {
 				vectorChunks = fallbackCached
 				status = providerStatus{
@@ -337,7 +340,7 @@ func executeSearch(ctx context.Context, config runclient.Config, request searchR
 				cacheStatusValue = cacheStatus{Status: "hit", CacheRef: cacheRef, ChunkCount: len(fallbackCached)}
 				cacheHitAfterFallback = true
 			} else {
-				vectorChunks, status, err = embedChunks(ctx, request, paths.DatabasePath, chunks)
+				vectorChunks, status, err = embedChunks(embeddingCtx, request, paths.DatabasePath, chunks)
 				status.FallbackProvider = originalFallbackProvider
 			}
 			provider = status
@@ -360,7 +363,7 @@ func executeSearch(ctx context.Context, config runclient.Config, request searchR
 		cacheStatusValue = cacheStatus{Status: "hit", CacheRef: cacheRef, ChunkCount: len(chunks)}
 		provider.EmbeddingDims = len(chunks[0].Vector)
 	}
-	queryVector, status, err := embedQuery(ctx, request, paths.DatabasePath, request.Query)
+	queryVector, status, err := embedQuery(embeddingCtx, request, paths.DatabasePath, request.Query)
 	provider.RequestCount += status.RequestCount
 	provider.RetryCount += status.RetryCount
 	provider.BackoffSeconds = math.Round((provider.BackoffSeconds+status.BackoffSeconds)*100) / 100
@@ -411,6 +414,7 @@ func normalizeRequest(request searchRequest) searchRequest {
 		request.GeminiConfigKey = geminiKeyName
 	}
 	request.EmbeddingModel = defaultModel(request.Provider, strings.TrimSpace(request.EmbeddingModel))
+	request.CacheDir = strings.TrimSpace(request.CacheDir)
 	if request.EmbeddingOutputDimensions == 0 {
 		request.EmbeddingOutputDimensions = 3072
 	}
@@ -523,7 +527,15 @@ func defaultModel(provider string, model string) string {
 }
 
 func unsafePrefix(prefix string) bool {
-	return filepath.IsAbs(prefix) || strings.HasPrefix(prefix, "/") || prefix == "." || prefix == ".." || strings.HasPrefix(prefix, "../")
+	if filepath.IsAbs(prefix) || strings.HasPrefix(prefix, "/") || prefix == "." {
+		return true
+	}
+	for _, segment := range strings.Split(strings.ReplaceAll(filepath.ToSlash(prefix), `\`, "/"), "/") {
+		if segment == ".." {
+			return true
+		}
+	}
+	return false
 }
 
 func normalizePrefix(raw string) string {
@@ -606,6 +618,9 @@ func loadChunks(ctx context.Context, client *runclient.Client, request searchReq
 	}
 	chunks := []semanticChunk{}
 	for _, summary := range documents {
+		if len(chunks) >= maxSemanticChunks {
+			return nil, fmt.Errorf("semantic corpus exceeds maximum supported chunks (%d)", maxSemanticChunks)
+		}
 		doc, err := client.GetDocument(ctx, summary.DocID)
 		if err != nil {
 			return nil, err
@@ -797,7 +812,7 @@ func remainingLongLineSegments(line string, limit int) int {
 	return (length + limit - 1) / limit
 }
 
-func cacheForRequest(request searchRequest, chunks []semanticChunk) (cacheFile, string, string) {
+func cacheForRequest(databasePath string, request searchRequest, chunks []semanticChunk) (cacheFile, string, string) {
 	corpusHash := corpusHash(chunks)
 	key := hashString(strings.Join([]string{
 		request.Provider,
@@ -809,21 +824,17 @@ func cacheForRequest(request searchRequest, chunks []semanticChunk) (cacheFile, 
 		request.MetadataValue,
 		corpusHash,
 	}, "\n"))
-	cacheDir := strings.TrimSpace(request.CacheDir)
-	if cacheDir == "" {
-		if userCache, err := os.UserCacheDir(); err == nil {
-			cacheDir = filepath.Join(userCache, "openclerk", "semantic-retrieval-adapter")
-		} else {
-			cacheDir = filepath.Join(os.TempDir(), "openclerk-semantic-retrieval-adapter-cache")
-		}
-	}
 	cache := cacheFile{
 		SchemaVersion: "semantic_retrieval_adapter_cache.v1",
 		Provider:      request.Provider,
 		Model:         request.EmbeddingModel,
 		CorpusHash:    corpusHash,
 	}
-	return cache, filepath.Join(cacheDir, key+".json"), "user_cache:semantic-retrieval-adapter/" + key + ".json"
+	return cache, filepath.Join(semanticCacheRoot(databasePath), key+".json"), "openclerk_state:semantic-retrieval-adapter/" + key + ".json"
+}
+
+func semanticCacheRoot(databasePath string) string {
+	return filepath.Join(filepath.Dir(databasePath), "cache", "semantic-retrieval-adapter")
 }
 
 func readCache(cachePath string, expected cacheFile, chunks []semanticChunk) ([]semanticChunk, cacheStatus) {
@@ -1199,13 +1210,32 @@ func (c geminiClient) postJSONWithRetry(ctx context.Context, endpoint string, pa
 		stats.RetryCount++
 		delay := geminiRetryDelay(err, attempt)
 		stats.BackoffSeconds += delay.Seconds()
-		sleep := c.sleep
-		if sleep == nil {
-			sleep = time.Sleep
+		if err := sleepWithContext(ctx, delay, c.sleep); err != nil {
+			return stats, err
 		}
-		sleep(delay)
 	}
 	return stats, errors.New("gemini retry loop exhausted")
+}
+
+func sleepWithContext(ctx context.Context, delay time.Duration, sleep func(time.Duration)) error {
+	if delay <= 0 {
+		return ctx.Err()
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if sleep != nil {
+		sleep(delay)
+		return ctx.Err()
+	}
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
 }
 
 func (c geminiClient) postJSON(ctx context.Context, endpoint string, payload any, result any) error {

@@ -8,13 +8,19 @@ shell.
 Install the latest runner:
 
 ```bash
-OPENCLERK_INSTALL_DIR="$HOME/.local/bin" sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh)"
+tmp_dir="$(mktemp -d)"
+curl -fsSLo "$tmp_dir/install.sh" https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh
+gh attestation verify "$tmp_dir/install.sh" --repo yazanabuashour/openclerk
+OPENCLERK_INSTALL_DIR="$HOME/.local/bin" sh "$tmp_dir/install.sh"
 ```
 
 Install a pinned release:
 
 ```bash
-OPENCLERK_INSTALL_DIR="$HOME/.local/bin" OPENCLERK_VERSION=v0.2.4 sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/download/v0.2.4/install.sh)"
+tmp_dir="$(mktemp -d)"
+curl -fsSLo "$tmp_dir/install.sh" https://github.com/yazanabuashour/openclerk/releases/download/v0.2.4/install.sh
+gh attestation verify "$tmp_dir/install.sh" --repo yazanabuashour/openclerk
+OPENCLERK_INSTALL_DIR="$HOME/.local/bin" OPENCLERK_VERSION=v0.2.4 sh "$tmp_dir/install.sh"
 ```
 
 Register the matching `skills/openclerk/SKILL.md` with the agent's native skill
@@ -34,7 +40,10 @@ A complete install has both the runner and the skill.
 Rerun the installer for the latest or requested version:
 
 ```bash
-OPENCLERK_INSTALL_DIR="$HOME/.local/bin" sh -c "$(curl -fsSL https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh)"
+tmp_dir="$(mktemp -d)"
+curl -fsSLo "$tmp_dir/install.sh" https://github.com/yazanabuashour/openclerk/releases/latest/download/install.sh
+gh attestation verify "$tmp_dir/install.sh" --repo yazanabuashour/openclerk
+OPENCLERK_INSTALL_DIR="$HOME/.local/bin" sh "$tmp_dir/install.sh"
 ```
 
 Then re-register the matching `skills/openclerk/SKILL.md` skill and verify:

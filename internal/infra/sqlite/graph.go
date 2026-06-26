@@ -7,11 +7,14 @@ import (
 	"fmt"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/yazanabuashour/openclerk/internal/domain"
 )
+
+const maxGraphLinksPerChunk = 200
 
 func (s *Store) GetDocumentLinks(ctx context.Context, docID string, limits ...int) (domain.DocumentLinks, error) {
 	if !supportsGraph(s.backend) {
@@ -188,6 +191,7 @@ func (s *Store) rebuildGraph(ctx context.Context) error {
 
 	now := s.now().UTC()
 	versionInputs := make(map[string][]string, len(documents))
+	linkFanoutTruncated := map[string]bool{}
 	for _, doc := range documents {
 		versionInputs[doc.DocID] = append(versionInputs[doc.DocID],
 			"doc:"+doc.DocID,
@@ -221,7 +225,12 @@ func (s *Store) rebuildGraph(ctx context.Context) error {
 			}); err != nil {
 				return err
 			}
-			for _, link := range extractMarkdownLinks(chunk.Content) {
+			links, truncated := extractMarkdownLinks(chunk.Content, maxGraphLinksPerChunk)
+			if truncated {
+				linkFanoutTruncated[doc.DocID] = true
+				versionInputs[doc.DocID] = append(versionInputs[doc.DocID], "link_fanout_truncated")
+			}
+			for _, link := range links {
 				targetPath := resolveLinkPath(doc.Path, link)
 				targetDoc, ok := documentIndex[targetPath]
 				if !ok {
@@ -258,17 +267,24 @@ func (s *Store) rebuildGraph(ctx context.Context) error {
 		if previous, ok := previousStates[doc.DocID]; ok && previous.ProjectionVersion == version {
 			stateUpdatedAt = previous.UpdatedAt
 		}
+		freshness := "fresh"
+		details := map[string]string{
+			"path": doc.Path,
+		}
+		if linkFanoutTruncated[doc.DocID] {
+			freshness = "stale"
+			details["freshness_reason"] = "markdown link fan-out capped"
+			details["link_limit_per_chunk"] = strconv.Itoa(maxGraphLinksPerChunk)
+		}
 		if err := upsertProjectionState(ctx, tx, domain.ProjectionState{
 			Projection:        "graph",
 			RefKind:           "document",
 			RefID:             doc.DocID,
 			SourceRef:         "doc:" + doc.DocID,
-			Freshness:         "fresh",
+			Freshness:         freshness,
 			ProjectionVersion: version,
 			UpdatedAt:         stateUpdatedAt,
-			Details: map[string]string{
-				"path": doc.Path,
-			},
+			Details:           details,
 		}); err != nil {
 			return err
 		}
@@ -344,8 +360,16 @@ func supportsGraph(backend domain.BackendKind) bool {
 	return backend == domain.BackendOpenClerk
 }
 
-func extractMarkdownLinks(content string) []string {
-	matches := linkPattern.FindAllStringSubmatch(content, -1)
+func extractMarkdownLinks(content string, limit int) ([]string, bool) {
+	scanLimit := -1
+	if limit > 0 {
+		scanLimit = limit + 1
+	}
+	matches := linkPattern.FindAllStringSubmatch(content, scanLimit)
+	truncated := limit > 0 && len(matches) > limit
+	if truncated {
+		matches = matches[:limit]
+	}
 	links := make([]string, 0, len(matches))
 	for _, match := range matches {
 		if len(match) < 2 {
@@ -353,7 +377,7 @@ func extractMarkdownLinks(content string) []string {
 		}
 		links = append(links, match[1])
 	}
-	return links
+	return links, truncated
 }
 
 func resolveLinkPath(docPath string, target string) string {

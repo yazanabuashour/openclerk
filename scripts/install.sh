@@ -63,8 +63,8 @@ download() {
 }
 
 verify_archive() {
-  checksum_file="$1"
-  archive="$2"
+	checksum_file="$1"
+	archive="$2"
   expected_line="expected-${archive}.sha256"
 
   awk -v file="$archive" '$2 == file { print; found = 1 } END { exit found ? 0 : 1 }' "$checksum_file" > "$expected_line" ||
@@ -82,7 +82,43 @@ verify_archive() {
     return
   fi
 
-  fail "missing required command: shasum or sha256sum"
+	fail "missing required command: shasum or sha256sum"
+}
+
+verify_attestation() {
+	asset="$1"
+	gh attestation verify "$asset" --repo "$repo" >/dev/null ||
+		fail "attestation verification failed for ${asset}"
+}
+
+validate_archive_members() {
+	archive="$1"
+	root="$2"
+	member_list="members-${archive}.txt"
+	tar -tzf "$archive" > "$member_list" ||
+		fail "archive listing failed for ${archive}"
+	while IFS= read -r member; do
+		[ -n "$member" ] || fail "archive contains an empty member name"
+		case "$member" in
+			/* | ../* | */../* | */.. | *\\*)
+				fail "archive member escapes extraction root: ${member}"
+				;;
+		esac
+		case "$member" in
+			"$root" | "$root/" | "$root"/*)
+				;;
+			*)
+				fail "archive member outside expected root ${root}: ${member}"
+				;;
+		esac
+	done < "$member_list"
+}
+
+reject_extracted_symlinks() {
+	root="$1"
+	[ -d "$root" ] || fail "archive root missing after extraction: ${root}"
+	symlink="$(find "$root" -type l -print | sed -n '1p')"
+	[ -z "$symlink" ] || fail "archive contains symlink member: ${symlink}"
 }
 
 is_ephemeral_install_dir() {
@@ -147,6 +183,8 @@ path_contains_dir() {
 }
 
 need_cmd curl
+need_cmd gh
+need_cmd find
 need_cmd tar
 
 os="$(detect_os)"
@@ -154,6 +192,7 @@ arch="$(detect_arch)"
 tag="$(select_version)"
 asset_version="${tag#v}"
 archive="openclerk_${asset_version}_${os}_${arch}.tar.gz"
+archive_root="openclerk_${asset_version}_${os}_${arch}"
 checksum="openclerk_${asset_version}_checksums.txt"
 release_url="https://github.com/${repo}/releases/download/${tag}"
 tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/openclerk-install.XXXXXX")"
@@ -169,11 +208,17 @@ log "Installing OpenClerk ${tag} for ${os}/${arch}"
 cd "$tmp_dir"
 download "${release_url}/${archive}" "$archive"
 download "${release_url}/${checksum}" "$checksum"
+verify_attestation "$archive"
+verify_attestation "$checksum"
 verify_archive "$checksum" "$archive"
+validate_archive_members "$archive" "$archive_root"
 
 tar -xzf "$archive"
+reject_extracted_symlinks "$archive_root"
+[ -f "${archive_root}/openclerk" ] && [ ! -L "${archive_root}/openclerk" ] ||
+	fail "archive missing regular openclerk runner"
 mkdir -p "$install_dir"
-cp "openclerk_${asset_version}_${os}_${arch}/openclerk" "${install_dir}/openclerk"
+cp "${archive_root}/openclerk" "${install_dir}/openclerk"
 chmod 755 "${install_dir}/openclerk"
 
 log "Installed openclerk runner to ${install_dir}/openclerk"

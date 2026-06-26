@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"sort"
 	"strings"
 	"time"
 
@@ -13,6 +14,11 @@ import (
 type storedProjectionState struct {
 	ProjectionVersion string
 	UpdatedAt         time.Time
+}
+
+type duplicateProjectionSource struct {
+	DocID string
+	Path  string
 }
 
 func (s *Store) ListProjectionStates(ctx context.Context, query domain.ProjectionStateQuery) (domain.ProjectionStateResult, error) {
@@ -136,4 +142,78 @@ ON CONFLICT(projection_name, ref_kind, ref_id) DO UPDATE SET
 		return domain.InternalError("upsert projection state", err)
 	}
 	return nil
+}
+
+func duplicateProjectionState(projection string, refKind string, refID string, sources []duplicateProjectionSource, previousStates map[string]storedProjectionState, now time.Time) domain.ProjectionState {
+	details := duplicateProjectionDetails(refID, sources)
+	versionInputs := []string{
+		"projection:" + projection,
+		"ref_kind:" + refKind,
+		"ref_id:" + refID,
+	}
+	for _, source := range sortedDuplicateProjectionSources(sources) {
+		versionInputs = append(versionInputs, "source:"+source.DocID+":"+source.Path)
+	}
+	sort.Strings(versionInputs)
+	version := hashID(projection, "duplicate", strings.Join(versionInputs, "|"))
+	updatedAt := now
+	if previous, ok := previousStates[refID]; ok && previous.ProjectionVersion == version {
+		updatedAt = previous.UpdatedAt
+	}
+	return domain.ProjectionState{
+		Projection:        projection,
+		RefKind:           refKind,
+		RefID:             refID,
+		SourceRef:         duplicateProjectionSourceRef(sources),
+		Freshness:         "stale",
+		ProjectionVersion: version,
+		UpdatedAt:         updatedAt,
+		Details:           details,
+	}
+}
+
+func duplicateProjectionDetails(refID string, sources []duplicateProjectionSource) map[string]string {
+	paths := make([]string, 0, len(sources))
+	docIDs := make([]string, 0, len(sources))
+	for _, source := range sortedDuplicateProjectionSources(sources) {
+		paths = append(paths, source.Path)
+		docIDs = append(docIDs, source.DocID)
+	}
+	return map[string]string{
+		"duplicate_ref_id":  refID,
+		"duplicate_paths":   strings.Join(paths, ", "),
+		"duplicate_doc_ids": strings.Join(docIDs, ", "),
+		"freshness_reason":  "duplicate projected id; no trusted record materialized",
+	}
+}
+
+func duplicateProjectionSourceRef(sources []duplicateProjectionSource) string {
+	refs := make([]string, 0, len(sources))
+	for _, source := range sortedDuplicateProjectionSources(sources) {
+		refs = append(refs, "doc:"+source.DocID)
+	}
+	return strings.Join(refs, ", ")
+}
+
+func insertDuplicateProjectionEvent(ctx context.Context, tx *sql.Tx, eventType string, refKind string, refID string, projection domain.ProjectionState, now time.Time) error {
+	return insertProvenanceEventIfAbsent(ctx, tx, domain.ProvenanceEvent{
+		EventID:    hashID("event", eventType, refKind, refID, projection.ProjectionVersion),
+		EventType:  eventType,
+		RefKind:    refKind,
+		RefID:      refID,
+		SourceRef:  projection.SourceRef,
+		OccurredAt: now,
+		Details:    projection.Details,
+	})
+}
+
+func sortedDuplicateProjectionSources(sources []duplicateProjectionSource) []duplicateProjectionSource {
+	sorted := append([]duplicateProjectionSource(nil), sources...)
+	sort.Slice(sorted, func(i, j int) bool {
+		if sorted[i].Path != sorted[j].Path {
+			return sorted[i].Path < sorted[j].Path
+		}
+		return sorted[i].DocID < sorted[j].DocID
+	})
+	return sorted
 }

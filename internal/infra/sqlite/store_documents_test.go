@@ -3,11 +3,13 @@ package sqlite
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/yazanabuashour/openclerk/internal/domain"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestCreateDocumentRejectsDuplicatePath(t *testing.T) {
@@ -109,6 +111,69 @@ func TestPathPrefixTreatsSQLWildcardsLiterally(t *testing.T) {
 	}
 	if len(search.Hits) != 1 || len(search.Hits[0].Citations) == 0 || search.Hits[0].Citations[0].Path != "notes/%/literal.md" {
 		t.Fatalf("search literal wildcard prefix = %+v", search.Hits)
+	}
+}
+
+func TestLexicalTokenFallbackSearchCapsCandidateRowsBeforeScoring(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	store := openTestStore(t, domain.BackendOpenClerk, filepath.Join(t.TempDir(), "openclerk.sqlite"), t.TempDir())
+	defer func() {
+		_ = store.Close()
+	}()
+
+	tx, err := store.db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatalf("begin setup tx: %v", err)
+	}
+	now := testClock().Format(time.RFC3339Nano)
+	for idx := 0; idx < maxLexicalFallbackCandidateRows; idx++ {
+		docID := fmt.Sprintf("doc_%04d", idx)
+		docPath := fmt.Sprintf("docs/a-%04d.md", idx)
+		if _, err := tx.ExecContext(ctx, `
+INSERT INTO documents (doc_id, path, title, body, headings_json, metadata_json, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			docID, docPath, "Ordinary", "ordinary body", "[]", "{}", now, now); err != nil {
+			_ = tx.Rollback()
+			t.Fatalf("insert document %d: %v", idx, err)
+		}
+		if _, err := tx.ExecContext(ctx, `
+INSERT INTO chunks (chunk_id, doc_id, path, heading, content, line_start, line_end)
+VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			"chunk_"+docID, docID, docPath, "Summary", "needle appears once", 1, 1); err != nil {
+			_ = tx.Rollback()
+			t.Fatalf("insert chunk %d: %v", idx, err)
+		}
+	}
+	lateDocID := "doc_late_priority"
+	latePath := "docs/z-priority.md"
+	if _, err := tx.ExecContext(ctx, `
+INSERT INTO documents (doc_id, path, title, body, headings_json, metadata_json, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		lateDocID, latePath, "Needle Priority", "needle priority body", "[]", "{}", now, now); err != nil {
+		_ = tx.Rollback()
+		t.Fatalf("insert late document: %v", err)
+	}
+	if _, err := tx.ExecContext(ctx, `
+INSERT INTO chunks (chunk_id, doc_id, path, heading, content, line_start, line_end)
+VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		"chunk_"+lateDocID, lateDocID, latePath, "Needle Heading", "needle appears in every field", 1, 1); err != nil {
+		_ = tx.Rollback()
+		t.Fatalf("insert late chunk: %v", err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatalf("commit setup tx: %v", err)
+	}
+
+	result, err := store.lexicalTokenFallbackSearch(ctx, domain.SearchQuery{Text: "needle", Limit: 10}, 10, 0)
+	if err != nil {
+		t.Fatalf("fallback search: %v", err)
+	}
+	for _, hit := range result.Hits {
+		if len(hit.Citations) > 0 && hit.Citations[0].Path == latePath {
+			t.Fatalf("fallback scanned past row cap and returned late high-score document: %+v", result.Hits)
+		}
 	}
 }
 

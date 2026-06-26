@@ -77,8 +77,8 @@ download() {
 }
 
 verify_archive() {
-  checksum_file="$1"
-  archive="$2"
+	checksum_file="$1"
+	archive="$2"
   expected_line="expected-${archive}.sha256"
 
   awk -v file="$archive" '$2 == file { print; found = 1 } END { exit found ? 0 : 1 }' "$checksum_file" > "$expected_line" ||
@@ -96,7 +96,43 @@ verify_archive() {
     return
   fi
 
-  fail "missing required command: shasum or sha256sum"
+	fail "missing required command: shasum or sha256sum"
+}
+
+verify_attestation() {
+	asset="$1"
+	gh attestation verify "$asset" --repo "$repo" >/dev/null ||
+		fail "attestation verification failed for ${asset}"
+}
+
+validate_archive_members() {
+	archive="$1"
+	root="$2"
+	member_list="members-${archive}.txt"
+	tar -tzf "$archive" > "$member_list" ||
+		fail "archive listing failed for ${archive}"
+	while IFS= read -r member; do
+		[ -n "$member" ] || fail "archive contains an empty member name"
+		case "$member" in
+			/* | ../* | */../* | */.. | *\\*)
+				fail "archive member escapes extraction root: ${member}"
+				;;
+		esac
+		case "$member" in
+			"$root" | "$root/" | "$root"/*)
+				;;
+			*)
+				fail "archive member outside expected root ${root}: ${member}"
+				;;
+		esac
+	done < "$member_list"
+}
+
+reject_extracted_symlinks() {
+	root="$1"
+	[ -d "$root" ] || fail "archive root missing after extraction: ${root}"
+	symlink="$(find "$root" -type l -print | sed -n '1p')"
+	[ -z "$symlink" ] || fail "archive contains symlink member: ${symlink}"
 }
 
 select_install_dir() {
@@ -154,6 +190,8 @@ registration_json() {
 }
 
 need_cmd curl
+need_cmd gh
+need_cmd find
 need_cmd tar
 
 module="$(select_module)"
@@ -162,6 +200,7 @@ asset_version="${version#v}"
 os="$(detect_os)"
 arch="$(detect_arch)"
 archive="openclerk-module-${module}_${asset_version}_${os}_${arch}.tar.gz"
+archive_root="openclerk-module-${module}_${asset_version}_${os}_${arch}"
 checksum="openclerk-module-${module}_${asset_version}_checksums.txt"
 release_url="https://github.com/${repo}/releases/download/$(url_tag "$module" "$version")"
 tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/openclerk-module-install.XXXXXX")"
@@ -181,10 +220,17 @@ log "Installing OpenClerk module ${module} ${version} for ${os}/${arch}"
 cd "$tmp_dir"
 download "${release_url}/${archive}" "$archive"
 download "${release_url}/${checksum}" "$checksum"
+verify_attestation "$archive"
+verify_attestation "$checksum"
 verify_archive "$checksum" "$archive"
+validate_archive_members "$archive" "$archive_root"
 
 tar -xzf "$archive"
-archive_root="openclerk-module-${module}_${asset_version}_${os}_${arch}"
+reject_extracted_symlinks "$archive_root"
+[ -d "${archive_root}/modules/${module}" ] && [ ! -L "${archive_root}/modules/${module}" ] ||
+  fail "archive missing regular module directory"
+[ -f "${archive_root}/modules/${module}/module.json" ] && [ ! -L "${archive_root}/modules/${module}/module.json" ] ||
+  fail "archive missing regular module manifest"
 mkdir -p "$module_root" "$install_dir"
 rm -rf "$module_root/$module"
 cp -R "${archive_root}/modules/${module}" "$module_root/${module}"
@@ -192,6 +238,8 @@ cp -R "${archive_root}/modules/${module}" "$module_root/${module}"
 if [ -d "${archive_root}/bin" ]; then
   for file in "${archive_root}/bin"/*; do
     [ -e "$file" ] || continue
+    [ -f "$file" ] && [ ! -L "$file" ] ||
+      fail "archive bundled command is not a regular file: ${file}"
     cp "$file" "$install_dir/$(basename "$file")"
     chmod 755 "$install_dir/$(basename "$file")"
     if [ "$(basename "$file")" = "$command_name" ]; then

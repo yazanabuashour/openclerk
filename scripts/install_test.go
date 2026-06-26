@@ -35,16 +35,32 @@ func TestInstallDirOverrideWins(t *testing.T) {
 	toolsDir := writeInstallTestTools(t)
 	home := t.TempDir()
 	installDir := filepath.Join(t.TempDir(), "custom-bin")
+	ghLog := filepath.Join(t.TempDir(), "gh.log")
 
 	result := runInstallScript(t, installScriptEnv{
 		home:       home,
 		path:       joinPath(toolsDir, systemPath()),
 		installDir: installDir,
+		ghLog:      ghLog,
 	})
 
 	wantPath := filepath.Join(installDir, "openclerk")
 	assertFileExists(t, wantPath)
 	assertContains(t, result, "Installed openclerk runner to "+wantPath)
+	ghCalls := readTestFile(t, ghLog)
+	assertContains(t, ghCalls, "openclerk_0.2.4_")
+	assertContains(t, ghCalls, "openclerk_0.2.4_checksums.txt")
+}
+
+func TestInstallRejectsArchiveMembersOutsideExpectedRoot(t *testing.T) {
+	toolsDir := writeInstallTestTools(t)
+	output := runInstallScriptExpectError(t, installScriptEnv{
+		home:       t.TempDir(),
+		path:       joinPath(toolsDir, systemPath()),
+		installDir: filepath.Join(t.TempDir(), "bin"),
+		tarList:    "../evil",
+	})
+	assertContains(t, output, "archive member escapes extraction root")
 }
 
 func TestInstallUpgradesExistingDurablePathBinary(t *testing.T) {
@@ -119,6 +135,7 @@ func TestInstallModuleInstallsEmbeddingPackageAndPrintsRegistration(t *testing.T
 	home := t.TempDir()
 	installDir := filepath.Join(t.TempDir(), "bin")
 	moduleDir := filepath.Join(t.TempDir(), "modules")
+	ghLog := filepath.Join(t.TempDir(), "gh.log")
 
 	result := runInstallModuleScript(t, moduleInstallScriptEnv{
 		home:       home,
@@ -127,6 +144,7 @@ func TestInstallModuleInstallsEmbeddingPackageAndPrintsRegistration(t *testing.T
 		moduleDir:  moduleDir,
 		module:     "ollama-embeddings",
 		version:    "latest",
+		ghLog:      ghLog,
 	})
 
 	assertFileExists(t, filepath.Join(installDir, "semantic-retrieval-adapter"))
@@ -136,6 +154,23 @@ func TestInstallModuleInstallsEmbeddingPackageAndPrintsRegistration(t *testing.T
 	assertContains(t, result, `"manifest_path":"`+filepath.Join(moduleDir, "ollama-embeddings", "module.json")+`"`)
 	assertContains(t, result, `"command":"`+filepath.Join(installDir, "semantic-retrieval-adapter")+`"`)
 	assertContains(t, result, `"provider":"ollama"`)
+	ghCalls := readTestFile(t, ghLog)
+	assertContains(t, ghCalls, "openclerk-module-ollama-embeddings_0.1.1_")
+	assertContains(t, ghCalls, "openclerk-module-ollama-embeddings_0.1.1_checksums.txt")
+}
+
+func TestInstallModuleRejectsArchiveMembersOutsideExpectedRoot(t *testing.T) {
+	toolsDir := writeModuleInstallTestTools(t, "ollama-embeddings", true)
+	output := runInstallModuleScriptExpectError(t, moduleInstallScriptEnv{
+		home:       t.TempDir(),
+		path:       joinPath(toolsDir, systemPath()),
+		installDir: filepath.Join(t.TempDir(), "bin"),
+		moduleDir:  filepath.Join(t.TempDir(), "modules"),
+		module:     "ollama-embeddings",
+		version:    "v0.1.1",
+		tarList:    "openclerk-module-ollama-embeddings_0.1.1_linux_amd64/../../evil",
+	})
+	assertContains(t, output, "archive member escapes extraction root")
 }
 
 func TestInstallModuleDoesNotBundleExternalTesseractBinary(t *testing.T) {
@@ -208,14 +243,34 @@ type installScriptEnv struct {
 	home       string
 	path       string
 	installDir string
+	tarList    string
+	ghLog      string
 }
 
 func runInstallScript(t *testing.T, env installScriptEnv) string {
 	t.Helper()
+	output, err := runInstallScriptRaw(t, env)
+	if err != nil {
+		t.Fatalf("install.sh failed: %v\n%s", err, output)
+	}
+	return output
+}
+
+func runInstallScriptExpectError(t *testing.T, env installScriptEnv) string {
+	t.Helper()
+	output, err := runInstallScriptRaw(t, env)
+	if err == nil {
+		t.Fatalf("install.sh succeeded unexpectedly:\n%s", output)
+	}
+	return output
+}
+
+func runInstallScriptRaw(t *testing.T, env installScriptEnv) (string, error) {
+	t.Helper()
 
 	scriptPath, err := filepath.Abs("install.sh")
 	if err != nil {
-		t.Fatalf("resolve install.sh: %v", err)
+		return "", err
 	}
 	cmd := exec.Command("sh", scriptPath)
 	cmd.Env = append(os.Environ(),
@@ -223,13 +278,12 @@ func runInstallScript(t *testing.T, env installScriptEnv) string {
 		"PATH="+env.path,
 		"OPENCLERK_VERSION="+testInstallVersion,
 		"OPENCLERK_INSTALL_DIR="+env.installDir,
+		"OPENCLERK_TEST_TAR_LIST="+env.tarList,
+		"OPENCLERK_TEST_GH_LOG="+env.ghLog,
 		"TMPDIR="+t.TempDir(),
 	)
 	output, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("install.sh failed: %v\n%s", err, output)
-	}
-	return string(output)
+	return string(output), err
 }
 
 type moduleInstallScriptEnv struct {
@@ -239,14 +293,34 @@ type moduleInstallScriptEnv struct {
 	moduleDir  string
 	module     string
 	version    string
+	tarList    string
+	ghLog      string
 }
 
 func runInstallModuleScript(t *testing.T, env moduleInstallScriptEnv) string {
 	t.Helper()
+	output, err := runInstallModuleScriptRaw(t, env)
+	if err != nil {
+		t.Fatalf("install-module.sh failed: %v\n%s", err, output)
+	}
+	return output
+}
+
+func runInstallModuleScriptExpectError(t *testing.T, env moduleInstallScriptEnv) string {
+	t.Helper()
+	output, err := runInstallModuleScriptRaw(t, env)
+	if err == nil {
+		t.Fatalf("install-module.sh succeeded unexpectedly:\n%s", output)
+	}
+	return output
+}
+
+func runInstallModuleScriptRaw(t *testing.T, env moduleInstallScriptEnv) (string, error) {
+	t.Helper()
 
 	scriptPath, err := filepath.Abs("install-module.sh")
 	if err != nil {
-		t.Fatalf("resolve install-module.sh: %v", err)
+		return "", err
 	}
 	cmd := exec.Command("sh", scriptPath)
 	cmd.Env = append(os.Environ(),
@@ -256,13 +330,12 @@ func runInstallModuleScript(t *testing.T, env moduleInstallScriptEnv) string {
 		"OPENCLERK_MODULE_VERSION="+env.version,
 		"OPENCLERK_INSTALL_DIR="+env.installDir,
 		"OPENCLERK_MODULE_DIR="+env.moduleDir,
+		"OPENCLERK_TEST_TAR_LIST="+env.tarList,
+		"OPENCLERK_TEST_GH_LOG="+env.ghLog,
 		"TMPDIR="+t.TempDir(),
 	)
 	output, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("install-module.sh failed: %v\n%s", err, output)
-	}
-	return string(output)
+	return string(output), err
 }
 
 func writeInstallTestTools(t *testing.T) string {
@@ -298,13 +371,25 @@ esac
 `)
 	writeExecutable(t, filepath.Join(dir, "tar"), `#!/bin/sh
 archive=""
+list=0
 for arg in "$@"; do
+  case "$arg" in
+    -*t*) list=1 ;;
+  esac
   case "$arg" in
     *.tar.gz) archive="$arg" ;;
   esac
 done
 [ -n "$archive" ] || exit 1
 asset_dir="${archive%.tar.gz}"
+if [ "$list" = "1" ]; then
+  if [ -n "${OPENCLERK_TEST_TAR_LIST:-}" ]; then
+    printf '%s\n' "$OPENCLERK_TEST_TAR_LIST"
+  else
+    printf '%s\n' "$asset_dir/" "$asset_dir/openclerk"
+  fi
+  exit 0
+fi
 mkdir -p "$asset_dir"
 cat > "$asset_dir/openclerk" <<'EOF'
 #!/bin/sh
@@ -317,6 +402,13 @@ EOF
 chmod 755 "$asset_dir/openclerk"
 `)
 	writeExecutable(t, filepath.Join(dir, "shasum"), "#!/bin/sh\nexit 0\n")
+	writeExecutable(t, filepath.Join(dir, "gh"), `#!/bin/sh
+[ "$1" = "attestation" ] && [ "$2" = "verify" ] || exit 1
+if [ -n "${OPENCLERK_TEST_GH_LOG:-}" ]; then
+  printf '%s\n' "$3" >> "$OPENCLERK_TEST_GH_LOG"
+fi
+exit 0
+`)
 	return dir
 }
 
@@ -364,19 +456,41 @@ chmod 755 "$asset_dir/bin/semantic-retrieval-adapter"
 	}
 	writeExecutable(t, filepath.Join(dir, "tar"), `#!/bin/sh
 archive=""
+list=0
 for arg in "$@"; do
+  case "$arg" in
+    -*t*) list=1 ;;
+  esac
   case "$arg" in
     *.tar.gz) archive="$arg" ;;
   esac
 done
 [ -n "$archive" ] || exit 1
 asset_dir="${archive%.tar.gz}"
+if [ "$list" = "1" ]; then
+  if [ -n "${OPENCLERK_TEST_TAR_LIST:-}" ]; then
+    printf '%s\n' "$OPENCLERK_TEST_TAR_LIST"
+  else
+    printf '%s\n' "$asset_dir/" "$asset_dir/modules/`+module+`/module.json" "$asset_dir/modules/`+module+`/skill/`+module+`/SKILL.md"
+    if [ "`+mapBool(withBinary)+`" = "true" ]; then
+      printf '%s\n' "$asset_dir/bin/semantic-retrieval-adapter"
+    fi
+  fi
+  exit 0
+fi
 mkdir -p "$asset_dir/modules/`+module+`/skill/`+module+`"
 printf '%s\n' '{"schema_version":"openclerk-module.v1"}' > "$asset_dir/modules/`+module+`/module.json"
 printf '%s\n' 'module skill' > "$asset_dir/modules/`+module+`/skill/`+module+`/SKILL.md"
 `+binaryBlock+`
 `)
 	writeExecutable(t, filepath.Join(dir, "shasum"), "#!/bin/sh\nexit 0\n")
+	writeExecutable(t, filepath.Join(dir, "gh"), `#!/bin/sh
+[ "$1" = "attestation" ] && [ "$2" = "verify" ] || exit 1
+if [ -n "${OPENCLERK_TEST_GH_LOG:-}" ]; then
+  printf '%s\n' "$3" >> "$OPENCLERK_TEST_GH_LOG"
+fi
+exit 0
+`)
 	return dir
 }
 
@@ -436,6 +550,23 @@ func writeExecutable(t *testing.T, path string, content string) {
 	if err := os.WriteFile(path, []byte(content), 0o755); err != nil {
 		t.Fatalf("write executable %s: %v", path, err)
 	}
+}
+
+func readTestFile(t *testing.T, path string) string {
+	t.Helper()
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	return string(data)
+}
+
+func mapBool(value bool) string {
+	if value {
+		return "true"
+	}
+	return "false"
 }
 
 func repoLocalScratchDir(t *testing.T) string {

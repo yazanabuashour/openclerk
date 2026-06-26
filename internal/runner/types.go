@@ -68,6 +68,7 @@ const (
 
 type ConfigTaskRequest struct {
 	Action           string        `json:"action"`
+	Autonomy         AutonomyModes `json:"autonomy,omitempty"`
 	Profile          AutonomyModes `json:"profile,omitempty"`
 	VaultIgnorePaths *[]string     `json:"vault_ignore_paths,omitempty"`
 }

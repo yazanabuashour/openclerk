@@ -279,7 +279,7 @@ func gitLifecycleCheckpoint(ctx context.Context, vaultRoot string, options GitLi
 
 func gitLifecycleStagedChanges(ctx context.Context, vaultRoot string, paths []string) (bool, error) {
 	args := append([]string{"diff", "--cached", "--quiet", "--"}, paths...)
-	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", vaultRoot}, args...)...)
+	cmd := exec.CommandContext(ctx, "git", gitLifecycleCommandArgs(vaultRoot, args...)...)
 	output, err := cmd.CombinedOutput()
 	if err == nil {
 		return false, nil
@@ -292,12 +292,17 @@ func gitLifecycleStagedChanges(ctx context.Context, vaultRoot string, paths []st
 }
 
 func runGitLifecycleCommand(ctx context.Context, vaultRoot string, args ...string) (string, error) {
-	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", vaultRoot}, args...)...)
+	cmd := exec.CommandContext(ctx, "git", gitLifecycleCommandArgs(vaultRoot, args...)...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("run local git lifecycle command: %w: %s", err, strings.TrimSpace(string(output)))
 	}
 	return string(output), nil
+}
+
+func gitLifecycleCommandArgs(vaultRoot string, args ...string) []string {
+	commandArgs := []string{"-C", vaultRoot, "-c", "core.hooksPath=/dev/null"}
+	return append(commandArgs, args...)
 }
 
 func runGitLifecycleCommandNoOutput(ctx context.Context, vaultRoot string, args ...string) error {

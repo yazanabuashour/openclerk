@@ -15,6 +15,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"os"
 	"path"
@@ -24,6 +25,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 type pdfExtraction struct {
@@ -67,14 +69,34 @@ const (
 	maxSourceInspectionLinks     = 40
 	maxSourceInspectionLinkScans = 1000
 	maxSourceTextPreviewRunes    = 1200
+	maxSourcePDFPages            = 200
+	maxSourcePDFTextObjects      = 200000
+	maxSourcePDFExtractedRunes   = 1000000
+	maxSourcePDFExtractionTime   = 10 * time.Second
 )
+
+var blockedPublicSourceIPPrefixes = []netip.Prefix{
+	netip.MustParsePrefix("0.0.0.0/8"),
+	netip.MustParsePrefix("100.64.0.0/10"),
+	netip.MustParsePrefix("192.0.0.0/24"),
+	netip.MustParsePrefix("192.0.2.0/24"),
+	netip.MustParsePrefix("198.18.0.0/15"),
+	netip.MustParsePrefix("198.51.100.0/24"),
+	netip.MustParsePrefix("203.0.113.0/24"),
+	netip.MustParsePrefix("240.0.0.0/4"),
+	netip.MustParsePrefix("255.255.255.255/32"),
+	netip.MustParsePrefix("100::/64"),
+	netip.MustParsePrefix("2001::/23"),
+	netip.MustParsePrefix("2001:db8::/32"),
+	netip.MustParsePrefix("2002::/16"),
+	netip.MustParsePrefix("64:ff9b:1::/48"),
+}
 
 func defaultSourceHTTPClient(checkRedirect func(*http.Request, []*http.Request) error) *http.Client {
 	return &http.Client{
 		Timeout:       30 * time.Second,
 		CheckRedirect: checkRedirect,
 		Transport: &http.Transport{
-			Proxy:       http.ProxyFromEnvironment,
 			DialContext: dialPublicSourceContext,
 		},
 	}
@@ -173,8 +195,7 @@ func (s *Store) createSourceURL(ctx context.Context, input domain.SourceURLInput
 	} else if exists {
 		return domain.SourceIngestionResult{}, domain.AlreadyExistsError("source URL", sourceURL)
 	}
-	sourceAbsPath := filepath.Join(s.vaultRoot, filepath.FromSlash(sourcePath))
-	if _, err := osStat(sourceAbsPath); err == nil {
+	if _, err := s.lstatVaultPath(sourcePath, "stat source document path"); err == nil {
 		return domain.SourceIngestionResult{}, domain.AlreadyExistsError("document path", sourcePath)
 	} else if !errors.Is(err, fs.ErrNotExist) {
 		return domain.SourceIngestionResult{}, domain.InternalError("stat source document path", err)
@@ -184,39 +205,45 @@ func (s *Store) createSourceURL(ctx context.Context, input domain.SourceURLInput
 	if err != nil {
 		return domain.SourceIngestionResult{}, err
 	}
+	sourceURL = firstNonEmpty(download.FinalURL, sourceURL)
+	if exists, err := s.sourceURLExists(ctx, []string{sourceURL}); err != nil {
+		return domain.SourceIngestionResult{}, err
+	} else if exists {
+		return domain.SourceIngestionResult{}, domain.AlreadyExistsError("source URL", sourceURL)
+	}
 	switch download.SourceType {
 	case sourceTypePDF:
-		return s.createPDFSourceURL(ctx, input, sourceURL, sourcePath, sourceAbsPath, download)
+		return s.createPDFSourceURL(ctx, input, sourceURL, sourcePath, download)
 	case sourceTypeWeb:
-		return s.createWebSourceURL(ctx, input, sourceURL, sourcePath, sourceAbsPath, download)
+		return s.createWebSourceURL(ctx, input, sourceURL, sourcePath, download)
 	default:
 		return domain.SourceIngestionResult{}, domain.ValidationError("source URL returned an unsupported content type", map[string]any{"mime_type": download.MIMEType})
 	}
 }
 
-func (s *Store) createPDFSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string, sourcePath string, sourceAbsPath string, download sourceDownload) (domain.SourceIngestionResult, error) {
+func (s *Store) createPDFSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string, sourcePath string, download sourceDownload) (domain.SourceIngestionResult, error) {
 	assetPath, err := normalizeSourceAssetPath(input.AssetPathHint)
 	if err != nil {
 		return domain.SourceIngestionResult{}, err
 	}
 	assetAbsPath := filepath.Join(s.vaultRoot, filepath.FromSlash(assetPath))
-	if _, err := osStat(assetAbsPath); err == nil {
+	if _, err := s.lstatVaultPath(assetPath, "stat source asset path"); err == nil {
 		return domain.SourceIngestionResult{}, domain.AlreadyExistsError("asset path", assetPath)
 	} else if !errors.Is(err, fs.ErrNotExist) {
 		return domain.SourceIngestionResult{}, domain.InternalError("stat source asset path", err)
 	}
 
-	if err := ensureDir(filepath.Dir(assetAbsPath)); err != nil {
-		return domain.SourceIngestionResult{}, domain.InternalError("create source asset directory", err)
-	}
-	if err := osWriteBytes(assetAbsPath, download.Body); err != nil {
-		return domain.SourceIngestionResult{}, domain.InternalError("write source asset", err)
+	if err := s.writeNewVaultFile(assetPath, download.Body, "write source asset"); err != nil {
+		if errors.Is(err, fs.ErrExist) {
+			return domain.SourceIngestionResult{}, domain.AlreadyExistsError("asset path", assetPath)
+		}
+		return domain.SourceIngestionResult{}, err
 	}
 	assetWritten := true
 	defer func() {
 		if assetWritten {
-			if _, err := osStat(sourceAbsPath); errors.Is(err, fs.ErrNotExist) {
-				_ = osRemove(assetAbsPath)
+			if _, err := s.lstatVaultPath(sourcePath, "stat source document path"); errors.Is(err, fs.ErrNotExist) {
+				_ = s.removeVaultPath(assetPath, "remove source asset after failed source note create")
 			}
 		}
 	}()
@@ -236,7 +263,7 @@ func (s *Store) createPDFSourceURL(ctx context.Context, input domain.SourceURLIn
 		Body:  body,
 	})
 	if err != nil {
-		if _, statErr := osStat(sourceAbsPath); statErr == nil {
+		if _, statErr := s.lstatVaultPath(sourcePath, "stat source document path"); statErr == nil {
 			assetWritten = false
 		}
 		return domain.SourceIngestionResult{}, err
@@ -269,7 +296,7 @@ func (s *Store) createPDFSourceURL(ctx context.Context, input domain.SourceURLIn
 	}, nil
 }
 
-func (s *Store) createWebSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string, sourcePath string, _ string, download sourceDownload) (domain.SourceIngestionResult, error) {
+func (s *Store) createWebSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string, sourcePath string, download sourceDownload) (domain.SourceIngestionResult, error) {
 	if strings.TrimSpace(input.AssetPathHint) != "" {
 		return domain.SourceIngestionResult{}, domain.ValidationError("source.asset_path_hint is not supported for web source ingestion", nil)
 	}
@@ -339,6 +366,24 @@ func (s *Store) updateSourceURL(ctx context.Context, input domain.SourceURLInput
 	}
 }
 
+func (s *Store) ensureSourceURLUpdateTarget(ctx context.Context, docID string, storedSourceURL string, finalSourceURL string) error {
+	if strings.TrimSpace(finalSourceURL) == "" || finalSourceURL == storedSourceURL {
+		return nil
+	}
+	existing, _, err := s.sourceDocumentByURL(ctx, []string{finalSourceURL})
+	if err != nil {
+		var appErr *domain.Error
+		if errors.As(err, &appErr) && appErr.Status == 404 {
+			return nil
+		}
+		return err
+	}
+	if existing.DocID == docID {
+		return nil
+	}
+	return domain.AlreadyExistsError("source URL", finalSourceURL)
+}
+
 func (s *Store) updatePDFSourceURL(ctx context.Context, input domain.SourceURLInput, sourceURL string, storedSourceURL string, document domain.Document) (domain.SourceIngestionResult, error) {
 	sourcePath, assetPath, err := validateStoredPDFSourceDocument(s.vaultRoot, document, storedSourceURL)
 	if err != nil {
@@ -366,12 +411,16 @@ func (s *Store) updatePDFSourceURL(ctx context.Context, input domain.SourceURLIn
 	if err := validateExistingVaultFile(s.vaultRoot, assetAbsPath, "validate existing source asset"); err != nil {
 		return domain.SourceIngestionResult{}, err
 	}
-	if _, err := osStat(assetAbsPath); err != nil {
-		return domain.SourceIngestionResult{}, domain.InternalError("validate existing source asset", err)
+	if _, err := s.statVaultPath(assetPath, "validate existing source asset"); err != nil {
+		return domain.SourceIngestionResult{}, err
 	}
 
 	download, err := downloadSource(ctx, sourceURL, sourceTypePDF)
 	if err != nil {
+		return domain.SourceIngestionResult{}, err
+	}
+	sourceURL = firstNonEmpty(download.FinalURL, sourceURL)
+	if err := s.ensureSourceURLUpdateTarget(ctx, document.DocID, storedSourceURL, sourceURL); err != nil {
 		return domain.SourceIngestionResult{}, err
 	}
 	sha := sha256.Sum256(download.Body)
@@ -384,14 +433,18 @@ func (s *Store) updatePDFSourceURL(ctx context.Context, input domain.SourceURLIn
 		return s.withSourceURLUpdateImpact(ctx, result, sourceURL, shaHex, shaHex, false)
 	}
 
-	tempAssetPath := assetAbsPath + ".openclerk-update-" + hashID("asset", sourceURL, shaHex)
-	if err := osWriteBytes(tempAssetPath, download.Body); err != nil {
-		return domain.SourceIngestionResult{}, domain.InternalError("write source asset staging file", err)
+	tempAssetPath := assetPath + ".openclerk-update-" + hashID("asset", sourceURL, shaHex)
+	tempAssetAbsPath := filepath.Join(s.vaultRoot, filepath.FromSlash(tempAssetPath))
+	if err := s.writeNewVaultFile(tempAssetPath, download.Body, "write source asset staging file"); err != nil {
+		if errors.Is(err, fs.ErrExist) {
+			return domain.SourceIngestionResult{}, domain.AlreadyExistsError("source asset staging path", tempAssetPath)
+		}
+		return domain.SourceIngestionResult{}, err
 	}
 	defer func() {
-		_ = osRemove(tempAssetPath)
+		_ = s.removeVaultPath(tempAssetPath, "remove source asset staging file")
 	}()
-	extracted, err := extractPDF(tempAssetPath)
+	extracted, err := extractPDF(tempAssetAbsPath)
 	if err != nil {
 		return domain.SourceIngestionResult{}, err
 	}
@@ -401,29 +454,29 @@ func (s *Store) updatePDFSourceURL(ctx context.Context, input domain.SourceURLIn
 		return domain.SourceIngestionResult{}, err
 	}
 	oldBody := document.Body
-	oldAssetBytes, err := osReadFile(assetAbsPath)
+	oldAssetBytes, err := s.readVaultFileLimited(assetPath, maxSourceDownloadBytes, "read existing source asset")
 	if err != nil {
-		return domain.SourceIngestionResult{}, domain.InternalError("read existing source asset", err)
+		return domain.SourceIngestionResult{}, err
 	}
 	capturedAt := s.now().UTC()
 	title := resolvedSourceTitle(input.Title, extracted.Metadata.Title, sourcePath)
 	body := buildPDFSourceNoteBody(sourceURL, sourcePath, assetPath, title, shaHex, int64(len(download.Body)), download.MIMEType, capturedAt, extracted)
-	if err := s.replaceSourceAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, download.Body, body, title); err != nil {
+	if err := s.replaceSourceAssetAndNote(ctx, sourcePath, assetPath, oldBody, oldAssetBytes, download.Body, body, title); err != nil {
 		return domain.SourceIngestionResult{}, err
 	}
 	updated, err := s.GetDocument(ctx, document.DocID)
 	if err != nil {
-		return domain.SourceIngestionResult{}, s.restoreSourceAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, err)
+		return domain.SourceIngestionResult{}, s.restoreSourceAssetAndNote(ctx, sourcePath, assetPath, oldBody, oldAssetBytes, err)
 	}
 	citations, err := s.sourceDocumentCitations(ctx, updated)
 	if err != nil {
-		return domain.SourceIngestionResult{}, s.restoreSourceAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, err)
+		return domain.SourceIngestionResult{}, s.restoreSourceAssetAndNote(ctx, sourcePath, assetPath, oldBody, oldAssetBytes, err)
 	}
 	if len(citations) == 0 {
-		return domain.SourceIngestionResult{}, s.restoreSourceAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, domain.InternalError("validate source update citations", errors.New("updated source has no indexed citations")))
+		return domain.SourceIngestionResult{}, s.restoreSourceAssetAndNote(ctx, sourcePath, assetPath, oldBody, oldAssetBytes, domain.InternalError("validate source update citations", errors.New("updated source has no indexed citations")))
 	}
 	if err := validateIngestedSource(updated, sourceURL, sourcePath, assetPath, assetAbsPath); err != nil {
-		return domain.SourceIngestionResult{}, s.restoreSourceAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, err)
+		return domain.SourceIngestionResult{}, s.restoreSourceAssetAndNote(ctx, sourcePath, assetPath, oldBody, oldAssetBytes, err)
 	}
 	result := domain.SourceIngestionResult{
 		DocID:       updated.DocID,
@@ -464,6 +517,10 @@ func (s *Store) updateWebSourceURL(ctx context.Context, input domain.SourceURLIn
 	if err != nil {
 		return domain.SourceIngestionResult{}, err
 	}
+	sourceURL = firstNonEmpty(download.FinalURL, sourceURL)
+	if err := s.ensureSourceURLUpdateTarget(ctx, document.DocID, storedSourceURL, sourceURL); err != nil {
+		return domain.SourceIngestionResult{}, err
+	}
 	sha := sha256.Sum256(download.Body)
 	shaHex := hex.EncodeToString(sha[:])
 	if strings.TrimSpace(document.Metadata["sha256"]) == shaHex {
@@ -485,22 +542,22 @@ func (s *Store) updateWebSourceURL(ctx context.Context, input domain.SourceURLIn
 	capturedAt := s.now().UTC()
 	title := resolvedSourceTitle(input.Title, extracted.Title, sourcePath)
 	body := buildWebSourceNoteBody(sourceURL, sourcePath, title, shaHex, int64(len(download.Body)), download.MIMEType, capturedAt, extracted)
-	if err := s.replaceSourceNote(ctx, sourcePath, sourceAbsPath, oldBody, body, title); err != nil {
+	if err := s.replaceSourceNote(ctx, sourcePath, oldBody, body, title); err != nil {
 		return domain.SourceIngestionResult{}, err
 	}
 	updated, err := s.GetDocument(ctx, document.DocID)
 	if err != nil {
-		return domain.SourceIngestionResult{}, s.restoreSourceNote(ctx, sourcePath, sourceAbsPath, oldBody, err)
+		return domain.SourceIngestionResult{}, s.restoreSourceNote(ctx, sourcePath, oldBody, err)
 	}
 	citations, err := s.sourceDocumentCitations(ctx, updated)
 	if err != nil {
-		return domain.SourceIngestionResult{}, s.restoreSourceNote(ctx, sourcePath, sourceAbsPath, oldBody, err)
+		return domain.SourceIngestionResult{}, s.restoreSourceNote(ctx, sourcePath, oldBody, err)
 	}
 	if len(citations) == 0 {
-		return domain.SourceIngestionResult{}, s.restoreSourceNote(ctx, sourcePath, sourceAbsPath, oldBody, domain.InternalError("validate web source update citations", errors.New("updated source has no indexed citations")))
+		return domain.SourceIngestionResult{}, s.restoreSourceNote(ctx, sourcePath, oldBody, domain.InternalError("validate web source update citations", errors.New("updated source has no indexed citations")))
 	}
 	if err := validateIngestedSource(updated, sourceURL, sourcePath, "", ""); err != nil {
-		return domain.SourceIngestionResult{}, s.restoreSourceNote(ctx, sourcePath, sourceAbsPath, oldBody, err)
+		return domain.SourceIngestionResult{}, s.restoreSourceNote(ctx, sourcePath, oldBody, err)
 	}
 	result := domain.SourceIngestionResult{
 		DocID:       updated.DocID,
@@ -763,8 +820,8 @@ func (s *Store) sourceIngestionResultFromDocument(ctx context.Context, document 
 	}, nil
 }
 
-func (s *Store) replaceSourceAssetAndNote(ctx context.Context, sourcePath string, sourceAbsPath string, assetAbsPath string, oldBody string, oldAssetBytes []byte, newAssetBytes []byte, newBody string, title string) error {
-	return s.replaceIngestedAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, newAssetBytes, newBody, title, noteMutationLabels{
+func (s *Store) replaceSourceAssetAndNote(ctx context.Context, sourcePath string, assetPath string, oldBody string, oldAssetBytes []byte, newAssetBytes []byte, newBody string, title string) error {
+	return s.replaceIngestedAssetAndNote(ctx, sourcePath, assetPath, oldBody, oldAssetBytes, newAssetBytes, newBody, title, noteMutationLabels{
 		WriteAsset:     "write source asset",
 		WriteNote:      "write source note",
 		RestoreAsset:   "restore source asset after failed update",
@@ -773,47 +830,47 @@ func (s *Store) replaceSourceAssetAndNote(ctx context.Context, sourcePath string
 	})
 }
 
-func (s *Store) restoreSourceAssetAndNote(ctx context.Context, sourcePath string, sourceAbsPath string, assetAbsPath string, oldBody string, oldAssetBytes []byte, cause error) error {
-	return s.restoreIngestedAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, cause, noteMutationLabels{
+func (s *Store) restoreSourceAssetAndNote(ctx context.Context, sourcePath string, assetPath string, oldBody string, oldAssetBytes []byte, cause error) error {
+	return s.restoreIngestedAssetAndNote(ctx, sourcePath, assetPath, oldBody, oldAssetBytes, cause, noteMutationLabels{
 		RestoreAsset:   "restore source asset after failed update",
 		RestoreNote:    "restore source note after failed update",
 		RestoreIndexed: "restore indexed source after failed update",
 	})
 }
 
-func (s *Store) replaceSourceNote(ctx context.Context, sourcePath string, sourceAbsPath string, oldBody string, newBody string, title string) error {
-	return s.replaceIngestedNote(ctx, sourcePath, sourceAbsPath, oldBody, newBody, title, noteMutationLabels{
+func (s *Store) replaceSourceNote(ctx context.Context, sourcePath string, oldBody string, newBody string, title string) error {
+	return s.replaceIngestedNote(ctx, sourcePath, oldBody, newBody, title, noteMutationLabels{
 		WriteNote:      "write source note",
 		RestoreNote:    "restore source note after failed update",
 		RestoreIndexed: "restore indexed source after failed update",
 	})
 }
 
-func (s *Store) restoreSourceNote(ctx context.Context, sourcePath string, sourceAbsPath string, oldBody string, cause error) error {
-	return s.restoreIngestedNote(ctx, sourcePath, sourceAbsPath, oldBody, cause, noteMutationLabels{
+func (s *Store) restoreSourceNote(ctx context.Context, sourcePath string, oldBody string, cause error) error {
+	return s.restoreIngestedNote(ctx, sourcePath, oldBody, cause, noteMutationLabels{
 		RestoreNote:    "restore source note after failed update",
 		RestoreIndexed: "restore indexed source after failed update",
 	})
 }
 
-func (s *Store) replaceIngestedAssetAndNote(ctx context.Context, sourcePath string, sourceAbsPath string, assetAbsPath string, oldBody string, oldAssetBytes []byte, newAssetBytes []byte, newBody string, title string, labels noteMutationLabels) error {
-	if err := osWriteBytes(assetAbsPath, newAssetBytes); err != nil {
-		return domain.InternalError(labels.WriteAsset, err)
+func (s *Store) replaceIngestedAssetAndNote(ctx context.Context, sourcePath string, assetPath string, oldBody string, oldAssetBytes []byte, newAssetBytes []byte, newBody string, title string, labels noteMutationLabels) error {
+	if err := s.writeExistingVaultFile(assetPath, newAssetBytes, labels.WriteAsset); err != nil {
+		return err
 	}
-	if err := osWriteFile(sourceAbsPath, newBody); err != nil {
-		return s.restoreIngestedAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, domain.InternalError(labels.WriteNote, err), labels)
+	if err := s.writeExistingVaultFile(sourcePath, []byte(newBody), labels.WriteNote); err != nil {
+		return s.restoreIngestedAssetAndNote(ctx, sourcePath, assetPath, oldBody, oldAssetBytes, err, labels)
 	}
 	if err := s.syncDocumentFromDisk(ctx, sourcePath, title); err != nil {
-		return s.restoreIngestedAssetAndNote(ctx, sourcePath, sourceAbsPath, assetAbsPath, oldBody, oldAssetBytes, err, labels)
+		return s.restoreIngestedAssetAndNote(ctx, sourcePath, assetPath, oldBody, oldAssetBytes, err, labels)
 	}
 	return nil
 }
 
-func (s *Store) restoreIngestedAssetAndNote(ctx context.Context, sourcePath string, sourceAbsPath string, assetAbsPath string, oldBody string, oldAssetBytes []byte, cause error, labels noteMutationLabels) error {
-	if restoreErr := osWriteBytes(assetAbsPath, oldAssetBytes); restoreErr != nil {
+func (s *Store) restoreIngestedAssetAndNote(ctx context.Context, sourcePath string, assetPath string, oldBody string, oldAssetBytes []byte, cause error, labels noteMutationLabels) error {
+	if restoreErr := s.writeExistingVaultFile(assetPath, oldAssetBytes, labels.RestoreAsset); restoreErr != nil {
 		return domain.InternalError(labels.RestoreAsset, errors.Join(cause, restoreErr))
 	}
-	if restoreErr := osWriteFile(sourceAbsPath, oldBody); restoreErr != nil {
+	if restoreErr := s.writeExistingVaultFile(sourcePath, []byte(oldBody), labels.RestoreNote); restoreErr != nil {
 		return domain.InternalError(labels.RestoreNote, errors.Join(cause, restoreErr))
 	}
 	if restoreErr := s.syncDocumentFromDisk(ctx, sourcePath, ""); restoreErr != nil {
@@ -822,18 +879,18 @@ func (s *Store) restoreIngestedAssetAndNote(ctx context.Context, sourcePath stri
 	return cause
 }
 
-func (s *Store) replaceIngestedNote(ctx context.Context, sourcePath string, sourceAbsPath string, oldBody string, newBody string, title string, labels noteMutationLabels) error {
-	if err := osWriteFile(sourceAbsPath, newBody); err != nil {
-		return domain.InternalError(labels.WriteNote, err)
+func (s *Store) replaceIngestedNote(ctx context.Context, sourcePath string, oldBody string, newBody string, title string, labels noteMutationLabels) error {
+	if err := s.writeExistingVaultFile(sourcePath, []byte(newBody), labels.WriteNote); err != nil {
+		return err
 	}
 	if err := s.syncDocumentFromDisk(ctx, sourcePath, title); err != nil {
-		return s.restoreIngestedNote(ctx, sourcePath, sourceAbsPath, oldBody, err, labels)
+		return s.restoreIngestedNote(ctx, sourcePath, oldBody, err, labels)
 	}
 	return nil
 }
 
-func (s *Store) restoreIngestedNote(ctx context.Context, sourcePath string, sourceAbsPath string, oldBody string, cause error, labels noteMutationLabels) error {
-	if restoreErr := osWriteFile(sourceAbsPath, oldBody); restoreErr != nil {
+func (s *Store) restoreIngestedNote(ctx context.Context, sourcePath string, oldBody string, cause error, labels noteMutationLabels) error {
+	if restoreErr := s.writeExistingVaultFile(sourcePath, []byte(oldBody), labels.RestoreNote); restoreErr != nil {
 		return domain.InternalError(labels.RestoreNote, errors.Join(cause, restoreErr))
 	}
 	if restoreErr := s.syncDocumentFromDisk(ctx, sourcePath, ""); restoreErr != nil {
@@ -1034,13 +1091,25 @@ func dialPublicSourceContext(ctx context.Context, network string, address string
 }
 
 func isPublicSourceIP(ip net.IP) bool {
-	return ip != nil &&
-		!ip.IsUnspecified() &&
-		!ip.IsLoopback() &&
-		!ip.IsPrivate() &&
-		!ip.IsLinkLocalUnicast() &&
-		!ip.IsLinkLocalMulticast() &&
-		!ip.IsMulticast()
+	addr, ok := netip.AddrFromSlice(ip)
+	if !ok {
+		return false
+	}
+	addr = addr.Unmap()
+	if !addr.IsGlobalUnicast() ||
+		addr.IsUnspecified() ||
+		addr.IsLoopback() ||
+		addr.IsPrivate() ||
+		addr.IsLinkLocalUnicast() ||
+		addr.IsMulticast() {
+		return false
+	}
+	for _, prefix := range blockedPublicSourceIPPrefixes {
+		if prefix.Contains(addr) {
+			return false
+		}
+	}
+	return true
 }
 
 func validateStoredPDFSourceDocument(vaultRoot string, document domain.Document, sourceURL string) (string, string, error) {
@@ -1097,23 +1166,33 @@ func validateStoredSourceDocument(vaultRoot string, document domain.Document, so
 }
 
 func validateExistingVaultFile(vaultRoot string, absPath string, label string) error {
-	resolved, err := filepath.EvalSymlinks(absPath)
-	if err != nil {
-		return domain.InternalError(label, err)
-	}
 	rootClean, err := filepath.Abs(vaultRoot)
 	if err != nil {
 		return domain.InternalError("resolve vault root", err)
 	}
-	if resolvedRoot, err := filepath.EvalSymlinks(rootClean); err == nil {
-		rootClean = resolvedRoot
-	}
-	resolvedClean, err := filepath.Abs(resolved)
+	candidateClean, err := filepath.Abs(absPath)
 	if err != nil {
 		return domain.InternalError(label, err)
 	}
-	if resolvedClean != rootClean && !strings.HasPrefix(resolvedClean, rootClean+string(os.PathSeparator)) {
+	rel, err := filepath.Rel(rootClean, candidateClean)
+	if err != nil {
+		return domain.InternalError(label, err)
+	}
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
 		return domain.ValidationError("source path must stay inside the vault root", nil)
+	}
+	root, err := os.OpenRoot(rootClean)
+	if err != nil {
+		return domain.InternalError(label, err)
+	}
+	defer func() {
+		_ = root.Close()
+	}()
+	if _, err := root.Stat(vaultRootName(filepath.ToSlash(rel))); err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "escapes") {
+			return domain.ValidationError("source path must stay inside the vault root", nil)
+		}
+		return domain.InternalError(label, err)
 	}
 	return nil
 }
@@ -1234,6 +1313,7 @@ func isMarkdownPathExtension(ext string) bool {
 }
 
 func extractPDF(assetPath string) (pdfExtraction, error) {
+	started := time.Now()
 	reader, err := pdf.Open(assetPath)
 	if err != nil {
 		return pdfExtraction{}, domain.ValidationError("source asset is not a readable PDF", nil)
@@ -1242,6 +1322,9 @@ func extractPDF(assetPath string) (pdfExtraction, error) {
 	if pages < 1 {
 		return pdfExtraction{}, domain.ValidationError("source PDF must contain at least one page", nil)
 	}
+	if pages > maxSourcePDFPages {
+		return pdfExtraction{}, domain.ValidationError("source PDF exceeds maximum supported page count", map[string]any{"max_pages": maxSourcePDFPages})
+	}
 	info := reader.Trailer().Key("Info")
 	metadata := domain.SourcePDFMetadata{
 		Title:         pdfText(info.Key("Title")),
@@ -1249,8 +1332,18 @@ func extractPDF(assetPath string) (pdfExtraction, error) {
 		PublishedDate: firstNonEmpty(pdfText(info.Key("CreationDate")), pdfText(info.Key("ModDate"))),
 	}
 	pageTexts := make([]string, 0, pages)
+	totalTextObjects := 0
+	totalRunes := 0
 	for pageNum := 1; pageNum <= pages; pageNum++ {
-		texts := append([]pdf.Text(nil), reader.Page(pageNum).Content().Text...)
+		if time.Since(started) > maxSourcePDFExtractionTime {
+			return pdfExtraction{}, domain.ValidationError("source PDF extraction exceeded time limit", map[string]any{"max_seconds": int(maxSourcePDFExtractionTime / time.Second)})
+		}
+		pageContent := reader.Page(pageNum).Content()
+		totalTextObjects += len(pageContent.Text)
+		if totalTextObjects > maxSourcePDFTextObjects {
+			return pdfExtraction{}, domain.ValidationError("source PDF exceeds maximum supported text object count", map[string]any{"max_text_objects": maxSourcePDFTextObjects})
+		}
+		texts := append([]pdf.Text(nil), pageContent.Text...)
 		sort.SliceStable(texts, func(i, j int) bool {
 			if texts[i].Y == texts[j].Y {
 				return texts[i].X < texts[j].X
@@ -1262,6 +1355,10 @@ func extractPDF(assetPath string) (pdfExtraction, error) {
 		for idx := range texts {
 			text := texts[idx]
 			if text.S != "" {
+				totalRunes += utf8.RuneCountInString(text.S)
+				if totalRunes > maxSourcePDFExtractedRunes {
+					return pdfExtraction{}, domain.ValidationError("source PDF exceeds maximum supported extracted text size", map[string]any{"max_runes": maxSourcePDFExtractedRunes})
+				}
 				if previous != nil {
 					if text.Y < previous.Y-previous.FontSize*0.5 {
 						pageText.WriteString("\n")
@@ -1369,7 +1466,7 @@ func buildPDFSourceNoteBody(sourceURL string, sourcePath string, assetPath strin
 		body.WriteString("pdf_published_date: " + frontmatterScalar(extracted.Metadata.PublishedDate) + "\n")
 	}
 	body.WriteString("---\n")
-	body.WriteString("# " + markdownLine(title) + "\n\n")
+	body.WriteString("# " + sourceNoteInline(title) + "\n\n")
 	body.WriteString("## Summary\n")
 	body.WriteString("PDF source ingested from " + sourceURL + ".\n\n")
 	body.WriteString("## Source Asset\n")
@@ -1381,21 +1478,21 @@ func buildPDFSourceNoteBody(sourceURL string, sourcePath string, assetPath strin
 	if extracted.Metadata.Title != "" || extracted.Metadata.Author != "" || extracted.Metadata.PublishedDate != "" {
 		body.WriteString("## PDF Metadata\n")
 		if extracted.Metadata.Title != "" {
-			body.WriteString("- Title: " + extracted.Metadata.Title + "\n")
+			body.WriteString("- Title: " + sourceNoteInline(extracted.Metadata.Title) + "\n")
 		}
 		if extracted.Metadata.Author != "" {
-			body.WriteString("- Author: " + extracted.Metadata.Author + "\n")
+			body.WriteString("- Author: " + sourceNoteInline(extracted.Metadata.Author) + "\n")
 		}
 		if extracted.Metadata.PublishedDate != "" {
-			body.WriteString("- Published date: " + extracted.Metadata.PublishedDate + "\n")
+			body.WriteString("- Published date: " + sourceNoteInline(extracted.Metadata.PublishedDate) + "\n")
 		}
 		body.WriteString("\n")
 	}
 	body.WriteString("## Extracted Text\n")
 	if extracted.Text != "" {
-		body.WriteString(extracted.Text + "\n")
+		body.WriteString(sourceNoteTextBlock(extracted.Text))
 	} else {
-		body.WriteString(sourceMetadataFallbackText(extracted.Metadata, title) + "\n")
+		body.WriteString(sourceNoteTextBlock(sourceMetadataFallbackText(extracted.Metadata, title)))
 	}
 	return body.String()
 }
@@ -1416,7 +1513,7 @@ func buildWebSourceNoteBody(sourceURL string, sourcePath string, title string, s
 		body.WriteString("source_title: " + frontmatterScalar(extracted.Title) + "\n")
 	}
 	body.WriteString("---\n")
-	body.WriteString("# " + markdownLine(title) + "\n\n")
+	body.WriteString("# " + sourceNoteInline(title) + "\n\n")
 	body.WriteString("## Summary\n")
 	body.WriteString("Web source ingested from " + sourceURL + ".\n\n")
 	body.WriteString("## Source Page\n")
@@ -1424,15 +1521,28 @@ func buildWebSourceNoteBody(sourceURL string, sourcePath string, title string, s
 	body.WriteString("- SHA256: " + sha + "\n")
 	_, _ = fmt.Fprintf(&body, "- Size bytes: %d\n", sizeBytes)
 	if extracted.Title != "" {
-		body.WriteString("- Page title: " + extracted.Title + "\n")
+		body.WriteString("- Page title: " + sourceNoteInline(extracted.Title) + "\n")
 	}
 	body.WriteString("\n## Extracted Text\n")
 	if extracted.Text != "" {
-		body.WriteString(extracted.Text + "\n")
+		body.WriteString(sourceNoteTextBlock(extracted.Text))
 	} else {
-		body.WriteString("No visible page text was found.\n")
+		body.WriteString(sourceNoteTextBlock("No visible page text was found."))
 	}
 	return body.String()
+}
+
+func sourceNoteInline(value string) string {
+	return html.EscapeString(markdownLine(value))
+}
+
+func sourceNoteTextBlock(value string) string {
+	text := strings.TrimSpace(strings.ReplaceAll(value, "\r\n", "\n"))
+	fence := "```"
+	for strings.Contains(text, fence) {
+		fence += "`"
+	}
+	return fence + "text\n" + text + "\n" + fence + "\n"
 }
 
 var (

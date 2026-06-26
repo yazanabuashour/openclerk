@@ -51,6 +51,9 @@ func TestConfigTaskProfileInspectConfigureAndClear(t *testing.T) {
 
 	configured, err := runner.RunConfigTask(ctx, config, runner.ConfigTaskRequest{
 		Action: runner.ConfigTaskActionConfigureProfile,
+		Autonomy: runner.AutonomyModes{
+			ApprovalMode: runner.ApprovalModeApproveWrite,
+		},
 		Profile: runner.AutonomyModes{
 			ApprovalMode:    runner.ApprovalModeAutonomousDisposable,
 			DraftingMode:    runner.DraftingModeAutonomousFields,
@@ -82,7 +85,10 @@ func TestConfigTaskProfileInspectConfigureAndClear(t *testing.T) {
 	}
 
 	invalid, err := runner.RunConfigTask(ctx, config, runner.ConfigTaskRequest{
-		Action:  runner.ConfigTaskActionConfigureProfile,
+		Action: runner.ConfigTaskActionConfigureProfile,
+		Autonomy: runner.AutonomyModes{
+			ApprovalMode: runner.ApprovalModeApproveWrite,
+		},
 		Profile: runner.AutonomyModes{AudienceMode: "boardroom"},
 	})
 	if err != nil {
@@ -90,6 +96,20 @@ func TestConfigTaskProfileInspectConfigureAndClear(t *testing.T) {
 	}
 	if !invalid.Rejected || !strings.Contains(invalid.RejectionReason, "profile.audience_mode") {
 		t.Fatalf("invalid profile result = %+v", invalid)
+	}
+
+	implicitApproval, err := runner.RunConfigTask(ctx, config, runner.ConfigTaskRequest{
+		Action: runner.ConfigTaskActionConfigureProfile,
+		Autonomy: runner.AutonomyModes{
+			PrivacyMode: runner.PrivacyModeAllowPaths,
+		},
+		Profile: runner.AutonomyModes{AudienceMode: runner.AudienceModeExecutiveSummary},
+	})
+	if err != nil {
+		t.Fatalf("implicit approval configure profile: %v", err)
+	}
+	if !implicitApproval.Rejected || !strings.Contains(implicitApproval.RejectionReason, "explicit autonomy.approval_mode") {
+		t.Fatalf("implicit approval profile result = %+v", implicitApproval)
 	}
 
 	unsupported, err := runner.RunConfigTask(ctx, config, runner.ConfigTaskRequest{Action: "write_raw_runtime_config"})
@@ -100,7 +120,12 @@ func TestConfigTaskProfileInspectConfigureAndClear(t *testing.T) {
 		t.Fatalf("unsupported config result = %+v", unsupported)
 	}
 
-	cleared, err := runner.RunConfigTask(ctx, config, runner.ConfigTaskRequest{Action: runner.ConfigTaskActionClearProfile})
+	cleared, err := runner.RunConfigTask(ctx, config, runner.ConfigTaskRequest{
+		Action: runner.ConfigTaskActionClearProfile,
+		Autonomy: runner.AutonomyModes{
+			ApprovalMode: runner.ApprovalModeApproveWrite,
+		},
+	})
 	if err != nil {
 		t.Fatalf("clear profile: %v", err)
 	}
@@ -119,6 +144,7 @@ func TestConfigTaskVaultIgnorePathsPersistInRuntimeConfig(t *testing.T) {
 	paths := []string{"scratch/", `private\drafts`}
 	configured, err := runner.RunConfigTask(ctx, config, runner.ConfigTaskRequest{
 		Action:           runner.ConfigTaskActionConfigureVaultIgnores,
+		Autonomy:         runner.AutonomyModes{ApprovalMode: runner.ApprovalModeApproveWrite},
 		VaultIgnorePaths: &paths,
 	})
 	if err != nil {
@@ -150,6 +176,7 @@ func TestConfigTaskVaultIgnorePathsPersistInRuntimeConfig(t *testing.T) {
 	emptyPaths := []string{}
 	cleared, err := runner.RunConfigTask(ctx, config, runner.ConfigTaskRequest{
 		Action:           runner.ConfigTaskActionConfigureVaultIgnores,
+		Autonomy:         runner.AutonomyModes{ApprovalMode: runner.ApprovalModeApproveWrite},
 		VaultIgnorePaths: &emptyPaths,
 	})
 	if err != nil {
@@ -177,7 +204,10 @@ func TestProfileDefaultsGateDocumentAndRetrievalWithRequestOverride(t *testing.T
 	ctx := context.Background()
 	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
 	if _, err := runner.RunConfigTask(ctx, config, runner.ConfigTaskRequest{
-		Action:  runner.ConfigTaskActionConfigureProfile,
+		Action: runner.ConfigTaskActionConfigureProfile,
+		Autonomy: runner.AutonomyModes{
+			ApprovalMode: runner.ApprovalModeApproveWrite,
+		},
 		Profile: runner.AutonomyModes{ApprovalMode: runner.ApprovalModeProposeOnly},
 	}); err != nil {
 		t.Fatalf("configure profile: %v", err)
@@ -257,7 +287,8 @@ func TestConfigInspectSummarizesModulesWithoutProviderSecrets(t *testing.T) {
 		inspect.Modules[0].Provider != "gemini" ||
 		inspect.Modules[0].Kind != runclient.ModuleKindEmbeddingProvider ||
 		!inspect.Modules[0].Enabled ||
-		inspect.Modules[0].Command != "semantic-retrieval-adapter" ||
+		!filepath.IsAbs(inspect.Modules[0].Command) ||
+		filepath.Base(inspect.Modules[0].Command) != "semantic-retrieval-adapter" ||
 		inspect.Modules[0].RedactionStatus != "redacted" {
 		t.Fatalf("module summaries = %+v", inspect.Modules)
 	}

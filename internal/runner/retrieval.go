@@ -768,7 +768,11 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		return normalized, ""
 	case RetrievalTaskActionSemanticSearch:
 		normalized.SemanticSearch.Query = strings.TrimSpace(request.SemanticSearch.Query)
-		normalized.SemanticSearch.PathPrefix = strings.TrimSpace(request.SemanticSearch.PathPrefix)
+		pathPrefix, rejection := normalizeSemanticSearchPathPrefix(request.SemanticSearch.PathPrefix)
+		if rejection != "" {
+			return normalizedRetrievalTaskRequest{}, rejection
+		}
+		normalized.SemanticSearch.PathPrefix = pathPrefix
 		normalized.SemanticSearch.MetadataKey = strings.TrimSpace(request.SemanticSearch.MetadataKey)
 		normalized.SemanticSearch.MetadataValue = strings.TrimSpace(request.SemanticSearch.MetadataValue)
 		normalized.SemanticSearch.Tag = request.SemanticSearch.Tag
@@ -780,6 +784,15 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		normalized.SemanticSearch.EmbeddingModel = strings.TrimSpace(request.SemanticSearch.EmbeddingModel)
 		normalized.SemanticSearch.GeminiAPIBase = strings.TrimRight(strings.TrimSpace(request.SemanticSearch.GeminiAPIBase), "/")
 		normalized.SemanticSearch.CacheDir = strings.TrimSpace(request.SemanticSearch.CacheDir)
+		if normalized.SemanticSearch.OllamaURL != "" {
+			return normalizedRetrievalTaskRequest{}, "semantic_search.ollama_url must be configured on the verified semantic module"
+		}
+		if normalized.SemanticSearch.GeminiAPIBase != "" {
+			return normalizedRetrievalTaskRequest{}, "semantic_search.gemini_api_base must be configured on the verified semantic module"
+		}
+		if normalized.SemanticSearch.CacheDir != "" {
+			return normalizedRetrievalTaskRequest{}, "semantic_search.cache_dir is managed by OpenClerk state"
+		}
 		if normalized.SemanticSearch.Query == "" {
 			return normalizedRetrievalTaskRequest{}, "semantic_search.query is required"
 		}
@@ -791,19 +804,6 @@ func normalizeRetrievalTaskRequest(request RetrievalTaskRequest) (normalizedRetr
 		}
 		if rejection := normalizeSemanticSearchTagFilter(&normalized.SemanticSearch); rejection != "" {
 			return normalizedRetrievalTaskRequest{}, rejection
-		}
-		if normalized.SemanticSearch.Provider == runclient.SemanticModuleProviderOllama {
-			if rejection := validateSemanticSearchOllamaURL(normalized.SemanticSearch.OllamaURL); rejection != "" {
-				return normalizedRetrievalTaskRequest{}, rejection
-			}
-		}
-		if normalized.SemanticSearch.Provider == runclient.SemanticModuleProviderGemini {
-			if rejection := validateSemanticSearchGeminiAPIBase(normalized.SemanticSearch.GeminiAPIBase); rejection != "" {
-				return normalizedRetrievalTaskRequest{}, rejection
-			}
-		}
-		if normalized.SemanticSearch.Provider == runclient.SemanticModuleProviderGemini && strings.TrimSpace(normalized.SemanticSearch.OllamaURL) != "" {
-			return normalizedRetrievalTaskRequest{}, "semantic_search.ollama_url is only valid for provider ollama"
 		}
 		if normalized.SemanticSearch.EmbeddingOutputDimensions < 0 {
 			return normalizedRetrievalTaskRequest{}, "semantic_search.embedding_output_dimensions must be greater than or equal to 0"
@@ -900,6 +900,25 @@ func normalizeSearchTagFilter(search *SearchOptions) string {
 
 func normalizeSemanticSearchTagFilter(search *SemanticSearchOptions) string {
 	return normalizeTagFilter("semantic_search", search.Tag, search.tagProvided, &search.MetadataKey, &search.MetadataValue, &search.Tag)
+}
+
+func normalizeSemanticSearchPathPrefix(raw string) (string, string) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return "", ""
+	}
+	if containsParentPathSegment(trimmed) {
+		return "", "semantic_search.path_prefix must stay inside the vault root"
+	}
+	clean, issue := domain.NormalizeOptionalVaultRelativePrefix(trimmed)
+	switch issue {
+	case domain.VaultPathOK:
+		return clean, ""
+	case domain.VaultPathAbsolute:
+		return "", "semantic_search.path_prefix must be relative to the vault root"
+	default:
+		return "", "semantic_search.path_prefix must stay inside the vault root"
+	}
 }
 
 func normalizeSearchDiagnosticsTagFilter(search *SearchDiagnosticsOptions) string {

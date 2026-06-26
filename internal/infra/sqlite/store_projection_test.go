@@ -54,7 +54,7 @@ Production service for routine local knowledge tasks.
 	}
 }
 
-func TestServicesProjectionSkipsDuplicateServiceIDs(t *testing.T) {
+func TestServicesProjectionRejectsDuplicateServiceIDs(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -97,9 +97,19 @@ Duplicate service projection should not brick rebuild.
 	if err != nil {
 		t.Fatalf("services lookup with duplicate IDs: %v", err)
 	}
-	if len(services.Services) != 1 || services.Services[0].ServiceID != "duplicate-runner" {
-		t.Fatalf("services = %+v, want one duplicate-runner record", services.Services)
+	if len(services.Services) != 0 {
+		t.Fatalf("services = %+v, want no trusted service row for duplicate service_id", services.Services)
 	}
+	projections, err := store.ListProjectionStates(ctx, domain.ProjectionStateQuery{
+		Projection: "services",
+		RefKind:    "service",
+		RefID:      "duplicate-runner",
+		Limit:      10,
+	})
+	if err != nil {
+		t.Fatalf("list duplicate service projection: %v", err)
+	}
+	assertDuplicateServiceProjection(t, projections.Projections)
 	events, err := store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{
 		RefKind: "service",
 		RefID:   "duplicate-runner",
@@ -108,14 +118,32 @@ Duplicate service projection should not brick rebuild.
 	if err != nil {
 		t.Fatalf("list duplicate service provenance: %v", err)
 	}
-	if got := duplicateServiceSkipEventCount(events.Events); got != 1 {
-		t.Fatalf("duplicate skip event count = %d, want 1", got)
+	if got := duplicateServiceRejectedEventCount(events.Events); got != 1 {
+		t.Fatalf("duplicate rejection event count = %d, want 1", got)
 	}
+
 	if err := store.Close(); err != nil {
 		t.Fatalf("close store before rebuild: %v", err)
 	}
 
 	store = openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	services, err = store.ServicesLookup(ctx, domain.ServiceLookupInput{Text: "Duplicate", Limit: 10})
+	if err != nil {
+		t.Fatalf("services lookup with duplicate IDs after rebuild: %v", err)
+	}
+	if len(services.Services) != 0 {
+		t.Fatalf("services after rebuild = %+v, want no trusted service row for duplicate service_id", services.Services)
+	}
+	projections, err = store.ListProjectionStates(ctx, domain.ProjectionStateQuery{
+		Projection: "services",
+		RefKind:    "service",
+		RefID:      "duplicate-runner",
+		Limit:      10,
+	})
+	if err != nil {
+		t.Fatalf("list duplicate service projection after rebuild: %v", err)
+	}
+	assertDuplicateServiceProjection(t, projections.Projections)
 	events, err = store.ListProvenanceEvents(ctx, domain.ProvenanceEventQuery{
 		RefKind: "service",
 		RefID:   "duplicate-runner",
@@ -124,15 +152,35 @@ Duplicate service projection should not brick rebuild.
 	if err != nil {
 		t.Fatalf("list duplicate service provenance after rebuild: %v", err)
 	}
-	if got := duplicateServiceSkipEventCount(events.Events); got != 1 {
-		t.Fatalf("duplicate skip event count after rebuild = %d, want 1", got)
+	if got := duplicateServiceRejectedEventCount(events.Events); got != 1 {
+		t.Fatalf("duplicate rejection event count after rebuild = %d, want 1", got)
 	}
 }
 
-func duplicateServiceSkipEventCount(events []domain.ProvenanceEvent) int {
+func assertDuplicateServiceProjection(t *testing.T, projections []domain.ProjectionState) {
+	t.Helper()
+
+	if len(projections) != 1 {
+		t.Fatalf("duplicate service projections = %+v, want one stale projection", projections)
+	}
+	projection := projections[0]
+	if projection.Freshness != "stale" ||
+		projection.Details["freshness_reason"] != "duplicate projected id; no trusted record materialized" ||
+		projection.Details["duplicate_ref_id"] != "duplicate-runner" ||
+		!strings.Contains(projection.Details["duplicate_doc_ids"], ", ") {
+		t.Fatalf("duplicate service projection = %+v, want stale duplicate service_id details", projection)
+	}
+	for _, want := range []string{"records/services/a-runner.md", "records/services/b-runner.md"} {
+		if !strings.Contains(projection.Details["duplicate_paths"], want) {
+			t.Fatalf("duplicate paths = %q, want %s", projection.Details["duplicate_paths"], want)
+		}
+	}
+}
+
+func duplicateServiceRejectedEventCount(events []domain.ProvenanceEvent) int {
 	count := 0
 	for _, event := range events {
-		if event.EventType == "service_duplicate_skipped" {
+		if event.EventType == "service_duplicate_rejected" {
 			count++
 		}
 	}

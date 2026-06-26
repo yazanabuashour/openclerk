@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/yazanabuashour/openclerk/internal/domain"
 	"os"
 	"path/filepath"
@@ -118,6 +119,45 @@ func TestSyncVaultIgnoresDefaultHiddenDirectories(t *testing.T) {
 	}
 }
 
+func TestSyncVaultSkipsSymlinkedMarkdown(t *testing.T) {
+	t.Parallel()
+
+	vaultRoot := t.TempDir()
+	outsideRoot := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+	writeVaultFile(t, vaultRoot, "docs/live.md", "# Live\n\nlive marker\n")
+	outsidePath := filepath.Join(outsideRoot, "secret.md")
+	if err := os.WriteFile(outsidePath, []byte("# Secret\n\noutsideonlymarker\n"), 0o644); err != nil {
+		t.Fatalf("write outside doc: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Join(vaultRoot, "docs"), 0o755); err != nil {
+		t.Fatalf("mkdir docs: %v", err)
+	}
+	if err := os.Symlink(outsidePath, filepath.Join(vaultRoot, "docs", "linked.md")); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+
+	store := openTestStore(t, domain.BackendOpenClerk, dbPath, vaultRoot)
+	defer func() {
+		_ = store.Close()
+	}()
+
+	live, err := store.Search(context.Background(), domain.SearchQuery{Text: "live marker", Limit: 10})
+	if err != nil {
+		t.Fatalf("search live: %v", err)
+	}
+	if len(live.Hits) != 1 {
+		t.Fatalf("live hits = %d, want 1", len(live.Hits))
+	}
+	secret, err := store.Search(context.Background(), domain.SearchQuery{Text: "outsideonlymarker", Limit: 10})
+	if err != nil {
+		t.Fatalf("search symlink target: %v", err)
+	}
+	if len(secret.Hits) != 0 {
+		t.Fatalf("symlink target hits = %d, want 0", len(secret.Hits))
+	}
+}
+
 func TestSyncVaultConfigurableIgnorePathsPruneExistingDocument(t *testing.T) {
 	t.Parallel()
 
@@ -218,6 +258,60 @@ func TestSyncVaultRejectsDirectCreateUnderIgnoredPath(t *testing.T) {
 	}
 	if len(list.Documents) != 0 {
 		t.Fatalf("documents after rejected create = %+v, want none", list.Documents)
+	}
+}
+
+func TestSyncDocumentRejectsMarkdownResourceBudgets(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		body string
+		want string
+	}{
+		{
+			name: "oversized body",
+			body: strings.Repeat("x", maxVaultMarkdownDocumentBytes+1),
+			want: "maximum supported Markdown size",
+		},
+		{
+			name: "too many sections",
+			body: manyMarkdownSectionsForTest(maxVaultMarkdownSections + 1),
+			want: "maximum supported Markdown sections",
+		},
+		{
+			name: "too many frontmatter fields",
+			body: manyFrontmatterFieldsForTest(maxVaultMarkdownMetadataFields + 1),
+			want: "maximum supported frontmatter fields",
+		},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := context.Background()
+			vaultRoot := t.TempDir()
+			dbPath := filepath.Join(t.TempDir(), "openclerk.sqlite")
+			writeVaultFile(t, vaultRoot, "docs/budget.md", tc.body)
+			store, err := NewUnsynced(ctx, Config{
+				Backend:      domain.BackendOpenClerk,
+				DatabasePath: dbPath,
+				VaultRoot:    vaultRoot,
+			})
+			if err != nil {
+				t.Fatalf("open unsynced store: %v", err)
+			}
+			defer func() {
+				_ = store.Close()
+			}()
+
+			_, err = store.syncDocumentFromDiskWithOptions(ctx, "docs/budget.md", "", documentSyncOptions{})
+			var appErr *domain.Error
+			if !errors.As(err, &appErr) || appErr.Code != "validation_error" || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("sync error = %v, want validation containing %q", err, tc.want)
+			}
+		})
 	}
 }
 
@@ -603,6 +697,25 @@ func writeVaultFile(t *testing.T, vaultRoot string, relPath string, content stri
 	if err := os.WriteFile(absPath, []byte(content), 0o644); err != nil {
 		t.Fatalf("write %s: %v", relPath, err)
 	}
+}
+
+func manyMarkdownSectionsForTest(count int) string {
+	var builder strings.Builder
+	builder.WriteString("# Budget\n\n")
+	for idx := 0; idx < count; idx++ {
+		_, _ = fmt.Fprintf(&builder, "## Section %04d\nsection body\n\n", idx)
+	}
+	return builder.String()
+}
+
+func manyFrontmatterFieldsForTest(count int) string {
+	var builder strings.Builder
+	builder.WriteString("---\n")
+	for idx := 0; idx < count; idx++ {
+		_, _ = fmt.Fprintf(&builder, "field_%04d: value\n", idx)
+	}
+	builder.WriteString("---\n# Metadata Budget\n")
+	return builder.String()
 }
 
 func readSyncDiagnosticsForTest(t *testing.T, path string) SyncDiagnostics {

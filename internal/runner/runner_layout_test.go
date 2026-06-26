@@ -71,6 +71,7 @@ func TestDocumentTaskInspectLayoutReportsIgnoredPaths(t *testing.T) {
 	ignoredPaths := []string{"scratch/"}
 	if _, err := runner.RunConfigTask(ctx, config, runner.ConfigTaskRequest{
 		Action:           runner.ConfigTaskActionConfigureVaultIgnores,
+		Autonomy:         runner.AutonomyModes{ApprovalMode: runner.ApprovalModeApproveWrite},
 		VaultIgnorePaths: &ignoredPaths,
 	}); err != nil {
 		t.Fatalf("configure vault ignores: %v", err)

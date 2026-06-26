@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -29,6 +30,9 @@ const (
 
 	semanticModuleCommand       = "semantic-retrieval-adapter"
 	semanticModuleSearchCommand = "semantic-retrieval-adapter search"
+	ocrModuleTesseractCommand   = "tesseract"
+	ocrModuleOCRmyPDFCommand    = "ocrmypdf"
+	ocrModuleOCRmyPDFSHAKey     = "ocrmypdf_command_sha256"
 	canonicalGeminiAPIBase      = "https://generativelanguage.googleapis.com/v1beta"
 )
 
@@ -39,6 +43,7 @@ type SemanticModuleConfig struct {
 	Enabled              bool              `json:"enabled"`
 	Command              string            `json:"command,omitempty"`
 	CommandArgs          []string          `json:"command_args,omitempty"`
+	CommandSHA256        string            `json:"command_sha256,omitempty"`
 	ManifestPath         string            `json:"manifest_path,omitempty"`
 	ManifestSHA256       string            `json:"manifest_sha256,omitempty"`
 	ManifestResolvedPath string            `json:"-"`
@@ -77,9 +82,6 @@ func InstallSemanticModule(ctx context.Context, cfg Config, input SemanticModule
 	if strings.TrimSpace(input.ManifestPath) == "" {
 		return SemanticModuleConfig{}, domain.ValidationError("module.manifest_path is required", nil)
 	}
-	if command := strings.TrimSpace(input.Command); command != "" && command != semanticModuleCommand {
-		return SemanticModuleConfig{}, domain.ValidationError("module.command must be semantic-retrieval-adapter for semantic modules", nil)
-	}
 	if len(input.CommandArgs) != 0 {
 		return SemanticModuleConfig{}, domain.ValidationError("module.command_args are unsupported for semantic modules", nil)
 	}
@@ -100,13 +102,18 @@ func InstallSemanticModule(ctx context.Context, cfg Config, input SemanticModule
 	if err := validateSemanticProviderConfig(provider, providerConfig); err != nil {
 		return SemanticModuleConfig{}, err
 	}
+	command, commandSHA, err := resolveBoundModuleExecutable(firstNonEmptyModuleString(strings.TrimSpace(input.Command), semanticModuleCommand), semanticModuleCommand, manifest, semanticModuleManifestPolicy)
+	if err != nil {
+		return SemanticModuleConfig{}, err
+	}
 	config := SemanticModuleConfig{
 		Kind:                 ModuleKindEmbeddingProvider,
 		Provider:             provider,
 		ModuleName:           manifest.Module.Name,
 		Enabled:              enabled,
-		Command:              semanticModuleCommand,
+		Command:              command,
 		CommandArgs:          nil,
+		CommandSHA256:        commandSHA,
 		ManifestPath:         manifestPath,
 		ManifestSHA256:       manifestSHA,
 		ManifestResolvedPath: resolvedManifestPath,
@@ -265,6 +272,9 @@ func InstallOCRModule(ctx context.Context, cfg Config, input SemanticModuleInsta
 	if strings.TrimSpace(input.Command) == "" {
 		return SemanticModuleConfig{}, domain.ValidationError("module.command is required", nil)
 	}
+	if len(input.CommandArgs) != 0 {
+		return SemanticModuleConfig{}, domain.ValidationError("module.command_args are unsupported for OCR modules", nil)
+	}
 	manifestPath := filepath.Clean(input.ManifestPath)
 	resolvedManifestPath, err := resolveModuleManifestPathForInstall(cfg, input.ManifestRoot, manifestPath, ocrModuleManifestPolicy)
 	if err != nil {
@@ -278,17 +288,26 @@ func InstallOCRModule(ctx context.Context, cfg Config, input SemanticModuleInsta
 	if input.Enabled != nil {
 		enabled = *input.Enabled
 	}
+	command, commandSHA, err := resolveBoundModuleExecutable(input.Command, ocrModuleTesseractCommand, manifest, ocrModuleManifestPolicy)
+	if err != nil {
+		return SemanticModuleConfig{}, err
+	}
+	providerConfig, err := normalizeOCRProviderConfig(manifest, redactedProviderConfig(provider, input.ProviderConfig))
+	if err != nil {
+		return SemanticModuleConfig{}, err
+	}
 	config := SemanticModuleConfig{
 		Kind:                 ModuleKindOCRProvider,
 		Provider:             provider,
 		ModuleName:           manifest.Module.Name,
 		Enabled:              enabled,
-		Command:              strings.TrimSpace(input.Command),
-		CommandArgs:          sanitizedArgs(input.CommandArgs),
+		Command:              command,
+		CommandArgs:          nil,
+		CommandSHA256:        commandSHA,
 		ManifestPath:         manifestPath,
 		ManifestSHA256:       manifestSHA,
 		ManifestResolvedPath: resolvedManifestPath,
-		ProviderConfig:       redactedProviderConfig(provider, input.ProviderConfig),
+		ProviderConfig:       providerConfig,
 		VerificationStatus:   "verified",
 		RedactionStatus:      "redacted",
 	}
@@ -319,6 +338,14 @@ func ConfigureOCRModule(ctx context.Context, cfg Config, input SemanticModuleCon
 	}
 	for key, value := range redactedProviderConfig(provider, input.ProviderConfig) {
 		merged[key] = value
+	}
+	manifest, _, err := verifyInstalledModuleManifest(cfg, current, ocrModuleManifestPolicy)
+	if err != nil {
+		return SemanticModuleConfig{}, err
+	}
+	merged, err = normalizeOCRProviderConfig(manifest, merged)
+	if err != nil {
+		return SemanticModuleConfig{}, err
 	}
 	current.ProviderConfig = merged
 	current.VerificationStatus = "verified"
@@ -383,6 +410,7 @@ func semanticModuleConfigFromValues(kind string, provider string, values map[str
 		ModuleName:           values["module_name"],
 		Enabled:              values["enabled"] == "true",
 		Command:              values["command"],
+		CommandSHA256:        values["command_sha256"],
 		ManifestPath:         values["manifest_path"],
 		ManifestSHA256:       values["manifest_sha256"],
 		ManifestResolvedPath: values["manifest_resolved_path"],
@@ -444,9 +472,6 @@ func verifyInstalledSemanticModule(cfg Config, config SemanticModuleConfig) erro
 	if strings.TrimSpace(config.Command) == "" {
 		return domain.ValidationError("semantic module command is missing", map[string]any{"provider": config.Provider})
 	}
-	if config.Command != semanticModuleCommand {
-		return domain.ValidationError("semantic module command must be semantic-retrieval-adapter", map[string]any{"provider": config.Provider})
-	}
 	if len(config.CommandArgs) != 0 {
 		return domain.ValidationError("semantic module command_args are unsupported", map[string]any{"provider": config.Provider})
 	}
@@ -460,12 +485,15 @@ func verifyInstalledSemanticModule(cfg Config, config SemanticModuleConfig) erro
 	if sha != config.ManifestSHA256 {
 		return domain.ValidationError("semantic module manifest digest changed", map[string]any{"provider": config.Provider, "module": manifest.Module.Name})
 	}
-	return nil
+	return verifyBoundModuleExecutable(config.Command, config.CommandSHA256, semanticModuleCommand, manifest, semanticModuleManifestPolicy)
 }
 
 func verifyInstalledOCRModule(cfg Config, config SemanticModuleConfig) error {
 	if strings.TrimSpace(config.Command) == "" {
 		return domain.ValidationError("OCR module command is missing", map[string]any{"provider": config.Provider})
+	}
+	if len(config.CommandArgs) != 0 {
+		return domain.ValidationError("OCR module command_args are unsupported", map[string]any{"provider": config.Provider})
 	}
 	if strings.TrimSpace(config.ManifestPath) == "" || strings.TrimSpace(config.ManifestSHA256) == "" {
 		return domain.ValidationError("OCR module manifest verification is missing", map[string]any{"provider": config.Provider})
@@ -476,6 +504,12 @@ func verifyInstalledOCRModule(cfg Config, config SemanticModuleConfig) error {
 	}
 	if sha != config.ManifestSHA256 {
 		return domain.ValidationError("OCR module manifest digest changed", map[string]any{"provider": config.Provider, "module": manifest.Module.Name})
+	}
+	if err := verifyBoundModuleExecutable(config.Command, config.CommandSHA256, ocrModuleTesseractCommand, manifest, ocrModuleManifestPolicy); err != nil {
+		return err
+	}
+	if err := verifyBoundModuleExecutable(config.ProviderConfig["ocrmypdf_command"], config.ProviderConfig[ocrModuleOCRmyPDFSHAKey], ocrModuleOCRmyPDFCommand, manifest, ocrModuleManifestPolicy); err != nil {
+		return err
 	}
 	return nil
 }
@@ -491,6 +525,9 @@ type semanticModuleManifest struct {
 		Type string `json:"type"`
 		Name string `json:"name"`
 	} `json:"provides"`
+	Requires struct {
+		Tools []string `json:"tools"`
+	} `json:"requires"`
 	Authority struct {
 		Default       string   `json:"default"`
 		DurableWrites string   `json:"durable_writes"`
@@ -646,6 +683,172 @@ func verifyModuleManifest(path string, provider string, expectedName string, pol
 	return manifest, sha, nil
 }
 
+func resolveBoundModuleExecutable(command string, expectedName string, manifest semanticModuleManifest, policy moduleManifestPolicy) (string, string, error) {
+	trimmed := strings.TrimSpace(command)
+	if trimmed == "" {
+		return "", "", domain.ValidationError(policy.label+" command is required", nil)
+	}
+	if err := validateManifestAllowsExecutable(manifest, expectedName, policy); err != nil {
+		return "", "", err
+	}
+	if moduleExecutableName(trimmed) != expectedName {
+		return "", "", domain.ValidationError(policy.label+" command must be "+expectedName, map[string]any{"command": trimmed})
+	}
+	resolved, err := resolveExecutablePath(trimmed, policy)
+	if err != nil {
+		return "", "", err
+	}
+	sha, err := executableSHA256(resolved, policy)
+	if err != nil {
+		return "", "", err
+	}
+	return resolved, sha, nil
+}
+
+func verifyBoundModuleExecutable(command string, expectedSHA string, expectedName string, manifest semanticModuleManifest, policy moduleManifestPolicy) error {
+	trimmed := strings.TrimSpace(command)
+	if trimmed == "" {
+		return domain.ValidationError(policy.label+" command is missing", nil)
+	}
+	if strings.TrimSpace(expectedSHA) == "" {
+		return domain.ValidationError(policy.label+" command digest is missing", map[string]any{"command": trimmed})
+	}
+	if !filepath.IsAbs(trimmed) {
+		return domain.ValidationError(policy.label+" command must be an absolute path resolved during module installation", map[string]any{"command": trimmed})
+	}
+	if err := validateManifestAllowsExecutable(manifest, expectedName, policy); err != nil {
+		return err
+	}
+	if moduleExecutableName(trimmed) != expectedName {
+		return domain.ValidationError(policy.label+" command must be "+expectedName, map[string]any{"command": trimmed})
+	}
+	sha, err := executableSHA256(trimmed, policy)
+	if err != nil {
+		return err
+	}
+	if sha != expectedSHA {
+		return domain.ValidationError(policy.label+" command digest changed", map[string]any{"command": trimmed})
+	}
+	return nil
+}
+
+func validateManifestAllowsExecutable(manifest semanticModuleManifest, expectedName string, policy moduleManifestPolicy) error {
+	for _, name := range manifestExecutableNames(manifest) {
+		if name == expectedName {
+			return nil
+		}
+	}
+	return domain.ValidationError(policy.label+" manifest does not declare required executable", map[string]any{"command": expectedName, "module": manifest.Module.Name})
+}
+
+func manifestExecutableNames(manifest semanticModuleManifest) []string {
+	names := map[string]bool{}
+	for _, provided := range manifest.Provides {
+		if provided.Type != "command" {
+			continue
+		}
+		if fields := strings.Fields(provided.Name); len(fields) > 0 {
+			names[fields[0]] = true
+		}
+	}
+	for _, tool := range manifest.Requires.Tools {
+		trimmed := strings.TrimSpace(tool)
+		if trimmed != "" {
+			names[trimmed] = true
+		}
+	}
+	result := make([]string, 0, len(names))
+	for name := range names {
+		result = append(result, name)
+	}
+	return result
+}
+
+func moduleExecutableName(command string) string {
+	return filepath.Base(filepath.Clean(strings.TrimSpace(command)))
+}
+
+func resolveExecutablePath(command string, policy moduleManifestPolicy) (string, error) {
+	if filepath.IsAbs(command) {
+		resolved := filepath.Clean(command)
+		if err := validateExecutablePath(resolved, policy); err != nil {
+			return "", err
+		}
+		return resolved, nil
+	}
+	if strings.ContainsAny(command, `/\`) {
+		return "", domain.ValidationError(policy.label+" command must be an absolute path or a bare executable name", map[string]any{"command": command})
+	}
+	resolved, err := exec.LookPath(command)
+	if err != nil {
+		return "", domain.ValidationError(policy.label+" command could not be resolved on PATH", map[string]any{"command": command})
+	}
+	if !filepath.IsAbs(resolved) {
+		abs, err := filepath.Abs(resolved)
+		if err != nil {
+			return "", domain.InternalError("resolve "+policy.label+" command path", err)
+		}
+		resolved = abs
+	}
+	resolved = filepath.Clean(resolved)
+	if err := validateExecutablePath(resolved, policy); err != nil {
+		return "", err
+	}
+	return resolved, nil
+}
+
+func validateExecutablePath(path string, policy moduleManifestPolicy) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return domain.ValidationError(policy.label+" command path does not exist", map[string]any{"command": path})
+		}
+		return domain.InternalError("inspect "+policy.label+" command", err)
+	}
+	if info.IsDir() || !info.Mode().IsRegular() {
+		return domain.ValidationError(policy.label+" command path must be a regular executable file", map[string]any{"command": path})
+	}
+	if info.Mode().Perm()&0o111 == 0 {
+		return domain.ValidationError(policy.label+" command path is not executable", map[string]any{"command": path})
+	}
+	return nil
+}
+
+func executableSHA256(path string, policy moduleManifestPolicy) (string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", domain.InternalError("read "+policy.label+" command for digest", err)
+	}
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:]), nil
+}
+
+func normalizeOCRProviderConfig(manifest semanticModuleManifest, values map[string]string) (map[string]string, error) {
+	config := map[string]string{}
+	for key, value := range values {
+		if key == ocrModuleOCRmyPDFSHAKey {
+			continue
+		}
+		config[key] = value
+	}
+	command, sha, err := resolveBoundModuleExecutable(firstNonEmptyModuleString(strings.TrimSpace(config["ocrmypdf_command"]), ocrModuleOCRmyPDFCommand), ocrModuleOCRmyPDFCommand, manifest, ocrModuleManifestPolicy)
+	if err != nil {
+		return nil, err
+	}
+	config["ocrmypdf_command"] = command
+	config[ocrModuleOCRmyPDFSHAKey] = sha
+	return config, nil
+}
+
+func firstNonEmptyModuleString(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
+}
+
 func semanticModuleProviderMatches(moduleName string, provider string) bool {
 	return moduleName == provider+"-embeddings"
 }
@@ -683,6 +886,7 @@ func moduleRuntimeConfigValues(config SemanticModuleConfig) map[string]string {
 		"enabled":                fmt.Sprint(config.Enabled),
 		"module_name":            config.ModuleName,
 		"command":                config.Command,
+		"command_sha256":         config.CommandSHA256,
 		"manifest_path":          config.ManifestPath,
 		"manifest_sha256":        config.ManifestSHA256,
 		"manifest_resolved_path": config.ManifestResolvedPath,

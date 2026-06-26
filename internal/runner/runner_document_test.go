@@ -406,7 +406,10 @@ func TestDocumentTaskPathCleanupReportsDuplicateRiskAndAppliesAutonomously(t *te
 
 	persistedSource := createDocument(t, ctx, config, "notes/projects/temp-name.md", "Persisted Profile Name", "# Persisted Profile Name\n")
 	if _, err := runner.RunConfigTask(ctx, config, runner.ConfigTaskRequest{
-		Action:  runner.ConfigTaskActionConfigureProfile,
+		Action: runner.ConfigTaskActionConfigureProfile,
+		Autonomy: runner.AutonomyModes{
+			ApprovalMode: runner.ApprovalModeApproveWrite,
+		},
 		Profile: runner.AutonomyModes{ApprovalMode: runner.ApprovalModeAutonomousTrusted},
 	}); err != nil {
 		t.Fatalf("configure autonomous profile: %v", err)
@@ -421,11 +424,18 @@ func TestDocumentTaskPathCleanupReportsDuplicateRiskAndAppliesAutonomously(t *te
 	if err != nil {
 		t.Fatalf("persisted autonomous apply path cleanup: %v", err)
 	}
-	if persistedApplied.PathCleanup == nil ||
-		persistedApplied.PathCleanup.AppliedCount != 1 ||
-		persistedApplied.PathCleanup.Candidates[0].MoveResult == nil ||
-		persistedApplied.PathCleanup.Candidates[0].MoveResult.Document.Path != "notes/projects/persisted-profile-name.md" {
-		t.Fatalf("persisted applied path cleanup = %+v", persistedApplied.PathCleanup)
+	if !persistedApplied.Rejected || !strings.Contains(persistedApplied.RejectionReason, "requires explicit autonomy.approval_mode") {
+		t.Fatalf("persisted autonomous apply result = %+v", persistedApplied)
+	}
+	unchanged, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGet,
+		DocID:  persistedSource.DocID,
+	})
+	if err != nil {
+		t.Fatalf("get persisted profile document: %v", err)
+	}
+	if unchanged.Document == nil || unchanged.Document.Path != "notes/projects/temp-name.md" {
+		t.Fatalf("persisted profile document moved without request autonomy: %+v", unchanged.Document)
 	}
 }
 
@@ -601,6 +611,45 @@ func TestDocumentTaskGitLifecycleCheckpointRequiresConfig(t *testing.T) {
 		result.GitLifecycle.CheckpointStatus != "disabled" ||
 		result.GitLifecycle.WriteStatus != "rejected" {
 		t.Fatalf("git lifecycle disabled result = %+v", result.GitLifecycle)
+	}
+}
+
+func TestDocumentTaskGitLifecycleCheckpointDoesNotRunRepositoryHooks(t *testing.T) {
+	t.Parallel()
+
+	vaultRoot := initGitLifecycleTestRepo(t)
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	if _, err := runclient.InitializePaths(runclient.Config{DatabasePath: dbPath}, vaultRoot); err != nil {
+		t.Fatalf("initialize paths: %v", err)
+	}
+	hookMarker := filepath.Join(t.TempDir(), "hook-ran")
+	hookPath := filepath.Join(vaultRoot, ".git", "hooks", "pre-commit")
+	hook := "#!/bin/sh\nprintf '%s\\n' hook-ran > " + shellQuote(hookMarker) + "\nexit 1\n"
+	if err := os.WriteFile(hookPath, []byte(hook), 0o755); err != nil {
+		t.Fatalf("write pre-commit hook: %v", err)
+	}
+
+	config := runclient.Config{DatabasePath: dbPath, GitCheckpoints: true}
+	ctx := context.Background()
+	createDocument(t, ctx, config, "notes/no-hooks.md", "No Hooks", "# No Hooks\n\n## Summary\nCheckpoint must not run repository hooks.\n")
+	result, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGitLifecycle,
+		GitLifecycle: runner.GitLifecycleOptions{
+			Mode:    "checkpoint",
+			Paths:   []string{"notes/no-hooks.md"},
+			Message: "openclerk: checkpoint without hooks",
+		},
+	})
+	if err != nil {
+		t.Fatalf("git lifecycle checkpoint with hook: %v", err)
+	}
+	if result.GitLifecycle == nil ||
+		result.GitLifecycle.CheckpointStatus != "created" ||
+		result.GitLifecycle.CommitID == "" {
+		t.Fatalf("git lifecycle hook result = %+v", result.GitLifecycle)
+	}
+	if _, err := os.Stat(hookMarker); !os.IsNotExist(err) {
+		t.Fatalf("repository hook executed; marker err=%v", err)
 	}
 }
 
@@ -2949,7 +2998,13 @@ func writeRunnerOCRModuleManifest(t *testing.T, dir string) string {
 		"provides": []map[string]any{{
 			"type": "command",
 			"name": "tesseract ocr",
+		}, {
+			"type": "command",
+			"name": "ocrmypdf ocr",
 		}},
+		"requires": map[string]any{
+			"tools": []string{"tesseract", "ocrmypdf"},
+		},
 		"authority": map[string]any{
 			"default":        "read_only",
 			"durable_writes": "forbidden",
@@ -2993,6 +3048,10 @@ func runGitLifecycleTestCommand(t *testing.T, dir string, args ...string) {
 	if err != nil {
 		t.Fatalf("git %v: %v\n%s", args, err, string(output))
 	}
+}
+
+func shellQuote(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", "'\\''") + "'"
 }
 
 func gitLifecycleDirtyPath(statuses []runner.GitLifecyclePathStatus, path string) bool {

@@ -186,24 +186,19 @@ func TestSemanticRetrievalAdapterSplitsLargeSectionsBeforeEmbedding(t *testing.T
 func TestSemanticRetrievalAdapterRejectsOversizedChunkCorpus(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
-	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
 	var body strings.Builder
 	body.WriteString("# Oversized Corpus\n\n## Summary\n")
 	for range maxSemanticChunks + 1 {
 		body.WriteString(strings.Repeat("semantic ", semanticChunkTargetCharacters/len("semantic ")+1))
 		body.WriteString("\n")
 	}
-	createModuleDocument(t, ctx, dbPath, "docs/oversized.md", "Oversized Corpus", body.String())
 
-	_, err := executeSearch(ctx, runclient.Config{DatabasePath: dbPath}, searchRequest{
-		Query:          "semantic",
-		Limit:          10,
-		Provider:       providerOllama,
-		OllamaURL:      "http://localhost:11434",
-		EmbeddingModel: "embeddinggemma",
-		CacheDir:       t.TempDir(),
-	})
+	_, err := chunksForDocumentLimited(domain.Document{
+		DocID: "doc_oversized",
+		Path:  "docs/oversized.md",
+		Title: "Oversized Corpus",
+		Body:  body.String(),
+	}, maxSemanticChunks)
 	if err == nil || !strings.Contains(err.Error(), "semantic corpus exceeds maximum supported chunks") {
 		t.Fatalf("oversized corpus error = %v", err)
 	}
@@ -526,13 +521,53 @@ func TestSemanticRetrievalAdapterProviderBlockedWithoutFallback(t *testing.T) {
 func TestSemanticRetrievalAdapterRejectsUnsafePrefix(t *testing.T) {
 	t.Parallel()
 
-	_, err := executeSearch(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "openclerk.sqlite")}, searchRequest{
-		Query:      "semantic",
-		PathPrefix: "../private",
-		Limit:      5,
-	})
-	if err == nil || !strings.Contains(err.Error(), "path_prefix") {
-		t.Fatalf("expected unsafe prefix rejection, got %v", err)
+	for _, prefix := range []string{"../private", "docs/..", "docs/../private"} {
+		prefix := prefix
+		t.Run(prefix, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := executeSearch(context.Background(), runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "openclerk.sqlite")}, searchRequest{
+				Query:      "semantic",
+				PathPrefix: prefix,
+				Limit:      5,
+			})
+			if err == nil || !strings.Contains(err.Error(), "path_prefix") {
+				t.Fatalf("expected unsafe prefix rejection, got %v", err)
+			}
+		})
+	}
+}
+
+func TestSemanticRetrievalAdapterCachePathStaysUnderOpenClerkState(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	attackerCacheDir := filepath.Join(t.TempDir(), "attacker-cache")
+	chunks := []semanticChunk{{
+		ChunkID:      "chunk_cache",
+		DocID:        "doc_cache",
+		Path:         "docs/cache.md",
+		Title:        "Cache",
+		Heading:      "Summary",
+		Content:      "cache boundary",
+		TextForIndex: "Cache\ndocs/cache.md\nSummary\ncache boundary",
+		Hash:         "cache-hash",
+	}}
+
+	_, cachePath, cacheRef := cacheForRequest(dbPath, searchRequest{
+		Provider:       providerOllama,
+		EmbeddingModel: "embeddinggemma",
+		CacheDir:       attackerCacheDir,
+	}, chunks)
+	wantRoot := semanticCacheRoot(dbPath)
+	if !strings.HasPrefix(cachePath, wantRoot+string(os.PathSeparator)) {
+		t.Fatalf("cache path = %q, want under %q", cachePath, wantRoot)
+	}
+	if strings.HasPrefix(cachePath, attackerCacheDir+string(os.PathSeparator)) {
+		t.Fatalf("cache path used caller cache_dir: %q", cachePath)
+	}
+	if !strings.HasPrefix(cacheRef, "openclerk_state:semantic-retrieval-adapter/") {
+		t.Fatalf("cache ref = %q", cacheRef)
 	}
 }
 
@@ -676,6 +711,35 @@ func TestGeminiClientRetriesAndBatches(t *testing.T) {
 	}
 	if len(vectors) != 2 || stats.RetryCount != 1 || stats.RequestCount != 2 {
 		t.Fatalf("vectors=%v stats=%+v", vectors, stats)
+	}
+}
+
+func TestGeminiRetryBackoffHonorsContextCancellation(t *testing.T) {
+	t.Parallel()
+
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		w.Header().Set("Retry-After", "60")
+		http.Error(w, "rate limited", http.StatusTooManyRequests)
+	}))
+	defer server.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	client := geminiClient{
+		baseURL:    server.URL,
+		apiKey:     "test-secret-gemini-key",
+		httpClient: providerHTTPClient(45 * time.Second),
+		sleep: func(time.Duration) {
+			cancel()
+		},
+	}
+	_, stats, err := client.embed(ctx, "gemini-embedding-001", []string{"private corpus text"}, "RETRIEVAL_DOCUMENT", 3)
+	if err == nil || !strings.Contains(err.Error(), "context canceled") {
+		t.Fatalf("error = %v, want context canceled", err)
+	}
+	if stats.RequestCount != 1 || stats.RetryCount != 1 || requests != 1 {
+		t.Fatalf("retry stats=%+v requests=%d, want one request and one canceled retry", stats, requests)
 	}
 }
 

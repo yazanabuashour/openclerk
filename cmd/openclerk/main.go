@@ -1116,7 +1116,7 @@ func moduleUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "")
 	_, _ = fmt.Fprintln(w, "Reads one strict JSON object from stdin and writes one JSON result.")
 	_, _ = fmt.Fprintln(w, "Manages optional embedding and OCR modules through redacted runtime_config state.")
-	_, _ = fmt.Fprintln(w, "Semantic modules always use semantic-retrieval-adapter on PATH; command_args are unsupported.")
+	_, _ = fmt.Fprintln(w, "Semantic modules resolve semantic-retrieval-adapter at install time, pin its digest, and reject command_args.")
 	_, _ = fmt.Fprintln(w, `  install Ollama: {"action":"install_module","module":{"provider":"ollama","manifest_path":"modules/ollama-embeddings/module.json","command":"semantic-retrieval-adapter","provider_config":{"embedding_model":"embeddinggemma","ollama_url":"http://localhost:11434"}}}`)
 	_, _ = fmt.Fprintln(w, `  install Gemini: {"action":"install_module","module":{"provider":"gemini","manifest_path":"modules/gemini-embeddings/module.json","command":"semantic-retrieval-adapter","provider_config":{"embedding_model":"gemini-embedding-001","gemini_api_base":"https://generativelanguage.googleapis.com/v1beta","embedding_output_dimensions":"3072"}}}`)
 	_, _ = fmt.Fprintln(w, `  install Tesseract OCR: {"action":"install_module","module":{"kind":"ocr_provider","provider":"tesseract","manifest_path":"modules/tesseract-ocr/module.json","command":"tesseract","provider_config":{"ocrmypdf_command":"ocrmypdf","language":"eng"}}}`)

@@ -209,13 +209,13 @@ Semantic recall citations stay local.
 		Action: runner.RetrievalTaskActionSemanticSearch,
 		SemanticSearch: runner.SemanticSearchOptions{
 			Query:     "semantic",
-			OllamaURL: "https://embeddings.example.test",
+			OllamaURL: "http://127.0.0.1:9999",
 		},
 	})
 	if err != nil {
 		t.Fatalf("ollama url validation: %v", err)
 	}
-	if !remoteURL.Rejected || remoteURL.RejectionReason != "semantic_search.ollama_url must be a loopback HTTP URL" {
+	if !remoteURL.Rejected || remoteURL.RejectionReason != "semantic_search.ollama_url must be configured on the verified semantic module" {
 		t.Fatalf("remote url result = %+v", remoteURL)
 	}
 
@@ -230,8 +230,36 @@ Semantic recall citations stay local.
 	if err != nil {
 		t.Fatalf("gemini url validation: %v", err)
 	}
-	if !remoteGeminiBase.Rejected || remoteGeminiBase.RejectionReason != "semantic_search.gemini_api_base must be https://generativelanguage.googleapis.com/v1beta" {
+	if !remoteGeminiBase.Rejected || remoteGeminiBase.RejectionReason != "semantic_search.gemini_api_base must be configured on the verified semantic module" {
 		t.Fatalf("remote gemini base result = %+v", remoteGeminiBase)
+	}
+
+	cacheDir, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSemanticSearch,
+		SemanticSearch: runner.SemanticSearchOptions{
+			Query:    "semantic",
+			CacheDir: t.TempDir(),
+		},
+	})
+	if err != nil {
+		t.Fatalf("cache dir validation: %v", err)
+	}
+	if !cacheDir.Rejected || cacheDir.RejectionReason != "semantic_search.cache_dir is managed by OpenClerk state" {
+		t.Fatalf("cache dir result = %+v", cacheDir)
+	}
+
+	traversalPrefix, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
+		Action: runner.RetrievalTaskActionSemanticSearch,
+		SemanticSearch: runner.SemanticSearchOptions{
+			Query:      "semantic",
+			PathPrefix: "docs/..",
+		},
+	})
+	if err != nil {
+		t.Fatalf("path prefix validation: %v", err)
+	}
+	if !traversalPrefix.Rejected || traversalPrefix.RejectionReason != "semantic_search.path_prefix must stay inside the vault root" {
+		t.Fatalf("path prefix result = %+v", traversalPrefix)
 	}
 
 	unknownProvider, err := runner.RunRetrievalTask(ctx, config, runner.RetrievalTaskRequest{
