@@ -25,9 +25,9 @@ A **work item** is one logical task, story, or other coherent unit of work. **Wh
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close or update the relevant public issue or project item when one exists
 4. **Prepare review** - Run `git status`, summarize changed files and quality gates, and confirm no commit or push has been performed
-5. **Codex review** - Run the review command once for the current work item or review checkpoint:
+5. **Codex review** - Run the review command once for the current work item or review checkpoint. The review must remain correctness-first: prioritize bugs, regressions, security, data safety, and missing tests. After that, include a final Ponytail pass for over-engineering only: identify dead code, speculative features, avoidable dependencies, one-implementation abstractions, reinvented stdlib/native features, and same-logic-fewer-lines opportunities. Do not let the Ponytail pass weaken safety, correctness, provenance, auditability, or necessary tests.
    ```bash
-   codex --search -m gpt-5.5 -c 'model_reasoning_effort="high"' review --uncommitted
+   codex --search -m gpt-5.5 -c 'model_reasoning_effort="xhigh"' review --uncommitted
    ```
    If the review finds issues, address the findings.
 6. **Commit reviewed changes** - After the review command completes, stage the intended files and create a local commit
