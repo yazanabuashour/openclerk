@@ -5,7 +5,7 @@ decision_status: accepted
 decision_scope: graph-relationship-maintenance-plan
 decision_owner: platform
 source_refs: docs/evals/graph-relationship-maintenance-plan-implementation.md, docs/evals/results/ockp-graph-relationship-maintenance-plan-implementation.md, docs/architecture/graph-product-story-promotion-decision.md
-follow_up_beads: none
+follow_up_work: none
 ---
 # Decision: Graph Relationship Maintenance Plan Promotion
 

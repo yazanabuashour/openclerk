@@ -138,7 +138,8 @@ func TestCopyRepoSkipsEvalContextContamination(t *testing.T) {
 		"README.md":                                      "kept",
 		"AGENTS.md":                                      "root instructions",
 		".agents/skills/openclerk/SKILL.md":              "stale skill",
-		".dolt/config":                                   "dolt",
+		".local-state/config":                            "local state",
+		".github/workflows/ci.yml":                       "workflow",
 		"docs/evals/results/previous.md":                 "report",
 		"scripts/agent-eval/ockp/main.go":                "harness",
 		"scripts/agent-eval/ockp/nested/fixture.txt":     "harness fixture",
@@ -157,7 +158,7 @@ func TestCopyRepoSkipsEvalContextContamination(t *testing.T) {
 	if err := copyRepo(src, dst); err != nil {
 		t.Fatalf("copy repo: %v", err)
 	}
-	for _, want := range []string{"README.md", "scripts/agent-eval/other-harness/kept-file.txt"} {
+	for _, want := range []string{"README.md", ".github/workflows/ci.yml", "scripts/agent-eval/other-harness/kept-file.txt"} {
 		if _, err := os.Stat(filepath.Join(dst, want)); err != nil {
 			t.Fatalf("expected copied %s: %v", want, err)
 		}
@@ -165,7 +166,7 @@ func TestCopyRepoSkipsEvalContextContamination(t *testing.T) {
 	for _, skipped := range []string{
 		"AGENTS.md",
 		".agents/skills/openclerk/SKILL.md",
-		".dolt/config",
+		".local-state/config",
 		"docs/evals/results/previous.md",
 		"scripts/agent-eval/ockp/main.go",
 		"scripts/agent-eval/ockp/nested/fixture.txt",
@@ -387,7 +388,7 @@ func TestRepositoryDoesNotDocumentRemovedPublicClientInterface(t *testing.T) {
 		}
 		if entry.IsDir() {
 			switch entry.Name() {
-			case ".git", ".beads", ".openclerk-eval":
+			case ".git", ".openclerk-eval":
 				return filepath.SkipDir
 			}
 			return nil

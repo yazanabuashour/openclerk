@@ -35,22 +35,22 @@ the repaired targeted lane. Guidance-only current primitives were sufficient
 for that pressure, so the candidate contract remains deferred rather than
 promoted.
 
-Beads searches before closure, using `--status all` where closed follow-ups
+work items searches before closure, using `--status all` where closed follow-ups
 must remain visible, found no newer trigger beyond `oc-ghcs` itself:
 
-- `bd search "compile synthesis ergonomics" --status all` returned only
+- `follow-up search "compile synthesis ergonomics" --status all` returned only
   `oc-ghcs`
-- `bd search "compile_synthesis ergonomics" --status all` returned only
+- `follow-up search "compile_synthesis ergonomics" --status all` returned only
   `oc-ghcs`
-- `bd search "compile synthesis natural intent"` returned no issues
-- `bd search "compile_synthesis repeated ergonomics"` returned no issues
-- `bd search "compile_synthesis candidate promotion evidence"` returned no
+- `follow-up search "compile synthesis natural intent"` returned no issues
+- `follow-up search "compile_synthesis repeated ergonomics"` returned no issues
+- `follow-up search "compile_synthesis candidate promotion evidence"` returned no
   issues
 
 ## Decision
 
 Do not run another targeted eval from this checkpoint. Do not file an
-implementation bead. Do not promote `compile_synthesis`.
+implementation work item. Do not promote `compile_synthesis`.
 
 The valid future trigger remains the one already recorded in the promotion
 decision: stronger repeated evidence that natural guidance over current

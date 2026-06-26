@@ -95,7 +95,7 @@ Use the same decision rubric for every deferred capability:
   does not justify implementation.
 
 No promoted implementation work should be filed from this document alone. A
-separate follow-up Bead is allowed only after a targeted eval report and
+separate follow-up work item is allowed only after a targeted eval report and
 decision note identify the exact promoted surface and its gates.
 
 ## Taste Review Checkpoint
@@ -147,7 +147,7 @@ follow-up category applies:
 - **Need exists, evaluated shape is wrong:** the user need remains real, but
   the tested surface should not advance.
 - **Need exists, candidate comparison required:** the user need remains real,
-  and the next step is a Beads comparison epic with ADR, POC, Eval, and
+  and the next step is a work items comparison epic with ADR, POC, Eval, and
   Decision children.
 - **Candidate selected for future promotion evidence:** candidate comparison
   has selected a shape for later targeted promotion evidence, but has not
@@ -264,7 +264,7 @@ Apply this budget to prior non-promotion decisions before closing release prep.
 At minimum, source-linked synthesis maintenance, source-sensitive audit repair,
 multi-source synthesis creation, stale/fresh synthesis inspection, and
 records/provenance/decision evidence bundles need candidate-surface comparison
-Beads when current evidence shows agents repeatedly compose lookup,
+work items when current evidence shows agents repeatedly compose lookup,
 provenance, projection, and repair steps by prompt choreography.
 
 Each comparison should evaluate:
@@ -378,7 +378,7 @@ Future POCs for deferred capabilities must follow this pattern:
 9. For defer, keep-as-reference, or another non-promotion outcome, record the
    applicable non-promotion follow-up category and file or propose a comparison
    epic when the need remains valid.
-10. If promoted, file a separate implementation Bead that names the exact
+10. If promoted, file a separate implementation work item that names the exact
    surface and gates.
 
 This keeps capability pressure measurable without letting interesting reference

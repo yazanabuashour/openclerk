@@ -65,7 +65,7 @@ Failure classifications should use:
 
 ## Proposed Future Lanes
 
-| Bead | Proposed lane | Natural-intent pressure | Scripted control | Promotion-sensitive checks |
+| Work item | Proposed lane | Natural-intent pressure | Scripted control | Promotion-sensitive checks |
 | --- | --- | --- | --- | --- |
 | `oc-18oo` | `capture-low-risk-ceremony` | Ask OpenClerk to save a low-risk note or routine capture item where body content is explicit but path and title are absent or obvious. | Use candidate generation and duplicate lookup before any write; compare propose-before-create against current missing-field clarification. | Approval boundary, metadata authority, duplicate handling, runner-only access, ceremony and latency metrics, and whether direct-create or smoother proposal behavior is justified by evidence. |
 | `oc-mjpz` | `capture-explicit-overrides` | Ask for smoother capture while supplying explicit path, title, type, body, naming, or filing instructions. | Preserve explicit values in candidate proposals and runner requests; invalid explicit values should fail validation or ask instead of being silently rewritten. | Override precedence, validation behavior, authority conflicts, no convention override of explicit intent, and evidence needed before any smoother autofiling policy can ship. |

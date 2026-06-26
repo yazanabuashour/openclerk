@@ -64,15 +64,15 @@ with only the separately approved zero-hit lexical fallback.
 ## Follow-Up
 
 Default semantic or hybrid ranking remains a valid need, but it is not ready to
-promote from this Bead. Follow-up work must compare optional-module evidence,
+promote from this work item. Follow-up work must compare optional-module evidence,
 local cache/index lifecycle, duplicate collapse, performance, and user-facing
 promotion before changing core default search.
 
 Searches performed before closing `oc-bq8c`:
 
-- `bd search "semantic hybrid default search promotion" --status all`: no
+- `follow-up search "semantic hybrid default search promotion" --status all`: no
   existing issue found.
-- `bd search "semantic retrieval adapter default search" --status all`: no
+- `follow-up search "semantic retrieval adapter default search" --status all`: no
   existing issue found.
 
 Created follow-up:

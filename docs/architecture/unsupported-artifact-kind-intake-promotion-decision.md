@@ -12,7 +12,7 @@ source_refs: docs/evals/artifact-unsupported-kind-intake.md, docs/evals/results/
 ## Status
 
 Accepted: defer unsupported artifact kind intake promotion for guidance and
-eval repair. Do not file an implementation bead, and do not change runner
+eval repair. Do not file an implementation work item, and do not change runner
 behavior, schemas, storage, public APIs, parser behavior, skill behavior, or
 product behavior.
 
@@ -86,7 +86,7 @@ collection overhead but not enough proof to promote a new surface.
 | Promote | Safety passes and repeated evidence shows a capability gap or serious UX/taste debt that justifies a simpler exact surface. |
 | Kill | The shape requires parser truth without provenance, hidden artifact inspection, direct file/vault/SQLite access, browser automation, unsupported transports, or durable writes before approval. |
 
-The current decision is **defer**. No implementation bead should be created for
+The current decision is **defer**. No implementation work item should be created for
 `oc-0cme`. The remaining need is real enough to track, but the evaluated shape
 needs candidate-surface comparison and guidance/eval repair first; follow-up
 `oc-vdfr` covers that comparison.

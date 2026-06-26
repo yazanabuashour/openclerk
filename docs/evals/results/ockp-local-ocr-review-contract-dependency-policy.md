@@ -77,7 +77,7 @@ Select `artifact_candidate_plan` OCR review with model-assisted extraction as
 the next evidence candidate. Keep local OCR engines as a required comparison
 for local-first policy. Keep runtime OCR unsupported in current production.
 
-Do not file a product implementation Bead from `oc-i8yk`. The next valid work
+Do not file a product implementation work item from `oc-i8yk`. The next valid work
 is targeted promotion evidence for the selected contract, not implementation.
 
 Created follow-up:

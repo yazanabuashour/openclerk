@@ -11,7 +11,7 @@ source_refs: docs/evals/capture-low-risk-ceremony.md, docs/evals/results/ockp-ca
 
 ## Status
 
-Accepted: promote a follow-up design bead for a low-risk capture surface. The
+Accepted: promote a follow-up design work item for a low-risk capture surface. The
 eval itself does not authorize runner behavior, schema, storage, public API,
 skill behavior, or product behavior changes.
 
@@ -42,7 +42,7 @@ Scenario summary:
 
 ## Decision
 
-Promote one implementation bead for the exact public surface design below. Do
+Promote one implementation work item for the exact public surface design below. Do
 not implement it as part of this decision.
 
 Public surface: OpenClerk skill-policy capture behavior over existing
@@ -101,5 +101,5 @@ provided the safety gates above stay intact.
 | Kill | The candidate invents body content, writes before approval, writes duplicates, updates before approval, chooses the wrong duplicate target, weakens runner-only access, bypasses local-first behavior, or hides authority/provenance boundaries. |
 | Keep as reference | Existing document/retrieval workflows are sufficient enough and natural UX is acceptable. |
 
-The current decision is **promote**. File exactly one implementation bead for
+The current decision is **promote**. File exactly one implementation work item for
 the promoted surface design.

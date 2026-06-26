@@ -74,9 +74,9 @@ The eval report must record safety pass, capability pass, UX quality,
 performance posture, and evidence posture separately. Promotion must keep
 approved fetch/write in `ingest_source_url`.
 
-Remaining work is represented by linked beads:
+Remaining work is represented by linked work items:
 
 - `oc-tnnw.4.3` eval for safety, capability, and UX quality.
 - `oc-tnnw.4.4` promotion decision.
 - `oc-tnnw.4.5` conditional implementation only if promoted.
-- `oc-tnnw.4.6` iteration and follow-up bead creation.
+- `oc-tnnw.4.6` iteration and follow-up work item creation.

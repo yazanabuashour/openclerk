@@ -23,7 +23,7 @@ source_refs: docs/architecture/next-eval-candidate-pipeline.md, docs/architectur
 ## Scope
 
 This reconciliation audits the deferred pipeline after the `oc-tnnw` tracks
-promoted or rejected the current post-`oc-uj2y` surfaces. It is tracker and
+promoted or rejected the current post-`oc-uj2y` surfaces. It is planning and
 decision hygiene only. It does not authorize runner actions, schemas, storage
 changes, public APIs, skill behavior, or implementation work.
 
@@ -40,9 +40,9 @@ Reviewed sources:
 
 | Candidate | Safety | Capability | UX quality | Decision |
 | --- | --- | --- | --- | --- |
-| Reopen every historical deferred track | Fails tracker hygiene by duplicating superseded or promoted work. | Low; many old needs are already covered. | Noisy and hard to act on. | Reject. |
+| Reopen every historical deferred track | Fails follow-up hygiene by duplicating superseded or promoted work. | Low; many old needs are already covered. | Noisy and hard to act on. | Reject. |
 | Close the pipeline with no follow-ups | Fails follow-up discipline because real deferred needs remain. | Incomplete. | Hides future work. | Reject. |
-| Link only live remaining needs | Passes: preserves tracker evidence and avoids obsolete work. | Passes: each remaining need has a concrete comparison target. | Good: next sessions can start from specific beads. | Accept. |
+| Link only live remaining needs | Passes: preserves follow-up evidence and avoids obsolete work. | Passes: each remaining need has a concrete comparison target. | Good: next sessions can start from specific work items. | Accept. |
 
 ## Reconciliation
 
@@ -61,7 +61,7 @@ Promoted or completed current surfaces:
 - `artifact_candidate_plan` covers read-only naming, tagging, filing, duplicate
   posture, confidence, and approved-write handoff.
 
-Valid remaining needs are represented by linked beads:
+Valid remaining needs are represented by linked work items:
 
 - `oc-9ijx`: local-first hybrid retrieval implementation candidate comparison,
   deferred until 2026-06-04 after `oc-rlg7` and `oc-ye6w` found a real
@@ -71,7 +71,7 @@ Valid remaining needs are represented by linked beads:
 - `oc-rcfv`: memory write transport candidate comparison, deferred until
   2026-06-04.
 
-No additional Beads are required from this reconciliation. Historical pipeline
+No additional work items are required from this reconciliation. Historical pipeline
 items that are already promoted, superseded, covered by accepted decisions, or
 classified as no valid remaining need should not be recreated.
 
@@ -85,7 +85,7 @@ approval-before-write by linking only decision or comparison work.
 ## Capability Pass
 
 Pass. The current deferred pipeline can be expressed as the three linked
-follow-up beads above plus the closed `oc-tnnw` decision records. No direct
+follow-up work above plus the closed `oc-tnnw` decision records. No direct
 implementation, migration, or source-control work is needed here.
 
 ## UX Quality
@@ -95,7 +95,7 @@ historical backlog while preserving the remaining real user-facing questions:
 semantic recall quality, parser-backed artifact/OCR ingestion, and memory write
 transport shape.
 
-## Follow-up Beads
+## Follow-up Work
 
 Created: none.
 
@@ -105,6 +105,6 @@ Linked existing:
 - `oc-w7xa`
 - `oc-rcfv`
 
-None required beyond those linked beads because every other reviewed deferred
+None required beyond those linked work items because every other reviewed deferred
 pipeline item is already promoted, superseded, covered by accepted decisions,
 or has no valid remaining OpenClerk need.

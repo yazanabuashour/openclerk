@@ -80,8 +80,8 @@ local-first behavior, and markdown reconciliation.
 
 ## Closure
 
-Remaining work is represented by linked beads:
+Remaining work is represented by linked work items:
 
 - `oc-tnnw.2.4` promotion decision.
 - `oc-tnnw.2.5` conditional implementation only if promoted.
-- `oc-tnnw.2.6` iteration and follow-up bead creation.
+- `oc-tnnw.2.6` iteration and follow-up work item creation.

@@ -19,7 +19,7 @@ exact surface.
 This decision resolves overlapping follow-ups `oc-4leh` and `oc-vuyb`. It does
 not add a runner action, parser, schema, migration, storage behavior, public
 API, public OpenClerk interface, product behavior, shipped skill behavior, or
-implementation work. It does not authorize an implementation bead.
+implementation work. It does not authorize an implementation work item.
 
 Evidence:
 
@@ -51,7 +51,7 @@ candidate-surface deferral.
 Follow-up `oc-ipjt` repairs the duplicate/provenance answer contract through
 skill guidance and eval-prompt hardening only. The focused repair report
 completed the duplicate row with scoped search/list/get/provenance evidence
-and no duplicate write. No implementation bead is filed from `oc-4leh`,
+and no duplicate write. No implementation work item is filed from `oc-4leh`,
 `oc-vuyb`, or `oc-ipjt`.
 
 ## Rejected Alternatives

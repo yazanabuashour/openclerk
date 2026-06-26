@@ -1,7 +1,6 @@
 # Maintainer Notes
 
-This repository uses **Beads** (`bd`) in embedded mode for maintainer task
-tracking. Recurring security operations are tracked in
+Recurring security operations are tracked in
 [docs/security-operations.md](security-operations.md).
 
 Keep public docs honest about the supported surface: the installed `openclerk`
@@ -11,61 +10,21 @@ Keep `skills/openclerk/SKILL.md` thin. Any substantial skill growth must first
 answer: can this move to an existing runner action, a new narrow workflow
 action, compact runner help, or eval/maintainer docs? If not, the PR must name
 the temporary safety gap, explain why caller autonomy plus runner JSON
-results/rejections is insufficient, and link a follow-up Bead to remove or
+results/rejections is insufficient, and link a follow-up work item to remove or
 replace the skill text later. Do not repair routine workflow-action UX by
 adding durable `SKILL.md` recipes.
 
 ## Initial Setup
 
-Preferred tool install:
+Install pinned repository tools:
 
 ```bash
 mise install
 ```
 
-Alternative:
-
-```bash
-brew install beads dolt
-```
-
-## Clone Bootstrap
-
-For a fresh maintainer clone or a second machine:
-
-```bash
-git clone git@github.com:yazanabuashour/openclerk.git
-cd openclerk
-bd bootstrap
-bd hooks install
-```
-
-If role detection warns in a maintainer clone, set:
-
-```bash
-git config beads.role maintainer
-```
-
-## Sync Between Machines
-
-Push local Beads state before switching machines, then pull on the other
-machine:
-
-```bash
-bd dolt push
-bd dolt pull
-```
-
-If `bd dolt pull` reports uncommitted Dolt changes, commit them first and retry:
-
-```bash
-bd dolt commit
-bd dolt pull
-```
-
 ## Public Repo Expectations
 
-- Outside contributors must be able to contribute without Beads.
+- Outside contributors must be able to contribute through GitHub issues and pull requests.
 - Policy, release, and skill files are part of the public contract and should stay reviewable in Git alone.
 - Do not document machine-absolute filesystem paths in committed docs.
 - Do not assume private infrastructure, deploy secrets, or internal services exist unless they have been added explicitly.

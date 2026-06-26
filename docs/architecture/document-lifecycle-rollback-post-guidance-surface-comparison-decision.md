@@ -14,7 +14,7 @@ post-guidance candidate surfaces.
 
 This decision does not add a runner action, schema, migration, storage
 behavior, public API, public OpenClerk interface, product behavior, shipped
-skill behavior, eval harness behavior, or implementation Bead. It does not
+skill behavior, eval harness behavior, or implementation work item. It does not
 authorize implementation work.
 
 Evidence:
@@ -60,13 +60,13 @@ candidate still preserves safety and capability.
 
 ## Follow-Up
 
-No implementation Bead is authorized by this decision.
+No implementation work item is authorized by this decision.
 
-Required Beads searches before closure found no newer matching follow-up:
+Required work items searches before closure found no newer matching follow-up:
 
-- `bd search "lifecycle rollback ergonomics" --status all` found no issues
-- `bd search "review_lifecycle_rollback" --status all` found no issues
-- `bd search "document lifecycle rollback guidance" --status all` found no
+- `follow-up search "lifecycle rollback ergonomics" --status all` found no issues
+- `follow-up search "review_lifecycle_rollback" --status all` found no issues
+- `follow-up search "document lifecycle rollback guidance" --status all` found no
   issues
 
 The future trigger remains stronger repeated natural-intent evidence that

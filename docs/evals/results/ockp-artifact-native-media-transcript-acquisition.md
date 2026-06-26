@@ -67,7 +67,7 @@ Decision: `keep_as_reference`
 
 Public surface: `openclerk document`, `openclerk retrieval`
 
-Promotion: keep native media transcript acquisition as reference evidence; supplied-transcript ingest_video_url remains the current supported control, native acquisition remains unsupported, and no implementation bead, runner action, dependency, parser, STT, transcript API, schema, storage, public API, skill behavior, or product behavior change is authorized.
+Promotion: keep native media transcript acquisition as reference evidence; supplied-transcript ingest_video_url remains the current supported control, native acquisition remains unsupported, and no implementation work item, runner action, dependency, parser, STT, transcript API, schema, storage, public API, skill behavior, or product behavior change is authorized.
 
 | Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Latency | Guidance dependence | Safety pass | Capability pass | UX quality | Safety risks | Fixture preflight | Evidence posture |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- |

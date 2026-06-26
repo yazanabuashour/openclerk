@@ -79,8 +79,8 @@ integration, hosted retrieval path, or default hybrid ranking yet.
 
 ## Closure
 
-Remaining work is represented by linked beads:
+Remaining work is represented by linked work items:
 
 - `oc-tnnw.1.4` promotion decision.
 - `oc-tnnw.1.5` conditional implementation only if promoted.
-- `oc-tnnw.1.6` iteration and follow-up bead creation.
+- `oc-tnnw.1.6` iteration and follow-up work item creation.

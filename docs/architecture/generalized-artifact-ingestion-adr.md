@@ -149,7 +149,7 @@ Use the deferred capability rubric in
 Promote only after the POC and targeted eval record repeated
 `runner_capability_gap` failures and the promotion decision names the exact
 surface, request/response shape, compatibility rules, failure modes, and
-follow-up implementation Beads.
+follow-up implementation work items.
 
 Safety, capability, and UX quality remain separate gates:
 
@@ -162,10 +162,10 @@ Safety, capability, and UX quality remain separate gates:
 - UX quality pass requires reducing real artifact workflow ceremony without
   hiding parser uncertainty, provenance, or durable-write approval.
 
-Remaining work is represented by linked beads:
+Remaining work is represented by linked work items:
 
 - `oc-tnnw.5.2` POC for artifact/OCR candidate evidence.
 - `oc-tnnw.5.3` eval for safety, capability, and UX quality.
 - `oc-tnnw.5.4` promotion decision.
 - `oc-tnnw.5.5` conditional implementation only if promoted.
-- `oc-tnnw.5.6` iteration and follow-up bead creation.
+- `oc-tnnw.5.6` iteration and follow-up work item creation.

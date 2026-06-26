@@ -82,9 +82,9 @@ synthesis revisit evidence also completed safely while remaining high-touch at
 
 ## Follow-Up
 
-File one follow-up Bead for targeted eval and promotion evidence for the
+File one follow-up Work item for targeted eval and promotion evidence for the
 selected narrow `compile_synthesis` candidate. Do not file an implementation
-Bead.
+Work item.
 
 The follow-up must compare the selected candidate against current primitives
 and guidance-only repair, then either promote an exact request/response

@@ -51,7 +51,7 @@ the same repaired evidence run.
 
 ## Follow-Up
 
-No implementation bead is authorized by this decision.
+No implementation work item is authorized by this decision.
 
 The repaired evidence supports keeping `compile_synthesis` deferred/reference
 only. Future promotion would require stronger repeated evidence that natural
@@ -59,17 +59,17 @@ guidance over current `openclerk document` and `openclerk retrieval` primitives
 leaves meaningful ergonomics or answer-contract debt while the candidate
 contract still preserves safety and capability.
 
-`bd search "compile_synthesis repeated ergonomics"`, `bd search "compile
-synthesis guidance-only current primitives"`, `bd search "compile_synthesis
-candidate promotion evidence"`, and `bd search "compile synthesis ergonomics
+`follow-up search "compile_synthesis repeated ergonomics"`, `follow-up search "compile
+synthesis guidance-only current primitives"`, `follow-up search "compile_synthesis
+candidate promotion evidence"`, and `follow-up search "compile synthesis ergonomics
 evidence"` found no existing follow-up, so follow-up `oc-ghcs` was filed to
 collect repeated natural-intent ergonomics evidence if the need recurs. It is
-not an implementation bead.
+not an implementation work item.
 
 The `oc-ghcs` checkpoint is recorded in
 [`docs/architecture/compile-synthesis-repeated-ergonomics-checkpoint.md`](compile-synthesis-repeated-ergonomics-checkpoint.md).
 It found no recurring trigger beyond `oc-ghcs` itself, ran no new targeted
-eval, and closed with no implementation bead.
+eval, and closed with no implementation work item.
 
 ## Compatibility
 

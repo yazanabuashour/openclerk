@@ -69,7 +69,7 @@ unsupported transports, source-built runners, or unsupported write actions.
 
 ## Conclusion
 
-Do not file an implementation bead from this comparison. File targeted
+Do not file an implementation work item from this comparison. File targeted
 eval/promotion evidence for the selected narrow `compile_synthesis` candidate.
 
 The future eval should compare the selected candidate against current

@@ -188,8 +188,7 @@ func shouldDescendRepoMarkdownDir(rel string) bool {
 	if len(parts) == 0 {
 		return true
 	}
-	switch parts[0] {
-	case ".git", ".beads", ".dolt", ".agents", ".openclerk-eval":
+	if shouldSkipTopLevelHiddenState(parts[0], true) {
 		return false
 	}
 	return !strings.HasPrefix(slash, "docs/evals/results/")
@@ -211,9 +210,10 @@ func shouldImportRepoMarkdown(rel string, entry fs.DirEntry) bool {
 	}
 	parts := strings.Split(slash, "/")
 	if len(parts) > 0 {
-		switch parts[0] {
-		case ".git", ".beads", ".dolt", ".agents", ".openclerk-eval":
+		if shouldSkipTopLevelHiddenState(parts[0], entry.IsDir()) {
 			return false
+		}
+		switch parts[0] {
 		case "AGENTS.md":
 			return false
 		}

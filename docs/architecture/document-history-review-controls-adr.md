@@ -96,7 +96,7 @@ than file-system centric. The candidate lifecycle record should cover:
   or citations instead of raw private bodies in committed reports
 
 These are product-level semantics only. Exact request and response shapes are
-out of scope until a later implementation Bead has targeted evidence and
+out of scope until a later implementation work item has targeted evidence and
 compatibility review.
 
 ## Decision
@@ -161,4 +161,4 @@ interface is promoted by this ADR.
   raw private artifact bodies or raw private diffs into committed reports.
 - Public artifacts use repo-relative paths or neutral placeholders.
 - New public runner actions require separate targeted evidence, compatibility
-  review, and an implementation Bead.
+  review, and an implementation work item.

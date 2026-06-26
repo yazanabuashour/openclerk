@@ -38,8 +38,8 @@ Expected evidence must preserve temporal status, current canonical docs over sta
 - Record `none_viable_yet` if current primitives or the candidate cannot safely express the workflow.
 - Defer if guidance-only current primitives pass cleanly.
 - Promote the eval-only candidate contract only if the response candidate passes safety/capability and guidance-only natural evidence still shows meaningful ergonomics or answer-contract debt.
-- If promotion is recorded, file a separate implementation Bead naming the exact contract and gates; do not implement it in `oc-fnhj`.
-- If a non-promotion outcome still leaves a real need, search Beads for existing follow-up work and file or link one non-implementation follow-up if none exists.
+- If promotion is recorded, file a separate implementation work item naming the exact contract and gates; do not implement it in `oc-fnhj`.
+- If a non-promotion outcome still leaves a real need, search work items for existing follow-up work and file or link one non-implementation follow-up if none exists.
 
 ## Pinned Run
 

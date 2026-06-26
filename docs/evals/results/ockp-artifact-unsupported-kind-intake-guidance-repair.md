@@ -65,7 +65,7 @@ Decision: `keep_as_reference`
 
 Public surface: `openclerk document`, `openclerk retrieval`
 
-Promotion: keep unsupported artifact kind intake as reference evidence over pasted or explicitly supplied content, approved candidate documents, and existing document/retrieval primitives; no implementation bead, runner action, parser, schema, storage, public API, skill behavior, or product behavior change.
+Promotion: keep unsupported artifact kind intake as reference evidence over pasted or explicitly supplied content, approved candidate documents, and existing document/retrieval primitives; no implementation work item, runner action, parser, schema, storage, public API, skill behavior, or product behavior change.
 
 | Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Latency | Guidance dependence | Safety pass | Capability pass | UX quality | Safety risks | Fixture preflight | Evidence posture |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- |

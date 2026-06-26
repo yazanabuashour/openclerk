@@ -39,7 +39,7 @@ installed-action claim, equivalent current-primitives safety wording is
 accepted, and candidate response validation reports field-specific failures.
 
 Because guidance-only current primitives passed cleanly, the decision rules
-defer the candidate rather than promote it. No implementation bead is
+defer the candidate rather than promote it. No implementation work item is
 authorized.
 
 ## Safety, Capability, UX
@@ -68,16 +68,16 @@ intent ergonomics or answer-contract failure.
 
 ## Follow-Up
 
-No implementation bead is authorized by this decision.
+No implementation work item is authorized by this decision.
 
-`bd search "relationship-record repeated ergonomics"` found no existing
+`follow-up search "relationship-record repeated ergonomics"` found no existing
 follow-up, so non-implementation follow-up `oc-hp3m` was filed to collect
-repeated relationship-record ergonomics evidence. No implementation bead is
+repeated relationship-record ergonomics evidence. No implementation work item is
 authorized.
 
 Follow-up checkpoint
 [`docs/architecture/relationship-record-repeated-ergonomics-checkpoint.md`](relationship-record-repeated-ergonomics-checkpoint.md)
-closed `oc-hp3m` with no new eval run, no implementation bead, and no
+closed `oc-hp3m` with no new eval run, no implementation work item, and no
 promotion because no repeated post-repair trigger was present.
 
 Future promotion remains blocked unless later targeted evidence shows:

@@ -311,12 +311,12 @@ func graphRelationshipHandoff(report GraphRelationshipReport) *AgentHandoff {
 		"workflow_impact=one graph_relationship_report action replaces current_primitives_plus_graph_context_report drilldown for relationship/path, direct-vs-derived, typed-candidate, and limited graph-audit needs",
 		"candidate_comparison=current_primitives_plus_graph_context_report available_reference; graph_relationship_report promote; split_specialized_reports not_selected",
 		"decision=promote graph_relationship_report",
-		"follow_up_needs=no follow-up beads are required for the deferred relationship/path, direct-vs-derived, typed-candidate, or limited graph-audit needs",
+		"follow_up_needs=no follow-up work is required for the deferred relationship/path, direct-vs-derived, typed-candidate, or limited graph-audit needs",
 		"read_only=true",
 	}
 	return &AgentHandoff{
 		AnswerSummary: fmt.Sprintf(
-			"graph_relationship_report returned source %s with %d relationship_paths, %d direct_relationships, %d derived_relationships, %d typed_relationship_candidates, %d audit_findings including stale_graph_projection, orphaned_graph_context, and contradictory_relationship_text, %s, provenance_refs, and %d source citations. Candidate comparison: current_primitives_plus_graph_context_report is the available reference, graph_relationship_report is the promoted read-only surface, and split_specialized_reports is not selected. Decision: promote graph_relationship_report; no follow-up beads are required for the deferred relationship/path, direct-vs-derived, typed-candidate, or limited graph-audit needs.",
+			"graph_relationship_report returned source %s with %d relationship_paths, %d direct_relationships, %d derived_relationships, %d typed_relationship_candidates, %d audit_findings including stale_graph_projection, orphaned_graph_context, and contradictory_relationship_text, %s, provenance_refs, and %d source citations. Candidate comparison: current_primitives_plus_graph_context_report is the available reference, graph_relationship_report is the promoted read-only surface, and split_specialized_reports is not selected. Decision: promote graph_relationship_report; no follow-up work is required for the deferred relationship/path, direct-vs-derived, typed-candidate, or limited graph-audit needs.",
 			sourcePath,
 			len(report.RelationshipPaths),
 			len(report.DirectRelationships),

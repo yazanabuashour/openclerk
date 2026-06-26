@@ -147,9 +147,9 @@ media metadata. That promotion remains deferred until targeted eval evidence
 shows repeated runner capability gaps and the exact surface is named in a
 promotion decision.
 
-Remaining work is represented by linked beads:
+Remaining work is represented by linked work items:
 
 - `oc-tnnw.5.3` eval for safety, capability, and UX quality.
 - `oc-tnnw.5.4` promotion decision.
 - `oc-tnnw.5.5` conditional implementation only if promoted.
-- `oc-tnnw.5.6` iteration and follow-up bead creation.
+- `oc-tnnw.5.6` iteration and follow-up work item creation.

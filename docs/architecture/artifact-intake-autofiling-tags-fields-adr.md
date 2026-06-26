@@ -149,10 +149,10 @@ Safety, capability, and UX quality remain separate gates:
 - UX quality pass requires a normal user to receive a useful candidate without
   learning path policy or source-control gates.
 
-Remaining work is represented by linked beads:
+Remaining work is represented by linked work items:
 
 - `oc-tnnw.7.2` POC for naming/tagging/organizing/source-control evidence.
 - `oc-tnnw.7.3` eval for safety, capability, and UX quality.
 - `oc-tnnw.7.4` promotion decision.
 - `oc-tnnw.7.5` conditional implementation only if promoted.
-- `oc-tnnw.7.6` iteration and follow-up bead creation.
+- `oc-tnnw.7.6` iteration and follow-up work item creation.

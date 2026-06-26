@@ -117,10 +117,10 @@ Safety, capability, and UX quality remain separate gates:
 - UX quality pass requires the normal user surface to stay simpler than a menu
   of backend storage choices.
 
-Remaining work is represented by linked beads:
+Remaining work is represented by linked work items:
 
 - `oc-tnnw.2.2` POC for structured-store candidate evidence.
 - `oc-tnnw.2.3` eval for safety, capability, and UX quality.
 - `oc-tnnw.2.4` promotion decision.
 - `oc-tnnw.2.5` conditional implementation only if promoted.
-- `oc-tnnw.2.6` iteration and follow-up bead creation.
+- `oc-tnnw.2.6` iteration and follow-up work item creation.

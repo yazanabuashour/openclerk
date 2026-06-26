@@ -1,6 +1,6 @@
 {
   "schema_version": "openclerk-eval-summary.v1",
-  "bead": "oc-sloi",
+  "work item": "oc-sloi",
   "summary": "Core explicit semantic_search implementation and optional adapter hardening evidence.",
   "implemented_surfaces": [
     {

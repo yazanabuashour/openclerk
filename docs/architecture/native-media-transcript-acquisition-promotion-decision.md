@@ -25,7 +25,7 @@ Evidence:
 
 ## Decision
 
-Keep this lane as reference evidence. Do not file an implementation bead from
+Keep this lane as reference evidence. Do not file an implementation work item from
 `oc-69h3.4`.
 
 Safety pass: the targeted run preserved runner-only access, no direct SQLite or
@@ -52,7 +52,7 @@ freshness, and local-first tradeoffs.
 
 ## Follow-Up
 
-`bd search` found no existing candidate-comparison follow-up for native media
+`follow-up search` found no existing candidate-comparison follow-up for native media
 transcript acquisition beyond the `oc-69h3` epic and children. Created
 `oc-e40d`, "Compare native media transcript acquisition candidate surfaces", to
 compare 2-3 candidate surfaces and choose, combine, defer, kill, or record

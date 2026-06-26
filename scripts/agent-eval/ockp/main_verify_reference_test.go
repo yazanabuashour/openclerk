@@ -653,7 +653,7 @@ Validation boundaries: no writes, no bypasses, no direct SQLite, no direct vault
 Workflow impact: graph_context_report reduces routine ceremony.
 Story outcomes: Read-only graph explanation - promote; Relationship/path finding - defer; Direct-vs-inferred relationship reporting - defer; Typed relationship candidates from canonical markdown - defer; Stale/contradictory/orphaned graph audits - defer; Approval-gated relationship annotation or maintenance plans - defer; Durable semantic graph/schema/storage candidates - kill.
 Candidate comparison: existing primitives/baseline, graph_context_report, narrow read-only report actions, approval-before-write maintenance plans, durable semantic graph/storage options, no-new-surface.
-Follow-up needs: follow-up Beads cover deferred report and maintenance plan comparisons.`
+Follow-up needs: follow-up work cover deferred report and maintenance plan comparisons.`
 	if !graphProductStoryExplorationAnswerPass(answer) {
 		t.Fatalf("complete graph product story answer did not pass")
 	}
@@ -677,7 +677,7 @@ Validation boundaries: no writes, no bypasses, no direct SQLite, no direct vault
 Workflow impact: one plan action replaces ceremonial report-plus-manual-write planning.
 Candidate comparison: current_primitives_plus_graph_relationship_report, graph_relationship_maintenance_plan, durable_semantic_graph_maintenance.
 Decision: promote graph_relationship_maintenance_plan.
-Follow-up needs: no follow-up beads are required for the approval-gated relationship annotation or maintenance-plan need.`
+Follow-up needs: no follow-up work is required for the approval-gated relationship annotation or maintenance-plan need.`
 	if !graphRelationshipMaintenanceAnswerPass(answer) {
 		t.Fatalf("complete graph relationship maintenance answer did not pass")
 	}
@@ -714,7 +714,7 @@ Validation boundaries: no writes, no bypasses, no direct SQLite, no direct vault
 Workflow impact: one action replaces ceremony.
 Candidate comparison: current_primitives_plus_graph_context_report, graph_relationship_report, split_specialized_reports.
 Decision: promote graph_relationship_report.
-Follow-up needs: no follow-up beads are required for the deferred relationship/path, direct-vs-derived, typed-candidate, or limited graph-audit needs.`
+Follow-up needs: no follow-up work is required for the deferred relationship/path, direct-vs-derived, typed-candidate, or limited graph-audit needs.`
 	metrics := metrics{
 		CommandExecutions:               2,
 		GraphContextReportUsed:          true,

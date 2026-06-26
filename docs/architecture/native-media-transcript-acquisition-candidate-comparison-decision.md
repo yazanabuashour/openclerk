@@ -17,7 +17,7 @@ This decision does not add a runner action, downloader dependency, caption
 retrieval, local STT, transcript API, remote extraction, parser, schema,
 migration, storage behavior, public API, public OpenClerk interface, product
 behavior, shipped skill behavior, or implementation work. It does not
-authorize an implementation bead.
+authorize an implementation work item.
 
 Evidence:
 
@@ -100,7 +100,7 @@ count while preserving:
   browser, direct vault/SQLite, HTTP/MCP, source-built runner, or unsupported
   transport bypasses
 
-No implementation bead should be filed from `oc-e40d`.
+No implementation work item should be filed from `oc-e40d`.
 
 ## Compatibility
 

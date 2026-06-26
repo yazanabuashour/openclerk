@@ -7,7 +7,7 @@ OCR/scanned-PDF artifact-candidate path: runner-owned model/provider egress,
 runner-owned local OCR runtime policy, and no OpenClerk-owned OCR extraction.
 
 The result is explicit kill for OpenClerk-owned OCR extraction on this path.
-No product implementation Bead is filed.
+No product implementation work item is filed.
 
 ## Targeted Policy Evidence
 

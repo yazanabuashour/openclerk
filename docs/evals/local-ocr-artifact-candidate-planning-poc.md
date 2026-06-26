@@ -89,7 +89,7 @@ A later implementation promotion must name:
 
 ## Conclusion
 
-Do not file a product implementation Bead from `oc-d1pm`. OCR and scanned-PDF
+Do not file a product implementation work item from `oc-d1pm`. OCR and scanned-PDF
 candidate planning remain valid OpenClerk needs, and the best future surface is
 an explicit review-mode extension of `artifact_candidate_plan`, but the current
 evidence does not prove confidence, provenance, correction, duplicate, or
@@ -98,6 +98,6 @@ review behavior strongly enough to promote runtime OCR.
 Follow-up fixture evidence in
 [`docs/evals/results/ockp-local-ocr-artifact-fixture-evidence.md`](results/ockp-local-ocr-artifact-fixture-evidence.md)
 keeps this outcome unchanged: `none viable yet` remains selected, no product
-implementation Bead is justified, and deferred follow-up `oc-i8yk` tracks the
+implementation work item is justified, and deferred follow-up `oc-i8yk` tracks the
 next OCR/scanned-PDF contract pass for a concrete OCR dependency and correction
 workflow.

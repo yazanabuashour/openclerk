@@ -83,7 +83,7 @@ to a remote provider.
 
 ## Required Evidence
 
-Before any product implementation Bead is filed, a later eval must include:
+Before any product implementation work item is filed, a later eval must include:
 
 - natural and scripted prompts for receipt image, scanned receipt PDF, and
   low-confidence OCR review

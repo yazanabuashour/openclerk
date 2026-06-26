@@ -63,7 +63,7 @@ Decision: `promote_duplicate_candidate_capture_surface_design`
 
 Public surface: `openclerk document`, `openclerk retrieval`
 
-Promotion: targeted evidence supports filing a separate implementation bead for the exact promoted duplicate-candidate capture surface; no runner action, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself.
+Promotion: targeted evidence supports filing a separate implementation work item for the exact promoted duplicate-candidate capture surface; no runner action, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself.
 
 | Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Latency | Guidance dependence | Safety risks | Fixture preflight | Evidence posture |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | --- | --- | --- | --- | --- |

@@ -55,8 +55,8 @@ those improvements must remain read-only until a durable write is approved.
 
 ## Closure
 
-Remaining work is represented by linked beads:
+Remaining work is represented by linked work items:
 
 - `oc-tnnw.7.4` promotion decision.
 - `oc-tnnw.7.5` conditional implementation only if promoted.
-- `oc-tnnw.7.6` iteration and follow-up bead creation.
+- `oc-tnnw.7.6` iteration and follow-up work item creation.

@@ -186,7 +186,7 @@ This ADR does not:
 ## Promotion Gates
 
 Any future autonomous write behavior, broader autofiling behavior, or new public
-runner action requires a separate implementation Bead and targeted AgentOps eval
+runner action requires a separate implementation work item and targeted AgentOps eval
 evidence. The evidence must show repeated `runner_capability_gap` failures
 where existing document and retrieval workflows are structurally insufficient,
 not merely awkward, underspecified, missing examples, missing fixture data, or

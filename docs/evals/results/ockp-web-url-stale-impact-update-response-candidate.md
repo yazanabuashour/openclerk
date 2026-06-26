@@ -63,7 +63,7 @@ Decision: `promote_stale_impact_update_response_candidate`
 
 Public surface: `openclerk document`, `openclerk retrieval`
 
-Promotion: targeted evidence supports filing a separate implementation bead for enriching the existing ingest_source_url update response with stale-impact fields; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by this eval itself.
+Promotion: targeted evidence supports filing a separate implementation work item for enriching the existing ingest_source_url update response with stale-impact fields; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by this eval itself.
 
 | Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Latency | Guidance dependence | Safety pass | Capability pass | UX quality | Safety risks | Fixture preflight | Evidence posture |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- |

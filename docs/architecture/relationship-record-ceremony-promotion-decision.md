@@ -56,13 +56,13 @@ right next step is candidate comparison, not implementation.
 
 ## Follow-Up
 
-No implementation bead is authorized by this decision. Conditional child
+No implementation work item is authorized by this decision. Conditional child
 `oc-oowv.4` should close as no-op because the decision did not promote.
 
 The remaining need is real: relationship-shaped lookup and promoted-record
 lookup are both safe and expressible, but the combined natural workflow failed
-under routine intent. `bd search "relationship record"` and
-`bd search "relationship-record"` found no existing candidate-surface follow-up
+under routine intent. `follow-up search "relationship record"` and
+`follow-up search "relationship-record"` found no existing candidate-surface follow-up
 outside `oc-oowv`, so follow-up `oc-614j` was filed to compare:
 
 - repaired guidance over existing `openclerk document` and `openclerk retrieval`

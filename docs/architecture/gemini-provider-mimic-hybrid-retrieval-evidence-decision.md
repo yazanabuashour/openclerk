@@ -64,7 +64,7 @@ embedding imports for routine `search`.
 
 Search performed before this decision:
 
-- `bd search "local offline hybrid retrieval Ollama rerun" --status all`: no
+- `follow-up search "local offline hybrid retrieval Ollama rerun" --status all`: no
   separate issue found.
 
 Remaining local/offline work stays on `oc-bq8c`: rerun with local Ollama or

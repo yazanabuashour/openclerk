@@ -11,39 +11,19 @@ When doing OpenClerk ADR, POC, eval, promotion, or deferred-capability decision 
 - Prefer extending the natural existing runner action when the input clearly belongs there, instead of declaring the adjacent UX unsupported.
 - Treat "completed but ceremonial" eval passes as possible taste debt when they require high step count, long latency, exact prompt choreography, or surprising clarification turns.
 - Record safety pass, capability pass, and UX quality separately when a report or decision needs to justify defer/reference.
-- When taste debt, defer, keep-as-reference, or another non-promotion outcome still leaves a real capability, ergonomics, safety, auditability, or workflow need, identify whether the evaluated shape failed while the need remains valid. If it does, create or propose follow-up Beads for candidate-surface comparison before handoff, normally with 2-3 plausible shapes unless the decision documents why only one is viable. The follow-up must compare candidates, choose the best, combine useful behaviors if appropriate, defer or kill the track, or record `none viable yet`.
-- Before closing any ADR, POC, eval, promotion, or deferred-capability decision epic with outcome `keep-as-reference`, `defer`, `more evidence`, `candidate selected`, `none viable yet`, or another non-promotion result, run `bd search` for existing follow-up work. If none exists, create and link the follow-up Bead(s) before closing the parent or handing off.
+- When taste debt, defer, keep-as-reference, or another non-promotion outcome still leaves a real capability, ergonomics, safety, auditability, or workflow need, identify whether the evaluated shape failed while the need remains valid. If it does, create or propose follow-up work for candidate-surface comparison before handoff, normally with 2-3 plausible shapes unless the decision documents why only one is viable. The follow-up must compare candidates, choose the best, combine useful behaviors if appropriate, defer or kill the track, or record `none viable yet`.
+- Before closing any ADR, POC, eval, promotion, or deferred-capability decision epic with outcome `keep-as-reference`, `defer`, `more evidence`, `candidate selected`, `none viable yet`, or another non-promotion result, check existing follow-up work in GitHub issues or public docs. If none exists, create or propose the follow-up work before closing the parent or handing off.
 - Do not use taste review to bypass safety or evidence discipline: authority, citations, provenance, freshness, local-first behavior, duplicate handling, runner-only access, approval-before-write, and ADR/POC/eval/promotion decisions still apply.
-
-<!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
-## Beads Issue Tracker
-
-This project uses **bd (beads)** for maintainer issue tracking. Run `bd prime` to see full workflow context and commands.
-
-### Quick Reference
-
-```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --claim  # Claim work
-bd close <id>         # Complete work
-```
-
-### Rules
-
-- If you are acting as a maintainer or local coding agent, use `bd` for task tracking instead of ad hoc markdown TODO lists
-- Run `bd prime` for detailed command reference and session close protocol
-- Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
 
 ## Work Item Completion
 
-A **work item** is one logical bead, task, story, or other coherent unit of work. **When completing each work item**, complete the workflow below through review, local commit, verification, and handoff before starting unrelated work or handing off. Push only when the maintainer or task explicitly asks for remote publication. If a single thread completes multiple independent beads/tasks/stories, repeat this workflow once for each completed work item. If a work item contains multiple independent logical checkpoints, complete the review workflow for each checkpoint before moving to the next; a checkpoint is the smallest coherent unit whose changes can be reviewed on their own, such as one bug fix, one finding, one migration step, or one separable behavior change.
+A **work item** is one logical task, story, or other coherent unit of work. **When completing each work item**, complete the workflow below through review, local commit, verification, and handoff before starting unrelated work or handing off. Push only when the maintainer or task explicitly asks for remote publication. If a single thread completes multiple independent tasks or stories, repeat this workflow once for each completed work item. If a work item contains multiple independent logical checkpoints, complete the review workflow for each checkpoint before moving to the next; a checkpoint is the smallest coherent unit whose changes can be reviewed on its own, such as one bug fix, one finding, one migration step, or one separable behavior change.
 
 **MANDATORY WORKFLOW:**
 
 1. **File issues for remaining work** - Create issues for anything that needs follow-up
 2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
+3. **Update issue status** - Close or update the relevant public issue or project item when one exists
 4. **Prepare review** - Run `git status`, summarize changed files and quality gates, and confirm no commit or push has been performed
 5. **Codex review** - Run the review command once for the current work item or review checkpoint:
    ```bash
@@ -54,7 +34,6 @@ A **work item** is one logical bead, task, story, or other coherent unit of work
 7. **Remote publication** - Push only when explicitly requested:
    ```bash
    git pull --rebase
-   bd dolt push
    git push
    git status
    ```
@@ -67,6 +46,5 @@ A **work item** is one logical bead, task, story, or other coherent unit of work
 - Run the Codex review command once per work item or review checkpoint; do not rerun the same checkpoint review as a workflow loop
 - For multi-checkpoint work, run quality gates, Codex review, and commit after each independent checkpoint before starting the next
 - Do NOT commit before quality gates and the Codex review command are complete
-- After the review command completes, stage and commit the intended files; if remote publication was requested, pull/rebase, run `bd dolt push`, and `git push`
+- After the review command completes, stage and commit the intended files; if remote publication was requested, pull/rebase, then push
 - If a requested push fails, resolve and retry until it succeeds or report the blocker
-<!-- END BEADS INTEGRATION -->

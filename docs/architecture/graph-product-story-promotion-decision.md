@@ -5,7 +5,7 @@ decision_status: accepted
 decision_scope: graph-product-stories
 decision_owner: platform
 source_refs: docs/evals/graph-product-story-exploration.md, docs/evals/results/ockp-graph-product-story-exploration.md, docs/architecture/graph-context-report-promotion-decision.md
-follow_up_beads: oc-sl7c, oc-2hx7
+follow_up_work: oc-sl7c, oc-2hx7
 ---
 # Decision: Graph Product Story Promotion
 
@@ -83,9 +83,9 @@ migration, schema, or durable semantic graph candidate must prove auditability,
 rollback, provenance, freshness, duplicate handling, and failure-mode behavior
 before promotion.
 
-## Follow-Up Beads
+## Follow-Up Work
 
-Before closing the parent decision work, `bd search` found no existing graph
+Before closing the parent decision work, `follow-up search` found no existing graph
 audit, typed relationship, or relationship annotation follow-up. The linked
 follow-ups are:
 

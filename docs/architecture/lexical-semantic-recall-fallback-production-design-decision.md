@@ -50,7 +50,7 @@ UX quality: pass only if invisible. A normal user should keep using plain
 
 Search performed before closing `oc-1amj`:
 
-- `bd search "lexical semantic recall fallback production regression" --status all`: no existing issue found.
+- `follow-up search "lexical semantic recall fallback production regression" --status all`: no existing issue found.
 
 Created follow-up:
 

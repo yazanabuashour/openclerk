@@ -96,14 +96,14 @@ A future promotion must name:
 - provenance events and projection freshness semantics
 - targeted eval scenarios that repeatedly fail without the proposed surface
 
-## Follow-up Beads
+## Follow-up Work
 
 Search performed before close:
 
-- `bd search "OCR artifact ingestion"`: no existing bead found.
-- `bd search "local file artifact"`: no existing bead found.
-- `bd search "native media transcript"`: no existing bead found.
-- `bd search "unsupported artifact kind"`: no existing bead found.
+- `follow-up search "OCR artifact ingestion"`: no existing work item found.
+- `follow-up search "local file artifact"`: no existing work item found.
+- `follow-up search "native media transcript"`: no existing work item found.
+- `follow-up search "unsupported artifact kind"`: no existing work item found.
 
 Created:
 
@@ -117,7 +117,7 @@ Linked existing:
   non-promotion decision.
 - `oc-tnnw.5.6` for the final iteration/follow-up check before parent closure.
 
-No implementation Beads are filed from this decision because the evidence does
+No implementation work items are filed from this decision because the evidence does
 not justify promotion. Future repair work may be filed for eval data hygiene or
 verifier coverage; production ingestion work must go through `oc-w7xa` or a
 more specific candidate-surface comparison that preserves source provenance,

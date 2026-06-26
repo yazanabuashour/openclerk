@@ -62,7 +62,7 @@ Decision: `defer_for_guidance_or_eval_repair`
 
 Public surface: `openclerk document`, `openclerk retrieval`
 
-Promotion: web URL stale repair promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation bead unless a later decision promotes.
+Promotion: web URL stale repair promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation work item unless a later decision promotes.
 
 | Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Latency | Guidance dependence | Safety risks | Fixture preflight | Evidence posture |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | --- | --- | --- | --- | --- |

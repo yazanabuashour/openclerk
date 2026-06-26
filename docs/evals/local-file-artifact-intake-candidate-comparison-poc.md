@@ -59,7 +59,7 @@ explicitly approved asset/source metadata can use current runner workflows.
 
 ## Conclusion
 
-Do not file a product implementation bead from this comparison. The evaluated
+Do not file a product implementation work item from this comparison. The evaluated
 shape is safe and current primitives can express the supported supplied-content
 and approved-candidate workflows, but the lane is not promotion-ready.
 

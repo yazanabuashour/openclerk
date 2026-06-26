@@ -1,7 +1,7 @@
 # Memory/Router Recall Candidate Evidence Repair Decision
 
-Status: deferred for guidance or eval repair  
-Bead: `oc-70it`  
+Status: deferred for guidance or eval repair
+Work item: `oc-70it`
 Evidence: `docs/evals/results/ockp-memory-router-recall-candidate-evidence-repair.md`, `docs/evals/results/ockp-memory-router-recall-candidate-evidence-repair.json`
 
 ## Summary
@@ -49,11 +49,11 @@ This is meaningful taste debt, but promotion is not allowed because the current-
 
 Defer for guidance or eval repair.
 
-Do not promote an implementation Bead from `oc-70it`. The repaired response candidate is viable as eval evidence, but the lane does not meet the promotion gate because current-primitives control failed and guidance-only natural remains taste debt.
+Do not promote an implementation work item from `oc-70it`. The repaired response candidate is viable as eval evidence, but the lane does not meet the promotion gate because current-primitives control failed and guidance-only natural remains taste debt.
 
 ## Follow-Up
 
-No existing follow-up Bead was found for the remaining current-primitives/guidance evidence issue. Filed `oc-cy9y` to repair or decide that remaining non-implementation evidence track.
+No existing follow-up Work item was found for the remaining current-primitives/guidance evidence issue. Filed `oc-cy9y` to repair or decide that remaining non-implementation evidence track.
 
 ## Compatibility Boundaries
 
@@ -63,4 +63,4 @@ No existing follow-up Bead was found for the remaining current-primitives/guidan
 - Session observations remain stale or advisory unless promoted through canonical markdown with source refs.
 - Feedback weighting remains advisory and cannot hide stale or conflicting canonical evidence.
 - Synthesis and projections remain derived evidence with provenance and freshness checks.
-- Any future implementation requires a later promotion decision and a separate implementation Bead naming the exact contract, compatibility expectations, failure modes, and gates.
+- Any future implementation requires a later promotion decision and a separate implementation work item naming the exact contract, compatibility expectations, failure modes, and gates.

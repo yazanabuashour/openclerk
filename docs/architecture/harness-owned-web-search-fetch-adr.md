@@ -101,13 +101,13 @@ Safety, capability, and UX quality remain separate gates:
 - UX quality pass requires a normal user to avoid provider menus and path
   construction unless live-provider evidence justifies that complexity.
 
-Remaining work is represented by linked beads:
+Remaining work is represented by linked work items:
 
 - `oc-tnnw.4.2` POC for planner/provider candidate evidence.
 - `oc-tnnw.4.3` eval for safety, capability, and UX quality.
 - `oc-tnnw.4.4` promotion decision.
 - `oc-tnnw.4.5` conditional implementation only if promoted.
-- `oc-tnnw.4.6` iteration and follow-up bead creation.
+- `oc-tnnw.4.6` iteration and follow-up work item creation.
 
 ## Non-Goals
 

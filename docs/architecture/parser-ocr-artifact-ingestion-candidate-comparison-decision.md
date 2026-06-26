@@ -57,7 +57,7 @@ approval boundaries are explicit.
 
 Search performed before closing `oc-w7xa`:
 
-- `bd search "parser OCR local artifact ingestion" --status all`: no existing issue found.
+- `follow-up search "parser OCR local artifact ingestion" --status all`: no existing issue found.
 
 Created follow-up:
 

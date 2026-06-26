@@ -451,7 +451,7 @@ func graphProductStoryExplorationAnswerPass(message string) bool {
 		containsAny(normalized, []string{"graph projection freshness", "projection freshness"}) &&
 		containsAny(normalized, []string{"auditability"}) &&
 		containsAny(normalized, []string{"rollback"}) &&
-		containsAny(normalized, []string{"follow-up beads", "follow up beads"})
+		containsAny(normalized, []string{"follow-up work"})
 	outcomes := graphProductStoryOutcomePass(normalized)
 	forbiddenGenericOutcome := "more" + " evidence"
 	return requiredPosture && requiredCandidates && requiredStories && requiredBoundaries && outcomes &&
@@ -494,7 +494,7 @@ func graphRelationshipReportAnswerPass(message string) bool {
 		containsAny(normalized, []string{"no graph memory", "no `graph memory`", "without graph memory"}) &&
 		containsAny(normalized, []string{"no durable semantic graph storage", "without durable semantic graph storage"})
 	decision := containsAny(normalized, []string{"promote graph_relationship_report", "promote graph relationship report"}) &&
-		containsAny(normalized, []string{"no follow-up beads are required", "no follow up beads are required"})
+		containsAny(normalized, []string{"no follow-up work is required"})
 	return requiredPosture && requiredCandidates && requiredFields && requiredBoundaries && decision
 }
 
@@ -535,7 +535,7 @@ func graphRelationshipMaintenanceAnswerPass(message string) bool {
 		containsAny(normalized, []string{"no graph memory", "no `graph memory`", "without graph memory"}) &&
 		containsAny(normalized, []string{"no durable semantic graph storage", "without durable semantic graph storage"})
 	decision := containsAny(normalized, []string{"promote graph_relationship_maintenance_plan", "promote graph relationship maintenance plan"}) &&
-		containsAny(normalized, []string{"no follow-up beads are required", "no follow up beads are required"})
+		containsAny(normalized, []string{"no follow-up work is required"})
 	return requiredPosture && requiredCandidates && requiredFields && requiredBoundaries && decision
 }
 

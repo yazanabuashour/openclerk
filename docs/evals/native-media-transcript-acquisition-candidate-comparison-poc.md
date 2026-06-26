@@ -61,7 +61,7 @@ acquisition until later targeted evidence justifies an exact safe contract.
 
 ## Conclusion
 
-Do not file an implementation bead from this comparison. The safest current
+Do not file an implementation work item from this comparison. The safest current
 candidate is supplied-transcript hardening/current primitives. The need for a
 simpler native media surface remains valid, but local-only and remote-provider
 acquisition should stay deferred until later evidence names exact surfaces and

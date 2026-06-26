@@ -52,11 +52,11 @@ evidence and does not justify a promoted surface yet.
 
 ## Follow-Up
 
-No implementation bead is authorized by this decision.
+No implementation work item is authorized by this decision.
 
 The remaining need is real: a normal user would expect a simpler stale repair
 surface than the current high-touch ceremony, while the evaluated natural shape
-still failed answer quality. `bd search "web URL stale repair ceremony"` found
+still failed answer quality. `follow-up search "web URL stale repair ceremony"` found
 only `oc-qnwd`, `oc-qnwd.3`, and `oc-qnwd.4`, so follow-up `oc-81vp` was filed
 to compare candidate surfaces before any future promotion:
 

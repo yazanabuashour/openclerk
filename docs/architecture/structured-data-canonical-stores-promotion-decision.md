@@ -87,14 +87,14 @@ approval-before-durable-write, and explicit authority reconciliation with
 canonical markdown. If none of the candidate shapes preserve these boundaries,
 record `none viable yet`.
 
-## Follow-up Beads
+## Follow-up Work
 
 Search performed before close:
 
-- `bd search "independent canonical store"`: found this track's implementation
-  and iteration beads, `oc-tnnw.2.5` and `oc-tnnw.2.6`, plus the current
+- `follow-up search "independent canonical store"`: found this track's implementation
+  and iteration work items, `oc-tnnw.2.5` and `oc-tnnw.2.6`, plus the current
   decision and parent epic.
-- `bd search "domain-specific store"`: no separate existing bead found.
+- `follow-up search "domain-specific store"`: no separate existing work item found.
 
 Created: none. The decision promotes the read-only report and does not identify
 a qualified domain that currently needs an independent canonical store.

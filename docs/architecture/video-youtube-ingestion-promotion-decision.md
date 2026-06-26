@@ -121,7 +121,7 @@ The coordinated design for the first four deferred gates is recorded in
 [`video-transcript-acquisition-design.md`](video-transcript-acquisition-design.md).
 That design preserves the current v1 boundary: supplied transcripts are
 implemented, while native acquisition remains unsupported until a separate
-promotion decision and implementation Beads name an exact surface.
+promotion decision and implementation work items name an exact surface.
 
 If these gates cannot preserve authority, citations, provenance, freshness,
 privacy, local-first operation, and the no-bypass contract, defer or kill the

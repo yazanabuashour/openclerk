@@ -9,7 +9,7 @@ Roadmap for 14 candidate eval-to-decision epics:
 - high-touch workflows: `oc-7feg`, `oc-k8ba`, `oc-oowv`, `oc-nu12`,
   `oc-qnwd`
 
-This note records Beads planning only. It does not authorize runner behavior,
+This note records work items planning only. It does not authorize runner behavior,
 eval harness scenarios, eval execution, promotion decisions, schemas, storage
 changes, public APIs, skill behavior changes, product behavior changes, or
 implementation work.
@@ -48,11 +48,11 @@ Each epic follows the same sequence:
 1. Add executable eval harness coverage for the candidate lane.
 2. Run the targeted eval and publish a reduced report under `docs/evals/results/`.
 3. Write a promote, defer, kill, or reference decision.
-4. File an implementation bead only if the decision promotes a surface.
+4. File an implementation work item only if the decision promotes a surface.
 
 The final step is conditional tracking, not implementation. If the decision
-does not promote, the conditional implementation-bead task should close with a
-no-op reason and no implementation bead should be created.
+does not promote, the conditional implementation-work item task should close with a
+no-op reason and no implementation work item should be created.
 
 ## Evidence Requirements
 

@@ -121,6 +121,6 @@ After embeddings exist, vector and hybrid scoring are local and in-memory.
 
 The result justifies continuing hybrid/vector retrieval design, but not
 promoting a durable embedding store or default hybrid ranking. The next work is
-deferred follow-up bead `oc-9ijx`, which must compare local/offline embeddings,
+deferred follow-up work item `oc-9ijx`, which must compare local/offline embeddings,
 explicit opt-in provider embeddings, and lexical-tuning fallback candidates
 before implementation.

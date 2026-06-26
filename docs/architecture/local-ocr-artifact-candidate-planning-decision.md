@@ -85,10 +85,10 @@ and capability pressure.
 
 Search performed before close:
 
-- `bd search "OCR scanned PDF artifact candidate plan" --status all`
-- `bd search "local OCR artifact candidate planning" --status all`
+- `follow-up search "OCR scanned PDF artifact candidate plan" --status all`
+- `follow-up search "local OCR artifact candidate planning" --status all`
 
-No product implementation Bead should be filed from `oc-d1pm`. A follow-up may
+No product implementation work item should be filed from `oc-d1pm`. A follow-up may
 gather evidence or compare fixtures, but implementation must remain blocked
 until a later accepted promotion decision names the exact request/response
 surface and passes the required gates.
@@ -99,7 +99,7 @@ Created follow-up:
 
 `oc-osmc` completed the fixture-evidence pass in
 [`docs/evals/results/ockp-local-ocr-artifact-fixture-evidence.md`](../evals/results/ockp-local-ocr-artifact-fixture-evidence.md).
-It selected `none viable yet`, filed no product implementation Bead, and
+It selected `none viable yet`, filed no product implementation work item, and
 created deferred follow-up `oc-i8yk` for the next OCR review contract and
 dependency-policy pass.
 
@@ -108,13 +108,13 @@ dependency-policy pass.
 It selected model-assisted OCR review as the simplest future evidence
 candidate, kept local OCR engines as the required local-first comparison, and
 filed follow-up `oc-s3wg` for targeted promotion evidence. It filed no product
-implementation Bead.
+implementation work item.
 
 `oc-s3wg` completed that comparison in
 [`docs/architecture/local-ocr-review-extraction-candidate-decision.md`](local-ocr-review-extraction-candidate-decision.md).
 It selected durable non-promotion for the local OCR/scanned-PDF
 artifact-candidate path, kept current OCR rejection behavior unchanged, and
-filed no product implementation Bead.
+filed no product implementation work item.
 
 ## Compatibility
 

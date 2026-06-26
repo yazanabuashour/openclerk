@@ -59,12 +59,12 @@ knobs.
 
 Searches performed before closing `oc-o2r8`:
 
-- `bd search "lexical semantic recall production fallback" --status all`: no
+- `follow-up search "lexical semantic recall production fallback" --status all`: no
   existing issue found.
-- `bd search "semantic recall fallback regression" --status all`: no existing
+- `follow-up search "semantic recall fallback regression" --status all`: no existing
   issue found.
 
-Created follow-up Bead:
+Created follow-up work item:
 
 - `oc-1amj`: design a production-safe lexical semantic-recall fallback or
   reject it after regression evidence.

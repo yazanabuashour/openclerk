@@ -103,4 +103,4 @@ Failure modes to preserve:
 
 ## Decision
 
-Implementation Bead `oc-oj0y` carries the promoted response enrichment on existing `ingest_source_url` update mode. Product behavior was not implemented in `oc-i62h`.
+Implementation work item `oc-oj0y` carries the promoted response enrichment on existing `ingest_source_url` update mode. Product behavior was not implemented in `oc-i62h`.

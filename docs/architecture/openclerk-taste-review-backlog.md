@@ -65,7 +65,7 @@ real. A defer, keep-as-reference, or other non-promotion decision should state
 whether there is no remaining need, or whether the evaluated shape failed while
 the underlying OpenClerk need remains valid.
 
-When the need remains valid, create or propose a Beads comparison epic before
+When the need remains valid, create or propose a work items comparison epic before
 handoff. The epic should normally include ADR, POC, Eval, and Decision children
 and compare 2-3 plausible candidate surfaces unless the decision documents why
 only one shape is viable. The Decision child must choose the best candidate,
@@ -79,9 +79,9 @@ citations, provenance, freshness, local-first operation, duplicate handling,
 runner-only access, approval-before-write, public-source and synthetic-fixture
 boundaries, and rejection of lower-level bypasses.
 
-## Tracker Backlog
+## Follow-Up Backlog
 
-The following Beads epics track the revisit work:
+The following work items epics track the revisit work:
 
 - `oc-fbqy`: Re-audit post-oc-v1ed URL and artifact intake UX
 - `oc-4rxs`: Re-audit path, title, and autofiling UX

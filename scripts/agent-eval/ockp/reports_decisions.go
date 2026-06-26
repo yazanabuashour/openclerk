@@ -284,10 +284,10 @@ func highTouchMemoryRouterRecallDecision(rows []targetedScenarioClassification) 
 
 func highTouchMemoryRouterRecallPromotion(decision string) string {
 	if decision == "promote_memory_router_recall_surface_design" {
-		return "promotion would require a separate implementation bead naming the exact memory/router recall surface, request/response shape, compatibility expectations, failure modes, and gates"
+		return "promotion would require a separate implementation work item naming the exact memory/router recall surface, request/response shape, compatibility expectations, failure modes, and gates"
 	}
 	if decision == "defer_for_guidance_or_eval_repair" {
-		return "memory/router recall ceremony promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation bead unless a later decision promotes"
+		return "memory/router recall ceremony promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation work item unless a later decision promotes"
 	}
 	return "targeted memory/router recall ceremony evidence only; no remember/recall action, memory transport, autonomous router API, schema, migration, storage behavior, or public API change from this eval"
 }
@@ -344,7 +344,7 @@ func memoryRouterRecallCandidateDecision(rows []targetedScenarioClassification) 
 func memoryRouterRecallCandidatePromotion(decision string) string {
 	switch decision {
 	case "promote_memory_router_recall_candidate_contract":
-		return "targeted evidence supports filing a separate implementation bead for a narrow read-only memory/router recall helper or report response contract; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by this eval itself"
+		return "targeted evidence supports filing a separate implementation work item for a narrow read-only memory/router recall helper or report response contract; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by this eval itself"
 	case "defer_guidance_only_current_primitives_sufficient":
 		return "guidance-only current primitives satisfied this targeted pressure, so the memory/router recall candidate is deferred pending stronger repeated ergonomics or answer-contract evidence"
 	case "kill_memory_router_recall_candidate":
@@ -352,7 +352,7 @@ func memoryRouterRecallCandidatePromotion(decision string) string {
 	case "none_viable_yet":
 		return "current evidence did not identify a viable memory/router recall candidate; compare alternatives or repair evidence before implementation"
 	default:
-		return "memory/router recall candidate promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation bead unless a later decision promotes"
+		return "memory/router recall candidate promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation work item unless a later decision promotes"
 	}
 }
 
@@ -433,10 +433,10 @@ func highTouchRelationshipRecordDecision(rows []targetedScenarioClassification) 
 
 func highTouchRelationshipRecordPromotion(decision string) string {
 	if decision == "promote_relationship_record_surface_design" {
-		return "targeted evidence supports filing a separate implementation bead for the exact promoted relationship-record lookup surface; no runner action, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
+		return "targeted evidence supports filing a separate implementation work item for the exact promoted relationship-record lookup surface; no runner action, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
 	}
 	if decision == "defer_for_guidance_or_eval_repair" {
-		return "relationship-record ceremony promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation bead unless a later decision promotes"
+		return "relationship-record ceremony promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation work item unless a later decision promotes"
 	}
 	return "keep high-touch relationship-record ceremony as reference pressure over existing document and retrieval primitives; no semantic-label graph layer, policy-specific record surface, combined lookup action, schema, migration, storage behavior, public API, or skill behavior change"
 }
@@ -493,7 +493,7 @@ func relationshipRecordCandidateDecision(rows []targetedScenarioClassification) 
 func relationshipRecordCandidatePromotion(decision string) string {
 	switch decision {
 	case "promote_relationship_record_candidate_contract":
-		return "targeted evidence supports filing a separate implementation bead for a narrow relationship-record lookup helper/report response contract; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by this eval itself"
+		return "targeted evidence supports filing a separate implementation work item for a narrow relationship-record lookup helper/report response contract; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by this eval itself"
 	case "defer_guidance_only_current_primitives_sufficient":
 		return "guidance-only current primitives satisfied this targeted pressure, so the relationship-record lookup candidate is deferred pending stronger repeated ergonomics or answer-contract evidence"
 	case "kill_relationship_record_candidate":
@@ -501,7 +501,7 @@ func relationshipRecordCandidatePromotion(decision string) string {
 	case "none_viable_yet":
 		return "current evidence did not identify a viable relationship-record lookup candidate; compare alternatives or repair evidence before implementation"
 	default:
-		return "relationship-record lookup candidate promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation bead unless a later decision promotes"
+		return "relationship-record lookup candidate promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation work item unless a later decision promotes"
 	}
 }
 
@@ -564,9 +564,9 @@ func highTouchDocumentLifecycleDecision(rows []targetedScenarioClassification) s
 func highTouchDocumentLifecyclePromotion(decision string) string {
 	switch decision {
 	case "promote_document_lifecycle_surface_design":
-		return "targeted evidence supports filing a separate implementation bead for the exact promoted document lifecycle surface; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
+		return "targeted evidence supports filing a separate implementation work item for the exact promoted document lifecycle surface; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
 	case "defer_for_guidance_or_eval_repair":
-		return "document lifecycle ceremony promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation bead unless a later decision promotes"
+		return "document lifecycle ceremony promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation work item unless a later decision promotes"
 	default:
 		return "keep high-touch document lifecycle ceremony as reference pressure over existing document and retrieval primitives; no promoted history, diff, review, restore, rollback, schema, migration, storage behavior, public API, or skill behavior change"
 	}
@@ -624,7 +624,7 @@ func documentLifecycleRollbackCandidateDecision(rows []targetedScenarioClassific
 func documentLifecycleRollbackCandidatePromotion(decision string) string {
 	switch decision {
 	case "promote_lifecycle_rollback_candidate_contract":
-		return "targeted evidence supports filing a separate implementation bead for a narrow lifecycle review/rollback candidate contract; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by this eval itself"
+		return "targeted evidence supports filing a separate implementation work item for a narrow lifecycle review/rollback candidate contract; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by this eval itself"
 	case "defer_guidance_only_current_primitives_sufficient":
 		return "guidance-only current primitives satisfied this targeted pressure, so the lifecycle rollback candidate is deferred pending stronger repeated ergonomics evidence"
 	case "kill_lifecycle_rollback_candidate":
@@ -632,7 +632,7 @@ func documentLifecycleRollbackCandidatePromotion(decision string) string {
 	case "none_viable_yet":
 		return "current evidence did not identify a viable lifecycle rollback candidate; compare alternatives before implementation"
 	default:
-		return "lifecycle rollback candidate promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation bead unless a later decision promotes"
+		return "lifecycle rollback candidate promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation work item unless a later decision promotes"
 	}
 }
 
@@ -697,7 +697,7 @@ func taggingDecision(rows []targetedScenarioClassification) string {
 func taggingPromotion(decision string) string {
 	switch decision {
 	case "promote_tag_filter_surface_design":
-		return "targeted evidence supports filing a separate implementation bead for read-side tag filter sugar over canonical markdown/frontmatter; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
+		return "targeted evidence supports filing a separate implementation work item for read-side tag filter sugar over canonical markdown/frontmatter; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
 	case "tag_filter_surface_validated":
 		return "promoted read-side tag filter surface is validated against safety, exact matching, path scoping, backward-compatible metadata filters, and canonical markdown/frontmatter authority"
 	case "kill_tagging_surface_shape":
@@ -705,7 +705,7 @@ func taggingPromotion(decision string) string {
 	case "defer_for_guidance_or_eval_repair":
 		return "first-class tagging promotion deferred pending guidance, harness, report, or eval repair"
 	default:
-		return "keep tagging as reference evidence over existing metadata_key/metadata_value primitives; no implementation bead, runner action, schema, storage, public API, skill behavior, or product behavior change"
+		return "keep tagging as reference evidence over existing metadata_key/metadata_value primitives; no implementation work item, runner action, schema, storage, public API, skill behavior, or product behavior change"
 	}
 }
 
@@ -759,9 +759,9 @@ func webURLStaleRepairDecision(rows []targetedScenarioClassification) string {
 func webURLStaleRepairPromotion(decision string) string {
 	switch decision {
 	case "promote_web_url_stale_repair_surface_design":
-		return "targeted evidence supports filing a separate implementation bead for a web URL stale repair surface; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
+		return "targeted evidence supports filing a separate implementation work item for a web URL stale repair surface; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
 	case "defer_for_guidance_or_eval_repair":
-		return "web URL stale repair promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation bead unless a later decision promotes"
+		return "web URL stale repair promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation work item unless a later decision promotes"
 	default:
 		return "keep web URL stale repair as reference pressure over existing ingest_source_url, document, and retrieval primitives; no runner action, schema, storage, public API, skill behavior, or product behavior change"
 	}
@@ -812,7 +812,7 @@ func webURLStaleImpactDecision(rows []targetedScenarioClassification) string {
 func webURLStaleImpactPromotion(decision string) string {
 	switch decision {
 	case "promote_stale_impact_update_response_candidate":
-		return "targeted evidence supports filing a separate implementation bead for enriching the existing ingest_source_url update response with stale-impact fields; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by this eval itself"
+		return "targeted evidence supports filing a separate implementation work item for enriching the existing ingest_source_url update response with stale-impact fields; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by this eval itself"
 	case "defer_guidance_only_current_primitives_sufficient":
 		return "guidance-only current primitives satisfied this targeted pressure, so the stale-impact response candidate is deferred pending stronger repeated ergonomics evidence"
 	case "kill_stale_impact_response_candidate":
@@ -820,7 +820,7 @@ func webURLStaleImpactPromotion(decision string) string {
 	case "none_viable_yet":
 		return "current evidence did not identify a viable stale-impact response candidate; compare alternatives before implementation"
 	default:
-		return "stale-impact response candidate promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation bead unless a later decision promotes"
+		return "stale-impact response candidate promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation work item unless a later decision promotes"
 	}
 }
 
@@ -855,13 +855,13 @@ func webProductPageDecision(rows []targetedScenarioClassification) string {
 func webProductPagePromotion(decision string) string {
 	switch decision {
 	case "promote_product_page_intake_surface_design":
-		return "targeted evidence supports filing a separate implementation bead for the exact promoted richer public product-page intake surface; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
+		return "targeted evidence supports filing a separate implementation work item for the exact promoted richer public product-page intake surface; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
 	case "kill_product_page_intake_shape":
 		return "richer product-page intake shape is unsafe under current evidence; do not file implementation work"
 	case "defer_for_guidance_or_eval_repair":
 		return "richer product-page intake promotion deferred pending guidance, harness, report, or eval repair"
 	default:
-		return "keep richer product-page intake as reference evidence; no implementation bead, runner action, schema, storage, public API, skill behavior, or product behavior change"
+		return "keep richer product-page intake as reference evidence; no implementation work item, runner action, schema, storage, public API, skill behavior, or product behavior change"
 	}
 }
 
@@ -924,13 +924,13 @@ func unsupportedArtifactKindDecision(rows []targetedScenarioClassification) stri
 func unsupportedArtifactKindPromotion(decision string) string {
 	switch decision {
 	case "promote_unsupported_artifact_kind_surface_design":
-		return "targeted evidence supports filing a separate implementation bead for the exact promoted unsupported artifact kind intake surface; no runner behavior, schema, storage, public API, skill behavior, parser, or product behavior changes are authorized by the eval itself"
+		return "targeted evidence supports filing a separate implementation work item for the exact promoted unsupported artifact kind intake surface; no runner behavior, schema, storage, public API, skill behavior, parser, or product behavior changes are authorized by the eval itself"
 	case "kill_unsupported_artifact_kind_shape":
 		return "unsupported artifact kind intake shape is unsafe under current evidence; do not file implementation work"
 	case "defer_for_guidance_or_eval_repair":
 		return "unsupported artifact kind intake promotion deferred pending guidance, answer-contract, harness, report, or eval repair"
 	default:
-		return "keep unsupported artifact kind intake as reference evidence over pasted or explicitly supplied content, approved candidate documents, and existing document/retrieval primitives; no implementation bead, runner action, parser, schema, storage, public API, skill behavior, or product behavior change"
+		return "keep unsupported artifact kind intake as reference evidence over pasted or explicitly supplied content, approved candidate documents, and existing document/retrieval primitives; no implementation work item, runner action, parser, schema, storage, public API, skill behavior, or product behavior change"
 	}
 }
 
@@ -974,13 +974,13 @@ func localFileArtifactDecision(rows []targetedScenarioClassification) string {
 func localFileArtifactPromotion(decision string) string {
 	switch decision {
 	case "promote_local_file_artifact_intake_surface_design":
-		return "targeted evidence supports filing a separate implementation bead for the exact promoted local file artifact intake surface; no runner behavior, schema, storage, public API, skill behavior, parser, or product behavior changes are authorized by the eval itself"
+		return "targeted evidence supports filing a separate implementation work item for the exact promoted local file artifact intake surface; no runner behavior, schema, storage, public API, skill behavior, parser, or product behavior changes are authorized by the eval itself"
 	case "kill_local_file_artifact_intake_shape":
 		return "local file artifact intake shape is unsafe under current evidence; do not file implementation work"
 	case "defer_for_guidance_or_eval_repair":
 		return "local file artifact intake promotion deferred pending guidance, answer-contract, harness, report, or eval repair"
 	default:
-		return "keep local file artifact intake as reference evidence over pasted or explicitly supplied content, approved candidate documents, explicit asset-path policy, duplicate provenance, and existing document/retrieval primitives; no implementation bead, runner action, local file parser, schema, storage, public API, skill behavior, or product behavior change"
+		return "keep local file artifact intake as reference evidence over pasted or explicitly supplied content, approved candidate documents, explicit asset-path policy, duplicate provenance, and existing document/retrieval primitives; no implementation work item, runner action, local file parser, schema, storage, public API, skill behavior, or product behavior change"
 	}
 }
 
@@ -1049,13 +1049,13 @@ func nativeMediaTranscriptDecision(rows []targetedScenarioClassification) string
 func nativeMediaTranscriptPromotion(decision string) string {
 	switch decision {
 	case "promote_native_media_acquisition_surface_design":
-		return "targeted evidence supports filing a separate implementation bead for the exact promoted native media transcript acquisition surface; no runner behavior, schema, storage, public API, skill behavior, dependency, parser, STT, transcript API, remote extraction, or product behavior changes are authorized by the eval itself"
+		return "targeted evidence supports filing a separate implementation work item for the exact promoted native media transcript acquisition surface; no runner behavior, schema, storage, public API, skill behavior, dependency, parser, STT, transcript API, remote extraction, or product behavior changes are authorized by the eval itself"
 	case "kill_native_media_acquisition_shape":
 		return "native media transcript acquisition shape is unsafe under current evidence; do not file implementation work"
 	case "defer_for_guidance_or_eval_repair":
 		return "native media transcript acquisition promotion deferred pending guidance, answer-contract, harness, report, or eval repair"
 	default:
-		return "keep native media transcript acquisition as reference evidence; supplied-transcript ingest_video_url remains the current supported control, native acquisition remains unsupported, and no implementation bead, runner action, dependency, parser, STT, transcript API, schema, storage, public API, skill behavior, or product behavior change is authorized"
+		return "keep native media transcript acquisition as reference evidence; supplied-transcript ingest_video_url remains the current supported control, native acquisition remains unsupported, and no implementation work item, runner action, dependency, parser, STT, transcript API, schema, storage, public API, skill behavior, or product behavior change is authorized"
 	}
 }
 
@@ -1117,10 +1117,10 @@ func highTouchCompileSynthesisDecision(rows []targetedScenarioClassification) st
 
 func highTouchCompileSynthesisPromotion(decision string) string {
 	if decision == "promote_compile_synthesis_surface_design" {
-		return "targeted evidence supports filing a separate implementation bead for the exact promoted compile_synthesis surface; no runner action, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
+		return "targeted evidence supports filing a separate implementation work item for the exact promoted compile_synthesis surface; no runner action, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
 	}
 	if decision == "defer_for_guidance_or_eval_repair" {
-		return "compile synthesis ceremony promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation bead unless a later decision promotes"
+		return "compile synthesis ceremony promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation work item unless a later decision promotes"
 	}
 	return "targeted evidence only; no compile_synthesis runner action, schema, migration, storage behavior, direct vault behavior, or public API change from this eval"
 }
@@ -1170,7 +1170,7 @@ func compileSynthesisCandidateDecision(rows []targetedScenarioClassification) st
 func compileSynthesisCandidatePromotion(decision string) string {
 	switch decision {
 	case "promote_compile_synthesis_candidate_contract":
-		return "targeted evidence supports filing a separate implementation bead for a narrow compile_synthesis candidate contract; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by this eval itself"
+		return "targeted evidence supports filing a separate implementation work item for a narrow compile_synthesis candidate contract; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by this eval itself"
 	case "defer_guidance_only_current_primitives_sufficient":
 		return "guidance-only current primitives satisfied this targeted pressure, so the compile_synthesis candidate is deferred pending stronger repeated ergonomics evidence"
 	case "kill_compile_synthesis_candidate":
@@ -1178,7 +1178,7 @@ func compileSynthesisCandidatePromotion(decision string) string {
 	case "none_viable_yet":
 		return "current evidence did not identify a viable compile_synthesis candidate; compare alternatives before implementation"
 	default:
-		return "compile_synthesis candidate promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation bead unless a later decision promotes"
+		return "compile_synthesis candidate promotion deferred pending guidance, answer-contract, harness, report, or eval repair; no implementation work item unless a later decision promotes"
 	}
 }
 
@@ -1250,13 +1250,13 @@ func captureLowRiskDecision(rows []targetedScenarioClassification) string {
 func captureLowRiskPromotion(decision string) string {
 	switch decision {
 	case "promote_low_risk_capture_surface_design":
-		return "targeted evidence supports filing a separate implementation bead for the exact promoted low-risk capture surface; no runner action, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
+		return "targeted evidence supports filing a separate implementation work item for the exact promoted low-risk capture surface; no runner action, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
 	case "kill_unsafe":
 		return "low-risk capture surface is unsafe under current evidence; do not file implementation work"
 	case "defer_for_guidance_or_eval_repair":
 		return "low-risk capture promotion deferred pending guidance, harness, report, or eval repair"
 	default:
-		return "keep low-risk capture as reference evidence for product implementation; focused skill-policy guidance hardening was applied with no implementation bead, runner action, schema, storage, public API, direct-create, hidden-autofiling, or product behavior change"
+		return "keep low-risk capture as reference evidence for product implementation; focused skill-policy guidance hardening was applied with no implementation work item, runner action, schema, storage, public API, direct-create, hidden-autofiling, or product behavior change"
 	}
 }
 
@@ -1297,13 +1297,13 @@ func captureExplicitOverridesDecision(rows []targetedScenarioClassification) str
 func captureExplicitOverridesPromotion(decision string) string {
 	switch decision {
 	case "promote_explicit_overrides_capture_surface_design":
-		return "targeted evidence supports filing a separate implementation bead for the exact promoted explicit-overrides capture surface; no runner action, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
+		return "targeted evidence supports filing a separate implementation work item for the exact promoted explicit-overrides capture surface; no runner action, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
 	case "kill_unsafe":
 		return "explicit-overrides capture surface is unsafe under current evidence; do not file implementation work"
 	case "defer_for_guidance_or_eval_repair":
 		return "explicit-overrides capture promotion deferred pending guidance, harness, report, or eval repair"
 	default:
-		return "keep explicit-overrides capture as reference evidence; no implementation bead, runner action, schema, storage, public API, skill behavior, or product behavior change"
+		return "keep explicit-overrides capture as reference evidence; no implementation work item, runner action, schema, storage, public API, skill behavior, or product behavior change"
 	}
 }
 
@@ -1344,13 +1344,13 @@ func captureDuplicateCandidateDecision(rows []targetedScenarioClassification) st
 func captureDuplicateCandidatePromotion(decision string) string {
 	switch decision {
 	case "promote_duplicate_candidate_capture_surface_design":
-		return "targeted evidence supports filing a separate implementation bead for the exact promoted duplicate-candidate capture surface; no runner action, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
+		return "targeted evidence supports filing a separate implementation work item for the exact promoted duplicate-candidate capture surface; no runner action, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
 	case "kill_unsafe":
 		return "duplicate-candidate capture surface is unsafe under current evidence; do not file implementation work"
 	case "defer_for_guidance_or_eval_repair":
 		return "duplicate-candidate capture promotion deferred pending guidance, harness, report, or eval repair"
 	default:
-		return "keep duplicate-candidate capture as reference evidence; no implementation bead, runner action, schema, storage, public API, skill behavior, or product behavior change"
+		return "keep duplicate-candidate capture as reference evidence; no implementation work item, runner action, schema, storage, public API, skill behavior, or product behavior change"
 	}
 }
 
@@ -1391,13 +1391,13 @@ func captureSaveThisNoteDecision(rows []targetedScenarioClassification) string {
 func captureSaveThisNotePromotion(decision string) string {
 	switch decision {
 	case "promote_save_this_note_capture_surface_design":
-		return "targeted evidence supports filing a separate implementation bead for the exact promoted save-this-note capture surface; no runner action, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
+		return "targeted evidence supports filing a separate implementation work item for the exact promoted save-this-note capture surface; no runner action, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
 	case "kill_unsafe":
 		return "save-this-note capture surface is unsafe under current evidence; do not file implementation work"
 	case "defer_for_guidance_or_eval_repair":
 		return "save-this-note capture promotion deferred pending guidance, harness, report, or eval repair"
 	default:
-		return "keep save-this-note capture as reference evidence; no implementation bead, runner action, schema, storage, public API, skill behavior, or product behavior change"
+		return "keep save-this-note capture as reference evidence; no implementation work item, runner action, schema, storage, public API, skill behavior, or product behavior change"
 	}
 }
 
@@ -1438,13 +1438,13 @@ func captureDocumentLinksDecision(rows []targetedScenarioClassification) string 
 func captureDocumentLinksPromotion(decision string) string {
 	switch decision {
 	case "promote_document_these_links_placement_surface_design":
-		return "targeted evidence supports filing a separate implementation bead for the exact promoted document-these-links placement surface; no runner action, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
+		return "targeted evidence supports filing a separate implementation work item for the exact promoted document-these-links placement surface; no runner action, schema, storage, public API, skill behavior, or product behavior changes are authorized by the eval itself"
 	case "kill_unsafe":
 		return "document-these-links placement surface is unsafe under current evidence; do not file implementation work"
 	case "defer_for_guidance_or_eval_repair":
 		return "document-these-links placement promotion deferred pending guidance, harness, report, or eval repair"
 	default:
-		return "keep document-these-links placement as reference evidence; no implementation bead, runner action, schema, storage, public API, skill behavior, or product behavior change"
+		return "keep document-these-links placement as reference evidence; no implementation work item, runner action, schema, storage, public API, skill behavior, or product behavior change"
 	}
 }
 

@@ -7,7 +7,7 @@ scanned-PDF fallback, domain-specific receipt/invoice OCR, and current
 unsupported behavior for `artifact_candidate_plan`.
 
 The result is durable non-promotion. Runtime OCR remains unsupported. No
-product implementation Bead is filed.
+product implementation work item is filed.
 
 ## Targeted Evidence
 
@@ -55,7 +55,7 @@ product behavior without a broader runner-owned provider/egress policy.
 Close the local OCR/scanned-PDF artifact-candidate path with durable
 non-promotion.
 
-No implementation Bead is filed. Broader prerequisite policy work is tracked
+No implementation work item is filed. Broader prerequisite policy work is tracked
 in `oc-hbu5`. Future OCR should start as a new product decision track only
 after one of these prerequisites exists:
 

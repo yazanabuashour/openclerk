@@ -51,7 +51,7 @@ documents can use current runner workflows.
 
 ## Conclusion
 
-Do not file an implementation bead from this comparison. File guidance/eval
+Do not file an implementation work item from this comparison. File guidance/eval
 repair only for the two failing answer contracts.
 
 Follow-up `oc-wi0z` tracks that repair. A future helper/report surface remains

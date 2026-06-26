@@ -1,6 +1,6 @@
 # Contributing
 
-Outside contributors do not need Beads to contribute to this repository.
+Outside contributors can contribute through GitHub issues and pull requests.
 
 ## Project Shape
 
@@ -22,8 +22,7 @@ mise install
 ```
 
 Outside contributors may use their own tooling if they can satisfy the
-repository checks. Beads and Dolt are maintainer-only tools and are not required
-to open, review, or merge pull requests.
+repository checks.
 
 Contributors should be able to run:
 
@@ -47,7 +46,7 @@ of relying on a global binary.
 
 ## Pull Request Expectations
 
-- Keep changes reviewable without access to Beads state.
+- Keep changes reviewable in GitHub without relying on private local state.
 - Update repository docs when the public contract or storage behavior changes.
 - Do not commit credentials, private infrastructure details, or sensitive sample data.
 - Route security issues through the private process in [SECURITY.md](SECURITY.md), not through public issues or pull requests.

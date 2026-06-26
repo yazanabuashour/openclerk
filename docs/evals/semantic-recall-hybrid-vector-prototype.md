@@ -89,4 +89,4 @@ generation requires network access and sends committed chunk/query text to an
 external provider.
 
 Remaining implementation-candidate work is represented by deferred follow-up
-bead `oc-9ijx`.
+work item `oc-9ijx`.

@@ -12,7 +12,7 @@ source_refs: docs/evals/web-product-page-rich-public-intake.md, docs/evals/resul
 ## Status
 
 Accepted: keep richer public product-page intake as reference evidence. Do not
-file an implementation bead, and do not change runner behavior, schemas,
+file an implementation work item, and do not change runner behavior, schemas,
 storage, public APIs, skill behavior, or product behavior.
 
 Supporting evidence:
@@ -82,6 +82,6 @@ with approved durable fields.
 | Promote | Safety passes and evidence shows a capability gap or serious UX/taste debt that justifies a simpler product-page surface. |
 | Kill | The shape requires browser automation, private access, login/account state, cart, checkout, purchase actions, hidden provenance, duplicate writes, or runner bypasses. |
 
-The current decision is **keep as reference**. No implementation bead should be
+The current decision is **keep as reference**. No implementation work item should be
 created for `oc-wqlb`.
 

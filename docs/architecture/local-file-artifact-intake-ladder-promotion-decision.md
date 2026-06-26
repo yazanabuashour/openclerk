@@ -12,7 +12,7 @@ source_refs: docs/evals/artifact-local-file-intake-ladder.md, docs/evals/results
 ## Status
 
 Accepted: defer local file artifact intake promotion for guidance, answer
-contract, and candidate-surface comparison. Do not file an implementation bead,
+contract, and candidate-surface comparison. Do not file an implementation work item,
 and do not change runner behavior, schemas, storage, public APIs, parser
 behavior, skill behavior, or product behavior.
 
@@ -97,7 +97,7 @@ repair before it can justify keep-as-reference or promotion.
 | Promote | Safety passes and repeated evidence shows a capability gap or serious UX/taste debt that justifies an exact simpler public surface. |
 | Kill | The shape requires hidden parser truth, hidden provenance, direct local file/vault/SQLite access, browser automation, unsupported transports, or durable writes before approval. |
 
-The current decision is **defer**. No implementation bead should be created for
+The current decision is **defer**. No implementation work item should be created for
 `oc-ijdk`, and `oc-ijdk.4` should close as a no-op. The remaining need is real
 enough to track: users can reasonably expect a simpler surface for local file
 artifact intake than a high-ceremony explicit asset policy path. Follow-up

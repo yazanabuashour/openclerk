@@ -72,7 +72,7 @@ operator can inspect.
 
 Future document history control should be an AgentOps-visible semantic layer.
 The exact JSON shapes are intentionally not defined here; they require a future
-implementation Bead, compatibility review, and targeted AgentOps evals.
+implementation work item, compatibility review, and targeted AgentOps evals.
 
 The candidate model should cover:
 

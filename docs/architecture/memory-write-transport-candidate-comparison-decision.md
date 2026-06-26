@@ -55,7 +55,7 @@ keeping the lower-step read-only memory recall report for routine recall.
 
 Search performed before closing `oc-rcfv`:
 
-- `bd search "memory write transport source linked projection Mem0" --status all`: no existing issue found.
+- `follow-up search "memory write transport source linked projection Mem0" --status all`: no existing issue found.
 
 No new follow-up is required because this decision records no current
 implementation need. Reopen only with new repeated evidence that existing

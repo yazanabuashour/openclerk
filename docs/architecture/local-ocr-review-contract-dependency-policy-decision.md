@@ -91,7 +91,7 @@ A later promotion decision must name:
 
 ## Follow-Up
 
-No product implementation Bead should be filed from `oc-i8yk`.
+No product implementation work item should be filed from `oc-i8yk`.
 
 The remaining need is valid and now has a selected contract for future
 promotion evidence. The next follow-up should evaluate `artifact_candidate_plan`
@@ -106,7 +106,7 @@ Created follow-up:
 `oc-s3wg` completed that extraction-candidate comparison in
 [`docs/architecture/local-ocr-review-extraction-candidate-decision.md`](local-ocr-review-extraction-candidate-decision.md).
 It selected durable non-promotion for this OCR/scanned-PDF path and filed no
-product implementation Bead.
+product implementation work item.
 
 ## Compatibility
 

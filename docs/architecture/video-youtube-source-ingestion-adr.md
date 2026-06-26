@@ -116,7 +116,7 @@ Promote only after targeted POC and eval evidence shows repeated capability-gap
 or ergonomics-gap pressure and a promotion decision names the exact request
 shape, response shape, dependency policy, privacy model, transcript provenance
 contract, citation mapping, update behavior, failure modes, compatibility
-rules, and follow-up implementation Beads.
+rules, and follow-up implementation work items.
 
 The shared future acquisition design is recorded in
 [`video-transcript-acquisition-design.md`](video-transcript-acquisition-design.md).

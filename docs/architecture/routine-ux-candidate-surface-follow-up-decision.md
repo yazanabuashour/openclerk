@@ -45,7 +45,7 @@ choreography, or repair turns is capability evidence, not UX acceptance.
 
 Do not promote behavior from the current telemetry lane. Keep
 `docs/evals/results/ockp-real-vault-routine-ux.md` as evidence only and use the
-follow-up Beads to compare candidate surfaces with separate safety,
+follow-up work to compare candidate surfaces with separate safety,
 capability, and UX-quality pass criteria.
 
 The evaluated shape failed while the underlying needs remain valid. The next

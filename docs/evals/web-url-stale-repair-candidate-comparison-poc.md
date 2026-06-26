@@ -58,7 +58,7 @@ and approval where applicable.
 
 ## Conclusion
 
-Do not file an implementation bead from this comparison. File targeted
+Do not file an implementation work item from this comparison. File targeted
 eval/promotion evidence for the selected stale-impact response candidate.
 
 The future eval should compare the selected response-enrichment candidate

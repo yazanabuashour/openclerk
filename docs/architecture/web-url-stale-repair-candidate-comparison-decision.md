@@ -75,8 +75,8 @@ assistant calls.
 
 ## Follow-Up
 
-File one follow-up Bead for targeted eval and promotion evidence for the
-selected stale-impact response candidate. Do not file an implementation Bead.
+File one follow-up Work item for targeted eval and promotion evidence for the
+selected stale-impact response candidate. Do not file an implementation work item.
 
 The follow-up must compare the candidate against current primitives and
 guidance-only repair, then either promote an exact response contract, defer,

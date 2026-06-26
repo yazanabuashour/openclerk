@@ -34,14 +34,14 @@ candidates. It does not authorize implementation.
 | Autonomous router behavior | Fails if routing hides canonical authority or stale state. | Not needed after read-only memory/report surfaces. | Too surprising for routine AgentOps. | Kill as product behavior; keep routing rationale in reports. |
 | Semantic graph layer as truth | Fails because graph state is derived and cannot outrank markdown or promoted records. | Useful for navigation only. | Risky if presented as memory/truth. | Kill as truth layer. |
 | Broad contradiction engine | Broad engine remains unsafe as second truth; narrow source-linked audit repair is already promoted elsewhere. | Narrow audit repair is covered; broad semantic detection is not needed. | Broad engine would be hard to audit. | Superseded by narrow audit surfaces. |
-| Lifecycle review controls | Git status/history/checkpoint is covered; destructive restore remains outside this track. | Current document primitives and `git_lifecycle_report` cover the post-`oc-uj2y` need. | Further review UX can be revisited only with new evidence. | No new bead. |
-| Remaining public runner action candidates | New actions require capability or ergonomics evidence under the promotion gates. | Existing current needs are represented by linked beads. | Avoid skill or API growth without evidence. | Link existing follow-ups only. |
+| Lifecycle review controls | Git status/history/checkpoint is covered; destructive restore remains outside this track. | Current document primitives and `git_lifecycle_report` cover the post-`oc-uj2y` need. | Further review UX can be revisited only with new evidence. | No new work item. |
+| Remaining public runner action candidates | New actions require capability or ergonomics evidence under the promotion gates. | Existing current needs are represented by linked work items. | Avoid skill or API growth without evidence. | Link existing follow-ups only. |
 
 ## Decision
 
 Record `none viable yet` for broad autonomous router, semantic graph truth, and
 broad contradiction-engine product behavior. The valid remaining deferred needs
-are already represented by concrete follow-up beads:
+are already represented by concrete follow-up work:
 
 - `oc-9ijx`: local-first hybrid retrieval implementation comparison after
   real lexical versus hybrid/vector semantic recall evidence.
@@ -49,7 +49,7 @@ are already represented by concrete follow-up beads:
   deferred until 2026-06-04.
 - `oc-rcfv`: memory write transport comparison, deferred until 2026-06-04.
 
-No additional candidate-comparison beads are created by this triage.
+No additional candidate-comparison work items are created by this triage.
 
 ## Safety Pass
 
@@ -61,16 +61,16 @@ approval-before-write.
 
 ## Capability Pass
 
-Pass for triage. Existing promoted surfaces and linked follow-up beads cover
+Pass for triage. Existing promoted surfaces and linked follow-up work cover
 the remaining concrete post-`oc-uj2y` questions. No additional product behavior
 is required from this track.
 
 ## UX Quality
 
 Pass. The result avoids reopening broad abstract capabilities and leaves future
-work as concrete comparison beads a normal maintainer can evaluate.
+work as concrete comparison work items a normal maintainer can evaluate.
 
-## Follow-up Beads
+## Follow-up Work
 
 Created: none.
 
@@ -80,6 +80,6 @@ Linked existing:
 - `oc-w7xa`
 - `oc-rcfv`
 
-None required beyond those linked beads because the other deferred areas are
+None required beyond those linked work items because the other deferred areas are
 either killed as unsafe truth layers, superseded by promoted narrow surfaces,
 or lack a valid current OpenClerk workflow need.

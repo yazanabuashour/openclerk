@@ -50,5 +50,5 @@ too high for this OpenClerk path.
 ## Outcome
 
 Explicitly kill OpenClerk-owned OCR-capable local artifact extraction for this
-path. Do not file implementation or further OCR artifact-candidate Beads from
+path. Do not file implementation or further OCR artifact-candidate work items from
 this decision.

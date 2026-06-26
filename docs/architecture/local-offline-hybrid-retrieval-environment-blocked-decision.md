@@ -65,9 +65,9 @@ production docs or a durable index.
 
 Searches performed before this deferral:
 
-- `bd search "Ollama semantic recall local hybrid" --status all`: no existing
+- `follow-up search "Ollama semantic recall local hybrid" --status all`: no existing
   issue found.
-- `bd search "local offline hybrid retrieval rerun" --status all`: no
+- `follow-up search "local offline hybrid retrieval rerun" --status all`: no
   existing issue found.
 
 Remaining work stays on `oc-bq8c`: rerun the harness with local Ollama and an

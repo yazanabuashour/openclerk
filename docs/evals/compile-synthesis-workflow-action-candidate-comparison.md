@@ -1,6 +1,6 @@
 # Compile Synthesis Workflow Action Candidate Comparison
 
-Bead: `oc-e8om`
+Work item: `oc-e8om`
 
 ## Decision
 

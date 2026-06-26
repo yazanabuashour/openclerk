@@ -58,11 +58,11 @@ valid.
 
 ## Follow-Up
 
-No implementation bead is authorized by this decision. Conditional child
+No implementation work item is authorized by this decision. Conditional child
 `oc-nu12.4` should close as no-op because the decision did not promote.
 
-`bd search "memory router recall"`, `bd search "memory-router recall"`, and
-`bd search "memory router candidate"` found no existing candidate-surface
+`follow-up search "memory router recall"`, `follow-up search "memory-router recall"`, and
+`follow-up search "memory router candidate"` found no existing candidate-surface
 follow-up outside `oc-nu12`, so follow-up `oc-ge4p` was filed and linked to
 compare:
 

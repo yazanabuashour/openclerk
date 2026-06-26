@@ -940,7 +940,7 @@ Graph relationship report marker requires [Routing](routing.md), supersedes [Fre
 		report.AgentHandoff == nil ||
 		!strings.Contains(report.AgentHandoff.AnswerSummary, "Candidate comparison") ||
 		!strings.Contains(report.AgentHandoff.AnswerSummary, "promote graph_relationship_report") ||
-		!strings.Contains(report.AgentHandoff.AnswerSummary, "no follow-up beads are required") ||
+		!strings.Contains(report.AgentHandoff.AnswerSummary, "no follow-up work is required") ||
 		!containsString(report.AgentHandoff.Evidence, "decision=promote graph_relationship_report") ||
 		!graphRelationshipCandidatesInclude(report.CandidateSurfaces, "current_primitives_plus_graph_context_report") ||
 		!graphRelationshipCandidatesInclude(report.CandidateSurfaces, "split_specialized_reports") ||

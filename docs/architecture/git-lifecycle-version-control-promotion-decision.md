@@ -95,14 +95,14 @@ unchanged unless the caller explicitly asks for `git_lifecycle_report`.
 Existing installs do not create checkpoints unless the caller enables the
 config gate and asks for checkpoint mode.
 
-## Follow-up Beads
+## Follow-up Work
 
 The non-promoted restore/review-queue portion remains outside this promoted
 surface. Before closing the decision, existing follow-up work was checked by
-Beads search:
+work items search:
 
-- `bd search "git lifecycle restore"`: no separate existing bead found.
-- `bd search "SQLite git checkpoint config"`: no separate existing bead found.
+- `follow-up search "git lifecycle restore"`: no separate existing work item found.
+- `follow-up search "SQLite git checkpoint config"`: no separate existing work item found.
 
 Created: none. The decision promotes the complete status/history/explicit
 checkpoint surface and does not authorize restore or SQLite default-enabled

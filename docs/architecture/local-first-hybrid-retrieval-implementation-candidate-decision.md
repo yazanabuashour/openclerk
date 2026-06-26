@@ -79,15 +79,15 @@ choice even though it remains useful evidence.
 
 Searches performed before closing `oc-9ijx`:
 
-- `bd search "offline embedding retrieval" --status all`: no existing issue
+- `follow-up search "offline embedding retrieval" --status all`: no existing issue
   found.
-- `bd search "local hybrid index" --status all`: no existing issue found.
-- `bd search "lexical semantic recall tuning" --status all`: no existing
+- `follow-up search "local hybrid index" --status all`: no existing issue found.
+- `follow-up search "lexical semantic recall tuning" --status all`: no existing
   issue found.
-- `bd search "opt-in provider embeddings" --status all`: no existing issue
+- `follow-up search "opt-in provider embeddings" --status all`: no existing issue
   found.
 
-Created follow-up Beads:
+Created follow-up work:
 
 - `oc-bq8c`: prototype a local/offline citation-preserving hybrid retrieval
   index and record model, index, freshness, duplicate, citation, privacy,

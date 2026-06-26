@@ -1,14 +1,14 @@
 # Memory/Router Recall Current-Primitives Evidence Decision
 
-Status: promoted for separate implementation Bead  
-Bead: `oc-cy9y`  
+Status: promoted for separate implementation work item
+Work item: `oc-cy9y`
 Evidence: `docs/evals/results/ockp-memory-router-recall-current-primitives-evidence-repair.md`, `docs/evals/results/ockp-memory-router-recall-current-primitives-evidence-repair.json`
 
 ## Summary
 
 `oc-cy9y` repaired the remaining current-primitives evidence contract after `oc-70it`. The targeted lane now proves that current primitives can safely express the workflow, the eval-only JSON response candidate can preserve the required evidence fields, and the natural guidance-only row still carries meaningful ergonomics debt.
 
-This decision promotes a separate implementation Bead only. It does not implement or authorize runner behavior, schema, storage behavior, public API, skill behavior, memory transports, remember/recall actions, autonomous router APIs, vector stores, embedding stores, graph memory, direct SQLite, direct vault inspection, HTTP/MCP bypasses, source-built runners, or hidden authority ranking.
+This decision promotes a separate implementation work item only. It does not implement or authorize runner behavior, schema, storage behavior, public API, skill behavior, memory transports, remember/recall actions, autonomous router APIs, vector stores, embedding stores, graph memory, direct SQLite, direct vault inspection, HTTP/MCP bypasses, source-built runners, or hidden authority ranking.
 
 ## Evidence
 
@@ -45,9 +45,9 @@ UX quality supports promotion. The natural row still needed 36 commands, 7 assis
 
 ## Decision
 
-Promote the eval-only candidate contract to a separate implementation Bead.
+Promote the eval-only candidate contract to a separate implementation work item.
 
-Implementation Bead: `oc-6p19`
+Implementation work item: `oc-6p19`
 
 Required future response evidence fields:
 

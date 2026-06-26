@@ -2,7 +2,7 @@
 decision_id: decision-semantic-retrieval-sloi-promotion
 status: accepted
 date: 2026-05-04
-bead: oc-sloi
+work item: oc-sloi
 source_refs: docs/evals/results/ockp-semantic-retrieval-local-model-matrix-sloi.md, docs/evals/results/ockp-semantic-search-core-hardening-sloi.md, docs/evals/results/ockp-semantic-recall-local-nomic-embed-text-sloi.md, docs/evals/results/ockp-semantic-recall-local-mxbai-embed-large-sloi.md
 ---
 

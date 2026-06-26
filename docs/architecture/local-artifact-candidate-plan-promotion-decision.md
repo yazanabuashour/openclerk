@@ -52,7 +52,7 @@ generalized `ingest_artifact`, background file scanning, or opaque parsing.
 
 Search performed before closing `oc-omg3`:
 
-- `bd search "OCR scanned PDF artifact candidate plan" --status all`: no
+- `follow-up search "OCR scanned PDF artifact candidate plan" --status all`: no
   existing issue found.
 
 Created follow-up:

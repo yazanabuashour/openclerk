@@ -1330,7 +1330,7 @@
       "openclerk document",
       "openclerk retrieval"
     ],
-    "promotion": "targeted evidence supports filing a separate implementation bead for enriching the existing ingest_source_url update response with stale-impact fields; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by this eval itself",
+    "promotion": "targeted evidence supports filing a separate implementation work item for enriching the existing ingest_source_url update response with stale-impact fields; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by this eval itself",
     "release_blocking": false,
     "scenario_classifications": [
       {

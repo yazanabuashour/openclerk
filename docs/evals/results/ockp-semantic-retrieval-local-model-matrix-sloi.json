@@ -1,6 +1,6 @@
 {
   "schema_version": "openclerk-eval-summary.v1",
-  "bead": "oc-sloi",
+  "work item": "oc-sloi",
   "summary": "Local/offline semantic retrieval model matrix for promotion decision.",
   "source_reports": [
     "docs/evals/results/ockp-semantic-recall-local-embeddinggemma-sloi.json",

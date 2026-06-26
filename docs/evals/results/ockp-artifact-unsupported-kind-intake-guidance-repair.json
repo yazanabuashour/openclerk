@@ -1475,7 +1475,7 @@
       "openclerk document",
       "openclerk retrieval"
     ],
-    "promotion": "keep unsupported artifact kind intake as reference evidence over pasted or explicitly supplied content, approved candidate documents, and existing document/retrieval primitives; no implementation bead, runner action, parser, schema, storage, public API, skill behavior, or product behavior change",
+    "promotion": "keep unsupported artifact kind intake as reference evidence over pasted or explicitly supplied content, approved candidate documents, and existing document/retrieval primitives; no implementation work item, runner action, parser, schema, storage, public API, skill behavior, or product behavior change",
     "release_blocking": false,
     "scenario_classifications": [
       {

@@ -5,19 +5,19 @@
 Implemented for `oc-b2wr`.
 
 This audit backfills the non-promotion follow-up loop across closed historical
-OpenClerk decision and eval Beads. It is documentation and tracker hygiene
+OpenClerk decision and eval work items. It is documentation and follow-up hygiene
 only. It does not authorize runner actions, schemas, storage changes, public
 APIs, skill behavior, eval harness changes, or implementation follow-up.
 
-The audit source of truth is closed Beads first, then the accepted architecture
-and eval records they cite. Open Beads are used only as coverage targets to
+The audit source of truth is closed work items first, then the accepted architecture
+and eval records they cite. Open work items are used only as coverage targets to
 avoid duplicate follow-up comparison epics.
 
 ## Method
 
-The reviewed historical set includes closed decision, eval, and process Beads
+The reviewed historical set includes closed decision, eval, and process work items
 with defer, keep-as-reference, reference-pressure, no-promotion, or partial
-promotion outcomes. The key closed Beads reviewed were:
+promotion outcomes. The key closed work items reviewed were:
 
 - `oc-iat`, `oc-99z`, and `oc-60s` for path/title, candidate intake, and
   propose-before-create policy
@@ -34,19 +34,19 @@ Classifications use the current follow-up loop:
 
 - `already covered`: an existing open or closed comparison/eval epic covers the
   remaining need
-- `needs comparison epic`: a real unresolved need remains and no Bead covers
+- `needs comparison epic`: a real unresolved need remains and no work item covers
   candidate-surface comparison
 - `no valid remaining need`: the deferred shape failed and no durable product,
   safety, workflow, ergonomics, or auditability need remains
 - `superseded by later work`: later shipped behavior, accepted decisions, or
-  completed Beads resolved or replaced the old concern
+  completed work items resolved or replaced the old concern
 
 ## Audit Findings
 
-| Historical decision area | Closed Bead evidence | Accepted record evidence | Non-promotion outcome | Remaining need | Classification | Coverage or result |
+| Historical decision area | Closed work item evidence | Accepted record evidence | Non-promotion outcome | Remaining need | Classification | Coverage or result |
 | --- | --- | --- | --- | --- | --- | --- |
 | Path/title autonomy | `oc-iat`, `oc-4rxs` | `agent-chosen-vault-path-selection-adr.md`, `path-title-autofiling-ux-audit.md`, `docs/evals/results/ockp-path-title-autonomy-pressure.md` | No constrained autonomy runner action, schema, storage migration, public API, direct-create behavior, or autonomous path/title policy. | Natural capture still needs smoother infer/propose/ask boundaries for path, title, body, and source hints. | `already covered` | Covered by closed audit `oc-4rxs`, closed capture epics `oc-hhap`, `oc-xh72`, `oc-yjuz`, `oc-xtbl`, and open `oc-3zd9`. |
-| Agent-side intake and autofiling | `oc-99z`, `oc-60s`, `oc-9k3` | `agent-side-knowledge-intake-autofiling-adr.md`, `agent-chosen-document-artifact-candidate-generation-adr.md`, `docs/evals/results/ockp-document-artifact-candidate-ergonomics.md` | No runner API, schema, storage migration, public API, direct create, or autonomous autofiling; promotion is limited to the existing propose-before-create skill policy. | Propose-before-create policy became the accepted smoother surface for faithful candidate generation before write approval. | `superseded by later work` | Superseded by `oc-60s` and the implemented propose-before-create skill policy; later capture ceremony Beads cover remaining ergonomics. |
+| Agent-side intake and autofiling | `oc-99z`, `oc-60s`, `oc-9k3` | `agent-side-knowledge-intake-autofiling-adr.md`, `agent-chosen-document-artifact-candidate-generation-adr.md`, `docs/evals/results/ockp-document-artifact-candidate-ergonomics.md` | No runner API, schema, storage migration, public API, direct create, or autonomous autofiling; promotion is limited to the existing propose-before-create skill policy. | Propose-before-create policy became the accepted smoother surface for faithful candidate generation before write approval. | `superseded by later work` | Superseded by `oc-60s` and the implemented propose-before-create skill policy; later capture ceremony work items cover remaining ergonomics. |
 | Explicit overrides in smoother capture | `oc-xh72` | `capture-explicit-overrides-promotion-decision.md`, `docs/evals/results/ockp-capture-explicit-overrides.md` | Kept as reference pressure; no public explicit-overrides capture runner action, schema, storage, public API, skill behavior, or product behavior. | Explicit user path, title, type, and body instructions must continue to win unless validation or authority conflicts reject them. | `no valid remaining need` | The row records acceptable UX after taste review. No separate comparison epic is needed beyond preserving the explicit-override invariant in future smoother flows. |
 | Generalized artifact ingestion | `oc-no2`, `oc-fbqy` | `generalized-artifact-ingestion-promotion-decision.md`, `post-oc-v1ed-url-artifact-intake-audit.md`, `docs/evals/results/ockp-heterogeneous-artifact-ingestion-pressure.md` | Keep heterogeneous artifact ingestion as reference pressure; defer generalized `ingest_artifact`, parser-backed ingestion, local file import, and unsupported-kind surfaces. | Local files, unsupported artifact kinds, richer public pages, and native media acquisition remain valid UX questions. | `already covered` | Covered by closed intake audit `oc-fbqy` and open URL/artifact epics `oc-0cme`, `oc-wqlb`, `oc-69h3`, and `oc-ijdk`. |
 | Video and YouTube ingestion | `oc-oot`, `oc-fbqy` | `video-youtube-ingestion-promotion-decision.md`, `video-transcript-acquisition-design.md`, `docs/evals/results/ockp-video-youtube-canonical-source-note.md` | Promote only supplied-transcript `ingest_video_url`; defer media download, caption retrieval, local STT, transcript APIs, remote extraction, and richer timestamp-span citations. | Native transcript acquisition still needs dependency, privacy, provenance, citation, and update-policy comparison. | `already covered` | Covered by open `oc-69h3`; coordinated design remains in `video-transcript-acquisition-design.md`. |

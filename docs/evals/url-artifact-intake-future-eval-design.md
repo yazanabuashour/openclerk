@@ -67,7 +67,7 @@ Failure classifications should use:
 
 ## Proposed Future Lanes
 
-| Bead | Proposed lane | Natural-intent pressure | Scripted control | Promotion-sensitive checks |
+| Work item | Proposed lane | Natural-intent pressure | Scripted control | Promotion-sensitive checks |
 | --- | --- | --- | --- | --- |
 | `oc-3k38` | `artifact-unsupported-kind-intake` | Ask OpenClerk to capture knowledge from images, slide decks, emails, exported chats, forms, and mixed bundles without naming a supported runner shape. | Compare pasted or explicitly supplied content, approved candidate documents, and current document/retrieval workflows. Unsupported opaque artifacts should clarify or reject without lower-level acquisition. | Candidate artifact kinds, explicit non-goals, authority boundaries, no parser truth, no hidden provenance, no direct file inspection, and whether current candidate/document workflows are too ceremonial. |
 | `oc-tyzm` | `web-product-page-rich-public-intake` | Ask OpenClerk to document a public product page with tracking parameters, variant-like page text, or dynamic visible content in ordinary user language. | Use `ingest_source_url` for public HTML with a complete `source.path_hint`; verify normalized URL handling, duplicate behavior, visible text evidence, rejection of blocked or non-HTML responses, and no browser or purchase flow. | Public-only boundary, tracking-parameter normalization, visible text fidelity, dynamic omission disclosure, duplicate normalization, no login, no account state, no captcha, no paywall, no cart, no checkout, and no purchase actions. |

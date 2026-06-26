@@ -53,17 +53,17 @@ checkpoint commits.
 
 ## Follow-Up Check
 
-Before closing `oc-11yz`, Beads search checked for existing active work:
+Before closing `oc-11yz`, work items search checked for existing active work:
 
-- `bd list --status=open`: no open issues found
-- `bd search "video"`: no issues found
-- `bd search "synthesis"`: no issues found
-- `bd search "document lifecycle ceremony"`: no issues found
-- `bd search "checkpoint git lifecycle"`: no issues found
+- `follow-up list --status=open`: no open issues found
+- `follow-up search "video"`: no issues found
+- `follow-up search "synthesis"`: no issues found
+- `follow-up search "document lifecycle ceremony"`: no issues found
+- `follow-up search "checkpoint git lifecycle"`: no issues found
 
-No follow-up Bead is created from this comparison. The selected current-surface
+No follow-up work item is created from this comparison. The selected current-surface
 matrix is implemented by the shipped skill policy and this decision record. A
-future Bead should be opened only if new targeted evidence shows repeated
+future work item should be opened only if new targeted evidence shows repeated
 capability or ergonomics gaps for one named surface while preserving
 approval-before-write, runner-only access, explicit override precedence,
 citations/source refs, provenance, and freshness.

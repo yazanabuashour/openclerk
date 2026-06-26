@@ -79,7 +79,7 @@ and commits only a sanitized Markdown summary.
 Use the real-vault report to decide whether current v1 surfaces are sufficient
 for representative workflows. If the report shows capability, safety,
 auditability, ergonomics, or workflow gaps that remain valid after taste
-review, create candidate-comparison Beads before proposing any new public
+review, create candidate-comparison work items before proposing any new public
 runner action, schema, storage behavior, skill behavior, or retrieval backend.
 
 The first-pass `oc-oa53` decision is

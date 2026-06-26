@@ -5,7 +5,7 @@ This runbook defines recurring security work for OpenClerk maintainers. It compl
 ## Cadence
 
 - Weekly: triage Dependabot pull requests, dependency-review failures, and new vulnerability alerts for Go modules and GitHub Actions.
-- Monthly: review the GitHub Security tab, private vulnerability reporting state, Dependabot alert backlog, code-scanning alerts, and any deferred security issues in Beads.
+- Monthly: review the GitHub Security tab, private vulnerability reporting state, Dependabot alert backlog, code-scanning alerts, and any deferred security follow-up.
 - Quarterly: rehearse the advisory workflow, refresh the threat model, and confirm that release, automation, and maintainer-isolation assumptions still match the repository.
 - Release-bound: review security impact before tagging any release that changes `.github/workflows/release.yml`, `scripts/install.sh`, `scripts/install-module.sh`, any `SKILL.md`, local storage behavior, runner write/update behavior, or release verification docs.
 
@@ -20,7 +20,7 @@ This runbook defines recurring security work for OpenClerk maintainers. It compl
 
 ## Review Workflow
 
-1. Open or update a Beads issue for any recurring security review that finds follow-up work.
+1. Open or update a GitHub issue or private advisory item for any recurring security review that finds follow-up work.
 2. Classify findings using the severity expectations in `SECURITY.md`.
 3. Keep exploit details private until a fix or mitigation is available.
 4. For dependency updates, prefer the smallest reviewable update that clears the alert and keeps `mise exec -- go test ./...` passing.
@@ -43,4 +43,4 @@ At least quarterly, maintainers should rehearse the private advisory flow withou
 - Confirm GitHub private vulnerability reporting is enabled and reachable from the repository Security tab.
 - Confirm the private fix path, release notes redaction approach, patch-tag process, and release verification steps are still documented.
 - Confirm emergency release expectations still match the current artifact set: binary archives, skill archive, installer, checksums, SBOM, and attestations.
-- File Beads issues for any gap found during the rehearsal.
+- File a GitHub issue or private advisory item for any gap found during the rehearsal.

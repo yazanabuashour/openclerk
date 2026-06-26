@@ -81,7 +81,7 @@ Existing behavior remains unchanged:
 
 ## Follow-Up
 
-No product implementation Bead is filed.
+No product implementation work item is filed.
 
 No additional OCR/scanned-PDF artifact-candidate follow-up is filed from this
 decision. Any future OCR work must start as a new product direction, not as a

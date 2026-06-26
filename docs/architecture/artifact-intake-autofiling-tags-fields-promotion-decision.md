@@ -67,7 +67,7 @@ explicit overrides, duplicate handling, and approval-before-write visible.
   and next-step guidance.
 - Update runner help, README, skill guidance, tests, and decision docs.
 
-## Follow-up Beads
+## Follow-up Work
 
 Created: none.
 

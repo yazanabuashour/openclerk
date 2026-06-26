@@ -62,9 +62,9 @@ tools/commands, 5 assistant calls, and 60.75 wall seconds.
 
 ## Follow-Up
 
-File one follow-up Bead for targeted eval and promotion evidence for the
+File one follow-up Work item for targeted eval and promotion evidence for the
 selected narrow relationship-record lookup candidate. Do not file an
-implementation Bead.
+implementation work item.
 
 Follow-up `oc-t7ob` must compare the selected candidate against current
 primitives and guidance-only repair, then either promote an exact

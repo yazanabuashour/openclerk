@@ -172,10 +172,10 @@ operator-visible repairability.
 The `oc-iat` pressure lane found no `runner_capability_gap` failures. All six
 selected scenarios in
 [`../evals/results/ockp-path-title-autonomy-pressure.md`](../evals/results/ockp-path-title-autonomy-pressure.md)
-completed with failure classification `none`, so no implementation bead should
+completed with failure classification `none`, so no implementation work item should
 start from that evidence.
 
-If promoted later, a separate implementation Bead must name the exact public
+If promoted later, a separate implementation work item must name the exact public
 surface, request and response shape if any, backward compatibility
 expectations, failure modes, and targeted eval gate. That follow-up must also
 state how explicit instructions, metadata authority, provenance/freshness,

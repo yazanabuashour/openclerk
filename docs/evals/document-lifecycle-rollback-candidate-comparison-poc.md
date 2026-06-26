@@ -74,7 +74,7 @@ approval of source-sensitive durable writes.
 
 ## Conclusion
 
-Do not file an implementation bead from this comparison. File targeted
+Do not file an implementation work item from this comparison. File targeted
 eval/promotion evidence for the selected narrow lifecycle review/rollback
 candidate.
 

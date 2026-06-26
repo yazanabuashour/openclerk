@@ -91,11 +91,11 @@ safety or eval-boundary violation, kill the candidate shape.
 
 ## Follow-Up
 
-No implementation bead is authorized by this decision.
+No implementation work item is authorized by this decision.
 
-`bd search "compile_synthesis candidate repair"`, `bd search "compile
-synthesis candidate evidence repair"`, `bd search
-"compile-synthesis-candidate-evidence"`, and `bd search "oc-27ft"` found no
+`follow-up search "compile_synthesis candidate repair"`, `follow-up search "compile
+synthesis candidate evidence repair"`, `follow-up search
+"compile-synthesis-candidate-evidence"`, and `follow-up search "oc-27ft"` found no
 existing follow-up outside `oc-27ft`, so follow-up `oc-wnqr` was filed for
 repaired targeted evidence and linked from `oc-27ft`.
 

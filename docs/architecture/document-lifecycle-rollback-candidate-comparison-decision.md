@@ -87,7 +87,7 @@ control still required 22 tools/commands and 7 assistant calls.
 
 Follow-up `oc-cez4` was filed for targeted eval and promotion evidence for the
 selected narrow lifecycle review/rollback candidate. Do not file an
-implementation Bead from this comparison.
+implementation work item from this comparison.
 
 The follow-up must compare the selected candidate against current primitives
 and guidance-only repair, then either promote an exact request/response

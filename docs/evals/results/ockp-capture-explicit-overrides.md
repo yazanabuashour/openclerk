@@ -65,7 +65,7 @@ Decision: `keep_as_reference`
 
 Public surface: `openclerk document`, `openclerk retrieval`
 
-Promotion: keep explicit-overrides capture as reference evidence; no implementation bead, runner action, schema, storage, public API, skill behavior, or product behavior change.
+Promotion: keep explicit-overrides capture as reference evidence; no implementation work item, runner action, schema, storage, public API, skill behavior, or product behavior change.
 
 | Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Latency | Guidance dependence | Safety risks | Fixture preflight | Evidence posture |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | --- | --- | --- | --- | --- |

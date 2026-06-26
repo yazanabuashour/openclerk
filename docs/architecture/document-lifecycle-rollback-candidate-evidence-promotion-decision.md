@@ -56,7 +56,7 @@ the candidate deferred pending stronger repeated ergonomics evidence.
 
 ## Follow-Up
 
-No implementation bead is authorized by this decision.
+No implementation work item is authorized by this decision.
 
 The original `oc-cez4` decision filed `oc-cez4.1` to repair the path-prefix
 verifier mismatch. `oc-cez4.1` succeeded at that repair and filed
@@ -64,9 +64,9 @@ verifier mismatch. `oc-cez4.1` succeeded at that repair and filed
 `oc-cez4.1.1` repaired run resolved that gap: all three lifecycle candidate
 rows passed, and each used only `notes/history-review/` list prefixes.
 
-No implementation bead is authorized. `bd search "lifecycle rollback repeated
-ergonomics"`, `bd search "document lifecycle rollback guidance sufficient"`,
-`bd search "review_lifecycle_rollback promotion"`, and `bd search "lifecycle
+No implementation work item is authorized. `follow-up search "lifecycle rollback repeated
+ergonomics"`, `follow-up search "document lifecycle rollback guidance sufficient"`,
+`follow-up search "review_lifecycle_rollback promotion"`, and `follow-up search "lifecycle
 rollback candidate deferred"` found no existing matching follow-up.
 Follow-up `oc-v5k6` was filed to compare lifecycle rollback candidate surfaces
 after the guidance-only pass. It must compare current `openclerk document` and

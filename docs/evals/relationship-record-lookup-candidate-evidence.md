@@ -113,7 +113,7 @@ passed cleanly, the decision rules require deferring the candidate rather than
 promoting it.
 
 The guidance-only row still required 56 tools/commands, 8 assistant calls, and
-68.10 wall seconds. `bd search "relationship-record repeated ergonomics"`
+68.10 wall seconds. `follow-up search "relationship-record repeated ergonomics"`
 found no existing follow-up, so non-implementation follow-up `oc-hp3m` was
 filed to collect repeated relationship-record ergonomics evidence before any
 future promotion decision.

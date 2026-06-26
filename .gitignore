@@ -1,8 +1,9 @@
-
-# Beads / Dolt files (added by bd init)
-.dolt/
+# Local hidden runtime state
+.*/
+!.github/
+!.github/**
+!.gitignore
 *.db
-.beads-credential-key
 
 # Go build outputs
 bin/

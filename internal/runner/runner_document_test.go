@@ -2431,7 +2431,7 @@ func TestDocumentTaskIngestSourceURLWeb(t *testing.T) {
 	}
 	t.Setenv("OPENCLERK_ENABLE_EVAL_SOURCE_FIXTURES", "1")
 	t.Setenv("OPENCLERK_EVAL_SOURCE_FIXTURE_ROOT", fixtureRoot)
-	sourceURL := "http://openclerk-eval.local/web/runner-product.html?ref=tracker"
+	sourceURL := "http://openclerk-eval.local/web/runner-product.html?ref=source"
 
 	ctx := context.Background()
 	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")

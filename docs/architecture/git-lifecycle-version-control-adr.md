@@ -123,13 +123,13 @@ Safety, capability, and UX quality remain separate gates:
 - UX quality pass requires a simpler normal-user lifecycle surface than direct
   Git while avoiding surprising background commits.
 
-Remaining work is represented by linked beads:
+Remaining work is represented by linked work items:
 
 - `oc-tnnw.3.2` POC for status/history/checkpoint evidence.
 - `oc-tnnw.3.3` eval for safety, capability, and UX quality.
 - `oc-tnnw.3.4` promotion decision.
 - `oc-tnnw.3.5` conditional implementation only if promoted.
-- `oc-tnnw.3.6` iteration and follow-up bead creation.
+- `oc-tnnw.3.6` iteration and follow-up work item creation.
 
 ## Non-Goals
 

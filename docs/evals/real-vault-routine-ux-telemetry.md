@@ -122,7 +122,7 @@ Raw JSON is written only under `<run-root>`. Raw event logs remain under
 
 ## Decision Use
 
-This lane can identify taste debt and justify follow-up Beads for candidate
+This lane can identify taste debt and justify follow-up work for candidate
 comparison. It cannot by itself promote a public OpenClerk surface. Any future
 implementation still needs targeted candidate evidence and a decision that names
 the exact surface, compatibility expectations, failure modes, and safety gates.

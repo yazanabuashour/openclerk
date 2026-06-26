@@ -61,7 +61,7 @@ unsupported transports, hidden authority ranking, or durable write shortcuts.
 
 ## Conclusion
 
-Do not file an implementation bead from this comparison. File targeted
+Do not file an implementation work item from this comparison. File targeted
 eval/promotion evidence for the selected narrow memory/router recall
 candidate.
 

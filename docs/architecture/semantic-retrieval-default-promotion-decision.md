@@ -14,7 +14,7 @@ source_refs: docs/evals/results/ockp-semantic-retrieval-promotion-comparison.md,
 Accepted for `oc-by5n`: keep `modules/semantic-retrieval-adapter` as an
 optional module. Do not promote semantic/hybrid ranking into default
 `openclerk retrieval search`, and do not add an explicit core semantic mode in
-this Bead.
+this work item.
 
 Evidence:
 
@@ -68,11 +68,11 @@ differences before the evidence is strong enough.
 
 Searches performed before closing `oc-by5n`:
 
-- `bd search "semantic retrieval promotion evidence" --status all`: no
+- `follow-up search "semantic retrieval promotion evidence" --status all`: no
   existing issue found.
-- `bd search "default semantic search local hybrid" --status all`: no existing
+- `follow-up search "default semantic search local hybrid" --status all`: no existing
   issue found.
-- `bd search "semantic retrieval cache index lifecycle" --status all`: no
+- `follow-up search "semantic retrieval cache index lifecycle" --status all`: no
   existing issue found.
 
 Created deferred follow-up:
@@ -86,5 +86,5 @@ Core behavior is unchanged:
 - `openclerk retrieval search` remains lexical plus zero-hit lexical fallback.
 - `modules/semantic-retrieval-adapter` remains explicit optional tooling.
 - Gemini remains explicit benchmark/fallback evidence only.
-- Any future default-search or explicit core semantic mode needs a new Bead.
+- Any future default-search or explicit core semantic mode needs a new work item.
 

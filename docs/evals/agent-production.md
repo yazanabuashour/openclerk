@@ -89,7 +89,7 @@ The scenario setup initializes that database with the copied repo's
 `.openclerk-eval/vault` as the configured vault root.
 
 The copied repo omits root `AGENTS.md`, stale `.agents` contents, VCS metadata,
-Beads/Dolt metadata, eval artifacts, and the eval harness itself before
+planning metadata, eval artifacts, and the eval harness itself before
 installing the shipped `skills/openclerk` skill into
 `.agents/skills/openclerk/`. The harness does not generate evaluator-only
 OpenClerk `AGENTS.md` instructions. Before each job runs, it preflights the

@@ -67,8 +67,8 @@ mise exec -- go test ./internal/runner ./cmd/openclerk ./internal/skilltest
 
 ## Closure
 
-Remaining work is represented by linked beads:
+Remaining work is represented by linked work items:
 
 - `oc-tnnw.4.4` promotion decision.
 - `oc-tnnw.4.5` conditional implementation only if promoted.
-- `oc-tnnw.4.6` iteration and follow-up bead creation.
+- `oc-tnnw.4.6` iteration and follow-up work item creation.

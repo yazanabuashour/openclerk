@@ -57,7 +57,7 @@ query path, browser/manual acquisition path, or durable write shortcut.
 
 ## Conclusion
 
-Do not file an implementation bead from this comparison. File targeted
+Do not file an implementation work item from this comparison. File targeted
 eval/promotion evidence for the selected narrow relationship-record lookup
 candidate.
 

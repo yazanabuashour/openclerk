@@ -1,6 +1,6 @@
 # Evidence Bundle Workflow Action Candidate Comparison
 
-Bead: `oc-lrqi`
+Work item: `oc-lrqi`
 
 ## Decision
 

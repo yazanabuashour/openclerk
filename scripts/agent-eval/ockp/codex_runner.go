@@ -477,9 +477,10 @@ func copyRepo(srcRoot string, dstRoot string) error {
 }
 func shouldSkipCopy(rel string, entry fs.DirEntry) bool {
 	parts := strings.Split(filepath.ToSlash(rel), "/")
+	if len(parts) > 0 && shouldSkipTopLevelHiddenState(parts[0], entry.IsDir()) {
+		return true
+	}
 	switch parts[0] {
-	case ".git", ".beads", ".dolt", ".agents":
-		return entry.IsDir()
 	case "AGENTS.md":
 		return true
 	}
@@ -492,6 +493,14 @@ func shouldSkipCopy(rel string, entry fs.DirEntry) bool {
 	}
 	return false
 }
+
+func shouldSkipTopLevelHiddenState(name string, isDir bool) bool {
+	if name == ".git" {
+		return true
+	}
+	return isDir && strings.HasPrefix(name, ".") && name != ".github"
+}
+
 func installVariant(repoRoot string, repoDir string, variant string) error {
 	if variant != productionVariant {
 		return fmt.Errorf("unsupported variant %q", variant)

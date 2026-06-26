@@ -13,7 +13,7 @@ source_refs: docs/evals/tagging-workflows.md, docs/evals/results/ockp-tagging-wo
 
 Accepted: promote and implement one read-side tag filter surface over
 canonical Markdown/frontmatter authority. The original eval did not authorize
-runner behavior directly; implementation happened through follow-up Bead
+runner behavior directly; implementation happened through follow-up Work item
 `oc-k2nj`.
 
 Supporting evidence:

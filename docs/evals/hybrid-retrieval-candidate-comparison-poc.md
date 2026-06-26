@@ -63,9 +63,9 @@ has enough evidence to justify itself.
 
 Safety pass, capability pass, and UX quality are recorded separately in
 `docs/evals/results/ockp-hybrid-retrieval-candidate-comparison.md`. Remaining
-work is represented by linked beads:
+work is represented by linked work items:
 
 - `oc-tnnw.1.3` eval for safety, capability, and UX quality.
 - `oc-tnnw.1.4` promotion decision.
 - `oc-tnnw.1.5` conditional implementation only if promoted.
-- `oc-tnnw.1.6` iteration and follow-up bead creation.
+- `oc-tnnw.1.6` iteration and follow-up work item creation.

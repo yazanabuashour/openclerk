@@ -1931,7 +1931,7 @@
       "openclerk document",
       "openclerk retrieval"
     ],
-    "promotion": "keep native media transcript acquisition as reference evidence; supplied-transcript ingest_video_url remains the current supported control, native acquisition remains unsupported, and no implementation bead, runner action, dependency, parser, STT, transcript API, schema, storage, public API, skill behavior, or product behavior change is authorized",
+    "promotion": "keep native media transcript acquisition as reference evidence; supplied-transcript ingest_video_url remains the current supported control, native acquisition remains unsupported, and no implementation work item, runner action, dependency, parser, STT, transcript API, schema, storage, public API, skill behavior, or product behavior change is authorized",
     "release_blocking": false,
     "scenario_classifications": [
       {

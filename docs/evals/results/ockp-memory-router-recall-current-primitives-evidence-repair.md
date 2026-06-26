@@ -63,7 +63,7 @@ Decision: `promote_memory_router_recall_candidate_contract`
 
 Public surface: `openclerk document`, `openclerk retrieval`
 
-Promotion: targeted evidence supports filing a separate implementation bead for a narrow read-only memory/router recall helper or report response contract; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by this eval itself.
+Promotion: targeted evidence supports filing a separate implementation work item for a narrow read-only memory/router recall helper or report response contract; no runner behavior, schema, storage, public API, skill behavior, or product behavior changes are authorized by this eval itself.
 
 | Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Latency | Guidance dependence | Safety pass | Capability pass | UX quality | Safety risks | Fixture preflight | Evidence posture |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- |

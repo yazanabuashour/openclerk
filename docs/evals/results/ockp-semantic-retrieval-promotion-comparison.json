@@ -2,7 +2,7 @@
   "lane": "semantic-retrieval-promotion",
   "generated_at": "2026-05-04T00:00:00Z",
   "schema_version": "semantic_retrieval_promotion_comparison.v1",
-  "bead": "oc-by5n",
+  "work item": "oc-by5n",
   "decision_thresholds": {
     "default_search_promotion": {
       "local_hit_at_3_required": 8,

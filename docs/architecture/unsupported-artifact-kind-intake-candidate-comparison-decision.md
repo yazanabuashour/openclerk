@@ -17,7 +17,7 @@ for unsupported artifact kind intake.
 This decision does not add a runner action, parser, schema, migration, storage
 behavior, public API, public OpenClerk interface, product behavior, shipped
 skill behavior, or implementation work. It does not authorize an
-implementation bead.
+implementation work item.
 
 Evidence:
 
@@ -39,7 +39,7 @@ Select the combined guidance/current-primitives path:
 Outcome category: need exists, evaluated shape needs guidance/eval repair.
 
 Follow-up `oc-wi0z` was filed for guidance/eval repair only. No implementation
-bead is filed from `oc-vdfr`.
+work item is filed from `oc-vdfr`.
 
 ## Rejected Alternatives
 

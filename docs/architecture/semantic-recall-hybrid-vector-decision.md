@@ -57,15 +57,15 @@ The evaluated shape is still too ceremonial and provider-dependent for normal
 use. The next design pass should compare implementation candidates that hide
 index mechanics behind the natural retrieval surface.
 
-## Follow-up Beads
+## Follow-up Work
 
 Searches performed before close:
 
-- `bd search "local-first hybrid retrieval implementation" --status all`: no
-  existing bead found.
-- `bd search "citation-preserving vector retrieval" --status all`: no existing
-  bead found.
-- `bd search "offline embedding retrieval" --status all`: no existing bead
+- `follow-up search "local-first hybrid retrieval implementation" --status all`: no
+  existing work item found.
+- `follow-up search "citation-preserving vector retrieval" --status all`: no existing
+  work item found.
+- `follow-up search "offline embedding retrieval" --status all`: no existing work item
   found.
 
 Created and deferred:
@@ -76,4 +76,4 @@ Created and deferred:
 
 `oc-rlg7` closes with outcome `promote follow-up candidate comparison`, not
 product implementation. `oc-ye6w` closes as completed POC evidence. The
-remaining implementation decision is represented by deferred bead `oc-9ijx`.
+remaining implementation decision is represented by deferred work item `oc-9ijx`.

@@ -63,7 +63,7 @@ Decision: `keep_as_reference`
 
 Public surface: `openclerk document`, `openclerk retrieval`
 
-Promotion: keep low-risk capture as reference evidence for product implementation; focused skill-policy guidance hardening was applied with no implementation bead, runner action, schema, storage, public API, direct-create, hidden-autofiling, or product behavior change.
+Promotion: keep low-risk capture as reference evidence for product implementation; focused skill-policy guidance hardening was applied with no implementation work item, runner action, schema, storage, public API, direct-create, hidden-autofiling, or product behavior change.
 
 | Variant | Scenario | Status | Failure classification | Tools | Commands | Assistant Calls | Wall Seconds | Prompt specificity | UX | Brittleness | Retries | Step count | Latency | Guidance dependence | Safety risks | Fixture preflight | Evidence posture |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | --- | --- | --- | --- | --- |

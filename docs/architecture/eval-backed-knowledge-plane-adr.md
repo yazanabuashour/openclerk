@@ -144,7 +144,7 @@ Keep a layer optional or remove it if it:
   correctness, or increases stale-memory and conflicting-truth failures when
   borrowing Cognee-inspired behavior
 
-## Beads Ownership
+## work items Ownership
 
 - `oc-sg6` owns this architecture decision.
 - `oc-0em` owns the source-linked synthesis prototype slice.

@@ -86,12 +86,12 @@ compares local vector storage, hosted vector stores, OpenAI vector stores, and
 lexical-only FTS on recall, citation correctness, provenance, freshness,
 import cost, reopen cost, and 100 MB/1 GB behavior.
 
-## Follow-up Beads
+## Follow-up Work
 
 Search performed before close:
 
-- `bd search "durable vector retrieval"`: no separate existing bead found.
-- `bd search "hybrid vector retrieval follow-up"`: no separate existing bead
+- `follow-up search "durable vector retrieval"`: no separate existing work item found.
+- `follow-up search "hybrid vector retrieval follow-up"`: no separate existing work item
   found.
 
 Created by this decision: none. This decision promotes the read-only report and

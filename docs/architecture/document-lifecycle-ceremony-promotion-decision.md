@@ -57,12 +57,12 @@ Non-promotion category: need exists, candidate comparison required.
 
 ## Follow-Up
 
-No implementation bead is authorized by this decision.
+No implementation work item is authorized by this decision.
 
 The remaining need is real: lifecycle review and rollback completed safely,
 but the natural path still required 40 runner/tool steps and 10 assistant
-calls. `bd search "document lifecycle"`, `bd search "lifecycle ceremony"`,
-`bd search "document history candidate"`, and `bd search "rollback surface"`
+calls. `follow-up search "document lifecycle"`, `follow-up search "lifecycle ceremony"`,
+`follow-up search "document history candidate"`, and `follow-up search "rollback surface"`
 found no existing candidate-surface follow-up outside `oc-k8ba`, so follow-up
 `oc-awo6` was filed to compare:
 

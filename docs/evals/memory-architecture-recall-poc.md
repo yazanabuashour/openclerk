@@ -62,9 +62,9 @@ is the simpler surface while OpenClerk keeps memory writes out of scope.
 
 Safety pass, capability pass, and UX quality are recorded separately in
 `docs/evals/results/ockp-memory-architecture-recall-track.md`. Remaining work
-is represented by linked beads:
+is represented by linked work items:
 
 - `oc-tnnw.6.3` eval for safety, capability, and UX quality.
 - `oc-tnnw.6.4` promotion decision.
 - `oc-tnnw.6.5` conditional implementation only if promoted.
-- `oc-tnnw.6.6` iteration and follow-up bead creation.
+- `oc-tnnw.6.6` iteration and follow-up work item creation.

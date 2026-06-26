@@ -67,7 +67,7 @@ The remaining gaps are eval/design backlog, not implementation approval:
   `oc-3k38` in
   [`../evals/url-artifact-intake-future-eval-design.md`](../evals/url-artifact-intake-future-eval-design.md).
 
-These gaps should produce future eval-design beads only. Implementation beads
+These gaps should produce future eval-design work items only. Implementation work items
 remain inappropriate until targeted evidence and a promotion decision name an
 exact surface, request/response shape, compatibility policy, failure modes, and
 gates.
@@ -79,5 +79,5 @@ inspect through `ingest_source_url`, keep durable-write approval at complete
 runner requests or approved candidate workflows, and keep unsupported
 acquisition boundaries intact.
 
-Close the `oc-fbqy` audit after filing future eval-design beads for the
+Close the `oc-fbqy` audit after filing future eval-design work items for the
 remaining gaps. Do not file implementation work from this audit.

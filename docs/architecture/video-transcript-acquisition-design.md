@@ -19,7 +19,7 @@ shipped skill behavior.
 
 The implemented `ingest_video_url` v1 surface remains supplied-transcript only.
 Future acquisition work requires a separate promotion decision and follow-up
-implementation Beads before any behavior changes.
+implementation work items before any behavior changes.
 
 ## Shared Provenance Envelope
 
@@ -267,7 +267,7 @@ This design pass is complete when documentation records:
 - remote transcript API opt-in policy, credentials, provider identity, egress
   visibility, rejection behavior, provenance, and tests/evals
 
-No acquisition implementation Bead should be filed from this note alone. A
-future implementation Bead requires a promotion decision that names the exact
+No acquisition implementation work item should be filed from this note alone. A
+future implementation work item requires a promotion decision that names the exact
 request shape, response shape, dependency setup, compatibility behavior,
 failure modes, tests, eval gates, and AgentOps invariants.

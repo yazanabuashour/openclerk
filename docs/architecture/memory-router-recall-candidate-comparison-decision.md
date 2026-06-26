@@ -69,9 +69,9 @@ tools/commands and 66.91 wall seconds for the natural row.
 
 ## Follow-Up
 
-File one follow-up Bead for targeted eval and promotion evidence for the
+File one follow-up Work item for targeted eval and promotion evidence for the
 selected narrow memory/router recall candidate. Do not file an implementation
-Bead.
+Work item.
 
 Follow-up `oc-fnhj` must compare the selected candidate against current
 primitives and guidance-only repair, then either promote an exact

@@ -125,6 +125,6 @@ pressure on at least one path:
   weakening invariants.
 
 A promotion decision must name the exact request and response shape,
-compatibility rules, failure modes, validation behavior, and follow-up Beads.
+compatibility rules, failure modes, validation behavior, and follow-up work.
 Without that targeted evidence, the default decision is defer or keep as
 reference.

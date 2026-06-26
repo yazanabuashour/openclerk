@@ -1,6 +1,6 @@
 # OpenClerk Agent Eval
 
-- Decision Bead: `oc-gfg`
+- Decision work item: `oc-gfg`
 - Lane: synthesis maintenance ergonomics
 - Release blocking: `false`
 - Raw logs: existing evidence only; no new eval run

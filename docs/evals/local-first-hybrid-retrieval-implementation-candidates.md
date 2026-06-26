@@ -85,10 +85,10 @@ mechanics while making freshness and authority limits visible in reports.
 
 ## Follow-Up
 
-Created follow-up Beads:
+Created follow-up work:
 
 - `oc-bq8c`: local/offline hybrid retrieval index POC.
 - `oc-o2r8`: lexical semantic-recall fallback tuning eval.
 
 `oc-9ijx` can close as candidate selected with remaining implementation and
-evidence work represented by those Beads.
+evidence work represented by those work items.

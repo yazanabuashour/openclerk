@@ -95,7 +95,7 @@ Valid outcomes:
 
 - keep lexical SQLite FTS
 - tune current indexes or query behavior
-- create hybrid/vector candidate-comparison Beads
+- create hybrid/vector candidate-comparison work items
 - defer more scale evidence
 - kill the scale track if it does not represent a valid OpenClerk need
 

@@ -40,23 +40,23 @@ tools/commands, 8 assistant calls, and 68.10 wall seconds. That is taste debt
 to monitor, but this checkpoint found no repeated post-repair trigger that
 would justify reopening promotion evidence or filing implementation work.
 
-Beads searches before closure, using `--status all` where closed follow-ups
+work items searches before closure, using `--status all` where closed follow-ups
 must remain visible, found no newer trigger:
 
-- `bd search "relationship-record repeated ergonomics" --status all` returned
+- `follow-up search "relationship-record repeated ergonomics" --status all` returned
   no issues
-- `bd search "relationship record ergonomics" --status all` returned no issues
-- `bd search "relationship-record natural intent" --status all` returned no
+- `follow-up search "relationship record ergonomics" --status all` returned no issues
+- `follow-up search "relationship-record natural intent" --status all` returned no
   issues
-- `bd search "relationship-record candidate promotion evidence" --status all`
+- `follow-up search "relationship-record candidate promotion evidence" --status all`
   returned no issues
-- `bd search "relationship-record answer-contract debt" --status all` returned
+- `follow-up search "relationship-record answer-contract debt" --status all` returned
   no issues
 
 ## Decision
 
 Do not run another targeted eval from this checkpoint. Do not file an
-implementation bead. Do not promote a relationship-record helper or report
+implementation work item. Do not promote a relationship-record helper or report
 surface.
 
 The valid future trigger remains the one already recorded in the promotion

@@ -78,9 +78,9 @@ of this surface; any checkpoint remains a separate approved
 Promote `artifact_candidate_plan`. The evaluated shape satisfies the real need
 while preserving canonical markdown authority and approval-before-write.
 
-Remaining work is represented by linked beads:
+Remaining work is represented by linked work items:
 
 - `oc-tnnw.7.3` eval for safety, capability, and UX quality.
 - `oc-tnnw.7.4` promotion decision.
 - `oc-tnnw.7.5` conditional implementation only if promoted.
-- `oc-tnnw.7.6` iteration and follow-up bead creation.
+- `oc-tnnw.7.6` iteration and follow-up work item creation.

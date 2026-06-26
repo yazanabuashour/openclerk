@@ -115,10 +115,10 @@ Safety, capability, and UX quality remain separate gates:
 - UX quality pass requires a simpler normal-user surface than the deferred
   infrastructure menu; ordinary retrieval should remain natural `search`.
 
-Remaining work is represented by linked beads:
+Remaining work is represented by linked work items:
 
 - `oc-tnnw.1.2` POC for the selected real hybrid/vector shape.
 - `oc-tnnw.1.3` eval for safety, capability, and UX quality.
 - `oc-tnnw.1.4` promotion decision.
 - `oc-tnnw.1.5` conditional implementation only if promoted.
-- `oc-tnnw.1.6` iteration and follow-up bead creation.
+- `oc-tnnw.1.6` iteration and follow-up work item creation.

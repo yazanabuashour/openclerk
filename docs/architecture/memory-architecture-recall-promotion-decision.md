@@ -79,15 +79,15 @@ recall needs that the report cannot satisfy. Any future write path must require
 approval before durable writes and preserve source refs, freshness, provenance,
 privacy boundaries, and canonical override behavior.
 
-## Follow-up Beads
+## Follow-up Work
 
 Search performed before close:
 
-- `bd search "memory write transport"`: found this track's implementation and
-  iteration beads, `oc-tnnw.6.5` and `oc-tnnw.6.6`, plus the current decision
+- `follow-up search "memory write transport"`: found this track's implementation and
+  iteration work items, `oc-tnnw.6.5` and `oc-tnnw.6.6`, plus the current decision
   and parent epic.
-- `bd search "Mem0 memory adapter"`: no separate existing bead found.
-- `bd search "memory projection"`: no separate existing bead found.
+- `follow-up search "Mem0 memory adapter"`: no separate existing work item found.
+- `follow-up search "memory projection"`: no separate existing work item found.
 
 Created:
 

@@ -1,6 +1,6 @@
 # Source Audit Workflow Action Candidate Comparison
 
-Bead: `oc-w8x0`
+Work item: `oc-w8x0`
 
 ## Decision
 

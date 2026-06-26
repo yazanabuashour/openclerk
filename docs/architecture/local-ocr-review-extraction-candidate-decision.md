@@ -100,7 +100,7 @@ Existing behavior remains unchanged:
 
 ## Follow-Up
 
-No product implementation Bead is filed.
+No product implementation work item is filed.
 
 Created broader prerequisite follow-up:
 
@@ -110,4 +110,4 @@ Created broader prerequisite follow-up:
 `oc-hbu5` completed that policy comparison in
 [`docs/architecture/local-artifact-ocr-platform-policy-decision.md`](local-artifact-ocr-platform-policy-decision.md).
 It explicitly killed OpenClerk-owned OCR extraction for this path and filed no
-product implementation Bead.
+product implementation work item.

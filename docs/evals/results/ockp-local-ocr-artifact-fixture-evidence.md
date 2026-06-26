@@ -34,7 +34,7 @@ or shipped skill behavior.
 ## Required Contract Before Promotion
 
 A future promotion decision must prove all of these through targeted evals or
-runner tests before any product implementation Bead is filed:
+runner tests before any product implementation work item is filed:
 
 - explicit opt-in request field, such as `text_extraction: "ocr_review"`
 - local-first OCR dependency policy and visible extractor identity
@@ -49,11 +49,11 @@ runner tests before any product implementation Bead is filed:
 ## Decision
 
 Select `none viable yet` for implementation promotion. Do not create a product
-implementation Bead from `oc-osmc`.
+implementation work item from `oc-osmc`.
 
 The remaining need is real, but this fixture evidence shows the next useful
 work would be another promotion-quality eval only after there is a concrete
-OCR dependency and correction contract to test. Filing another evidence Bead
+OCR dependency and correction contract to test. Filing another evidence work item
 without a narrower contract would duplicate `oc-osmc`; filing implementation
 work would bypass `oc-d1pm`.
 
@@ -63,7 +63,7 @@ Created deferred follow-up:
 
 - `oc-i8yk`: define local OCR review contract and dependency policy.
 
-No ready Beads remain on this OCR/scanned-PDF artifact-candidate path. The path
+No ready work items remain on this OCR/scanned-PDF artifact-candidate path. The path
 should resume at `oc-i8yk` when there is a concrete OCR review contract,
 dependency policy, and correction workflow to test against the required gates
 above.

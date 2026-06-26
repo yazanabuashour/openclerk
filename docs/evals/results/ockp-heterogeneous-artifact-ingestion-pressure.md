@@ -105,8 +105,8 @@ Promotion: targeted evidence only; no promoted runner action, parser, schema, st
 
 ## Closure
 
-Remaining decision and follow-up work is represented by linked beads:
+Remaining decision and follow-up work is represented by linked work items:
 
 - `oc-tnnw.5.4` promotion decision.
 - `oc-tnnw.5.5` conditional implementation only if promoted.
-- `oc-tnnw.5.6` iteration and follow-up bead creation.
+- `oc-tnnw.5.6` iteration and follow-up work item creation.

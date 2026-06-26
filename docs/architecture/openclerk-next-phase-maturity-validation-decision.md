@@ -52,7 +52,7 @@ routine-agent bypass events.
 Representative real-vault workflows stay on current v1 AgentOps surfaces for
 now. The sanitized real-vault trial and reduced timing report did not show a
 capability gap or UX gap that justifies new runner-owned surfaces. No
-candidate-comparison Beads are needed from the tested real-vault workflows.
+candidate-comparison work items are needed from the tested real-vault workflows.
 
 Retrieval/indexing decision: continue with lexical SQLite FTS for now. `oc-oa53.12`
 showed that the original 100 MB cliff was caused by full-sync document import
@@ -98,7 +98,7 @@ The real taste debt was performance and observability at larger corpus sizes.
 cost enough that the remaining larger cost is projection rebuild plus bulk FTS
 maintenance, not retrieval relevance.
 
-Beads searches before closing this decision found no existing hybrid/vector,
+work items searches before closing this decision found no existing hybrid/vector,
 LLM-wiki, or release-gate candidate work matching the non-promotion outcomes.
 The scale-ladder follow-ups are linked as `oc-oa53.12` and `oc-oa53.12.1`.
 

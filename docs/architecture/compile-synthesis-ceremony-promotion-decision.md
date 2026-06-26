@@ -54,11 +54,11 @@ approval-before-write.
 
 ## Follow-Up
 
-No implementation bead is authorized by this decision.
+No implementation work item is authorized by this decision.
 
 The remaining need is real: source-backed synthesis maintenance completed, but
-the natural path still required 42 runner/tool steps. `bd search
-"compile_synthesis"`, `bd search "synthesis compile"`, and `bd search
+the natural path still required 42 runner/tool steps. `follow-up search
+"compile_synthesis"`, `follow-up search "synthesis compile"`, and `follow-up search
 "compile synthesis candidate"` found no existing candidate-surface follow-up
 outside the `oc-7feg` epic, so follow-up `oc-zu6y` was filed to compare:
 

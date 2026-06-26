@@ -1,7 +1,7 @@
 # Memory/Router Recall Candidate Evidence Promotion Decision
 
-Status: deferred for guidance or eval repair  
-Bead: `oc-fnhj`  
+Status: deferred for guidance or eval repair
+Work item: `oc-fnhj`
 Evidence: `docs/evals/results/ockp-memory-router-recall-candidate-evidence.md`, `docs/evals/results/ockp-memory-router-recall-candidate-evidence.json`
 
 ## Summary
@@ -46,11 +46,11 @@ The response candidate did not earn promotion because the eval-only JSON contrac
 
 Defer for guidance or eval repair. Do not promote, kill, or record `none_viable_yet`.
 
-The candidate remains evidence-level only. No implementation Bead is authorized by `oc-fnhj`.
+The candidate remains evidence-level only. No implementation work item is authorized by `oc-fnhj`.
 
 ## Follow-Up
 
-No existing follow-up Bead was found for the remaining memory/router recall answer-contract or eval-repair need. Filed `oc-70it` to repair the memory/router recall candidate evidence contract without implementing product behavior.
+No existing follow-up Work item was found for the remaining memory/router recall answer-contract or eval-repair need. Filed `oc-70it` to repair the memory/router recall candidate evidence contract without implementing product behavior.
 
 ## Compatibility Boundaries
 
@@ -62,4 +62,4 @@ Current compatibility remains unchanged:
 - Session observations remain stale or advisory unless promoted through canonical markdown with source refs.
 - Feedback weighting remains advisory and cannot hide stale or conflicting canonical evidence.
 - Synthesis and projections remain derived evidence with provenance and freshness checks.
-- Any future implementation requires a later promotion decision and a separate implementation Bead naming the exact contract, compatibility expectations, failure modes, and gates.
+- Any future implementation requires a later promotion decision and a separate implementation work item naming the exact contract, compatibility expectations, failure modes, and gates.

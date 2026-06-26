@@ -67,14 +67,14 @@ explicit promotion decision name an exact surface, request/response shape,
 compatibility policy, failure modes, and gates. No implementation issue should
 be filed directly from this audit.
 
-## Follow-Up Beads
+## Follow-Up Work
 
-The follow-up beads filed from this audit are eval/design backlog. They should
+The follow-up work filed from this audit are eval/design backlog. They should
 ask whether a simpler OpenClerk surface is warranted while preserving current
 authority, citations, provenance, freshness, local-first behavior, duplicate
 handling, runner-only access, and approval-before-write.
 
-| Bead | Flow | Eval-design question |
+| work item | Flow | Eval-design question |
 | --- | --- | --- |
 | `oc-14gv` | Compile synthesis natural-intent ceremony | Is the current high-step synthesis maintenance path acceptable UX debt, or should refreshed pressure test a simpler surface? See [`high-touch-successful-workflows-ceremony-eval-design.md`](../evals/high-touch-successful-workflows-ceremony-eval-design.md). |
 | `oc-zjd3` | Document lifecycle review/rollback ceremony | Is lifecycle review and rollback too procedural for natural intent despite passing current safety and capability gates? See [`high-touch-successful-workflows-ceremony-eval-design.md`](../evals/high-touch-successful-workflows-ceremony-eval-design.md). |
