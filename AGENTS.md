@@ -45,7 +45,7 @@ A **work item** is one logical task, story, or other coherent unit of work. **Wh
      --output-last-message "$TMPDIR/codex-security-review.md" \
      'Use $codex-security:security-diff-scan to review my current uncommitted changes for security regressions. Do not modify the checkout. Return the final report path, findings summary, reviewed surfaces, deferred coverage, and open questions.'
    ```
-   During rollout, this scan is a required attempt and advisory gate. If the plugin is unavailable, not installed in `CODEX_HOME`, or cannot start, record the reason and continue. If the scan completes and reports findings in the current diff, address them before commit unless explicitly deferred with a follow-up issue. Do not install or configure plugins as part of normal work-item completion unless the maintainer asks.
+   During rollout, this scan is a required attempt and advisory gate. If the scan command reports the security scan skill unavailable or cannot start, record the reason and continue. If the scan completes and reports findings in the current diff, address them before commit unless explicitly deferred with a follow-up issue. Do not install or configure plugins as part of normal work-item completion unless the maintainer asks.
 8. **Commit reviewed changes** - After the review sequence completes, stage the intended files and create a local commit
 9. **Remote publication** - Push only when explicitly requested:
    ```bash
