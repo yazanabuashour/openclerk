@@ -25,26 +25,42 @@ A **work item** is one logical task, story, or other coherent unit of work. **Wh
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close or update the relevant public issue or project item when one exists
 4. **Prepare review** - Run `git status`, summarize changed files and quality gates, and confirm no commit or push has been performed
-5. **Codex review** - Run the review command once for the current work item or review checkpoint. The review must remain correctness-first: prioritize bugs, regressions, security, data safety, and missing tests. After that, include a final Ponytail pass for over-engineering only: identify dead code, speculative features, avoidable dependencies, one-implementation abstractions, reinvented stdlib/native features, and same-logic-fewer-lines opportunities. Do not let the Ponytail pass weaken safety, correctness, provenance, auditability, or necessary tests.
+5. **Codex review** - Run the correctness-first review command once for the current work item or review checkpoint:
    ```bash
    codex --search -m gpt-5.5 -c 'model_reasoning_effort="xhigh"' review --uncommitted
    ```
    If the review finds issues, address the findings.
-6. **Commit reviewed changes** - After the review command completes, stage the intended files and create a local commit
-7. **Remote publication** - Push only when explicitly requested:
+6. **Avoidable-complexity review** - Run the command-bound complexity review once for the current work item or review checkpoint:
+   ```bash
+   codex --search -m gpt-5.5 -c 'model_reasoning_effort="xhigh"' exec --sandbox read-only \
+     'Review the current uncommitted changes for avoidable complexity only. Do not modify files. Inspect staged, unstaged, and untracked changes. Report only actionable findings with file/line references for dead code, speculative features, avoidable dependencies, one-implementation abstractions, reinvented standard-library or native-platform features, and same-logic-fewer-lines opportunities. Do not weaken safety, correctness, provenance, auditability, or necessary tests. If there are no findings, say "No avoidable-complexity findings."'
+   ```
+   If the review finds issues, address the findings.
+7. **Security diff scan** - Attempt the advisory security scan once before committing:
+   ```bash
+   : "${TMPDIR:?Set TMPDIR to a writable artifact directory for security scan output}"
+
+   codex --search -m gpt-5.5 -c 'model_reasoning_effort="xhigh"' exec \
+     --sandbox workspace-write \
+     --output-last-message "$TMPDIR/codex-security-review.md" \
+     'Use $codex-security:security-diff-scan to review my current uncommitted changes for security regressions. Do not modify the checkout. Return the final report path, findings summary, reviewed surfaces, deferred coverage, and open questions.'
+   ```
+   During rollout, this scan is a required attempt and advisory gate. If the plugin is unavailable, not installed in `CODEX_HOME`, or cannot start, record the reason and continue. If the scan completes and reports findings in the current diff, address them before commit unless explicitly deferred with a follow-up issue. Do not install or configure plugins as part of normal work-item completion unless the maintainer asks.
+8. **Commit reviewed changes** - After the review sequence completes, stage the intended files and create a local commit
+9. **Remote publication** - Push only when explicitly requested:
    ```bash
    git pull --rebase
    git push
    git status
    ```
-8. **Clean up** - Clear stashes, prune remote branches when relevant
-9. **Verify** - All intended changes are committed, and pushed only when remote publication was requested
-10. **Hand off** - Provide context for next session
+10. **Clean up** - Clear stashes, prune remote branches when relevant
+11. **Verify** - All intended changes are committed, and pushed only when remote publication was requested
+12. **Hand off** - Provide context for next session
 
 **CRITICAL RULES:**
 - Do not push to a remote unless the maintainer or task explicitly requested remote publication
-- Run the Codex review command once per work item or review checkpoint; do not rerun the same checkpoint review as a workflow loop
-- For multi-checkpoint work, run quality gates, Codex review, and commit after each independent checkpoint before starting the next
-- Do NOT commit before quality gates and the Codex review command are complete
-- After the review command completes, stage and commit the intended files; if remote publication was requested, pull/rebase, then push
+- Run the review sequence once per work item or review checkpoint; do not rerun the same checkpoint review sequence as a workflow loop
+- For multi-checkpoint work, run quality gates, the review sequence, and commit after each independent checkpoint before starting the next
+- Do NOT commit before quality gates and the review sequence are complete
+- After the review sequence completes, stage and commit the intended files; if remote publication was requested, pull/rebase, then push
 - If a requested push fails, resolve and retry until it succeeds or report the blocker
