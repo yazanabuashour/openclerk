@@ -234,13 +234,20 @@ type AppendDocumentInput struct {
 }
 
 type ReplaceSectionInput struct {
-	Heading string
-	Content string
+	Heading            string
+	Content            string
+	IncludeHeading     bool
+	IncludeSubsections *bool
+	DryRun             bool
 }
 
 type ReplaceDocumentInput struct {
-	Title string
-	Body  string
+	Path             string
+	Title            string
+	Body             string
+	Metadata         map[string]string
+	AllowDocIDChange bool
+	DryRun           bool
 }
 
 type MoveDocumentInput struct {
@@ -488,6 +495,7 @@ type Store interface {
 	IngestSourceURL(context.Context, SourceURLInput) (SourceIngestionResult, error)
 	IngestVideoURL(context.Context, VideoURLInput) (VideoIngestionResult, error)
 	GetDocument(context.Context, string) (Document, error)
+	GetDocumentByPath(context.Context, string) (Document, error)
 	GetDocumentLinks(context.Context, string, ...int) (DocumentLinks, error)
 	AppendDocument(context.Context, string, AppendDocumentInput) (Document, error)
 	ReplaceDocumentSection(context.Context, string, ReplaceSectionInput) (Document, error)

@@ -179,13 +179,13 @@ func resolvedDocumentTitle(relPath string, body string, headings []string, front
 	return strings.TrimSuffix(path.Base(relPath), path.Ext(relPath))
 }
 
-func replaceSection(body string, targetHeading string, content string) (string, error) {
+func replaceSection(body string, input domain.ReplaceSectionInput) (string, error) {
 	lines := strings.Split(body, "\n")
 	_, contentStart, err := parseFrontmatter(lines)
 	if err != nil {
 		return "", err
 	}
-	targetHeading = strings.TrimSpace(targetHeading)
+	targetHeading := strings.TrimSpace(input.Heading)
 	for idx := contentStart; idx < len(lines); idx++ {
 		matches := headingPattern.FindStringSubmatch(lines[idx])
 		if len(matches) == 0 {
@@ -195,25 +195,73 @@ func replaceSection(body string, targetHeading string, content string) (string, 
 			continue
 		}
 		level := len(matches[1])
+		if err := validateSectionReplacementContent(level, input); err != nil {
+			return "", err
+		}
+		includeSubsections := true
+		if input.IncludeSubsections != nil {
+			includeSubsections = *input.IncludeSubsections
+		}
 		end := len(lines)
 		for next := idx + 1; next < len(lines); next++ {
 			nextMatches := headingPattern.FindStringSubmatch(lines[next])
 			if len(nextMatches) == 0 {
 				continue
 			}
-			if len(nextMatches[1]) <= level {
+			if !includeSubsections || len(nextMatches[1]) <= level {
 				end = next
 				break
 			}
 		}
-		replacement := []string{lines[idx]}
-		replacement = append(replacement, strings.Split(strings.TrimSpace(content), "\n")...)
+		replacement := strings.Split(strings.TrimSpace(input.Content), "\n")
+		if !input.IncludeHeading {
+			replacement = append([]string{lines[idx]}, replacement...)
+		}
 		updated := append([]string{}, lines[:idx]...)
 		updated = append(updated, replacement...)
 		updated = append(updated, lines[end:]...)
 		return strings.TrimRight(strings.Join(updated, "\n"), "\n") + "\n", nil
 	}
 	return "", domain.NotFoundError("heading", targetHeading)
+}
+
+func validateSectionReplacementContent(targetLevel int, input domain.ReplaceSectionInput) error {
+	firstLine := ""
+	for _, line := range strings.Split(strings.TrimSpace(input.Content), "\n") {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		firstLine = strings.TrimSpace(line)
+		break
+	}
+	if firstLine == "" {
+		return nil
+	}
+	matches := headingPattern.FindStringSubmatch(firstLine)
+	if len(matches) == 0 {
+		if input.IncludeHeading {
+			return domain.ValidationError("include_heading=true requires replacement content to start with a markdown heading", nil)
+		}
+		return nil
+	}
+	level := len(matches[1])
+	if input.IncludeHeading {
+		if level != targetLevel {
+			return domain.ValidationError("include_heading=true replacement heading must use the matched heading level", map[string]any{
+				"expected_level": targetLevel,
+				"actual_level":   level,
+			})
+		}
+		return nil
+	}
+	if level == targetLevel {
+		return domain.ValidationError("replace_section preserves the matched heading; omit the same-level heading from content or set include_heading=true", map[string]any{
+			"heading":         strings.TrimSpace(input.Heading),
+			"heading_level":   targetLevel,
+			"include_heading": false,
+		})
+	}
+	return nil
 }
 
 func docIDForPath(relPath string) string {

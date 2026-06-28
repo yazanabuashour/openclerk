@@ -235,7 +235,7 @@ func assembleMemoryRouterRecallReport(query string, searchHits int, docs map[str
 	}
 
 	report := MemoryRouterRecallReport{
-		QuerySummary:          fmt.Sprintf("memory/router recall report for %q; search returned %d hits; canonical evidence %d/%d present", query, searchHits, foundCanonical, len(memoryRouterCanonicalPaths)),
+		QuerySummary:          fmt.Sprintf("memory-router policy evidence report for %q; search returned %d hits; canonical evidence %d/%d present", query, searchHits, foundCanonical, len(memoryRouterCanonicalPaths)),
 		TemporalStatus:        temporalStatusSummary(docs, synthesis),
 		CanonicalEvidenceRefs: refs,
 		StaleSessionStatus:    fmt.Sprintf("session observations are stale or advisory until promoted through canonical markdown with source refs; %s", provenanceStatus),
@@ -244,7 +244,7 @@ func assembleMemoryRouterRecallReport(query string, searchHits int, docs map[str
 		ProvenanceRefs:        provenanceRefs,
 		SynthesisFreshness:    freshness,
 		ValidationBoundaries:  validation,
-		AuthorityLimits:       "canonical markdown remains durable memory authority; synthesis is derived evidence with provenance and freshness; feedback is advisory; this report is read-only and does not create hidden memory authority or autonomous routing decisions",
+		AuthorityLimits:       "canonical markdown remains durable memory-router policy authority; synthesis is derived evidence with provenance and freshness; feedback is advisory; this report is read-only, scoped to memory-router policy evidence, and does not perform ordinary vault fact recall, create hidden memory authority, or make autonomous routing decisions",
 	}
 	report.AgentHandoff = memoryRouterRecallHandoff(report)
 	return report
@@ -309,6 +309,6 @@ func memoryRouterRecallHandoff(report MemoryRouterRecallReport) *AgentHandoff {
 		Evidence:                    evidence,
 		ValidationBoundaries:        report.ValidationBoundaries,
 		AuthorityLimits:             report.AuthorityLimits,
-		FollowUpPrimitiveInspection: "not required for this read-only report; use get_document, provenance_events, and projection_states only if drilling into cited memory-router refs",
+		FollowUpPrimitiveInspection: `not required for memory-router policy evidence; for ordinary vault fact recall use retrieval search, for example {"action":"search","search":{"text":"...","limit":10}}, then use get_document only for cited doc_id/path drill-down`,
 	}
 }

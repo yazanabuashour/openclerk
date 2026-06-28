@@ -22,6 +22,7 @@ const (
 	DocumentTaskActionList                = "list_documents"
 	DocumentTaskActionGet                 = "get_document"
 	DocumentTaskActionAppend              = "append_document"
+	DocumentTaskActionReplaceDocument     = "replace_document"
 	DocumentTaskActionReplaceSection      = "replace_section"
 	DocumentTaskActionResolvePaths        = "resolve_paths"
 	DocumentTaskActionInspectLayout       = "inspect_layout"
@@ -128,6 +129,7 @@ type DocumentTaskRequest struct {
 	Path                string                   `json:"path,omitempty"`
 	Title               string                   `json:"title,omitempty"`
 	Body                string                   `json:"body,omitempty"`
+	Metadata            map[string]string        `json:"metadata,omitempty"`
 	BodyFacts           []string                 `json:"body_facts,omitempty"`
 	SourceRefs          []string                 `json:"source_refs,omitempty"`
 	FreshnessNote       string                   `json:"freshness_note,omitempty"`
@@ -135,7 +137,38 @@ type DocumentTaskRequest struct {
 	DocID               string                   `json:"doc_id,omitempty"`
 	Content             string                   `json:"content,omitempty"`
 	Heading             string                   `json:"heading,omitempty"`
+	IncludeHeading      bool                     `json:"include_heading,omitempty"`
+	IncludeSubsections  *bool                    `json:"include_subsections,omitempty"`
+	DryRun              bool                     `json:"dry_run,omitempty"`
+	Diff                bool                     `json:"diff,omitempty"`
+	AllowDocIDChange    bool                     `json:"allow_doc_id_change,omitempty"`
 	List                DocumentListOptions      `json:"list,omitempty"`
+
+	jsonDecoded    bool
+	providedFields map[string]bool
+}
+
+func (request *DocumentTaskRequest) UnmarshalJSON(data []byte) error {
+	type documentTaskRequestAlias DocumentTaskRequest
+	var decoded documentTaskRequestAlias
+	if err := decodeStrictJSON(data, &decoded); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*request = DocumentTaskRequest(decoded)
+	request.jsonDecoded = true
+	request.providedFields = make(map[string]bool, len(raw))
+	for key := range raw {
+		request.providedFields[key] = true
+	}
+	return nil
+}
+
+func (request DocumentTaskRequest) fieldProvided(field string) bool {
+	return request.providedFields[field]
 }
 
 type DocumentInput struct {
@@ -338,7 +371,9 @@ type DocumentListOptions struct {
 type DocumentTaskResult struct {
 	Rejected            bool                    `json:"rejected"`
 	RejectionReason     string                  `json:"rejection_reason,omitempty"`
+	ExampleRequest      string                  `json:"example_request,omitempty"`
 	Document            *Document               `json:"document,omitempty"`
+	DocumentUpdate      *DocumentUpdateResult   `json:"document_update,omitempty"`
 	Ingestion           *SourceIngestionResult  `json:"ingestion,omitempty"`
 	SourcePlacement     *SourcePlacementPlan    `json:"source_placement_plan,omitempty"`
 	SourceIntakePlan    *SourceURLIntakePlan    `json:"source_url_intake_plan,omitempty"`
@@ -354,8 +389,36 @@ type DocumentTaskResult struct {
 	Documents           []DocumentSummary       `json:"documents,omitempty"`
 	Paths               *Paths                  `json:"paths,omitempty"`
 	Layout              *KnowledgeLayout        `json:"layout,omitempty"`
+	AgentHandoff        *AgentHandoff           `json:"agent_handoff,omitempty"`
 	PageInfo            PageInfo                `json:"page_info,omitempty"`
 	Summary             string                  `json:"summary"`
+}
+
+type DocumentUpdateResult struct {
+	Action               string                 `json:"action"`
+	DocID                string                 `json:"doc_id"`
+	WriteStatus          string                 `json:"write_status"`
+	DryRun               bool                   `json:"dry_run,omitempty"`
+	Before               DocumentUpdateSnapshot `json:"before"`
+	After                DocumentUpdateSnapshot `json:"after"`
+	Diff                 string                 `json:"diff,omitempty"`
+	PreimageSHA256       string                 `json:"preimage_sha256,omitempty"`
+	RollbackRequest      string                 `json:"rollback_request,omitempty"`
+	NextWriteRequest     string                 `json:"next_write_request,omitempty"`
+	Heading              string                 `json:"heading,omitempty"`
+	HeadingPreserved     *bool                  `json:"heading_preserved,omitempty"`
+	IncludeHeading       bool                   `json:"include_heading,omitempty"`
+	IncludeSubsections   bool                   `json:"include_subsections,omitempty"`
+	ApprovalBoundary     string                 `json:"approval_boundary,omitempty"`
+	ValidationBoundaries string                 `json:"validation_boundaries,omitempty"`
+	AuthorityLimits      string                 `json:"authority_limits,omitempty"`
+	AgentHandoff         *AgentHandoff          `json:"agent_handoff,omitempty"`
+}
+
+type DocumentUpdateSnapshot struct {
+	Title    string   `json:"title"`
+	Path     string   `json:"path"`
+	Headings []string `json:"headings,omitempty"`
 }
 
 type RetrievalTaskRequest struct {

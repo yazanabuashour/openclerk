@@ -154,11 +154,13 @@ func graphRelationshipNextReplaceSectionRequest(report GraphRelationshipReport, 
 	if report.SourceDocument == nil {
 		return ""
 	}
-	return marshalRunnerRequest(map[string]string{
-		"action":  DocumentTaskActionReplaceSection,
-		"doc_id":  report.SourceDocument.DocID,
-		"heading": heading,
-		"content": content,
+	return marshalRunnerRequest(map[string]any{
+		"action":              DocumentTaskActionReplaceSection,
+		"doc_id":              report.SourceDocument.DocID,
+		"heading":             heading,
+		"content":             content,
+		"include_subsections": true,
+		"include_heading":     false,
 	})
 }
 
@@ -166,14 +168,14 @@ func graphRelationshipNextAppendDocumentRequest(report GraphRelationshipReport, 
 	if report.SourceDocument == nil {
 		return ""
 	}
-	return marshalRunnerRequest(map[string]string{
+	return marshalRunnerRequest(map[string]any{
 		"action":  DocumentTaskActionAppend,
 		"doc_id":  report.SourceDocument.DocID,
 		"content": "## Relationships\n" + strings.TrimSpace(content),
 	})
 }
 
-func marshalRunnerRequest(value map[string]string) string {
+func marshalRunnerRequest(value map[string]any) string {
 	data, _ := json.Marshal(value)
 	return string(data)
 }
@@ -209,7 +211,7 @@ func graphRelationshipMaintenanceHandoff(plan GraphRelationshipMaintenancePlan) 
 		Evidence:                    evidence,
 		ValidationBoundaries:        plan.ValidationBoundaries,
 		AuthorityLimits:             plan.AuthorityLimits,
-		FollowUpPrimitiveInspection: "not required for routine relationship maintenance planning; approve and run replace_section or append_document only after reviewing exact request content, then inspect provenance_events and projection_states if freshness or rollback evidence is needed",
+		FollowUpPrimitiveInspection: "not required for routine relationship maintenance planning; approve and run replace_section or append_document only after reviewing exact request content. The replace_section request preserves the matched heading unless include_heading is changed. Inspect provenance_events and projection_states if freshness evidence is needed; applied document writes return rollback_request.",
 	}
 }
 

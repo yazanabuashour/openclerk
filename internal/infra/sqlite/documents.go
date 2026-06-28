@@ -208,6 +208,14 @@ WHERE doc_id = ?`
 	return document, nil
 }
 
+func (s *Store) GetDocumentByPath(ctx context.Context, rawPath string) (domain.Document, error) {
+	relPath, err := normalizePath(rawPath)
+	if err != nil {
+		return domain.Document{}, err
+	}
+	return s.getDocumentByPath(ctx, relPath)
+}
+
 func (s *Store) AppendDocument(ctx context.Context, docID string, input domain.AppendDocumentInput) (domain.Document, error) {
 	if strings.TrimSpace(input.Content) == "" {
 		return domain.Document{}, domain.ValidationError("content is required", nil)
@@ -238,9 +246,12 @@ func (s *Store) ReplaceDocumentSection(ctx context.Context, docID string, input 
 	if err != nil {
 		return domain.Document{}, err
 	}
-	body, err := replaceSection(doc.Body, input.Heading, input.Content)
+	body, err := replaceSection(doc.Body, input)
 	if err != nil {
 		return domain.Document{}, err
+	}
+	if input.DryRun {
+		return previewDocumentReplacement(doc, body, ""), nil
 	}
 	if _, err := s.vaultExistingAbsPath(doc.Path, "validate document path"); err != nil {
 		return domain.Document{}, err
@@ -255,23 +266,133 @@ func (s *Store) ReplaceDocumentSection(ctx context.Context, docID string, input 
 }
 
 func (s *Store) ReplaceDocument(ctx context.Context, docID string, input domain.ReplaceDocumentInput) (domain.Document, error) {
-	if strings.TrimSpace(input.Body) == "" {
-		return domain.Document{}, domain.ValidationError("body is required", nil)
-	}
 	doc, err := s.refreshDocumentFromDisk(ctx, docID)
 	if err != nil {
 		return domain.Document{}, err
 	}
+	if strings.TrimSpace(input.Path) != "" {
+		relPath, err := normalizePath(input.Path)
+		if err != nil {
+			return domain.Document{}, err
+		}
+		if relPath != doc.Path {
+			return domain.Document{}, domain.ValidationError("replacement path does not match doc_id", map[string]any{
+				"doc_id":        docID,
+				"current_path":  doc.Path,
+				"request_path":  relPath,
+				"expected_path": doc.Path,
+			})
+		}
+	}
+	body, err := replacementDocumentBody(doc, input)
+	if err != nil {
+		return domain.Document{}, err
+	}
+	if input.DryRun {
+		return previewDocumentReplacement(doc, body, strings.TrimSpace(input.Title)), nil
+	}
 	if _, err := s.vaultExistingAbsPath(doc.Path, "validate document path"); err != nil {
 		return domain.Document{}, err
 	}
-	if err := s.writeExistingVaultFile(doc.Path, []byte(strings.TrimRight(input.Body, "\n")+"\n"), "replace document"); err != nil {
+	if err := s.writeExistingVaultFile(doc.Path, []byte(body), "replace document"); err != nil {
 		return domain.Document{}, err
 	}
 	if err := s.syncDocumentFromDisk(ctx, doc.Path, strings.TrimSpace(input.Title)); err != nil {
 		return domain.Document{}, err
 	}
+	if input.AllowDocIDChange {
+		return s.getDocumentByPath(ctx, doc.Path)
+	}
 	return s.GetDocument(ctx, docID)
+}
+
+func replacementDocumentBody(doc domain.Document, input domain.ReplaceDocumentInput) (string, error) {
+	body := input.Body
+	if len(input.Metadata) > 0 {
+		if strings.HasPrefix(strings.TrimSpace(body), "---") {
+			return "", domain.ValidationError("replacement body must not include frontmatter when metadata is provided", nil)
+		}
+		body = renderFrontmatter(input.Metadata, input.Title) + strings.TrimLeft(body, "\n")
+	}
+	if strings.TrimSpace(body) == "" {
+		return "", domain.ValidationError("body is required", nil)
+	}
+	body = strings.TrimRight(body, "\n") + "\n"
+	_, _, frontmatter, err := parseMarkdown(body, doc.Path)
+	if err != nil {
+		return "", err
+	}
+	if requestedID := strings.TrimSpace(frontmatter["id"]); requestedID != "" && requestedID != doc.DocID && !input.AllowDocIDChange {
+		return "", domain.ValidationError("replacement frontmatter id does not match doc_id", map[string]any{
+			"doc_id":       doc.DocID,
+			"frontmatter":  requestedID,
+			"current_path": doc.Path,
+		})
+	}
+	if strings.TrimSpace(doc.Metadata["id"]) != "" && strings.TrimSpace(frontmatter["id"]) == "" {
+		body = addStableIDFrontmatter(body, doc.DocID)
+		if _, _, _, err := parseMarkdown(body, doc.Path); err != nil {
+			return "", err
+		}
+	}
+	return body, nil
+}
+
+func renderFrontmatter(metadata map[string]string, title string) string {
+	values := make(map[string]string, len(metadata)+1)
+	for key, value := range metadata {
+		key = strings.TrimSpace(strings.ToLower(key))
+		if key == "" {
+			continue
+		}
+		values[key] = strings.TrimSpace(value)
+	}
+	if strings.TrimSpace(title) != "" {
+		if _, exists := values["title"]; !exists {
+			values["title"] = strings.TrimSpace(title)
+		}
+	}
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	var builder strings.Builder
+	builder.WriteString("---\n")
+	for _, key := range keys {
+		builder.WriteString(key)
+		builder.WriteString(": ")
+		builder.WriteString(frontmatterScalar(values[key]))
+		builder.WriteString("\n")
+	}
+	builder.WriteString("---\n")
+	return builder.String()
+}
+
+func addStableIDFrontmatter(body string, docID string) string {
+	lines := strings.Split(body, "\n")
+	if len(lines) >= 3 && strings.TrimSpace(lines[0]) == "---" {
+		for idx := 1; idx < len(lines); idx++ {
+			if strings.TrimSpace(lines[idx]) == "---" {
+				updated := append([]string{}, lines[:idx]...)
+				updated = append(updated, "id: "+frontmatterScalar(docID))
+				updated = append(updated, lines[idx:]...)
+				return strings.TrimRight(strings.Join(updated, "\n"), "\n") + "\n"
+			}
+		}
+	}
+	return "---\nid: " + frontmatterScalar(docID) + "\n---\n" + strings.TrimLeft(body, "\n")
+}
+
+func previewDocumentReplacement(doc domain.Document, body string, preferredTitle string) domain.Document {
+	headings, _, frontmatter, _ := parseMarkdown(body, doc.Path)
+	preview := doc
+	preview.Body = body
+	preview.Headings = headings
+	preview.Metadata = frontmatter
+	preview.Title = resolvedDocumentTitle(doc.Path, body, headings, frontmatter, preferredTitle, doc.Title)
+	preview.DocID = docIDForDocument(doc.Path, frontmatter)
+	return preview
 }
 
 func (s *Store) refreshDocumentFromDisk(ctx context.Context, docID string) (domain.Document, error) {

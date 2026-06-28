@@ -248,7 +248,7 @@ func TestOpenClerkSkillKeepsWorkflowPoliciesCompact(t *testing.T) {
 		"Do not fetch URLs with browser, HTTP, filesystem, or other non-runner tools",
 		"Document lifecycle review, rollback, restore, and semantic diff",
 		"Use `git_lifecycle_report` only for local Git status/history/checkpoints",
-		"There is no public raw diff, restore, or rollback action",
+		"Existing-document write receipts return compact diffs, preimage hashes, and `replace_document` rollback requests",
 		"Messy populated-vault retrieval",
 		"metadata-filtered authority results",
 		"polluted, decoy, stale, draft, archived, duplicate, or candidate documents as non-authority",

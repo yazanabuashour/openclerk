@@ -2,9 +2,13 @@ package runner
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"path"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -18,12 +22,13 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 		return DocumentTaskResult{
 			Rejected:        true,
 			RejectionReason: rejection,
+			ExampleRequest:  documentTaskExampleRequest(request.Action),
 			Summary:         rejection,
 		}, nil
 	}
 
 	if normalized.Action == DocumentTaskActionValidate {
-		return DocumentTaskResult{Summary: "valid"}, nil
+		return runDocumentValidationTask(ctx, config, request, normalized)
 	}
 
 	autonomy, err := applyProfileDefaults(ctx, config, request.Autonomy)
@@ -36,6 +41,7 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 		return DocumentTaskResult{
 			Rejected:        true,
 			RejectionReason: rejection,
+			ExampleRequest:  documentTaskExampleRequest(request.Action),
 			Summary:         rejection,
 		}, nil
 	}
@@ -143,7 +149,7 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 			Summary:   fmt.Sprintf("returned %d documents", len(documents.Documents)),
 		}, nil
 	case DocumentTaskActionGet:
-		document, err := client.GetDocument(ctx, normalized.DocID)
+		document, err := getDocumentByNormalizedTarget(ctx, client, normalized)
 		if err != nil {
 			return DocumentTaskResult{}, err
 		}
@@ -152,6 +158,10 @@ func RunDocumentTask(ctx context.Context, config runclient.Config, request Docum
 			Document: &converted,
 			Summary:  fmt.Sprintf("returned document %s", converted.DocID),
 		}, nil
+	case DocumentTaskActionReplaceSection:
+		return runDocumentSectionReplacement(ctx, client, normalized, "dry_run")
+	case DocumentTaskActionReplaceDocument:
+		return runDocumentReplacement(ctx, client, normalized, "dry_run")
 	case DocumentTaskActionGitLifecycle:
 		report, err := runGitLifecycleReport(ctx, client.Paths().VaultRoot, normalized.GitLifecycle, config)
 		if err != nil {
@@ -239,11 +249,12 @@ func isMutatingDocumentAction(normalized normalizedDocumentTaskRequest) bool {
 		DocumentTaskActionCompileSynthesis,
 		DocumentTaskActionValidationSynthesis,
 		DocumentTaskActionAppend,
-		DocumentTaskActionReplaceSection,
 		DocumentTaskActionMoveDocument,
 		DocumentTaskActionRenameDocument,
 		DocumentTaskActionPromoteCandidate:
 		return true
+	case DocumentTaskActionReplaceDocument, DocumentTaskActionReplaceSection:
+		return !normalized.DryRun
 	case DocumentTaskActionPlanPathCleanup:
 		return normalized.PathCleanup.Mode == pathCleanupModeApply
 	case DocumentTaskActionGitLifecycle:
@@ -333,28 +344,25 @@ func runMutatingDocumentTask(ctx context.Context, client *runclient.Client, norm
 			Summary:             fmt.Sprintf("validated synthesis %s", compiled.SelectedPath),
 		}, nil
 	case DocumentTaskActionAppend:
+		before, err := client.GetDocument(ctx, normalized.DocID)
+		if err != nil {
+			return DocumentTaskResult{}, err
+		}
 		document, err := client.AppendDocument(ctx, normalized.DocID, domain.AppendDocumentInput{Content: normalized.Content})
 		if err != nil {
 			return DocumentTaskResult{}, err
 		}
 		converted := toDocument(document)
+		update := documentUpdateResult(DocumentTaskActionAppend, before, document, normalized, "applied")
 		return DocumentTaskResult{
-			Document: &converted,
-			Summary:  fmt.Sprintf("appended document %s", converted.DocID),
+			Document:       &converted,
+			DocumentUpdate: &update,
+			Summary:        fmt.Sprintf("appended document %s", converted.DocID),
 		}, nil
+	case DocumentTaskActionReplaceDocument:
+		return runDocumentReplacement(ctx, client, normalized, "applied")
 	case DocumentTaskActionReplaceSection:
-		document, err := client.ReplaceSection(ctx, normalized.DocID, domain.ReplaceSectionInput{
-			Heading: normalized.Heading,
-			Content: normalized.Content,
-		})
-		if err != nil {
-			return DocumentTaskResult{}, err
-		}
-		converted := toDocument(document)
-		return DocumentTaskResult{
-			Document: &converted,
-			Summary:  fmt.Sprintf("replaced section in document %s", converted.DocID),
-		}, nil
+		return runDocumentSectionReplacement(ctx, client, normalized, "applied")
 	case DocumentTaskActionMoveDocument, DocumentTaskActionRenameDocument, DocumentTaskActionPromoteCandidate:
 		plan, err := client.PlanMoveDocument(ctx, toDomainMoveDocumentInput(normalized.Move))
 		if err != nil {
@@ -389,6 +397,360 @@ func runMutatingDocumentTask(ctx context.Context, client *runclient.Client, norm
 	default:
 		return DocumentTaskResult{}, fmt.Errorf("unsupported mutating document task action %q", normalized.Action)
 	}
+}
+
+func runDocumentValidationTask(ctx context.Context, config runclient.Config, request DocumentTaskRequest, normalized normalizedDocumentTaskRequest) (DocumentTaskResult, error) {
+	if !looksLikeDocumentUpdateValidation(request, normalized) {
+		return DocumentTaskResult{Summary: "valid"}, nil
+	}
+	client, err := runclient.OpenReadOnly(config)
+	if err != nil {
+		return DocumentTaskResult{}, err
+	}
+	defer func() {
+		_ = client.Close()
+	}()
+	if strings.TrimSpace(normalized.Body) != "" {
+		normalized.Action = DocumentTaskActionReplaceDocument
+		normalized.DryRun = true
+		return runDocumentReplacement(ctx, client, normalized, "validated_no_write")
+	}
+	if normalized.DocID == "" && normalized.Path != "" {
+		document, err := client.GetDocumentByPath(ctx, normalized.Path)
+		if err != nil {
+			return DocumentTaskResult{}, err
+		}
+		normalized.DocID = document.DocID
+	}
+	normalized.Action = DocumentTaskActionReplaceSection
+	normalized.DryRun = true
+	return runDocumentSectionReplacement(ctx, client, normalized, "validated_no_write")
+}
+
+func looksLikeDocumentUpdateValidation(request DocumentTaskRequest, normalized normalizedDocumentTaskRequest) bool {
+	hasTarget := normalized.DocID != "" || normalized.Path != ""
+	if !hasTarget {
+		return false
+	}
+	if strings.TrimSpace(normalized.Body) != "" {
+		return true
+	}
+	if normalized.Heading == "" {
+		return false
+	}
+	if request.jsonDecoded {
+		return request.fieldProvided("content")
+	}
+	return true
+}
+
+func runDocumentReplacement(ctx context.Context, client *runclient.Client, normalized normalizedDocumentTaskRequest, writeStatus string) (DocumentTaskResult, error) {
+	before, err := resolveDocumentUpdateTarget(ctx, client, normalized)
+	if err != nil {
+		if rejected, ok := rejectedDocumentResultFromError(err, DocumentTaskActionReplaceDocument); ok {
+			return rejected, nil
+		}
+		return DocumentTaskResult{}, err
+	}
+	dryRun := writeStatus != "applied" || normalized.DryRun
+	after, err := client.ReplaceDocument(ctx, before.DocID, domain.ReplaceDocumentInput{
+		Path:             normalized.Path,
+		Title:            normalized.Title,
+		Body:             normalized.Body,
+		Metadata:         normalized.Metadata,
+		AllowDocIDChange: normalized.AllowDocIDChange,
+		DryRun:           dryRun,
+	})
+	if err != nil {
+		if rejected, ok := rejectedDocumentResultFromError(err, DocumentTaskActionReplaceDocument); ok {
+			return rejected, nil
+		}
+		return DocumentTaskResult{}, err
+	}
+	converted := toDocument(after)
+	update := documentUpdateResult(DocumentTaskActionReplaceDocument, before, after, normalized, writeStatus)
+	return DocumentTaskResult{
+		Document:       &converted,
+		DocumentUpdate: &update,
+		AgentHandoff:   update.AgentHandoff,
+		Summary:        documentUpdateSummary("document replacement", after.DocID, writeStatus),
+	}, nil
+}
+
+func runDocumentSectionReplacement(ctx context.Context, client *runclient.Client, normalized normalizedDocumentTaskRequest, writeStatus string) (DocumentTaskResult, error) {
+	before, err := client.GetDocument(ctx, normalized.DocID)
+	if err != nil {
+		return DocumentTaskResult{}, err
+	}
+	includeSubsections := normalized.IncludeSubsections
+	dryRun := writeStatus != "applied" || normalized.DryRun
+	after, err := client.ReplaceSection(ctx, normalized.DocID, domain.ReplaceSectionInput{
+		Heading:            normalized.Heading,
+		Content:            normalized.Content,
+		IncludeHeading:     normalized.IncludeHeading,
+		IncludeSubsections: &includeSubsections,
+		DryRun:             dryRun,
+	})
+	if err != nil {
+		if rejected, ok := rejectedDocumentResultFromError(err, DocumentTaskActionReplaceSection); ok {
+			return rejected, nil
+		}
+		return DocumentTaskResult{}, err
+	}
+	converted := toDocument(after)
+	update := documentUpdateResult(DocumentTaskActionReplaceSection, before, after, normalized, writeStatus)
+	headingPreserved := !normalized.IncludeHeading
+	update.Heading = normalized.Heading
+	update.HeadingPreserved = &headingPreserved
+	update.IncludeHeading = normalized.IncludeHeading
+	update.IncludeSubsections = normalized.IncludeSubsections
+	return DocumentTaskResult{
+		Document:       &converted,
+		DocumentUpdate: &update,
+		AgentHandoff:   update.AgentHandoff,
+		Summary:        documentUpdateSummary("section replacement", after.DocID, writeStatus),
+	}, nil
+}
+
+func getDocumentByNormalizedTarget(ctx context.Context, client *runclient.Client, normalized normalizedDocumentTaskRequest) (domain.Document, error) {
+	if normalized.DocID != "" {
+		return client.GetDocument(ctx, normalized.DocID)
+	}
+	return client.GetDocumentByPath(ctx, normalized.Path)
+}
+
+func resolveDocumentUpdateTarget(ctx context.Context, client *runclient.Client, normalized normalizedDocumentTaskRequest) (domain.Document, error) {
+	if normalized.DocID == "" {
+		return client.GetDocumentByPath(ctx, normalized.Path)
+	}
+	document, err := client.GetDocument(ctx, normalized.DocID)
+	if err != nil {
+		return domain.Document{}, err
+	}
+	if normalized.Path != "" && normalized.Path != document.Path {
+		return domain.Document{}, &runclient.Error{
+			Code:    "validation_error",
+			Message: "replacement path does not match doc_id",
+			Status:  400,
+			Details: map[string]any{
+				"doc_id":        normalized.DocID,
+				"current_path":  document.Path,
+				"request_path":  normalized.Path,
+				"expected_path": document.Path,
+			},
+		}
+	}
+	return document, nil
+}
+
+func documentUpdateResult(action string, before domain.Document, after domain.Document, normalized normalizedDocumentTaskRequest, writeStatus string) DocumentUpdateResult {
+	dryRun := writeStatus != "applied" || normalized.DryRun
+	result := DocumentUpdateResult{
+		Action:               action,
+		DocID:                after.DocID,
+		WriteStatus:          writeStatus,
+		DryRun:               dryRun,
+		Before:               documentUpdateSnapshot(before),
+		After:                documentUpdateSnapshot(after),
+		Diff:                 compactMarkdownDiff(before.Body, after.Body),
+		PreimageSHA256:       sha256Hex(before.Body),
+		ApprovalBoundary:     documentUpdateApprovalBoundary(action),
+		ValidationBoundaries: documentUpdateValidationBoundaries(action),
+		AuthorityLimits:      "OpenClerk updates only the targeted runner-visible markdown document; citations, provenance, and projection freshness remain separate evidence surfaces.",
+	}
+	if action == DocumentTaskActionReplaceDocument || action == DocumentTaskActionReplaceSection {
+		result.NextWriteRequest = nextDocumentUpdateRequest(action, before.DocID, before.Path, normalized)
+	}
+	if writeStatus == "applied" {
+		result.NextWriteRequest = ""
+		result.RollbackRequest = rollbackReplaceDocumentRequest(after.DocID, after.Path, before.Body)
+	}
+	result.AgentHandoff = documentUpdateHandoff(result)
+	return result
+}
+
+func documentUpdateSnapshot(document domain.Document) DocumentUpdateSnapshot {
+	return DocumentUpdateSnapshot{
+		Title:    document.Title,
+		Path:     document.Path,
+		Headings: append([]string(nil), document.Headings...),
+	}
+}
+
+func documentUpdateSummary(kind string, docID string, writeStatus string) string {
+	switch writeStatus {
+	case "applied":
+		return fmt.Sprintf("applied %s for document %s", kind, docID)
+	case "validated_no_write":
+		return fmt.Sprintf("validated %s for document %s without writing", kind, docID)
+	default:
+		return fmt.Sprintf("previewed %s for document %s without writing", kind, docID)
+	}
+}
+
+func documentUpdateApprovalBoundary(action string) string {
+	switch action {
+	case DocumentTaskActionReplaceDocument:
+		return "validate or dry_run is not durable-write approval; approve and run the returned replace_document next_write_request before replacing the full note"
+	case DocumentTaskActionReplaceSection:
+		return "validate or dry_run is not durable-write approval; approve and run the returned replace_section next_write_request before replacing the section"
+	default:
+		return "approved durable writes return a preimage hash and rollback request for OpenClerk-based repair"
+	}
+}
+
+func documentUpdateValidationBoundaries(action string) string {
+	switch action {
+	case DocumentTaskActionReplaceDocument:
+		return "replace_document validates doc_id/path agreement, parses frontmatter before writing, preserves the current stable id unless allow_doc_id_change=true, and returns before/after title, path, headings, and a compact diff"
+	case DocumentTaskActionReplaceSection:
+		return "replace_section preserves the matched heading unless include_heading=true, rejects same-level replacement headings when preserving the heading, and can replace nested subsections through include_subsections=true"
+	default:
+		return "document write receipt reports the targeted document preimage and resulting title, path, and headings"
+	}
+}
+
+func documentUpdateHandoff(update DocumentUpdateResult) *AgentHandoff {
+	followUp := "Use the returned rollback_request with openclerk document if the applied edit is undesired."
+	if update.WriteStatus != "applied" {
+		followUp = "Approve and run next_write_request for the durable write; do not substitute another mutation primitive."
+		if update.Action == DocumentTaskActionReplaceDocument {
+			followUp = "Approve and run next_write_request for the durable full-note replacement; do not use replace_section for this full-note update."
+		}
+		if update.Action == DocumentTaskActionReplaceSection && update.HeadingPreserved != nil {
+			followUp = fmt.Sprintf("Approve and run next_write_request for the durable section update; heading_preserved=%t.", *update.HeadingPreserved)
+		}
+	}
+	return &AgentHandoff{
+		AnswerSummary: fmt.Sprintf("%s %s for %s -> %s", update.Action, update.WriteStatus, update.Before.Path, update.After.Path),
+		Evidence: []string{
+			"before_title:" + update.Before.Title,
+			"before_path:" + update.Before.Path,
+			"after_title:" + update.After.Title,
+			"after_path:" + update.After.Path,
+			"preimage_sha256:" + update.PreimageSHA256,
+		},
+		ValidationBoundaries:        update.ValidationBoundaries,
+		AuthorityLimits:             update.AuthorityLimits,
+		FollowUpPrimitiveInspection: followUp,
+	}
+}
+
+func nextDocumentUpdateRequest(action string, docID string, docPath string, normalized normalizedDocumentTaskRequest) string {
+	switch action {
+	case DocumentTaskActionReplaceDocument:
+		request := map[string]any{
+			"action": DocumentTaskActionReplaceDocument,
+			"doc_id": docID,
+			"body":   normalized.Body,
+		}
+		if docPath != "" {
+			request["path"] = docPath
+		}
+		if normalized.Title != "" {
+			request["title"] = normalized.Title
+		}
+		if len(normalized.Metadata) > 0 {
+			request["metadata"] = normalized.Metadata
+		}
+		if normalized.AllowDocIDChange {
+			request["allow_doc_id_change"] = true
+		}
+		return marshalRequestString(request)
+	case DocumentTaskActionReplaceSection:
+		request := map[string]any{
+			"action":              DocumentTaskActionReplaceSection,
+			"doc_id":              docID,
+			"heading":             normalized.Heading,
+			"content":             normalized.Content,
+			"include_subsections": normalized.IncludeSubsections,
+		}
+		if normalized.IncludeHeading {
+			request["include_heading"] = true
+		}
+		return marshalRequestString(request)
+	default:
+		return ""
+	}
+}
+
+func rollbackReplaceDocumentRequest(docID string, docPath string, body string) string {
+	return marshalRequestString(map[string]any{
+		"action":              DocumentTaskActionReplaceDocument,
+		"doc_id":              docID,
+		"path":                docPath,
+		"body":                body,
+		"allow_doc_id_change": true,
+	})
+}
+
+func marshalRequestString(request map[string]any) string {
+	encoded, err := json.Marshal(request)
+	if err != nil {
+		return ""
+	}
+	return string(encoded)
+}
+
+func sha256Hex(value string) string {
+	sum := sha256.Sum256([]byte(value))
+	return hex.EncodeToString(sum[:])
+}
+
+func compactMarkdownDiff(before string, after string) string {
+	if before == after {
+		return "no content changes"
+	}
+	beforeLines := splitDiffLines(before)
+	afterLines := splitDiffLines(after)
+	prefix := 0
+	for prefix < len(beforeLines) && prefix < len(afterLines) && beforeLines[prefix] == afterLines[prefix] {
+		prefix++
+	}
+	suffix := 0
+	for suffix < len(beforeLines)-prefix && suffix < len(afterLines)-prefix &&
+		beforeLines[len(beforeLines)-1-suffix] == afterLines[len(afterLines)-1-suffix] {
+		suffix++
+	}
+	removed := beforeLines[prefix : len(beforeLines)-suffix]
+	added := afterLines[prefix : len(afterLines)-suffix]
+	var builder strings.Builder
+	_, _ = fmt.Fprintf(&builder, "@@ line %d; -%d +%d @@\n", prefix+1, len(removed), len(added))
+	appendDiffLines(&builder, "-", removed)
+	appendDiffLines(&builder, "+", added)
+	return strings.TrimRight(builder.String(), "\n")
+}
+
+func splitDiffLines(value string) []string {
+	trimmed := strings.TrimRight(value, "\n")
+	if trimmed == "" {
+		return []string{}
+	}
+	return strings.Split(trimmed, "\n")
+}
+
+func appendDiffLines(builder *strings.Builder, prefix string, lines []string) {
+	const maxDiffLines = 8
+	for idx, line := range lines {
+		if idx >= maxDiffLines {
+			_, _ = fmt.Fprintf(builder, "%s ... (%d more lines)\n", prefix, len(lines)-maxDiffLines)
+			return
+		}
+		_, _ = fmt.Fprintf(builder, "%s %s\n", prefix, line)
+	}
+}
+
+func rejectedDocumentResultFromError(err error, action string) (DocumentTaskResult, bool) {
+	var runErr *runclient.Error
+	if !errors.As(err, &runErr) || runErr.Code != "validation_error" {
+		return DocumentTaskResult{}, false
+	}
+	return DocumentTaskResult{
+		Rejected:        true,
+		RejectionReason: runErr.Message,
+		ExampleRequest:  documentTaskExampleRequest(action),
+		Summary:         runErr.Message,
+	}, true
 }
 
 func toDomainMoveDocumentInput(options MoveDocumentOptions) domain.MoveDocumentInput {
@@ -440,8 +802,17 @@ type normalizedDocumentTaskRequest struct {
 	Move                MoveDocumentOptions
 	PathCleanup         PathCleanupOptions
 	DocID               string
+	Path                string
+	Title               string
+	Body                string
+	Metadata            map[string]string
 	Content             string
 	Heading             string
+	IncludeHeading      bool
+	IncludeSubsections  bool
+	DryRun              bool
+	Diff                bool
+	AllowDocIDChange    bool
 	List                DocumentListOptions
 }
 
@@ -449,6 +820,10 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 	action := strings.TrimSpace(request.Action)
 	if action == "" {
 		action = DocumentTaskActionValidate
+	}
+	includeSubsections := true
+	if request.IncludeSubsections != nil {
+		includeSubsections = *request.IncludeSubsections
 	}
 	normalized := normalizedDocumentTaskRequest{
 		Action:              action,
@@ -464,8 +839,17 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		Move:                trimMoveDocumentOptions(moveDocumentOptionsFromRequest(request)),
 		PathCleanup:         trimPathCleanupOptions(pathCleanupOptionsFromRequest(request)),
 		DocID:               strings.TrimSpace(request.DocID),
+		Path:                normalizeVaultRelativePath(firstNonEmpty(request.Path, request.Document.Path)),
+		Title:               strings.TrimSpace(firstNonEmpty(request.Title, request.Document.Title)),
+		Body:                firstNonEmpty(request.Body, request.Document.Body),
+		Metadata:            replacementMetadataFromRequest(request),
 		Content:             request.Content,
 		Heading:             strings.TrimSpace(request.Heading),
+		IncludeHeading:      request.IncludeHeading,
+		IncludeSubsections:  includeSubsections,
+		DryRun:              request.DryRun || request.Diff,
+		Diff:                request.Diff,
+		AllowDocIDChange:    request.AllowDocIDChange,
 		List:                request.List,
 	}
 
@@ -482,6 +866,9 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		request.Artifact.Limit,
 		request.PathCleanup.Limit,
 	); rejection != "" {
+		return normalizedDocumentTaskRequest{}, rejection
+	}
+	if rejection := rejectUnsupportedDocumentPreviewFields(request, action); rejection != "" {
 		return normalizedDocumentTaskRequest{}, rejection
 	}
 
@@ -537,22 +924,73 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		}
 		return normalized, ""
 	case DocumentTaskActionGet:
-		if normalized.DocID == "" {
-			return normalizedDocumentTaskRequest{}, "doc_id is required"
+		if rejection := rejectIgnoredDocumentFields(request, map[string]bool{
+			"action": true, "doc_id": true, "path": true,
+		}); rejection != "" {
+			return normalizedDocumentTaskRequest{}, rejection
+		}
+		if normalized.DocID == "" && normalized.Path == "" {
+			return normalizedDocumentTaskRequest{}, "doc_id or path is required"
+		}
+		if normalized.DocID != "" && normalized.Path != "" {
+			return normalizedDocumentTaskRequest{}, "get_document accepts only one of doc_id or path"
 		}
 		return normalized, ""
 	case DocumentTaskActionAppend:
+		if rejection := rejectIgnoredDocumentFields(request, map[string]bool{
+			"action": true, "autonomy": true, "doc_id": true, "content": true,
+		}); rejection != "" {
+			return normalizedDocumentTaskRequest{}, rejection
+		}
 		if rejection := rejectDocumentAutonomyWrite(normalized); rejection != "" {
 			return normalizedDocumentTaskRequest{}, rejection
 		}
 		if normalized.DocID == "" {
 			return normalizedDocumentTaskRequest{}, "doc_id is required"
 		}
+		if request.jsonDecoded && !request.fieldProvided("content") {
+			return normalizedDocumentTaskRequest{}, "content is required"
+		}
 		if strings.TrimSpace(normalized.Content) == "" {
 			return normalizedDocumentTaskRequest{}, "content is required"
 		}
 		return normalized, ""
+	case DocumentTaskActionReplaceDocument:
+		if rejection := rejectIgnoredDocumentFields(request, map[string]bool{
+			"action": true, "autonomy": true, "doc_id": true, "path": true, "title": true, "body": true,
+			"metadata": true, "document": true, "allow_doc_id_change": true, "dry_run": true, "diff": true,
+		}); rejection != "" {
+			return normalizedDocumentTaskRequest{}, rejection
+		}
+		if rejection := rejectDocumentAutonomyWrite(normalized); rejection != "" {
+			return normalizedDocumentTaskRequest{}, rejection
+		}
+		if normalized.DocID == "" {
+			return normalizedDocumentTaskRequest{}, "doc_id is required"
+		}
+		if request.jsonDecoded && !request.fieldProvided("body") && !request.fieldProvided("document") {
+			return normalizedDocumentTaskRequest{}, "body or document.body is required"
+		}
+		if strings.TrimSpace(normalized.Body) == "" {
+			return normalizedDocumentTaskRequest{}, "body is required"
+		}
+		if normalized.Path != "" {
+			if _, rejection := validateRequiredVaultPath(normalized.Path, "path is required", "path must be relative to the vault root", "path must stay inside the vault root"); rejection != "" {
+				return normalizedDocumentTaskRequest{}, rejection
+			}
+			if path.Ext(normalized.Path) != ".md" {
+				return normalizedDocumentTaskRequest{}, "path must be a vault-relative markdown path"
+			}
+		}
+		return normalized, ""
 	case DocumentTaskActionReplaceSection:
+		if rejection := rejectIgnoredDocumentFields(request, map[string]bool{
+			"action": true, "autonomy": true, "doc_id": true, "heading": true, "content": true,
+			"include_heading": true, "include_subsections": true,
+			"dry_run": true, "diff": true,
+		}); rejection != "" {
+			return normalizedDocumentTaskRequest{}, rejection
+		}
 		if rejection := rejectDocumentAutonomyWrite(normalized); rejection != "" {
 			return normalizedDocumentTaskRequest{}, rejection
 		}
@@ -561,6 +999,9 @@ func normalizeDocumentTaskRequest(request DocumentTaskRequest) (normalizedDocume
 		}
 		if normalized.Heading == "" {
 			return normalizedDocumentTaskRequest{}, "heading is required"
+		}
+		if request.jsonDecoded && !request.fieldProvided("content") {
+			return normalizedDocumentTaskRequest{}, "content is required"
 		}
 		return normalized, ""
 	case DocumentTaskActionResolvePaths:
@@ -704,6 +1145,84 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func replacementMetadataFromRequest(request DocumentTaskRequest) map[string]string {
+	if len(request.Metadata) == 0 {
+		return nil
+	}
+	metadata := make(map[string]string, len(request.Metadata))
+	for key, value := range request.Metadata {
+		key = strings.TrimSpace(key)
+		if key == "" {
+			continue
+		}
+		metadata[key] = strings.TrimSpace(value)
+	}
+	if len(metadata) == 0 {
+		return nil
+	}
+	return metadata
+}
+
+func rejectIgnoredDocumentFields(request DocumentTaskRequest, allowed map[string]bool) string {
+	if !request.jsonDecoded {
+		return ""
+	}
+	fields := make([]string, 0, len(request.providedFields))
+	for field := range request.providedFields {
+		fields = append(fields, field)
+	}
+	sort.Strings(fields)
+	action := strings.TrimSpace(request.Action)
+	if action == "" {
+		action = DocumentTaskActionValidate
+	}
+	for _, field := range fields {
+		if allowed[field] {
+			continue
+		}
+		if action == DocumentTaskActionReplaceSection && field == "body" {
+			return "replace_section uses content, not body; body is not accepted"
+		}
+		return fmt.Sprintf("%s does not accept field %q", action, field)
+	}
+	return ""
+}
+
+func rejectUnsupportedDocumentPreviewFields(request DocumentTaskRequest, action string) string {
+	if !request.jsonDecoded {
+		return ""
+	}
+	if !request.fieldProvided("dry_run") && !request.fieldProvided("diff") {
+		return ""
+	}
+	switch action {
+	case DocumentTaskActionReplaceDocument, DocumentTaskActionReplaceSection:
+		return ""
+	default:
+		if request.fieldProvided("dry_run") {
+			return fmt.Sprintf("%s does not support dry_run; use validate, plan mode, or a replacement action with dry_run", action)
+		}
+		return fmt.Sprintf("%s does not support diff; use replace_document or replace_section with diff=true", action)
+	}
+}
+
+func documentTaskExampleRequest(action string) string {
+	switch strings.TrimSpace(action) {
+	case DocumentTaskActionAppend:
+		return `{"action":"append_document","doc_id":"doc_id_from_json","content":"## Update\nApproved content."}`
+	case DocumentTaskActionReplaceDocument:
+		return `{"action":"replace_document","doc_id":"doc_id_from_json","path":"notes/example.md","body":"---\ntitle: \"Example\"\n---\n# Example\n\nApproved full replacement."}`
+	case DocumentTaskActionReplaceSection:
+		return `{"action":"replace_section","doc_id":"doc_id_from_json","heading":"Summary","content":"Updated summary.","include_subsections":true}`
+	case DocumentTaskActionGet:
+		return `{"action":"get_document","doc_id":"doc_id_from_json"} or {"action":"get_document","path":"notes/example.md"}`
+	case DocumentTaskActionCreate:
+		return `{"action":"create_document","document":{"path":"notes/example.md","title":"Example","body":"# Example\n\nBody."}}`
+	default:
+		return `{"action":"list_documents","list":{"path_prefix":"notes/","limit":20}}`
+	}
 }
 
 func moveDocumentOptionsFromRequest(request DocumentTaskRequest) MoveDocumentOptions {

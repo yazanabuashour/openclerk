@@ -1960,8 +1960,9 @@ func TestRetrievalTaskMemoryRouterRecallReport(t *testing.T) {
 		t.Fatalf("provenance refs = %+v", report.ProvenanceRefs)
 	}
 	if report.AgentHandoff == nil ||
-		!strings.Contains(report.AgentHandoff.AnswerSummary, "memory/router recall report") ||
-		!containsString(report.AgentHandoff.Evidence, "notes/memory-router/session-observation.md") {
+		!strings.Contains(report.AgentHandoff.AnswerSummary, "memory-router policy evidence report") ||
+		!containsString(report.AgentHandoff.Evidence, "notes/memory-router/session-observation.md") ||
+		!strings.Contains(report.AgentHandoff.FollowUpPrimitiveInspection, "ordinary vault fact recall use retrieval search") {
 		t.Fatalf("agent handoff = %+v", report.AgentHandoff)
 	}
 	if !strings.Contains(report.SynthesisFreshness, "fresh synthesis projection") {

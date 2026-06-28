@@ -101,6 +101,200 @@ func TestDocumentTaskCreateListGetAndUpdate(t *testing.T) {
 	}
 }
 
+func TestDocumentTaskReplaceDocumentValidatesAndReturnsUpdateReceipt(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	created := createDocument(t, ctx, config, "notes/projects/roadmap.md", "Roadmap", strings.TrimSpace(`---
+id: "stable-roadmap"
+title: "Roadmap"
+tag: "planning"
+---
+# Roadmap
+
+## Summary
+Old summary.
+`)+"\n")
+
+	getByPath, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionGet,
+		Path:   "notes/projects/roadmap.md",
+	})
+	if err != nil {
+		t.Fatalf("get by path: %v", err)
+	}
+	if getByPath.Document == nil || getByPath.Document.DocID != created.DocID {
+		t.Fatalf("get by path result = %+v", getByPath)
+	}
+
+	validate, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionValidate,
+		DocID:  created.DocID,
+		Path:   "notes/projects/roadmap.md",
+		Body: strings.TrimSpace(`---
+title: "Roadmap Replacement"
+tag: "planning"
+---
+# Roadmap Replacement
+
+- New full-note body.
+`),
+	})
+	if err != nil {
+		t.Fatalf("validate replacement: %v", err)
+	}
+	if validate.DocumentUpdate == nil ||
+		validate.DocumentUpdate.WriteStatus != "validated_no_write" ||
+		validate.DocumentUpdate.After.Title != "Roadmap Replacement" ||
+		!strings.Contains(validate.DocumentUpdate.Diff, "New full-note body") ||
+		!strings.Contains(validate.DocumentUpdate.NextWriteRequest, `"action":"replace_document"`) ||
+		strings.Contains(validate.DocumentUpdate.NextWriteRequest, "replace_section") ||
+		validate.AgentHandoff == nil ||
+		!strings.Contains(validate.AgentHandoff.FollowUpPrimitiveInspection, "do not use replace_section") {
+		t.Fatalf("validate replacement result = %+v", validate.DocumentUpdate)
+	}
+
+	replaced, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionReplaceDocument,
+		DocID:  created.DocID,
+		Path:   "notes/projects/roadmap.md",
+		Title:  "Roadmap Structured Replacement",
+		Metadata: map[string]string{
+			"title":   "Roadmap Structured Replacement",
+			"tag":     "planning",
+			"aliases": "Roadmap, Project roadmap",
+		},
+		Body: "# Roadmap Structured Replacement\n\n- Structured metadata replacement.\n",
+	})
+	if err != nil {
+		t.Fatalf("replace document: %v", err)
+	}
+	if replaced.Document == nil ||
+		replaced.Document.DocID != created.DocID ||
+		replaced.Document.Title != "Roadmap Structured Replacement" ||
+		!strings.Contains(replaced.Document.Body, `id: "stable-roadmap"`) ||
+		replaced.DocumentUpdate == nil ||
+		replaced.DocumentUpdate.WriteStatus != "applied" ||
+		replaced.DocumentUpdate.PreimageSHA256 == "" ||
+		!strings.Contains(replaced.DocumentUpdate.RollbackRequest, `"action":"replace_document"`) {
+		t.Fatalf("replace document result = %+v", replaced)
+	}
+
+	mismatch, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionReplaceDocument,
+		DocID:  created.DocID,
+		Path:   "notes/projects/wrong.md",
+		Body:   "# Wrong\n",
+	})
+	if err != nil {
+		t.Fatalf("mismatch replacement errored: %v", err)
+	}
+	if !mismatch.Rejected || !strings.Contains(mismatch.RejectionReason, "path does not match") {
+		t.Fatalf("mismatch replacement result = %+v", mismatch)
+	}
+
+	normalizedPathDoc := createDocument(t, ctx, config, "notes/projects/normalized.md", "Normalized", "# Normalized\n")
+	validateByPath, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionValidate,
+		Path:   "notes/projects/normalized",
+		Body:   "# Normalized\n\nUpdated body.\n",
+	})
+	if err != nil {
+		t.Fatalf("validate replacement by extensionless path: %v", err)
+	}
+	if validateByPath.DocumentUpdate == nil ||
+		!strings.Contains(validateByPath.DocumentUpdate.NextWriteRequest, `"doc_id":"`+normalizedPathDoc.DocID+`"`) ||
+		!strings.Contains(validateByPath.DocumentUpdate.NextWriteRequest, `"path":"notes/projects/normalized.md"`) {
+		t.Fatalf("validate by normalized path result = %+v", validateByPath.DocumentUpdate)
+	}
+}
+
+func TestDocumentTaskReplaceSectionSchemaAndHeadingOptions(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	created := createDocument(t, ctx, config, "notes/projects/section.md", "Section", "# Section\n\n## Summary\nOld summary.\n\n### Detail\nOld detail.\n")
+
+	var bodyInsteadOfContent runner.DocumentTaskRequest
+	if err := json.Unmarshal([]byte(`{"action":"replace_section","doc_id":"`+created.DocID+`","heading":"Summary","body":"New summary."}`), &bodyInsteadOfContent); err != nil {
+		t.Fatalf("decode bad replace_section: %v", err)
+	}
+	rejectedBody, err := runner.RunDocumentTask(ctx, config, bodyInsteadOfContent)
+	if err != nil {
+		t.Fatalf("bad replace_section body field: %v", err)
+	}
+	if !rejectedBody.Rejected ||
+		!strings.Contains(rejectedBody.RejectionReason, "content, not body") ||
+		!strings.Contains(rejectedBody.ExampleRequest, `"content"`) {
+		t.Fatalf("body-field rejection = %+v", rejectedBody)
+	}
+
+	rejectedHeading, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action:  runner.DocumentTaskActionReplaceSection,
+		DocID:   created.DocID,
+		Heading: "Summary",
+		Content: "## Summary\nDuplicated heading.",
+		DryRun:  true,
+	})
+	if err != nil {
+		t.Fatalf("same-level heading replace_section: %v", err)
+	}
+	if !rejectedHeading.Rejected || !strings.Contains(rejectedHeading.RejectionReason, "preserves the matched heading") {
+		t.Fatalf("same-level heading rejection = %+v", rejectedHeading)
+	}
+
+	retitled, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action:             runner.DocumentTaskActionReplaceSection,
+		DocID:              created.DocID,
+		Heading:            "Summary",
+		Content:            "## Outcome\nRetitled section.",
+		IncludeHeading:     true,
+		IncludeSubsections: ptrBool(true),
+		DryRun:             true,
+	})
+	if err != nil {
+		t.Fatalf("retitle replace_section dry run: %v", err)
+	}
+	if retitled.Document == nil ||
+		!strings.Contains(retitled.Document.Body, "## Outcome") ||
+		strings.Contains(retitled.Document.Body, "### Detail") ||
+		retitled.DocumentUpdate == nil ||
+		retitled.DocumentUpdate.HeadingPreserved == nil ||
+		*retitled.DocumentUpdate.HeadingPreserved {
+		t.Fatalf("retitle result = %+v", retitled)
+	}
+}
+
+func TestDocumentTaskRejectsUnsupportedDryRunBeforeWrite(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
+	var request runner.DocumentTaskRequest
+	if err := json.Unmarshal([]byte(`{"action":"create_document","dry_run":true,"document":{"path":"notes/dry-run-create.md","title":"Dry Run Create","body":"# Dry Run Create\n"}}`), &request); err != nil {
+		t.Fatalf("decode create dry_run: %v", err)
+	}
+	result, err := runner.RunDocumentTask(ctx, config, request)
+	if err != nil {
+		t.Fatalf("create dry_run rejected with error: %v", err)
+	}
+	if !result.Rejected || !strings.Contains(result.RejectionReason, "does not support dry_run") {
+		t.Fatalf("create dry_run result = %+v", result)
+	}
+	list, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{PathPrefix: "notes/", Limit: 10},
+	})
+	if err != nil {
+		t.Fatalf("list after rejected dry_run: %v", err)
+	}
+	if len(list.Documents) != 0 {
+		t.Fatalf("unsupported dry_run created documents: %+v", list.Documents)
+	}
+}
+
 func TestDocumentTaskAutonomyModesValidateAndGateWrites(t *testing.T) {
 	t.Parallel()
 

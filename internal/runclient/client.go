@@ -144,6 +144,14 @@ func (c *Client) GetDocument(ctx context.Context, docID string) (domain.Document
 	return wrapResult(store.GetDocument(ctx, docID))
 }
 
+func (c *Client) GetDocumentByPath(ctx context.Context, path string) (domain.Document, error) {
+	store, err := c.store()
+	if err != nil {
+		return domain.Document{}, err
+	}
+	return wrapResult(store.GetDocumentByPath(ctx, path))
+}
+
 func (c *Client) ListDocuments(ctx context.Context, query domain.DocumentListQuery) (domain.DocumentListResult, error) {
 	store, err := c.store()
 	if err != nil {

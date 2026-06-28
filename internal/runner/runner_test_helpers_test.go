@@ -55,6 +55,10 @@ func containsString(values []string, want string) bool {
 	return false
 }
 
+func ptrBool(value bool) *bool {
+	return &value
+}
+
 func graphContextContainsPrefix(values []string, prefix string) bool {
 	for _, value := range values {
 		if strings.HasPrefix(value, prefix) {

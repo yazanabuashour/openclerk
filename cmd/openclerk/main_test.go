@@ -112,6 +112,8 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 				"move_document",
 				"rename_document",
 				"promote_candidate",
+				"replace_document",
+				"preimage_sha256",
 				"refuse existing targets",
 				"plan_path_cleanup",
 				"autonomous_trusted",
@@ -127,7 +129,7 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 		{
 			name: "retrieval",
 			args: []string{"retrieval", "--help"},
-			want: []string{"document_links", "graph_neighborhood", "canonical markdown remains relationship authority", "records_lookup", "services_lookup", "decisions_lookup", "canonical markdown with citations and freshness", "source_discovery_report", "source_audit_report", "evidence_bundle_report", "decision_lookup_report", "duplicate_candidate_report", "workflow_guide_report", "memory_router_recall_report", "structured_store_report", "hybrid_retrieval_report", "graph_context_report", "graph_relationship_report", "graph_relationship_maintenance_plan", "semantic_search", "retrieval_eval_capture", "retrieval_eval_replay", "search_diagnostics_report", "maintenance_report", "no default ranking change", "agent_handoff", "Read-only"},
+			want: []string{"document_links", "graph_neighborhood", "canonical markdown remains relationship authority", "records_lookup", "services_lookup", "decisions_lookup", "canonical markdown with citations and freshness", "source_discovery_report", "source_audit_report", "evidence_bundle_report", "decision_lookup_report", "duplicate_candidate_report", "workflow_guide_report", "memory_router_recall_report", "ordinary vault fact recall", "structured_store_report", "hybrid_retrieval_report", "graph_context_report", "graph_relationship_report", "graph_relationship_maintenance_plan", "semantic_search", "retrieval_eval_capture", "retrieval_eval_replay", "search_diagnostics_report", "maintenance_report", "no default ranking change", "agent_handoff", "Read-only"},
 		},
 		{
 			name: "module",

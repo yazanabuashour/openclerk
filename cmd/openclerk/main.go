@@ -159,9 +159,10 @@ func buildCapabilitiesResult() capabilitiesResult {
 					{Action: "ingest_source_url", Purpose: "inspect, plan, create, or update public web, Markdown, or PDF source notes through the runner", Posture: "inspect_or_plan_read_only_or_approved_write"},
 					{Action: "ingest_video_url", Purpose: "create or update video source notes from supplied transcripts", Posture: "approved_write_with_user_supplied_transcript"},
 					{Action: "list_documents", Purpose: "list runner-visible documents", Posture: "read_only"},
-					{Action: "get_document", Purpose: "read one runner-visible document by doc_id", Posture: "read_only"},
+					{Action: "get_document", Purpose: "read one runner-visible document by doc_id or vault-relative path", Posture: "read_only"},
 					{Action: "append_document", Purpose: "append approved content to an existing document", Posture: "durable_write_requires_approval"},
-					{Action: "replace_section", Purpose: "replace an approved markdown section", Posture: "durable_write_requires_approval"},
+					{Action: "replace_document", Purpose: "atomically replace an approved existing document body while validating path/doc_id and stable id", Posture: "durable_write_requires_approval_with_preimage"},
+					{Action: "replace_section", Purpose: "replace an approved markdown section; preserves matched heading unless include_heading=true", Posture: "durable_write_requires_approval_with_preimage"},
 					{Action: "plan_move_document", Purpose: "plan a safe vault-relative document move, rename, or candidate promotion before writing", Posture: "read_only"},
 					{Action: "move_document", Purpose: "move an approved markdown document while preserving stable id and updating reported links", Posture: "durable_write_requires_approval_no_overwrite"},
 					{Action: "rename_document", Purpose: "same-directory move convenience wrapper for path/title cleanup", Posture: "durable_write_requires_approval_no_overwrite"},
@@ -204,7 +205,7 @@ func buildCapabilitiesResult() capabilitiesResult {
 					{Action: "decision_lookup_report", Purpose: "lookup decision-like evidence across decisions, records, search, provenance, and projection freshness", Posture: "read_only", Handoff: "decision_lookup.agent_handoff"},
 					{Action: "duplicate_candidate_report", Purpose: "choose update-versus-new evidence before durable writes", Posture: "read_only", Handoff: "duplicate_candidate.agent_handoff"},
 					{Action: "workflow_guide_report", Purpose: "select the natural runner surface for an intent", Posture: "read_only", Handoff: "workflow_guide.agent_handoff"},
-					{Action: "memory_router_recall_report", Purpose: "package routine memory/router recall evidence without memory transports", Posture: "read_only", Handoff: "memory_router_recall.agent_handoff"},
+					{Action: "memory_router_recall_report", Purpose: "package memory-router policy evidence; ordinary vault fact recall should use search", Posture: "read_only", Handoff: "memory_router_recall.agent_handoff"},
 					{Action: "structured_store_report", Purpose: "review structured-data and canonical-store evidence", Posture: "read_only", Handoff: "structured_store.agent_handoff"},
 					{Action: "hybrid_retrieval_report", Purpose: "review lexical baseline and hybrid/vector candidate boundaries", Posture: "read_only", Handoff: "hybrid_retrieval.agent_handoff"},
 					{Action: "graph_context_report", Purpose: "package relationship graph context with canonical markdown authority and freshness", Posture: "read_only", Handoff: "graph_context.agent_handoff"},
@@ -1140,7 +1141,9 @@ func documentUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, `  ingest_source_url inspect: {"action":"ingest_source_url","source":{"url":"https://github.com/owner/repo","mode":"inspect","source_type":"web","title":"Optional title","limit":8}}`)
 	_, _ = fmt.Fprintln(w, `  ingest_video_url create: {"action":"ingest_video_url","video":{"url":"https://youtube.example.test/watch?v=demo","path_hint":"sources/video-youtube/demo.md","transcript":{"text":"Supplied transcript text.","policy":"supplied","origin":"user_supplied_transcript"}}}`)
 	_, _ = fmt.Fprintln(w, `  ingest_video_url update: {"action":"ingest_video_url","video":{"url":"https://youtube.example.test/watch?v=demo","mode":"update","transcript":{"text":"Updated supplied transcript text.","policy":"supplied","origin":"user_supplied_transcript"}}}`)
-	_, _ = fmt.Fprintln(w, `  list/get/edit: {"action":"list_documents","list":{"path_prefix":"notes/","limit":20}} | {"action":"get_document","doc_id":"doc_id_from_json"} | {"action":"replace_section","doc_id":"doc_id_from_json","heading":"Summary","content":"Updated summary."}`)
+	_, _ = fmt.Fprintln(w, `  list/get/edit: {"action":"list_documents","list":{"path_prefix":"notes/","limit":20}} | {"action":"get_document","path":"notes/example.md"} | {"action":"replace_document","doc_id":"doc_id_from_json","path":"notes/example.md","body":"# Example\n\nFull approved replacement.","dry_run":true}`)
+	_, _ = fmt.Fprintln(w, `  section edit: {"action":"replace_section","doc_id":"doc_id_from_json","heading":"Summary","content":"Updated summary.","include_subsections":true,"dry_run":true}`)
+	_, _ = fmt.Fprintln(w, "  replace_document validates doc_id/path and frontmatter id before writing, preserves stable id unless allow_doc_id_change=true, and returns before/after title/path/headings, compact diff, preimage_sha256, and rollback_request. replace_section preserves the matched heading unless include_heading=true.")
 	_, _ = fmt.Fprintln(w, `  plan move: {"action":"plan_move_document","move":{"path":"technology/projects.md","target_path":"technology/project-ideas.md","update_indexes":true}}`)
 	_, _ = fmt.Fprintln(w, `  move/rename/promote: {"action":"move_document","move":{"doc_id":"doc_id_from_json","target_path":"notes/projects/example.md"}} | {"action":"rename_document","move":{"path":"notes/projects/rough.md","target_path":"notes/projects/precise.md"}} | {"action":"promote_candidate","move":{"path":"notes/candidates/idea.md","target_path":"notes/projects/idea.md"}}`)
 	_, _ = fmt.Fprintln(w, "  Move actions preserve stable id, update only reported markdown links/index links, record provenance, refresh projections, and refuse existing targets instead of overwriting.")
@@ -1190,7 +1193,7 @@ func retrievalUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, `  workflow_guide_report: {"action":"workflow_guide_report","workflow_guide":{"intent":"should I update an existing note or create a new one?"}}`)
 	_, _ = fmt.Fprintln(w, "  Read-only. Returns workflow_guide.agent_handoff with runner-owned surface selection guidance; it does not inspect storage or replace the selected action result.")
 	_, _ = fmt.Fprintln(w, `  memory_router_recall_report: {"action":"memory_router_recall_report","memory_router_recall":{"query":"memory router temporal recall session promotion feedback weighting routing canonical docs","limit":10}}`)
-	_, _ = fmt.Fprintln(w, "  Read-only. Returns memory_router_recall.agent_handoff with canonical refs, stale-session posture, feedback weighting, provenance, freshness, and authority limits.")
+	_, _ = fmt.Fprintln(w, "  Read-only memory-router policy evidence only. For ordinary vault fact recall, use search; the handoff says how to retry.")
 	_, _ = fmt.Fprintln(w, `  structured_store_report: {"action":"structured_store_report","structured_store":{"domain":"records","query":"structured canonical record evidence","entity_type":"tool","limit":10}}`)
 	_, _ = fmt.Fprintln(w, "  Read-only. Returns structured_store.agent_handoff with promoted record/service/decision projection evidence, candidate-store boundaries, freshness, and authority limits.")
 	_, _ = fmt.Fprintln(w, `  hybrid_retrieval_report: {"action":"hybrid_retrieval_report","hybrid_retrieval":{"query":"semantic recall citation quality","path_prefix":"docs/","limit":10}}`)

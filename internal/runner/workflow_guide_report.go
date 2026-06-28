@@ -133,14 +133,14 @@ func selectWorkflowGuideCandidate(intent string) workflowGuideSelection {
 			DoNotUseFor:    []string{"broad contradiction engine", "new synthesis creation"},
 			HandoffSummary: "Use retrieval source_audit_report; explain mode is read-only, repair_existing may update only an existing synthesis target.",
 		}
-	case containsAny(normalized, "memory", "router", "recall"):
+	case containsAny(normalized, "memory router", "memory-router", "router policy", "stale session", "feedback weighting", "temporal recall"):
 		return workflowGuideSelection{
 			Surface:        "memory_router_recall_report",
 			RunnerDomain:   "retrieval",
 			RequestShape:   `{"action":"memory_router_recall_report","memory_router_recall":{"query":"...","limit":10}}`,
-			UseWhen:        "use for routine read-only memory/router recall evidence",
-			DoNotUseFor:    []string{"remember/recall transports", "autonomous router APIs", "memory writes"},
-			HandoffSummary: "Use retrieval memory_router_recall_report and answer from returned memory_router_recall evidence.",
+			UseWhen:        "use for read-only memory-router policy evidence such as stale-session posture, temporal policy, feedback weighting, and routing rationale",
+			DoNotUseFor:    []string{"ordinary vault fact recall", "remember/recall transports", "autonomous router APIs", "memory writes"},
+			HandoffSummary: "Use retrieval memory_router_recall_report only for memory-router policy evidence; use retrieval search for ordinary vault fact recall.",
 		}
 	case containsAny(normalized, "structured", "canonical store", "time-series", "time series", "metrics", "measurements", "inventory", "finance", "health"):
 		return workflowGuideSelection{

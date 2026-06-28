@@ -54,9 +54,10 @@ Prefer a promoted workflow action over manual primitive choreography when it mat
   `duplicate_candidate.agent_handoff`.
 - Workflow surface selection: retrieval `workflow_guide_report`, then use
   `workflow_guide.agent_handoff` to choose the next runner action.
-- Routine read-only memory/router recall reports: retrieval
+- Routine read-only memory-router policy evidence reports: retrieval
   `memory_router_recall_report`, then answer from
-  `memory_router_recall.agent_handoff` or returned evidence.
+  `memory_router_recall.agent_handoff` or returned evidence. For ordinary
+  vault fact recall, use retrieval `search` instead.
 - Structured data and non-document canonical-store decision support: retrieval
   `structured_store_report`, then answer from `structured_store.agent_handoff`;
   do not claim independent tables, external connectors, or structured writes.
@@ -156,7 +157,7 @@ policies and let runner results drive the answer:
 - Duplicate checks: when duplicate risk is requested or plausible, use runner-visible evidence before validating or writing; report the likely target, evidence inspected, and that no document was created or updated; ask whether to update the existing target or create a confirmed new path.
 - Public URL/source intake: use `web_search_plan` for supplied search results and `ingest_source_url` for HTTP/HTTPS PDF and public web sources. Use `mode: "inspect"` when the agent should inspect a supplied public URL, extract a preview, and propose related source candidates; use `mode: "plan"` only for no-fetch placement. Do not fetch URLs with browser, HTTP, filesystem, or other non-runner tools; ask for approval before durable source writes.
 - Video/YouTube source intake: use `ingest_video_url` only with user-supplied transcript text and provenance; do not acquire media or transcripts externally.
-- Document lifecycle review, rollback, restore, and semantic diff: stay inside `openclerk document` and `openclerk retrieval`. Use `git_lifecycle_report` only for local Git status/history/checkpoints; it is storage history, not semantic provenance, and checkpoint mode needs explicit runner config. There is no public raw diff, restore, or rollback action.
+- Document lifecycle review, rollback, restore, and semantic diff: stay inside `openclerk document` and `openclerk retrieval`. Use `git_lifecycle_report` only for local Git status/history/checkpoints; it is storage history, not semantic provenance, and checkpoint mode needs explicit runner config. Existing-document write receipts return compact diffs, preimage hashes, and `replace_document` rollback requests; avoid raw vault edits for repair.
 - Messy populated-vault retrieval: answer from runner-visible authority such as metadata-filtered authority results, active canonical sources, cited source paths, `doc_id`, and `chunk_id`; treat polluted, decoy, stale, draft, archived, duplicate, or candidate documents as non-authority unless runner-visible source authority says otherwise.
 - Synthesis maintenance: prefer `compile_synthesis`; include requested outcome claims in `body_facts` or `body`; use lower-level document and retrieval actions only for explicit primitive or manual cases; preserve `source_refs`, `## Sources`, `## Freshness`, provenance, and projection freshness.
 Detailed versions of these workflows belong in runner actions, compact runner help, maintainer/eval docs, or follow-up candidate-surface comparisons.
@@ -169,7 +170,7 @@ Run document tasks with:
 openclerk document
 ```
 
-Common actions are `validate`, `create_document`, `ingest_source_url`, `ingest_video_url`, `web_search_plan`, `artifact_candidate_plan`, `plan_move_document`, `move_document`, `rename_document`, `promote_candidate`, `plan_path_cleanup`, `list_documents`, `get_document`, `append_document`, `replace_section`, `resolve_paths`, `inspect_layout`, `compile_synthesis`, `validation_synthesis_report`, and `git_lifecycle_report`. Use `openclerk document --help` for request shapes.
+Common actions are `validate`, `create_document`, `ingest_source_url`, `ingest_video_url`, `web_search_plan`, `artifact_candidate_plan`, `plan_move_document`, `move_document`, `rename_document`, `promote_candidate`, `plan_path_cleanup`, `list_documents`, `get_document`, `append_document`, `replace_document`, `replace_section`, `resolve_paths`, `inspect_layout`, `compile_synthesis`, `validation_synthesis_report`, and `git_lifecycle_report`. Use `openclerk document --help` for request shapes.
 
 Move actions use `move` with `doc_id` or `path` plus `target_path`; `plan_path_cleanup` proposes exact next requests and apply mode needs autonomous trusted/disposable. Writes refuse existing targets; `rename_document` is same-directory only; `promote_candidate` leaves `notes/candidates/`.
 
