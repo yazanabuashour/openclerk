@@ -266,10 +266,11 @@ func TestConfigInspectSummarizesModulesWithoutProviderSecrets(t *testing.T) {
 	ctx := context.Background()
 	config := runclient.Config{DatabasePath: filepath.Join(t.TempDir(), "data", "openclerk.sqlite")}
 	manifestPath := writeRunnerSemanticModuleManifest(t, t.TempDir(), "gemini")
+	commandPath := writeRunnerExecutable(t, "semantic-retrieval-adapter")
 	if _, err := runclient.InstallSemanticModule(ctx, config, runclient.SemanticModuleInstallInput{
 		Provider:     "gemini",
 		ManifestPath: manifestPath,
-		Command:      "semantic-retrieval-adapter",
+		Command:      commandPath,
 		ProviderConfig: map[string]string{
 			"embedding_model": "gemini-embedding-001",
 			"gemini_api_base": "https://generativelanguage.googleapis.com/v1beta",
@@ -364,6 +365,16 @@ func writeRunnerSemanticModuleManifest(t *testing.T, dir string, provider string
 	}
 	if err := os.WriteFile(path, data, 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
+	}
+	return path
+}
+
+func writeRunnerExecutable(t *testing.T, name string) string {
+	t.Helper()
+	dir := t.TempDir()
+	path := filepath.Join(dir, name)
+	if err := os.WriteFile(path, []byte("#!/bin/sh\nprintf '%s\\n' "+name+"\n"), 0o755); err != nil {
+		t.Fatalf("write executable %s: %v", path, err)
 	}
 	return path
 }

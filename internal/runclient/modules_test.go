@@ -99,6 +99,7 @@ func TestSemanticModuleProviderConfigRejectsUnsafeEndpointConfig(t *testing.T) {
 		if _, err := InstallSemanticModule(ctx, config, SemanticModuleInstallInput{
 			Provider:     SemanticModuleProviderGemini,
 			ManifestPath: manifestPath,
+			Command:      writeRunclientExecutable(t, semanticModuleCommand),
 		}); err != nil {
 			t.Fatalf("install module: %v", err)
 		}
@@ -121,6 +122,7 @@ func TestSemanticModuleProviderConfigRejectsUnsafeEndpointConfig(t *testing.T) {
 		installed, err := InstallSemanticModule(ctx, config, SemanticModuleInstallInput{
 			Provider:     SemanticModuleProviderOllama,
 			ManifestPath: manifestPath,
+			Command:      writeRunclientExecutable(t, semanticModuleCommand),
 		})
 		if err != nil {
 			t.Fatalf("install module: %v", err)

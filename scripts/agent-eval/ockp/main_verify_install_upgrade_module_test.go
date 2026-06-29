@@ -118,6 +118,11 @@ func seedModuleVerificationFixture(t *testing.T, embeddingModel string) (string,
 	}
 	repoRoot := t.TempDir()
 	writeTestFile(t, repoRoot, moduleAgentInstallManifestPath, string(sourceManifest))
+	commandPath := filepath.Join(repoRoot, "bin", moduleAgentInstallCommand)
+	writeTestFile(t, repoRoot, filepath.ToSlash(filepath.Join("bin", moduleAgentInstallCommand)), "#!/bin/sh\nprintf '%s\\n' "+moduleAgentInstallCommand+"\n")
+	if err := os.Chmod(commandPath, 0o755); err != nil {
+		t.Fatalf("chmod %s: %v", commandPath, err)
+	}
 
 	dbPath := filepath.Join(repoRoot, ".openclerk-eval", "openclerk.db")
 	_, err = runclient.InstallSemanticModule(context.Background(), runclient.Config{
@@ -126,7 +131,7 @@ func seedModuleVerificationFixture(t *testing.T, embeddingModel string) (string,
 	}, runclient.SemanticModuleInstallInput{
 		Provider:     moduleAgentInstallProvider,
 		ManifestPath: moduleAgentInstallManifestPath,
-		Command:      moduleAgentInstallCommand,
+		Command:      commandPath,
 		ProviderConfig: map[string]string{
 			"embedding_model": embeddingModel,
 			"ollama_url":      moduleAgentInstallOllamaURL,
