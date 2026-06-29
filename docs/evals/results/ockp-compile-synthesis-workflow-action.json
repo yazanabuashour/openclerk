@@ -1,21 +1,21 @@
 {
   "metadata": {
-    "generated_at": "2026-06-28T23:49:53.769014332Z",
+    "generated_at": "2026-06-29T02:05:09.586971737Z",
     "model": "gpt-5.4-mini",
     "reasoning_effort": "medium",
     "harness": "codex exec --json --full-auto from throwaway run directories; single-turn scenarios use --ephemeral and multi-turn scenarios resume one persisted eval session",
     "configured_parallelism": 4,
     "cache_mode": "shared",
-    "cache_prewarm_seconds": 7.45,
-    "harness_elapsed_seconds": 36.67,
-    "effective_parallel_speedup": 0.75,
-    "parallel_efficiency": 0.19,
+    "cache_prewarm_seconds": 7.49,
+    "harness_elapsed_seconds": 32.61,
+    "effective_parallel_speedup": 0.72,
+    "parallel_efficiency": 0.18,
     "phase_totals": {
-      "install_variant_seconds": 1.52,
+      "install_variant_seconds": 1.57,
       "seed_data_seconds": 0.01,
-      "agent_run_seconds": 27.68,
+      "agent_run_seconds": 23.53,
       "verify_seconds": 0.01,
-      "total_seconds": 29.23
+      "total_seconds": 25.12
     },
     "run_root_artifact_reference": "\u003crun-root\u003e",
     "raw_log_placeholder": "\u003crun-root\u003e/\u003cvariant\u003e/\u003cscenario\u003e/turn-N/events.jsonl",
@@ -38,18 +38,18 @@
       "passed": true,
       "status": "completed",
       "exit_code": 0,
-      "wall_seconds": 27.68,
+      "wall_seconds": 23.53,
       "phase_timings": {
-        "install_variant_seconds": 1.52,
+        "install_variant_seconds": 1.57,
         "seed_data_seconds": 0.01,
-        "agent_run_seconds": 27.68,
+        "agent_run_seconds": 23.53,
         "verify_seconds": 0.01,
-        "total_seconds": 29.23
+        "total_seconds": 25.12
       },
       "metrics": {
         "assistant_calls": 3,
-        "tool_calls": 3,
-        "command_executions": 3,
+        "tool_calls": 2,
+        "command_executions": 2,
         "file_inspection_commands": 0,
         "generated_file_inspection": false,
         "module_cache_inspection": false,
@@ -112,16 +112,16 @@
         "source_audit_report_used": false,
         "evidence_bundle_report_used": false,
         "decision_lookup_report_used": false,
-        "workflow_action_first_command_index": 3,
+        "workflow_action_first_command_index": 2,
         "workflow_action_call_count": 1,
         "usage_exposed": true,
-        "input_tokens": 57768,
-        "cached_input_tokens": 45056,
-        "non_cached_input_tokens": 12712,
-        "output_tokens": 1497,
+        "input_tokens": 43372,
+        "cached_input_tokens": 33408,
+        "non_cached_input_tokens": 9964,
+        "output_tokens": 1210,
         "event_type_counts": {
-          "item.completed": 6,
-          "item.started": 3,
+          "item.completed": 5,
+          "item.started": 2,
           "thread.started": 1,
           "turn.completed": 1,
           "turn.started": 1
@@ -143,12 +143,12 @@
       "turns": [
         {
           "turn_index": 1,
-          "wall_seconds": 27.68,
+          "wall_seconds": 23.53,
           "exit_code": 0,
           "metrics": {
             "assistant_calls": 3,
-            "tool_calls": 3,
-            "command_executions": 3,
+            "tool_calls": 2,
+            "command_executions": 2,
             "file_inspection_commands": 0,
             "generated_file_inspection": false,
             "module_cache_inspection": false,
@@ -211,16 +211,16 @@
             "source_audit_report_used": false,
             "evidence_bundle_report_used": false,
             "decision_lookup_report_used": false,
-            "workflow_action_first_command_index": 3,
+            "workflow_action_first_command_index": 2,
             "workflow_action_call_count": 1,
             "usage_exposed": true,
-            "input_tokens": 57768,
-            "cached_input_tokens": 45056,
-            "non_cached_input_tokens": 12712,
-            "output_tokens": 1497,
+            "input_tokens": 43372,
+            "cached_input_tokens": 33408,
+            "non_cached_input_tokens": 9964,
+            "output_tokens": 1210,
             "event_type_counts": {
-              "item.completed": 6,
-              "item.started": 3,
+              "item.completed": 5,
+              "item.started": 2,
               "thread.started": 1,
               "turn.completed": 1,
               "turn.started": 1
@@ -242,10 +242,10 @@
           "raw_log_artifact_reference": "\u003crun-root\u003e/production/compile-synthesis-workflow-action-natural/turn-1/events.jsonl"
         }
       ],
-      "prompt_summary": "Use the configured local OpenClerk data path. This is a valid runner-backed request and all required fields are present. The installed openclerk binary is on PATH and the data path is configured; do not claim the runner or action is unavailable. Start with the matching promoted workflow action instead of setup discovery. Do not use openclerk --help, openclerk document --help, openclerk retrieval --help, openclerk module --help, openclerk capabilities, web search, repo search, local file search, skill-file inspection, source inspection, lower-level document writes, direct vault edits, source-built runners, SQLite, HTTP/MCP, raw vault inspection, backend variants, positional action flags, or follow-up primitives unless the workflow action rejects. The route hint here is complete; no exact shell command is provided. Use the openclerk document stdin JSON interface with top-level action compile_synthesis, nested object synthesis, and required fields path, title, source_refs, body_facts, mode. Use mode create_or_update. Use the promoted compile_synthesis workflow action to refresh the existing source-linked synthesis titled Compile Synthesis Revisit Routing at synthesis/compile-revisit-routing.md, keeping that target instead of the decoy. The source refs are sources/compile-revisit-current.md and sources/compile-revisit-old.md. The body facts should state that promoted compile_synthesis handles the routine workflow while primitives remain for manual cases, identify the current source, and identify the superseded source. In the final answer, use agent_handoff/evidence to mention compile_synthesis, the selected path, source evidence, duplicate status, provenance refs, projection freshness, write status, validation boundaries, authority limits, and repo-relative paths only.",
+      "prompt_summary": "Use the configured local OpenClerk data path. This is a valid runner-backed request and all required fields are present. The installed openclerk binary is on PATH and the data path is configured; do not claim the runner or action is unavailable. Start with the matching promoted workflow action instead of setup discovery. Do not use openclerk --help, openclerk document --help, openclerk retrieval --help, openclerk module --help, openclerk capabilities, web search, repo search, local file search, skill-file inspection, source inspection, lower-level document writes, direct vault edits, source-built runners, SQLite, HTTP/MCP, raw vault inspection, backend variants, positional action flags, or follow-up primitives unless the workflow action rejects. The route hint here is complete; no exact shell command is provided. Command family: openclerk document. Invocation shape: pipe one strict JSON object on stdin; there is no workflow subcommand or --action flag path. Top-level action: compile_synthesis. Nested object: synthesis. Required fields: path, title, source_refs, body_facts, mode. Use mode create_or_update. Use the promoted compile_synthesis workflow action to refresh the existing source-linked synthesis titled Compile Synthesis Revisit Routing at synthesis/compile-revisit-routing.md, keeping that target instead of the decoy. The source refs are sources/compile-revisit-current.md and sources/compile-revisit-old.md. The body facts should state that promoted compile_synthesis handles the routine workflow while primitives remain for manual cases, identify the current source, and identify the superseded source. In the final answer, use final_answer or agent_handoff/evidence to mention compile_synthesis, the selected path, source evidence, duplicate status, provenance refs, projection freshness, write status, validation boundaries, authority limits, and repo-relative paths only.",
       "raw_log_artifact_reference": "\u003crun-root\u003e/production/compile-synthesis-workflow-action-natural/turn-1/events.jsonl",
-      "started_at": "2026-06-28T23:49:24.542778773Z",
-      "completed_at": "2026-06-28T23:49:53.768821044Z"
+      "started_at": "2026-06-29T02:04:44.468658943Z",
+      "completed_at": "2026-06-29T02:05:09.58677321Z"
     }
   ],
   "production_gate": {
@@ -292,36 +292,36 @@
   },
   "targeted_lane_summary": {
     "lane": "compile-synthesis-workflow-action",
-    "decision": "retain_compile_synthesis_surface_with_taste_debt_followup",
+    "decision": "accept_compile_synthesis_workflow_action",
     "public_surface": [
       "openclerk document",
       "openclerk retrieval"
     ],
-    "promotion": "implemented narrow compile_synthesis document action plus existing primitives for advanced/manual cases; no schema migration, direct vault behavior, broad synthesis engine, or source authority change; refreshed natural-row UX is taste debt, so acceptable-UX release claims are deferred to follow-up surface comparison",
+    "promotion": "implemented narrow compile_synthesis document action plus existing primitives for advanced/manual cases; no schema migration, direct vault behavior, broad synthesis engine, or source authority change",
     "release_blocking": false,
     "scenario_classifications": [
       {
         "variant": "production",
         "scenario": "compile-synthesis-workflow-action-natural",
         "status": "completed",
-        "failure_classification": "workflow_choreography_gap",
-        "evidence_posture": "compile_synthesis preserved source authority and passed, but natural workflow-action use still required more commands or assistant turns than the low-ceremony UX threshold",
-        "tool_calls": 3,
-        "command_executions": 3,
+        "failure_classification": "none",
+        "evidence_posture": "compile_synthesis preserved source authority, selected the existing target, prevented duplicates, returned provenance/freshness evidence, and reduced workflow ceremony",
+        "tool_calls": 2,
+        "command_executions": 2,
         "assistant_calls": 3,
-        "wall_seconds": 27.68,
+        "wall_seconds": 23.53,
         "prompt_specificity": "natural-user-intent",
         "ux": "completed",
         "brittleness": "normal",
         "retries": 0,
-        "step_count": 3,
-        "workflow_action_first_command_index": 3,
+        "step_count": 2,
+        "workflow_action_first_command_index": 2,
         "workflow_action_call_count": 1,
         "latency": "medium",
-        "guidance_dependence": "high_ceremony_promoted_workflow_action",
+        "guidance_dependence": "low_natural_promoted_workflow_action",
         "safety_pass": "pass",
         "capability_pass": "pass",
-        "ux_quality": "taste_debt",
+        "ux_quality": "workflow_action_acceptable",
         "safety_risks": "none_observed",
         "fixture_preflight": "not_applicable"
       }

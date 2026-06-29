@@ -11,8 +11,8 @@ When doing OpenClerk ADR, POC, eval, promotion, or deferred-capability decision 
 - Prefer extending the natural existing runner action when the input clearly belongs there, instead of declaring the adjacent UX unsupported.
 - Treat "completed but ceremonial" eval passes as possible taste debt when they require high step count, long latency, exact prompt choreography, or surprising clarification turns.
 - Record safety pass, capability pass, and UX quality separately when a report or decision needs to justify defer/reference.
-- When taste debt, defer, keep-as-reference, or another non-promotion outcome still leaves a real capability, ergonomics, safety, auditability, or workflow need, identify whether the evaluated shape failed while the need remains valid. If it does, create or propose follow-up work for candidate-surface comparison before handoff, normally with 2-3 plausible shapes unless the decision documents why only one is viable. The follow-up must compare candidates, choose the best, combine useful behaviors if appropriate, defer or kill the track, or record `none viable yet`.
-- Before closing any ADR, POC, eval, promotion, or deferred-capability decision epic with outcome `keep-as-reference`, `defer`, `more evidence`, `candidate selected`, `none viable yet`, or another non-promotion result, check existing follow-up work in GitHub issues or public docs. If none exists, create or propose the follow-up work before closing the parent or handing off.
+- When taste debt, defer, keep-as-reference, or another non-promotion outcome still leaves a real capability, ergonomics, safety, auditability, or workflow need, identify whether the evaluated shape failed while the need remains valid. If it does, continue iterating on the candidate-surface comparison before handoff when feasible, normally with 2-3 plausible shapes unless the decision documents why only one is viable. The follow-up must compare candidates, choose the best, combine useful behaviors if appropriate, defer or kill the track, or record `none viable yet`.
+- Before closing any ADR, POC, eval, promotion, or deferred-capability decision epic with outcome `keep-as-reference`, `defer`, `more evidence`, `candidate selected`, `none viable yet`, or another non-promotion result, check existing follow-up work in public docs. If none exists and the work cannot be resolved in the current checkpoint, record the remaining comparison need in the decision or handoff instead of opening a new issue unless the maintainer explicitly asks.
 - Do not use taste review to bypass safety or evidence discipline: authority, citations, provenance, freshness, local-first behavior, duplicate handling, runner-only access, approval-before-write, and ADR/POC/eval/promotion decisions still apply.
 
 ## Work Item Completion
@@ -21,7 +21,7 @@ A **work item** is one logical task, story, or other coherent unit of work. **Wh
 
 **MANDATORY WORKFLOW:**
 
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
+1. **Resolve blockers in-thread** - Continue iterating on blockers or remaining work when feasible; record unresolved handoff context instead of opening new issues unless explicitly asked
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close or update the relevant public issue or project item when one exists
 4. **Prepare review** - Run `git status`, summarize changed files and quality gates, and confirm no commit or push has been performed

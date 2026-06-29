@@ -332,6 +332,7 @@ func runMutatingDocumentTask(ctx context.Context, client *runclient.Client, norm
 		}
 		return DocumentTaskResult{
 			CompileSynthesis: &compiled,
+			AgentHandoff:     compiled.AgentHandoff,
 			Summary:          fmt.Sprintf("compiled synthesis %s", compiled.SelectedPath),
 		}, nil
 	case DocumentTaskActionValidationSynthesis:

@@ -892,6 +892,8 @@ func TestRunnerDocumentAndRetrievalJSONRoundTrip(t *testing.T) {
 	if compileResult.CompileSynthesis == nil ||
 		compileResult.CompileSynthesis.WriteStatus != "created" ||
 		compileResult.CompileSynthesis.AgentHandoff == nil ||
+		compileResult.AgentHandoff == nil ||
+		!strings.Contains(compileResult.CompileSynthesis.FinalAnswer, "duplicate_status=no_duplicate_created") ||
 		!strings.Contains(compileResult.CompileSynthesis.AgentHandoff.AnswerSummary, "compile_synthesis created synthesis/runner-workflow.md") {
 		t.Fatalf("compile synthesis result = %+v", compileResult)
 	}

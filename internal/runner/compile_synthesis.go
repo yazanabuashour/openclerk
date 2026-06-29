@@ -26,6 +26,15 @@ func runCompileSynthesis(ctx context.Context, client *runclient.Client, input Co
 	if len(matches) > 1 {
 		validationBoundaries := compileSynthesisValidationBoundaries()
 		authorityLimits := compileSynthesisAuthorityLimits()
+		handoff := compileSynthesisHandoff(
+			input.Path,
+			input.SourceRefs,
+			"blocked duplicate synthesis target; no write applied",
+			[]string{"duplicate_status=duplicate_target_path_detected"},
+			validationBoundaries,
+			authorityLimits,
+			"required: resolve duplicate synthesis target before retrying compile_synthesis",
+		)
 		return CompileSynthesisResult{
 			SelectedPath:         input.Path,
 			SourceRefs:           input.SourceRefs,
@@ -34,15 +43,8 @@ func runCompileSynthesis(ctx context.Context, client *runclient.Client, input Co
 			WriteStatus:          "skipped",
 			ValidationBoundaries: validationBoundaries,
 			AuthorityLimits:      authorityLimits,
-			AgentHandoff: compileSynthesisHandoff(
-				input.Path,
-				input.SourceRefs,
-				"blocked duplicate synthesis target; no write applied",
-				[]string{"duplicate_status=duplicate_target_path_detected"},
-				validationBoundaries,
-				authorityLimits,
-				"required: resolve duplicate synthesis target before retrying compile_synthesis",
-			),
+			FinalAnswer:          compileSynthesisFinalAnswer(handoff),
+			AgentHandoff:         handoff,
 		}, nil
 	}
 
@@ -88,6 +90,22 @@ func runCompileSynthesis(ctx context.Context, client *runclient.Client, input Co
 	validationBoundaries := compileSynthesisValidationBoundaries()
 	authorityLimits := compileSynthesisAuthorityLimits()
 	projectionSummary := projectionFreshnessSummary(projectionFreshness)
+	handoff := compileSynthesisHandoff(
+		document.Path,
+		input.SourceRefs,
+		fmt.Sprintf("compile_synthesis %s %s with %s; %s", writeStatus, document.Path, strings.Join(input.SourceRefs, ", "), projectionSummary),
+		[]string{
+			"selected_path=" + document.Path,
+			"source_refs=" + strings.Join(input.SourceRefs, ", "),
+			"duplicate_status=" + duplicateStatus,
+			"provenance_refs=" + strings.Join(provenanceRefs, ", "),
+			"projection_freshness=" + projectionSummary,
+			"write_status=" + writeStatus,
+		},
+		validationBoundaries,
+		authorityLimits,
+		"not required for routine answer; use primitives only for explicit follow-up inspection or runner rejection repair",
+	)
 	return CompileSynthesisResult{
 		SelectedPath:         document.Path,
 		DocumentID:           document.DocID,
@@ -101,22 +119,8 @@ func runCompileSynthesis(ctx context.Context, client *runclient.Client, input Co
 		WriteStatus:          writeStatus,
 		ValidationBoundaries: validationBoundaries,
 		AuthorityLimits:      authorityLimits,
-		AgentHandoff: compileSynthesisHandoff(
-			document.Path,
-			input.SourceRefs,
-			fmt.Sprintf("compile_synthesis %s %s with %s; %s", writeStatus, document.Path, strings.Join(input.SourceRefs, ", "), projectionSummary),
-			[]string{
-				"selected_path=" + document.Path,
-				"source_refs=" + strings.Join(input.SourceRefs, ", "),
-				"duplicate_status=" + duplicateStatus,
-				"provenance_refs=" + strings.Join(provenanceRefs, ", "),
-				"projection_freshness=" + projectionSummary,
-				"write_status=" + writeStatus,
-			},
-			validationBoundaries,
-			authorityLimits,
-			"not required for routine answer; use primitives only for explicit follow-up inspection or runner rejection repair",
-		),
+		FinalAnswer:          compileSynthesisFinalAnswer(handoff),
+		AgentHandoff:         handoff,
 	}, nil
 }
 
@@ -395,6 +399,19 @@ func compileSynthesisHandoff(path string, sourceRefs []string, answerSummary str
 		AuthorityLimits:             authorityLimits,
 		FollowUpPrimitiveInspection: followUp,
 	}
+}
+
+func compileSynthesisFinalAnswer(handoff *AgentHandoff) string {
+	if handoff == nil {
+		return ""
+	}
+	return fmt.Sprintf(
+		"%s; evidence: %s; validation boundaries: %s; authority limits: %s",
+		strings.TrimSpace(handoff.AnswerSummary),
+		strings.Join(handoff.Evidence, "; "),
+		strings.TrimSpace(handoff.ValidationBoundaries),
+		strings.TrimSpace(handoff.AuthorityLimits),
+	)
 }
 
 func stringSliceContains(values []string, expected string) bool {

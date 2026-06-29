@@ -1559,6 +1559,10 @@ Checked current source evidence.
 		len(created.CompileSynthesis.SourceEvidence) != 2 ||
 		len(created.CompileSynthesis.ProjectionFreshness) == 0 ||
 		created.CompileSynthesis.AgentHandoff == nil ||
+		created.AgentHandoff == nil ||
+		!strings.Contains(created.CompileSynthesis.FinalAnswer, "duplicate_status=no_duplicate_created") ||
+		!strings.Contains(created.CompileSynthesis.FinalAnswer, "validation boundaries") ||
+		!strings.Contains(created.CompileSynthesis.FinalAnswer, "authority limits") ||
 		!strings.Contains(created.CompileSynthesis.AgentHandoff.AnswerSummary, "compile_synthesis created synthesis/workflow.md") ||
 		!strings.Contains(created.CompileSynthesis.AgentHandoff.FollowUpPrimitiveInspection, "not required") ||
 		!strings.Contains(created.CompileSynthesis.ValidationBoundaries, "no broad repo search") {

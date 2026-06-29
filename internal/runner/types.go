@@ -848,6 +848,7 @@ type CompileSynthesisResult struct {
 	WriteStatus          string            `json:"write_status"`
 	ValidationBoundaries string            `json:"validation_boundaries"`
 	AuthorityLimits      string            `json:"authority_limits"`
+	FinalAnswer          string            `json:"final_answer,omitempty"`
 	AgentHandoff         *AgentHandoff     `json:"agent_handoff,omitempty"`
 }
 

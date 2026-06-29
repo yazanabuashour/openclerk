@@ -113,7 +113,7 @@ func selectWorkflowGuideCandidate(intent string) workflowGuideSelection {
 			RequestShape:   `{"action":"compile_synthesis","synthesis":{"path":"synthesis/example.md","title":"Example","source_refs":["sources/a.md"],"body_facts":["..."],"mode":"create_or_update"}}`,
 			UseWhen:        "use for approved source-linked synthesis create/update",
 			DoNotUseFor:    []string{"uncited claims", "duplicate synthesis creation", "unapproved durable writes"},
-			HandoffSummary: "Use document compile_synthesis for approved source-linked synthesis, then answer from compile_synthesis.agent_handoff.",
+			HandoffSummary: "Use document compile_synthesis for approved source-linked synthesis, then answer from final_answer, agent_handoff, or compile_synthesis.agent_handoff.",
 		}
 	case containsAny(normalized, "git", "checkpoint", "version history", "storage history", "local history"):
 		return workflowGuideSelection{
