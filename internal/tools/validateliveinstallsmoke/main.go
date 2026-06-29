@@ -228,17 +228,15 @@ func prepareReleaseFixture(ctx context.Context, smoke *smokeContext) error {
 	if err := os.MkdirAll(binDir, 0o755); err != nil {
 		return err
 	}
-	cmd := exec.CommandContext(ctx, "go", "build", "-trimpath", "-ldflags=-s -w -X main.version="+smokeVersion, "-o", filepath.Join(binDir, "openclerk"), "./cmd/openclerk")
-	cmd.Dir = smoke.repoRoot
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("build smoke openclerk binary: %w: %s", err, strings.TrimSpace(string(output)))
+	if err := runSetupCommand(ctx, smoke.repoRoot, "build smoke openclerk binary", "go", "build", "-trimpath", "-buildvcs=false", "-ldflags=-s -w -X main.version="+smokeVersion, "-o", filepath.Join(binDir, "openclerk"), "./cmd/openclerk"); err != nil {
+		return err
+	}
+	if err := runSetupCommand(ctx, smoke.repoRoot, "build smoke semantic-retrieval-adapter binary", "go", "build", "-trimpath", "-buildvcs=false", "-ldflags=-s -w -X main.version="+smokeVersion, "-o", filepath.Join(smoke.toolsDir, "semantic-retrieval-adapter"), "./modules/semantic-retrieval-adapter"); err != nil {
+		return err
 	}
 	archive := name + ".tar.gz"
-	tarCmd := exec.CommandContext(ctx, "tar", "-C", smoke.distDir, "-czf", filepath.Join(smoke.distDir, archive), name)
-	output, err = tarCmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("archive smoke openclerk binary: %w: %s", err, strings.TrimSpace(string(output)))
+	if err := runSetupCommand(ctx, smoke.repoRoot, "archive smoke openclerk binary", "tar", "-C", smoke.distDir, "-czf", filepath.Join(smoke.distDir, archive), name); err != nil {
+		return err
 	}
 	if err := os.RemoveAll(binDir); err != nil {
 		return err
@@ -261,7 +259,20 @@ func prepareReleaseFixture(ctx context.Context, smoke *smokeContext) error {
 	}
 	smoke.archive = archive
 	smoke.checksum = checksum
-	return writeCurlShim(smoke)
+	if err := writeCurlShim(smoke); err != nil {
+		return err
+	}
+	return writeGHShim(smoke)
+}
+
+func runSetupCommand(ctx context.Context, dir string, label string, name string, args ...string) error {
+	cmd := exec.CommandContext(ctx, name, args...)
+	cmd.Dir = dir
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s: %w: %s", label, err, strings.TrimSpace(string(output)))
+	}
+	return nil
 }
 
 func prepareSmokeEnvironment(smoke *smokeContext) error {
@@ -368,7 +379,7 @@ func runModuleSmoke(ctx context.Context, smoke smokeContext) (moduleSmoke, error
 	}
 	if installResult.Module.Provider != "ollama" ||
 		installResult.Module.ManifestPath != "modules/ollama-embeddings/module.json" ||
-		installResult.Module.Command != "semantic-retrieval-adapter" ||
+		filepath.Base(installResult.Module.Command) != "semantic-retrieval-adapter" ||
 		!installResult.Module.Enabled ||
 		installResult.Module.ProviderConfig["embedding_model"] != "embeddinggemma" ||
 		installResult.Module.ProviderConfig["ollama_url"] != "http://localhost:11434" ||
@@ -594,6 +605,23 @@ case "$url" in
 esac
 `, smoke.distDir, smokeVersion)
 	return os.WriteFile(filepath.Join(smoke.toolsDir, "curl"), []byte(script), 0o755)
+}
+
+func writeGHShim(smoke *smokeContext) error {
+	script := fmt.Sprintf(`#!/bin/sh
+set -eu
+[ "$1" = "attestation" ] && [ "$2" = "verify" ] || { echo "gh shim unsupported command" >&2; exit 2; }
+case "$3" in
+  %q|%q)
+    exit 0
+    ;;
+  *)
+    echo "gh shim refusing unexpected attestation asset: $3" >&2
+    exit 2
+    ;;
+esac
+`, smoke.archive, smoke.checksum)
+	return os.WriteFile(filepath.Join(smoke.toolsDir, "gh"), []byte(script), 0o755)
 }
 
 func copyDir(src string, dst string) error {

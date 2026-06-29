@@ -423,7 +423,7 @@ func buildOpenClerkRunner(repoDir string, runDir string, paths evalPaths, cache 
 	if err := os.MkdirAll(binDir, 0o755); err != nil {
 		return err
 	}
-	cmd := exec.Command("go", "build", "-o", filepath.Join(binDir, "openclerk"), "./cmd/openclerk")
+	cmd := exec.Command("go", "build", "-buildvcs=false", "-o", filepath.Join(binDir, "openclerk"), "./cmd/openclerk")
 	cmd.Dir = repoDir
 	cmd.Env = evalEnv(runDir, paths, cache)
 	output, err := cmd.CombinedOutput()

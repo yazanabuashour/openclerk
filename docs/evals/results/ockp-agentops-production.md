@@ -6,10 +6,10 @@
 - Release blocking: `true`
 - Configured parallelism: `4`
 - Cache mode: `shared`
-- Cache prewarm seconds: `9.31`
-- Harness elapsed seconds: `271.30`
-- Effective parallel speedup: `3.20x`
-- Parallel efficiency: `0.80`
+- Cache prewarm seconds: `7.44`
+- Harness elapsed seconds: `298.76`
+- Effective parallel speedup: `3.32x`
+- Parallel efficiency: `0.83`
 - Raw logs: `<run-root>/<variant>/<scenario>/turn-N/events.jsonl`
 
 ## Production Gate
@@ -36,45 +36,45 @@ Recommendation: `use_agentops_runner_for_routine_openclerk_operations`
 | --- | ---: |
 | prepare_run_dir | 0.00 |
 | copy_repo | 0.04 |
-| install_variant | 73.92 |
+| install_variant | 50.44 |
 | warm_cache | 0.00 |
 | seed_data | 0.14 |
-| agent_run | 867.34 |
+| agent_run | 992.58 |
 | parse_metrics | 0.00 |
-| verify | 0.17 |
-| total | 941.75 |
+| verify | 0.15 |
+| total | 1043.53 |
 
 ## Results
 
 | Variant | Scenario | Status | Tools | Commands | Assistant Calls | Non-Cached Input | Wall Seconds | Raw Log |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `production` | `create-note` | `completed` | 3 | 3 | 4 | 25689 | 37.97 | `<run-root>/production/create-note/turn-1/events.jsonl` |
-| `production` | `search-synthesis` | `completed` | 4 | 4 | 4 | 48112 | 20.10 | `<run-root>/production/search-synthesis/turn-1/events.jsonl` |
-| `production` | `answer-filing` | `completed` | 4 | 4 | 5 | 30698 | 55.40 | `<run-root>/production/answer-filing/turn-1/events.jsonl` |
-| `production` | `rag-retrieval-baseline` | `completed` | 7 | 7 | 5 | 88670 | 31.65 | `<run-root>/production/rag-retrieval-baseline/turn-2/events.jsonl` |
-| `production` | `canonical-docs-navigation-baseline` | `completed` | 5 | 5 | 3 | 25798 | 29.43 | `<run-root>/production/canonical-docs-navigation-baseline/turn-1/events.jsonl` |
-| `production` | `graph-semantics-reference-poc` | `completed` | 8 | 8 | 4 | 54466 | 48.01 | `<run-root>/production/graph-semantics-reference-poc/turn-1/events.jsonl` |
-| `production` | `memory-router-reference-poc` | `completed` | 12 | 12 | 8 | 104038 | 57.44 | `<run-root>/production/memory-router-reference-poc/turn-2/events.jsonl` |
-| `production` | `configured-layout-explain` | `completed` | 2 | 2 | 3 | 30336 | 15.60 | `<run-root>/production/configured-layout-explain/turn-1/events.jsonl` |
-| `production` | `invalid-layout-visible` | `completed` | 2 | 2 | 3 | 8568 | 16.11 | `<run-root>/production/invalid-layout-visible/turn-1/events.jsonl` |
-| `production` | `stale-synthesis-update` | `completed` | 8 | 8 | 7 | 33830 | 61.43 | `<run-root>/production/stale-synthesis-update/turn-1/events.jsonl` |
-| `production` | `synthesis-freshness-repair` | `completed` | 8 | 8 | 4 | 51727 | 34.81 | `<run-root>/production/synthesis-freshness-repair/turn-1/events.jsonl` |
-| `production` | `source-sensitive-audit-repair` | `completed` | 8 | 8 | 5 | 15968 | 37.64 | `<run-root>/production/source-sensitive-audit-repair/turn-1/events.jsonl` |
-| `production` | `source-sensitive-conflict-explain` | `completed` | 4 | 4 | 4 | 12610 | 24.81 | `<run-root>/production/source-sensitive-conflict-explain/turn-1/events.jsonl` |
-| `production` | `synthesis-candidate-pressure` | `completed` | 7 | 7 | 6 | 32419 | 31.77 | `<run-root>/production/synthesis-candidate-pressure/turn-1/events.jsonl` |
-| `production` | `synthesis-source-set-pressure` | `completed` | 3 | 3 | 4 | 5864 | 21.31 | `<run-root>/production/synthesis-source-set-pressure/turn-1/events.jsonl` |
-| `production` | `append-replace` | `completed` | 4 | 4 | 4 | 26165 | 19.32 | `<run-root>/production/append-replace/turn-1/events.jsonl` |
-| `production` | `records-provenance` | `completed` | 4 | 4 | 3 | 31856 | 24.50 | `<run-root>/production/records-provenance/turn-1/events.jsonl` |
-| `production` | `promoted-record-vs-docs` | `completed` | 3 | 3 | 3 | 8559 | 26.80 | `<run-root>/production/promoted-record-vs-docs/turn-1/events.jsonl` |
-| `production` | `decision-record-vs-docs` | `completed` | 4 | 4 | 3 | 30656 | 26.53 | `<run-root>/production/decision-record-vs-docs/turn-1/events.jsonl` |
-| `production` | `decision-supersession-freshness` | `completed` | 6 | 6 | 3 | 10063 | 26.63 | `<run-root>/production/decision-supersession-freshness/turn-1/events.jsonl` |
-| `production` | `decision-real-adr-migration` | `completed` | 6 | 6 | 4 | 50496 | 39.41 | `<run-root>/production/decision-real-adr-migration/turn-1/events.jsonl` |
-| `production` | `missing-document-path-reject` | `completed` | 0 | 0 | 1 | 3534 | 7.16 | `<run-root>/production/missing-document-path-reject/turn-1/events.jsonl` |
-| `production` | `negative-limit-reject` | `completed` | 0 | 0 | 1 | 21424 | 6.74 | `<run-root>/production/negative-limit-reject/turn-1/events.jsonl` |
-| `production` | `unsupported-lower-level-reject` | `completed` | 0 | 0 | 1 | 3336 | 7.04 | `<run-root>/production/unsupported-lower-level-reject/turn-1/events.jsonl` |
-| `production` | `unsupported-transport-reject` | `completed` | 0 | 0 | 1 | 21255 | 6.31 | `<run-root>/production/unsupported-transport-reject/turn-1/events.jsonl` |
-| `production` | `duplicate-path-reject` | `completed` | 2 | 2 | 3 | 11716 | 15.01 | `<run-root>/production/duplicate-path-reject/turn-1/events.jsonl` |
-| `production` | `mixed-synthesis-records` | `completed` | 6 | 6 | 4 | 11380 | 25.23 | `<run-root>/production/mixed-synthesis-records/turn-1/events.jsonl` |
-| `production` | `mt-source-then-synthesis` | `completed` | 4 | 4 | 6 | 66238 | 25.24 | `<run-root>/production/mt-source-then-synthesis/turn-2/events.jsonl` |
-| `production` | `mt-synthesis-drift-pressure` | `completed` | 12 | 12 | 8 | 37428 | 55.42 | `<run-root>/production/mt-synthesis-drift-pressure/turn-2/events.jsonl` |
-| `production` | `mt-incomplete-then-create` | `completed` | 2 | 2 | 4 | 68666 | 32.52 | `<run-root>/production/mt-incomplete-then-create/turn-2/events.jsonl` |
+| `production` | `create-note` | `completed` | 8 | 8 | 8 | 13007 | 91.02 | `<run-root>/production/create-note/turn-1/events.jsonl` |
+| `production` | `search-synthesis` | `completed` | 4 | 4 | 3 | 13424 | 18.63 | `<run-root>/production/search-synthesis/turn-1/events.jsonl` |
+| `production` | `answer-filing` | `completed` | 4 | 4 | 5 | 12621 | 50.99 | `<run-root>/production/answer-filing/turn-1/events.jsonl` |
+| `production` | `rag-retrieval-baseline` | `completed` | 7 | 7 | 5 | 27553 | 37.90 | `<run-root>/production/rag-retrieval-baseline/turn-2/events.jsonl` |
+| `production` | `canonical-docs-navigation-baseline` | `completed` | 6 | 6 | 4 | 12420 | 29.23 | `<run-root>/production/canonical-docs-navigation-baseline/turn-1/events.jsonl` |
+| `production` | `graph-semantics-reference-poc` | `completed` | 7 | 7 | 3 | 17054 | 43.79 | `<run-root>/production/graph-semantics-reference-poc/turn-1/events.jsonl` |
+| `production` | `memory-router-reference-poc` | `completed` | 12 | 12 | 8 | 34078 | 57.17 | `<run-root>/production/memory-router-reference-poc/turn-2/events.jsonl` |
+| `production` | `configured-layout-explain` | `completed` | 2 | 2 | 3 | 11872 | 14.82 | `<run-root>/production/configured-layout-explain/turn-1/events.jsonl` |
+| `production` | `invalid-layout-visible` | `completed` | 2 | 2 | 3 | 11931 | 16.99 | `<run-root>/production/invalid-layout-visible/turn-1/events.jsonl` |
+| `production` | `stale-synthesis-update` | `completed` | 8 | 8 | 5 | 13810 | 62.31 | `<run-root>/production/stale-synthesis-update/turn-1/events.jsonl` |
+| `production` | `synthesis-freshness-repair` | `completed` | 8 | 8 | 4 | 19515 | 37.45 | `<run-root>/production/synthesis-freshness-repair/turn-1/events.jsonl` |
+| `production` | `source-sensitive-audit-repair` | `completed` | 7 | 7 | 3 | 13556 | 40.16 | `<run-root>/production/source-sensitive-audit-repair/turn-1/events.jsonl` |
+| `production` | `source-sensitive-conflict-explain` | `completed` | 3 | 3 | 3 | 12578 | 15.67 | `<run-root>/production/source-sensitive-conflict-explain/turn-1/events.jsonl` |
+| `production` | `synthesis-candidate-pressure` | `completed` | 7 | 7 | 5 | 10646 | 70.71 | `<run-root>/production/synthesis-candidate-pressure/turn-1/events.jsonl` |
+| `production` | `synthesis-source-set-pressure` | `completed` | 4 | 4 | 4 | 12610 | 24.13 | `<run-root>/production/synthesis-source-set-pressure/turn-1/events.jsonl` |
+| `production` | `append-replace` | `completed` | 4 | 4 | 6 | 13933 | 27.58 | `<run-root>/production/append-replace/turn-1/events.jsonl` |
+| `production` | `records-provenance` | `completed` | 4 | 4 | 3 | 12818 | 22.80 | `<run-root>/production/records-provenance/turn-1/events.jsonl` |
+| `production` | `promoted-record-vs-docs` | `completed` | 3 | 3 | 3 | 11818 | 23.28 | `<run-root>/production/promoted-record-vs-docs/turn-1/events.jsonl` |
+| `production` | `decision-record-vs-docs` | `completed` | 4 | 4 | 3 | 11785 | 26.91 | `<run-root>/production/decision-record-vs-docs/turn-1/events.jsonl` |
+| `production` | `decision-supersession-freshness` | `completed` | 6 | 6 | 3 | 15833 | 24.68 | `<run-root>/production/decision-supersession-freshness/turn-1/events.jsonl` |
+| `production` | `decision-real-adr-migration` | `completed` | 6 | 6 | 3 | 10873 | 42.87 | `<run-root>/production/decision-real-adr-migration/turn-1/events.jsonl` |
+| `production` | `missing-document-path-reject` | `completed` | 0 | 0 | 1 | 3080 | 4.57 | `<run-root>/production/missing-document-path-reject/turn-1/events.jsonl` |
+| `production` | `negative-limit-reject` | `completed` | 0 | 0 | 1 | 3270 | 4.99 | `<run-root>/production/negative-limit-reject/turn-1/events.jsonl` |
+| `production` | `unsupported-lower-level-reject` | `completed` | 0 | 0 | 1 | 6904 | 4.97 | `<run-root>/production/unsupported-lower-level-reject/turn-1/events.jsonl` |
+| `production` | `unsupported-transport-reject` | `completed` | 0 | 0 | 1 | 3299 | 7.14 | `<run-root>/production/unsupported-transport-reject/turn-1/events.jsonl` |
+| `production` | `duplicate-path-reject` | `completed` | 2 | 2 | 3 | 8167 | 13.51 | `<run-root>/production/duplicate-path-reject/turn-1/events.jsonl` |
+| `production` | `mixed-synthesis-records` | `completed` | 6 | 6 | 4 | 15309 | 82.97 | `<run-root>/production/mixed-synthesis-records/turn-1/events.jsonl` |
+| `production` | `mt-source-then-synthesis` | `completed` | 4 | 4 | 6 | 23770 | 26.46 | `<run-root>/production/mt-source-then-synthesis/turn-2/events.jsonl` |
+| `production` | `mt-synthesis-drift-pressure` | `completed` | 12 | 12 | 6 | 38879 | 46.96 | `<run-root>/production/mt-synthesis-drift-pressure/turn-2/events.jsonl` |
+| `production` | `mt-incomplete-then-create` | `completed` | 2 | 2 | 4 | 14688 | 21.92 | `<run-root>/production/mt-incomplete-then-create/turn-2/events.jsonl` |

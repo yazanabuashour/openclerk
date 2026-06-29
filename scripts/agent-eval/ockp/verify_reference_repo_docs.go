@@ -319,7 +319,7 @@ func verifyRepoDocsReleaseReadiness(ctx context.Context, paths evalPaths, finalM
 		Action: runner.DocumentTaskActionList,
 		List: runner.DocumentListOptions{
 			Tag:   repoDocsReleaseTag,
-			Limit: 20,
+			Limit: 100,
 		},
 	})
 	if err != nil {
@@ -395,7 +395,7 @@ func verifyRepoDocsTagFilter(ctx context.Context, paths evalPaths, finalMessage 
 	}
 	list, err := runner.RunDocumentTask(ctx, cfg, runner.DocumentTaskRequest{
 		Action: runner.DocumentTaskActionList,
-		List:   runner.DocumentListOptions{Tag: repoDocsReleaseTag, Limit: 20},
+		List:   runner.DocumentListOptions{Tag: repoDocsReleaseTag, Limit: 100},
 	})
 	if err != nil {
 		return verificationResult{}, err
