@@ -10,7 +10,7 @@ correctness_log="$review_dir/correctness-review.log"
 complexity_log="$review_dir/avoidable-complexity-review.log"
 complexity_msg="$review_dir/avoidable-complexity-review.md"
 
-complexity_prompt='Review the current uncommitted changes for avoidable complexity only. Do not modify files. Inspect staged, unstaged, and untracked changes. Report only actionable deletion or simplification findings with file/line references. Use one line per finding: <file>:L<line>: <tag> <what to cut>. <replacement>. Tags: delete, stdlib, native, yagni, shrink. End with net: -<N> lines possible. If there are no findings, say "Lean already. Ship." and stop. Do not report correctness, security, performance, provenance, auditability, or necessary-test issues; leave those to the normal review. Do not suggest removing safety, correctness, provenance, auditability, or necessary tests.'
+complexity_prompt='Review the current uncommitted changes for avoidable complexity. Follow The Rule of Three, YAGNI principles, and one-liner solutions. Report only actionable simplifications with file/line references; if none, say so.'
 
 printf 'Review output: %s\n' "$review_dir"
 
