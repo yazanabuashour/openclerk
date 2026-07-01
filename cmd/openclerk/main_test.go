@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -168,12 +169,12 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 		{
 			name: "demo",
 			args: []string{"demo", "--help"},
-			want: []string{"openclerk demo <init|ask>", "stale projection freshness", "compile_synthesis repair request"},
+			want: []string{"openclerk demo <init|ask>", "stale projection freshness", "compile_synthesis repair request", "Knowledge pack templates", "codebase-decisions"},
 		},
 		{
 			name: "demo init",
 			args: []string{"demo", "init", "--help"},
-			want: []string{"openclerk demo init", "empty or already marked"},
+			want: []string{"openclerk demo init", "--template", "empty or already marked", "agent-session-to-docs"},
 		},
 		{
 			name: "demo ask",
@@ -466,6 +467,121 @@ func TestDemoInitAndAskJSON(t *testing.T) {
 		len(askResult.RepairRequest.Synthesis.SourceRefs) != 1 ||
 		askResult.RepairRequest.Synthesis.SourceRefs[0] != "sources/plan.md" {
 		t.Fatalf("demo ask result = %+v", askResult)
+	}
+}
+
+func TestDemoInitKnowledgePackTemplates(t *testing.T) {
+	t.Parallel()
+
+	for _, template := range availableDemoTemplates() {
+		template := template
+		t.Run(template, func(t *testing.T) {
+			t.Parallel()
+
+			root := filepath.Join(t.TempDir(), "openclerk-demo")
+			var initResult demoResult
+			code, stderr := runJSON(t, []string{"demo", "init", "--root", root, "--template", template}, "", &initResult)
+			if code != 0 {
+				t.Fatalf("demo init template exit = %d stderr=%s", code, stderr)
+			}
+			if initResult.SchemaVersion != "openclerk-demo.v1" ||
+				initResult.Action != "init" ||
+				initResult.Template != template ||
+				initResult.TemplateDocumentCount == 0 ||
+				len(initResult.Next) == 0 {
+				t.Fatalf("template init result = %+v", initResult)
+			}
+			if _, err := os.Stat(filepath.Join(root, demoMarkerFile)); err != nil {
+				t.Fatalf("demo marker missing: %v", err)
+			}
+
+			var inspect inspectEnvelope
+			code, stderr = runJSON(t, []string{"inspect", "--db", initResult.DatabasePath}, "", &inspect)
+			if code != 0 {
+				t.Fatalf("inspect template exit = %d stderr=%s", code, stderr)
+			}
+			if inspect.Result.Storage.Status != "ready" ||
+				inspect.Result.Vault.Status != "ready" ||
+				inspect.Result.Vault.Documents.KnownCount != initResult.TemplateDocumentCount {
+				t.Fatalf("inspect template result = %+v", inspect)
+			}
+
+			var search runner.RetrievalTaskResult
+			code, stderr = runJSON(t, []string{"retrieval", "--db", initResult.DatabasePath}, `{"action":"search","search":{"text":"Summary","limit":5}}`, &search)
+			if code != 0 {
+				t.Fatalf("search template exit = %d stderr=%s", code, stderr)
+			}
+			if search.Search == nil || len(search.Search.Hits) == 0 {
+				t.Fatalf("search template result = %+v", search)
+			}
+
+			if template == "stale-runbook" {
+				var document runner.DocumentTaskResult
+				code, stderr = runJSON(t, []string{"document", "--db", initResult.DatabasePath}, `{"action":"get_document","path":"synthesis/deploy-runbook.md"}`, &document)
+				if code != 0 {
+					t.Fatalf("get stale runbook exit = %d stderr=%s", code, stderr)
+				}
+				if document.Document == nil {
+					t.Fatalf("get stale runbook result = %+v", document)
+				}
+				var projections runner.RetrievalTaskResult
+				code, stderr = runJSON(t, []string{"retrieval", "--db", initResult.DatabasePath}, fmt.Sprintf(`{"action":"projection_states","projection":{"projection":"synthesis","ref_kind":"document","ref_id":%q,"limit":10}}`, document.Document.DocID), &projections)
+				if code != 0 {
+					t.Fatalf("projection stale runbook exit = %d stderr=%s", code, stderr)
+				}
+				if projections.Projections == nil ||
+					len(projections.Projections.Projections) != 1 ||
+					projections.Projections.Projections[0].Freshness != "stale" ||
+					projections.Projections.Projections[0].Details["stale_source_refs"] != "sources/deploy-source.md" {
+					t.Fatalf("stale runbook projections = %+v", projections)
+				}
+			}
+		})
+	}
+}
+
+func TestDemoInitUnknownTemplateListsAvailableTemplates(t *testing.T) {
+	t.Parallel()
+
+	var result demoResult
+	code, stderr := runJSON(t, []string{"demo", "init", "--root", filepath.Join(t.TempDir(), "demo"), "--template", "missing-template"}, "", &result)
+	if code != 2 ||
+		!strings.Contains(stderr, "unknown demo template") ||
+		!strings.Contains(stderr, "codebase-decisions") ||
+		!strings.Contains(stderr, "agent-session-to-docs") {
+		t.Fatalf("unknown template exit=%d stderr=%s", code, stderr)
+	}
+}
+
+func TestDemoInitTemplateDoesNotTouchConfiguredVault(t *testing.T) {
+	configRoot := t.TempDir()
+	configuredDB := filepath.Join(configRoot, "data", "openclerk.sqlite")
+	configuredVault := filepath.Join(configRoot, "real-vault")
+	if err := os.MkdirAll(configuredVault, 0o755); err != nil {
+		t.Fatalf("create configured vault: %v", err)
+	}
+	realPath := filepath.Join(configuredVault, "real.md")
+	if err := os.WriteFile(realPath, []byte("# Real Vault\n"), 0o644); err != nil {
+		t.Fatalf("write configured vault: %v", err)
+	}
+	var initConfigured struct{}
+	code, stderr := runJSON(t, []string{"init", "--db", configuredDB, "--vault-root", configuredVault}, "", &initConfigured)
+	if code != 0 {
+		t.Fatalf("init configured vault exit=%d stderr=%s", code, stderr)
+	}
+	t.Setenv("OPENCLERK_DATABASE_PATH", configuredDB)
+
+	demoRoot := filepath.Join(t.TempDir(), "demo")
+	var initResult demoResult
+	code, stderr = runJSON(t, []string{"demo", "init", "--root", demoRoot, "--template", "research-vault"}, "", &initResult)
+	if code != 0 {
+		t.Fatalf("demo template exit=%d stderr=%s", code, stderr)
+	}
+	if initResult.VaultRoot == configuredVault {
+		t.Fatalf("demo reused configured vault: %+v", initResult)
+	}
+	if data, err := os.ReadFile(realPath); err != nil || string(data) != "# Real Vault\n" {
+		t.Fatalf("configured vault changed: data=%q err=%v", string(data), err)
 	}
 }
 

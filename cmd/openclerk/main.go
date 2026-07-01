@@ -560,20 +560,22 @@ func runClerkContextPack(args []string, stdout io.Writer, stderr io.Writer) int 
 }
 
 type demoResult struct {
-	SchemaVersion       string             `json:"schema_version"`
-	Action              string             `json:"action"`
-	Question            string             `json:"question,omitempty"`
-	Summary             string             `json:"summary"`
-	DemoRoot            string             `json:"demo_root"`
-	DatabasePath        string             `json:"database_path"`
-	VaultRoot           string             `json:"vault_root"`
-	SourcePath          string             `json:"source_path,omitempty"`
-	SynthesisPath       string             `json:"synthesis_path,omitempty"`
-	SynthesisDocID      string             `json:"synthesis_doc_id,omitempty"`
-	ProjectionFreshness []demoProjection   `json:"projection_freshness,omitempty"`
-	Citations           []demoCitation     `json:"citations,omitempty"`
-	RepairRequest       *demoRepairRequest `json:"repair_request,omitempty"`
-	Next                []string           `json:"next,omitempty"`
+	SchemaVersion         string             `json:"schema_version"`
+	Action                string             `json:"action"`
+	Template              string             `json:"template,omitempty"`
+	Question              string             `json:"question,omitempty"`
+	Summary               string             `json:"summary"`
+	DemoRoot              string             `json:"demo_root"`
+	DatabasePath          string             `json:"database_path"`
+	VaultRoot             string             `json:"vault_root"`
+	TemplateDocumentCount int                `json:"template_document_count,omitempty"`
+	SourcePath            string             `json:"source_path,omitempty"`
+	SynthesisPath         string             `json:"synthesis_path,omitempty"`
+	SynthesisDocID        string             `json:"synthesis_doc_id,omitempty"`
+	ProjectionFreshness   []demoProjection   `json:"projection_freshness,omitempty"`
+	Citations             []demoCitation     `json:"citations,omitempty"`
+	RepairRequest         *demoRepairRequest `json:"repair_request,omitempty"`
+	Next                  []string           `json:"next,omitempty"`
 }
 
 type demoProjection struct {
@@ -617,11 +619,19 @@ func runDemoInit(args []string, stdout io.Writer, stderr io.Writer) int {
 		demoInitUsage(stdout)
 		return 0
 	}
-	root, _, ok := parseDemoConfig("init", args, stderr)
+	root, template, ok := parseDemoInitConfig(args, stderr)
 	if !ok {
 		return 2
 	}
-	result, err := seedDemo(context.Background(), root)
+	var (
+		result demoResult
+		err    error
+	)
+	if template == "" {
+		result, err = seedDemo(context.Background(), root)
+	} else {
+		result, err = seedDemoTemplate(context.Background(), root, template)
+	}
 	if err != nil {
 		_, _ = fmt.Fprintf(stderr, "run demo init: %v\n", err)
 		return 1
@@ -675,6 +685,37 @@ func parseDemoConfig(name string, args []string, stderr io.Writer) (string, []st
 		return "", nil, false
 	}
 	return absRoot, fs.Args(), true
+}
+
+func parseDemoInitConfig(args []string, stderr io.Writer) (string, string, bool) {
+	fs := flag.NewFlagSet("openclerk demo init", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	root := fs.String("root", defaultDemoRoot(), "isolated demo root")
+	template := fs.String("template", "", "optional example knowledge pack template")
+	if err := fs.Parse(args); err != nil {
+		return "", "", false
+	}
+	if fs.NArg() != 0 {
+		_, _ = fmt.Fprintf(stderr, "unexpected positional arguments: %v\n", fs.Args())
+		return "", "", false
+	}
+	if strings.TrimSpace(*root) == "" {
+		_, _ = fmt.Fprintln(stderr, "demo root is required")
+		return "", "", false
+	}
+	normalizedTemplate := strings.TrimSpace(*template)
+	if normalizedTemplate != "" {
+		if _, ok := demoKnowledgePackTemplates[normalizedTemplate]; !ok {
+			_, _ = fmt.Fprintf(stderr, "unknown demo template %q; available templates: %s\n", normalizedTemplate, strings.Join(availableDemoTemplates(), ", "))
+			return "", "", false
+		}
+	}
+	absRoot, err := filepath.Abs(*root)
+	if err != nil {
+		_, _ = fmt.Fprintf(stderr, "resolve demo root: %v\n", err)
+		return "", "", false
+	}
+	return absRoot, normalizedTemplate, true
 }
 
 func defaultDemoRoot() string {
@@ -746,6 +787,77 @@ func seedDemo(ctx context.Context, root string) (demoResult, error) {
 	answer.Summary = "seeded demo vault and detected stale synthesis"
 	answer.Next = []string{`openclerk demo ask "what changed and what is stale?"`}
 	return answer, nil
+}
+
+func seedDemoTemplate(ctx context.Context, root string, templateName string) (demoResult, error) {
+	template, ok := demoKnowledgePackTemplates[templateName]
+	if !ok {
+		return demoResult{}, fmt.Errorf("unknown demo template %q; available templates: %s", templateName, strings.Join(availableDemoTemplates(), ", "))
+	}
+	paths, err := resetDemoPaths(root)
+	if err != nil {
+		return demoResult{}, err
+	}
+	if err := writeDemoKnowledgePackTemplate(paths.VaultRoot, template); err != nil {
+		return demoResult{}, err
+	}
+	config := runclient.Config{DatabasePath: paths.DatabasePath}
+	if _, err := runclient.InitializePaths(config, paths.VaultRoot); err != nil {
+		return demoResult{}, err
+	}
+	// Listing opens the normal read path, syncing the copied vault into derived storage.
+	list, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+		Action: runner.DocumentTaskActionList,
+		List:   runner.DocumentListOptions{Limit: 100},
+	})
+	if err != nil {
+		return demoResult{}, err
+	}
+	if err := markDemoTemplateStale(ctx, config, template.StaleAfterSyncPaths); err != nil {
+		return demoResult{}, err
+	}
+	return demoResult{
+		SchemaVersion:         "openclerk-demo.v1",
+		Action:                "init",
+		Template:              templateName,
+		Summary:               template.Summary,
+		DemoRoot:              root,
+		DatabasePath:          paths.DatabasePath,
+		VaultRoot:             paths.VaultRoot,
+		TemplateDocumentCount: len(list.Documents),
+		Next: []string{
+			fmt.Sprintf("openclerk inspect --db %q", paths.DatabasePath),
+			fmt.Sprintf("openclerk clerk context_pack --db %q --task %q --limit 5", paths.DatabasePath, "describe the task here"),
+		},
+	}, nil
+}
+
+func markDemoTemplateStale(ctx context.Context, config runclient.Config, sourcePaths []string) error {
+	if len(sourcePaths) == 0 {
+		return nil
+	}
+	time.Sleep(time.Millisecond)
+	for _, sourcePath := range sourcePaths {
+		source, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+			Action: runner.DocumentTaskActionGet,
+			Path:   sourcePath,
+		})
+		if err != nil {
+			return err
+		}
+		if source.Document == nil {
+			return fmt.Errorf("template stale source %s was not synced", sourcePath)
+		}
+		if _, err := runner.RunDocumentTask(ctx, config, runner.DocumentTaskRequest{
+			Action:  runner.DocumentTaskActionReplaceSection,
+			DocID:   source.Document.DocID,
+			Heading: "Summary",
+			Content: "Updated source guidance after the template synthesis was written.",
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func resetDemoPaths(root string) (runclient.Paths, error) {
@@ -1101,15 +1213,19 @@ func demoUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "")
 	_, _ = fmt.Fprintln(w, "Creates and queries an isolated demo vault/database under the demo root.")
 	_, _ = fmt.Fprintln(w, `  openclerk demo init`)
+	_, _ = fmt.Fprintln(w, `  openclerk demo init --template codebase-decisions`)
 	_, _ = fmt.Fprintln(w, `  openclerk demo ask "what changed and what is stale?"`)
 	_, _ = fmt.Fprintln(w, "The demo seeds one source note, one synthesis page, updates the source, reports stale projection freshness, and returns a compile_synthesis repair request.")
+	_, _ = fmt.Fprintf(w, "Knowledge pack templates: %s\n", strings.Join(availableDemoTemplates(), ", "))
 }
 
 func demoInitUsage(w io.Writer) {
-	_, _ = fmt.Fprintln(w, "usage: openclerk demo init [--root path]")
+	_, _ = fmt.Fprintln(w, "usage: openclerk demo init [--root path] [--template name]")
 	_, _ = fmt.Fprintln(w, "")
 	_, _ = fmt.Fprintln(w, "Seeds an isolated demo vault/database, then reports stale synthesis evidence.")
+	_, _ = fmt.Fprintln(w, "With --template, seeds an isolated example knowledge pack instead of the built-in stale-memory demo.")
 	_, _ = fmt.Fprintln(w, "The root must be empty or already marked as an OpenClerk demo root.")
+	_, _ = fmt.Fprintf(w, "Templates: %s\n", strings.Join(availableDemoTemplates(), ", "))
 }
 
 func demoAskUsage(w io.Writer) {
