@@ -18,10 +18,10 @@ The sharper stack framing is:
 
 | Surface | Job |
 | --- | --- |
-| AgentSpace / Workcell | Where the work happens. |
+| Workspace | Where the work happens. |
 | OpenClerk | What the agent should know before work starts. |
 | Chronicler Lite | What gets recorded after work happens. |
-| Sentinel | What operational evidence explains why work is needed. |
+| Operational evidence | What explains why work is needed. |
 
 Chronicler Lite's job is narrow: turn a completed workspace session, inbox
 note, or handoff artifact into durable repo-knowledge candidates that can be

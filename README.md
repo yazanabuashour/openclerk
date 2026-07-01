@@ -66,20 +66,20 @@ Technical users building agent workflows over local markdown, source notes, or
 research vaults. If you want your agent to *know* your notes — not just search
 them — and you want to audit every write, this is the runtime for that.
 
-## Why not just RAG / Obsidian / NotebookLM?
+## Why not just an index or note app?
 
-| | OpenClerk | RAG pipeline | Obsidian | NotebookLM |
+| | OpenClerk | Index-first search | Plain note app | Hosted notebook |
 |---|---|---|---|---|
-| Canonical authority | Markdown in vault | Embedding index | Markdown in vault | Google's servers |
+| Canonical authority | Markdown in vault | Index or cache | Markdown in vault | Hosted workspace |
 | Agent-native writes | Yes, with provenance | No | No | No |
-| Citations on retrieval | Yes, always | Varies | No | Yes |
+| Citations on retrieval | Yes, always | Varies | No | Varies |
 | Local-first | Yes | Depends | Yes | No |
-| Composable modules | Yes | DIY | Plugin ecosystem | No |
+| Composable modules | Yes | Custom | Extension-dependent | No |
 
-Many RAG setups make the index the primary agent interface. OpenClerk keeps
-markdown as the human-readable authority and treats indexes and projections as
-derived recall layers. Obsidian has no agent-write contract. NotebookLM is not
-local.
+Many index-first setups make the derived layer the primary agent interface.
+OpenClerk keeps markdown as the human-readable authority and treats indexes and
+projections as derived recall layers. Plain note apps usually lack an
+approval-gated agent-write contract. Hosted notebooks are not local-first.
 
 For a more detailed buyer matrix, see [`docs/comparison.md`](docs/comparison.md).
 
@@ -202,7 +202,7 @@ openclerk capabilities
 - **Automatic video transcript acquisition** — not supported.
 - **Hosted service or cloud sync** — fully local. No OpenClerk server, no SaaS.
 - **Multi-user / team server** — single-user, single-machine runtime.
-- **Broad vector DB memory** — no Pinecone, Weaviate, or default durable vector index. Semantic modules are optional and local-only by default.
+- **Broad vector DB memory** — no default external vector database or durable vector index. Semantic modules are optional and local-only by default.
 - **Autonomous memory and routing** — deferred until docs, synthesis, and truth-sync layers are reliable. See [`docs/architecture/memory-routing-reference-decision.md`](docs/architecture/memory-routing-reference-decision.md).
 - **Autonomous / dreaming / always-on Chronicler** — shelved. Chronicler Lite remains the concrete post-work surface for explicit completed-session notes, handoffs, inbox scans, and context packs. See [`docs/architecture/chronicler-boundary.md`](docs/architecture/chronicler-boundary.md).
 
@@ -210,6 +210,7 @@ openclerk capabilities
 
 ```bash
 openclerk config      # persisted product/profile config
+openclerk inspect     # read-only posture before agent work
 openclerk document    # doc writes, registry, paths
 openclerk retrieval   # search, graph context/reports, records, provenance
 openclerk clerk       # Chronicler Lite session-to-repo-knowledge planning
@@ -220,10 +221,15 @@ JSON in, JSON out. See runner help:
 
 ```bash
 openclerk config --help
+openclerk inspect --help
 openclerk document --help
 openclerk retrieval --help
 openclerk clerk --help
 ```
+
+`openclerk inspect` is the read-only posture report for agents before work. It
+reports storage, vault, knowledge, modules, git posture, blockers, and next safe
+actions without initializing, repairing, refreshing, ingesting, or writing.
 
 `openclerk config inspect_config` is the read-only effective config summary for
 storage, profile defaults, module summaries, and git lifecycle gate posture.
@@ -234,17 +240,17 @@ rebind it with `openclerk init --vault-root`, not `openclerk config`.
 Request-level `document` and `retrieval` `autonomy` fields override persisted
 profile defaults field-by-field. Git checkpoint enablement remains
 invocation-scoped through `--git-checkpoints` or `OPENCLERK_GIT_CHECKPOINTS`.
-`openclerk clerk run --once` is the combined Chronicler Lite report: a
+`openclerk clerk session_record_report` is the named after-work report: a
 read-only way to turn explicit completed-session notes, handoffs, or inbox
-files into reviewed repo-knowledge candidates and task context. The same
-read-only primitives are also exposed as `openclerk clerk inbox_scan` for
-explicit local inbox candidate planning and `openclerk clerk context_pack` for
-task context, must-read documents, decisions, and citations. All three emit
+files into reviewed repo-knowledge candidates and task context. `openclerk
+clerk run --once` remains the compatible combined report. The same read-only
+primitives are also exposed as `openclerk clerk inbox_scan` for explicit local
+inbox candidate planning and `openclerk clerk context_pack` for task context,
+must-read documents, decisions, and citations. These reports emit
 `openclerk-clerk.v1`, report `planned_no_write: true`, and perform no durable
 vault writes. Autonomous/dreaming/always-on Chronicler is shelved; planning
-that inspects Core evidence requires existing OpenClerk storage, and
-Chronicler returns a blocker rather than initializing SQLite from a read-only
-command.
+that inspects Core evidence requires existing OpenClerk storage, and Chronicler
+returns a blocker rather than initializing SQLite from a read-only command.
 
 Storage: `${XDG_DATA_HOME:-~/.local/share}/openclerk/openclerk.sqlite`  
 Override: `OPENCLERK_DATABASE_PATH` or `--db`

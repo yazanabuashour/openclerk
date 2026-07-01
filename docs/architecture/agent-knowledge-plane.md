@@ -5,19 +5,20 @@
 OpenClerk is positioned as a single-surface agent-facing knowledge plane, not a domain-specific health application and not a menu of user-facing backend variants.
 
 The first principle is AgentOps: the installed `openclerk` JSON runner plus
-`skills/openclerk/SKILL.md`. Agents use task-shaped JSON for routine document
-and retrieval work. They do not inspect implementation files, backend variants,
-HTTP server internals, source-built command paths, module caches, or SQLite to
-operate the knowledge plane.
+`skills/openclerk/SKILL.md`. Agents start with `openclerk inspect`, then use
+task-shaped JSON for routine document, retrieval, and clerk work. They do not
+inspect implementation files, backend variants, HTTP server internals,
+source-built command paths, module caches, or SQLite to operate the knowledge
+plane.
 
 The skill is deliberately not the product workflow engine. It activates the
 right surface, names hard safety and no-tools boundaries, and points the caller
-at `openclerk document` and `openclerk retrieval`. Routine behavior that needs
-step ordering, exact JSON recipes, or repeated prompt choreography belongs in
-runner help, an existing runner action, a new narrow workflow action, or
-maintainer/eval documentation. A normal agent caller is expected to use its own
-autonomy with runner JSON results and rejections once those boundaries are
-clear.
+at runner-owned surfaces such as `inspect`, `document`, `retrieval`, and
+`clerk`. Routine behavior that needs step ordering, exact JSON recipes, or
+repeated prompt choreography belongs in runner help, an existing runner action,
+a new narrow workflow action, or maintainer/eval documentation. A normal agent
+caller is expected to use its own autonomy with runner JSON results and
+rejections once those boundaries are clear.
 
 It is also positioned as infrastructure for persistent agent-maintained knowledge: useful synthesis should become cited, inspectable markdown instead of being rediscovered from scratch on every query.
 
@@ -57,11 +58,15 @@ The public product surface is:
 - the installed `openclerk` runner for production agent workflows
 - the Agent Skills-compatible `skills/openclerk/SKILL.md` guidance as a thin
   activation, routing, and safety contract
+- static knowledge-pack examples and docs that demonstrate repo-relative vault
+  layouts without creating a second truth system
 
 The public runner contract is organized by capability, not implementation
 variant:
 
+- `inspect` is the read-only posture check before guessing
 - docs and search are core
+- `clerk` provides context packs and explicit after-work planning reports
 - graph is an optional derived-docs capability
 - records are an optional promoted-domain capability
 - provenance exposes truth-sync inspection
@@ -136,19 +141,20 @@ The direction is to add agent-visible document history, review, and rollback
 semantics after the first release without replacing Git or adding a new public
 runner action before eval evidence justifies it.
 
-### LLM Wiki alignment
+### Agent-Maintained Knowledge
 
-Karpathy's LLM Wiki pattern maps cleanly onto OpenClerk, but OpenClerk should implement it as a provenance-backed docs workflow rather than a literal clone.
+OpenClerk treats agent-maintained knowledge as a provenance-backed docs
+workflow, not a separate memory product or literal clone of any external
+reference shape.
 
-| LLM Wiki concept | OpenClerk mapping |
-| --- | --- |
-| Raw sources | canonical source docs and assets |
-| Wiki | source-linked synthesis and accepted canonical notes |
-| Schema | repo docs plus `skills/openclerk` guidance |
-| `index.md` | search, metadata filters, graph neighborhoods, and optional index notes |
-| `log.md` | provenance events, projection states, and optional human-readable activity notes |
+Durable knowledge means source-linked synthesis and accepted canonical notes;
+indexes and logs remain optional search and provenance views.
 
-The shared idea is that agents should maintain summaries, links, contradiction notes, and filed answers so knowledge compounds over time. The OpenClerk-specific constraint is that synthesis must stay inspectable through stable ids, citations, provenance events, and projection freshness. It should not become an opaque second truth system.
+The core idea is that agents should maintain summaries, links, contradiction
+notes, and filed answers so knowledge compounds over time. The OpenClerk
+constraint is that synthesis must stay inspectable through stable ids,
+citations, provenance events, and projection freshness. It should not become an
+opaque second truth system.
 
 ### Semantic retrieval building blocks
 
@@ -175,12 +181,9 @@ explicit `semantic_search` without changing ranking.
 
 The direction is recorded in
 [`semantic-retrieval-building-blocks.md`](semantic-retrieval-building-blocks.md).
-It uses the LLM Wiki idea of optional search tooling over durable wiki
-artifacts, the building-block economy model of separately installable parts,
-OpenAI prompt/harness guidance for explicit testable surfaces, embeddings and
-retrieval guidance for vector search as recall infrastructure, and Mem0 as a
-memory-system reference that OpenClerk deliberately does not turn into the
-canonical truth layer.
+It keeps optional search tooling over durable markdown artifacts, uses
+separately installable parts for capability expansion, and treats vector search
+as recall infrastructure rather than canonical truth.
 
 ### OCR and artifact extraction
 
@@ -203,18 +206,12 @@ durable write action. Core OpenClerk does not gain hidden OCR fallback, hidden
 model egress, committed OCR caches, parser truth, or a default local artifact
 extraction stack.
 
-### Cognee alignment
+### Memory Engine Boundaries
 
-Cognee is a useful external reference for graph/vector AI memory engines, but
-it is not a markdown-canonical knowledge plane in the OpenClerk sense. Its
-valuable lessons are retriever taxonomy, ontology grounding, temporal
-retrieval, session memory, feedback weighting, and the operational cost of
-coordinating graph, vector, relational, and cache stores.
-
-OpenClerk should not adopt Cognee's `remember`/`recall` product surface,
+Graph, vector, relational, and cache stores can be useful implementation
+options or benchmark categories, but OpenClerk should not adopt a
 memory-first canonical truth model, routine HTTP/MCP/Python bypasses, or graph
-as an independent authority layer. Cognee-inspired ideas should enter
-OpenClerk only as benchmark categories or internal implementation options that
+as an independent authority layer. Any future memory-engine behavior must
 preserve AgentOps, citations, provenance, freshness, and canonical
 markdown/record authority.
 
@@ -318,7 +315,7 @@ and
 
 ## Out of scope for this rewrite
 
-- Mem0 or other long-term memory integration
+- third-party long-term memory integration
 - autonomous routing across docs, records, and memory
 - treating the current generic records projection as the final structured model
 - hiding derivation behind opaque heuristics

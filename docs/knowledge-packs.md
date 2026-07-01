@@ -43,7 +43,7 @@ database the pack.
 
 Run `openclerk inspect` before guessing, then request cited task context with
 `openclerk clerk context_pack`. After work, use an explicit session note,
-handoff, or inbox artifact with the read-only Chronicler Lite planning surface;
+handoff, or inbox artifact with `openclerk clerk session_record_report`;
 durable writes still go through approved `openclerk document` lifecycle APIs.
 
 Agents should treat citations and source refs as evidence, avoid SQLite/raw
