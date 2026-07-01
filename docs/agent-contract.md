@@ -70,7 +70,7 @@ inspect, and plan permission is not durable-write approval.
 openclerk demo init --template codebase-decisions
 openclerk inspect
 openclerk clerk context_pack --task "change the auth callback behavior" --limit 5
-openclerk clerk run --once \
+openclerk clerk session_record_report \
   --inbox-path examples/knowledge-packs/agent-session-to-docs/handoffs/session.md \
   --task "summarize completed auth callback work into repo knowledge" \
   --limit 5

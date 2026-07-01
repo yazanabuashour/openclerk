@@ -110,6 +110,64 @@ func TestRunOncePlansExplicitInboxNonRecursive(t *testing.T) {
 	}
 }
 
+func TestRunSessionRecordReportPackagesInboxAndContextWithoutWrites(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	config := runclient.Config{DatabasePath: dbPath}
+	doc := createDocument(t, ctx, config, "docs/session-record.md", "Session Record", "# Session Record\n\nSession report marker evidence.\n")
+	beforeBody := getDocumentBody(t, ctx, config, doc.DocID)
+	beforeDocs := listDocumentCount(t, ctx, config)
+	beforeEvents := provenanceEventCount(t, ctx, config)
+	beforeStorage := storageSnapshot(t, filepath.Dir(dbPath))
+
+	inboxPath := filepath.Join(t.TempDir(), "session.md")
+	if err := os.WriteFile(inboxPath, []byte("# Completed Session\n\nSession report marker candidate update.\n"), 0o644); err != nil {
+		t.Fatalf("write session note: %v", err)
+	}
+	result, err := RunSessionRecordReport(ctx, config, RunRequest{
+		InboxPaths: []string{inboxPath},
+		Task:       "Session report marker",
+		Limit:      5,
+	})
+	if err != nil {
+		t.Fatalf("session record report: %v", err)
+	}
+	if result.SchemaVersion != SchemaVersion ||
+		result.Action != ActionSessionRecordReport ||
+		result.Result.Mode != ActionSessionRecordReport ||
+		!result.Result.PlannedNoWrite ||
+		result.Result.WritesPerformed != 0 {
+		t.Fatalf("identity/write posture = %+v", result)
+	}
+	if len(result.Result.InboxCandidates) != 1 ||
+		len(result.Result.ContextPacks) != 1 ||
+		len(result.Result.PendingReview) != 1 {
+		t.Fatalf("report result = %+v", result.Result)
+	}
+	candidate := result.Result.InboxCandidates[0]
+	if candidate.WriteStatus != "planned_no_write" ||
+		candidate.NextCreateRequest == "" ||
+		candidate.ApprovalBoundary == "" {
+		t.Fatalf("candidate = %+v", candidate)
+	}
+	if len(result.Result.ContextPacks[0].MustRead) == 0 ||
+		result.Result.ContextPacks[0].WriteStatus != "read_only_no_write" {
+		t.Fatalf("context pack = %+v", result.Result.ContextPacks[0])
+	}
+	assertStorageUnchanged(t, beforeStorage, storageSnapshot(t, filepath.Dir(dbPath)))
+	if got := getDocumentBody(t, ctx, config, doc.DocID); got != beforeBody {
+		t.Fatalf("document body changed:\n%s", got)
+	}
+	if got := listDocumentCount(t, ctx, config); got != beforeDocs {
+		t.Fatalf("document count = %d, want %d", got, beforeDocs)
+	}
+	if got := provenanceEventCount(t, ctx, config); got != beforeEvents {
+		t.Fatalf("provenance event count = %d, want %d", got, beforeEvents)
+	}
+}
+
 func TestRunInboxScanPlansExplicitInboxOnly(t *testing.T) {
 	t.Parallel()
 

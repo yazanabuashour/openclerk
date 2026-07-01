@@ -70,6 +70,7 @@ func TestCapabilitiesManifestShowsBuildingBlocks(t *testing.T) {
 		!hasCapabilityAction(result, "retrieval", "maintenance_report") ||
 		!hasCapabilityAction(result, "module", "install_module") ||
 		!hasCapabilityAction(result, "clerk", "run --once") ||
+		!hasCapabilityAction(result, "clerk", "session_record_report") ||
 		!hasCapabilityAction(result, "clerk", "inbox_scan") ||
 		!hasCapabilityAction(result, "clerk", "context_pack") {
 		t.Fatalf("capabilities missing expected document/retrieval/module actions: %+v", result.Domains)
@@ -149,12 +150,17 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 		{
 			name: "clerk",
 			args: []string{"clerk", "--help"},
-			want: []string{"Chronicler Lite", "session-to-repo-knowledge", "autonomous/dreaming/always-on Chronicler is shelved", "openclerk clerk run --once", "openclerk clerk inbox_scan", "openclerk clerk context_pack", "planned_no_write=true", "writes_performed=0", "no durable vault writes"},
+			want: []string{"Chronicler Lite", "session-to-repo-knowledge", "autonomous/dreaming/always-on Chronicler is shelved", "openclerk clerk run --once", "openclerk clerk session_record_report", "openclerk clerk inbox_scan", "openclerk clerk context_pack", "planned_no_write=true", "writes_performed=0", "no durable vault writes"},
 		},
 		{
 			name: "clerk run",
 			args: []string{"clerk", "run", "--help"},
 			want: []string{"openclerk-clerk.v1", "--inbox-path", "--task", "--query", "blockers", "deferred"},
+		},
+		{
+			name: "clerk session_record_report",
+			args: []string{"clerk", "session_record_report", "--help"},
+			want: []string{"openclerk-clerk.v1", "--inbox-path", "--task", "Output action: session_record_report", "planned_no_write", "writes_performed"},
 		},
 		{
 			name: "clerk inbox_scan",
@@ -653,6 +659,45 @@ func TestClerkContextPackJSON(t *testing.T) {
 	if len(result.Result.ContextPacks[0].MustRead) == 0 ||
 		result.Result.ContextPacks[0].WriteStatus != "read_only_no_write" {
 		t.Fatalf("context pack = %+v", result.Result.ContextPacks[0])
+	}
+}
+
+func TestClerkSessionRecordReportJSON(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	createRequest := `{"action":"create_document","document":{"path":"docs/cli/session-record.md","title":"CLI Session Record","body":"# CLI Session Record\n\nCLI session record marker evidence.\n"}}`
+	var createResult runner.DocumentTaskResult
+	code, stderr := runJSON(t, []string{"document", "--db", dbPath}, createRequest, &createResult)
+	if code != 0 {
+		t.Fatalf("create document exit = %d stderr=%s", code, stderr)
+	}
+	if createResult.Document == nil {
+		t.Fatalf("create document result = %+v", createResult)
+	}
+	inboxPath := filepath.Join(t.TempDir(), "session.md")
+	if err := os.WriteFile(inboxPath, []byte("# CLI Session\n\nCLI session record marker candidate.\n"), 0o644); err != nil {
+		t.Fatalf("write session: %v", err)
+	}
+
+	var result chronicler.RunEnvelope
+	code, stderr = runJSON(t, []string{"clerk", "session_record_report", "--db", dbPath, "--inbox-path", inboxPath, "--task", "CLI session record marker", "--limit", "5"}, "", &result)
+	if code != 0 {
+		t.Fatalf("clerk session_record_report exit = %d stderr=%s", code, stderr)
+	}
+	if result.SchemaVersion != chronicler.SchemaVersion ||
+		result.Action != chronicler.ActionSessionRecordReport ||
+		result.Result.Mode != chronicler.ActionSessionRecordReport ||
+		!result.Result.PlannedNoWrite ||
+		result.Result.WritesPerformed != 0 ||
+		len(result.Result.InboxCandidates) != 1 ||
+		len(result.Result.ContextPacks) != 1 {
+		t.Fatalf("clerk session_record_report result = %+v", result)
+	}
+	if result.Result.InboxCandidates[0].NextCreateRequest == "" ||
+		result.Result.InboxCandidates[0].WriteStatus != "planned_no_write" ||
+		result.Result.ContextPacks[0].WriteStatus != "read_only_no_write" {
+		t.Fatalf("clerk session_record_report detail = %+v", result.Result)
 	}
 }
 

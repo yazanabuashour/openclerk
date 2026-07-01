@@ -16,10 +16,11 @@ import (
 )
 
 const (
-	SchemaVersion     = "openclerk-clerk.v1"
-	ActionRun         = "clerk_run"
-	ActionInboxScan   = "inbox_scan"
-	ActionContextPack = "context_pack"
+	SchemaVersion             = "openclerk-clerk.v1"
+	ActionRun                 = "clerk_run"
+	ActionSessionRecordReport = "session_record_report"
+	ActionInboxScan           = "inbox_scan"
+	ActionContextPack         = "context_pack"
 
 	storageMissingBlocker = "OpenClerk storage must already exist for Chronicler Lite read-only planning; Chronicler will not initialize SQLite"
 )
@@ -68,6 +69,7 @@ type InboxCandidate struct {
 	WriteStatus       string            `json:"write_status"`
 	ApprovalBoundary  string            `json:"approval_boundary"`
 	MetadataFields    map[string]string `json:"metadata_fields,omitempty"`
+	NextCreateRequest string            `json:"next_create_document_request,omitempty"`
 }
 
 type ContextPack struct {
@@ -126,6 +128,15 @@ func RunOnce(ctx context.Context, config runclient.Config, request RunRequest) (
 	return runPlan(ctx, config, request, runPlanOptions{
 		action:         ActionRun,
 		mode:           "once",
+		includeInbox:   true,
+		includeContext: true,
+	})
+}
+
+func RunSessionRecordReport(ctx context.Context, config runclient.Config, request RunRequest) (RunEnvelope, error) {
+	return runPlan(ctx, config, request, runPlanOptions{
+		action:         ActionSessionRecordReport,
+		mode:           ActionSessionRecordReport,
 		includeInbox:   true,
 		includeContext: true,
 	})
@@ -407,6 +418,7 @@ func inboxCandidateFromPlan(sourceRef string, plan runner.ArtifactCandidatePlan)
 		WriteStatus:       plan.WriteStatus,
 		ApprovalBoundary:  plan.ApprovalBoundary,
 		MetadataFields:    cloneStringMap(plan.MetadataFields),
+		NextCreateRequest: plan.NextCreateRequest,
 	}
 }
 

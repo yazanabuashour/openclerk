@@ -33,9 +33,14 @@ The Lite surface ships in the existing `openclerk` binary under:
 
 ```bash
 openclerk clerk run --once
+openclerk clerk session_record_report
 openclerk clerk inbox_scan
 openclerk clerk context_pack
 ```
+
+`session_record_report` emits the same combined report schema as `run --once`,
+but sets `action` and `mode` to `session_record_report` so the completed-session
+path is obvious.
 
 `run --once` emits the combined planning report:
 
@@ -120,9 +125,11 @@ around the installed runner/service boundary.
 
 ## Lite Behavior
 
-`openclerk clerk run --once` performs one combined read-only planning pass.
-`openclerk clerk inbox_scan` runs only the inbox-candidate part, and
-`openclerk clerk context_pack` runs only the task-context part.
+`openclerk clerk session_record_report` is the preferred named after-work
+surface for explicit session notes or handoffs. `openclerk clerk run --once`
+performs the same combined read-only planning pass for backwards
+compatibility. `openclerk clerk inbox_scan` runs only the inbox-candidate part,
+and `openclerk clerk context_pack` runs only the task-context part.
 
 Supported inputs:
 
@@ -188,24 +195,23 @@ because it could mean agent memory, repo wiki maintenance, runbook updates,
 autonomous research, incident history, architecture documentation, session
 summaries, or knowledge graph construction.
 
-Decision: keep Chronicler Lite as the shipped concrete capability; shelve
-autonomous/dreaming/always-on Chronicler as a product track; preserve the
-underlying post-work recording idea through follow-up candidate comparison.
+Decision: keep Chronicler Lite as the shipped concrete capability; promote
+`session_record_report` as the named after-work wrapper over the existing
+read-only planner; shelve autonomous/dreaming/always-on Chronicler as a product
+track.
 
 ## Follow-Up
 
-The underlying need remains valid: workcell sessions should leave durable,
+The underlying need remains valid: completed sessions should leave durable,
 reviewable repo knowledge when they create decisions, runbooks, architecture
-context, incident history, or reusable handoff material.
-
-`oc-dcy2` should compare post-Lite Chronicler candidate surfaces before any
-promotion:
+context, incident history, or reusable handoff material. The current comparison
+selects the narrow named report and keeps durable writes approval-gated:
 
 | Candidate | Safety | Capability | UX quality |
 | --- | --- | --- | --- |
-| Current `clerk run --once` plus explicit session notes | Strongest current boundary: read-only planning, no writes, no daemon. | Can propose document candidates and context from explicit artifacts. | Simple enough, but may still require manual prompt choreography and handoff discipline. |
-| Dedicated `session_record_report` under `openclerk clerk` | Keeps runner-only read/fetch/inspect and planned-no-write posture. | Could package session summary, candidate doc updates, stale docs, open decisions, and next approved requests in one report. | Best near-term candidate if evidence shows the current two-command shape is too ceremonial. |
+| `session_record_report` under `openclerk clerk` | Keeps runner-only read/fetch/inspect and planned-no-write posture. | Packages candidate updates, duplicate risks, context packs, blockers, and next approved document requests from explicit artifacts. | Selected because the after-work path is obvious without new authority. |
+| Current `clerk run --once` plus explicit session notes | Same planner and safety posture. | Preserved for compatibility. | Less obvious as the first command for completed-session handoff. |
 | Approval-gated review queue over document lifecycle APIs | Preserves durable-write approval, duplicate checks, provenance, and audit behavior. | Could complete session-to-repo-knowledge handoff after review without granting Chronicler autonomous authority. | Useful later, but heavier than the first concrete Lite demo. |
 
-The follow-up must choose the best candidate, combine useful behavior if
-appropriate, defer or kill the track, or record `none viable yet`.
+Remaining follow-up should compare approval-gated review queue shapes only
+after the named report has enough dogfood evidence.
