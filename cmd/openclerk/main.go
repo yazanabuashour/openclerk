@@ -1244,6 +1244,8 @@ func usage(stderr io.Writer) {
 	_, _ = fmt.Fprintln(stderr, "       openclerk retrieval --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk clerk --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk demo --help")
+	_, _ = fmt.Fprintln(stderr, "Start agent work with openclerk inspect. Natural surfaces: inspect posture, retrieval context, clerk session planning, document lifecycle, config/module setup, demo examples.")
+	_, _ = fmt.Fprintln(stderr, "Read-only surfaces: inspect, capabilities, retrieval reports, clerk reports, document validation/planning/list/get. Durable writes live under init, config/module changes, and approved document lifecycle actions.")
 	_, _ = fmt.Fprintln(stderr, "document/retrieval read strict JSON from stdin and use configured paths by default; pass --db only for an explicit dataset.")
 	_, _ = fmt.Fprintln(stderr, "promoted workflow actions: compile_synthesis, validation_synthesis_report, ingest_source_url inspect/plan, web_search_plan, artifact_candidate_plan, git_lifecycle_report, source_discovery_report, source_audit_report, evidence_bundle_report, decision_lookup_report, duplicate_candidate_report, workflow_guide_report, memory_router_recall_report, structured_store_report, hybrid_retrieval_report, graph_context_report, graph_relationship_report, graph_relationship_maintenance_plan, semantic_search, retrieval_eval_capture, retrieval_eval_replay, search_diagnostics_report, maintenance_report, clerk run --once, clerk session_record_report, clerk inbox_scan, clerk context_pack")
 }
@@ -1255,7 +1257,8 @@ func demoUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, `  openclerk demo init`)
 	_, _ = fmt.Fprintln(w, `  openclerk demo init --template codebase-decisions`)
 	_, _ = fmt.Fprintln(w, `  openclerk demo ask "what changed and what is stale?"`)
-	_, _ = fmt.Fprintln(w, "The demo seeds one source note, one synthesis page, updates the source, reports stale projection freshness, and returns a compile_synthesis repair request.")
+	_, _ = fmt.Fprintln(w, "Without --template, the demo seeds one source note, one synthesis page, updates the source, reports stale projection freshness, and returns a compile_synthesis repair request.")
+	_, _ = fmt.Fprintln(w, "Use --template to seed an isolated example knowledge pack.")
 	_, _ = fmt.Fprintf(w, "Knowledge pack templates: %s\n", strings.Join(availableDemoTemplates(), ", "))
 }
 
@@ -1309,6 +1312,7 @@ func documentUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "Reads one strict JSON object from stdin and writes one JSON result.")
 	_, _ = fmt.Fprintln(w, "Actions are selected only through stdin JSON; there is no document subcommand or --action flag path.")
 	_, _ = fmt.Fprintln(w, "Uses configured paths by default; pass --db only for an explicit dataset. Configure additional vault-relative sync ignores through openclerk config.")
+	_, _ = fmt.Fprintln(w, "Read-only actions include validate, list/get, placement plans, duplicate/path/move plans, layout diagnostics, and dry-run edits. Durable writes require approved create/append/replace/move/promote/synthesis requests.")
 	_, _ = fmt.Fprintln(w, "Primitive request shapes:")
 	_, _ = fmt.Fprintln(w, `  validate/create_document: {"action":"validate","document":{"path":"notes/example.md","title":"Example","body":"# Example\n\nBody."}}`)
 	_, _ = fmt.Fprintln(w, `  ingest_source_url PDF create: {"action":"ingest_source_url","source":{"url":"https://example.test/source.pdf","path_hint":"sources/example.md","asset_path_hint":"assets/sources/example.pdf","title":"Optional title"}}`)
@@ -1349,6 +1353,7 @@ func retrievalUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "")
 	_, _ = fmt.Fprintln(w, "Reads one strict JSON object from stdin and writes one JSON result.")
 	_, _ = fmt.Fprintln(w, "Uses configured paths by default; pass --db only for an explicit dataset. Configure additional vault-relative sync ignores through openclerk config.")
+	_, _ = fmt.Fprintln(w, "Retrieval is for cited read/inspection reports over canonical markdown and derived layers. It does not initialize storage, refresh silently, create autonomous memory, or make optional modules authoritative.")
 	_, _ = fmt.Fprintln(w, "Primitive read-only actions:")
 	_, _ = fmt.Fprintln(w, `  document_links: {"action":"document_links","doc_id":"doc_..."}`)
 	_, _ = fmt.Fprintln(w, `  graph_neighborhood: {"action":"graph_neighborhood","doc_id":"doc_...","limit":10}`)

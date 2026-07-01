@@ -96,6 +96,11 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 		want []string
 	}{
 		{
+			name: "top-level",
+			args: []string{"--help"},
+			want: []string{"Start agent work with openclerk inspect", "Durable writes live under"},
+		},
+		{
 			name: "inspect",
 			args: []string{"inspect", "--help"},
 			want: []string{"openclerk-inspect.v1", "Read-only", "no init", "storage", "vault", "derived knowledge layers", "next safe runner requests"},
@@ -110,6 +115,7 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 			args: []string{"document", "--help"},
 			want: []string{
 				"Primitive request shapes:",
+				"Durable writes require approved",
 				"ingest_source_url",
 				"asset_path_hint",
 				"placement plan",
@@ -140,7 +146,7 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 		{
 			name: "retrieval",
 			args: []string{"retrieval", "--help"},
-			want: []string{"document_links", "graph_neighborhood", "canonical markdown remains relationship authority", "records_lookup", "services_lookup", "decisions_lookup", "canonical markdown with citations and freshness", "source_discovery_report", "source_audit_report", "evidence_bundle_report", "decision_lookup_report", "duplicate_candidate_report", "workflow_guide_report", "memory_router_recall_report", "ordinary vault fact recall", "structured_store_report", "hybrid_retrieval_report", "graph_context_report", "graph_relationship_report", "graph_relationship_maintenance_plan", "semantic_search", "retrieval_eval_capture", "retrieval_eval_replay", "search_diagnostics_report", "maintenance_report", "no default ranking change", "agent_handoff", "Read-only"},
+			want: []string{"does not initialize storage", "document_links", "graph_neighborhood", "canonical markdown remains relationship authority", "records_lookup", "services_lookup", "decisions_lookup", "canonical markdown with citations and freshness", "source_discovery_report", "source_audit_report", "evidence_bundle_report", "decision_lookup_report", "duplicate_candidate_report", "workflow_guide_report", "memory_router_recall_report", "ordinary vault fact recall", "structured_store_report", "hybrid_retrieval_report", "graph_context_report", "graph_relationship_report", "graph_relationship_maintenance_plan", "semantic_search", "retrieval_eval_capture", "retrieval_eval_replay", "search_diagnostics_report", "maintenance_report", "no default ranking change", "agent_handoff", "Read-only"},
 		},
 		{
 			name: "module",
@@ -175,7 +181,7 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 		{
 			name: "demo",
 			args: []string{"demo", "--help"},
-			want: []string{"openclerk demo <init|ask>", "stale projection freshness", "compile_synthesis repair request", "Knowledge pack templates", "codebase-decisions"},
+			want: []string{"openclerk demo <init|ask>", "stale projection freshness", "compile_synthesis repair request", "example knowledge pack", "Knowledge pack templates", "codebase-decisions"},
 		},
 		{
 			name: "demo init",
