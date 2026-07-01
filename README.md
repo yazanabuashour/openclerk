@@ -20,6 +20,38 @@ The demo creates an isolated sample vault, writes a source note and synthesis
 page, changes the source, and reports the synthesis as stale with citations and
 a `compile_synthesis` repair request.
 
+## Use it with a coding agent
+
+```bash
+demo_dir="$(mktemp -d)/openclerk-demo"
+openclerk demo init --root "$demo_dir" --template codebase-decisions
+db="$demo_dir/openclerk.sqlite"
+
+openclerk inspect --db "$db"
+
+openclerk clerk context_pack \
+  --db "$db" \
+  --task "change the auth callback behavior" \
+  --limit 5
+
+openclerk clerk session_record_report \
+  --db "$db" \
+  --inbox-path examples/knowledge-packs/agent-session-to-docs/handoffs/session.md \
+  --task "summarize completed auth callback work into repo knowledge" \
+  --limit 5
+```
+
+The workflow is: inspect posture, get cited task context, do the work outside
+OpenClerk, then turn an explicit session note into reviewable candidate
+knowledge. Durable writes still require approved `openclerk document` lifecycle
+requests. OpenClerk does not run a background bot, daemon, or autonomous memory
+loop.
+
+See [Agent Contract](docs/agent-contract.md),
+[Knowledge Packs](docs/knowledge-packs.md),
+[Agent Knowledge Plane](docs/architecture/agent-knowledge-plane.md), and
+[Chronicler Lite Boundary](docs/architecture/chronicler-boundary.md).
+
 ## What is this?
 
 OpenClerk gives agents a citation-bearing, provenance-tracked knowledge base
