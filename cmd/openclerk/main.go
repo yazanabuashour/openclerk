@@ -41,6 +41,8 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 		return 0
 	case "capabilities":
 		return runCapabilities(args[1:], stdout, stderr)
+	case "inspect":
+		return runInspect(args[1:], stdout, stderr)
 	case "init":
 		return runInit(args[1:], stdout, stderr)
 	case "config":
@@ -113,6 +115,24 @@ func runCapabilities(args []string, stdout io.Writer, stderr io.Writer) int {
 	}
 	if err := json.NewEncoder(stdout).Encode(buildCapabilitiesResult()); err != nil {
 		_, _ = fmt.Fprintf(stderr, "encode capabilities result: %v\n", err)
+		return 1
+	}
+	return 0
+}
+
+func runInspect(args []string, stdout io.Writer, stderr io.Writer) int {
+	if wantsSubcommandHelp(args) {
+		inspectUsage(stdout)
+		return 0
+	}
+	config, ok := parseConfig("inspect", args, stderr)
+	if !ok {
+		return 2
+	}
+	info, buildInfoOK := readBuildInfo()
+	result := buildInspectEnvelope(context.Background(), config, resolvedVersion(version, info, buildInfoOK))
+	if err := json.NewEncoder(stdout).Encode(result); err != nil {
+		_, _ = fmt.Fprintf(stderr, "encode inspect result: %v\n", err)
 		return 1
 	}
 	return 0
@@ -1062,9 +1082,10 @@ func resolvedVersion(linkerVersion string, info *debug.BuildInfo, ok bool) strin
 }
 
 func usage(stderr io.Writer) {
-	_, _ = fmt.Fprintln(stderr, "usage: openclerk <version|capabilities|init|config|module|document|retrieval|clerk|demo> [--db path]")
+	_, _ = fmt.Fprintln(stderr, "usage: openclerk <version|capabilities|inspect|init|config|module|document|retrieval|clerk|demo> [--db path]")
 	_, _ = fmt.Fprintln(stderr, "       openclerk init [--db path] [--vault-root path]")
 	_, _ = fmt.Fprintln(stderr, "       openclerk capabilities")
+	_, _ = fmt.Fprintln(stderr, "       openclerk inspect --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk config --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk module --help")
 	_, _ = fmt.Fprintln(stderr, "       openclerk document --help")

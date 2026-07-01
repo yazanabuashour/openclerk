@@ -93,6 +93,14 @@ func runGitLifecycleReport(ctx context.Context, vaultRoot string, options GitLif
 	return report, nil
 }
 
+func InspectGitLifecycleStatus(ctx context.Context, vaultRoot string, config runclient.Config) (GitLifecycleReport, error) {
+	return runGitLifecycleReport(ctx, vaultRoot, GitLifecycleOptions{Mode: gitLifecycleModeStatus}, config)
+}
+
+func GitLifecycleCheckpointsEnabled(config runclient.Config) bool {
+	return gitLifecycleCheckpointsEnabled(config)
+}
+
 type gitLifecycleRepo struct {
 	branch string
 	head   string
@@ -145,7 +153,7 @@ func inspectGitLifecycleRepo(ctx context.Context, vaultRoot string) (gitLifecycl
 
 func gitLifecycleStatus(ctx context.Context, vaultRoot string, paths []string) ([]GitLifecyclePathStatus, error) {
 	args := append([]string{"status", "--porcelain=v1", "--"}, paths...)
-	output, err := runGitLifecycleCommand(ctx, vaultRoot, args...)
+	output, err := runGitLifecycleCommandNoOptionalLocks(ctx, vaultRoot, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +300,18 @@ func gitLifecycleStagedChanges(ctx context.Context, vaultRoot string, paths []st
 }
 
 func runGitLifecycleCommand(ctx context.Context, vaultRoot string, args ...string) (string, error) {
+	return runGitLifecycleCommandWithEnv(ctx, vaultRoot, nil, args...)
+}
+
+func runGitLifecycleCommandNoOptionalLocks(ctx context.Context, vaultRoot string, args ...string) (string, error) {
+	return runGitLifecycleCommandWithEnv(ctx, vaultRoot, []string{"GIT_OPTIONAL_LOCKS=0"}, args...)
+}
+
+func runGitLifecycleCommandWithEnv(ctx context.Context, vaultRoot string, env []string, args ...string) (string, error) {
 	cmd := exec.CommandContext(ctx, "git", gitLifecycleCommandArgs(vaultRoot, args...)...)
+	if len(env) > 0 {
+		cmd.Env = append(os.Environ(), env...)
+	}
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("run local git lifecycle command: %w: %s", err, strings.TrimSpace(string(output)))

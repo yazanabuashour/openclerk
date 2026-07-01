@@ -2,15 +2,19 @@ package main
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime/debug"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/yazanabuashour/openclerk/internal/chronicler"
 	"github.com/yazanabuashour/openclerk/internal/runner"
+	_ "modernc.org/sqlite"
 )
 
 func TestRunnerVersion(t *testing.T) {
@@ -89,6 +93,11 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 		args []string
 		want []string
 	}{
+		{
+			name: "inspect",
+			args: []string{"inspect", "--help"},
+			want: []string{"openclerk-inspect.v1", "Read-only", "no init", "storage", "vault", "derived knowledge layers", "next safe runner requests"},
+		},
 		{
 			name: "config",
 			args: []string{"config", "--help"},
@@ -185,6 +194,216 @@ func TestSubcommandHelpShowsPromotedWorkflowActions(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestInspectMissingStorageIsReadOnlyJSON(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	var result inspectEnvelope
+	code, stderr := runJSON(t, []string{"inspect", "--db", dbPath}, "", &result)
+	if code != 0 {
+		t.Fatalf("inspect exit = %d stderr=%s", code, stderr)
+	}
+	if result.SchemaVersion != inspectSchemaVersion ||
+		result.Action != "inspect" ||
+		!result.Result.ReadOnly ||
+		result.Result.WritesPerformed != 0 ||
+		result.Result.Storage.Status != "missing" ||
+		result.Result.Storage.DatabaseBound ||
+		result.Result.Storage.DatabasePathKind != "flag_override" ||
+		result.Result.Vault.Status != "unbound" ||
+		result.Result.Knowledge.DerivedLayers.SearchIndex != "unavailable" ||
+		result.Result.Modules.Status != "unknown" ||
+		len(result.Result.Blockers) == 0 ||
+		!inspectHasNextAction(result, "Bind a vault") {
+		t.Fatalf("inspect missing result = %+v", result)
+	}
+	output := mustMarshalInspect(t, result)
+	for _, field := range []string{"runner", "storage", "vault", "knowledge", "modules", "git", "recommended_next_actions", "blockers"} {
+		if !strings.Contains(output, `"`+field+`"`) {
+			t.Fatalf("inspect output missing top-level field %s: %+v", field, result)
+		}
+	}
+	if _, err := os.Stat(filepath.Dir(dbPath)); !os.IsNotExist(err) {
+		t.Fatalf("inspect created storage directory: %v", err)
+	}
+}
+
+func TestInspectUninitializedDatabaseDoesNotBindVault(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	dbPath := filepath.Join(root, "data", "openclerk.sqlite")
+	writeUnboundSQLiteDatabase(t, dbPath)
+	vaultPath := filepath.Join(filepath.Dir(dbPath), "vault")
+
+	var result inspectEnvelope
+	code, stderr := runJSON(t, []string{"inspect", "--db", dbPath}, "", &result)
+	if code != 0 {
+		t.Fatalf("inspect exit = %d stderr=%s", code, stderr)
+	}
+	if result.Result.Storage.Status != "uninitialized" ||
+		!result.Result.Storage.DatabaseBound ||
+		result.Result.Vault.Status != "unbound" ||
+		result.Result.Vault.VaultRootKind != "unconfigured" ||
+		result.Result.WritesPerformed != 0 ||
+		len(result.Result.Storage.Blockers) == 0 {
+		t.Fatalf("uninitialized inspect result = %+v", result)
+	}
+	if _, err := os.Stat(vaultPath); !os.IsNotExist(err) {
+		t.Fatalf("inspect bound or created vault root: %v", err)
+	}
+}
+
+func TestInspectBoundEmptyVaultJSON(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	dbPath := filepath.Join(root, "data", "openclerk.sqlite")
+	vaultRoot := filepath.Join(root, "vault")
+	var initResult struct{}
+	code, stderr := runJSON(t, []string{"init", "--db", dbPath, "--vault-root", vaultRoot}, "", &initResult)
+	if code != 0 {
+		t.Fatalf("init exit = %d stderr=%s", code, stderr)
+	}
+	for _, path := range []string{dbPath + "-shm", dbPath + "-wal"} {
+		_ = os.Remove(path)
+	}
+
+	var result inspectEnvelope
+	code, stderr = runJSON(t, []string{"inspect", "--db", dbPath}, "", &result)
+	if code != 0 {
+		t.Fatalf("inspect exit = %d stderr=%s", code, stderr)
+	}
+	if result.Result.Storage.Status != "ready" ||
+		result.Result.Vault.Status != "ready" ||
+		result.Result.Vault.Documents.KnownCount != 0 ||
+		result.Result.Vault.Documents.ChunkCount != 0 ||
+		result.Result.Modules.Status != "none_installed" ||
+		result.Result.Knowledge.CanonicalMarkdownAuthority != true ||
+		result.Result.Knowledge.DerivedLayers.SearchIndex != "ready" ||
+		result.Result.Git.Status != "not_git" ||
+		result.Result.WritesPerformed != 0 ||
+		!inspectHasNextAction(result, "Get task context") {
+		t.Fatalf("bound empty inspect result = %+v", result)
+	}
+	for _, path := range []string{dbPath + "-shm", dbPath + "-wal"} {
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Fatalf("inspect created sqlite sidecar %s: %v", filepath.Base(path), err)
+		}
+	}
+}
+
+func TestInspectPopulatedVaultReportsCountsAndStaleSynthesis(t *testing.T) {
+	t.Parallel()
+
+	dbPath := filepath.Join(t.TempDir(), "data", "openclerk.sqlite")
+	sourceRequest := `{"action":"create_document","document":{"path":"sources/inspect-source.md","title":"Inspect Source","body":"# Inspect Source\n\n## Summary\nInitial inspect evidence.\n"}}`
+	var source runner.DocumentTaskResult
+	code, stderr := runJSON(t, []string{"document", "--db", dbPath}, sourceRequest, &source)
+	if code != 0 {
+		t.Fatalf("create source exit = %d stderr=%s", code, stderr)
+	}
+	synthesisRequest := `{"action":"create_document","document":{"path":"synthesis/inspect-summary.md","title":"Inspect Summary","body":"---\ntype: synthesis\nstatus: active\nfreshness: fresh\nsource_refs: sources/inspect-source.md\n---\n# Inspect Summary\n\n## Summary\nInitial inspect evidence.\n\n## Sources\n- sources/inspect-source.md\n\n## Freshness\nChecked source refs.\n"}}`
+	var synthesis runner.DocumentTaskResult
+	code, stderr = runJSON(t, []string{"document", "--db", dbPath}, synthesisRequest, &synthesis)
+	if code != 0 {
+		t.Fatalf("create synthesis exit = %d stderr=%s", code, stderr)
+	}
+	updateRequest := `{"action":"replace_section","doc_id":"` + source.Document.DocID + `","heading":"Summary","content":"Updated inspect evidence."}`
+	var update runner.DocumentTaskResult
+	code, stderr = runJSON(t, []string{"document", "--db", dbPath}, updateRequest, &update)
+	if code != 0 {
+		t.Fatalf("update source exit = %d stderr=%s", code, stderr)
+	}
+
+	var result inspectEnvelope
+	code, stderr = runJSON(t, []string{"inspect", "--db", dbPath}, "", &result)
+	if code != 0 {
+		t.Fatalf("inspect exit = %d stderr=%s", code, stderr)
+	}
+	if result.Result.Storage.Status != "ready" ||
+		result.Result.Vault.Status != "ready" ||
+		result.Result.Vault.Documents.KnownCount != 2 ||
+		result.Result.Vault.Documents.ChunkCount == 0 ||
+		result.Result.Knowledge.DerivedLayers.SearchIndex != "ready" ||
+		result.Result.Knowledge.DerivedLayers.Synthesis != "stale" ||
+		result.Result.Knowledge.Synthesis.StaleCount != 1 ||
+		result.Result.Knowledge.Synthesis.MissingSourceRefCount != 0 ||
+		result.Result.Knowledge.DuplicateRisk.Status != "checked" ||
+		result.Result.Knowledge.DuplicateRisk.CandidateCount != 0 ||
+		result.Result.Modules.Status != "none_installed" ||
+		!inspectHasNextAction(result, "Review stale synthesis") {
+		t.Fatalf("populated inspect result = %+v", result)
+	}
+}
+
+func TestInspectGitWorktreeDoesNotRefreshIndex(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	dbPath := filepath.Join(root, "data", "openclerk.sqlite")
+	vaultRoot := filepath.Join(root, "vault")
+	var initResult struct{}
+	code, stderr := runJSON(t, []string{"init", "--db", dbPath, "--vault-root", vaultRoot}, "", &initResult)
+	if code != 0 {
+		t.Fatalf("init exit = %d stderr=%s", code, stderr)
+	}
+	runGitForTest(t, vaultRoot, "init", "-q")
+	runGitForTest(t, vaultRoot, "config", "user.email", "test@example.com")
+	runGitForTest(t, vaultRoot, "config", "user.name", "Test")
+	if err := os.WriteFile(filepath.Join(vaultRoot, "note.md"), []byte("# Note\n"), 0o644); err != nil {
+		t.Fatalf("write git note: %v", err)
+	}
+	runGitForTest(t, vaultRoot, "add", "note.md")
+	runGitForTest(t, vaultRoot, "commit", "-q", "-m", "init")
+	indexPath := filepath.Join(vaultRoot, ".git", "index")
+	before := fileModTime(t, indexPath)
+
+	var result inspectEnvelope
+	code, stderr = runJSON(t, []string{"inspect", "--db", dbPath}, "", &result)
+	if code != 0 {
+		t.Fatalf("inspect exit = %d stderr=%s", code, stderr)
+	}
+	if result.Result.Git.Status != "clean" {
+		t.Fatalf("git inspect result = %+v", result.Result.Git)
+	}
+	if after := fileModTime(t, indexPath); !after.Equal(before) {
+		t.Fatalf("inspect refreshed git index: before=%s after=%s", before, after)
+	}
+}
+
+func TestInspectMissingVaultRootReturnsBlockerWithoutCreatingIt(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	dbPath := filepath.Join(root, "data", "openclerk.sqlite")
+	vaultRoot := filepath.Join(root, "vault")
+	var initResult struct{}
+	code, stderr := runJSON(t, []string{"init", "--db", dbPath, "--vault-root", vaultRoot}, "", &initResult)
+	if code != 0 {
+		t.Fatalf("init exit = %d stderr=%s", code, stderr)
+	}
+	if err := os.RemoveAll(vaultRoot); err != nil {
+		t.Fatalf("remove vault root: %v", err)
+	}
+
+	var result inspectEnvelope
+	code, stderr = runJSON(t, []string{"inspect", "--db", dbPath}, "", &result)
+	if code != 0 {
+		t.Fatalf("inspect exit = %d stderr=%s", code, stderr)
+	}
+	if result.Result.Storage.Status != "ready" ||
+		result.Result.Vault.Status != "missing" ||
+		len(result.Result.Vault.Blockers) == 0 ||
+		result.Result.Vault.Blockers[0].Code != "vault_missing" ||
+		result.Result.WritesPerformed != 0 {
+		t.Fatalf("missing vault inspect result = %+v", result)
+	}
+	if _, err := os.Stat(vaultRoot); !os.IsNotExist(err) {
+		t.Fatalf("inspect recreated missing vault root: %v", err)
 	}
 }
 
@@ -1207,6 +1426,59 @@ func runJSON(t *testing.T, args []string, input string, output any) (int, string
 		}
 	}
 	return code, stderr.String()
+}
+
+func inspectHasNextAction(result inspectEnvelope, label string) bool {
+	for _, action := range result.Result.RecommendedNextActions {
+		if action.Label == label {
+			return true
+		}
+	}
+	return false
+}
+
+func mustMarshalInspect(t *testing.T, result inspectEnvelope) string {
+	t.Helper()
+	data, err := json.Marshal(result)
+	if err != nil {
+		t.Fatalf("marshal inspect result: %v", err)
+	}
+	return string(data)
+}
+
+func writeUnboundSQLiteDatabase(t *testing.T, dbPath string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
+		t.Fatalf("create db dir: %v", err)
+	}
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	defer func() {
+		_ = db.Close()
+	}()
+	if _, err := db.Exec(`CREATE TABLE scratch (id TEXT PRIMARY KEY);`); err != nil {
+		t.Fatalf("create scratch table: %v", err)
+	}
+}
+
+func runGitForTest(t *testing.T, workdir string, args ...string) {
+	t.Helper()
+	cmd := exec.Command("git", append([]string{"-C", workdir}, args...)...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %s: %v: %s", strings.Join(args, " "), err, strings.TrimSpace(string(output)))
+	}
+}
+
+func fileModTime(t *testing.T, path string) time.Time {
+	t.Helper()
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("stat %s: %v", path, err)
+	}
+	return info.ModTime()
 }
 
 func writeCLISemanticModuleManifest(t *testing.T, dir string, provider string) string {
