@@ -1,5 +1,4 @@
 - For all committed docs, reports, and artifact references, use repo-relative paths or neutral repo-relative placeholders. Never use machine-absolute filesystem paths.
-- Do work on the current branch. Do not create or switch to another branch unless explicitly instructed.
 - For repo-pinned developer tools declared in `mise.toml`, run commands through `mise exec -- ...` so agents use the same tool versions as local docs and CI.
 
 ## ADR/POC/Eval Decision Taste Review
@@ -15,36 +14,36 @@ When doing OpenClerk ADR, POC, eval, promotion, or deferred-capability decision 
 - Before closing any ADR, POC, eval, promotion, or deferred-capability decision epic with outcome `keep-as-reference`, `defer`, `more evidence`, `candidate selected`, `none viable yet`, or another non-promotion result, check existing follow-up work in public docs. If none exists and the work cannot be resolved in the current checkpoint, record the remaining comparison need in the decision or handoff instead of opening a new issue unless the maintainer explicitly asks.
 - Do not use taste review to bypass safety or evidence discipline: authority, citations, provenance, freshness, local-first behavior, duplicate handling, runner-only access, approval-before-write, and ADR/POC/eval/promotion decisions still apply.
 
-## Work Item Completion
+## Agent Orchestration
 
-A **work item** is one logical task, story, or other coherent unit of work. **When completing each work item**, complete the workflow below through review, local commit, verification, and handoff before starting unrelated work or handing off. Push only when the maintainer or task explicitly asks for remote publication. If a single thread completes multiple independent tasks or stories, repeat this workflow once for each completed work item. If a work item contains multiple independent logical checkpoints, complete the review workflow for each checkpoint before moving to the next; a checkpoint is the smallest coherent unit whose changes can be reviewed on its own, such as one bug fix, one finding, one migration step, or one separable behavior change.
+For non-trivial work, proactively choose the smallest effective orchestration pattern. Use extra agents only when they reduce risk, improve independent coverage, or save enough wall-clock time to justify added tokens and integration overhead.
 
-**MANDATORY WORKFLOW:**
+Prefer:
+- the main session for architecture, task decomposition, integration, final verification, review sequencing, and commits;
+- read-only subagents for scoped investigation, source/API verification, test-gap analysis, fixture ideas, security/correctness/complexity review, and other work that can return evidence without owning design;
+- isolated worktree sessions for parallel implementations, dependency experiments, large migrations, risky edits, or work that would disturb the active checkout;
+- many-agent or batch workflows only for broad audits, large mechanical migrations, cross-checked research, or file-partitioned work with an explicit merge and review plan.
 
-1. **Resolve blockers in-thread** - Continue iterating on blockers or remaining work when feasible; record unresolved handoff context instead of opening new issues unless explicitly asked
-2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close or update the relevant public issue or project item when one exists
-4. **Prepare review** - Run `git status`, summarize changed files and quality gates, and confirm no commit or push has been performed
-5. **Review sequence** - Run the review sequence once for the current work item or review checkpoint:
-   ```bash
-   scripts/codex-review-sequence.sh
-   ```
-   If the review finds issues, address the findings, then continue to commit without rerunning the review sequence for the same checkpoint.
-6. **Commit reviewed changes** - After the review sequence completes, stage the intended files and create a local commit
-7. **Remote publication** - Push only when explicitly requested:
-   ```bash
-   git pull --rebase
-   git push
-   git status
-   ```
-8. **Clean up** - Clear stashes, prune remote branches when relevant
-9. **Verify** - All intended changes are committed, and pushed only when remote publication was requested
-10. **Hand off** - Provide context for next session
+Use orchestration without waiting for a second prompt when the task is clearly decomposable and the harness supports it. Good triggers include unfamiliar codebase exploration, broad review, multi-file migrations, competing implementation approaches, dependency/toolchain experiments, difficult bug hunts, performance/correctness investigations, and work that benefits from independent reviewer perspectives.
 
-**CRITICAL RULES:**
-- Do not push to a remote unless the maintainer or task explicitly requested remote publication
-- Run the review sequence exactly once per work item or review checkpoint before commit; after addressing findings, do not rerun the same checkpoint review sequence unless the maintainer explicitly asks
-- For multi-checkpoint work, run quality gates, the review sequence, and commit after each independent checkpoint before starting the next
-- Do NOT commit before quality gates and the review sequence are complete
-- After the review sequence completes, stage and commit the intended files; if remote publication was requested, pull/rebase, then push
-- If a requested push fails, resolve and retry until it succeeds or report the blocker
+Do not use extra agents for tightly coupled edits, small one-file fixes, vague exploratory churn, or tasks where merge/integration overhead would dominate.
+
+Do not delegate away architectural ownership. Parallel agents must report scope, files inspected or changed, commands run, result, risks, and next recommended action. The main session integrates all work under the normal review and commit workflow.
+
+Prefer cheaper/faster models for read-only scans and supporting subagents. Use the strongest available coding model with higher reasoning effort for architecture, complex implementation, high-risk review, or final integration. Put exact model IDs in harness config, agent definitions, skills, or scripts rather than here.
+
+Use goals only for long-running work with a verifiable stop condition, such as passing tests/builds/evals, a benchmark result, a scan report, or a committed artifact. Open-ended goals must include a turn, time, or attempt bound.
+
+## Completion Contract
+
+For each completed work item or independent review checkpoint:
+
+1. Record remaining follow-up work as issues or in the repo-local backlog.
+2. Run the relevant quality gates for changed code.
+3. Run `scripts/codex-review-sequence.sh` exactly once before commit.
+4. Address review findings without rerunning the same checkpoint review unless explicitly requested.
+5. Commit the intended files locally after gates and review are complete.
+6. Push only when explicitly requested by the maintainer or task.
+7. Hand off with changed files, gates run, review result, commit hash, and remaining risks.
+
+Never push without explicit request. Never commit before quality gates and review.
