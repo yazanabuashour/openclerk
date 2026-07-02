@@ -46,4 +46,14 @@ For each completed work item or independent review checkpoint:
 6. Push only when explicitly requested by the maintainer or task.
 7. Hand off with changed files, gates run, review result, commit hash, and remaining risks.
 
+Review sequence defaults and optional extras:
+- The standard checkpoint command is `scripts/codex-review-sequence.sh`; it runs the built-in uncommitted review and avoidable-complexity review.
+- Add focused reviewers only when the change warrants them, using `CODEX_REVIEW_EXTRA=test-gaps`, `security`, `api-compat`, or `concurrency`.
+- Use `test-gaps` for behavior changes, bug fixes, migrations, or weak validation risk.
+- Use `security` for auth, permissions, shell/filesystem/network/browser/URL handling, secrets, or dependency-sensitive changes.
+- Use `api-compat` for public CLI/API/config/env/schema/docs contract changes.
+- Use `concurrency` for async, lifecycle, retry, cache/state, transactionality, or parallelism changes.
+- Combine extras with commas, for example `CODEX_REVIEW_EXTRA=security,test-gaps scripts/codex-review-sequence.sh`.
+- Agents may override `CODEX_REVIEW_MODEL` and `CODEX_REVIEW_EFFORT` for the whole run when needed. Exact default model IDs belong in the script, not here.
+
 Never push without explicit request. Never commit before quality gates and review.
