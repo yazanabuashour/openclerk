@@ -20,12 +20,12 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
 fi
 
 # Defaults can be overridden per repo/user/session.
-#   REVIEW_MODEL=gpt-5.5
-#   REVIEW_EFFORT=xhigh
+#   REVIEW_MODEL=gpt-5.6-sol
+#   REVIEW_EFFORT=max
 #   REVIEW_EXTRA=security,test-gaps,api-compat,concurrency,policy
 #   REVIEW_CUSTOM_PROMPT_FILE=path/to/review-prompt.md
-REVIEW_MODEL="${REVIEW_MODEL:-gpt-5.5}"
-REVIEW_EFFORT="${REVIEW_EFFORT:-xhigh}"
+REVIEW_MODEL="${REVIEW_MODEL:-gpt-5.6-sol}"
+REVIEW_EFFORT="${REVIEW_EFFORT:-max}"
 REVIEW_EXTRA="${REVIEW_EXTRA:-}"
 REVIEW_CUSTOM_PROMPT="${REVIEW_CUSTOM_PROMPT:-}"
 REVIEW_CUSTOM_PROMPT_FILE="${REVIEW_CUSTOM_PROMPT_FILE:-}"
