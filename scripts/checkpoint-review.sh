@@ -4,6 +4,12 @@ set -Eeuo pipefail
 repo_root="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root" || exit 1
 
+if [ "${CHECKPOINT_REVIEW_ACTIVE:-}" = "1" ]; then
+  printf 'Checkpoint review already active; recursive invocation skipped.\n'
+  exit 0
+fi
+export CHECKPOINT_REVIEW_ACTIVE=1
+
 if ! command -v git >/dev/null 2>&1; then
   printf 'error: git is required\n' >&2
   exit 127

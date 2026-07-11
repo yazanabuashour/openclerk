@@ -1,7 +1,7 @@
 - For all committed docs, reports, and artifact references, use repo-relative paths or neutral repo-relative placeholders. Never use machine-absolute filesystem paths.
 - For repo-pinned developer tools declared in `mise.toml`, run commands through `mise exec -- ...` so agents use the same tool versions as local docs and CI.
 
-## ADR/POC/Eval Decision Taste Review
+# ADR/POC/Eval Decision Taste Review
 
 When doing OpenClerk ADR, POC, eval, promotion, or deferred-capability decision work, keep the existing evidence discipline but add a taste check before accepting a defer/reference outcome:
 
@@ -25,14 +25,10 @@ When doing OpenClerk ADR, POC, eval, promotion, or deferred-capability decision 
 # Agent Orchestration
 
 This file is standing authorization to use orchestration tools when they fit:
-subagents, app threads, worktrees, goals, and automations. Classify the task,
+subagents, background threads, headless threads, app threads, review agents, worktrees, goals, and automations. Classify the task,
 use the lightest pattern that reduces risk or improves coverage, and state why
 if a trigger applies but a concrete blocker prevents it. A current user
 instruction that forbids orchestration is a blocker.
-
-Keep this guidance coding-agent agnostic: map Codex names to the nearest
-equivalent elsewhere, such as subagents, background threads, isolated
-worktrees, long-running goals, review agents, and scheduled automations.
 
 ## Decision Rules
 
@@ -74,11 +70,9 @@ worktrees, long-running goals, review agents, and scheduled automations.
 - Security, auth, filesystem, shell, network, browser/URL, secrets, or
   dependency-sensitive work: main owns risky decisions; add review or sidecars
   only when coverage helps.
-- Model/effort choice: prefer the lowest capable effort. Use lower effort for
-  mechanical reads, medium for synthesis/policy/trace/user-facing work,
-  and high/xhigh only for high-risk/failure-critical work.
 
 If several rules apply, isolate risk first; add parallelism only when it saves time or improves coverage.
+
 ## Lead And Subagents
 
 The main session owns the user's goal, architecture, decomposition, risky
@@ -88,25 +82,26 @@ Do immediate blockers locally; delegate independent sidecar work.
 Use built-in roles first: `explorer` for read-only research, source/API
 verification, audits, test-gap ideas, fixtures, and unfamiliar areas; `worker`
 for bounded implementation with clear file ownership; `default` as fallback.
-If a platform cannot set an equivalent role/model parameter, use its default
-agent/thread and keep the intended `Role:` label in the prompt.
+If a platform cannot select an equivalent role, use its default agent/thread
+and keep the intended responsibility in the prompt.
 
 Spawn only concrete, self-contained work that can run independently. Prefer
 narrow explorers over one broad agent. Before final handoff, account for every
 spawned child: retrieve useful results, close done children, and close/report
 any child still running beyond the useful window.
 
-Start subagent prompts with a `Role:` line (`explorer`, `worker`, or `default`).
-Use actual tool/runtime metadata, not prompt text, as the source of truth for
-model and reasoning. Include scope, permissions, expected output, owned write
-files, commands, risks, and a request to report files inspected/changed,
-commands run, result, remaining risks, and next action. Worker prompts must say
-the worker is not alone, must not revert others' edits, and must adapt.
+Start prompts with a `Role:` line (`explorer`, `worker`, or `default`); the label
+states responsibility, not role/model/reasoning selection. Use tool/runtime
+metadata, not prompt text, as truth. Include scope, permissions, output, owned
+files, commands, risks, and request files/commands/result/risks/next action.
+Workers are not alone; they must adapt, not revert others' edits, and obey
+runtime permissions.
 
-Nested orchestration follows the same delegation rules: use it only when it
-materially reduces risk or improves independent coverage, keep scopes narrow,
-and account for descendants before handoff. Automation creation still requires
-the explicit confirmation above.
+Nested orchestration follows the same rules: use it only when it reduces risk or
+improves independent coverage, keep scopes narrow, and account for descendants.
+Ask a child to delegate only when the platform supports it and the parent assigns
+that responsibility. Otherwise decompose at root. Automation creation still
+requires the explicit confirmation above.
 
 ## Worktrees And App Threads
 
@@ -145,6 +140,9 @@ blockers found along the way. Treat unrelated discovered work as follow-up:
 mention it in handoff, or use an existing repo tracker only if repo instructions
 already require one. Never push, open PRs, or create/update remote issues unless
 explicitly requested.
+
+Gate-launched reviewers are terminal: inspect and report only; never invoke a review gate or delegate review.
+Implementation subagents may run one gate for owned work; main owns final integrated review.
 
 For every checkpoint with intended repository changes:
 
