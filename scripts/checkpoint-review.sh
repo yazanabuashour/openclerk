@@ -36,6 +36,7 @@ concurrency_effort=""
 policy_effort=""
 custom_effort=""
 custom_prompt=""
+requested_reviews=()
 
 validate_effort() {
   case "$1" in
@@ -95,6 +96,7 @@ while [ "$#" -gt 0 ]; do
       exit 2
     fi
     printf -v "$effort_var" '%s' "$effort"
+    requested_reviews+=("$review_type=$effort")
     shift 3
     ;;
   --custom-review)
@@ -113,6 +115,7 @@ while [ "$#" -gt 0 ]; do
     fi
     custom_effort="$2"
     custom_prompt="$3"
+    requested_reviews+=("custom-review=$custom_effort")
     shift 3
     ;;
   *)
@@ -241,6 +244,7 @@ api_compat_prompt="$review_prefix Focus on API, CLI, config/env, schema, migrati
 concurrency_prompt="$review_prefix Focus on concurrency, lifecycle, and operational correctness: races, async ordering, cancellation/cleanup, leaks, retry idempotency, transactions, stale cache/state, timing assumptions, and unsafe parallelism. Report only actionable findings with file:line references, the runtime scenario, and the smallest safe fix. If there are none, say exactly: No actionable concurrency/lifecycle findings."
 policy_prompt="$review_prefix Focus on orchestration-policy quality: ambiguous delegation rules, over-orchestration risk, under-orchestration risk, thread/worktree/subagent/goal sequencing contradictions, review/commit contract contradictions, and coding-agent portability. Report only actionable findings with file:line references and the smallest wording or script change that resolves the issue. If there are none, say exactly: No actionable orchestration-policy findings."
 
+printf 'Requested reviews: %s\n' "${requested_reviews[*]}"
 printf 'Review output: %s\n' "$review_dir"
 printf '\nChanged files:\n'
 git_status_short
