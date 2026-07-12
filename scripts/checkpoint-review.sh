@@ -25,44 +25,114 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   exit 2
 fi
 
-# Defaults can be overridden per repo/user/session.
-#   REVIEW_MODEL=gpt-5.6-sol
-#   REVIEW_EFFORT=max
-#   REVIEW_EXTRA=security,test-gaps,api-compat,concurrency,policy
-#   REVIEW_CUSTOM_PROMPT_FILE=path/to/review-prompt.md
 REVIEW_MODEL="${REVIEW_MODEL:-gpt-5.6-sol}"
-REVIEW_EFFORT="${REVIEW_EFFORT:-max}"
-REVIEW_EXTRA="${REVIEW_EXTRA:-}"
-REVIEW_CUSTOM_PROMPT="${REVIEW_CUSTOM_PROMPT:-}"
-REVIEW_CUSTOM_PROMPT_FILE="${REVIEW_CUSTOM_PROMPT_FILE:-}"
-REVIEW_CUSTOM_PROMPT_FILES="${REVIEW_CUSTOM_PROMPT_FILES:-}"
 
-REVIEW_EXTRA="${REVIEW_EXTRA//[[:space:]]/}"
+correctness_effort=""
+complexity_effort=""
+security_effort=""
+test_gaps_effort=""
+api_compat_effort=""
+concurrency_effort=""
+policy_effort=""
+custom_effort=""
+custom_prompt=""
 
-IFS=',' read -r -a requested_extras <<<"$REVIEW_EXTRA"
-for extra in "${requested_extras[@]}"; do
-  case "$extra" in
-  "" | security | test-gaps | api-compat | concurrency | policy) ;;
+validate_effort() {
+  case "$1" in
+  none | minimal | low | medium | high | xhigh | max) ;;
+  ultra)
+    printf 'error: reasoning effort ultra is not allowed\n' >&2
+    exit 2
+    ;;
   *)
-    printf 'error: unknown review extra item=%s\n' "$extra" >&2
-    printf 'valid values: security, test-gaps, api-compat, concurrency, policy\n' >&2
+    printf 'error: unknown reasoning effort: %s\n' "$1" >&2
+    printf 'valid values: none, minimal, low, medium, high, xhigh, max\n' >&2
+    exit 2
+    ;;
+  esac
+}
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+  --review)
+    if [ "$#" -lt 3 ]; then
+      printf 'error: --review requires TYPE and EFFORT\n' >&2
+      exit 2
+    fi
+    review_type="$2"
+    effort="$3"
+    validate_effort "$effort"
+    case "$review_type" in
+    correctness)
+      effort_var=correctness_effort
+      ;;
+    complexity)
+      effort_var=complexity_effort
+      ;;
+    security)
+      effort_var=security_effort
+      ;;
+    test-gaps)
+      effort_var=test_gaps_effort
+      ;;
+    api-compat)
+      effort_var=api_compat_effort
+      ;;
+    concurrency)
+      effort_var=concurrency_effort
+      ;;
+    policy)
+      effort_var=policy_effort
+      ;;
+    *)
+      printf 'error: unknown review type: %s\n' "$review_type" >&2
+      printf 'valid values: correctness, complexity, security, test-gaps, api-compat, concurrency, policy\n' >&2
+      exit 2
+      ;;
+    esac
+    if [ -n "${!effort_var}" ]; then
+      printf 'error: duplicate review type: %s\n' "$review_type" >&2
+      exit 2
+    fi
+    printf -v "$effort_var" '%s' "$effort"
+    shift 3
+    ;;
+  --custom-review)
+    if [ "$#" -lt 3 ]; then
+      printf 'error: --custom-review requires EFFORT and PROMPT\n' >&2
+      exit 2
+    fi
+    if [ -n "$custom_effort" ]; then
+      printf 'error: --custom-review may be specified only once\n' >&2
+      exit 2
+    fi
+    validate_effort "$2"
+    if [ -z "${3//[[:space:]]/}" ]; then
+      printf 'error: custom review prompt is empty\n' >&2
+      exit 2
+    fi
+    custom_effort="$2"
+    custom_prompt="$3"
+    shift 3
+    ;;
+  *)
+    printf 'error: unknown argument: %s\n' "$1" >&2
     exit 2
     ;;
   esac
 done
 
-has_extra() {
-  needle="$1"
-  case ",$REVIEW_EXTRA," in
-  *",$needle,"*) return 0 ;;
-  *) return 1 ;;
-  esac
-}
+if [ -z "$correctness_effort" ] || [ -z "$complexity_effort" ]; then
+  printf 'error: --review correctness EFFORT and --review complexity EFFORT are required\n' >&2
+  exit 2
+fi
 
 run_codex() {
+  effort="$1"
+  shift
   codex --search \
     -m "$REVIEW_MODEL" \
-    -c "model_reasoning_effort=\"$REVIEW_EFFORT\"" \
+    -c "model_reasoning_effort=\"$effort\"" \
     "$@"
 }
 
@@ -132,9 +202,10 @@ trap 'cleanup_and_mark 129' HUP
 
 start_builtin_review() {
   name="$1"
+  effort="$2"
   log="$review_dir/${name}.log"
 
-  run_codex --sandbox read-only review --uncommitted >"$log" 2>&1 &
+  run_codex "$effort" --sandbox read-only review --uncommitted >"$log" 2>&1 &
 
   pids+=("$!")
   names+=("$name")
@@ -144,12 +215,13 @@ start_builtin_review() {
 
 start_focused_review() {
   name="$1"
-  prompt="$2"
+  effort="$2"
+  prompt="$3"
 
   log="$review_dir/${name}.log"
   msg="$review_dir/${name}.md"
 
-  run_codex \
+  run_codex "$effort" \
     exec \
     --sandbox read-only \
     --output-last-message "$msg" \
@@ -161,18 +233,6 @@ start_focused_review() {
   msgs+=("$msg")
 }
 
-start_custom_prompt_review() {
-  name="$1"
-  prompt="$2"
-
-  if [ -z "${prompt//[[:space:]]/}" ]; then
-    printf 'error: custom review prompt is empty for %s\n' "$name" >&2
-    exit 2
-  fi
-
-  start_focused_review "$name" "$prompt"
-}
-
 review_prefix='Review the current uncommitted changes. Do not edit files.'
 complexity_prompt="$review_prefix Focus on avoidable complexity: Rule of Three, YAGNI, and one-liners. Report only actionable simplifications with file:line references and why the simpler alternative preserves behavior. If there are none, say exactly: No actionable avoidable-complexity findings."
 test_gaps_prompt="$review_prefix Focus on missing, weak, or misleading validation for changed behavior, bug fixes, migrations, and compatibility-sensitive changes. Report only actionable test gaps with file:line references and the exact behavior that should be tested. If there are none, say exactly: No actionable test-gap findings."
@@ -180,42 +240,6 @@ security_prompt="$review_prefix Focus on concrete security regressions introduce
 api_compat_prompt="$review_prefix Focus on API, CLI, config/env, schema, migration, generated-client, docs-contract, rollout, and rollback compatibility regressions. Report only actionable risks with file:line references, the expected failure mode, and the smallest safe fix. If there are none, say exactly: No actionable API/migration compatibility findings."
 concurrency_prompt="$review_prefix Focus on concurrency, lifecycle, and operational correctness: races, async ordering, cancellation/cleanup, leaks, retry idempotency, transactions, stale cache/state, timing assumptions, and unsafe parallelism. Report only actionable findings with file:line references, the runtime scenario, and the smallest safe fix. If there are none, say exactly: No actionable concurrency/lifecycle findings."
 policy_prompt="$review_prefix Focus on orchestration-policy quality: ambiguous delegation rules, over-orchestration risk, under-orchestration risk, thread/worktree/subagent/goal sequencing contradictions, review/commit contract contradictions, and coding-agent portability. Report only actionable findings with file:line references and the smallest wording or script change that resolves the issue. If there are none, say exactly: No actionable orchestration-policy findings."
-
-if [ -n "$REVIEW_CUSTOM_PROMPT" ] && [ -z "${REVIEW_CUSTOM_PROMPT//[[:space:]]/}" ]; then
-  printf 'error: custom review prompt is empty\n' >&2
-  exit 2
-fi
-
-custom_prompt_files="$REVIEW_CUSTOM_PROMPT_FILES"
-if [ -n "$REVIEW_CUSTOM_PROMPT_FILE" ]; then
-  if [ -n "$custom_prompt_files" ]; then
-    custom_prompt_files="$REVIEW_CUSTOM_PROMPT_FILE,$custom_prompt_files"
-  else
-    custom_prompt_files="$REVIEW_CUSTOM_PROMPT_FILE"
-  fi
-fi
-
-custom_prompt_file_list=()
-if [ -n "$custom_prompt_files" ]; then
-  IFS=',' read -r -a custom_prompt_file_list <<<"$custom_prompt_files"
-  for prompt_file in "${custom_prompt_file_list[@]}"; do
-    if [ -z "$prompt_file" ]; then
-      continue
-    fi
-    if [ ! -f "$prompt_file" ]; then
-      printf 'error: custom review prompt file not found: %s\n' "$prompt_file" >&2
-      exit 2
-    fi
-    if [ ! -r "$prompt_file" ]; then
-      printf 'error: custom review prompt file is not readable: %s\n' "$prompt_file" >&2
-      exit 2
-    fi
-    if ! grep -q '[^[:space:]]' "$prompt_file"; then
-      printf 'error: custom review prompt file is empty: %s\n' "$prompt_file" >&2
-      exit 2
-    fi
-  done
-fi
 
 printf 'Review output: %s\n' "$review_dir"
 printf '\nChanged files:\n'
@@ -227,44 +251,32 @@ review_state_hash="$(snapshot_state)"
 # Standard checkpoint review: keep this cheap enough to run for every work item.
 # These are independent Codex CLI review processes, not interactive subagent
 # threads, so they work in non-interactive checkpoint scripts.
-start_builtin_review "correctness-review"
-start_focused_review "avoidable-complexity-review" "$complexity_prompt"
+start_builtin_review "correctness-review" "$correctness_effort"
+start_focused_review "avoidable-complexity-review" "$complexity_effort" "$complexity_prompt"
 
 # Optional focused reviewers:
-#   REVIEW_EXTRA=security,test-gaps scripts/checkpoint-review.sh
-if has_extra "test-gaps"; then
-  start_focused_review "test-gap-review" "$test_gaps_prompt"
+if [ -n "$test_gaps_effort" ]; then
+  start_focused_review "test-gap-review" "$test_gaps_effort" "$test_gaps_prompt"
 fi
 
-if has_extra "security"; then
-  start_focused_review "security-review" "$security_prompt"
+if [ -n "$security_effort" ]; then
+  start_focused_review "security-review" "$security_effort" "$security_prompt"
 fi
 
-if has_extra "api-compat"; then
-  start_focused_review "api-compat-review" "$api_compat_prompt"
+if [ -n "$api_compat_effort" ]; then
+  start_focused_review "api-compat-review" "$api_compat_effort" "$api_compat_prompt"
 fi
 
-if has_extra "concurrency"; then
-  start_focused_review "concurrency-review" "$concurrency_prompt"
+if [ -n "$concurrency_effort" ]; then
+  start_focused_review "concurrency-review" "$concurrency_effort" "$concurrency_prompt"
 fi
 
-if has_extra "policy"; then
-  start_focused_review "policy-review" "$policy_prompt"
+if [ -n "$policy_effort" ]; then
+  start_focused_review "policy-review" "$policy_effort" "$policy_prompt"
 fi
 
-if [ -n "$REVIEW_CUSTOM_PROMPT" ]; then
-  start_custom_prompt_review "custom-review" "$REVIEW_CUSTOM_PROMPT"
-fi
-
-if [ "${#custom_prompt_file_list[@]}" -gt 0 ]; then
-  custom_index=1
-  for prompt_file in "${custom_prompt_file_list[@]}"; do
-    if [ -z "$prompt_file" ]; then
-      continue
-    fi
-    start_custom_prompt_review "custom-review-$custom_index" "$(cat "$prompt_file")"
-    custom_index=$((custom_index + 1))
-  done
+if [ -n "$custom_effort" ]; then
+  start_focused_review "custom-review" "$custom_effort" "$review_prefix $custom_prompt"
 fi
 
 statuses=()
