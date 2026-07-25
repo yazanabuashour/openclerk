@@ -29,6 +29,7 @@ REVIEW_MODEL="${REVIEW_MODEL:-gpt-5.6-sol}"
 
 correctness_effort=""
 complexity_effort=""
+test_reduction_effort=""
 security_effort=""
 test_gaps_effort=""
 api_compat_effort=""
@@ -70,6 +71,9 @@ while [ "$#" -gt 0 ]; do
     complexity)
       effort_var=complexity_effort
       ;;
+    test-reduction)
+      effort_var=test_reduction_effort
+      ;;
     security)
       effort_var=security_effort
       ;;
@@ -87,7 +91,7 @@ while [ "$#" -gt 0 ]; do
       ;;
     *)
       printf 'error: unknown review type: %s\n' "$review_type" >&2
-      printf 'valid values: correctness, complexity, security, test-gaps, api-compat, concurrency, policy\n' >&2
+      printf 'valid values: correctness, complexity, test-reduction, security, test-gaps, api-compat, concurrency, policy\n' >&2
       exit 2
       ;;
     esac
@@ -125,8 +129,8 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
-if [ -z "$correctness_effort" ] || [ -z "$complexity_effort" ]; then
-  printf 'error: --review correctness EFFORT and --review complexity EFFORT are required\n' >&2
+if [ -z "$correctness_effort" ] || [ -z "$complexity_effort" ] || [ -z "$test_reduction_effort" ]; then
+  printf 'error: --review correctness EFFORT, --review complexity EFFORT, and --review test-reduction EFFORT are required\n' >&2
   exit 2
 fi
 
@@ -238,6 +242,7 @@ start_focused_review() {
 
 review_prefix='Review the current uncommitted changes. Do not edit files.'
 complexity_prompt="$review_prefix Focus on avoidable complexity: Rule of Three, YAGNI, and one-liners. Report only actionable simplifications with file:line references and why the simpler alternative preserves behavior. If there are none, say exactly: No actionable avoidable-complexity findings."
+test_reduction_prompt="$review_prefix Focus only on reducing tests added or expanded by this diff. Keep tests that protect important behavior or catch plausible non-obvious regressions, boundary conditions, failure modes, or gotchas. Identify tautological tests, tests that merely restate the implementation or mocks, redundant or overlapping cases, low-value happy-path permutations, and brittle over-specified assertions that can be removed or consolidated without materially reducing defect detection. Do not request additional tests. Report only actionable removals or consolidations with file:line references and why the remaining coverage is sufficient. If there are none, say exactly: No actionable test-reduction findings."
 test_gaps_prompt="$review_prefix Focus on missing, weak, or misleading validation for changed behavior, bug fixes, migrations, and compatibility-sensitive changes. Report only actionable test gaps with file:line references and the exact behavior that should be tested. If there are none, say exactly: No actionable test-gap findings."
 security_prompt="$review_prefix Focus on concrete security regressions introduced or exposed by this diff: authn/authz, unsafe filesystem/shell/network/browser/URL handling, injection, path traversal, secret exposure, unsafe deserialization, privilege boundaries, and dependency/config weakening. Report only actionable findings with file:line references, impact, and the smallest safe fix. If there are none, say exactly: No actionable security findings."
 api_compat_prompt="$review_prefix Focus on API, CLI, config/env, schema, migration, generated-client, docs-contract, rollout, and rollback compatibility regressions. Report only actionable risks with file:line references, the expected failure mode, and the smallest safe fix. If there are none, say exactly: No actionable API/migration compatibility findings."
@@ -257,6 +262,7 @@ review_state_hash="$(snapshot_state)"
 # threads, so they work in non-interactive checkpoint scripts.
 start_builtin_review "correctness-review" "$correctness_effort"
 start_focused_review "avoidable-complexity-review" "$complexity_effort" "$complexity_prompt"
+start_focused_review "test-reduction-review" "$test_reduction_effort" "$test_reduction_prompt"
 
 # Optional focused reviewers:
 if [ -n "$test_gaps_effort" ]; then
